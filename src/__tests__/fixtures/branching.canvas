@@ -1,0 +1,48 @@
+{
+  "nodes": [
+    {
+      "id": "n-start",
+      "type": "text",
+      "text": "Start",
+      "x": 0, "y": 0, "width": 200, "height": 60,
+      "radiprotocol_nodeType": "start"
+    },
+    {
+      "id": "n-q1",
+      "type": "text",
+      "text": "Q1",
+      "x": 0, "y": 120, "width": 200, "height": 60,
+      "radiprotocol_nodeType": "question",
+      "radiprotocol_questionText": "Q1"
+    },
+    {
+      "id": "n-a1",
+      "type": "text",
+      "text": "A1",
+      "x": -150, "y": 240, "width": 200, "height": 60,
+      "radiprotocol_nodeType": "answer",
+      "radiprotocol_answerText": "A1",
+      "radiprotocol_displayLabel": "A1"
+    },
+    {
+      "id": "n-a2",
+      "type": "text",
+      "text": "A2",
+      "x": 150, "y": 240, "width": 200, "height": 60,
+      "radiprotocol_nodeType": "answer",
+      "radiprotocol_answerText": "A2",
+      "radiprotocol_displayLabel": "A2"
+    },
+    {
+      "id": "n-plain",
+      "type": "text",
+      "text": "Plain canvas note — no radiprotocol fields",
+      "x": 500, "y": 0, "width": 300, "height": 60
+    }
+  ],
+  "edges": [
+    { "id": "e1", "fromNode": "n-start", "toNode": "n-q1" },
+    { "id": "e2", "fromNode": "n-q1",   "toNode": "n-a1" },
+    { "id": "e3", "fromNode": "n-q1",   "toNode": "n-a2" }
+  ]
+}

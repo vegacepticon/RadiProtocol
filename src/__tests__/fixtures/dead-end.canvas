@@ -1,0 +1,22 @@
+{
+  "nodes": [
+    {
+      "id": "n-start",
+      "type": "text",
+      "text": "Start",
+      "x": 0, "y": 0, "width": 200, "height": 60,
+      "radiprotocol_nodeType": "start"
+    },
+    {
+      "id": "n-q1",
+      "type": "text",
+      "text": "Q1",
+      "x": 0, "y": 120, "width": 200, "height": 60,
+      "radiprotocol_nodeType": "question",
+      "radiprotocol_questionText": "Q1"
+    }
+  ],
+  "edges": [
+    { "id": "e1", "fromNode": "n-start", "toNode": "n-q1" }
+  ]
+}
