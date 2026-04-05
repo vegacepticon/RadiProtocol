@@ -1,0 +1,11 @@
+{
+  "id": "radiprotocol",
+  "name": "RadiProtocol",
+  "version": "0.1.0",
+  "minAppVersion": "1.5.7",
+  "description": "Canvas-based guided protocol runner for radiologists.",
+  "author": "",
+  "authorUrl": "",
+  "fundingUrl": "",
+  "isDesktopOnly": true
+}
