@@ -1,0 +1,449 @@
+# Plan 01-02: Full Directory Structure and Stub Files
+
+**Phase**: 1 — Project Scaffold and Canvas Parsing Foundation
+**Requirements**: PARSE-04, PARSE-05, PARSE-06, DEV-04, NFR-01, NFR-07, NFR-08
+**Wave**: 1
+**Depends on**: 01-01
+
+## Goal
+
+Create the complete `src/` directory tree matching ARCHITECTURE.md §1, with stub files for all 7-phase modules — so TypeScript compiles from day one and all module import paths are resolvable by subsequent implementation plans.
+
+## Context
+
+D-05 and D-06 require the full module structure to be scaffolded upfront with empty-export stubs. This plan creates `src/main.ts`, `src/settings.ts`, all stub files in `src/runner/`, `src/snippets/`, `src/sessions/`, `src/views/`, `src/utils/`, and the empty type-only shells in `src/graph/` that Plan 01-03 will fill in. Every stub file must compile with `tsc -noEmit -skipLibCheck` without errors. No Obsidian API imports appear in `src/graph/`, `src/runner/`, `src/snippets/`, `src/sessions/`, or `src/utils/` (NFR-01).
+
+---
+
+## Tasks
+
+### Task 01-02-01: Create src/graph/ stubs (graph-model.ts, canvas-parser.ts, graph-validator.ts)
+
+**Requirement**: PARSE-04, PARSE-05, PARSE-06, NFR-01
+**Verify**: `npx tsc -noEmit -skipLibCheck 2>&1 | grep -c "error TS"` — must output `0`.
+
+These stubs define the complete TypeScript interfaces for the graph model and export empty class shells. Plan 01-03 replaces the class bodies; the interfaces are final.
+
+**File: `src/graph/graph-model.ts`** — complete type definitions (these are the contracts, not stubs):
+
+```typescript
+// graph/graph-model.ts
+// Pure TypeScript types — zero Obsidian API imports (NFR-01, PARSE-06)
+
+export type RPNodeKind =
+  | 'start'
+  | 'question'
+  | 'answer'
+  | 'free-text-input'
+  | 'text-block'
+  | 'loop-start'
+  | 'loop-end';
+
+export interface RPNodeBase {
+  id: string;
+  kind: RPNodeKind;
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  color?: string;
+}
+
+export interface StartNode extends RPNodeBase {
+  kind: 'start';
+}
+
+export interface QuestionNode extends RPNodeBase {
+  kind: 'question';
+  questionText: string;
+}
+
+export interface AnswerNode extends RPNodeBase {
+  kind: 'answer';
+  answerText: string;
+  displayLabel?: string;
+}
+
+export interface FreeTextInputNode extends RPNodeBase {
+  kind: 'free-text-input';
+  promptLabel: string;
+  prefix?: string;
+  suffix?: string;
+}
+
+export interface TextBlockNode extends RPNodeBase {
+  kind: 'text-block';
+  content: string;
+  snippetId?: string;
+}
+
+export interface LoopStartNode extends RPNodeBase {
+  kind: 'loop-start';
+  loopLabel: string;
+  exitLabel: string;
+  maxIterations: number;
+}
+
+export interface LoopEndNode extends RPNodeBase {
+  kind: 'loop-end';
+  loopStartId: string;
+}
+
+export type RPNode =
+  | StartNode
+  | QuestionNode
+  | AnswerNode
+  | FreeTextInputNode
+  | TextBlockNode
+  | LoopStartNode
+  | LoopEndNode;
+
+export interface RPEdge {
+  id: string;
+  fromNodeId: string;
+  toNodeId: string;
+  label?: string;
+}
+
+export interface ProtocolGraph {
+  canvasFilePath: string;
+  nodes: Map<string, RPNode>;
+  edges: RPEdge[];
+  adjacency: Map<string, string[]>;
+  reverseAdjacency: Map<string, string[]>;
+  startNodeId: string;
+}
+
+export type ParseResult =
+  | { success: true; graph: ProtocolGraph }
+  | { success: false; error: string };
+```
+
+**File: `src/graph/canvas-parser.ts`** — stub class (body implemented in Plan 01-03):
+
+```typescript
+// graph/canvas-parser.ts
+// Pure module — zero Obsidian API imports (PARSE-06, NFR-01)
+import type { ParseResult } from './graph-model';
+
+export class CanvasParser {
+  parse(_jsonString: string, _canvasFilePath: string): ParseResult {
+    // TODO: Phase 1 — Plan 01-03 implements this
+    return { success: false, error: 'Not implemented' };
+  }
+}
+```
+
+**File: `src/graph/graph-validator.ts`** — stub class (body implemented in Plan 01-04):
+
+```typescript
+// graph/graph-validator.ts
+// Pure module — zero Obsidian API imports (PARSE-07, NFR-01)
+import type { ProtocolGraph } from './graph-model';
+
+export class GraphValidator {
+  /**
+   * Validates a ProtocolGraph and returns an array of human-readable error strings.
+   * Returns an empty array if the graph is valid (PARSE-08).
+   */
+  validate(_graph: ProtocolGraph): string[] {
+    // TODO: Phase 1 — Plan 01-04 implements this
+    return [];
+  }
+}
+```
+
+Run `npx tsc -noEmit -skipLibCheck 2>&1 | grep -c "error TS"` — must output `0`. (TypeScript will not find `src/main.ts` yet; that is created in Task 01-02-03.)
+
+---
+
+### Task 01-02-02: Create src/runner/, src/snippets/, src/sessions/, src/utils/ stubs
+
+**Requirement**: NFR-01, NFR-07
+**Verify**: `npx tsc -noEmit -skipLibCheck 2>&1 | grep -c "error TS"` — must output `0` after this task.
+
+Create stub files for all future-phase modules. Each stub exports the minimum needed so TypeScript resolves the import without errors. No Obsidian API imports in any of these directories (NFR-01). All stubs include a `// TODO: Phase N` comment indicating which phase implements them.
+
+**File: `src/runner/protocol-runner.ts`**:
+```typescript
+// runner/protocol-runner.ts — TODO: Phase 2
+// Pure module — zero Obsidian API imports (NFR-01)
+export class ProtocolRunner {
+  // Phase 2 implementation
+}
+```
+
+**File: `src/runner/runner-state.ts`**:
+```typescript
+// runner/runner-state.ts — TODO: Phase 2
+// Pure module — zero Obsidian API imports (NFR-01)
+export type RunnerStatus =
+  | 'idle'
+  | 'at-node'
+  | 'awaiting-snippet-fill'
+  | 'complete'
+  | 'error';
+```
+
+**File: `src/runner/text-accumulator.ts`**:
+```typescript
+// runner/text-accumulator.ts — TODO: Phase 2
+// Pure module — zero Obsidian API imports (NFR-01)
+export class TextAccumulator {
+  // Phase 2 implementation
+}
+```
+
+**File: `src/snippets/snippet-service.ts`**:
+```typescript
+// snippets/snippet-service.ts — TODO: Phase 5
+// Pure module — zero Obsidian API imports (NFR-01)
+export class SnippetService {
+  // Phase 5 implementation
+}
+```
+
+**File: `src/snippets/snippet-model.ts`**:
+```typescript
+// snippets/snippet-model.ts — TODO: Phase 5
+// Pure module — zero Obsidian API imports (NFR-01)
+export interface SnippetFile {
+  id: string;
+  name: string;
+  template: string;
+  placeholders: SnippetPlaceholder[];
+}
+
+export interface SnippetPlaceholder {
+  id: string;
+  label: string;
+  type: 'free-text' | 'choice' | 'multi-choice' | 'number';
+}
+```
+
+**File: `src/sessions/session-service.ts`**:
+```typescript
+// sessions/session-service.ts — TODO: Phase 7
+// Pure module — zero Obsidian API imports (NFR-01)
+export class SessionService {
+  // Phase 7 implementation
+}
+```
+
+**File: `src/utils/write-mutex.ts`**:
+```typescript
+// utils/write-mutex.ts — TODO: Phase 5 (SNIP-07)
+// Pure module — zero Obsidian API imports (NFR-01)
+export class WriteMutex {
+  // Phase 5 implementation — per-file async write queue using async-mutex
+}
+```
+
+**File: `src/utils/vault-utils.ts`**:
+```typescript
+// utils/vault-utils.ts — TODO: Phase 2
+// Pure module — zero Obsidian API imports (NFR-01)
+// Note: Functions that call vault API will receive App/Vault as parameters,
+// keeping the module free of direct Obsidian imports.
+export function ensureFolderPath(_path: string): string {
+  // Phase 2 implementation
+  return _path;
+}
+```
+
+Run `npx tsc -noEmit -skipLibCheck 2>&1 | grep -c "error TS"` — must output `0`.
+
+---
+
+### Task 01-02-03: Create src/main.ts and src/settings.ts
+
+**Requirement**: NFR-06, NFR-08
+**Verify**: `npx tsc -noEmit -skipLibCheck 2>&1 | grep -c "error TS"` — must output `0`. Then run `node esbuild.config.mjs production 2>&1 | tail -5` — must output a successful build line (e.g., "main.js") with no "error" lines.
+
+**File: `src/settings.ts`** — settings interface and defaults (NFR-08 pattern):
+
+```typescript
+// settings.ts
+import type { App, PluginSettingTab } from 'obsidian';
+import type RadiProtocolPlugin from './main';
+
+export interface RadiProtocolSettings {
+  outputDestination: 'clipboard' | 'new-note' | 'both';
+  outputFolderPath: string;
+  maxLoopIterations: number;
+}
+
+export const DEFAULT_SETTINGS: RadiProtocolSettings = {
+  outputDestination: 'clipboard',
+  outputFolderPath: 'RadiProtocol Output',
+  maxLoopIterations: 50,
+};
+
+// Phase 3 will implement the full settings tab UI
+export class RadiProtocolSettingsTab extends PluginSettingTab {
+  private plugin: RadiProtocolPlugin;
+
+  constructor(app: App, plugin: RadiProtocolPlugin) {
+    super(app, plugin);
+    this.plugin = plugin;
+  }
+
+  display(): void {
+    const { containerEl } = this;
+    containerEl.empty();
+    containerEl.createEl('h2', { text: 'RadiProtocol settings' });
+    // TODO: Phase 3 — add setting controls
+    containerEl.createEl('p', { text: 'Settings UI coming in Phase 3.' });
+  }
+}
+```
+
+**File: `src/main.ts`** — plugin entry point with ribbon icon and command registration:
+
+```typescript
+// main.ts
+import { Plugin, Notice } from 'obsidian';
+import { RadiProtocolSettings, DEFAULT_SETTINGS, RadiProtocolSettingsTab } from './settings';
+import { CanvasParser } from './graph/canvas-parser';
+
+export default class RadiProtocolPlugin extends Plugin {
+  settings!: RadiProtocolSettings;
+  canvasParser!: CanvasParser;
+
+  async onload(): Promise<void> {
+    // Load settings with defaults guard (NFR-08)
+    this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());
+
+    // Instantiate pure modules (no Obsidian dependency)
+    this.canvasParser = new CanvasParser();
+
+    // Ribbon icon (Phase 3 will open the runner view)
+    this.addRibbonIcon('activity', 'RadiProtocol', (_evt: MouseEvent) => {
+      new Notice('RadiProtocol loaded. Open a canvas file to run a protocol.');
+    });
+
+    // Commands — IDs intentionally omit plugin name prefix (NFR-06)
+    this.addCommand({
+      id: 'run-protocol',
+      name: 'Run protocol',
+      callback: () => {
+        new Notice('Protocol runner coming in Phase 3.');
+      },
+    });
+
+    this.addCommand({
+      id: 'validate-protocol',
+      name: 'Validate protocol',
+      callback: () => {
+        new Notice('Protocol validator coming in Phase 3.');
+      },
+    });
+
+    // Settings tab
+    this.addSettingTab(new RadiProtocolSettingsTab(this.app, this));
+
+    console.debug('[RadiProtocol] Plugin loaded');
+  }
+
+  async onunload(): Promise<void> {
+    console.debug('[RadiProtocol] Plugin unloaded');
+  }
+
+  async saveSettings(): Promise<void> {
+    await this.saveData(this.settings);
+  }
+}
+```
+
+Run the build check: `node esbuild.config.mjs production 2>&1 | tail -10`. The output must include `main.js` and must not contain any `error:` lines.
+
+Also run TypeScript check: `npx tsc -noEmit -skipLibCheck 2>&1 | grep -c "error TS"` — must output `0`.
+
+---
+
+## Views Stubs
+
+Create `src/views/runner-view.ts`, `src/views/editor-panel-view.ts`, and `src/views/snippet-manager-view.ts` as minimal stubs that import from Obsidian (views MUST use Obsidian API — they are not pure modules):
+
+**File: `src/views/runner-view.ts`**:
+```typescript
+// views/runner-view.ts — TODO: Phase 3
+import { ItemView, WorkspaceLeaf } from 'obsidian';
+
+export const RUNNER_VIEW_TYPE = 'radiprotocol-runner';
+
+export class RunnerView extends ItemView {
+  constructor(leaf: WorkspaceLeaf) {
+    super(leaf);
+  }
+
+  getViewType(): string { return RUNNER_VIEW_TYPE; }
+  getDisplayText(): string { return 'RadiProtocol Runner'; }
+
+  async onOpen(): Promise<void> {
+    this.contentEl.createEl('p', { text: 'Runner UI coming in Phase 3.' });
+  }
+
+  async onClose(): Promise<void> {
+    this.contentEl.empty();
+  }
+}
+```
+
+**File: `src/views/editor-panel-view.ts`**:
+```typescript
+// views/editor-panel-view.ts — TODO: Phase 4
+import { ItemView, WorkspaceLeaf } from 'obsidian';
+
+export const EDITOR_PANEL_VIEW_TYPE = 'radiprotocol-editor-panel';
+
+export class EditorPanelView extends ItemView {
+  constructor(leaf: WorkspaceLeaf) {
+    super(leaf);
+  }
+
+  getViewType(): string { return EDITOR_PANEL_VIEW_TYPE; }
+  getDisplayText(): string { return 'RadiProtocol Node Editor'; }
+
+  async onOpen(): Promise<void> {
+    this.contentEl.createEl('p', { text: 'Node editor coming in Phase 4.' });
+  }
+
+  async onClose(): Promise<void> {
+    this.contentEl.empty();
+  }
+}
+```
+
+**File: `src/views/snippet-manager-view.ts`**:
+```typescript
+// views/snippet-manager-view.ts — TODO: Phase 5
+import { ItemView, WorkspaceLeaf } from 'obsidian';
+
+export const SNIPPET_MANAGER_VIEW_TYPE = 'radiprotocol-snippet-manager';
+
+export class SnippetManagerView extends ItemView {
+  constructor(leaf: WorkspaceLeaf) {
+    super(leaf);
+  }
+
+  getViewType(): string { return SNIPPET_MANAGER_VIEW_TYPE; }
+  getDisplayText(): string { return 'RadiProtocol Snippet Manager'; }
+
+  async onOpen(): Promise<void> {
+    this.contentEl.createEl('p', { text: 'Snippet manager coming in Phase 5.' });
+  }
+
+  async onClose(): Promise<void> {
+    this.contentEl.empty();
+  }
+}
+```
+
+---
+
+## Recommended Commit
+
+```
+feat(01): scaffold full src/ directory structure with typed stubs for all 7-phase modules
+```

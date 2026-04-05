@@ -37,7 +37,15 @@
   4. `eslint` runs with zero errors against all source files from the first commit
   5. A canvas file with mixed RadiProtocol and plain cards parses without error; plain cards are silently skipped
 
-**Plans**: TBD
+**Plans**: 6 plans
+
+Plans:
+- [ ] 01-00-PLAN-wave0-test-infrastructure.md — Vitest config, four canvas fixtures, stub test files (RED)
+- [ ] 01-01-PLAN-plugin-scaffold.md — package.json, tsconfig, esbuild+.env copy, manifest, LICENSE
+- [ ] 01-02-PLAN-directory-structure-stubs.md — full src/ tree with typed stubs for all 7 modules
+- [ ] 01-03-PLAN-canvas-parser.md — CanvasParser.parse() implementation, tests GREEN
+- [ ] 01-04-PLAN-graph-validator.md — GraphValidator.validate() six error classes, tests GREEN
+- [ ] 01-05-PLAN-eslint-and-build.md — ESLint config, zero errors, integrated lint+test+build check
 
 **Risk flags**:
 - Custom `radiprotocol_*` properties may be stripped by future Obsidian major-version canvas editor upgrades. Mitigate: validate property round-trip in test vault early; namespace strictly.
@@ -203,7 +211,7 @@
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Project Scaffold and Canvas Parsing Foundation | 0/? | Not started | - |
+| 1. Project Scaffold and Canvas Parsing Foundation | 0/6 | Not started | - |
 | 2. Core Protocol Runner Engine | 0/? | Not started | - |
 | 3. Runner UI (ItemView) | 0/? | Not started | - |
 | 4. Canvas Node Editor Side Panel | 0/? | Not started | - |
