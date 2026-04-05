@@ -1,0 +1,13 @@
+# Dependencies
+node_modules/
+
+# Build output
+main.js
+main.js.map
+
+# Dev vault config (never commit vault paths)
+.env
+
+# OS files
+.DS_Store
+Thumbs.db
