@@ -27,8 +27,7 @@ export class RadiProtocolSettingsTab extends PluginSettingTab {
   display(): void {
     const { containerEl } = this;
     containerEl.empty();
-    containerEl.createEl('h2', { text: 'RadiProtocol settings' });
-    // TODO: Phase 3 — add setting controls
-    containerEl.createEl('p', { text: 'Settings UI coming in Phase 3.' });
+    // TODO: Phase 3 — add setting controls (no-manual-html-headings: use Setting.setHeading())
+    containerEl.createEl('p', { text: 'Settings UI coming in phase 3.' });
   }
 }

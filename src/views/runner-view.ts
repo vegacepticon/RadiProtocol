@@ -9,10 +9,10 @@ export class RunnerView extends ItemView {
   }
 
   getViewType(): string { return RUNNER_VIEW_TYPE; }
-  getDisplayText(): string { return 'RadiProtocol Runner'; }
+  getDisplayText(): string { return 'Radiprotocol runner'; }
 
   async onOpen(): Promise<void> {
-    this.contentEl.createEl('p', { text: 'Runner UI coming in Phase 3.' });
+    this.contentEl.createEl('p', { text: 'Runner UI coming in phase 3.' });
   }
 
   async onClose(): Promise<void> {

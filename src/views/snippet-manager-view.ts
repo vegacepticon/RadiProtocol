@@ -9,10 +9,10 @@ export class SnippetManagerView extends ItemView {
   }
 
   getViewType(): string { return SNIPPET_MANAGER_VIEW_TYPE; }
-  getDisplayText(): string { return 'RadiProtocol Snippet Manager'; }
+  getDisplayText(): string { return 'Radiprotocol snippet manager'; }
 
   async onOpen(): Promise<void> {
-    this.contentEl.createEl('p', { text: 'Snippet manager coming in Phase 5.' });
+    this.contentEl.createEl('p', { text: 'Snippet manager coming in phase 5.' });
   }
 
   async onClose(): Promise<void> {

@@ -15,8 +15,8 @@ export default class RadiProtocolPlugin extends Plugin {
     this.canvasParser = new CanvasParser();
 
     // Ribbon icon (Phase 3 will open the runner view)
-    this.addRibbonIcon('activity', 'RadiProtocol', (_evt: MouseEvent) => {
-      new Notice('RadiProtocol loaded. Open a canvas file to run a protocol.');
+    this.addRibbonIcon('activity', 'Radiprotocol', () => {
+      new Notice('Radiprotocol loaded. Open a canvas file to run a protocol.');
     });
 
     // Commands — IDs intentionally omit plugin name prefix (NFR-06)
@@ -24,7 +24,7 @@ export default class RadiProtocolPlugin extends Plugin {
       id: 'run-protocol',
       name: 'Run protocol',
       callback: () => {
-        new Notice('Protocol runner coming in Phase 3.');
+        new Notice('Protocol runner coming in phase 3.');
       },
     });
 
@@ -32,7 +32,7 @@ export default class RadiProtocolPlugin extends Plugin {
       id: 'validate-protocol',
       name: 'Validate protocol',
       callback: () => {
-        new Notice('Protocol validator coming in Phase 3.');
+        new Notice('Protocol validator coming in phase 3.');
       },
     });
 
