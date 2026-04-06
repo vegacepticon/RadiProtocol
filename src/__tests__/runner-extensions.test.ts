@@ -32,7 +32,7 @@ describe('ProtocolRunner extensions (RUN-11, D-04, D-05, D-07)', () => {
       }
     }
     // Now call setAccumulatedText — should clear undo
-    runner.setAccumulatedText('Custom text');
+    ((runner as unknown as Record<string, unknown>)['setAccumulatedText'] as (t: string) => void)('Custom text');
     const afterState = runner.getState();
     if (afterState.status === 'at-node') {
       expect(afterState.canStepBack).toBe(false);
@@ -47,7 +47,7 @@ describe('ProtocolRunner extensions (RUN-11, D-04, D-05, D-07)', () => {
     const graph = loadGraph('two-questions.canvas');
     const runner = new ProtocolRunner();
     const startNodeId = 'n-q2'; // Second question — unreachable without startNodeId support
-    runner.start(graph, startNodeId);
+    ((runner as unknown as Record<string, unknown>)['start'] as (g: typeof graph, s: string) => void)(graph, startNodeId);
     const state = runner.getState();
     expect(state.status).toBe('at-node');
     if (state.status === 'at-node') {

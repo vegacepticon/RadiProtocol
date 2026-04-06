@@ -61,7 +61,7 @@ describe('saveNodeEdits — write-back contract (EDIT-03, EDIT-04)', () => {
     // With real implementation: vault.modify() called but written JSON must not contain changed values
     // With stub: vault.modify() never called — test documents the contract for Plan 02
     if (mockVaultModify.mock.calls.length > 0) {
-      const written = JSON.parse(mockVaultModify.mock.calls[0][1] as string) as {
+      const written = JSON.parse(mockVaultModify.mock.calls[0]![1] as string) as {
         nodes: Array<Record<string, unknown>>;
       };
       const node = written.nodes[0];
@@ -79,7 +79,7 @@ describe('saveNodeEdits — write-back contract (EDIT-03, EDIT-04)', () => {
     });
     // Stub never calls vault.modify() — RED
     expect(mockVaultModify).toHaveBeenCalled();
-    const written = JSON.parse(mockVaultModify.mock.calls[0][1] as string) as {
+    const written = JSON.parse(mockVaultModify.mock.calls[0]![1] as string) as {
       nodes: Array<Record<string, unknown>>;
     };
     const node = written.nodes[0];
@@ -96,7 +96,7 @@ describe('saveNodeEdits — write-back contract (EDIT-03, EDIT-04)', () => {
     });
     // Stub never calls vault.modify() — RED
     expect(mockVaultModify).toHaveBeenCalled();
-    const written = JSON.parse(mockVaultModify.mock.calls[0][1] as string) as {
+    const written = JSON.parse(mockVaultModify.mock.calls[0]![1] as string) as {
       nodes: Array<Record<string, unknown>>;
     };
     const node = written.nodes[0];
@@ -128,7 +128,7 @@ describe('saveNodeEdits — write-back contract (EDIT-03, EDIT-04)', () => {
     });
     // Stub never calls vault.modify() — RED
     expect(mockVaultModify).toHaveBeenCalled();
-    const written = JSON.parse(mockVaultModify.mock.calls[0][1] as string) as {
+    const written = JSON.parse(mockVaultModify.mock.calls[0]![1] as string) as {
       nodes: Array<Record<string, unknown>>;
     };
     const node = written.nodes[0];
