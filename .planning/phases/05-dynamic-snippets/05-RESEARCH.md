@@ -657,14 +657,14 @@ confirmBtn.addEventListener('click', () => { this.handleConfirm(); });
 
 ---
 
-## Open Questions
+## Open Questions (RESOLVED)
 
-1. **RunnerView Phase 3 dependency**
+1. **RunnerView Phase 3 dependency** — RESOLVED: Phase 5 Plan 04 (Wave 4) implements the full RunnerView, addressing all Phase 3 deferred requirements (RUN-10, RUN-11, UI-01 through UI-12) alongside SNIP-06 runner integration.
    - What we know: Phase 3 was never executed (STATE.md confirms "Not started"). `runner-view.ts` is a stub with only a placeholder paragraph.
    - What's unclear: Does Phase 5 include implementing the full RunnerView (Phases 3 requirements: RUN-10, RUN-11, UI-01 through UI-12) or only the `awaiting-snippet-fill` branch?
    - Recommendation: Phase 5 should implement the full `RunnerView` (all runner UI including question rendering, answer buttons, free-text input, text-block display, step-back, output buttons) as Wave 1 or 2, since the snippet integration is impossible without it. The planner should scope this explicitly and flag that it addresses previously unimplemented Phase 3 requirements.
 
-2. **`snippetFolderPath` in settings**
+2. **`snippetFolderPath` in settings** — RESOLVED: Plan 01 (Wave 1) adds `snippetFolderPath: string` to `RadiProtocolSettings` with default value `'.radiprotocol/snippets'` in both the interface and `DEFAULT_SETTINGS` in `settings.ts`.
    - What we know: CONTEXT.md D-15 says `settings.snippetFolderPath` (default `.radiprotocol/snippets`). The current `RadiProtocolSettings` interface in `settings.ts` does NOT have a `snippetFolderPath` field.
    - What's unclear: Must `snippetFolderPath` be a user-configurable setting, or is it a hardcoded constant?
    - Recommendation: Add `snippetFolderPath: string` to `RadiProtocolSettings` and `DEFAULT_SETTINGS` in `settings.ts` as part of Phase 5 Wave 1. Default value: `'.radiprotocol/snippets'`.
