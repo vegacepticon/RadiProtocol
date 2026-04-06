@@ -1,8 +1,14 @@
-// utils/vault-utils.ts — TODO: Phase 2
-// Pure module — zero Obsidian API imports (NFR-01)
-// Note: Functions that call vault API will receive App/Vault as parameters,
-// keeping the module free of direct Obsidian imports.
-export function ensureFolderPath(_path: string): string {
-  // Phase 2 implementation
-  return _path;
+// utils/vault-utils.ts
+// Pure module — vault calls via parameter (NFR-01 — no direct Obsidian imports)
+import type { Vault } from 'obsidian';
+
+/**
+ * Ensure a folder exists in the vault, creating it if necessary.
+ * Guards against vault.createFolder() throwing on existing paths (SNIP-08, RESEARCH.md Pitfall 2).
+ */
+export async function ensureFolderPath(vault: Vault, folderPath: string): Promise<void> {
+  const exists = await vault.adapter.exists(folderPath);
+  if (!exists) {
+    await vault.createFolder(folderPath);
+  }
 }

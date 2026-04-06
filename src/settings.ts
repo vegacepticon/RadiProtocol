@@ -7,12 +7,15 @@ export interface RadiProtocolSettings {
   outputDestination: 'clipboard' | 'new-note' | 'both';
   outputFolderPath: string;
   maxLoopIterations: number;
+  /** Vault-relative path for snippet JSON files (D-15, SNIP-08). Default: .radiprotocol/snippets */
+  snippetFolderPath: string;
 }
 
 export const DEFAULT_SETTINGS: RadiProtocolSettings = {
   outputDestination: 'clipboard',
   outputFolderPath: 'RadiProtocol Output',
   maxLoopIterations: 50,
+  snippetFolderPath: '.radiprotocol/snippets',
 };
 
 // Phase 3 will implement the full settings tab UI
