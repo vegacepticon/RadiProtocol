@@ -163,7 +163,14 @@ Plans:
   4. Completing the modal appends the rendered snippet text (with placeholder values substituted) to the accumulated protocol text and the runner advances — confirmed by manual test
   5. Concurrent snippet file writes (simulated by rapid save operations) do not produce corrupted JSON — confirmed by write-mutex unit test or stress test
 
-**Plans**: TBD
+**Plans**: 5 plans
+
+Plans:
+- [ ] 05-00-PLAN.md — Wave 0: npm install async-mutex, 4 RED test stubs (snippet-model, snippet-service, write-mutex, vault-utils), extend Modal mock with titleEl
+- [ ] 05-01-PLAN.md — Wave 1: snippet-model.ts (extend SnippetPlaceholder, renderSnippet, slugifyLabel), WriteMutex, ensureFolderPath, SnippetService CRUD, settings snippetFolderPath
+- [ ] 05-02-PLAN.md — Wave 2: SnippetManagerView full master-detail UI (D-01–D-08), Phase 5 CSS classes
+- [ ] 05-03-PLAN.md — Wave 3: SnippetFillInModal (all placeholder types, live preview, free-text override SNIP-09)
+- [ ] 05-04-PLAN.md — Wave 4: RunnerView full implementation + awaiting-snippet-fill branch + main.ts wiring + human UAT checkpoint
 
 **UI hint**: yes
 
@@ -234,6 +241,6 @@ Plans:
 | 2. Core Protocol Runner Engine | 3/3 | Complete | 2026-04-06 |
 | 3. Runner UI (ItemView) | 0/5 | Planning complete | - |
 | 4. Canvas Node Editor Side Panel | 3/3 | Complete | 2026-04-06 |
-| 5. Dynamic Snippets | 0/? | Not started | - |
+| 5. Dynamic Snippets | 0/5 | Planning complete | - |
 | 6. Loop Support | 0/? | Not started | - |
 | 7. Mid-Session Save and Resume | 0/? | Not started | - |
