@@ -166,11 +166,11 @@ Plans:
 **Plans**: 5 plans
 
 Plans:
-- [ ] 05-00-PLAN.md — Wave 0: npm install async-mutex, 4 RED test stubs (snippet-model, snippet-service, write-mutex, vault-utils), extend Modal mock with titleEl
-- [ ] 05-01-PLAN.md — Wave 1: snippet-model.ts (extend SnippetPlaceholder, renderSnippet, slugifyLabel), WriteMutex, ensureFolderPath, SnippetService CRUD, settings snippetFolderPath
-- [ ] 05-02-PLAN.md — Wave 2: SnippetManagerView full master-detail UI (D-01–D-08), Phase 5 CSS classes
-- [ ] 05-03-PLAN.md — Wave 3: SnippetFillInModal (all placeholder types, live preview, free-text override SNIP-09)
-- [ ] 05-04-PLAN.md — Wave 4: RunnerView full implementation + awaiting-snippet-fill branch + main.ts wiring + human UAT checkpoint
+- [x] 05-00-PLAN.md — Wave 0: npm install async-mutex, 4 RED test stubs (snippet-model, snippet-service, write-mutex, vault-utils), extend Modal mock with titleEl
+- [x] 05-01-PLAN.md — Wave 1: snippet-model.ts (extend SnippetPlaceholder, renderSnippet, slugifyLabel), WriteMutex, ensureFolderPath, SnippetService CRUD, settings snippetFolderPath
+- [x] 05-02-PLAN.md — Wave 2: SnippetManagerView full master-detail UI (D-01–D-08), Phase 5 CSS classes
+- [x] 05-03-PLAN.md — Wave 3: SnippetFillInModal (all placeholder types, live preview, free-text override SNIP-09)
+- [x] 05-04-PLAN.md — Wave 4: RunnerView full implementation + awaiting-snippet-fill branch + main.ts wiring + human UAT checkpoint
 
 **UI hint**: yes
 
