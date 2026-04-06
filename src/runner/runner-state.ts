@@ -1,8 +1,80 @@
-// runner/runner-state.ts — TODO: Phase 2
+// runner/runner-state.ts
 // Pure module — zero Obsidian API imports (NFR-01)
+
+// Five runner statuses — used as the discriminant field in RunnerState
 export type RunnerStatus =
   | 'idle'
   | 'at-node'
   | 'awaiting-snippet-fill'
   | 'complete'
   | 'error';
+
+// --- Public state interfaces (returned by ProtocolRunner.getState()) ---
+
+/** Runner has not been started yet. */
+export interface IdleState {
+  status: 'idle';
+}
+
+/**
+ * Runner is paused at a node awaiting user input.
+ * The node is either a question (awaiting chooseAnswer) or a
+ * free-text-input node (awaiting enterFreeText).
+ */
+export interface AtNodeState {
+  status: 'at-node';
+  currentNodeId: string;
+  accumulatedText: string;
+  /** true when undoStack is non-empty — avoids exposing the stack itself (D-02) */
+  canStepBack: boolean;
+}
+
+/**
+ * Runner has reached a text-block node with a snippetId.
+ * Phase 5 will call runner.completeSnippet(renderedText) to resume.
+ * The runner carries snippetId and nodeId so the caller can open the correct modal.
+ */
+export interface AwaitingSnippetFillState {
+  status: 'awaiting-snippet-fill';
+  snippetId: string;
+  nodeId: string;
+  accumulatedText: string;
+  canStepBack: boolean;
+}
+
+/** All nodes have been traversed and there is no next node. */
+export interface CompleteState {
+  status: 'complete';
+  finalText: string;
+}
+
+/**
+ * An unrecoverable error occurred (unknown node, iteration cap exceeded, loop node
+ * reached in Phase 2). The runner cannot continue — caller should surface message to user.
+ */
+export interface ErrorState {
+  status: 'error';
+  message: string;
+}
+
+/** Discriminated union over all five runner states. */
+export type RunnerState =
+  | IdleState
+  | AtNodeState
+  | AwaitingSnippetFillState
+  | CompleteState
+  | ErrorState;
+
+// --- Internal types (exported for use by ProtocolRunner) ---
+
+/**
+ * One entry on the undo stack.
+ * Captured BEFORE any mutation inside chooseAnswer() or enterFreeText().
+ * Text-block auto-advances do NOT create separate UndoEntry values (D-03).
+ */
+export interface UndoEntry {
+  /** currentNodeId BEFORE this user action */
+  nodeId: string;
+  /** accumulatedText BEFORE this user action — full string snapshot (D-04, RUN-07) */
+  textSnapshot: string;
+}
