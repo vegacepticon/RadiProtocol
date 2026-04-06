@@ -3,27 +3,28 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-last_updated: "2026-04-06T11:10:00.000Z"
+last_updated: "2026-04-06T15:25:00Z"
 progress:
   total_phases: 7
-  completed_phases: 2
-  total_plans: 9
-  completed_plans: 9
-  percent: 29
+  completed_phases: 3
+  total_plans: 14
+  completed_plans: 14
+  percent: 43
 ---
 
 # RadiProtocol — Project State
 
 **Updated:** 2026-04-06
 **Milestone:** v1.0 — Initial public release
-**Status:** Phase 02 Complete — Ready for Phase 03
+**Status:** Phase 03 complete — ready for Phase 04
 
 ---
 
 ## Current Position
 
-Phase: 02 (core-protocol-runner-engine) — COMPLETE ✓
-Plan: 3 of 3
+Phase: 03 (runner-ui-itemview) — COMPLETE
+Next phase: 04 (canvas-node-editor-side-panel) — NOT STARTED
+
 All pre-development planning is complete:
 
 - PROJECT.md — requirements, constraints, out-of-scope
@@ -31,7 +32,7 @@ All pre-development planning is complete:
 - ROADMAP.md — 7-phase roadmap with UAT criteria and risk flags
 - Research: FEATURES.md, PITFALLS.md, STACK.md, ARCHITECTURE.md, SUMMARY.md
 
-**Next action:** `/gsd-plan-phase` on Phase 1 (Project Scaffold + Canvas Parsing Foundation)
+**Next action:** Confirm open assumption A4/A5 (canvas write-back strategy) before `/gsd-plan-phase` on Phase 4 (Canvas Node Editor Side Panel)
 
 ---
 
@@ -41,7 +42,7 @@ All pre-development planning is complete:
 |-------|------|--------|
 | 1 | Project Scaffold + Canvas Parsing Foundation | ✓ Complete |
 | 2 | Core Protocol Runner Engine | ✓ Complete |
-| 3 | Runner UI (ItemView) | Not started |
+| 3 | Runner UI (ItemView) | ✓ Complete |
 | 4 | Canvas Node Editor Side Panel | Not started |
 | 5 | Dynamic Snippets | Not started |
 | 6 | Loop Support | Not started |
@@ -60,6 +61,10 @@ All pre-development planning is complete:
 | Discriminated union on `kind` for node types | Type-safe graph model; 7 node types: start, question, answer, text-block, free-text, loop-start, loop-end |
 | Snapshot undo stack | Simplest correct approach for step-back; protocol text is small (<5KB) |
 | `radiprotocol_*` property namespace | Avoids collisions with other plugins and future Obsidian updates |
+| Ribbon calls activateRunnerView() not openProtocol() | Clicking ribbon when no canvas is open shows idle state instead of a Notice error |
+| openNodePickerCommand() re-parses canvas on demand | Keeps graph data fresh without a synchronisation layer; no caching needed |
+| Step back disables on 'input' event (not blur) | Clears undo stack at the moment of edit per D-05 intent |
+| noUncheckedIndexedAccess guards throughout | getLeavesOfType(TYPE)[0] always guarded with `if (leaf !== undefined)` |
 
 ---
 
@@ -89,6 +94,6 @@ All pre-development planning is complete:
 
 ## Repository
 
-- Branch: `master`
+- Branch: `main`
 - Remote: (not yet configured)
-- Last commit: `1425e60` — docs: add requirements and 7-phase roadmap for v1
+- Last commit: `fd02746` — docs(03-04): SUMMARY.md — final integration complete, UAT approved

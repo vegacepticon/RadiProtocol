@@ -10,9 +10,9 @@
 
 ## Phases
 
-- [ ] **Phase 1: Project Scaffold and Canvas Parsing Foundation** - Verified plugin scaffold, pure graph model, full validation suite, test infrastructure, and dev toolchain
+- [x] **Phase 1: Project Scaffold and Canvas Parsing Foundation** - Verified plugin scaffold, pure graph model, full validation suite, test infrastructure, and dev toolchain
 - [x] **Phase 2: Core Protocol Runner Engine** - Fully unit-tested traversal state machine with step-back, text accumulation, and undo — no UI required to verify
-- [ ] **Phase 3: Runner UI (ItemView)** - End-to-end demonstrable plugin: open a canvas, run a protocol, see live preview, copy output
+- [x] **Phase 3: Runner UI (ItemView)** - End-to-end demonstrable plugin: open a canvas, run a protocol, see live preview, copy output
 - [ ] **Phase 4: Canvas Node Editor Side Panel** - Protocol authoring without touching raw JSON: per-node forms write back to the canvas file
 - [ ] **Phase 5: Dynamic Snippets** - Placeholder fill-in modal integrated into the runner; snippet CRUD backed by per-file vault storage
 - [ ] **Phase 6: Loop Support** - Multi-iteration protocol sections with correct undo, iteration display, and exit UX
@@ -100,11 +100,11 @@ Plans:
 **Plans**: 5 plans
 
 Plans:
-- [ ] 03-00-PLAN.md — Wave 0: four failing test stubs (RunnerView, runner-extensions, runner-commands, settings-tab)
-- [ ] 03-01-PLAN.md — RunnerView full skeleton: two-zone layout, render dispatcher, getState/setState, legend, styles.css
-- [ ] 03-02-PLAN.md — ProtocolRunner extensions (setAccumulatedText, optional startNodeId) + copy/save/inline-edit wiring
-- [ ] 03-03-PLAN.md — NodePickerModal for start-from-node command (SuggestModal, buildNodeOptions)
-- [ ] 03-04-PLAN.md — main.ts full wiring + settings tab three controls + human verification checkpoint
+- [x] 03-00-PLAN.md — Wave 0: four failing test stubs (RunnerView, runner-extensions, runner-commands, settings-tab)
+- [x] 03-01-PLAN.md — RunnerView full skeleton: two-zone layout, render dispatcher, getState/setState, legend, styles.css
+- [x] 03-02-PLAN.md — ProtocolRunner extensions (setAccumulatedText, optional startNodeId) + copy/save/inline-edit wiring
+- [x] 03-03-PLAN.md — NodePickerModal for start-from-node command (SuggestModal, buildNodeOptions)
+- [x] 03-04-PLAN.md — main.ts full wiring + settings tab three controls + human verification checkpoint
 
 **UI hint**: yes
 
@@ -223,9 +223,9 @@ Plans:
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Project Scaffold and Canvas Parsing Foundation | 0/6 | Not started | - |
-| 2. Core Protocol Runner Engine | 0/3 | Planning complete | - |
-| 3. Runner UI (ItemView) | 0/5 | Planning complete | - |
+| 1. Project Scaffold and Canvas Parsing Foundation | 6/6 | Complete | 2026-04-06 |
+| 2. Core Protocol Runner Engine | 3/3 | Complete | 2026-04-06 |
+| 3. Runner UI (ItemView) | 5/5 | Complete | 2026-04-06 |
 | 4. Canvas Node Editor Side Panel | 0/? | Not started | - |
 | 5. Dynamic Snippets | 0/? | Not started | - |
 | 6. Loop Support | 0/? | Not started | - |
