@@ -1,5 +1,5 @@
 // views/runner-view.ts — Phase 3 full implementation
-import { ItemView, WorkspaceLeaf, setIcon, ViewStateResult, TFile } from 'obsidian';
+import { ItemView, WorkspaceLeaf, setIcon, ViewStateResult, TFile, Notice } from 'obsidian';
 import type RadiProtocolPlugin from '../main';
 import { ProtocolRunner } from '../runner/protocol-runner';
 import { CanvasParser } from '../graph/canvas-parser';
@@ -89,9 +89,7 @@ export class RunnerView extends ItemView {
 
     // Register stable 'input' event via registerDomEvent (UI-09)
     this.registerDomEvent(this.previewTextarea, 'input', () => {
-      // Plan 02 wires setAccumulatedText; stub call is safe as optional chain
-      (this.runner as unknown as { setAccumulatedText?: (t: string) => void })
-        ?.setAccumulatedText?.(this.previewTextarea.value);
+      this.runner?.setAccumulatedText(this.previewTextarea.value);
     });
 
     // Output toolbar
@@ -101,15 +99,17 @@ export class RunnerView extends ItemView {
       cls: 'rp-copy-btn',
       text: 'Copy to clipboard',
     }) as HTMLButtonElement;
+    this.copyBtn.addClass('mod-cta');
 
     this.saveBtn = toolbar.createEl('button', {
       cls: 'rp-save-btn',
       text: 'Save to note',
     }) as HTMLButtonElement;
+    this.saveBtn.addClass('mod-cta');
 
-    // Copy/save handlers stubbed — Plan 02 wires behavior
-    this.registerDomEvent(this.copyBtn, 'click', () => { void 0; });
-    this.registerDomEvent(this.saveBtn, 'click', () => { void 0; });
+    // Wire copy/save handlers (UI-05, UI-06)
+    this.registerDomEvent(this.copyBtn, 'click', () => { void this.handleCopy(); });
+    this.registerDomEvent(this.saveBtn, 'click', () => { void this.handleSave(); });
 
     // Disable output buttons initially
     this.copyBtn.disabled = true;
@@ -228,25 +228,15 @@ export class RunnerView extends ItemView {
         break;
     }
 
-    // Update output button disabled state
-    const isComplete = state.status === 'complete';
-    const hasText = this.previewTextarea.value.length > 0;
-    this.copyBtn.disabled = !(isComplete || hasText);
-    this.saveBtn.disabled = !(isComplete || hasText);
+    // Update output button disabled state (trim check per plan spec)
+    const hasText = this.previewTextarea.value.trim().length > 0;
+    this.copyBtn.disabled = !hasText;
+    this.saveBtn.disabled = !hasText;
 
     // Output button visibility per settings (Pitfall 5 — read settings on every render)
     const dest = this.plugin.settings.outputDestination;
-    if (dest === 'clipboard') {
-      this.copyBtn.style.display = '';
-      this.saveBtn.style.display = 'none';
-    } else if (dest === 'new-note') {
-      this.copyBtn.style.display = 'none';
-      this.saveBtn.style.display = '';
-    } else {
-      // 'both'
-      this.copyBtn.style.display = '';
-      this.saveBtn.style.display = '';
-    }
+    this.copyBtn.style.display = dest === 'new-note' ? 'none' : '';
+    this.saveBtn.style.display = dest === 'clipboard' ? 'none' : '';
   }
 
   // ── Render helpers ────────────────────────────────────────────────────────────
@@ -401,5 +391,46 @@ export class RunnerView extends ItemView {
 
     const footer = this.questionZoneEl.createEl('p', { text: 'Fix the canvas and try again.' });
     footer.style.color = 'var(--text-muted)';
+  }
+
+  // ── Output handlers ───────────────────────────────────────────────────────────
+
+  /**
+   * Copy accumulated text to the system clipboard (UI-05).
+   * Shows "Copied!" feedback for 1500ms then reverts the button label.
+   */
+  private async handleCopy(): Promise<void> {
+    const text = this.previewTextarea.value;
+    await navigator.clipboard.writeText(text);
+    const originalLabel = this.copyBtn.textContent ?? 'Copy to clipboard';
+    this.copyBtn.textContent = 'Copied!';
+    window.setTimeout(() => {
+      this.copyBtn.textContent = originalLabel;
+    }, 1500);
+  }
+
+  /**
+   * Save accumulated text as a new note in the configured output folder (UI-06).
+   * Creates the folder if it does not exist. Shows Notice on success or failure.
+   * Wrapped in try/catch per T-03-02-02 (DoS mitigation).
+   */
+  private async handleSave(): Promise<void> {
+    const text = this.previewTextarea.value;
+    const folderPath = this.plugin.settings.outputFolderPath || 'RadiProtocol Output';
+    const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+    const fileName = `${timestamp}-protocol.md`;
+    const fullPath = `${folderPath}/${fileName}`;
+    try {
+      // Ensure folder exists (Pitfall 6 — await vault.create)
+      const folderExists = this.app.vault.getAbstractFileByPath(folderPath);
+      if (folderExists === null) {
+        await this.app.vault.createFolder(folderPath);
+      }
+      await this.app.vault.create(fullPath, text);
+      new Notice(`Protocol saved to ${fullPath}`);
+    } catch (err) {
+      new Notice('Failed to save protocol. Check the output folder path in settings.');
+      console.error('[RadiProtocol] Save to note failed:', err);
+    }
   }
 }
