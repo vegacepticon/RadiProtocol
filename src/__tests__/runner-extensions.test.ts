@@ -32,7 +32,7 @@ describe('ProtocolRunner extensions (RUN-11, D-04, D-05, D-07)', () => {
       }
     }
     // Now call setAccumulatedText — should clear undo
-    (runner as unknown as Record<string, (t: string) => void>)['setAccumulatedText']('Custom text');
+    runner.setAccumulatedText('Custom text');
     const afterState = runner.getState();
     if (afterState.status === 'at-node') {
       expect(afterState.canStepBack).toBe(false);
