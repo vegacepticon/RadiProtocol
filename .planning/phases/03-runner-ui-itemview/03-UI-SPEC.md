@@ -5,6 +5,7 @@ status: draft
 shadcn_initialized: false
 preset: none
 created: 2026-04-06
+revised: 2026-04-06
 ---
 
 # Phase 3 — UI Design Contract
@@ -56,10 +57,12 @@ explicit px values that align to the 4-point grid. No arbitrary values.
 All sizes inherit from Obsidian theme variables. Do not hardcode font-size values in px unless
 Obsidian provides no variable.
 
+Two weights only: 400 (body) and 600 (labels and headings).
+
 | Role | Size | Obsidian var | Weight | Line Height | Usage |
 |------|------|--------------|--------|-------------|-------|
 | Body | 14px | `var(--font-text-size)` | 400 (`var(--font-normal)`) | 1.5 | Preview textarea, answer button labels, legend descriptions |
-| Label | 13px | `var(--font-smaller)` | 500 (`var(--font-medium)`) | 1.4 | Question text heading, section sub-labels, legend type names |
+| Label | 13px | `var(--font-smaller)` | 600 (`var(--font-semibold)`) | 1.4 | Question text heading, section sub-labels, legend type names |
 | Heading | 16px | `var(--font-ui-medium)` | 600 (`var(--font-semibold)`) | 1.2 | Zone headings ("Question", "Protocol preview"), validation error heading |
 | Display | — | — | — | — | Not used in Phase 3 |
 
@@ -111,6 +114,10 @@ These are documentation swatches, not interactive elements:
 
 ## Layout Contract
 
+### Focal Point
+
+The primary visual anchor is the question text and answer buttons in the question zone.
+
 ### RunnerView — Two-Zone Vertical Split
 
 ```
@@ -153,7 +160,7 @@ These are documentation swatches, not interactive elements:
 
 - Full-width `textarea` with 4 visible rows minimum
 - Placeholder: "Type your finding here..." (sentence case)
-- Below: one "Continue" button (`mod-cta`)
+- Below: one "Submit answer" button (`mod-cta`)
 - `padding: var(--size-4-2);` inside the question zone
 
 ### Text-Block Auto-Advance
@@ -283,6 +290,7 @@ All text in sentence case per NFR-05.
 |---------|------|
 | Primary CTA (copy) | "Copy to clipboard" |
 | Primary CTA (save) | "Save to note" |
+| Free-text submit button | "Submit answer" |
 | Step back button | "Step back" |
 | Empty state heading | "No protocol loaded" |
 | Empty state body | "Run a protocol from the command palette or use the ribbon icon to get started." |
