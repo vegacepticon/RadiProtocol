@@ -71,6 +71,7 @@ export class SuggestModal<T> {
   getSuggestions(_query: string): T[] { return []; }
   renderSuggestion(_item: T, _el: unknown): void {}
   onChooseSuggestion(_item: T, _evt: unknown): void {}
+  setPlaceholder(_placeholder: string): void {}
   open(): void {}
   close(): void {}
 }
