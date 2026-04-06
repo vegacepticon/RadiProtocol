@@ -97,7 +97,14 @@ Plans:
   5. Running "Run protocol" on an invalid canvas (e.g., no start node) shows a validation error panel with plain-language guidance before any session opens — confirmed by manual test
   6. Closing and reopening Obsidian restores `RunnerView` to its idle state without errors (workspace persistence via `getState`/`setState`) — confirmed by manual test
 
-**Plans**: TBD
+**Plans**: 5 plans
+
+Plans:
+- [ ] 03-00-PLAN.md — Wave 0: four failing test stubs (RunnerView, runner-extensions, runner-commands, settings-tab)
+- [ ] 03-01-PLAN.md — RunnerView full skeleton: two-zone layout, render dispatcher, getState/setState, legend, styles.css
+- [ ] 03-02-PLAN.md — ProtocolRunner extensions (setAccumulatedText, optional startNodeId) + copy/save/inline-edit wiring
+- [ ] 03-03-PLAN.md — NodePickerModal for start-from-node command (SuggestModal, buildNodeOptions)
+- [ ] 03-04-PLAN.md — main.ts full wiring + settings tab three controls + human verification checkpoint
 
 **UI hint**: yes
 
@@ -218,7 +225,7 @@ Plans:
 |-------|----------------|--------|-----------|
 | 1. Project Scaffold and Canvas Parsing Foundation | 0/6 | Not started | - |
 | 2. Core Protocol Runner Engine | 0/3 | Planning complete | - |
-| 3. Runner UI (ItemView) | 0/? | Not started | - |
+| 3. Runner UI (ItemView) | 0/5 | Planning complete | - |
 | 4. Canvas Node Editor Side Panel | 0/? | Not started | - |
 | 5. Dynamic Snippets | 0/? | Not started | - |
 | 6. Loop Support | 0/? | Not started | - |
