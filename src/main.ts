@@ -3,10 +3,13 @@ import { Plugin, Notice, Menu } from 'obsidian';
 import { RadiProtocolSettings, DEFAULT_SETTINGS, RadiProtocolSettingsTab } from './settings';
 import { CanvasParser } from './graph/canvas-parser';
 import { EditorPanelView, EDITOR_PANEL_VIEW_TYPE } from './views/editor-panel-view';
+import { SnippetManagerView, SNIPPET_MANAGER_VIEW_TYPE } from './views/snippet-manager-view';
+import { SnippetService } from './snippets/snippet-service';
 
 export default class RadiProtocolPlugin extends Plugin {
   settings!: RadiProtocolSettings;
   canvasParser!: CanvasParser;
+  snippetService!: SnippetService;
 
   async onload(): Promise<void> {
     // Load settings with defaults guard (NFR-08)
@@ -14,6 +17,9 @@ export default class RadiProtocolPlugin extends Plugin {
 
     // Instantiate pure modules (no Obsidian dependency)
     this.canvasParser = new CanvasParser();
+
+    // Instantiate services
+    this.snippetService = new SnippetService(this.app, this.settings);
 
     // Ribbon icon (Phase 3 will open the runner view)
     this.addRibbonIcon('activity', 'Radiprotocol', () => {
@@ -39,6 +45,16 @@ export default class RadiProtocolPlugin extends Plugin {
 
     // Register EditorPanelView ItemView (EDIT-01)
     this.registerView(EDITOR_PANEL_VIEW_TYPE, (leaf) => new EditorPanelView(leaf, this));
+
+    // Register SnippetManagerView ItemView (SNIP-01)
+    this.registerView(SNIPPET_MANAGER_VIEW_TYPE, (leaf) => new SnippetManagerView(leaf, this));
+
+    // Command: open-snippet-manager (SNIP-01)
+    this.addCommand({
+      id: 'open-snippet-manager',
+      name: 'Open snippet manager',
+      callback: () => { void this.activateSnippetManagerView(); },
+    });
 
     // Command: open-node-editor (EDIT-01 — opens editor panel; NFR-06: no plugin name prefix)
     this.addCommand({
@@ -103,6 +119,19 @@ export default class RadiProtocolPlugin extends Plugin {
     if (leaf) {
       await leaf.setViewState({ type: EDITOR_PANEL_VIEW_TYPE, active: true });
       const activeLeaf = workspace.getLeavesOfType(EDITOR_PANEL_VIEW_TYPE)[0];
+      if (activeLeaf !== undefined) {
+        workspace.revealLeaf(activeLeaf);
+      }
+    }
+  }
+
+  async activateSnippetManagerView(): Promise<void> {
+    const { workspace } = this.app;
+    workspace.detachLeavesOfType(SNIPPET_MANAGER_VIEW_TYPE);
+    const leaf = workspace.getRightLeaf(false);
+    if (leaf) {
+      await leaf.setViewState({ type: SNIPPET_MANAGER_VIEW_TYPE, active: true });
+      const activeLeaf = workspace.getLeavesOfType(SNIPPET_MANAGER_VIEW_TYPE)[0];
       if (activeLeaf !== undefined) {
         workspace.revealLeaf(activeLeaf);
       }
