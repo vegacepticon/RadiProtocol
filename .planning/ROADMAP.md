@@ -13,7 +13,7 @@
 - [ ] **Phase 1: Project Scaffold and Canvas Parsing Foundation** - Verified plugin scaffold, pure graph model, full validation suite, test infrastructure, and dev toolchain
 - [x] **Phase 2: Core Protocol Runner Engine** - Fully unit-tested traversal state machine with step-back, text accumulation, and undo — no UI required to verify
 - [ ] **Phase 3: Runner UI (ItemView)** - End-to-end demonstrable plugin: open a canvas, run a protocol, see live preview, copy output
-- [ ] **Phase 4: Canvas Node Editor Side Panel** - Protocol authoring without touching raw JSON: per-node forms write back to the canvas file
+- [x] **Phase 4: Canvas Node Editor Side Panel** - Protocol authoring without touching raw JSON: per-node forms write back to the canvas file
 - [ ] **Phase 5: Dynamic Snippets** - Placeholder fill-in modal integrated into the runner; snippet CRUD backed by per-file vault storage
 - [ ] **Phase 6: Loop Support** - Multi-iteration protocol sections with correct undo, iteration display, and exit UX
 - [ ] **Phase 7: Mid-Session Save and Resume** - Auto-save after every step; resume-session prompt; validation on resume against modified canvases
@@ -130,7 +130,14 @@ Plans:
   3. The canvas file is not corrupted after the editor writes to it — confirmed by re-opening the canvas in Obsidian's native Canvas view and verifying all nodes and edges are intact
   4. Attempting to write to an open canvas either (a) prompts the user to close it first, or (b) uses a guarded undocumented API path with a clear version-warning notice — confirmed by attempting an edit with the canvas open
 
-**Plans**: TBD
+**Plans**: 3 plans
+
+Plans:
+- [x] 04-00-PLAN — Wave 0: RED test stubs for EditorPanelView (editor-panel.test.ts, canvas-write-back.test.ts)
+- [x] 04-01-PLAN — EditorPanelView full implementation: idle state, loadNode(), renderNodeForm(), buildKindForm() for all 7 node kinds, pendingEdits, Phase 4 CSS
+- [x] 04-02-PLAN — saveNodeEdits() write-back with canvas-open guard, PROTECTED_FIELDS, vault.modify(); main.ts wiring: registerView, command, context menu, activateEditorPanelView(), openEditorPanelForNode()
+
+**Completed**: 2026-04-06
 
 **UI hint**: yes
 
@@ -224,9 +231,9 @@ Plans:
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Project Scaffold and Canvas Parsing Foundation | 0/6 | Not started | - |
-| 2. Core Protocol Runner Engine | 0/3 | Planning complete | - |
+| 2. Core Protocol Runner Engine | 3/3 | Complete | 2026-04-06 |
 | 3. Runner UI (ItemView) | 0/5 | Planning complete | - |
-| 4. Canvas Node Editor Side Panel | 0/? | Not started | - |
+| 4. Canvas Node Editor Side Panel | 3/3 | Complete | 2026-04-06 |
 | 5. Dynamic Snippets | 0/? | Not started | - |
 | 6. Loop Support | 0/? | Not started | - |
 | 7. Mid-Session Save and Resume | 0/? | Not started | - |

@@ -3,28 +3,28 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-last_updated: "2026-04-06T14:05:06.348Z"
+last_updated: "2026-04-06T17:45:00Z"
 progress:
   total_phases: 7
-  completed_phases: 2
-  total_plans: 9
-  completed_plans: 9
-  percent: 29
+  completed_phases: 3
+  total_plans: 12
+  completed_plans: 12
+  percent: 43
 ---
 
 # RadiProtocol — Project State
 
 **Updated:** 2026-04-06
 **Milestone:** v1.0 — Initial public release
-**Status:** Executing Phase 04
+**Status:** Executing Phase 05
 
 ---
 
 ## Current Position
 
-Phase: 04 (canvas-node-editor-side-panel) — EXECUTING
-Plan: 1 of 3
-Next phase: 04 (canvas-node-editor-side-panel) — NOT STARTED
+Phase: 05 (dynamic-snippets) — NOT STARTED
+Plan: 0 of TBD
+Next phase: 05 (dynamic-snippets) — NOT STARTED
 
 
 All pre-development planning is complete:
@@ -34,7 +34,7 @@ All pre-development planning is complete:
 - ROADMAP.md — 7-phase roadmap with UAT criteria and risk flags
 - Research: FEATURES.md, PITFALLS.md, STACK.md, ARCHITECTURE.md, SUMMARY.md
 
-**Next action:** `/gsd-plan-phase` on Phase 1 (Project Scaffold + Canvas Parsing Foundation)
+**Next action:** `/gsd-plan-phase` on Phase 5 (Dynamic Snippets)
 
 ---
 
@@ -42,10 +42,10 @@ All pre-development planning is complete:
 
 | Phase | Name | Status |
 |-------|------|--------|
-| 1 | Project Scaffold + Canvas Parsing Foundation | ✓ Complete |
-| 2 | Core Protocol Runner Engine | ✓ Complete |
+| 1 | Project Scaffold + Canvas Parsing Foundation | Complete |
+| 2 | Core Protocol Runner Engine | Complete |
 | 3 | Runner UI (ItemView) | Not started |
-| 4 | Canvas Node Editor Side Panel | Not started |
+| 4 | Canvas Node Editor Side Panel | Complete |
 | 5 | Dynamic Snippets | Not started |
 | 6 | Loop Support | Not started |
 | 7 | Mid-Session Save + Resume | Not started |
@@ -63,18 +63,17 @@ All pre-development planning is complete:
 | Discriminated union on `kind` for node types | Type-safe graph model; 7 node types: start, question, answer, text-block, free-text, loop-start, loop-end |
 | Snapshot undo stack | Simplest correct approach for step-back; protocol text is small (<5KB) |
 | `radiprotocol_*` property namespace | Avoids collisions with other plugins and future Obsidian updates |
+| Canvas write-back Strategy A | Require canvas closed before any vault.modify() — simple and safe; avoids undocumented internals (A4 resolved) |
 
 ---
 
-## Open Assumptions (Require User Confirmation Before Phases 4 + 6)
+## Open Assumptions (Require User Confirmation Before Phases 5 + 6)
 
 | ID | Assumption | Phase |
 |----|-----------|-------|
 | A1 | Loop-start node uses two outgoing edges (continue + exit) rather than a dedicated "loop again?" node | 6 |
 | A2 | Snippet placeholder syntax uses `{{placeholder_id}}` double-curly-brace format | 5 |
 | A3 | Session files stored vault-visible in `.radiprotocol/sessions/` (not hidden in plugin data.json) | 7 |
-| A4 | Canvas side panel write-back strategy: require canvas closed before editing (safest); vs undocumented internals (fragile) | 4 |
-| A5 | The recommended option for A4 is: require canvas closed — user must confirm this UX tradeoff | 4 |
 
 ---
 
@@ -92,6 +91,6 @@ All pre-development planning is complete:
 
 ## Repository
 
-- Branch: `master`
+- Branch: `main`
 - Remote: (not yet configured)
-- Last commit: `1425e60` — docs: add requirements and 7-phase roadmap for v1
+- Last commit: `2530427` — docs(04-02): finalize SUMMARY — human UAT approved, all 7 tests passed

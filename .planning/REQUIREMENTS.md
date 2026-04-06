@@ -231,11 +231,11 @@ These design decisions are flagged in ARCHITECTURE.md as assumed — not yet val
 | RUN-10 | Phase 3 | Pending |
 | RUN-11 | Phase 3 | Pending |
 | UI-12 | Phase 3 | Pending |
-| EDIT-01 | Phase 4 | Pending |
-| EDIT-02 | Phase 4 | Pending |
-| EDIT-03 | Phase 4 | Pending |
-| EDIT-04 | Phase 4 | Pending |
-| EDIT-05 | Phase 4 | Pending |
+| EDIT-01 | Phase 4 | Complete |
+| EDIT-02 | Phase 4 | Complete |
+| EDIT-03 | Phase 4 | Complete |
+| EDIT-04 | Phase 4 | Complete |
+| EDIT-05 | Phase 4 | Complete |
 | SNIP-01 | Phase 5 | Pending |
 | SNIP-02 | Phase 5 | Pending |
 | SNIP-03 | Phase 5 | Pending |
