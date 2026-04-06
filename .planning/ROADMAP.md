@@ -11,7 +11,7 @@
 ## Phases
 
 - [ ] **Phase 1: Project Scaffold and Canvas Parsing Foundation** - Verified plugin scaffold, pure graph model, full validation suite, test infrastructure, and dev toolchain
-- [ ] **Phase 2: Core Protocol Runner Engine** - Fully unit-tested traversal state machine with step-back, text accumulation, and undo — no UI required to verify
+- [x] **Phase 2: Core Protocol Runner Engine** - Fully unit-tested traversal state machine with step-back, text accumulation, and undo — no UI required to verify
 - [ ] **Phase 3: Runner UI (ItemView)** - End-to-end demonstrable plugin: open a canvas, run a protocol, see live preview, copy output
 - [ ] **Phase 4: Canvas Node Editor Side Panel** - Protocol authoring without touching raw JSON: per-node forms write back to the canvas file
 - [ ] **Phase 5: Dynamic Snippets** - Placeholder fill-in modal integrated into the runner; snippet CRUD backed by per-file vault storage
@@ -71,9 +71,9 @@ Plans:
 **Plans**: 3 plans
 
 Plans:
-- [ ] 02-00-PLAN.md — Wave 0: four canvas fixtures + failing test stubs for TextAccumulator and ProtocolRunner (RED)
-- [ ] 02-01-PLAN.md — RunnerState discriminated union (5 states + UndoEntry) + TextAccumulator implementation (tests GREEN)
-- [ ] 02-02-PLAN.md — ProtocolRunner full state machine implementation (all runner tests GREEN)
+- [x] 02-00-PLAN.md — Wave 0: four canvas fixtures + failing test stubs for TextAccumulator and ProtocolRunner (RED)
+- [x] 02-01-PLAN.md — RunnerState discriminated union (5 states + UndoEntry) + TextAccumulator implementation (tests GREEN)
+- [x] 02-02-PLAN.md — ProtocolRunner full state machine implementation (all runner tests GREEN)
 
 **Risk flags**:
 - Step-back must revert **both** navigation state and accumulated text. Using text diffs instead of full snapshots can introduce partial-revert bugs under edge cases (e.g., free-text input with embedded newlines). Snapshots are the correct approach.
