@@ -1,8 +1,10 @@
 // main.ts
 import { Plugin, Notice, Menu } from 'obsidian';
+import type { TFile } from 'obsidian';
 import { RadiProtocolSettings, DEFAULT_SETTINGS, RadiProtocolSettingsTab } from './settings';
 import { CanvasParser } from './graph/canvas-parser';
 import { EditorPanelView, EDITOR_PANEL_VIEW_TYPE } from './views/editor-panel-view';
+import { RunnerView, RUNNER_VIEW_TYPE } from './views/runner-view';
 import { SnippetManagerView, SNIPPET_MANAGER_VIEW_TYPE } from './views/snippet-manager-view';
 import { SnippetService } from './snippets/snippet-service';
 
@@ -30,9 +32,7 @@ export default class RadiProtocolPlugin extends Plugin {
     this.addCommand({
       id: 'run-protocol',
       name: 'Run protocol',
-      callback: () => {
-        new Notice('Protocol runner coming in phase 3.');
-      },
+      callback: () => { void this.activateRunnerView(); },
     });
 
     this.addCommand({
@@ -45,6 +45,9 @@ export default class RadiProtocolPlugin extends Plugin {
 
     // Register EditorPanelView ItemView (EDIT-01)
     this.registerView(EDITOR_PANEL_VIEW_TYPE, (leaf) => new EditorPanelView(leaf, this));
+
+    // Register RunnerView ItemView (UI-01)
+    this.registerView(RUNNER_VIEW_TYPE, (leaf) => new RunnerView(leaf, this));
 
     // Register SnippetManagerView ItemView (SNIP-01)
     this.registerView(SNIPPET_MANAGER_VIEW_TYPE, (leaf) => new SnippetManagerView(leaf, this));
@@ -135,6 +138,51 @@ export default class RadiProtocolPlugin extends Plugin {
       if (activeLeaf !== undefined) {
         workspace.revealLeaf(activeLeaf);
       }
+    }
+  }
+
+  async activateRunnerView(): Promise<void> {
+    const { workspace } = this.app;
+    const existing = workspace.getLeavesOfType(RUNNER_VIEW_TYPE);
+    if (existing.length > 0 && existing[0] !== undefined) {
+      workspace.revealLeaf(existing[0]);
+      return;
+    }
+    const leaf = workspace.getRightLeaf(false);
+    if (leaf !== null) {
+      await leaf.setViewState({ type: RUNNER_VIEW_TYPE, active: true });
+      workspace.revealLeaf(leaf);
+    }
+    // After RunnerView opens, trigger openCanvas on the active canvas file if any
+    const canvasLeaves = workspace.getLeavesOfType('canvas');
+    const activeCanvas = canvasLeaves[0];
+    if (activeCanvas !== undefined) {
+      const filePath = (activeCanvas.view as { file?: { path: string } } | undefined)?.file?.path;
+      if (filePath !== undefined) {
+        const runnerLeaves = workspace.getLeavesOfType(RUNNER_VIEW_TYPE);
+        const runnerLeaf = runnerLeaves[0];
+        if (runnerLeaf !== undefined) {
+          const view = runnerLeaf.view as RunnerView;
+          void view.openCanvas(filePath);
+        }
+      }
+    }
+  }
+
+  async saveOutputToNote(text: string): Promise<void> {
+    const { workspace, vault } = this.app;
+    const folderPath = this.settings.outputFolderPath;
+    // Ensure output folder exists (T-5-14: vault paths scoped to vault root)
+    const folderExists = await vault.adapter.exists(folderPath);
+    if (!folderExists) {
+      await vault.createFolder(folderPath);
+    }
+    const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+    const notePath = `${folderPath}/Report-${timestamp}.md`;
+    await vault.create(notePath, text);
+    const file = vault.getAbstractFileByPath(notePath);
+    if (file !== null) {
+      await workspace.getLeaf('tab').openFile(file as TFile);
     }
   }
 
