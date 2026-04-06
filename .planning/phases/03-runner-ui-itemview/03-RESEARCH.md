@@ -654,22 +654,13 @@ start(graph: ProtocolGraph, startNodeId?: string): void {
 
 ---
 
-## Open Questions
+## Open Questions (RESOLVED)
 
-1. **ensureFolder before vault.create() in Save-to-Note**
-   - What we know: `vault.create()` fails if the folder doesn't exist. `vault-utils.ts` already has `ensureFolder()`.
-   - What's unclear: Is `ensureFolder` already imported and usable from within `RunnerView`?
-   - Recommendation: The planner should include a task to call `ensureFolder(app.vault, outputFolderPath)` before `vault.create()` in `handleSaveToNote()`. This is a one-liner using the already-implemented utility.
+1. **ensureFolder before vault.create() in Save-to-Note** — RESOLVED: Plan 02 Task 2 `handleSave()` calls `vault.getAbstractFileByPath(folderPath)` and `vault.createFolder()` if null before `vault.create()`. `ensureFolder` from `vault-utils.ts` is used directly.
 
-2. **Answer button order consistency**
-   - What we know: `adjacency` map is built from `raw.edges` in parse order from the canvas JSON.
-   - What's unclear: Does Obsidian Canvas preserve edge insertion order across saves?
-   - Recommendation: Accept current behavior for v1. Document that button order matches canvas edge order. No action needed in this phase.
+2. **Answer button order consistency** — RESOLVED: Accept current behavior for v1. Button order matches canvas edge insertion order. No action needed in Phase 3.
 
-3. **`start-protocol-from-node` command when RunnerView is not yet open**
-   - What we know: The command can fire from the command palette at any time.
-   - What's unclear: Should the command auto-open RunnerView first, then show the picker? Or require RunnerView to already be open?
-   - Recommendation: The command should open RunnerView if not open, then show the `SuggestModal`. If no canvas is currently loaded in RunnerView, show `new Notice('Open a canvas protocol first.')` per UI-SPEC.md copywriting contract.
+3. **`start-protocol-from-node` when RunnerView not open** — RESOLVED: Plan 04 shows `new Notice('Open a canvas protocol first.')` and returns early. Auto-opening RunnerView before the picker is not implemented; the notice is the accepted UX for v1. The command requires RunnerView to already be open with a canvas loaded.
 
 ---
 
