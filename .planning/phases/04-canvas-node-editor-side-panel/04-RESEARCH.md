@@ -626,22 +626,19 @@ this.registerEvent(
 
 ---
 
-## Open Questions
+## Open Questions (RESOLVED)
 
-1. **Write-back strategy: Strategy A only, or Strategy A + B fallback?**
+1. **Write-back strategy: Strategy A only, or Strategy A + B fallback?** (RESOLVED)
    - What we know: Strategy A is documented as the recommended option (STATE.md A5). Strategy B is possible but requires additional version-guard code.
-   - What's unclear: Whether the user wants the "seamless" Strategy B enhancement or prefers the simpler Strategy A only.
-   - Recommendation: Implement Strategy A only for Phase 4. Strategy B can be added as a Phase 4 enhancement task if time allows.
+   - **Resolution:** Strategy A only is implemented in Phase 4. The plan uses `isCanvasOpen()` guard + `vault.modify()` when canvas is closed. Strategy B (undocumented `canvas.setData()`) is deferred — it can be added as a future enhancement if the seamless UX becomes a priority. No task in this phase implements Strategy B.
 
-2. **How to retrieve the canvas file path from the canvas:node-menu callback's node object?**
+2. **How to retrieve the canvas file path from the canvas:node-menu callback's node object?** (RESOLVED)
    - What we know: The node object is an internal Canvas class instance. The canvas leaf's `view.file.path` is the correct path. But matching the node object's canvas back to a leaf is indirect.
-   - What's unclear: Whether `node.canvas.view.file.path` (internal chain) is reliable or whether scanning all canvas leaves is safer.
-   - Recommendation: Scan all canvas leaves via `getLeavesOfType('canvas')` and find the one whose `view.file.path` is a `.canvas` file. This is more robust than following the internal `node.canvas` reference chain.
+   - **Resolution:** Scan all canvas leaves via `getLeavesOfType('canvas')` and find the one whose internal `canvas` property matches `node.canvas`. This is implemented in Plan 02 Task 2 (main.ts context menu handler). The `node.canvas.view.file.path` internal chain is NOT used — leaf scanning is more robust (Pitfall 3).
 
-3. **Does removing `radiprotocol_nodeType` (to "un-mark" a node as a RadiProtocol node) require also removing all `radiprotocol_*` fields?**
+3. **Does removing `radiprotocol_nodeType` (to "un-mark" a node as a RadiProtocol node) require also removing all `radiprotocol_*` fields?** (RESOLVED)
    - What we know: The parser silently skips nodes without `radiprotocol_nodeType`. Orphaned `radiprotocol_*` fields on a plain canvas node are harmless but messy.
-   - What's unclear: Whether the UX should clean up stale fields when a node is converted back to a plain node.
-   - Recommendation: When `radiprotocol_nodeType` is removed or set to empty, remove all `radiprotocol_*` fields to keep the canvas JSON clean.
+   - **Resolution:** YES — implemented in Plan 02 Task 1. When `saveNodeEdits()` receives `radiprotocol_nodeType: ''` (or unset), it iterates all keys on the node and deletes every key matching `key.startsWith('radiprotocol_')`. This keeps the canvas JSON clean and prevents stale fields from accumulating. The `canvas-write-back.test.ts` stub (Plan 00 Task 2, test 5) provides automated coverage for this behavior.
 
 ---
 
