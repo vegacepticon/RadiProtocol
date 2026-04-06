@@ -153,3 +153,41 @@
   font-weight: var(--font-semibold);
   margin-bottom: var(--size-4-1);
 }
+
+/* Phase 4: EditorPanelView ─────────────────────────────────────────────── */
+
+.rp-editor-panel {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  padding: var(--size-4-2); /* 16px */
+  box-sizing: border-box;
+  overflow-y: auto;
+}
+
+.rp-editor-idle {
+  color: var(--text-muted);
+  font-size: var(--font-text-size);
+  padding: var(--size-4-2); /* 16px */
+}
+
+.rp-editor-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--size-2-1); /* 4px */
+  flex: 1 1 auto;
+  overflow-y: auto;
+}
+
+.rp-editor-save-row {
+  flex: 0 0 auto;
+  padding-top: var(--size-4-1); /* 8px */
+  border-top: 1px solid var(--background-modifier-border);
+}
+
+.rp-editor-start-note {
+  color: var(--text-muted);
+  font-style: italic;
+  font-size: var(--font-text-size);
+  padding: var(--size-4-1) 0; /* 8px 0 */
+}
