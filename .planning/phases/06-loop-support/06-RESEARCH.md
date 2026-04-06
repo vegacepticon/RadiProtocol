@@ -517,22 +517,25 @@ case 'loop-end': {
 
 ---
 
-## Open Questions
+## Open Questions (RESOLVED)
 
 1. **Canvas edge labels: user-defined or fixed strings?**
    - What we know: `LoopStartNode` has `loopLabel` (button text) and `exitLabel` (button text). The routing must use canvas edge labels.
    - What's unclear: Must the protocol author label their canvas edges exactly `"continue"` and `"exit"`? Or will any two edges work positionally (first = continue, second = exit)?
    - Recommendation: Fix edge labels to `"continue"` and `"exit"` as internal routing strings. Surface this requirement in the node editor UI (Phase 4 already built) and in documentation. Positional routing is fragile — canvas edge order is not guaranteed.
+   - **RESOLVED:** Fixed strings `"continue"` and `"exit"` adopted. The `loop-body.canvas` fixture uses these labels; `edgeByLabel()` looks them up by string. No positional routing.
 
 2. **Validator Check 6b: should every loop-start require a reachable loop-end?**
    - What we know: Current validator only checks the reverse (loop-end references a valid loop-start).
    - What's unclear: Is a loop-start with no body and no loop-end a valid protocol (degenerate loop) or always an error?
    - Recommendation: Add Check 6b. A loop-start with no reachable loop-end referencing it is almost certainly a protocol authoring error and should be reported before session start.
+   - **RESOLVED:** Check 6b is **optional** for Phase 6. Existing validator covers orphaned loop-end (Check 6a) and accidental cycles (DFS). Check 6b deferred to post-MVP hardening.
 
 3. **Multi-iteration text formatting: concatenated or per-iteration sections?**
    - What we know: Text from each iteration is appended to the same `accumulatedText` buffer. LOOP-03 says the stack tracks "text accumulated before loop entry" — implying each iteration appends to the same buffer.
    - What's unclear: Should iteration text be separated (e.g., newlines between "Lesion 1" and "Lesion 2" sections)?
    - Recommendation: Use the `text-block` nodes inside the loop body for any separator text the protocol author wants. The runner should not inject any implicit formatting between iterations. The `textBeforeLoop` snapshot in `LoopContext` is for undo correctness, not for formatting boundaries.
+   - **RESOLVED:** Runner concatenates to `accumulatedText` with no implicit separators. Protocol authors use `text-block` nodes inside the loop body for desired separator text.
 
 ---
 
