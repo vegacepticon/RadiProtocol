@@ -196,7 +196,12 @@ Plans:
   4. Stepping back from the second iteration of a loop correctly reverts to the last question of the first iteration (not to before the loop started) — confirmed by manual test
   5. A canvas with an accidental cycle (not through a loop-end node) is rejected by the validator with a clear error before the session starts — confirmed by manual test
 
-**Plans**: TBD
+**Plans**: 3 plans
+
+Plans:
+- [ ] 06-01-PLAN.md — Wave 0: loop-body.canvas fixture + 7 RED test stubs (runner loop cases, validator loop case)
+- [ ] 06-02-PLAN.md — Wave 1: LoopContext type, extended UndoEntry/AtNodeState, full loop engine in ProtocolRunner (all 7 tests GREEN)
+- [ ] 06-03-PLAN.md — Wave 2: RunnerView loop-end UI (iteration label, loop again / done buttons), Phase 6 CSS, human UAT checkpoint
 
 **UI hint**: yes
 
@@ -242,5 +247,5 @@ Plans:
 | 3. Runner UI (ItemView) | 0/5 | Planning complete | - |
 | 4. Canvas Node Editor Side Panel | 3/3 | Complete | 2026-04-06 |
 | 5. Dynamic Snippets | 0/5 | Planning complete | - |
-| 6. Loop Support | 0/? | Not started | - |
+| 6. Loop Support | 0/3 | Planning complete | - |
 | 7. Mid-Session Save and Resume | 0/? | Not started | - |
