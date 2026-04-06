@@ -1,5 +1,4 @@
-import { ItemView, WorkspaceLeaf, Setting, TFile } from 'obsidian';
-import type { App } from 'obsidian';
+import { ItemView, WorkspaceLeaf, Setting, TFile, Notice } from 'obsidian';
 import type { RPNodeKind } from '../graph/graph-model';
 import type RadiProtocolPlugin from '../main';
 
@@ -48,9 +47,90 @@ export class EditorPanelView extends ItemView {
     void this.renderNodeForm(canvasFilePath, nodeId);
   }
 
-  async saveNodeEdits(filePath: string, nodeId: string, edits: Record<string, unknown>): Promise<void> {
-    // Implementation added in Plan 02 — write-back with canvas-open guard
-    void filePath; void nodeId; void edits;
+  private isCanvasOpen(filePath: string): boolean {
+    return this.plugin.app.workspace
+      .getLeavesOfType('canvas')
+      .some(leaf => {
+        const view = leaf.view as { file?: { path: string } };
+        return view.file?.path === filePath;
+      });
+  }
+
+  async saveNodeEdits(
+    filePath: string,
+    nodeId: string,
+    edits: Record<string, unknown>
+  ): Promise<void> {
+    // EDIT-04: Strategy A — require canvas closed before writing
+    if (this.isCanvasOpen(filePath)) {
+      new Notice('Close the canvas before editing node properties.');
+      return;
+    }
+
+    const file = this.plugin.app.vault.getAbstractFileByPath(filePath);
+    if (!file) {
+      new Notice('Canvas file not found in vault.');
+      return;
+    }
+
+    let raw: string;
+    try {
+      raw = await this.plugin.app.vault.read(file as TFile);
+    } catch {
+      new Notice('Could not read canvas file.');
+      return;
+    }
+
+    let canvasData: { nodes: Array<Record<string, unknown>>; edges: unknown[] };
+    try {
+      canvasData = JSON.parse(raw) as typeof canvasData;
+    } catch {
+      new Notice('Canvas file contains invalid JSON — cannot save.');
+      return;
+    }
+
+    const nodeIndex = canvasData.nodes.findIndex(n => n['id'] === nodeId);
+    if (nodeIndex === -1) {
+      new Notice('Node not found in canvas — it may have been deleted.');
+      return;
+    }
+
+    // Patch only radiprotocol_* fields and the native 'text' field (cosmetic sync).
+    // NEVER modify: id, x, y, width, height, type, color.
+    const PROTECTED_FIELDS = new Set(['id', 'x', 'y', 'width', 'height', 'type', 'color']);
+
+    // Q3 resolution (RESEARCH.md): if nodeType is being unset (empty string),
+    // remove ALL radiprotocol_* fields from the node to prevent orphaned keys.
+    const nodeTypeEdit = edits['radiprotocol_nodeType'];
+    const isUnmarking = nodeTypeEdit === '' || nodeTypeEdit === undefined;
+
+    const node = canvasData.nodes[nodeIndex];
+    if (node !== undefined) {
+      if (isUnmarking && 'radiprotocol_nodeType' in edits) {
+        // Remove all radiprotocol_* fields from the node
+        for (const key of Object.keys(node)) {
+          if (key.startsWith('radiprotocol_')) {
+            delete node[key];
+          }
+        }
+      } else {
+        for (const [key, value] of Object.entries(edits)) {
+          if (PROTECTED_FIELDS.has(key)) continue;
+          if (value === undefined) {
+            delete node[key];
+          } else {
+            node[key] = value;
+          }
+        }
+      }
+    }
+
+    try {
+      await this.plugin.app.vault.modify(file as TFile, JSON.stringify(canvasData, null, 2));
+      new Notice('Node properties saved.');
+    } catch {
+      new Notice('Could not save — write failed. Check file permissions.');
+    }
   }
 
   private async renderNodeForm(filePath: string, nodeId: string): Promise<void> {
