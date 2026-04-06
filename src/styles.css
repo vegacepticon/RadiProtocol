@@ -191,3 +191,233 @@
   font-size: var(--font-text-size);
   padding: var(--size-4-1) 0; /* 8px 0 */
 }
+
+/* Phase 5: SnippetManagerView ──────────────────────────────────────────── */
+
+.rp-snippet-manager {
+  display: flex;
+  flex-direction: row;
+  height: 100%;
+  overflow: hidden;
+}
+
+.rp-snippet-list-panel {
+  width: 200px;
+  flex: 0 0 200px;
+  display: flex;
+  flex-direction: column;
+  background: var(--background-secondary);
+  border-right: 1px solid var(--background-modifier-border);
+  overflow-y: auto;
+}
+
+.rp-snippet-list-item {
+  padding: var(--size-4-1) var(--size-4-2); /* 8px 16px */
+  min-height: 32px;
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  font-size: var(--font-text-size);
+  font-weight: var(--font-normal);
+  line-height: 1.5;
+}
+
+.rp-snippet-list-item.is-active {
+  background: var(--background-modifier-active-hover);
+}
+
+.rp-snippet-form {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  background: var(--background-primary);
+  padding: var(--size-4-2); /* 16px */
+  overflow-y: auto;
+  gap: var(--size-4-1); /* 8px */
+}
+
+.rp-snippet-form-section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--size-2-1); /* 4px */
+}
+
+.rp-snippet-form-section label {
+  font-size: var(--font-smaller); /* 13px */
+  font-weight: var(--font-semibold); /* 600 */
+  line-height: 1.4;
+}
+
+.rp-snippet-form-section textarea {
+  resize: vertical;
+  min-height: 80px;
+  font-family: var(--font-monospace);
+  font-size: var(--font-text-size);
+  line-height: 1.5;
+  padding: var(--size-4-1);
+  box-sizing: border-box;
+  width: 100%;
+}
+
+.rp-snippet-action-row {
+  display: flex;
+  flex-direction: row;
+  gap: var(--size-4-1); /* 8px */
+  margin-top: auto;
+  padding-top: var(--size-4-1);
+  border-top: 1px solid var(--background-modifier-border);
+  flex: 0 0 auto;
+}
+
+.rp-add-placeholder-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--size-2-1); /* 4px */
+  padding: var(--size-4-1);
+  background: var(--background-secondary);
+  border: 1px solid var(--background-modifier-border);
+  border-radius: var(--radius-s);
+}
+
+.rp-placeholder-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--size-2-1); /* 4px */
+}
+
+.rp-placeholder-row {
+  display: flex;
+  flex-direction: column;
+  gap: var(--size-2-1);
+  padding: var(--size-2-1) var(--size-4-1);
+  border: 1px solid var(--background-modifier-border);
+  border-radius: var(--radius-s);
+  cursor: pointer;
+}
+
+.rp-placeholder-row.is-expanded {
+  cursor: default;
+  background: var(--background-secondary);
+}
+
+.rp-placeholder-row-header {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: var(--size-4-1); /* 8px */
+  min-height: 32px;
+}
+
+.rp-placeholder-type-badge {
+  font-size: var(--font-smaller);
+  color: var(--text-muted);
+}
+
+.rp-placeholder-orphan-badge {
+  font-size: var(--font-smaller);
+  color: var(--text-warning);
+  padding: var(--size-2-1) var(--size-4-1);
+  border: 1px solid var(--text-warning);
+  border-radius: var(--radius-s);
+}
+
+.rp-option-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--size-2-1); /* 4px */
+}
+
+.rp-option-row {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: var(--size-2-1);
+}
+
+.rp-option-row input {
+  flex: 1 1 auto;
+}
+
+.rp-option-row button {
+  width: 24px;
+  height: 24px;
+  flex: 0 0 24px;
+  padding: 0;
+  font-size: var(--font-smaller);
+}
+
+/* Phase 5: SnippetFillInModal ──────────────────────────────────────────── */
+
+.rp-snippet-modal {
+  display: flex;
+  flex-direction: column;
+  gap: var(--size-4-2); /* 16px */
+  padding: var(--size-4-4) var(--size-4-2); /* 32px 16px */
+}
+
+.rp-snippet-modal-field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--size-2-1); /* 4px */
+}
+
+.rp-snippet-modal-label {
+  font-size: var(--font-smaller); /* 13px */
+  font-weight: var(--font-semibold); /* 600 */
+  line-height: 1.4;
+}
+
+.rp-snippet-modal-options {
+  display: flex;
+  flex-direction: column;
+  gap: var(--size-2-1); /* 4px */
+}
+
+.rp-snippet-modal-custom-row {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: var(--size-4-1); /* 8px */
+}
+
+.rp-snippet-modal-custom-row label {
+  font-size: var(--font-text-size);
+  font-weight: var(--font-normal);
+  flex: 0 0 auto;
+}
+
+.rp-snippet-modal-custom-row input {
+  flex: 1 1 auto;
+}
+
+.rp-snippet-preview-label {
+  font-size: var(--font-smaller); /* 13px */
+  font-weight: var(--font-semibold); /* 600 */
+  line-height: 1.4;
+}
+
+.rp-snippet-preview {
+  width: 100%;
+  min-height: 80px;
+  resize: none;
+  font-family: var(--font-monospace);
+  font-size: var(--font-text-size);
+  font-weight: var(--font-normal);
+  line-height: 1.5;
+  background: var(--background-primary);
+  border: 1px solid var(--background-modifier-border);
+  padding: var(--size-4-1);
+  box-sizing: border-box;
+}
+
+.rp-snippet-modal-btn-row {
+  display: flex;
+  flex-direction: row;
+  justify-content: flex-end;
+  gap: var(--size-4-1); /* 8px */
+  flex: 0 0 auto;
+}
+
+.rp-snippet-modal-btn-row button {
+  min-height: 36px;
+}
