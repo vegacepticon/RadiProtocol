@@ -110,12 +110,16 @@ export class Plugin {
 export class Modal {
   app: unknown;
   contentEl: ReturnType<typeof makeMockEl>;
+  titleEl: ReturnType<typeof makeMockEl>;
   constructor(app: unknown) {
     this.app = app;
     this.contentEl = makeMockEl();
+    this.titleEl = makeMockEl();
   }
   open(): void {}
   close(): void {}
+  onOpen(): void {}
+  onClose(): void {}
 }
 
 export class SuggestModal<T> {
