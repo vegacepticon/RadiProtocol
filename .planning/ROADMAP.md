@@ -2,7 +2,7 @@
 
 **Project:** RadiProtocol
 **Milestone:** v1 — Community Plugin Release
-**Last updated:** 2026-04-05
+**Last updated:** 2026-04-06
 **Total phases:** 7
 **Granularity:** Standard
 
@@ -40,12 +40,12 @@
 **Plans**: 6 plans
 
 Plans:
-- [ ] 01-00-PLAN-wave0-test-infrastructure.md — Vitest config, four canvas fixtures, stub test files (RED)
-- [ ] 01-01-PLAN-plugin-scaffold.md — package.json, tsconfig, esbuild+.env copy, manifest, LICENSE
-- [ ] 01-02-PLAN-directory-structure-stubs.md — full src/ tree with typed stubs for all 7 modules
-- [ ] 01-03-PLAN-canvas-parser.md — CanvasParser.parse() implementation, tests GREEN
-- [ ] 01-04-PLAN-graph-validator.md — GraphValidator.validate() six error classes, tests GREEN
-- [ ] 01-05-PLAN-eslint-and-build.md — ESLint config, zero errors, integrated lint+test+build check
+- [x] 01-00-PLAN-wave0-test-infrastructure.md — Vitest config, four canvas fixtures, stub test files (RED)
+- [x] 01-01-PLAN-plugin-scaffold.md — package.json, tsconfig, esbuild+.env copy, manifest, LICENSE
+- [x] 01-02-PLAN-directory-structure-stubs.md — full src/ tree with typed stubs for all 7 modules
+- [x] 01-03-PLAN-canvas-parser.md — CanvasParser.parse() implementation, tests GREEN
+- [x] 01-04-PLAN-graph-validator.md — GraphValidator.validate() six error classes, tests GREEN
+- [x] 01-05-PLAN-eslint-and-build.md — ESLint config, zero errors, integrated lint+test+build check
 
 **Risk flags**:
 - Custom `radiprotocol_*` properties may be stripped by future Obsidian major-version canvas editor upgrades. Mitigate: validate property round-trip in test vault early; namespace strictly.
@@ -68,7 +68,12 @@ Plans:
   4. A protocol with a loop body (even without full loop-start/loop-end node support) correctly handles the iteration cap: after `maxIterations` steps, the runner transitions to `error` state with a clear message — confirmed by Vitest
   5. All five discriminated union states (`idle`, `at-node`, `awaiting-snippet-fill`, `complete`, `error`) are reachable and transition correctly — confirmed by Vitest state-machine tests
 
-**Plans**: TBD
+**Plans**: 3 plans
+
+Plans:
+- [ ] 02-00-PLAN.md — Wave 0: four canvas fixtures + failing test stubs for TextAccumulator and ProtocolRunner (RED)
+- [ ] 02-01-PLAN.md — RunnerState discriminated union (5 states + UndoEntry) + TextAccumulator implementation (tests GREEN)
+- [ ] 02-02-PLAN.md — ProtocolRunner full state machine implementation (all runner tests GREEN)
 
 **Risk flags**:
 - Step-back must revert **both** navigation state and accumulated text. Using text diffs instead of full snapshots can introduce partial-revert bugs under edge cases (e.g., free-text input with embedded newlines). Snapshots are the correct approach.
@@ -212,7 +217,7 @@ Plans:
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Project Scaffold and Canvas Parsing Foundation | 0/6 | Not started | - |
-| 2. Core Protocol Runner Engine | 0/? | Not started | - |
+| 2. Core Protocol Runner Engine | 0/3 | Planning complete | - |
 | 3. Runner UI (ItemView) | 0/? | Not started | - |
 | 4. Canvas Node Editor Side Panel | 0/? | Not started | - |
 | 5. Dynamic Snippets | 0/? | Not started | - |
