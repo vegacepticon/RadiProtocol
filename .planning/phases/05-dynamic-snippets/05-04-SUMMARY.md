@@ -33,7 +33,7 @@ decisions:
 metrics:
   duration_seconds: 306
   completed_date: "2026-04-06"
-  tasks_completed: 2
+  tasks_completed: 3
   tasks_total: 3
   files_modified: 2
 ---
@@ -48,7 +48,7 @@ metrics:
 |------|------|--------|-------|
 | 1 | Implement full RunnerView with awaiting-snippet-fill branch | `86e66ab` | src/views/runner-view.ts |
 | 2 | Wire main.ts — SnippetService, SnippetManagerView, commands | `807301c` | src/main.ts |
-| 3 | Human verification — Phase 5 end-to-end UAT | — | (checkpoint — awaiting human) |
+| 3 | Human verification — Phase 5 end-to-end UAT | — | UAT approved (5/5 tests passed) |
 
 ## What Was Built
 
@@ -92,6 +92,18 @@ npx tsc --noEmit                                  → 0 errors in src/
 
 The 3 failing tests (`runner-extensions.test.ts`) are intentional RED stubs planted in a prior wave ("RED until Plan 02" labels) — not caused by this plan.
 
+## UAT Results
+
+Human verification completed 2026-04-06. All 5 tests passed.
+
+| Test | Description | Result | Notes |
+|------|-------------|--------|-------|
+| 1 | Snippet authoring (SNIP-01, SNIP-02, SNIP-03) | PASS | |
+| 2 | Orphan warning badge (SNIP-02, D-05) | PASS | Warning text appeared correctly; visual badge styling (CSS) did not render — see Known Issues |
+| 3 | Runner + snippet fill-in (SNIP-06, SNIP-04, SNIP-05) | PASS | Required post-checkpoint bug fix: snippet id was being saved as UUID instead of slugified name |
+| 4 | Cancel behavior (D-11) | PASS | |
+| 5 | Tab navigation (SNIP-04, D-12) | PASS | |
+
 ## Deviations from Plan
 
 ### Auto-fixed Issues
@@ -110,6 +122,21 @@ The 3 failing tests (`runner-extensions.test.ts`) are intentional RED stubs plan
 - **Files modified:** src/views/runner-view.ts
 - **Commit:** 86e66ab
 
+**3. [Rule 1 - Bug] Snippet id saved as UUID instead of slugified name (post-checkpoint fix)**
+- **Found during:** UAT Test 3 (Test 1 step 9 — file path check)
+- **Issue:** When saving a new snippet, the id field was generated as a random UUID (e.g. `a3f2c1d0-...`) instead of being derived from the snippet name. The canvas `radiprotocol_snippetId` property expected a human-readable slug (e.g. `liver-finding`), causing a mismatch when the runner tried to load the snippet.
+- **Fix:** Derived snippet id from slugified name on save (lowercase, spaces to hyphens, non-alphanumeric chars stripped). Committed separately to main by the user: `fix(snippet-manager): derive snippet id from slugified name on save instead of UUID`
+- **Files modified:** src/views/snippet-manager-view.ts (or snippetService save path)
+- **Commit:** committed separately (user-applied fix)
+
+### Known Issues (Non-blocking)
+
+**1. Orphan warning badge — CSS not visually rendering**
+- **Observed during:** UAT Test 2
+- **Issue:** The orphan warning text content appeared correctly in the DOM, but the visual badge styling (background color, border, icon) was not visible. The underlying warning logic works; only the CSS class is not applying the expected visual treatment.
+- **Impact:** Minor cosmetic only — the warning message is still readable as plain text. Not a blocker for any SNIP requirement.
+- **Deferred to:** Phase 5 CSS cleanup or a dedicated styling pass.
+
 ## Known Stubs
 
 None — all runner states are fully implemented. `saveOutputToNote` is wired end-to-end (creates real vault file). No placeholder text in user-visible paths.
@@ -127,3 +154,7 @@ None — all runner states are fully implemented. `saveOutputToNote` is wired en
 - .planning/phases/05-dynamic-snippets/05-04-SUMMARY.md — FOUND
 - Commit 86e66ab — FOUND
 - Commit 807301c — FOUND
+
+## UAT Sign-off
+
+Approved by user on 2026-04-06. All 5 UAT tests passed. One non-blocking cosmetic issue noted (orphan badge CSS). One bug found and fixed post-checkpoint (snippet id UUID → slugified name).
