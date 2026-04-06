@@ -54,6 +54,8 @@ export class EditorPanelView extends ItemView {
   }
 
   private async renderNodeForm(filePath: string, nodeId: string): Promise<void> {
+    // Guard: contentEl may not be initialized if the view is not yet mounted
+    if (!this.contentEl) return;
     this.contentEl.empty();
     this.pendingEdits = {};
 
