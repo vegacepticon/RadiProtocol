@@ -10,9 +10,9 @@
 
 ## Phases
 
-- [x] **Phase 1: Project Scaffold and Canvas Parsing Foundation** - Verified plugin scaffold, pure graph model, full validation suite, test infrastructure, and dev toolchain
+- [ ] **Phase 1: Project Scaffold and Canvas Parsing Foundation** - Verified plugin scaffold, pure graph model, full validation suite, test infrastructure, and dev toolchain
 - [x] **Phase 2: Core Protocol Runner Engine** - Fully unit-tested traversal state machine with step-back, text accumulation, and undo — no UI required to verify
-- [x] **Phase 3: Runner UI (ItemView)** - End-to-end demonstrable plugin: open a canvas, run a protocol, see live preview, copy output
+- [ ] **Phase 3: Runner UI (ItemView)** - End-to-end demonstrable plugin: open a canvas, run a protocol, see live preview, copy output
 - [ ] **Phase 4: Canvas Node Editor Side Panel** - Protocol authoring without touching raw JSON: per-node forms write back to the canvas file
 - [ ] **Phase 5: Dynamic Snippets** - Placeholder fill-in modal integrated into the runner; snippet CRUD backed by per-file vault storage
 - [ ] **Phase 6: Loop Support** - Multi-iteration protocol sections with correct undo, iteration display, and exit UX
@@ -100,11 +100,11 @@ Plans:
 **Plans**: 5 plans
 
 Plans:
-- [x] 03-00-PLAN.md — Wave 0: four failing test stubs (RunnerView, runner-extensions, runner-commands, settings-tab)
-- [x] 03-01-PLAN.md — RunnerView full skeleton: two-zone layout, render dispatcher, getState/setState, legend, styles.css
-- [x] 03-02-PLAN.md — ProtocolRunner extensions (setAccumulatedText, optional startNodeId) + copy/save/inline-edit wiring
-- [x] 03-03-PLAN.md — NodePickerModal for start-from-node command (SuggestModal, buildNodeOptions)
-- [x] 03-04-PLAN.md — main.ts full wiring + settings tab three controls + human verification checkpoint
+- [ ] 03-00-PLAN.md — Wave 0: four failing test stubs (RunnerView, runner-extensions, runner-commands, settings-tab)
+- [ ] 03-01-PLAN.md — RunnerView full skeleton: two-zone layout, render dispatcher, getState/setState, legend, styles.css
+- [ ] 03-02-PLAN.md — ProtocolRunner extensions (setAccumulatedText, optional startNodeId) + copy/save/inline-edit wiring
+- [ ] 03-03-PLAN.md — NodePickerModal for start-from-node command (SuggestModal, buildNodeOptions)
+- [ ] 03-04-PLAN.md — main.ts full wiring + settings tab three controls + human verification checkpoint
 
 **UI hint**: yes
 
@@ -130,12 +130,7 @@ Plans:
   3. The canvas file is not corrupted after the editor writes to it — confirmed by re-opening the canvas in Obsidian's native Canvas view and verifying all nodes and edges are intact
   4. Attempting to write to an open canvas either (a) prompts the user to close it first, or (b) uses a guarded undocumented API path with a clear version-warning notice — confirmed by attempting an edit with the canvas open
 
-**Plans**: 3 plans
-
-Plans:
-- [ ] 04-00-PLAN.md — Wave 0: editor-panel test stubs (RED) for EDIT-01, EDIT-02 surface contracts
-- [ ] 04-01-PLAN.md — EditorPanelView full implementation: idle state, loadNode(), form render per node kind, pendingEdits collection, CSS classes
-- [ ] 04-02-PLAN.md — Write-back (isCanvasOpen guard + vault.modify()), main.ts wiring (registerView, canvas:node-menu, open-node-editor command), human UAT checkpoint
+**Plans**: TBD
 
 **UI hint**: yes
 
@@ -228,10 +223,10 @@ Plans:
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Project Scaffold and Canvas Parsing Foundation | 6/6 | Complete | 2026-04-06 |
-| 2. Core Protocol Runner Engine | 3/3 | Complete | 2026-04-06 |
-| 3. Runner UI (ItemView) | 5/5 | Complete | 2026-04-06 |
-| 4. Canvas Node Editor Side Panel | 0/3 | Not started | - |
+| 1. Project Scaffold and Canvas Parsing Foundation | 0/6 | Not started | - |
+| 2. Core Protocol Runner Engine | 0/3 | Planning complete | - |
+| 3. Runner UI (ItemView) | 0/5 | Planning complete | - |
+| 4. Canvas Node Editor Side Panel | 0/? | Not started | - |
 | 5. Dynamic Snippets | 0/? | Not started | - |
 | 6. Loop Support | 0/? | Not started | - |
 | 7. Mid-Session Save and Resume | 0/? | Not started | - |
