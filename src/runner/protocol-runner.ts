@@ -46,7 +46,7 @@ export class ProtocolRunner {
    * Start a new protocol session.
    * Transitions from idle to at-node (or error if graph has no start node).
    */
-  start(graph: ProtocolGraph): void {
+  start(graph: ProtocolGraph, startNodeId?: string): void {
     this.graph = graph;
     this.currentNodeId = null;
     this.accumulator = new TextAccumulator();
@@ -55,8 +55,9 @@ export class ProtocolRunner {
     this.snippetId = null;
     this.snippetNodeId = null;
     this.runnerStatus = 'at-node';
-    // Auto-advance from the start node
-    this.advanceThrough(graph.startNodeId);
+    // Auto-advance from the entry node (D-07: optional startNodeId override)
+    const entryNodeId = startNodeId ?? graph.startNodeId;
+    this.advanceThrough(entryNodeId);
   }
 
   /**
@@ -172,6 +173,25 @@ export class ProtocolRunner {
       return;
     }
     this.advanceThrough(next);
+  }
+
+  /**
+   * Replace the accumulated text with a new value and clear the undo stack.
+   * Called when the user edits the preview textarea directly (RUN-11 / D-04).
+   * Manual edits cannot be undone via stepBack() (D-05).
+   * No-op if the runner is not in a state that has accumulated text.
+   */
+  setAccumulatedText(text: string): void {
+    if (
+      this.runnerStatus !== 'at-node' &&
+      this.runnerStatus !== 'awaiting-snippet-fill' &&
+      this.runnerStatus !== 'complete'
+    ) {
+      return;
+    }
+    this.accumulator = new TextAccumulator();
+    this.accumulator.append(text);
+    this.undoStack = []; // D-05: clear undo stack on manual edit
   }
 
   /**
