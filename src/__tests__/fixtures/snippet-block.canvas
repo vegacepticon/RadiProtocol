@@ -1,0 +1,13 @@
+{
+  "nodes": [
+    { "id": "n-start", "type": "text", "text": "Start", "x": 0, "y": 0, "width": 200, "height": 60, "radiprotocol_nodeType": "start" },
+    { "id": "n-q1", "type": "text", "text": "Q1", "x": 0, "y": 120, "width": 200, "height": 60, "radiprotocol_nodeType": "question", "radiprotocol_questionText": "Liver size?" },
+    { "id": "n-a1", "type": "text", "text": "A1", "x": 0, "y": 240, "width": 200, "height": 60, "radiprotocol_nodeType": "answer", "radiprotocol_answerText": "Size: normal", "radiprotocol_displayLabel": "Normal" },
+    { "id": "n-tb1", "type": "text", "text": "TB1", "x": 0, "y": 360, "width": 200, "height": 60, "radiprotocol_nodeType": "text-block", "radiprotocol_content": "Findings: normal liver.", "radiprotocol_snippetId": "snip-liver-001" }
+  ],
+  "edges": [
+    { "id": "e1", "fromNode": "n-start", "toNode": "n-q1" },
+    { "id": "e2", "fromNode": "n-q1", "toNode": "n-a1" },
+    { "id": "e3", "fromNode": "n-a1", "toNode": "n-tb1" }
+  ]
+}

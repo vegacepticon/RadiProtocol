@@ -1,0 +1,9 @@
+{
+  "nodes": [
+    { "id": "n-start", "type": "text", "text": "Start", "x": 0, "y": 0, "width": 200, "height": 60, "radiprotocol_nodeType": "start" },
+    { "id": "n-ls1", "type": "text", "text": "LS1", "x": 0, "y": 120, "width": 200, "height": 60, "radiprotocol_nodeType": "loop-start", "radiprotocol_loopLabel": "Lesion loop", "radiprotocol_exitLabel": "Done", "radiprotocol_maxIterations": 10 }
+  ],
+  "edges": [
+    { "id": "e1", "fromNode": "n-start", "toNode": "n-ls1" }
+  ]
+}

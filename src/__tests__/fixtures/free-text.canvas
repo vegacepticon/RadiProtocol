@@ -1,0 +1,9 @@
+{
+  "nodes": [
+    { "id": "n-start", "type": "text", "text": "Start", "x": 0, "y": 0, "width": 200, "height": 60, "radiprotocol_nodeType": "start" },
+    { "id": "n-ft1", "type": "text", "text": "FT1", "x": 0, "y": 120, "width": 200, "height": 60, "radiprotocol_nodeType": "free-text-input", "radiprotocol_promptLabel": "Enter findings:", "radiprotocol_prefix": "Findings: ", "radiprotocol_suffix": "." }
+  ],
+  "edges": [
+    { "id": "e1", "fromNode": "n-start", "toNode": "n-ft1" }
+  ]
+}
