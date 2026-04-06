@@ -23,7 +23,7 @@ export default class RadiProtocolPlugin extends Plugin {
 
     // Ribbon icon (NFR-05 sentence case; UI-SPEC copywriting: 'RadiProtocol runner')
     this.addRibbonIcon('activity', 'RadiProtocol runner', () => {
-      void this.openProtocol();
+      void this.activateRunnerView();
     });
 
     // Command: run-protocol (NFR-06: no plugin name prefix)
