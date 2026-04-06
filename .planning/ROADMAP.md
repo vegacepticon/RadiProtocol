@@ -130,7 +130,12 @@ Plans:
   3. The canvas file is not corrupted after the editor writes to it — confirmed by re-opening the canvas in Obsidian's native Canvas view and verifying all nodes and edges are intact
   4. Attempting to write to an open canvas either (a) prompts the user to close it first, or (b) uses a guarded undocumented API path with a clear version-warning notice — confirmed by attempting an edit with the canvas open
 
-**Plans**: TBD
+**Plans**: 3 plans
+
+Plans:
+- [ ] 04-00-PLAN.md — Wave 0: editor-panel test stubs (RED) for EDIT-01, EDIT-02 surface contracts
+- [ ] 04-01-PLAN.md — EditorPanelView full implementation: idle state, loadNode(), form render per node kind, pendingEdits collection, CSS classes
+- [ ] 04-02-PLAN.md — Write-back (isCanvasOpen guard + vault.modify()), main.ts wiring (registerView, canvas:node-menu, open-node-editor command), human UAT checkpoint
 
 **UI hint**: yes
 
@@ -226,7 +231,7 @@ Plans:
 | 1. Project Scaffold and Canvas Parsing Foundation | 6/6 | Complete | 2026-04-06 |
 | 2. Core Protocol Runner Engine | 3/3 | Complete | 2026-04-06 |
 | 3. Runner UI (ItemView) | 5/5 | Complete | 2026-04-06 |
-| 4. Canvas Node Editor Side Panel | 0/? | Not started | - |
+| 4. Canvas Node Editor Side Panel | 0/3 | Not started | - |
 | 5. Dynamic Snippets | 0/? | Not started | - |
 | 6. Loop Support | 0/? | Not started | - |
 | 7. Mid-Session Save and Resume | 0/? | Not started | - |
