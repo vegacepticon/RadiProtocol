@@ -163,7 +163,7 @@ export class RunnerView extends ItemView {
    * Public method called by main.ts command to open a canvas file as a protocol session.
    * Threat T-03-01-03: guard vault.getAbstractFileByPath() null return before TFile cast.
    */
-  async openCanvas(filePath: string): Promise<void> {
+  async openCanvas(filePath: string, startNodeId?: string): Promise<void> {
     const abstractFile = this.app.vault.getAbstractFileByPath(filePath);
     if (abstractFile === null) {
       this.canvasFilePath = filePath;
@@ -192,7 +192,7 @@ export class RunnerView extends ItemView {
     this.canvasFilePath = filePath;
     this.graph = parseResult.graph;
     this.runner = new ProtocolRunner({ maxIterations: this.plugin.settings.maxLoopIterations });
-    this.runner.start(this.graph);
+    this.runner.start(this.graph, startNodeId);
     this.previewTextarea.disabled = false;
     this.render();
   }
