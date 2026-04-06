@@ -592,6 +592,15 @@ export class SnippetManagerView extends ItemView {
     // T-5-06: disable during save to prevent rapid-click DoS
     saveBtn.disabled = true;
     try {
+      // Derive id from name so canvas files can reference snippets by human-readable slug
+      const oldId = draft.id;
+      draft.id = slugifyLabel(draft.name) || oldId;
+
+      // If the id changed (e.g. was a UUID on first save), delete the old file
+      if (oldId !== draft.id) {
+        await this.plugin.snippetService.delete(oldId);
+      }
+
       await this.plugin.snippetService.save(draft);
 
       // Sync local list — update existing or add if not present
