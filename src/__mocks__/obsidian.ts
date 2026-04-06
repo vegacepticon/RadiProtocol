@@ -4,21 +4,86 @@
  * Real Obsidian runtime is only available inside the Obsidian desktop app.
  */
 
+/** Minimal mock element returned by createEl/createDiv */
+function makeMockEl(): MockElement {
+  const el: MockElement = {
+    createEl: (_tag: string, _opts?: unknown) => makeMockEl(),
+    createDiv: (_opts?: unknown) => makeMockEl(),
+    empty: () => {},
+    setText: (_text: string) => {},
+    type: '',
+    min: '',
+  };
+  return el;
+}
+
+interface MockElement {
+  createEl: (tag: string, opts?: unknown) => MockElement;
+  createDiv: (opts?: unknown) => MockElement;
+  empty: () => void;
+  setText: (text: string) => void;
+  type: string;
+  min: string;
+}
+
+/** Mock TextComponent / TextAreaComponent returned by addText / addTextArea */
+function makeMockTextComponent(): MockTextComponent {
+  const tc: MockTextComponent = {
+    inputEl: { type: '', min: '' },
+    setValue: (_v: string) => tc,
+    onChange: (_cb: (v: string) => void) => tc,
+  };
+  return tc;
+}
+
+interface MockTextComponent {
+  inputEl: { type: string; min: string };
+  setValue: (v: string) => MockTextComponent;
+  onChange: (cb: (v: string) => void) => MockTextComponent;
+}
+
+/** Mock DropdownComponent — must support full addOption chaining (8 options) */
+function makeMockDropdown(): MockDropdown {
+  const drop: MockDropdown = {
+    addOption: (_value: string, _display: string) => drop,
+    setValue: (_v: string) => drop,
+    onChange: (_cb: (v: string) => void) => drop,
+  };
+  return drop;
+}
+
+interface MockDropdown {
+  addOption: (value: string, display: string) => MockDropdown;
+  setValue: (v: string) => MockDropdown;
+  onChange: (cb: (v: string) => void) => MockDropdown;
+}
+
+/** Mock ButtonComponent — supports setCta and onClick chaining */
+function makeMockButton(): MockButton {
+  const btn: MockButton = {
+    setButtonText: (_text: string) => btn,
+    setCta: () => btn,
+    onClick: (_cb: () => void) => btn,
+  };
+  return btn;
+}
+
+interface MockButton {
+  setButtonText: (text: string) => MockButton;
+  setCta: () => MockButton;
+  onClick: (cb: () => void) => MockButton;
+}
+
 export class ItemView {
   leaf: unknown;
-  contentEl: {
-    createEl: () => unknown;
-    empty: () => void;
-  };
+  contentEl: ReturnType<typeof makeMockEl>;
   constructor(leaf: unknown) {
     this.leaf = leaf;
-    this.contentEl = {
-      createEl: () => ({}),
-      empty: () => {},
-    };
+    this.contentEl = makeMockEl();
   }
   getViewType(): string { return ''; }
   getDisplayText(): string { return ''; }
+  getIcon(): string { return ''; }
   getState(): Record<string, unknown> { return {}; }
   setState(_state: unknown, _result: unknown): Promise<void> { return Promise.resolve(); }
 }
@@ -28,17 +93,11 @@ export class WorkspaceLeaf {}
 export class PluginSettingTab {
   app: unknown;
   plugin: unknown;
-  containerEl: {
-    empty: () => void;
-    createEl: () => unknown;
-  };
+  containerEl: ReturnType<typeof makeMockEl>;
   constructor(app: unknown, plugin: unknown) {
     this.app = app;
     this.plugin = plugin;
-    this.containerEl = {
-      empty: () => {},
-      createEl: () => ({}),
-    };
+    this.containerEl = makeMockEl();
   }
   display(): void {}
 }
@@ -50,16 +109,10 @@ export class Plugin {
 
 export class Modal {
   app: unknown;
-  contentEl: {
-    createEl: () => unknown;
-    empty: () => void;
-  };
+  contentEl: ReturnType<typeof makeMockEl>;
   constructor(app: unknown) {
     this.app = app;
-    this.contentEl = {
-      createEl: () => ({}),
-      empty: () => {},
-    };
+    this.contentEl = makeMockEl();
   }
   open(): void {}
   close(): void {}
@@ -84,21 +137,33 @@ export class Setting {
   constructor(_containerEl: unknown) {}
   setName(_name: string): this { return this; }
   setDesc(_desc: string): this { return this; }
-  addText(_cb: (text: unknown) => void): this {
-    _cb({ setValue: () => this, onChange: () => this, inputEl: {} });
+  setHeading(): this { return this; }
+  addText(_cb: (text: MockTextComponent) => void): this {
+    _cb(makeMockTextComponent());
     return this;
   }
-  addDropdown(_cb: (drop: unknown) => void): this {
-    _cb({ addOption: () => ({ addOption: () => ({}) }), setValue: () => this, onChange: () => this });
+  addTextArea(_cb: (ta: MockTextComponent) => void): this {
+    _cb(makeMockTextComponent());
+    return this;
+  }
+  addDropdown(_cb: (drop: MockDropdown) => void): this {
+    _cb(makeMockDropdown());
     return this;
   }
   addSlider(_cb: (slider: unknown) => void): this {
     _cb({ setLimits: () => this, setValue: () => this, onChange: () => this, setDynamicTooltip: () => this });
     return this;
   }
-  addButton(_cb: (btn: unknown) => void): this {
-    _cb({ setButtonText: () => this, onClick: () => this });
+  addButton(_cb: (btn: MockButton) => void): this {
+    _cb(makeMockButton());
     return this;
   }
-  setHeading(): this { return this; }
+}
+
+/** TFile mock — instanceof checks use this */
+export class TFile {
+  path: string;
+  constructor(path = '') {
+    this.path = path;
+  }
 }

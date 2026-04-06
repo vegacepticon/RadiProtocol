@@ -1,21 +1,292 @@
-// views/editor-panel-view.ts — TODO: Phase 4
-import { ItemView, WorkspaceLeaf } from 'obsidian';
+import { ItemView, WorkspaceLeaf, Setting, TFile } from 'obsidian';
+import type { App } from 'obsidian';
+import type { RPNodeKind } from '../graph/graph-model';
+import type RadiProtocolPlugin from '../main';
 
 export const EDITOR_PANEL_VIEW_TYPE = 'radiprotocol-editor-panel';
 
 export class EditorPanelView extends ItemView {
-  constructor(leaf: WorkspaceLeaf) {
+  private plugin: RadiProtocolPlugin;
+  private currentNodeId: string | null = null;
+  private currentFilePath: string | null = null;
+  private pendingEdits: Record<string, unknown> = {};
+  // kindFormSection holds the container for kind-specific fields
+  // so onChange can call kindFormSection.empty() + rebuild without
+  // clearing the node-type dropdown
+  private kindFormSection: HTMLElement | null = null;
+
+  constructor(leaf: WorkspaceLeaf, plugin: RadiProtocolPlugin) {
     super(leaf);
+    this.plugin = plugin;
   }
 
   getViewType(): string { return EDITOR_PANEL_VIEW_TYPE; }
-  getDisplayText(): string { return 'Radiprotocol node editor'; }
+  getDisplayText(): string { return 'RadiProtocol node editor'; }
+  getIcon(): string { return 'pencil'; }
 
   async onOpen(): Promise<void> {
-    this.contentEl.createEl('p', { text: 'Node editor coming in phase 4.' });
+    this.renderIdle();
   }
 
   async onClose(): Promise<void> {
     this.contentEl.empty();
+  }
+
+  private renderIdle(): void {
+    this.contentEl.empty();
+    const container = this.contentEl.createDiv({ cls: 'rp-editor-idle' });
+    container.createEl('p', { text: 'No node selected' });
+    container.createEl('p', {
+      text: "Right-click a canvas node and choose 'Edit RadiProtocol properties' to open its configuration form.",
+    });
+  }
+
+  loadNode(canvasFilePath: string, nodeId: string): void {
+    this.currentFilePath = canvasFilePath;
+    this.currentNodeId = nodeId;
+    this.pendingEdits = {};
+    void this.renderNodeForm(canvasFilePath, nodeId);
+  }
+
+  async saveNodeEdits(filePath: string, nodeId: string, edits: Record<string, unknown>): Promise<void> {
+    // Implementation added in Plan 02 — write-back with canvas-open guard
+    void filePath; void nodeId; void edits;
+  }
+
+  private async renderNodeForm(filePath: string, nodeId: string): Promise<void> {
+    this.contentEl.empty();
+    this.pendingEdits = {};
+
+    const file = this.plugin.app.vault.getAbstractFileByPath(filePath);
+    if (!(file instanceof TFile)) {
+      this.renderError('Canvas file not found in vault.');
+      return;
+    }
+
+    let raw: string;
+    try {
+      raw = await this.plugin.app.vault.read(file);
+    } catch {
+      this.renderError('Could not read canvas file.');
+      return;
+    }
+
+    let canvasData: { nodes: Array<Record<string, unknown>>; edges: unknown[] };
+    try {
+      canvasData = JSON.parse(raw) as typeof canvasData;
+    } catch {
+      this.renderError('Canvas file contains invalid JSON — cannot save.');
+      return;
+    }
+
+    const nodeRecord = canvasData.nodes.find(n => n['id'] === nodeId);
+    if (!nodeRecord) {
+      this.renderError('Node not found in canvas — it may have been deleted.');
+      return;
+    }
+
+    const currentKind = (nodeRecord['radiprotocol_nodeType'] as RPNodeKind | undefined) ?? null;
+    this.renderForm(nodeRecord, currentKind);
+  }
+
+  private renderForm(nodeRecord: Record<string, unknown>, currentKind: RPNodeKind | null): void {
+    this.contentEl.empty();
+    const panel = this.contentEl.createDiv({ cls: 'rp-editor-panel' });
+    const formArea = panel.createDiv({ cls: 'rp-editor-form' });
+
+    // Node type dropdown — always first
+    new Setting(formArea)
+      .setName('Node type')
+      .setDesc('The RadiProtocol role of this canvas node. Changing this will update the fields below.')
+      .addDropdown(drop => {
+        drop
+          .addOption('', '— unset —')
+          .addOption('start', 'Start')
+          .addOption('question', 'Question')
+          .addOption('answer', 'Answer')
+          .addOption('free-text-input', 'Free-text input')
+          .addOption('text-block', 'Text block')
+          .addOption('loop-start', 'Loop start')
+          .addOption('loop-end', 'Loop end')
+          .setValue(currentKind ?? '')
+          .onChange(value => {
+            this.pendingEdits['radiprotocol_nodeType'] = value || undefined;
+            if (this.kindFormSection) {
+              this.kindFormSection.empty();
+              this.buildKindForm(
+                this.kindFormSection,
+                nodeRecord,
+                value ? (value as RPNodeKind) : null
+              );
+            }
+          });
+      });
+
+    // Kind-specific fields section
+    this.kindFormSection = formArea.createDiv();
+    this.buildKindForm(this.kindFormSection, nodeRecord, currentKind);
+
+    // Save row
+    const saveRow = panel.createDiv({ cls: 'rp-editor-save-row' });
+    new Setting(saveRow)
+      .addButton(btn => {
+        btn
+          .setButtonText('Save changes')
+          .setCta()
+          .onClick(() => {
+            if (this.currentFilePath && this.currentNodeId) {
+              void this.saveNodeEdits(
+                this.currentFilePath,
+                this.currentNodeId,
+                { ...this.pendingEdits }
+              );
+            }
+          });
+      });
+  }
+
+  private buildKindForm(
+    container: HTMLElement,
+    nodeRecord: Record<string, unknown>,
+    kind: RPNodeKind | null
+  ): void {
+    if (!kind) return; // unset — no kind-specific fields
+
+    switch (kind) {
+      case 'start': {
+        new Setting(container).setHeading().setName('Start node');
+        container.createEl('p', {
+          text: 'Start node has no additional properties.',
+          cls: 'rp-editor-start-note',
+        });
+        break;
+      }
+
+      case 'question': {
+        new Setting(container).setHeading().setName('Question node');
+        new Setting(container)
+          .setName('Question text')
+          .setDesc('Displayed to the user during the protocol session.')
+          .addTextArea(ta => {
+            ta.setValue((nodeRecord['radiprotocol_questionText'] as string | undefined) ?? (nodeRecord['text'] as string | undefined) ?? '')
+              .onChange(v => { this.pendingEdits['radiprotocol_questionText'] = v; this.pendingEdits['text'] = v; });
+          });
+        break;
+      }
+
+      case 'answer': {
+        new Setting(container).setHeading().setName('Answer node');
+        new Setting(container)
+          .setName('Answer text')
+          .setDesc('Appended to the accumulated report text when this answer is chosen.')
+          .addTextArea(ta => {
+            ta.setValue((nodeRecord['radiprotocol_answerText'] as string | undefined) ?? (nodeRecord['text'] as string | undefined) ?? '')
+              .onChange(v => { this.pendingEdits['radiprotocol_answerText'] = v; this.pendingEdits['text'] = v; });
+          });
+        new Setting(container)
+          .setName('Display label (optional)')
+          .setDesc('Short label shown in the runner button if set. Leave blank to use answer text.')
+          .addText(t => {
+            t.setValue((nodeRecord['radiprotocol_displayLabel'] as string | undefined) ?? '')
+              .onChange(v => { this.pendingEdits['radiprotocol_displayLabel'] = v || undefined; });
+          });
+        break;
+      }
+
+      case 'free-text-input': {
+        new Setting(container).setHeading().setName('Free-text input node');
+        new Setting(container)
+          .setName('Prompt label')
+          .setDesc('Shown to the user above the text input field during the session.')
+          .addText(t => {
+            t.setValue((nodeRecord['radiprotocol_promptLabel'] as string | undefined) ?? (nodeRecord['text'] as string | undefined) ?? '')
+              .onChange(v => { this.pendingEdits['radiprotocol_promptLabel'] = v; this.pendingEdits['text'] = v; });
+          });
+        new Setting(container)
+          .setName('Prefix (optional)')
+          .setDesc('Prepended to the user\'s input in the accumulated text.')
+          .addText(t => {
+            t.setValue((nodeRecord['radiprotocol_prefix'] as string | undefined) ?? '')
+              .onChange(v => { this.pendingEdits['radiprotocol_prefix'] = v || undefined; });
+          });
+        new Setting(container)
+          .setName('Suffix (optional)')
+          .setDesc('Appended to the user\'s input in the accumulated text.')
+          .addText(t => {
+            t.setValue((nodeRecord['radiprotocol_suffix'] as string | undefined) ?? '')
+              .onChange(v => { this.pendingEdits['radiprotocol_suffix'] = v || undefined; });
+          });
+        break;
+      }
+
+      case 'text-block': {
+        new Setting(container).setHeading().setName('Text-block node');
+        new Setting(container)
+          .setName('Content')
+          .setDesc('Auto-appended to the accumulated text when this node is reached.')
+          .addTextArea(ta => {
+            ta.setValue((nodeRecord['radiprotocol_content'] as string | undefined) ?? (nodeRecord['text'] as string | undefined) ?? '')
+              .onChange(v => { this.pendingEdits['radiprotocol_content'] = v; this.pendingEdits['text'] = v; });
+          });
+        new Setting(container)
+          .setName('Snippet ID (optional)')
+          .setDesc('Snippet ID for Phase 5 dynamic snippet fill-in. Leave blank if not using snippets.')
+          .addText(t => {
+            t.setValue((nodeRecord['radiprotocol_snippetId'] as string | undefined) ?? '')
+              .onChange(v => { this.pendingEdits['radiprotocol_snippetId'] = v || undefined; });
+          });
+        break;
+      }
+
+      case 'loop-start': {
+        new Setting(container).setHeading().setName('Loop-start node');
+        new Setting(container)
+          .setName('Loop label')
+          .setDesc('Shown as iteration prefix in the runner (e.g., "Lesion 2"). Default: Loop.')
+          .addText(t => {
+            t.setValue((nodeRecord['radiprotocol_loopLabel'] as string | undefined) ?? 'Loop')
+              .onChange(v => { this.pendingEdits['radiprotocol_loopLabel'] = v || 'Loop'; });
+          });
+        new Setting(container)
+          .setName('Exit label')
+          .setDesc('Text on the exit button shown at the loop-end node. Default: Done.')
+          .addText(t => {
+            t.setValue((nodeRecord['radiprotocol_exitLabel'] as string | undefined) ?? 'Done')
+              .onChange(v => { this.pendingEdits['radiprotocol_exitLabel'] = v || 'Done'; });
+          });
+        new Setting(container)
+          .setName('Max iterations')
+          .setDesc('Hard cap on loop repetitions. Prevents infinite loops in the runner. Default: 50.')
+          .addText(t => {
+            const inputEl = t.inputEl;
+            inputEl.type = 'number';
+            inputEl.min = '1';
+            t.setValue(String((nodeRecord['radiprotocol_maxIterations'] as number | undefined) ?? 50))
+              .onChange(v => {
+                const n = parseInt(v, 10);
+                this.pendingEdits['radiprotocol_maxIterations'] = isNaN(n) ? 50 : Math.max(1, n);
+              });
+          });
+        break;
+      }
+
+      case 'loop-end': {
+        new Setting(container).setHeading().setName('Loop-end node');
+        new Setting(container)
+          .setName('Loop start node ID')
+          .setDesc('Must match the ID of the corresponding loop-start node on the canvas.')
+          .addText(t => {
+            t.setValue((nodeRecord['radiprotocol_loopStartId'] as string | undefined) ?? '')
+              .onChange(v => { this.pendingEdits['radiprotocol_loopStartId'] = v; });
+          });
+        break;
+      }
+    }
+  }
+
+  private renderError(message: string): void {
+    this.contentEl.empty();
+    const container = this.contentEl.createDiv({ cls: 'rp-editor-idle' });
+    container.createEl('p', { text: message });
   }
 }
