@@ -24,6 +24,7 @@ export class RunnerView extends ItemView {
   private previewTextarea!: HTMLTextAreaElement;
   private copyBtn!: HTMLButtonElement;
   private saveBtn!: HTMLButtonElement;
+  private stepBackBtn: HTMLButtonElement | null = null;
 
   constructor(leaf: WorkspaceLeaf, plugin: RadiProtocolPlugin) {
     super(leaf);
@@ -90,6 +91,10 @@ export class RunnerView extends ItemView {
     // Register stable 'input' event via registerDomEvent (UI-09)
     this.registerDomEvent(this.previewTextarea, 'input', () => {
       this.runner?.setAccumulatedText(this.previewTextarea.value);
+      // D-05: undo stack is cleared on manual edit — disable step back immediately
+      if (this.stepBackBtn !== null) {
+        this.stepBackBtn.disabled = true;
+      }
     });
 
     // Output toolbar
@@ -345,6 +350,7 @@ export class RunnerView extends ItemView {
     setIcon(btn, 'undo-2');
     btn.appendChild(document.createTextNode('Step back'));
     btn.disabled = !canStepBack;
+    this.stepBackBtn = btn;
 
     // Ephemeral button — use el.onclick (Pitfall 2)
     btn.onclick = () => {
