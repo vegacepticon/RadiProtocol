@@ -69,7 +69,7 @@ export class ResumeSessionModal extends Modal {
   private settle(choice: ResumeChoice): void {
     if (this.resolved) return;
     this.resolved = true;
-    this.close();
-    this.resolve(choice);
+    this.resolve(choice);   // resolve FIRST
+    this.close();           // close AFTER — onClose will call contentEl.empty()
   }
 }
