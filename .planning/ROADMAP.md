@@ -2,7 +2,7 @@
 
 **Project:** RadiProtocol
 **Milestone:** v1 — Community Plugin Release
-**Last updated:** 2026-04-06
+**Last updated:** 2026-04-07
 **Total phases:** 7
 **Granularity:** Standard
 
@@ -199,8 +199,8 @@ Plans:
 **Plans**: 3 plans
 
 Plans:
-- [ ] 06-01-PLAN.md — Wave 0: loop-body.canvas fixture + 7 RED test stubs (runner loop cases, validator loop case)
-- [ ] 06-02-PLAN.md — Wave 1: LoopContext type, extended UndoEntry/AtNodeState, full loop engine in ProtocolRunner (all 7 tests GREEN)
+- [x] 06-01-PLAN.md — Wave 0: loop-body.canvas fixture + 7 RED test stubs (runner loop cases, validator loop case)
+- [x] 06-02-PLAN.md — Wave 1: LoopContext type, extended UndoEntry/AtNodeState, full loop engine in ProtocolRunner (all 7 tests GREEN)
 - [ ] 06-03-PLAN.md — Wave 2: RunnerView loop-end UI (iteration label, loop again / done buttons), Phase 6 CSS, human UAT checkpoint
 
 **UI hint**: yes
@@ -228,7 +228,14 @@ Plans:
   4. Resuming a session when a referenced node ID no longer exists in the canvas shows an error with a "Start over" option — confirmed by manual test
   5. `SessionService` correctly serializes and deserializes the full loop context stack including any in-progress loop iteration — confirmed by Vitest unit test
 
-**Plans**: TBD
+**Plans**: 3 plans
+
+Plans:
+- [ ] 07-00-PLAN.md — Wave 0: 2 RED test stubs (session-service.test.ts, protocol-runner-session.test.ts) covering SESSION-01 through SESSION-07
+- [ ] 07-01-PLAN.md — Wave 1: session-model.ts types + SessionService CRUD + validateSessionNodeIds + ProtocolRunner.getSerializableState/restoreFrom/setGraph + settings.sessionFolderPath (all tests GREEN)
+- [ ] 07-02-PLAN.md — Wave 2: ResumeSessionModal + RunnerView session hooks (openCanvas resume detection, autoSaveSession, clear on complete) + main.ts wiring + human UAT checkpoint
+
+**UI hint**: yes
 
 **Risk flags**:
 - `Set` values in session state cannot be directly serialized to JSON. All `Set` fields must be converted to `Array` before `JSON.stringify()` and restored on `JSON.parse()`. One missed conversion will silently produce `{}` in the session file.
@@ -248,4 +255,4 @@ Plans:
 | 4. Canvas Node Editor Side Panel | 3/3 | Complete | 2026-04-06 |
 | 5. Dynamic Snippets | 0/5 | Planning complete | - |
 | 6. Loop Support | 0/3 | Planning complete | - |
-| 7. Mid-Session Save and Resume | 0/? | Not started | - |
+| 7. Mid-Session Save and Resume | 0/3 | Planning complete | - |
