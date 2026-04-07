@@ -28,10 +28,7 @@ export default class RadiProtocolPlugin extends Plugin {
     // Instantiate session persistence service (SESSION-01)
     this.sessionService = new SessionService(this.app, this.settings.sessionFolderPath);
 
-    // Ribbon icon (Phase 3 will open the runner view)
-    this.addRibbonIcon('activity', 'Radiprotocol', () => {
-      new Notice('Radiprotocol loaded. Open a canvas file to run a protocol.');
-    });
+    this.addRibbonIcon('activity', 'Radiprotocol', () => { void this.activateRunnerView(); });
 
     // Commands — IDs intentionally omit plugin name prefix (NFR-06)
     this.addCommand({
