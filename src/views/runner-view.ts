@@ -53,6 +53,7 @@ export class RunnerView extends ItemView {
 
   async openCanvas(filePath: string): Promise<void> {
     this.canvasFilePath = filePath;
+    this.selector?.setSelectedPath(filePath);
     const file = this.app.vault.getAbstractFileByPath(filePath);
     if (file === null) {
       this.renderError([`Canvas file not found: "${filePath}".`]);
@@ -233,9 +234,8 @@ export class RunnerView extends ItemView {
 
     switch (state.status) {
       case 'idle': {
-        questionZone.createEl('h2', { text: 'Open a canvas file to start' });
         questionZone.createEl('p', {
-          text: "Use the 'Run protocol' command from the command palette.",
+          text: 'Select a protocol above to get started.',
           cls: 'rp-empty-state-body',
         });
         this.renderPreviewZone(previewZone, '');
