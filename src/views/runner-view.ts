@@ -1,11 +1,14 @@
 // views/runner-view.ts — Phase 5: Full RunnerView with awaiting-snippet-fill branch
-import { ItemView, WorkspaceLeaf, Notice } from 'obsidian';
+import { ItemView, WorkspaceLeaf, Notice, TFile } from 'obsidian';
 import type RadiProtocolPlugin from '../main';
 import { ProtocolRunner } from '../runner/protocol-runner';
 import { GraphValidator } from '../graph/graph-validator';
 import type { CompleteState } from '../runner/runner-state';
 import type { ProtocolGraph } from '../graph/graph-model';
 import { SnippetFillInModal } from './snippet-fill-in-modal';
+import { ResumeSessionModal } from './resume-session-modal';
+import type { PersistedSession } from '../sessions/session-model';
+import { validateSessionNodeIds } from '../sessions/session-service';
 
 export const RUNNER_VIEW_TYPE = 'radiprotocol-runner';
 
@@ -47,8 +50,7 @@ export class RunnerView extends ItemView {
 
     let content: string;
     try {
-      // vault.read requires a TFile — cast from abstract file
-      content = await this.app.vault.read(file as import('obsidian').TFile);
+      content = await this.app.vault.read(file as TFile);
     } catch {
       this.renderError([`Could not read canvas file: "${filePath}".`]);
       return;
@@ -66,8 +68,54 @@ export class RunnerView extends ItemView {
       return;
     }
 
-    this.graph = parseResult.graph;
-    this.runner.start(parseResult.graph);
+    const graph = parseResult.graph;
+
+    // ── SESSION-02: check for existing incomplete session ─────────────────────
+    const session = await this.plugin.sessionService.load(filePath);
+
+    if (session !== null) {
+      // SESSION-03: validate that all saved node IDs still exist in the current graph
+      const missingIds = validateSessionNodeIds(session, graph);
+      if (missingIds.length > 0) {
+        // Hard failure — cannot resume safely; clear the session and show error
+        await this.plugin.sessionService.clear(filePath);
+        this.renderError([
+          `Cannot resume session: ${missingIds.length} node(s) referenced in the saved session no longer exist in the canvas.`,
+          'The canvas may have been edited since the session was saved.',
+          'Starting over. Run the protocol again to begin a fresh session.',
+        ]);
+        return;
+      }
+
+      // SESSION-04: check canvas mtime against the saved timestamp
+      const warnings: string[] = [];
+      if (file instanceof TFile && file.stat.mtime > session.canvasMtimeAtSave) {
+        warnings.push('The canvas file has been modified since this session was saved.');
+        warnings.push('Resuming may produce unexpected results if nodes or their content changed.');
+      }
+
+      // SESSION-06: present resume/start-over choice to the user
+      const modal = new ResumeSessionModal(this.app, warnings);
+      modal.open();
+      const choice = await modal.result;
+
+      if (choice === 'resume') {
+        // Restore the runner from the saved session snapshot
+        // Order is critical: setGraph first, then restoreFrom (Pitfall 2)
+        this.graph = graph;
+        this.runner.setGraph(graph);
+        this.runner.restoreFrom(session);
+        this.render();
+        return;
+      }
+
+      // 'start-over' — clear the stale session and fall through to normal start
+      await this.plugin.sessionService.clear(filePath);
+    }
+
+    // Normal protocol start (no session, or user chose start-over)
+    this.graph = graph;
+    this.runner.start(graph);
     this.render();
   }
 
@@ -134,6 +182,7 @@ export class RunnerView extends ItemView {
               });
               this.registerDomEvent(btn, 'click', () => {
                 this.runner.chooseAnswer(answerNode.id);
+                void this.autoSaveSession();   // SESSION-01 — save after answer
                 void this.renderAsync();
               });
             }
@@ -149,6 +198,7 @@ export class RunnerView extends ItemView {
             const submitBtn = questionZone.createEl('button', { text: 'Submit' });
             this.registerDomEvent(submitBtn, 'click', () => {
               this.runner.enterFreeText(textarea.value);
+              void this.autoSaveSession();   // SESSION-01 — save after free-text
               void this.renderAsync();
             });
             break;
@@ -172,6 +222,7 @@ export class RunnerView extends ItemView {
           });
           this.registerDomEvent(stepBackBtn, 'click', () => {
             this.runner.stepBack();
+            void this.autoSaveSession();   // SESSION-01 — save the reverted state
             this.render();
           });
         }
@@ -194,6 +245,10 @@ export class RunnerView extends ItemView {
       }
 
       case 'complete': {
+        // SESSION-01 Pitfall 3: clear session file when protocol finishes — no resume needed
+        if (this.canvasFilePath !== null) {
+          void this.plugin.sessionService.clear(this.canvasFilePath);
+        }
         questionZone.createEl('h2', { text: 'Protocol complete', cls: 'rp-complete-heading' });
         this.renderPreviewZone(previewZone, state.finalText);
         this.renderOutputToolbar(outputToolbar, state.finalText, true);
@@ -244,7 +299,38 @@ export class RunnerView extends ItemView {
       // D-11: Cancel = skip — advance runner with empty string
       this.runner.completeSnippet('');
     }
+    void this.autoSaveSession();   // SESSION-01 — save after snippet completion
     this.render();
+  }
+
+  /**
+   * Fire-and-forget session auto-save (SESSION-01).
+   * Called after every user action that mutates runner state.
+   * Returns without writing if runner is not in a saveable state (idle/complete/error)
+   * or if canvasFilePath is not set.
+   *
+   * IMPORTANT: Call as `void this.autoSaveSession()` — never await in event handlers
+   * (NFR-09: floating promises must be void-marked).
+   *
+   * Do NOT call this inside render() — only at explicit mutation sites (Pitfall 6).
+   */
+  private async autoSaveSession(): Promise<void> {
+    if (this.canvasFilePath === null) return;
+    const state = this.runner.getSerializableState();
+    if (state === null) return; // idle, complete, or error — not a valid save point
+
+    // Read canvas mtime for SESSION-04 change detection on resume
+    const file = this.app.vault.getAbstractFileByPath(this.canvasFilePath);
+    const mtime = (file instanceof TFile) ? file.stat.mtime : 0;
+
+    const session: PersistedSession = {
+      version: 1,
+      canvasFilePath: this.canvasFilePath,
+      canvasMtimeAtSave: mtime,
+      savedAt: Date.now(),
+      ...state,
+    };
+    await this.plugin.sessionService.save(session);
   }
 
   // ── Sub-renders ───────────────────────────────────────────────────────────
