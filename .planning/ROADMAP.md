@@ -15,7 +15,7 @@
 - [ ] **Phase 3: Runner UI (ItemView)** - End-to-end demonstrable plugin: open a canvas, run a protocol, see live preview, copy output
 - [x] **Phase 4: Canvas Node Editor Side Panel** - Protocol authoring without touching raw JSON: per-node forms write back to the canvas file
 - [ ] **Phase 5: Dynamic Snippets** - Placeholder fill-in modal integrated into the runner; snippet CRUD backed by per-file vault storage
-- [ ] **Phase 6: Loop Support** - Multi-iteration protocol sections with correct undo, iteration display, and exit UX
+- [x] **Phase 6: Loop Support** - Multi-iteration protocol sections with correct undo, iteration display, and exit UX
 - [ ] **Phase 7: Mid-Session Save and Resume** - Auto-save after every step; resume-session prompt; validation on resume against modified canvases
 
 ---
@@ -201,7 +201,7 @@ Plans:
 Plans:
 - [x] 06-01-PLAN.md — Wave 0: loop-body.canvas fixture + 7 RED test stubs (runner loop cases, validator loop case)
 - [x] 06-02-PLAN.md — Wave 1: LoopContext type, extended UndoEntry/AtNodeState, full loop engine in ProtocolRunner (all 7 tests GREEN)
-- [ ] 06-03-PLAN.md — Wave 2: RunnerView loop-end UI (iteration label, loop again / done buttons), Phase 6 CSS, human UAT checkpoint
+- [x] 06-03-PLAN.md — Wave 2: RunnerView loop-end UI (iteration label, loop again / done buttons), Phase 6 CSS, human UAT checkpoint
 
 **UI hint**: yes
 
@@ -254,7 +254,7 @@ Plans:
 | 3. Runner UI (ItemView) | 0/5 | Planning complete | - |
 | 4. Canvas Node Editor Side Panel | 3/3 | Complete | 2026-04-06 |
 | 5. Dynamic Snippets | 0/5 | Planning complete | - |
-| 6. Loop Support | 0/3 | Planning complete | - |
+| 6. Loop Support | 3/3 | Complete | 2026-04-07 |
 | 7. Mid-Session Save and Resume | 0/3 | Planning complete | - |
 
 ---
