@@ -55,21 +55,19 @@
 
 ## Traceability
 
-*Filled by roadmapper after roadmap is created.*
-
-| REQ-ID | Phase |
-|--------|-------|
-| RUNTAB-01 | — |
-| RUNTAB-02 | — |
-| RUNTAB-03 | — |
-| SELECTOR-01 | — |
-| SELECTOR-02 | — |
-| SELECTOR-03 | — |
-| SELECTOR-04 | — |
-| OUTPUT-01 | — |
-| OUTPUT-02 | — |
-| OUTPUT-03 | — |
-| LIVE-01 | — |
-| LIVE-02 | — |
-| LIVE-03 | — |
-| LIVE-04 | — |
+| REQ-ID | Phase | Status |
+|--------|-------|--------|
+| RUNTAB-01 | Phase 8 | Pending |
+| RUNTAB-02 | Phase 8 | Pending |
+| RUNTAB-03 | Phase 8 | Pending |
+| SELECTOR-01 | Phase 9 | Pending |
+| SELECTOR-02 | Phase 9 | Pending |
+| SELECTOR-03 | Phase 9 | Pending |
+| SELECTOR-04 | Phase 9 | Pending |
+| OUTPUT-01 | Phase 10 | Pending |
+| OUTPUT-02 | Phase 10 | Pending |
+| OUTPUT-03 | Phase 10 | Pending |
+| LIVE-01 | Phase 11 | Pending |
+| LIVE-02 | Phase 11 | Pending |
+| LIVE-03 | Phase 11 | Pending |
+| LIVE-04 | Phase 11 | Pending |
