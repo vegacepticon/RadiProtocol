@@ -7,11 +7,13 @@ import { EditorPanelView, EDITOR_PANEL_VIEW_TYPE } from './views/editor-panel-vi
 import { RunnerView, RUNNER_VIEW_TYPE } from './views/runner-view';
 import { SnippetManagerView, SNIPPET_MANAGER_VIEW_TYPE } from './views/snippet-manager-view';
 import { SnippetService } from './snippets/snippet-service';
+import { SessionService } from './sessions/session-service';
 
 export default class RadiProtocolPlugin extends Plugin {
   settings!: RadiProtocolSettings;
   canvasParser!: CanvasParser;
   snippetService!: SnippetService;
+  sessionService!: SessionService;
 
   async onload(): Promise<void> {
     // Load settings with defaults guard (NFR-08)
@@ -22,6 +24,9 @@ export default class RadiProtocolPlugin extends Plugin {
 
     // Instantiate services
     this.snippetService = new SnippetService(this.app, this.settings);
+
+    // Instantiate session persistence service (SESSION-01)
+    this.sessionService = new SessionService(this.app, this.settings.sessionFolderPath);
 
     // Ribbon icon (Phase 3 will open the runner view)
     this.addRibbonIcon('activity', 'Radiprotocol', () => {
