@@ -33,8 +33,10 @@ export class SessionService {
 
   /**
    * Save a session. Idempotent — overwrites any existing session file for this canvas.
-   * Uses exists-check → adapter.write (existing) or vault.create (new) pattern,
-   * mirroring SnippetService.save() (SESSION-01).
+   * Always uses vault.adapter.write() (SESSION-01) — this avoids vault.create() path
+   * normalisation issues with encodeURIComponent-encoded characters such as %2F.
+   * vault.adapter.write() creates the file if it does not exist and treats the path as
+   * a literal filesystem path, matching the behaviour needed for encoded filenames.
    */
   async save(session: PersistedSession): Promise<void> {
     const filePath = this.sessionFilePath(session.canvasFilePath);
@@ -42,12 +44,7 @@ export class SessionService {
 
     await this.mutex.runExclusive(filePath, async () => {
       await ensureFolderPath(this.app.vault, this.sessionFolderPath);
-      const exists = await this.app.vault.adapter.exists(filePath);
-      if (exists) {
-        await this.app.vault.adapter.write(filePath, payload);
-      } else {
-        await this.app.vault.create(filePath, payload);
-      }
+      await this.app.vault.adapter.write(filePath, payload);
     });
   }
 

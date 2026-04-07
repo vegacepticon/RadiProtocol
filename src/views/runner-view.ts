@@ -330,7 +330,12 @@ export class RunnerView extends ItemView {
       savedAt: Date.now(),
       ...state,
     };
-    await this.plugin.sessionService.save(session);
+    try {
+      await this.plugin.sessionService.save(session);
+    } catch (err) {
+      // Log save errors so silent failures are visible in the developer console
+      console.error('[RadiProtocol] autoSaveSession failed:', err);
+    }
   }
 
   // ── Sub-renders ───────────────────────────────────────────────────────────
