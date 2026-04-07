@@ -151,5 +151,19 @@ Commits exist:
 - 209e83f: FOUND (fix(07-02): restore report preview editability — remove accidental readonly)
 
 ---
+
+## Post-UAT Fix: Session file not deleted on completion or "Start over" (2026-04-07)
+
+**Commit:** `37ae9b9` — `fix(07-02): use vault.adapter.remove for session deletion — fixes path normalisation`
+
+**Root cause:** `SessionService.clear()` used `vault.getAbstractFileByPath(filePath)` to obtain a `TFile` handle, then called `vault.delete(file)`. This is the same path-normalisation trap as the original `vault.create()` bug fixed in `fbbd368`. Obsidian's `getAbstractFileByPath()` searches the vault's in-memory index using the normalised path — it decodes `%2F` back to `/`, so a filename like `protocols%2Fchest.canvas.json` was looked up as `protocols/chest.canvas.json`, which does not exist in the index. `getAbstractFileByPath()` returned `null`, the `if (file !== null)` guard short-circuited, and every deletion was silently skipped.
+
+**Callers were correct:** Both call sites — the `status === 'complete'` branch in `render()` and the `'start-over'` branch in `openCanvas()` — were already calling `sessionService.clear()` as intended. The only broken piece was `clear()` itself.
+
+**Fix:** Replaced the two-step `getAbstractFileByPath` + `vault.delete` with a direct `vault.adapter.remove(filePath)` call, mirroring the pattern established in `save()` and `load()`. The unused `TFile` import was also removed.
+
+**Files modified:** `src/sessions/session-service.ts`
+
+---
 *Phase: 07-mid-session-save-and-resume*
 *Completed: 2026-04-07*
