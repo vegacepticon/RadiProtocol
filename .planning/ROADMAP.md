@@ -42,7 +42,12 @@ Full details: `.planning/milestones/v1.0-ROADMAP.md`
 
 **Goal:** Let users choose which canvas/scenario to run from within the plugin panel via a dropdown — without having to close the panel and invoke the command again on a different canvas.
 **Requirements:** SELECTOR-01, SELECTOR-02, SELECTOR-03, SELECTOR-04
-**Plans:** 0 plans
+**Plans:** 3 plans
+
+Plans:
+- [ ] 09-01-PLAN.md — Add protocolFolderPath setting and implement CanvasSelectorWidget with drill-down dropdown and CSS
+- [ ] 09-02-PLAN.md — Create CanvasSwitchModal confirmation dialog for mid-session canvas switching
+- [ ] 09-03-PLAN.md — Wire CanvasSelectorWidget and CanvasSwitchModal into RunnerView with vault events and idle-state UX update
 
 ### Phase 10: Insert Into Current Note Output
 
@@ -70,6 +75,6 @@ Full details: `.planning/milestones/v1.0-ROADMAP.md`
 | 6. Loop Support | v1.0 | 3/3 | Complete | 2026-04-07 |
 | 7. Mid-Session Save and Resume | v1.0 | 3/3 | Complete | 2026-04-07 |
 | 8. Settings + Full-Tab Runner View | v1.1 | 2/2 | Needs Review | — |
-| 9. Canvas Selector Dropdown | v1.1 | 0/? | Pending | — |
+| 9. Canvas Selector Dropdown | v1.1 | 0/3 | Pending | — |
 | 10. Insert Into Current Note Output | v1.1 | 0/? | Pending | — |
 | 11. Live Canvas Editing | v1.1 | 0/? | Pending | — |
