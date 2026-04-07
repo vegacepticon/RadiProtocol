@@ -55,14 +55,14 @@ export class RunnerView extends ItemView {
     this.canvasFilePath = filePath;
     this.selector?.setSelectedPath(filePath);
     const file = this.app.vault.getAbstractFileByPath(filePath);
-    if (file === null) {
+    if (!(file instanceof TFile)) {
       this.renderError([`Canvas file not found: "${filePath}".`]);
       return;
     }
 
     let content: string;
     try {
-      content = await this.app.vault.read(file as TFile);
+      content = await this.app.vault.read(file);
     } catch {
       this.renderError([`Could not read canvas file: "${filePath}".`]);
       return;
