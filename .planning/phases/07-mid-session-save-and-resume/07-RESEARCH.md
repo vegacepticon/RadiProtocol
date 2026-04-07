@@ -604,22 +604,25 @@ this.sessionService = new SessionService(this.app, this.settings.sessionFolderPa
 
 ---
 
-## Open Questions
+## Open Questions (RESOLVED)
 
-1. **`awaiting-snippet-fill` auto-save timing**
+1. **`awaiting-snippet-fill` auto-save timing** — RESOLVED
    - What we know: The runner is in `awaiting-snippet-fill` while the snippet modal is open. The auto-save hook fires after `chooseAnswer/enterFreeText/chooseLoopAction` but NOT while the modal is open.
    - What's unclear: Should we save when transitioning INTO `awaiting-snippet-fill`, or only AFTER `completeSnippet()` resolves?
    - Recommendation: Save when entering `awaiting-snippet-fill` (i.e., after the `handleSnippetFill` path sets status). If Obsidian is closed while the modal is open, a save with `awaiting-snippet-fill` status means the modal re-opens on resume — acceptable. The alternative (only saving after `completeSnippet`) would lose the session if Obsidian crashes mid-modal.
+   - **Decision:** Save on transition INTO `awaiting-snippet-fill` (inside `handleSnippetFill()` before `modal.open()`). Implemented in Plan 07-02 Task T1.
 
-2. **`ProtocolRunner.setGraph()` method placement**
+2. **`ProtocolRunner.setGraph()` method placement** — RESOLVED
    - What we know: `restoreFrom()` needs the graph to be set without calling `start()` (which resets all state).
    - What's unclear: Whether to add a `setGraph()` method to `ProtocolRunner` or have `RunnerView` call `start()` and then immediately call `restoreFrom()`.
    - Recommendation: Add `setGraph(graph: ProtocolGraph): void` as a minimal public method. Calling `start()` then overriding with `restoreFrom()` works but is semantically confusing and triggers unnecessary `advanceThrough()`.
+   - **Decision:** Add `setGraph()` as a public method on `ProtocolRunner`. Implemented in Plan 07-01 Task T2.
 
-3. **Session file retention after complete**
+3. **Session file retention after complete** — RESOLVED
    - What we know: A completed session should not be offered for resume.
    - What's unclear: Whether to delete immediately on `complete` or keep for debugging.
    - Recommendation: Delete immediately on `complete` state transition in `RunnerView.render()`. The session is no longer useful once the protocol is done.
+   - **Decision:** Delete in `render()` when state is `complete`. Implemented in Plan 07-02 Task T1.
 
 ---
 
