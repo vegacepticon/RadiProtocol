@@ -1,6 +1,6 @@
 // settings.ts
 import type { App } from 'obsidian';
-import { PluginSettingTab, Setting } from 'obsidian';
+import { Notice, PluginSettingTab, Setting } from 'obsidian';
 import type RadiProtocolPlugin from './main';
 
 export interface RadiProtocolSettings {
@@ -94,6 +94,8 @@ export class RadiProtocolSettingsTab extends PluginSettingTab {
           if (!isNaN(num) && num > 0) {
             this.plugin.settings.maxLoopIterations = num;
             await this.plugin.saveSettings();
+          } else if (value.trim() !== '') {
+            new Notice('Max loop iterations must be a positive integer.');
           }
         })
       );
