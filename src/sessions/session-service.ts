@@ -1,6 +1,6 @@
 // sessions/session-service.ts
 // Pure module — zero Obsidian API imports (NFR-01)
-import type { App, TFile } from 'obsidian';
+import type { App } from 'obsidian';
 import { WriteMutex } from '../utils/write-mutex';
 import { ensureFolderPath } from '../utils/vault-utils';
 import type { PersistedSession } from './session-model';
@@ -76,15 +76,19 @@ export class SessionService {
    * Delete the session file for the given canvas path.
    * No-op if the file does not exist.
    * Called when: protocol completes, user chooses "Start over", node ID validation fails.
+   *
+   * Uses vault.adapter.remove() — NOT vault.delete() — for the same reason save() uses
+   * vault.adapter.write(): vault.getAbstractFileByPath() looks up files by the
+   * normalised vault index path, which decodes %2F back to /, so a filename like
+   * "protocols%2Fchest.canvas.json" is never found in the index and getAbstractFileByPath
+   * returns null. vault.adapter.remove() treats the path as a literal filesystem path,
+   * matching exactly how the file was written by save().
    */
   async clear(canvasFilePath: string): Promise<void> {
     const filePath = this.sessionFilePath(canvasFilePath);
     const exists = await this.app.vault.adapter.exists(filePath);
     if (!exists) return;
-    const file = this.app.vault.getAbstractFileByPath(filePath);
-    if (file !== null) {
-      await this.app.vault.delete(file as TFile);
-    }
+    await this.app.vault.adapter.remove(filePath);
   }
 
   /**
