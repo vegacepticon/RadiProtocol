@@ -1,5 +1,5 @@
 ---
-status: testing
+status: complete
 phase: 08-settings-full-tab-runner-view
 source: 08-01-SUMMARY.md, 08-02-SUMMARY.md
 started: 2026-04-07T00:00:00Z
@@ -29,6 +29,7 @@ expected: With Runner View Mode set to "Sidebar" (default), trigger the runner (
 result: issue
 reported: "при нажатии на иконку выскакивает справа сверху надпись 'Radiprotocol loaded. Open a canvas file to run a protocol', даже если .canvas открыт. Если выбираю командой Run protocol - боковая панель справа открывается."
 severity: major
+fixed: "Replaced stub Notice with void this.activateRunnerView() — verified pass after fix"
 
 ### 5. Open Runner in Tab Mode
 expected: Change Runner View Mode to "Tab" in settings. Trigger the runner. The RadiProtocol runner should open as a tab in the main workspace editor tab strip (not in the sidebar).
