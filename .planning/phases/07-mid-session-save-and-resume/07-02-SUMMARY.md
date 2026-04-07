@@ -90,14 +90,21 @@ Each task was committed atomically:
 
 ### UAT Bug Fixes (post-checkpoint)
 
-**1. [Rule 1 - Bug] vault.create() silently fails for encoded session filenames**
+**1. [Rule 1 - Bug] Startup hang — ResumeSessionModal opened before workspace ready**
+- **Found during:** Post-UAT — plugin caused infinite loading on Obsidian startup when a `.radiprotocol/sessions/` file existed
+- **Root cause:** `RunnerView.setState()` is called by Obsidian during workspace layout restoration at startup. It directly `await`ed `openCanvas()`, which performs vault I/O (`vault.adapter.exists`, `vault.adapter.read`) and then opened `ResumeSessionModal` and `await`ed `modal.result` — a Promise that only resolves when the user clicks a button. During startup layout restoration the workspace is not yet ready, so the modal could not receive user interaction and the `await` hung forever, blocking plugin load indefinitely.
+- **Fix:** Wrapped the `openCanvas(path)` call inside `this.app.workspace.onLayoutReady(() => { ... })` in `setState()`. `onLayoutReady` fires immediately when the layout is already ready (normal runtime use), and defers until after full workspace initialization on startup. Vault I/O and modal display now only happen in a fully ready state.
+- **Files modified:** `src/views/runner-view.ts`
+- **Commit:** `880f78c`
+
+**2. [Rule 1 - Bug] vault.create() silently fails for encoded session filenames** *(original UAT fix)*
 - **Found during:** UAT — `.radiprotocol/sessions/` folder never created after answering questions
 - **Root cause:** `SessionService.save()` called `vault.create(filePath, payload)` for new files. Obsidian's `vault.create()` is a high-level API that normalises paths: when `filePath` contains `%2F` (the `encodeURIComponent` encoding of `/` in canvas paths like `protocols/chest.canvas`), Obsidian decodes it back to `/` and attempts to create a nested directory structure that does not exist, throwing silently. The error was invisible because `autoSaveSession()` was called as `void this.autoSaveSession()` (fire-and-forget).
 - **Fix:** Replaced `vault.create()` with `vault.adapter.write()` for all writes in `SessionService.save()`. `adapter.write()` treats the path as a literal filesystem path (no normalisation), creates the file if absent, and overwrites if present — making the `exists` check redundant. Also added a `try/catch` in `autoSaveSession()` that logs errors to the developer console.
 - **Files modified:** `src/sessions/session-service.ts`, `src/views/runner-view.ts`
 - **Commit:** `fbbd368`
 
-**2. [Rule 1 - Bug] Report preview textarea accidentally set to read-only**
+**3. [Rule 1 - Bug] Report preview textarea accidentally set to read-only**
 - **Found during:** UAT — textarea in the preview zone was non-editable
 - **Root cause:** `renderPreviewZone()` included `textarea.readOnly = true` introduced during Task 1 session wiring. The line was not in the plan spec and was not intentional — the report preview is meant to be user-editable so the accumulated text can be adjusted before copy/save.
 - **Fix:** Removed `textarea.readOnly = true` from `renderPreviewZone()`.
