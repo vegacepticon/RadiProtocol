@@ -1,12 +1,6 @@
 import { defineConfig } from 'vitest/config';
-import path from 'node:path';
 
 export default defineConfig({
-  resolve: {
-    alias: {
-      obsidian: path.resolve(__dirname, 'src/__mocks__/obsidian.ts'),
-    },
-  },
   test: {
     environment: 'node',
     include: ['src/__tests__/**/*.test.ts'],
