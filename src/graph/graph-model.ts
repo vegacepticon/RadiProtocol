@@ -60,6 +60,21 @@ export interface LoopEndNode extends RPNodeBase {
   loopStartId: string;
 }
 
+/**
+ * One frame on the loop context stack.
+ * Pushed when the runner enters a loop-start node.
+ * Contains only primitives — shallow array copy is sufficient for snapshots (LOOP-05).
+ */
+export interface LoopContext {
+  /** ID of the loop-start node that opened this frame */
+  loopStartId: string;
+  /** 1-based iteration counter (starts at 1 on first entry) */
+  iteration: number;
+  /** Full text snapshot captured immediately before entering the loop body.
+   *  Used to restore accumulated text if the user steps back past the loop entry point. */
+  textBeforeLoop: string;
+}
+
 export type RPNode =
   | StartNode
   | QuestionNode

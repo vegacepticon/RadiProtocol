@@ -253,16 +253,16 @@ describe('ProtocolRunner', () => {
     });
   });
 
-  describe('loop-start error state (RUN-08, D-05)', () => {
-    it('transitions to error state with message when loop-start node is reached', () => {
-      // loop-start.canvas: start → n-ls1 (loop-start)
+  describe('loop-start missing continue edge (RUN-08)', () => {
+    it('transitions to error state when loop-start has no continue edge', () => {
+      // loop-start.canvas: start → n-ls1 (loop-start, no outgoing edges with label 'continue')
+      // Phase 6: loop support is implemented — a missing 'continue' edge is a malformed graph error
       const runner = new ProtocolRunner();
       runner.start(loadGraph('loop-start.canvas'));
       const state = runner.getState();
       expect(state.status).toBe('error');
       if (state.status !== 'error') return;
-      // D-05: exact message: "Loop nodes are not yet supported — upgrade to Phase 6"
-      expect(state.message).toBe('Loop nodes are not yet supported — upgrade to Phase 6');
+      expect(state.message).toMatch(/Loop-start node.*has no 'continue' edge/);
     });
   });
 

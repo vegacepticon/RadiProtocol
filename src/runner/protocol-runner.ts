@@ -1,6 +1,6 @@
 // runner/protocol-runner.ts
 // Pure module — zero Obsidian API imports (NFR-01)
-import type { ProtocolGraph } from '../graph/graph-model';
+import type { ProtocolGraph, LoopContext } from '../graph/graph-model';
 import type { RunnerState, UndoEntry } from './runner-state';
 import { TextAccumulator } from './text-accumulator';
 
@@ -35,6 +35,7 @@ export class ProtocolRunner {
   private errorMessage: string | null = null;
   private snippetId: string | null = null;
   private snippetNodeId: string | null = null;
+  private loopContextStack: LoopContext[] = [];
 
   constructor(options: ProtocolRunnerOptions = {}) {
     this.maxIterations = options.maxIterations ?? 50;
@@ -54,6 +55,7 @@ export class ProtocolRunner {
     this.errorMessage = null;
     this.snippetId = null;
     this.snippetNodeId = null;
+    this.loopContextStack = [];
     this.runnerStatus = 'at-node';
     // Auto-advance from the start node
     this.advanceThrough(graph.startNodeId);
@@ -78,6 +80,7 @@ export class ProtocolRunner {
     this.undoStack.push({
       nodeId: this.currentNodeId,
       textSnapshot: this.accumulator.snapshot(),
+      loopContextStack: [...this.loopContextStack],
     });
 
     // Append the answer text
@@ -113,6 +116,7 @@ export class ProtocolRunner {
     this.undoStack.push({
       nodeId: this.currentNodeId,
       textSnapshot: this.accumulator.snapshot(),
+      loopContextStack: [...this.loopContextStack],
     });
 
     // Assemble final string with optional prefix/suffix (RUN-04)
@@ -142,6 +146,7 @@ export class ProtocolRunner {
 
     this.currentNodeId = entry.nodeId;
     this.accumulator.restoreTo(entry.textSnapshot);
+    this.loopContextStack = [...entry.loopContextStack]; // restore from snapshot (LOOP-05)
     this.runnerStatus = 'at-node';
     this.errorMessage = null;
     this.snippetId = null;
@@ -175,6 +180,65 @@ export class ProtocolRunner {
   }
 
   /**
+   * User chooses to loop again or exit the loop at a loop-end node (LOOP-02).
+   * Only valid in at-node state when current node is a loop-end node.
+   * Pushes UndoEntry BEFORE mutation (same invariant as chooseAnswer).
+   */
+  chooseLoopAction(action: 'again' | 'done'): void {
+    if (this.runnerStatus !== 'at-node') return;
+    if (this.graph === null || this.currentNodeId === null) return;
+
+    const node = this.graph.nodes.get(this.currentNodeId);
+    if (node === undefined || node.kind !== 'loop-end') return;
+
+    // Push undo entry BEFORE any mutation (LOOP-05)
+    this.undoStack.push({
+      nodeId: this.currentNodeId,
+      textSnapshot: this.accumulator.snapshot(),
+      loopContextStack: [...this.loopContextStack],
+    });
+
+    const frame = this.loopContextStack[this.loopContextStack.length - 1];
+
+    if (action === 'again') {
+      if (frame === undefined) {
+        this.transitionToError('Loop context stack is empty at loop-end node.');
+        return;
+      }
+      // Enforce per-loop iteration cap (RUN-09)
+      const loopStartNode = this.graph.nodes.get(frame.loopStartId);
+      if (loopStartNode?.kind === 'loop-start' && frame.iteration >= loopStartNode.maxIterations) {
+        this.transitionToError(
+          `Maximum iterations (${loopStartNode.maxIterations}) reached for loop "${loopStartNode.loopLabel}".`,
+        );
+        return;
+      }
+      // Increment iteration on the top stack frame (replace — do not mutate)
+      this.loopContextStack[this.loopContextStack.length - 1] = {
+        ...frame,
+        iteration: frame.iteration + 1,
+      };
+      // Re-enter the loop body via loop-start's 'continue' edge (Pitfall 3)
+      const continueNeighbor = this.edgeByLabel(frame.loopStartId, 'continue');
+      if (continueNeighbor === undefined) {
+        this.transitionToError(`Loop-start '${frame.loopStartId}' has no 'continue' edge for re-entry.`);
+        return;
+      }
+      this.advanceThrough(continueNeighbor);
+    } else {
+      // 'done' — pop the loop frame and follow loop-start's 'exit' edge
+      this.loopContextStack.pop();
+      const loopStartId = node.loopStartId;
+      const exitNeighbor = this.edgeByLabel(loopStartId, 'exit');
+      if (exitNeighbor === undefined) {
+        this.transitionToError(`Loop-start '${loopStartId}' has no 'exit' edge.`);
+        return;
+      }
+      this.advanceThrough(exitNeighbor);
+    }
+  }
+
+  /**
    * Return a read-only snapshot of the current runner state (D-02).
    * Callers must narrow with switch(state.status) — do not access internal fields.
    */
@@ -182,13 +246,27 @@ export class ProtocolRunner {
     switch (this.runnerStatus) {
       case 'idle':
         return { status: 'idle' };
-      case 'at-node':
+      case 'at-node': {
+        const topFrame = this.loopContextStack[this.loopContextStack.length - 1];
+        const loopStartNode = topFrame !== undefined
+          ? this.graph?.nodes.get(topFrame.loopStartId)
+          : undefined;
+        const loopLabel = loopStartNode?.kind === 'loop-start'
+          ? loopStartNode.loopLabel
+          : undefined;
+        const loopIterationLabel =
+          topFrame !== undefined && loopLabel !== undefined
+            ? `${loopLabel} ${topFrame.iteration}`
+            : undefined;
         return {
           status: 'at-node',
           currentNodeId: this.currentNodeId ?? '',
           accumulatedText: this.accumulator.current,
           canStepBack: this.undoStack.length > 0,
+          loopIterationLabel,
+          isAtLoopEnd: this.graph?.nodes.get(this.currentNodeId ?? '')?.kind === 'loop-end',
         };
+      }
       case 'awaiting-snippet-fill':
         return {
           status: 'awaiting-snippet-fill',
@@ -292,12 +370,26 @@ export class ProtocolRunner {
           cursor = next;
           break;
         }
-        case 'loop-start':
+        case 'loop-start': {
+          // Push a new loop frame — iteration starts at 1 (LOOP-03)
+          this.loopContextStack.push({
+            loopStartId: cursor,
+            iteration: 1,
+            textBeforeLoop: this.accumulator.snapshot(),
+          });
+          // Follow the 'continue' edge into the loop body (LOOP-02)
+          const continueNeighbor = this.edgeByLabel(cursor, 'continue');
+          if (continueNeighbor === undefined) {
+            this.transitionToError(`Loop-start node '${cursor}' has no 'continue' edge.`);
+            return;
+          }
+          cursor = continueNeighbor;
+          break;
+        }
         case 'loop-end': {
-          // D-05: Phase 2 stub — this exact block is replaced in Phase 6
-          this.transitionToError(
-            'Loop nodes are not yet supported — upgrade to Phase 6',
-          );
+          // Halt here — RunnerView will render "loop again / done" prompt (LOOP-02)
+          this.currentNodeId = cursor;
+          this.runnerStatus = 'at-node';
           return;
         }
         default: {
@@ -316,6 +408,17 @@ export class ProtocolRunner {
     const neighbors = this.graph.adjacency.get(nodeId);
     if (neighbors === undefined) return undefined;
     return neighbors[0];
+  }
+
+  /**
+   * Returns the toNodeId of the first edge from nodeId with the given label.
+   * Edge count per loop-start node is ≤ 2 — O(n) find is fine (RESEARCH.md Don't Hand-Roll).
+   */
+  private edgeByLabel(nodeId: string, label: string): string | undefined {
+    if (this.graph === null) return undefined;
+    return this.graph.edges.find(
+      e => e.fromNodeId === nodeId && e.label === label,
+    )?.toNodeId;
   }
 
   private transitionToComplete(): void {

@@ -1,5 +1,6 @@
 // runner/runner-state.ts
 // Pure module — zero Obsidian API imports (NFR-01)
+import type { LoopContext } from '../graph/graph-model';
 
 // Five runner statuses — used as the discriminant field in RunnerState
 export type RunnerStatus =
@@ -27,6 +28,10 @@ export interface AtNodeState {
   accumulatedText: string;
   /** true when undoStack is non-empty — avoids exposing the stack itself (D-02) */
   canStepBack: boolean;
+  /** Iteration label for display when inside a loop body (e.g., "Lesion 2") (LOOP-04) */
+  loopIterationLabel?: string;
+  /** true when currentNodeId refers to a loop-end node — drives UI branch (LOOP-02) */
+  isAtLoopEnd?: boolean;
 }
 
 /**
@@ -77,4 +82,7 @@ export interface UndoEntry {
   nodeId: string;
   /** accumulatedText BEFORE this user action — full string snapshot (D-04, RUN-07) */
   textSnapshot: string;
+  /** Deep snapshot of the loop context stack at the moment this entry was pushed.
+   *  Must be a spread copy — NOT a live reference (LOOP-05, Pitfall 1 in RESEARCH.md). */
+  loopContextStack: LoopContext[];
 }
