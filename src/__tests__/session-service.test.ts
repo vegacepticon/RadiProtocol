@@ -65,20 +65,14 @@ describe('SessionService API surface (SESSION-01)', () => {
 });
 
 describe('SessionService.save() write behavior (SESSION-01)', () => {
-  it('calls vault.create when file does not yet exist', async () => {
-    const app = makeAppMock(false);
-    const svc = new SessionService(app as never, '.radiprotocol/sessions');
-    await svc.save(makeSession());
-    expect(app.vault.create).toHaveBeenCalledTimes(1);
-    expect(app.vault.adapter.write).not.toHaveBeenCalled();
-  });
-
-  it('calls vault.adapter.write (not vault.create) when file already exists', async () => {
-    const app = makeAppMock(true);
-    const svc = new SessionService(app as never, '.radiprotocol/sessions');
-    await svc.save(makeSession());
-    expect(app.vault.adapter.write).toHaveBeenCalledTimes(1);
-    expect(app.vault.create).not.toHaveBeenCalled();
+  it('always calls vault.adapter.write (never vault.create) regardless of file existence', async () => {
+    for (const existsResult of [false, true]) {
+      const app = makeAppMock(existsResult);
+      const svc = new SessionService(app as never, '.radiprotocol/sessions');
+      await svc.save(makeSession());
+      expect(app.vault.adapter.write).toHaveBeenCalledTimes(1);
+      expect(app.vault.create).not.toHaveBeenCalled();
+    }
   });
 });
 
