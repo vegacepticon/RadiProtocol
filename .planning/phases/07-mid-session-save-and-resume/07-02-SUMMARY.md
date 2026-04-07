@@ -71,6 +71,8 @@ Each task was committed atomically:
 
 1. **Task 1: Create ResumeSessionModal and extend RunnerView with session hooks** - `3b90d76` (feat)
 2. **Task 2: Wire SessionService into main.ts** - `edaf5e5` (feat)
+3. **UAT Bug 1 fix: sessions not saving** - `fbbd368` (fix)
+4. **UAT Bug 2 fix: report preview read-only** - `209e83f` (fix)
 
 ## Files Created/Modified
 
@@ -86,7 +88,21 @@ Each task was committed atomically:
 
 ## Deviations from Plan
 
-None — plan executed exactly as written. All code patterns, method signatures, import locations, and mutation hook sites match the plan spec.
+### UAT Bug Fixes (post-checkpoint)
+
+**1. [Rule 1 - Bug] vault.create() silently fails for encoded session filenames**
+- **Found during:** UAT — `.radiprotocol/sessions/` folder never created after answering questions
+- **Root cause:** `SessionService.save()` called `vault.create(filePath, payload)` for new files. Obsidian's `vault.create()` is a high-level API that normalises paths: when `filePath` contains `%2F` (the `encodeURIComponent` encoding of `/` in canvas paths like `protocols/chest.canvas`), Obsidian decodes it back to `/` and attempts to create a nested directory structure that does not exist, throwing silently. The error was invisible because `autoSaveSession()` was called as `void this.autoSaveSession()` (fire-and-forget).
+- **Fix:** Replaced `vault.create()` with `vault.adapter.write()` for all writes in `SessionService.save()`. `adapter.write()` treats the path as a literal filesystem path (no normalisation), creates the file if absent, and overwrites if present — making the `exists` check redundant. Also added a `try/catch` in `autoSaveSession()` that logs errors to the developer console.
+- **Files modified:** `src/sessions/session-service.ts`, `src/views/runner-view.ts`
+- **Commit:** `fbbd368`
+
+**2. [Rule 1 - Bug] Report preview textarea accidentally set to read-only**
+- **Found during:** UAT — textarea in the preview zone was non-editable
+- **Root cause:** `renderPreviewZone()` included `textarea.readOnly = true` introduced during Task 1 session wiring. The line was not in the plan spec and was not intentional — the report preview is meant to be user-editable so the accumulated text can be adjusted before copy/save.
+- **Fix:** Removed `textarea.readOnly = true` from `renderPreviewZone()`.
+- **Files modified:** `src/views/runner-view.ts`
+- **Commit:** `209e83f`
 
 ## Issues Encountered
 
@@ -119,10 +135,13 @@ Files exist:
 - src/views/resume-session-modal.ts: FOUND
 - src/views/runner-view.ts: FOUND (modified)
 - src/main.ts: FOUND (modified)
+- src/sessions/session-service.ts: FOUND (modified — UAT fix)
 
 Commits exist:
 - 3b90d76: FOUND (feat(07-02): create ResumeSessionModal and extend RunnerView with session hooks)
 - edaf5e5: FOUND (feat(07-02): wire SessionService into main.ts)
+- fbbd368: FOUND (fix(07-02): wire auto-save triggers in RunnerView — sessions now persist to vault)
+- 209e83f: FOUND (fix(07-02): restore report preview editability — remove accidental readonly)
 
 ---
 *Phase: 07-mid-session-save-and-resume*
