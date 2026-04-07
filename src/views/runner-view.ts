@@ -343,7 +343,6 @@ export class RunnerView extends ItemView {
   private renderPreviewZone(zone: HTMLElement, text: string): void {
     zone.createEl('p', { text: 'Report preview', cls: 'rp-preview-heading' });
     const textarea = zone.createEl('textarea', { cls: 'rp-preview-textarea' });
-    textarea.readOnly = true;
     textarea.value = text;
     this.previewTextarea = textarea;
   }
