@@ -166,9 +166,13 @@ export class RunnerView extends ItemView {
       })
     );
     this.registerEvent(
-      this.app.vault.on('rename', (file) => {
+      this.app.vault.on('rename', (file, oldPath) => {
         if (file instanceof TFile && file.extension === 'canvas') {
           this.selector?.rebuildIfOpen();
+          if (oldPath === this.canvasFilePath) {
+            this.canvasFilePath = file.path;
+            this.selector?.setSelectedPath(file.path);
+          }
         }
       })
     );
