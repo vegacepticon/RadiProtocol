@@ -1,22 +1,31 @@
 ---
 gsd_state_version: 1.0
-milestone: v1.0
-milestone_name: milestone
-status: completed
-last_updated: "2026-04-07T08:39:26.639Z"
+milestone: v1.1
+milestone_name: UX & Community Release
+status: in_progress
+last_updated: "2026-04-07T00:00:00.000Z"
 progress:
-  total_phases: 9
-  completed_phases: 7
-  total_plans: 28
-  completed_plans: 28
-  percent: 100
+  total_phases: 0
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
+  percent: 0
 ---
 
 # RadiProtocol — Project State
 
 **Updated:** 2026-04-07
-**Milestone:** v1.0 — Initial public release
-**Status:** v1.0 milestone complete
+**Milestone:** v1.1 — UX & Community Release
+**Status:** Defining requirements
+
+---
+
+## Current Position
+
+Phase: Not started (defining requirements)
+Plan: —
+Status: Defining requirements
+Last activity: 2026-04-07 — Milestone v1.1 started
 
 ---
 
@@ -24,22 +33,8 @@ progress:
 
 See: `.planning/PROJECT.md` (updated 2026-04-07)
 
-**Core value:** A radiologist can generate a structured, accurate protocol in seconds by answering a guided algorithm — without writing a single line of code.  
-**Current focus:** Planning next milestone (community submission + v1.1 features)
-
----
-
-## Phase Progress
-
-| Phase | Name | Status |
-|-------|------|--------|
-| 1 | Project Scaffold + Canvas Parsing Foundation | Complete |
-| 2 | Core Protocol Runner Engine | Complete |
-| 3 | Runner UI (ItemView) | Complete |
-| 4 | Canvas Node Editor Side Panel | Complete |
-| 5 | Dynamic Snippets | Complete |
-| 6 | Loop Support | Complete |
-| 7 | Mid-Session Save + Resume | Complete |
+**Core value:** A radiologist can generate a structured, accurate protocol in seconds by answering a guided algorithm — without writing a single line of code.
+**Current focus:** v1.1 — UX improvements + community plugin submission
 
 ---
 
@@ -47,30 +42,21 @@ See: `.planning/PROJECT.md` (updated 2026-04-07)
 
 | Decision | Rationale |
 |----------|-----------|
-| Read-only Canvas contract | No official Canvas runtime API; never modify `.canvas` while open |
+| Read-only Canvas contract during sessions | No official Canvas runtime API; never modify `.canvas` while open |
 | TypeScript + esbuild + plain DOM | Standard Obsidian plugin toolchain; zero framework overhead for v1 |
 | Vitest for engine tests | Pure engine modules (parser, runner) have no Obsidian imports; fully unit-testable |
 | One-file-per-snippet storage | Minimizes vault.modify() race conditions and sync conflicts |
-| Discriminated union on `kind` for node types | Type-safe graph model; 7 node types: start, question, answer, text-block, free-text, loop-start, loop-end |
+| Discriminated union on `kind` for node types | Type-safe graph model; 7 node types |
 | Snapshot undo stack | Simplest correct approach for step-back; protocol text is small (<5KB) |
 | `radiprotocol_*` property namespace | Avoids collisions with other plugins and future Obsidian updates |
-| Canvas write-back Strategy A | Require canvas closed before any vault.modify() — simple and safe; avoids undocumented internals (A4 resolved) |
-
----
-
-## Open Assumptions (Require User Confirmation Before Phases 5 + 6)
-
-| ID | Assumption | Phase |
-|----|-----------|-------|
-| A1 | Loop-start node uses two outgoing edges (continue + exit) rather than a dedicated "loop again?" node | 6 |
-| A2 | Snippet placeholder syntax uses `{{placeholder_id}}` double-curly-brace format | 5 |
-| A3 | Session files stored vault-visible in `.radiprotocol/sessions/` (not hidden in plugin data.json) | 7 |
+| Canvas write-back Strategy A | Require canvas closed before any vault.modify() — simple and safe |
+| Live canvas editing via internal Canvas View API | v1.1 decision: use canvas.requestSave() / internal API to allow node edits while canvas is open |
 
 ---
 
 ## Critical Pitfalls (Standing Reminders)
 
-1. **Never modify `.canvas` while open in Canvas view** — Canvas view will overwrite on next interaction
+1. **Never modify `.canvas` while open in Canvas view** — Canvas view will overwrite on next interaction (Strategy A; v1.1 explores internal API to lift this restriction)
 2. **`vault.modify()` race conditions** — use write mutex (async-mutex) per file path
 3. **No `innerHTML`** — use DOM API and Obsidian helpers; blocks community review if violated
 4. **No `require('fs')`** — use `app.vault.*` exclusively
@@ -80,8 +66,9 @@ See: `.planning/PROJECT.md` (updated 2026-04-07)
 
 ---
 
-## Repository
+## Accumulated Context
 
-- Branch: `main`
-- Remote: (not yet configured)
-- Last commit: `2530427` — docs(04-02): finalize SUMMARY — human UAT approved, all 7 tests passed
+- v1.0 shipped 2026-04-07: 7 phases, 28 plans, ~43K LOC, all UAT approved
+- Session restore uses `onLayoutReady` deferral to prevent startup hang
+- WriteMutex (async-mutex) required on all vault.modify() calls
+- Canvas editor (EditorPanelView) currently uses Strategy A: requires canvas closed before write

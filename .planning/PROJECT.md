@@ -55,14 +55,14 @@ A radiologist can generate a structured, accurate protocol in seconds by answeri
 - ✓ ESLint flat config: all 23 `eslint-plugin-obsidianmd` rules, strict TS, no-console, no-innerHTML — v1.0
 - ✓ Vitest for pure engine modules with zero Obsidian imports — v1.0
 
-### Active (Next Milestone)
+### Active (v1.1)
 
-- [ ] Canvas selector dropdown in runner view — choose protocol without reopening command
-- [ ] Full-tab runner view — open as editor tab instead of sidebar panel
-- [ ] Protocol authoring documentation / example canvases for community submission
-- [ ] Community plugin submission checklist (README, LICENSE, manifest review, plugin review)
+- [ ] Full-tab runner view — open protocol runner as editor tab instead of sidebar panel
+- [ ] Canvas selector dropdown in runner view — choose canvas without re-invoking command
+- [ ] Live canvas node editing — edit nodes while canvas is open via internal Canvas View API
+- [ ] Configurable output: insert into current note — new output destination mode
 - [ ] Node templates — save frequently-used node structures for reuse
-- [ ] Configurable output destination: insert into current note
+- [ ] Community submission — README, LICENSE, example canvases, submission checklist
 
 ### Out of Scope
 
@@ -111,6 +111,18 @@ A radiologist can generate a structured, accurate protocol in seconds by answeri
 | `WriteMutex` (async-mutex) per file path | Prevents race-condition corruption on snippet/session writes | ✓ Good — required fix in Phase 7 code review |
 | `onLayoutReady` deferral for session restore | Prevents Obsidian startup hang on workspace restore | ✓ Good — caught in Phase 7 UAT |
 
+## Current Milestone: v1.1 UX & Community Release
+
+**Goal:** Improve the protocol runner UX and prepare the plugin for submission to Obsidian Community Plugins.
+
+**Target features:**
+- Full-tab runner view — open protocol runner as editor tab instead of sidebar panel
+- Canvas selector dropdown — choose canvas without re-invoking command
+- Live canvas node editing — edit nodes while canvas is open via internal Canvas View API
+- Configurable output: insert into current note
+- Node templates — save frequently-used node structures for reuse
+- Community submission — README, LICENSE, example canvases, submission checklist
+
 ## Evolution
 
 **After each milestone** (via `/gsd-complete-milestone`):
@@ -120,4 +132,4 @@ A radiologist can generate a structured, accurate protocol in seconds by answeri
 4. Update Context with current state
 
 ---
-*Last updated: 2026-04-07 after v1.0 milestone*
+*Last updated: 2026-04-07 — Milestone v1.1 started*
