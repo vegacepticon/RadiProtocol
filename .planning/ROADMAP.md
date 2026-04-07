@@ -49,7 +49,10 @@ Full details: `.planning/milestones/v1.0-ROADMAP.md`
   2. With tab mode on, invoking the runner command opens the runner as an editor tab in the main workspace — not the right sidebar
   3. With tab mode on, invoking the runner command a second time reveals the existing tab instead of opening a duplicate
   4. With sidebar mode on (default), runner behavior is identical to v1.0 — no regression
-**Plans**: TBD
+**Plans:** 2 plans
+Plans:
+- [ ] 08-01-PLAN.md — Extend settings.ts: add runnerViewMode field + full 4-group display() + test assertions
+- [ ] 08-02-PLAN.md — Replace activateRunnerView() with D-04 deduplication + tab/sidebar branch
 **UI hint**: yes
 
 ### Phase 9: Canvas Selector Dropdown
@@ -100,7 +103,7 @@ Full details: `.planning/milestones/v1.0-ROADMAP.md`
 | 5. Dynamic Snippets | v1.0 | 5/5 | Complete | 2026-04-06 |
 | 6. Loop Support | v1.0 | 3/3 | Complete | 2026-04-07 |
 | 7. Mid-Session Save and Resume | v1.0 | 3/3 | Complete | 2026-04-07 |
-| 8. Settings + Full-Tab Runner View | v1.1 | 0/? | Not started | - |
+| 8. Settings + Full-Tab Runner View | v1.1 | 0/2 | Not started | - |
 | 9. Canvas Selector Dropdown | v1.1 | 0/? | Not started | - |
 | 10. Insert Into Current Note Output | v1.1 | 0/? | Not started | - |
 | 11. Live Canvas Editing | v1.1 | 0/? | Not started | - |
