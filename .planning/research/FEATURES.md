@@ -1,437 +1,325 @@
-# Feature Landscape: RadiProtocol v1.1
+# Features Research: RadiProtocol
 
-**Domain:** Obsidian community plugin — medical imaging protocol runner
-**Researched:** 2026-04-07
-**Milestone:** v1.1 UX & Community Release
-
----
-
-## Feature Index
-
-1. Full-tab runner view
-2. Canvas selector dropdown
-3. Live canvas node editing
-4. Insert into current note
-5. Node templates
-6. Community submission
+**Domain:** Obsidian plugin -- interactive medical protocol/report generator from Canvas decision trees
+**Researched:** 2026-04-05
+**Overall confidence:** MEDIUM-HIGH (strong evidence from radiology reporting tools, Obsidian plugin ecosystem, and wizard UX research; some specifics are RadiProtocol-unique with no direct precedent)
 
 ---
 
-## 1. Full-Tab Runner View
+## Table Stakes (must have for credibility)
+
+Features users expect from day one. Missing any of these makes the plugin feel broken or toy-like.
+
+| Feature | Why Expected | Complexity | Confidence | Notes |
+|---------|-------------|------------|------------|-------|
+| **One-question-at-a-time runner** | This is the core promise. RadioReport, CLICKVIEW, and every clinical decision-tree tool presents one step at a time. Users will not accept a wall of questions. | Medium | HIGH | ZettelFlow and Cannoli both use canvas-as-workflow; the step-by-step runner pattern is proven. |
+| **Live protocol preview** | Radiologists need to see the accumulating report text as they answer. RadioReport and rScriptor both show the report building in real time. Without this, users cannot spot errors until the end. | Medium | HIGH | Every structured reporting tool does this. Non-negotiable. |
+| **Preset answer buttons** | Click-to-select from predefined options (e.g., "Right", "Left", "Bilateral"). RadioReport is built entirely on checkboxes and selection tools -- "completely without free text." CLICKVIEW uses voice-activated tiles. Buttons are the desktop equivalent. | Low | HIGH | This is the primary interaction mode for ~80% of protocol steps. |
+| **Free-text input fields** | Some findings cannot be enumerated (e.g., "describe additional findings"). Every structured reporting tool includes free-text escape hatches alongside structured fields. | Low | HIGH | Must coexist with preset buttons on the same step when needed. |
+| **Step back / undo last answer** | Universal wizard UX requirement. NN/g guidelines: "Always allow users to go back. Forcing forward-only flow frustrates users who made a mistake." PatternFly wizard guidelines agree. | Medium | HIGH | Must revert both the navigation state AND the accumulated protocol text. This is the tricky part -- not just going back, but undoing the text that was appended. |
+| **Output to clipboard** | Radiologists paste into PACS/RIS. This is the #1 output path for any tool not integrated with hospital systems. | Low | HIGH | Must be one click / one shortcut. |
+| **Output to new note** | Obsidian-native output. Users expect to keep reports in their vault for reference. | Low | HIGH | Configurable output folder in settings. |
+| **Canvas-based algorithm authoring** | The entire value proposition. Obsidian Canvas is the visual editor. ZettelFlow and Cannoli both prove canvas-as-workflow-editor is viable in the Obsidian ecosystem. | High | HIGH | Must not break native canvas functionality or corrupt .canvas files. |
+| **Node type differentiation** | Users must visually distinguish question nodes, answer nodes, text blocks, and loop markers on the canvas. Color coding at minimum. Advanced Canvas plugin shows this is expected -- it offers extensive node styling (shapes, colors, borders). | Medium | HIGH | Use canvas node colors and/or text prefixes. Do not require users to edit raw JSON. |
+| **Configurable output destination** | Settings to choose: clipboard, new note, insert at cursor, or any combination. | Low | MEDIUM | Standard for Obsidian plugins that produce text output. |
+
+## Differentiating Features (what sets RadiProtocol apart)
+
+These features are not expected in a v1 Obsidian plugin, but they are what would make radiologists actually adopt this over their current workflow.
+
+| Feature | Value Proposition | Complexity | Confidence | Notes |
+|---------|-------------------|------------|------------|-------|
+| **Dynamic snippets with placeholders** | VS Code pioneered this: tab-stop placeholders with defaults, choices, and linked editing. TextExpander adds dropdown menus, date pickers, and optional sections. Combining structured reporting with snippet-style placeholder fill-in is something RadioReport does but no Obsidian plugin does. | High | MEDIUM | This is the "killer feature" -- a snippet like `"The {{lesion_type\|mass,cyst,nodule}} measures {{size}} cm in {{location\|right lobe,left lobe,caudate}}"` that pops up inline fill-in fields during the protocol run. |
+| **Visual loop nodes** | Repeating sections (e.g., "describe each lesion") are critical for radiology. No existing Obsidian canvas plugin handles loops. Cannoli supports loops but only for LLM workflows. This is genuinely novel for a canvas-based human workflow tool. | High | MEDIUM | Must feel intuitive: "repeat this section until user says done." Loop state (iteration count, accumulated text per iteration) needs careful UX. |
+| **Side panel for node editing** | A dedicated panel to configure node properties (question text, answer options, snippet content, loop settings) without editing raw canvas card text. Modal Form plugin shows form-based configuration is expected in Obsidian. | Medium | HIGH | ZettelFlow uses right-click context menus to "convert to step / edit step." A persistent side panel is more discoverable and faster. |
+| **Mid-session save and resume** | Save current position + accumulated text + answer history. Resume later. Enterprise wizard UX research (AppMaster, Oracle Alta) calls this essential for complex multi-step flows. No Obsidian plugin currently does this for canvas workflows. | Medium | MEDIUM | Store as a JSON file in the vault (like snippet storage). Show "resume session" in the command palette. |
+| **Start from any node** | Jump into the algorithm at a specific point. Useful when a radiologist knows the first 5 answers and wants to skip ahead, or when re-running just the "liver" section of an abdominal CT protocol. | Medium | MEDIUM | Requires the runner to handle "no prior accumulated text" gracefully. Offer a way to select the starting node from the canvas or a list. |
+| **Inline protocol editing during session** | Let users edit the accumulated report text directly while still in the session. If a previous answer produced slightly wrong text, they can fix it without stepping back. | Medium | HIGH | RadioReport and rScriptor both allow this. Critical for radiologist trust -- they need to feel in control of the final text at all times. |
+| **Snippet manager UI** | Dedicated tab to create, edit, preview, and delete snippets outside of a protocol run. TextExpander's snippet manager is the gold standard: organized by group, with inline preview showing rendered output with placeholder values. | Medium | MEDIUM | File-based storage (JSON in vault) is the right call per PROJECT.md. The UI should show a live preview as you edit. |
+| **Node templates (reusable node structures)** | Save a frequently-used node configuration (e.g., "laterality question" with Left/Right/Bilateral options) and insert it into any canvas. QuickAdd's "template" concept but for canvas nodes. | Medium | LOW | Nice-to-have for power users who build many protocols. Not needed for v1 adoption but high value for long-term engagement. |
+
+## UX Patterns from Similar Tools
+
+### From Obsidian Plugin Ecosystem
+
+**QuickAdd** (HIGH confidence -- well-documented):
+- Uses a "choice" paradigm: templates, captures, macros, multis
+- Macro chains allow multi-step workflows
+- Command palette integration is the primary trigger mechanism
+- Lesson for RadiProtocol: command palette to launch a protocol run is expected; ribbon icon as secondary trigger
+
+**Modal Form Plugin** (HIGH confidence):
+- Field types: text, number, date, time, slider, toggle, select, multi-select
+- Supports skipping fields -- important for optional protocol sections
+- Forms can have associated templates for output generation
+- Lesson for RadiProtocol: the snippet placeholder UI should support at minimum: free text, number, select (single), multi-select. Date and toggle are nice-to-haves.
+
+**ZettelFlow** (MEDIUM confidence):
+- Uses canvas as a workflow definition surface
+- Right-click to "convert to step / edit step"
+- Actions per step: Prompt (text input), Number, Checkbox
+- Steps are connected by canvas edges (arrows)
+- Root notes are starting points; plugin auto-detects them
+- Lesson for RadiProtocol: the canvas-to-workflow pattern is validated. Edge direction = flow direction. Root nodes (no incoming edges) = protocol entry points.
+
+**Cannoli** (MEDIUM confidence):
+- Canvas as directed acyclic graph (DAG) for LLM workflows
+- Uses node colors and prefixes to denote node types
+- Supports branching and loops (for LLM pipelines)
+- Lesson for RadiProtocol: color-coding nodes by type is the established Obsidian convention. DAG validation (checking for valid flow structure) before running is smart.
+
+**Advanced Canvas** (HIGH confidence):
+- Adds node styling: shapes, colors, borders, arrows
+- Collapsible groups, portals, focus mode, presentation mode
+- Lesson for RadiProtocol: do not conflict with Advanced Canvas. Users may have both installed. Use node color/text conventions that do not clash.
+
+### From Wizard/Multi-Step Form UX Research
+
+**NN/g Wizard Guidelines** (HIGH confidence):
+- Always show progress (which step, how many remain)
+- Always allow going back
+- Validate per-step, not at the end
+- Keep steps short -- one concept per step
+
+**PatternFly Wizard Component** (HIGH confidence):
+- Step sidebar showing all steps with visited/current/future states
+- Visited steps are clickable for direct navigation
+- "Next" and "Back" buttons always visible
+- Optional "Cancel" with confirmation dialog
+
+**Save-and-Resume Pattern** (MEDIUM confidence -- AppMaster, Oracle Alta):
+- Create a draft record when session starts
+- Persist after each step (not just on explicit save)
+- On resume: fetch draft, prefill UI, continue from last step
+- Finalize with one action: full validation, then output
 
-### What the UX pattern is
+### From Developer Snippet Tools
 
-In Obsidian, any view can live in either the sidebar (left/right) or the main editor area (tabs). The main editor area is the "root split." Users expect interactive tools — anything they work with actively for more than a few seconds — to open as an editor tab, not a sidebar panel. Sidebars are for persistent reference panels (file explorer, backlinks, outline). A protocol runner is interactive like a form; users treat it like "opening a document." The expected UX is: run a command, a new tab opens with the runner, the tab has a title ("Protocol runner"), the tab persists across sessions, user can have it open alongside a canvas.
+**VS Code Snippets** (HIGH confidence):
+- Tab-stop order ($1, $2, ... $0 for final position)
+- Placeholders with defaults: `${1:defaultValue}`
+- Choice placeholders: `${1|option1,option2,option3|}`
+- Linked placeholders: same $N in multiple places edits in sync
+- Transformations: auto-capitalize, regex transforms on tab
+- Lesson for RadiProtocol: the placeholder syntax should support defaults and choices. Linked editing (same value appears in multiple places) is powerful for radiology (e.g., laterality mentioned in findings and impression).
 
-### How it works technically
+**TextExpander** (HIGH confidence):
+- Five fill-in types: single-line text, multi-line text, date picker, dropdown menu, optional section
+- Each fill-in has a label name shown to the user
+- Optional sections: include/exclude entire blocks of text
+- Lesson for RadiProtocol: the "optional section" concept maps perfectly to conditional protocol text (e.g., "include contrast reaction section only if contrast was used"). Dropdown menus map to multi-select placeholder type.
 
-The existing `RunnerView` extends `ItemView` and is registered for the right sidebar via `getLeaf('right')`. To open the same view in the main editor area instead, the leaf creation call changes:
+## Medical Protocol Specifics
 
-```typescript
-// Current (sidebar):
-const leaf = this.app.workspace.getRightLeaf(false);
+### Standard Radiology Report Sections (HIGH confidence)
 
-// Tab pattern:
-const leaf = this.app.workspace.getLeaf('tab');
-await leaf.setViewState({ type: RUNNER_VIEW_TYPE, active: true });
-this.app.workspace.revealLeaf(leaf);
-```
+Based on RSNA RadReport templates and standard radiology practice:
 
-`getLeaf('tab')` creates a new leaf in the root split (main editor area). `getLeaf(false)` returns the most recently navigable leaf in the root split, reusing an existing tab if the view type is already open. `workspace.revealLeaf()` ensures the tab becomes active and scrolls into view.
+1. **Clinical Indication** -- why the study was ordered
+2. **Technique** -- modality, contrast, protocol details
+3. **Comparison** -- prior studies reviewed
+4. **Findings** -- organ-by-organ or system-by-system observations
+5. **Impression** -- summary of key findings, diagnoses, recommendations
 
-The `ItemView` class itself does not need to change — the same `RunnerView` code works in both sidebar and tab. Only the leaf creation and placement logic in `main.ts` changes.
+RadiProtocol algorithms will typically generate the **Findings** and **Impression** sections, since Technique and Comparison are often dictated separately or auto-populated from PACS/RIS.
 
-`getViewType()`, `getDisplayText()`, `getIcon()` and `getState()`/`setState()` all carry over unchanged.
+### Common Variable Types in Radiology Protocols
 
-### Table stakes vs differentiator
+| Variable Type | Examples | Best Input Type |
+|---------------|----------|-----------------|
+| **Laterality** | Right, Left, Bilateral | Preset buttons (3 options) |
+| **Measurement** | "2.3 cm", "15 x 10 mm" | Numeric input with unit selector |
+| **Anatomic location** | Right upper lobe, Segment 4a, L4-L5 | Dropdown/select from predefined list |
+| **Severity/grade** | Mild, Moderate, Severe | Preset buttons (3-5 options) |
+| **Presence/absence** | Present, Absent, Indeterminate | Preset buttons (2-3 options) |
+| **Morphology** | Solid, Cystic, Mixed, Ground-glass | Preset buttons or multi-select |
+| **Enhancement pattern** | Homogeneous, Heterogeneous, Rim, Non-enhancing | Preset buttons |
+| **Count** | "3 lesions", "multiple" | Numeric input or preset (single/few/multiple/innumerable) |
+| **Free description** | "irregular margins with surrounding edema" | Free-text input |
+| **Comparison change** | Stable, Increased, Decreased, New, Resolved | Preset buttons (5 options) |
+| **Standard classification** | BI-RADS 1-6, LI-RADS 1-5, Bosniak I-IV, Lung-RADS 1-4 | Preset buttons with associated text blocks |
 
-**Table stakes.** Users who open protocol runners (complex interactive tools) expect a full tab. The current sidebar placement is a v1 expedient; full-tab is the standard pattern for any view that requires sustained interaction. Missing this makes the runner feel cramped.
+### Structured Reporting Tiers (MEDIUM confidence -- RSNA/ESR)
 
-### Complexity
+The radiology community recognizes three tiers of structure:
+- **Tier 1:** Structured layout (headings: Findings, Impression, etc.)
+- **Tier 2:** Structured content (dropdowns, checkboxes, decision trees)
+- **Tier 3:** Standardized language (RadLex terminology, CDEs)
 
-**Low.** The `RunnerView` code is unchanged. The change is one leaf creation call in `main.ts`. Risk: if the view is also registered for the sidebar somewhere, need to audit and remove that registration or make placement configurable. Existing `getState()`/`setState()` workspace persistence already handles tab restoration across Obsidian restarts.
+RadiProtocol operates at **Tier 2** -- structured content via decision trees. This is the sweet spot: more structured than free dictation, but does not require adopting a controlled vocabulary like RadLex (which would limit adoption).
 
-### Dependencies on existing code
+### RSNA Common Data Elements (CDEs) (MEDIUM confidence)
 
-- `RunnerView` (no changes required to the view itself)
-- `main.ts` `activateRunnerView()` method — leaf creation changes here
-- `getState()`/`setState()` — already implemented, already handles persistence
-- No engine changes needed
+RSNA/ACR CDEs define standardized question-and-answer sets for specific findings. Example: a liver lesion CDE might define:
+- Size (numeric, in cm)
+- Location (categorical: segments 1-8)
+- Signal characteristics (categorical: T1 hypo/iso/hyper, T2 hypo/iso/hyper)
+- Enhancement pattern (categorical: arterial hyper, portal washout, etc.)
+- Threshold growth (boolean)
 
----
+RadiProtocol's algorithm structure naturally maps to CDEs. Each CDE set = a subtree of the algorithm. This is not needed for v1 but is a powerful future direction for interoperability.
 
-## 2. Canvas Selector Dropdown
+### Lessons from RadioReport (MEDIUM confidence)
 
-### What the UX pattern is
+RadioReport is the closest commercial analog to RadiProtocol's concept:
+- Uses 23 anatomy-based modules (not finding-based templates)
+- Decision tree guides radiologist through analysis
+- Enforces mandatory fields, eliminates omissions
+- Breast MRI: 10 min with RadioReport vs. 35 min conventional
+- Key difference: RadioReport is a standalone web app. RadiProtocol lives inside Obsidian, which means lower barrier to entry but no PACS integration.
 
-Currently the runner requires running a command to open a canvas file — the user must close and re-invoke "Run protocol" to switch canvases. The expected UX for any plugin that works on multiple files is an in-panel dropdown (a `<select>` or fuzzy modal trigger) listing all `.canvas` files in the vault. User changes selection, runner re-loads for the new canvas. This is the same pattern used by Dataview (choose a query file), QuickAdd (choose a macro), and Obsidian's own Template picker.
+### Lessons from rScriptor (MEDIUM confidence)
 
-Two valid sub-patterns exist:
+rScriptor's "Adaptive Structured Reporting" dynamically adjusts templates based on scan type, patient demographics, and unexpected findings. Key insight: if a chest CT shows an incidental gallbladder finding, rScriptor auto-adds a relevant section.
 
-1. **Inline `<select>` element** in the runner view header — always visible, low friction for users who switch canvases often. Rebuilds on vault file change events.
-2. **Button that opens `FuzzySuggestModal`** — matches Obsidian's native file picker UX, better for large vaults with many canvas files, no DOM complexity.
+For RadiProtocol, this suggests: algorithms should support **conditional branches** that activate based on earlier answers (e.g., "if contrast was used, show contrast-specific questions"). This is naturally supported by the decision-tree structure.
 
-For a plugin where canvas switching is an occasional action (not per-step), pattern 2 (fuzzy modal) is more idiomatic. Pattern 1 is more appropriate if switching is frequent.
+## Snippet/Placeholder UX Best Practices
 
-### How it works technically
+### Must-Have Placeholder Features
 
-**Pattern 2 (recommended):**
+1. **Labeled fields**: Every placeholder must have a human-readable label (e.g., "Lesion size" not "${1}"). Radiologists will not learn placeholder syntax.
 
-```typescript
-class CanvasSuggestModal extends FuzzySuggestModal<TFile> {
-  getItems(): TFile[] {
-    return this.app.vault.getFiles().filter(f => f.extension === 'canvas');
-  }
-  getItemText(file: TFile): string { return file.basename; }
-  onChooseItem(file: TFile): void { this.runnerView.openCanvas(file.path); }
-}
-```
+2. **Default values**: Pre-fill with the most common answer. Radiologists should only need to change values that differ from normal. This is the #1 efficiency gain in structured reporting.
 
-A "Change canvas" button in the runner view header opens this modal. `vault.getFiles()` is synchronous and always fresh. No file watcher needed for the modal pattern.
+3. **Choice/dropdown placeholders**: Enumerated options for categorical variables. VS Code's `${1|opt1,opt2|}` pattern, but presented as buttons or a dropdown -- not as raw syntax.
 
-**Pattern 1 (inline select):**
-Populate on `onOpen()` and re-populate on `this.app.vault.on('create' | 'delete' | 'rename', ...)` events. Wrap in `registerEvent()` for cleanup. Filter by `.extension === 'canvas'`. Requires DOM management when the canvas list changes.
+4. **Tab-through navigation**: After filling one placeholder, Tab (or Enter) moves to the next. VS Code tab-stop order is the proven UX. Do not force mouse clicks between fields.
 
-### Table stakes vs differentiator
+5. **Live preview**: As placeholders are filled, the rendered snippet text updates in real time. TextExpander does this. Seeing the final text form as you fill fields builds confidence.
 
-**Table stakes for v1.1.** Once the plugin is public, users will have multiple canvas files (one per modality, one per protocol). Requiring command re-invocation to switch is a friction point that will generate immediate feedback.
+### Nice-to-Have Placeholder Features
 
-### Complexity
+6. **Linked placeholders**: Same value referenced in multiple places (e.g., laterality in Findings and Impression). VS Code supports this with same-numbered tab stops.
 
-**Low-medium.** The fuzzy modal pattern is ~20 lines. The inline select adds ongoing vault event subscription complexity. The runner already has `openCanvas(filePath)` — the selector only needs to call it.
+7. **Optional sections**: Entire blocks of text that can be included or excluded. TextExpander's optional section pattern. Maps to conditional protocol text.
 
-### Dependencies on existing code
+8. **Multi-select with join**: Select multiple items from a list, auto-joined with commas or "and". Common in radiology: "There is mild {{findings|atelectasis,effusion,consolidation}} at the {{location|right base,left base,bilateral bases}}."
 
-- `RunnerView.openCanvas()` — already implemented, called with new path
-- `ProtocolRunner` state machine — `runner.reset()` or equivalent needed before re-opening; verify runner has a clean-reset path
-- Session service — opening a new canvas should prompt to clear current session (same flow as current "canvas modification warning")
-- No engine changes
+9. **Numeric validation**: For measurements -- reject non-numeric input, enforce reasonable ranges (a liver lesion is not 500 cm).
 
----
+### Anti-Patterns in Placeholder UX
 
-## 3. Live Canvas Node Editing
+- **Raw syntax visible to user**: Never show `${1:foo}` or `{{placeholder}}` in the UI. Always render as labeled input fields.
+- **No escape hatch**: Always allow free-text override even for choice fields. Radiology has edge cases that no predefined list covers.
+- **Mandatory all-or-nothing**: Let users skip optional placeholders. Not every field is required for every report.
 
-### What the UX pattern is
+## Anti-Features (what NOT to do, with examples)
 
-Currently `EditorPanelView` requires the canvas to be closed before it can write back node edits (Strategy A). The expected UX for a "live editing" workflow is: canvas is open, user right-clicks a node, editor panel shows the node's current properties, user edits them, changes reflect on the canvas without closing it.
+| Anti-Feature | Why Avoid | What to Do Instead |
+|--------------|-----------|-------------------|
+| **AI/LLM text generation** | Explicitly out of scope per PROJECT.md. Radiologists need to trust that protocol text comes from their algorithms, not from a model that might hallucinate. Cannoli already fills the LLM-on-canvas niche. | Manual algorithm authoring only. Every word in the output must be traceable to a node the user created. |
+| **PACS/RIS integration** | Requires HL7/DICOM/FHIR compliance, hospital IT approval, security audits. Out of scope for v1 and probably v2. | Clipboard output. Radiologists already paste from other tools into PACS. |
+| **Code/expression syntax in nodes** | PROJECT.md: "authoring algorithms must feel like visual design, not programming." Cannoli uses color prefixes and special syntax. This is fine for developers but alienates radiologists. | Visual configuration only. Side panel with labeled fields, not text-based DSLs. |
+| **Overly rigid templates** | The #1 reason structured reporting has "limited adoption" (per European Radiology systematic review): "inflexibility of templates and insufficient customization options." | Every algorithm is user-created and user-editable. No built-in "correct" way to report. |
+| **Mobile support** | Out of scope per PROJECT.md. Canvas editing on mobile is already poor in Obsidian. The runner might work on mobile eventually, but authoring will not. | Desktop-first. Do not compromise desktop UX for mobile compatibility. |
+| **Multi-user / collaborative editing** | Out of scope per PROJECT.md. Obsidian vaults are single-user by default. Real-time collaboration would require a server. | Single-user local vault. Users can share .canvas files and snippet folders via git/sync. |
+| **Version history for snippets/protocols** | Out of scope per PROJECT.md. Adds significant complexity for marginal value when users can use git or Obsidian Sync's version history. | File-based storage in vault. Users manage versions with their existing tools. |
+| **Automatic impression generation** | Some tools (rScriptor, Rad AI) auto-generate the Impression from Findings. This requires NLP/AI and is error-prone. | Let the algorithm author define what text appears in each section. The algorithm IS the intelligence, not an AI layer. |
+| **Mandatory field enforcement** | RadioReport enforces mandatory fields. For an Obsidian plugin, this would feel hostile. Radiologists should be free to skip sections. | Optional enforcement: algorithm authors can mark fields as required, but the runner should warn, not block. |
 
-This is the workflow used by Advanced Canvas, Resize Card Plugin, and Enhanced Canvas — all of which modify canvas node data at runtime using Obsidian's internal canvas API.
+## Feature Gap Analysis (what similar tools miss that RadiProtocol can nail)
 
-### How it works technically
+### Gap 1: No Canvas-Based Protocol Builder Exists
 
-The canvas runtime API is **entirely undocumented** — it is not in `obsidian-api` (`canvas.d.ts` only contains the data schema, not runtime classes). The community pattern, confirmed by multiple plugins (Resize Card Plugin, Advanced Canvas, canvas-event-patcher), is:
+**What is missing:** ZettelFlow uses canvas for note-creation workflows. Cannoli uses canvas for LLM pipelines. Neither uses canvas for guided human Q&A that assembles structured text. RadioReport has the Q&A concept but uses a proprietary web editor, not a visual canvas.
 
-```typescript
-// Access the live canvas object
-const canvasLeaves = app.workspace.getLeavesOfType('canvas');
-const canvasView = canvasLeaves.find(l =>
-  (l.view as any).file?.path === targetFilePath
-)?.view as any;
-const canvas = canvasView?.canvas;
+**RadiProtocol opportunity:** Be the first tool that lets a domain expert (radiologist) visually design a decision tree on Obsidian Canvas and then run it as an interactive questionnaire. The visual authoring surface is the differentiator -- it makes the algorithm tangible and editable without code.
 
-// Get a node and mutate it
-const node = canvas?.nodes?.get(nodeId);
-node?.setData({ ...existingData, ...updatedFields });
+### Gap 2: Snippet Placeholders Are Primitive in Obsidian
 
-// Trigger Obsidian to write the .canvas file
-canvas?.requestSave();
-```
+**What is missing:** Obsidian's Templater and QuickAdd support basic variable substitution but lack VS Code-style tab-stop navigation, choice dropdowns, or linked editing. Modal Form plugin offers form fields but the output is a flat form, not inline snippet editing. TextExpander has rich fill-in types but is a separate app with no Obsidian integration.
 
-Key points about this API:
-- `canvas.nodes` is a `Map<string, CanvasNode>` where keys are node IDs
-- `node.setData(data)` updates the node's in-memory data and re-renders the node
-- `canvas.requestSave()` triggers the debounced file write that Obsidian uses natively
-- The API is internal (no TypeScript types) — all access requires `as any` or a local type shim
-- The API has been stable across Obsidian versions that multiple published plugins depend on, but it is not guaranteed; a breaking Obsidian update could silently break it
+**RadiProtocol opportunity:** Build snippet placeholders that feel like VS Code snippets (tab through, choose from options, see live preview) but are configured visually (not with syntax). This bridges the gap between developer-tool power and radiologist-friendly UX.
 
-### Table stakes vs differentiator
+### Gap 3: No Loop Handling in Canvas Workflows
 
-**Differentiator.** The "canvas must be closed" constraint (Strategy A) is unusual and creates friction for advanced users. However, Strategy A is correct and safe for the general case. Live editing is a quality-of-life improvement, not a missing baseline feature. Many protocol authors will build the canvas, close it, run the protocol — the current workflow works.
+**What is missing:** Neither ZettelFlow nor any other Obsidian canvas plugin supports repeating sections. Cannoli supports loops but only for LLM API calls. In radiology, loops are essential: "describe each lesion" requires repeating the same question set N times.
 
-### Complexity
+**RadiProtocol opportunity:** Visual loop nodes on the canvas. The user marks a group of nodes as a loop region. During the protocol run, the runner repeats that section until the user clicks "Done / No more lesions." Each iteration's text is accumulated (e.g., "Lesion 1: ... Lesion 2: ..."). This is genuinely novel.
 
-**High.** Reasons:
-1. No TypeScript types — requires a local interface shim or `as any` throughout (conflicts with the project's ESLint `no-explicit-any` rule, needs deliberate exception)
-2. The access pattern requires detecting whether the canvas is currently open (`getLeavesOfType('canvas')` + matching by file path)
-3. Must gracefully fall back to Strategy A when the canvas is not open
-4. `canvas.requestSave()` triggers file write — need to verify this does not conflict with the `WriteMutex` used for snippets/sessions (different files, probably safe, but needs audit)
-5. Community Review risk: Obsidian reviewers are aware that internal API use is fragile; this may generate review feedback asking for a safer approach or a clear fallback
+### Gap 4: Mid-Session Persistence Is Absent
 
-### Dependencies on existing code
+**What is missing:** No Obsidian workflow plugin saves session state. If you close Obsidian or switch to another task, your protocol run is lost. ZettelFlow creates a note at the end but has no concept of a draft state. Complex radiology protocols can take 5-10 minutes; interruptions are common in clinical settings.
 
-- `EditorPanelView` — Strategy A write-back logic needs a branch: "if canvas open, use live API; else use file write"
-- `isCanvasOpen()` method already exists in `EditorPanelView` (line 50 of editor-panel-view.ts) — this is the detection hook
-- `WriteMutex` — audit whether `canvas.requestSave()` conflicts with vault.modify() guards
-- ESLint config — `no-explicit-any` will fire; needs targeted disable comments or a local type shim
+**RadiProtocol opportunity:** Auto-save session state to a JSON file in the vault after each step. On launch, check for incomplete sessions and offer to resume. This is standard in enterprise wizard UX (Oracle Alta, AppMaster patterns) but novel in the Obsidian plugin ecosystem.
 
----
+### Gap 5: Structured Reporting Tools Are Closed and Expensive
 
-## 4. Insert Into Current Note
+**What is missing:** RadioReport, CLICKVIEW, and rScriptor are proprietary, require institutional licenses, and cannot be customized by individual radiologists. RSNA RadReport provides templates but they are static documents, not interactive runners.
 
-### What the UX pattern is
+**RadiProtocol opportunity:** Open-source, free, runs locally inside Obsidian, and algorithms are user-authored. A radiologist can build their own protocol in 30 minutes and share it as a .canvas file. This democratizes structured reporting for solo practitioners, residents, and small practices who cannot afford enterprise tools.
 
-Currently the runner outputs to clipboard or a new note. The expected third mode is: insert the generated report text at the cursor position in whatever note the user currently has active. This is standard in Obsidian plugins that produce text (Templater's "Append to current note", QuickAdd's inline mode, various AI writing tools). The mental model: the radiologist has a patient note open, runs the protocol, and the report appears directly in the note at the cursor without any intermediate step.
+### Gap 6: No Bridge Between Visual Design and Structured Output
 
-### How it works technically
+**What is missing:** Obsidian Canvas is great for visual thinking but has no concept of "running" a canvas as a workflow that produces structured text. The closest tools (Cannoli, ZettelFlow) produce notes or LLM outputs, not structured medical reports with sections, measurements, and classifications.
 
-The challenge is that when the runner view is active (tab or sidebar), the main editor loses `activeEditor` focus. The pattern to get around this:
-
-```typescript
-// Get the most recently active leaf in the root split
-const leaf = this.app.workspace.getMostRecentLeaf();
-const view = leaf?.view;
-// MarkdownView has an 'editor' property
-if (view instanceof MarkdownView) {
-  const editor = view.editor;
-  editor.replaceSelection(reportText);  // inserts at cursor, replaces selection if any
-}
-```
-
-Alternatively: `this.app.workspace.activeEditor?.editor` — but this returns null when a sidebar or tab view (like the runner) has focus.
-
-`getMostRecentLeaf()` returns the leaf that had focus before the runner took over. If the user's workflow is: open note → open runner → complete protocol → insert — this returns the correct note.
-
-Edge case: if no markdown note was ever open (user opened the runner immediately on launch), `getMostRecentLeaf()` may return the runner leaf itself or null. Need a null-check and a fallback notice ("No active note found — use Copy or Save instead").
-
-The setting for output destination (`settings.outputDestination`) already has at least two modes (new note, clipboard based on v1.0 settings tab). A third `insert-at-cursor` enum value is added.
-
-### Table stakes vs differentiator
-
-**Table stakes for clinical workflow.** The clinical use case is explicitly: run protocol, output goes into patient note. Copy-to-clipboard + paste is a two-step friction that adds time in a clinical environment. This is the most directly useful output mode for the target user.
-
-### Complexity
-
-**Low.** The `getMostRecentLeaf()` + `instanceof MarkdownView` + `editor.replaceSelection()` pattern is ~10 lines. The main work is the settings UI change (adding a third output mode) and null-handling. No engine changes needed.
-
-### Dependencies on existing code
-
-- `RunnerView` output buttons — add third button "Insert into note" alongside existing Copy and Save
-- `settings.ts` — add `insert-at-cursor` to `outputDestination` enum/union
-- `RadiProtocolSettingsTab` — add the third option to the setting dropdown
-- `MarkdownView` import needed in `runner-view.ts`
-- No engine changes
-
----
-
-## 5. Node Templates
-
-### What the UX pattern is
-
-Node templates allow a user to save a pre-configured node structure (e.g., a Question node with a label and four preset Answer nodes already connected) and later insert it into any canvas with a single action. This is the canvas equivalent of Obsidian's built-in Templates plugin — "here is a structure I use often, stamp it into the canvas."
-
-The expected UX: in the node editor or via a command, user selects nodes on the canvas (or defines a template from scratch), names the template, saves it. Later, they invoke "Insert template" (command or button) and the node structure is inserted into the open canvas.
-
-**Scope boundary for v1.1:** The realistic scope given the live canvas API complexity is "save a single node's properties as a template and insert it as a new node." Full multi-node sub-graph templates (saving a Question + 4 Answers + edges as one unit) require canvas write-back while open or complex JSON stitching, which increases scope significantly.
-
-### How it works technically
-
-Templates are stored as JSON files in `.radiprotocol/templates/` (same pattern as snippets: `SnippetService`). A `TemplateService` provides CRUD.
-
-A template record contains:
-```typescript
-interface NodeTemplate {
-  id: string;          // uuid
-  name: string;        // user-visible label
-  kind: RPNodeKind;    // which node type
-  data: Record<string, unknown>;  // the node's RP properties
-}
-```
-
-Inserting a template means writing a new node entry into the target canvas file. If canvas is closed: read file, append node JSON, write back. If canvas is open: use `canvas.createTextNode()` or equivalent (undocumented) API, or fall back to file write with close-detection.
-
-For single-node templates, the simpler path is Strategy A (require canvas closed for insertion). This avoids the live API risk entirely.
-
-A `TemplateManagerView` (new `ItemView` modeled on `SnippetManagerView`) provides the CRUD UI. A "Insert template" command opens a `FuzzySuggestModal` listing available templates.
-
-### Table stakes vs differentiator
-
-**Differentiator.** No existing Obsidian plugin (as of research date) offers canvas node templates for protocol authoring. This is novel functionality. The table-stakes version (save/load node configs) adds real value for protocol authors who build similar patterns repeatedly. Multi-node sub-graph templates are out of scope for v1.1.
-
-### Complexity
-
-**Medium** (single-node templates with Strategy A). Reasons:
-- New service (`TemplateService`) modeled on `SnippetService` — low risk, established pattern
-- New view (`TemplateManagerView`) modeled on `SnippetManagerView` — medium effort, established DOM pattern
-- Canvas node insertion: adding a node to the `.canvas` JSON is straightforward (it's just appending to the `nodes` array) but requires positioning logic (where to place the new node on the canvas — default to viewport center or a fixed offset)
-- Node positioning: `.canvas` files include `x`, `y`, `width`, `height` per node — inserting with hardcoded or user-specified coordinates, or defaulting to `0, 0` with a note to user, is acceptable for v1.1
-
-**High** if multi-node sub-graph templates are in scope (out of scope for v1.1).
-
-### Dependencies on existing code
-
-- `SnippetService` — direct model for `TemplateService` architecture
-- `SnippetManagerView` — direct model for `TemplateManagerView` DOM patterns
-- `EditorPanelView` — needs "Save as template" button on node forms
-- `WriteMutex` — template file writes should use the same mutex pattern
-- Canvas file format knowledge already in `CanvasParser` — inverse (write) operation needed
-- Settings: template folder path (or hardcode to `.radiprotocol/templates/`)
-
----
-
-## 6. Community Submission
-
-### What the UX pattern is
-
-This is not a user-facing UX feature — it is a delivery milestone. The expected output is: the plugin is listed in Obsidian's Community Plugins browser, users can install it with one click, the README answers "what is this, how do I install it, how do I use it."
-
-### What is required (verified from official sources)
-
-**manifest.json fields (required/critical):**
-- `id` — alphanumeric + dashes, no "obsidian" prefix, must be unique in the registry
-- `name` — display name
-- `version` — must exactly match the GitHub release tag (no "v" prefix on tag: tag is `1.1.0` not `v1.1.0`)
-- `minAppVersion` — set to latest stable Obsidian if unsure; controls who can install
-- `description` — max 250 characters, starts with action verb, ends with period, no emoji, no "This is a plugin"
-- `author`
-- `isDesktopOnly: true` — **required** because the plugin uses Node.js/Electron APIs (file system via `vault.adapter`)
-
-**Files required in GitHub release assets (must be attached individually, not as zip):**
-- `main.js`
-- `manifest.json`
-- `styles.css` (if present)
-
-**Repository files required:**
-- `README.md` — usage docs, installation instructions, example canvas structure
-- `LICENSE` — must be present (MIT is standard for community plugins)
-
-**PR process:**
-- Fork `obsidianmd/obsidian-releases`
-- Add entry to `community-plugins.json` (id, name, author, description, repo)
-- Complete the PR template checklist
-- Automated CI validates JSON structure, naming conventions, manifest accessibility, release assets
-
-**Common rejection reasons to pre-empt:**
-- Plugin ID contains "obsidian" as prefix
-- Release tag is `v1.0.0` but manifest says `1.0.0` (must match exactly, no "v")
-- `main.js` not attached as a release asset (separate from the source `.zip` GitHub auto-generates)
-- No LICENSE file
-- Description starts with "This is a plugin" or contains emoji
-
-**Plugin guidelines (from review process):**
-- No `innerHTML` (project already enforces this via ESLint `eslint-plugin-obsidianmd` rules — confirmed in project ESLint config)
-- No `eval()`
-- External network requests must be declared and justified; this plugin makes none
-- `isDesktopOnly: true` if using Node.js/Electron APIs
-- Command IDs must not repeat the plugin ID prefix (already correct per NFR-06)
-- Remove all sample/placeholder code before submission
-
-**Example canvases:**
-Not a formal requirement, but standard practice for this type of plugin — include one or two `.canvas` files in the repository demonstrating a minimal protocol and a loop protocol. This dramatically reduces time-to-first-success for new users.
-
-**versions.json:**
-A `versions.json` file in the repo root maps each plugin version to the minimum Obsidian version that supports it. Must be kept up to date with each release.
-
-### Table stakes vs differentiator
-
-**Table stakes** — this IS the milestone goal. Without it, v1.1 is not a community release.
-
-### Complexity
-
-**Medium** (time not technical). Reasons:
-- README writing is time-consuming to do well for a non-technical audience (radiologists)
-- Example canvas creation requires careful authoring (must validate, must demonstrate loops + snippets)
-- Release pipeline: need a `release.yml` GitHub Actions workflow to auto-attach `main.js`, `manifest.json`, `styles.css` to GitHub releases (the `obsidianmd/obsidian-sample-plugin` contains the reference workflow)
-- The `versions.json` file must be created and maintained
-- One-time PR process; not technically hard but requires checklist discipline
-
-### Dependencies on existing code
-
-- `manifest.json` — audit all required fields, add `isDesktopOnly: true`
-- `versions.json` — create if not present
-- GitHub Actions release workflow — create if not present
-- No source code changes required unless review surfaces a guideline violation
-
----
-
-## Table Stakes vs Differentiators: Summary
-
-| Feature | Category | Rationale |
-|---------|----------|-----------|
-| Full-tab runner view | Table stakes | Expected UX for interactive tools in Obsidian |
-| Canvas selector dropdown | Table stakes | Multi-canvas users blocked without it |
-| Insert into current note | Table stakes (clinical workflow) | Core use case: output to open patient note |
-| Live canvas node editing | Differentiator | Strategy A works; live editing is QoL improvement |
-| Node templates | Differentiator | Novel; no equivalent in ecosystem |
-| Community submission | Milestone requirement | Not a feature; it is the delivery gate |
-
----
+**RadiProtocol opportunity:** The canvas IS the algorithm. Each node contributes specific text to specific report sections. The visual layout shows the logical flow. The runner turns that visual layout into an interactive experience. This is a direct bridge from visual design to structured clinical output.
 
 ## Feature Dependencies
 
 ```
-Full-tab runner view
-  depends on: RunnerView (no changes), main.ts leaf creation logic
-
-Canvas selector dropdown
-  depends on: RunnerView.openCanvas(), ProtocolRunner reset path, session clear flow
-  note: openCanvas() already implemented; verify runner reset is clean
-
-Insert into current note
-  depends on: RunnerView output section, settings.outputDestination enum
-  note: getMostRecentLeaf() + instanceof MarkdownView pattern; ~10 lines
-
-Live canvas node editing
-  depends on: EditorPanelView.isCanvasOpen() (already exists)
-  depends on: internal canvas API (undocumented, as-any)
-  conflicts with: ESLint no-explicit-any (needs targeted exemption)
-  risk: undocumented API, version fragility, WriteMutex audit required
-
-Node templates
-  depends on: SnippetService pattern (model for TemplateService)
-  depends on: EditorPanelView "Save as template" button (new)
-  depends on: CanvasParser knowledge (inverse: node insertion into .canvas JSON)
-  depends on: WriteMutex pattern (reuse from SnippetService)
-
-Community submission
-  depends on: manifest.json audit, versions.json creation, GitHub release workflow
-  depends on: README authored (no code dependency)
-  depends on: example .canvas files created
-  independent of: all other v1.1 features (can be parallelized)
+Canvas Node Types --> Protocol Runner (runner must understand node types)
+Protocol Runner --> Output System (runner produces text, output system delivers it)
+Snippet Manager --> Dynamic Snippets in Runner (snippets must exist before they can be used in protocols)
+Preset Buttons --> Step Back/Undo (undo must know what text each button appended)
+Loop Nodes --> Loop State Management (loops need iteration tracking)
+Mid-Session Save --> Session State Model (must define what state to persist)
+Side Panel Editor --> Node Type Schema (panel needs to know what fields each node type has)
 ```
 
----
+## MVP Recommendation
 
-## Anti-Features
+**Prioritize (v1 must-ship):**
+1. One-question-at-a-time runner with preset answer buttons
+2. Live protocol preview showing accumulating text
+3. Free-text input fields alongside preset buttons
+4. Step back / undo last answer
+5. Output to clipboard + output to new note
+6. Basic canvas node types: question, answer (preset text), free-text input, text block
+7. Node color coding for visual differentiation
+8. Configurable output destination in settings
 
-| Anti-Feature | Why Avoid | What to Do Instead |
-|--------------|-----------|-------------------|
-| Multi-node sub-graph templates in v1.1 | Requires live canvas API for node + edge insertion; doubles scope | Single-node templates only in v1.1 |
-| Canvas selector as persistent inline `<select>` | Ongoing vault event subscription complexity | FuzzySuggestModal on demand — same UX, fewer lines, no DOM bookkeeping |
-| Live canvas editing as the only write path | If internal API breaks in Obsidian update, node editing breaks entirely | Live API as enhancement; Strategy A as required fallback |
-| Auto-insert into note without confirmation | Could silently corrupt a clinical note if wrong note is active | Show which note will receive output before inserting |
-| TemplateManagerView as a separate sidebar panel | Adds another registered view type; template management is occasional | Inline modal for CRUD, or a tab in the same panel space as SnippetManagerView |
+**Include if time allows (v1 nice-to-have):**
+9. Dynamic snippets with placeholder fill-in (choice + free-text types)
+10. Side panel for node configuration
+11. Start from any node
 
----
-
-## MVP Recommendation for v1.1
-
-Priority order based on user-visible impact, implementation risk, and dependencies:
-
-1. **Community submission prep** — Do this first (or in parallel). It audits existing code and surfaces any guideline violations that would require changes to source code. Non-blocking for other features.
-2. **Full-tab runner view** — Lowest complexity, highest perceived UX improvement. Sets the correct base context (tab, not sidebar) before other runner changes are built on top.
-3. **Canvas selector dropdown** — Low complexity, immediately unblocks multi-canvas users. Builds on the runner view and calls the existing `openCanvas()`.
-4. **Insert into current note** — Low complexity, highest clinical value. Independent of other features.
-5. **Node templates (single-node, Strategy A)** — Medium complexity, novel differentiator. Requires the SnippetService pattern (already proven) and a canvas node insertion utility (new code).
-6. **Live canvas node editing** — Highest risk/complexity due to undocumented internal API. Implement last, after all other features are stable and community submission is underway. Include Strategy A fallback unconditionally.
-
-**Defer from v1.1:**
-- Multi-node sub-graph templates
-- Template insertion while canvas is open via live API (use Strategy A only)
-
----
+**Defer to v2:**
+- Visual loop nodes (complex state management)
+- Mid-session save/resume (needs session state model)
+- Snippet manager UI (snippets can be JSON files edited manually in v1)
+- Node templates / reusable structures
+- Linked placeholders across report sections
+- Optional sections in snippets
 
 ## Sources
 
-- [FileView — Obsidian Developer Documentation](https://docs.obsidian.md/Reference/TypeScript+API/FileView)
-- [Workspace — Obsidian Developer Documentation](https://docs.obsidian.md/Plugins/User+interface/Workspace)
-- [Submit your plugin — Obsidian Developer Documentation](https://docs.obsidian.md/Plugins/Releasing/Submit+your+plugin)
-- [Submission requirements for plugins — Obsidian Developer Documentation](https://docs.obsidian.md/Plugins/Releasing/Submission+requirements+for+plugins)
-- [Plugin Submission Guide — DeepWiki](https://deepwiki.com/obsidianmd/obsidian-releases/6.1-plugin-submission-guide)
-- [obsidian-api/canvas.d.ts — GitHub](https://github.com/obsidianmd/obsidian-api/blob/master/canvas.d.ts)
-- [canvas-event-patcher — GitHub](https://github.com/neonpalms/obsidian-canvas-event-patcher)
-- [obsidian-advanced-canvas — GitHub](https://github.com/Developer-Mike/obsidian-advanced-canvas)
-- [obsidian-resize-card-plugin — GitHub](https://github.com/jasperyzh/obsidian-resize-card-plugin)
-- [Any details on the canvas API? — Obsidian Forum](https://forum.obsidian.md/t/any-details-on-the-canvas-api/57120)
-- [Access current editor from a sidebar plugin — Obsidian Forum](https://forum.obsidian.md/t/access-current-editor-from-a-sidebar-plugin/79477)
-- [Canvas System — DeepWiki](https://deepwiki.com/obsidianmd/obsidian-api/4.1-canvas-system)
-- [Making A Custom View in Obsidian — upskil.dev](https://upskil.dev/blog/obsidian_plugin_custom_view)
+### Obsidian Plugins
+- [QuickAdd](https://github.com/chhoumann/quickadd) -- macro/template workflow plugin
+- [Modal Form Plugin](https://github.com/danielo515/obsidian-modal-form) -- form-based data collection
+- [ZettelFlow](https://github.com/RafaelGB/Obsidian-ZettelFlow) -- canvas-based note creation workflow
+- [Cannoli](https://github.com/DeabLabs/cannoli) -- canvas-based LLM workflow execution
+- [Advanced Canvas](https://github.com/Developer-Mike/obsidian-advanced-canvas) -- canvas styling and features
+- [JSON Canvas Spec](https://jsoncanvas.org/) -- official canvas file format
+
+### Radiology Structured Reporting
+- [RSNA RadReport Templates](https://www.rsna.org/practice-tools/data-tools-and-standards/radreport-reporting-templates)
+- [RSNA/ACR Common Data Elements](https://radelement.org/about/)
+- [RadioReport](https://radioreport.com/) -- decision-tree structured reporting
+- [rScriptor](https://scriptorsoftware.com/2024/03/14/streamline-radiology-reporting-with-rscriptor-a-game-changing-software-solution/) -- adaptive structured reporting
+- [CLICKVIEW 9i](https://clickview.com/) -- voice-activated structured reporting
+- [Structured reporting systematic review (European Radiology)](https://pmc.ncbi.nlm.nih.gov/articles/PMC8921035/)
+
+### Wizard/Form UX
+- [NN/g Wizard Design Guidelines](https://www.nngroup.com/articles/wizards/)
+- [PatternFly Wizard Component](https://www.patternfly.org/components/wizard/design-guidelines/)
+- [Save-and-Resume Wizard Patterns (AppMaster)](https://appmaster.io/blog/save-and-resume-multi-step-wizard)
+
+### Snippet/Template UX
+- [VS Code Snippet Documentation](https://code.visualstudio.com/docs/editing/userdefinedsnippets)
+- [TextExpander Fill-In Types](https://textexpander.com/learn/using/snippets/snippet-fill-ins)
+
+### Radiology Report Structure
+- [RadiologyInfo.org -- About Your Radiology Report](https://www.radiologyinfo.org/en/info/all-about-your-radiology-report)
+- [ContrastConnect -- Findings vs Impression](https://www.contrast-connect.com/blog-post/radiology-report-findings-vs-impression-whats-the-difference)
