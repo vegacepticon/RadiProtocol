@@ -13,6 +13,8 @@ export interface RadiProtocolSettings {
   sessionFolderPath: string;
   /** Runner opens in sidebar panel or full editor tab (RUNTAB-01). Default: 'sidebar' */
   runnerViewMode: 'sidebar' | 'tab';
+  /** Vault-relative folder scanned for .canvas protocol files (SELECTOR-01). Default: '' (empty) */
+  protocolFolderPath: string;
 }
 
 export const DEFAULT_SETTINGS: RadiProtocolSettings = {
@@ -22,6 +24,7 @@ export const DEFAULT_SETTINGS: RadiProtocolSettings = {
   snippetFolderPath: '.radiprotocol/snippets',
   sessionFolderPath: '.radiprotocol/sessions',
   runnerViewMode: 'sidebar',
+  protocolFolderPath: '',
 };
 
 export class RadiProtocolSettingsTab extends PluginSettingTab {
@@ -52,7 +55,26 @@ export class RadiProtocolSettingsTab extends PluginSettingTab {
         })
       );
 
-    // Group 2 — Output
+    // Group 2 — Protocol
+    new Setting(containerEl).setName('Protocol').setHeading();
+
+    new Setting(containerEl)
+      .setName('Protocol canvas folder')
+      .setDesc(
+        'Vault-relative folder containing your .canvas protocol files. ' +
+        'The canvas selector in the runner panel scans this folder. ' +
+        'Leave empty to disable the selector.'
+      )
+      .addText(text => text
+        .setPlaceholder('e.g. Protocols')
+        .setValue(this.plugin.settings.protocolFolderPath)
+        .onChange(async (value) => {
+          this.plugin.settings.protocolFolderPath = value.trim();
+          await this.plugin.saveSettings();
+        })
+      );
+
+    // Group 3 — Output
     new Setting(containerEl).setName('Output').setHeading();
 
     new Setting(containerEl)
@@ -81,7 +103,7 @@ export class RadiProtocolSettingsTab extends PluginSettingTab {
         })
       );
 
-    // Group 3 — Protocol engine
+    // Group 4 — Protocol engine
     new Setting(containerEl).setName('Protocol engine').setHeading();
 
     new Setting(containerEl)
@@ -100,7 +122,7 @@ export class RadiProtocolSettingsTab extends PluginSettingTab {
         })
       );
 
-    // Group 4 — Storage
+    // Group 5 — Storage
     new Setting(containerEl).setName('Storage').setHeading();
 
     new Setting(containerEl)
