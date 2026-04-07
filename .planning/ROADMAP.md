@@ -231,9 +231,9 @@ Plans:
 **Plans**: 3 plans
 
 Plans:
-- [ ] 07-00-PLAN.md — Wave 0: 2 RED test stubs (session-service.test.ts, protocol-runner-session.test.ts) covering SESSION-01 through SESSION-07
-- [ ] 07-01-PLAN.md — Wave 1: session-model.ts types + SessionService CRUD + validateSessionNodeIds + ProtocolRunner.getSerializableState/restoreFrom/setGraph + settings.sessionFolderPath (all tests GREEN)
-- [ ] 07-02-PLAN.md — Wave 2: ResumeSessionModal + RunnerView session hooks (openCanvas resume detection, autoSaveSession, clear on complete) + main.ts wiring + human UAT checkpoint
+- [x] 07-00-PLAN.md — Wave 0: 2 RED test stubs (session-service.test.ts, protocol-runner-session.test.ts) covering SESSION-01 through SESSION-07
+- [x] 07-01-PLAN.md — Wave 1: session-model.ts types + SessionService CRUD + validateSessionNodeIds + ProtocolRunner.getSerializableState/restoreFrom/setGraph + settings.sessionFolderPath (all tests GREEN)
+- [x] 07-02-PLAN.md — Wave 2: ResumeSessionModal + RunnerView session hooks (openCanvas resume detection, autoSaveSession, clear on complete) + main.ts wiring + human UAT checkpoint
 
 **UI hint**: yes
 
