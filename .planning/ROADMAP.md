@@ -256,3 +256,25 @@ Plans:
 | 5. Dynamic Snippets | 0/5 | Planning complete | - |
 | 6. Loop Support | 0/3 | Planning complete | - |
 | 7. Mid-Session Save and Resume | 0/3 | Planning complete | - |
+
+---
+
+## Backlog
+
+### Phase 999.1: Canvas selector dropdown in runner view (BACKLOG)
+
+**Goal:** Let users choose which canvas/scenario to run from within the plugin panel via a dropdown or similar UX — without having to close the panel and invoke the command again on a different canvas.
+**Requirements:** TBD
+**Plans:** 0 plans
+
+Plans:
+- [ ] TBD (promote with /gsd-review-backlog when ready)
+
+### Phase 999.2: Full-tab runner view (BACKLOG)
+
+**Goal:** Open the protocol runner as a full editor tab (like a new note) instead of a sidebar panel — full-width layout for better readability and UX.
+**Requirements:** TBD
+**Plans:** 0 plans
+
+Plans:
+- [ ] TBD (promote with /gsd-review-backlog when ready)
