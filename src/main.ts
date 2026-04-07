@@ -187,7 +187,9 @@ export default class RadiProtocolPlugin extends Plugin {
 
     // After opening, trigger openCanvas on the active canvas file if any (preserved from v1.0)
     const canvasLeaves = workspace.getLeavesOfType('canvas');
-    const activeCanvas = canvasLeaves[0];
+    // Prefer the most-recently-active canvas leaf; fall back to the first in the list (WR-03)
+    const mostRecentCanvasLeaf = canvasLeaves.find(l => l === workspace.getMostRecentLeaf());
+    const activeCanvas = mostRecentCanvasLeaf ?? canvasLeaves[0];
     if (activeCanvas !== undefined) {
       const filePath = (activeCanvas.view as { file?: { path: string } } | undefined)?.file?.path;
       if (filePath !== undefined) {
