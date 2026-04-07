@@ -443,3 +443,49 @@
   box-sizing: border-box;
   min-height: 80px;
 }
+
+/* Phase 6: Loop Support ─────────────────────────────────────────────────── */
+
+.rp-loop-iteration-label {
+  font-size: var(--font-ui-small);
+  font-weight: var(--font-semibold);
+  color: var(--color-yellow);
+  margin-bottom: var(--size-2-3); /* 8px */
+  letter-spacing: 0.02em;
+}
+
+.rp-loop-btn-row {
+  display: flex;
+  gap: var(--size-2-3); /* 8px */
+  flex-wrap: wrap;
+  margin-top: var(--size-2-3);
+}
+
+.rp-loop-again-btn {
+  background: var(--interactive-accent);
+  color: var(--text-on-accent);
+  border: none;
+  border-radius: var(--radius-s);
+  padding: var(--size-2-2) var(--size-4-2);
+  cursor: pointer;
+  font-size: var(--font-ui-small);
+}
+
+.rp-loop-again-btn:hover {
+  background: var(--interactive-accent-hover);
+}
+
+.rp-loop-done-btn {
+  background: var(--background-modifier-border);
+  color: var(--text-normal);
+  border: none;
+  border-radius: var(--radius-s);
+  padding: var(--size-2-2) var(--size-4-2);
+  cursor: pointer;
+  font-size: var(--font-ui-small);
+}
+
+.rp-loop-done-btn:hover {
+  background: var(--background-modifier-border-hover, var(--background-modifier-border));
+  opacity: 0.8;
+}
