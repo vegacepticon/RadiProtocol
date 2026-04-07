@@ -1,5 +1,5 @@
 // views/runner-view.ts — Phase 5: Full RunnerView with awaiting-snippet-fill branch
-import { ItemView, WorkspaceLeaf, Notice, TFile } from 'obsidian';
+import { ItemView, WorkspaceLeaf, Notice, TFile, TFolder } from 'obsidian';
 import type RadiProtocolPlugin from '../main';
 import { ProtocolRunner } from '../runner/protocol-runner';
 import { GraphValidator } from '../graph/graph-validator';
@@ -9,6 +9,8 @@ import { SnippetFillInModal } from './snippet-fill-in-modal';
 import { ResumeSessionModal } from './resume-session-modal';
 import type { PersistedSession } from '../sessions/session-model';
 import { validateSessionNodeIds } from '../sessions/session-service';
+import { CanvasSelectorWidget } from './canvas-selector-widget';
+import { CanvasSwitchModal } from './canvas-switch-modal';
 
 export const RUNNER_VIEW_TYPE = 'radiprotocol-runner';
 
@@ -19,6 +21,7 @@ export class RunnerView extends ItemView {
   private canvasFilePath: string | null = null;
   private previewTextarea: HTMLTextAreaElement | null = null;
   private graph: ProtocolGraph | null = null;
+  private selector: CanvasSelectorWidget | null = null;
 
   constructor(leaf: WorkspaceLeaf, plugin: RadiProtocolPlugin) {
     super(leaf);
@@ -128,11 +131,90 @@ export class RunnerView extends ItemView {
   }
 
   async onOpen(): Promise<void> {
+    // Render selector into headerEl (D-05) — headerEl persists across render() calls
+    // because render() only clears contentEl, never headerEl.
+    // headerEl is a real DOM element on every ItemView at runtime but is not
+    // declared in the public Obsidian type definitions — access via cast (D-05).
+    const headerEl = (this as unknown as { headerEl: HTMLElement }).headerEl;
+    this.selector = new CanvasSelectorWidget(
+      this.app,
+      this.plugin,
+      headerEl,
+      (filePath) => { void this.handleSelectorSelect(filePath); },
+    );
+
+    // Sync selector label if a canvas is already set (e.g. restored from state)
+    if (this.canvasFilePath !== null) {
+      this.selector.setSelectedPath(this.canvasFilePath);
+    }
+
+    // Vault file-change listeners — rebuild widget when .canvas files in the
+    // protocol folder are created, deleted, or renamed (D-11).
+    this.registerEvent(
+      this.app.vault.on('create', (file) => {
+        if (file instanceof TFile && file.extension === 'canvas') {
+          this.selector?.rebuildIfOpen();
+        }
+      })
+    );
+    this.registerEvent(
+      this.app.vault.on('delete', (file) => {
+        if (file instanceof TFile && file.extension === 'canvas') {
+          this.selector?.rebuildIfOpen();
+        }
+      })
+    );
+    this.registerEvent(
+      this.app.vault.on('rename', (file) => {
+        if (file instanceof TFile && file.extension === 'canvas') {
+          this.selector?.rebuildIfOpen();
+        }
+      })
+    );
+
     this.render();
   }
 
   async onClose(): Promise<void> {
+    this.selector?.destroy();
+    this.selector = null;
     this.contentEl.empty();
+  }
+
+  /**
+   * Called by CanvasSelectorWidget when a file is picked.
+   * Implements D-12 / D-13 mid-session confirmation logic.
+   */
+  private async handleSelectorSelect(newPath: string): Promise<void> {
+    // No-op if the user selects the already-active canvas
+    if (newPath === this.canvasFilePath) return;
+
+    const state = this.runner.getState();
+    const needsConfirmation =
+      state.status === 'at-node' || state.status === 'awaiting-snippet-fill';
+
+    if (needsConfirmation) {
+      // D-12: show confirmation modal; runner state is in-progress
+      const modal = new CanvasSwitchModal(this.app);
+      modal.open();
+      const confirmed = await modal.result;
+
+      if (!confirmed) {
+        // D-12: user cancelled — revert selector label to previous canvas
+        this.selector?.setSelectedPath(this.canvasFilePath);
+        return;
+      }
+
+      // D-12: confirmed — clear active session before switching (D-14: already auto-saved)
+      if (this.canvasFilePath !== null) {
+        await this.plugin.sessionService.clear(this.canvasFilePath);
+      }
+    }
+    // D-13: idle or complete — switch without confirmation; fall through directly
+
+    // Update selector label to the new canvas, then load it
+    this.selector?.setSelectedPath(newPath);
+    await this.openCanvas(newPath);
   }
 
   // ── Render ────────────────────────────────────────────────────────────────
