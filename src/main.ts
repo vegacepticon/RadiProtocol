@@ -1,6 +1,6 @@
 // main.ts
 import { Plugin, Notice, Menu } from 'obsidian';
-import type { TFile } from 'obsidian';
+import type { TFile, WorkspaceLeaf } from 'obsidian';
 import { RadiProtocolSettings, DEFAULT_SETTINGS, RadiProtocolSettingsTab } from './settings';
 import { CanvasParser } from './graph/canvas-parser';
 import { EditorPanelView, EDITOR_PANEL_VIEW_TYPE } from './views/editor-panel-view';
@@ -148,17 +148,42 @@ export default class RadiProtocolPlugin extends Plugin {
 
   async activateRunnerView(): Promise<void> {
     const { workspace } = this.app;
-    const existing = workspace.getLeavesOfType(RUNNER_VIEW_TYPE);
-    if (existing.length > 0 && existing[0] !== undefined) {
-      workspace.revealLeaf(existing[0]);
-      return;
+    const existingLeaves = workspace.getLeavesOfType(RUNNER_VIEW_TYPE);
+
+    if (existingLeaves.length > 0 && existingLeaves[0] !== undefined) {
+      const existingLeaf = existingLeaves[0];
+      // Detect whether the existing leaf is in the sidebar or main tab area.
+      // leaf.getRoot() === workspace.rightSplit is true for sidebar leaves.
+      // Do NOT use leaf.parent instanceof WorkspaceSidedock — parent is WorkspaceTabs.
+      const leafIsInSidebar = existingLeaf.getRoot() === workspace.rightSplit;
+      const targetIsSidebar = this.settings.runnerViewMode === 'sidebar';
+
+      if (leafIsInSidebar === targetIsSidebar) {
+        // RUNTAB-03: mode unchanged — reveal existing leaf, no duplicate
+        workspace.revealLeaf(existingLeaf);
+        return;
+      }
+
+      // Mode changed — close the old leaf, fall through to open fresh in new mode
+      existingLeaf.detach();
     }
-    const leaf = workspace.getRightLeaf(false);
+
+    // Open in the configured mode
+    let leaf: WorkspaceLeaf | null;
+    if (this.settings.runnerViewMode === 'tab') {
+      // RUNTAB-02: open in main workspace tab strip
+      leaf = workspace.getLeaf('tab');
+    } else {
+      // RUNTAB-01 sidebar default: v1.0 behavior preserved
+      leaf = workspace.getRightLeaf(false);
+    }
+
     if (leaf !== null) {
       await leaf.setViewState({ type: RUNNER_VIEW_TYPE, active: true });
       workspace.revealLeaf(leaf);
     }
-    // After RunnerView opens, trigger openCanvas on the active canvas file if any
+
+    // After opening, trigger openCanvas on the active canvas file if any (preserved from v1.0)
     const canvasLeaves = workspace.getLeavesOfType('canvas');
     const activeCanvas = canvasLeaves[0];
     if (activeCanvas !== undefined) {
