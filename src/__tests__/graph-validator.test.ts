@@ -142,4 +142,13 @@ describe('GraphValidator', () => {
       }
     });
   });
+
+  describe('loop validation (LOOP-01, LOOP-06)', () => {
+    it('valid loop-body graph passes validation with zero errors (LOOP-01)', () => {
+      const graph = parseFixture('loop-body.canvas');
+      const validator = new GraphValidator();
+      const errors = validator.validate(graph);
+      expect(errors).toHaveLength(0);
+    });
+  });
 });

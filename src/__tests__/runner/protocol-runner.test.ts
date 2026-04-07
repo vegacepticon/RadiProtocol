@@ -314,4 +314,87 @@ describe('ProtocolRunner', () => {
       expect(typeof ProtocolRunner).toBe('function');
     });
   });
+
+  describe('loop support (LOOP-01 through LOOP-05, RUN-09)', () => {
+    function reachLoopEnd(runner: ProtocolRunner, graph: ProtocolGraph): void {
+      runner.start(graph);
+      // Runner halts at n-q1 (first question inside loop body)
+      runner.chooseAnswer('n-a1'); // answer → n-le1 (loop-end) — runner should halt here
+    }
+
+    it('runner halts at loop-end node after traversing loop body once (LOOP-02)', () => {
+      const runner = new ProtocolRunner();
+      const graph = loadGraph('loop-body.canvas');
+      reachLoopEnd(runner, graph);
+      const state = runner.getState();
+      expect(state.status).toBe('at-node');
+      if (state.status !== 'at-node') return;
+      expect(state.currentNodeId).toBe('n-le1');
+    });
+
+    it("chooseLoopAction('again') re-enters loop body and increments iteration to 2 (LOOP-02, LOOP-03)", () => {
+      const runner = new ProtocolRunner();
+      const graph = loadGraph('loop-body.canvas');
+      reachLoopEnd(runner, graph);
+      (runner as unknown as Record<string, unknown>)['chooseLoopAction']?.('again');
+      const state = runner.getState();
+      expect(state.status).toBe('at-node');
+      if (state.status !== 'at-node') return;
+      expect(state.currentNodeId).toBe('n-q1');
+      expect((state as unknown as Record<string, unknown>)['loopIterationLabel']).toBe('Lesion 2');
+    });
+
+    it("chooseLoopAction('done') exits loop and completes protocol (LOOP-02)", () => {
+      const runner = new ProtocolRunner();
+      const graph = loadGraph('loop-body.canvas');
+      reachLoopEnd(runner, graph);
+      (runner as unknown as Record<string, unknown>)['chooseLoopAction']?.('done');
+      const state = runner.getState();
+      expect(state.status).toBe('complete');
+      if (state.status !== 'complete') return;
+      expect(state.finalText).toBe('LiverEnd of protocol.');
+    });
+
+    it("getState() returns loopIterationLabel='Lesion 1' when halted at loop-end on iteration 1 (LOOP-04)", () => {
+      const runner = new ProtocolRunner();
+      const graph = loadGraph('loop-body.canvas');
+      reachLoopEnd(runner, graph);
+      const state = runner.getState();
+      expect(state.status).toBe('at-node');
+      if (state.status !== 'at-node') return;
+      expect((state as unknown as Record<string, unknown>)['loopIterationLabel']).toBe('Lesion 1');
+      expect((state as unknown as Record<string, unknown>)['isAtLoopEnd']).toBe(true);
+    });
+
+    it('stepBack() from iteration 2 first question restores iteration 1 loop-end state (LOOP-05)', () => {
+      const runner = new ProtocolRunner();
+      const graph = loadGraph('loop-body.canvas');
+      reachLoopEnd(runner, graph);
+      (runner as unknown as Record<string, unknown>)['chooseLoopAction']?.('again');
+      // Now at n-q1 iteration 2
+      runner.stepBack();
+      const state = runner.getState();
+      expect(state.status).toBe('at-node');
+      if (state.status !== 'at-node') return;
+      expect(state.currentNodeId).toBe('n-le1');
+      expect((state as unknown as Record<string, unknown>)['loopIterationLabel']).toBe('Lesion 1');
+    });
+
+    it('per-loop maxIterations cap transitions to error after exceeding limit (RUN-09)', () => {
+      const runner = new ProtocolRunner();
+      const graph = loadGraph('loop-body.canvas');
+      reachLoopEnd(runner, graph);
+      // Iterate 4 more times to reach the 5th iteration (maxIterations=5)
+      for (let i = 0; i < 4; i++) {
+        (runner as unknown as Record<string, unknown>)['chooseLoopAction']?.('again');
+        runner.chooseAnswer('n-a1'); // advance back to loop-end
+      }
+      // 5th 'again' should hit the cap
+      (runner as unknown as Record<string, unknown>)['chooseLoopAction']?.('again');
+      const state = runner.getState();
+      expect(state.status).toBe('error');
+      if (state.status !== 'error') return;
+      expect(state.message).toMatch(/Maximum iterations/);
+    });
+  });
 });
