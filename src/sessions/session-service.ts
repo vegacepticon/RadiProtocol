@@ -86,9 +86,11 @@ export class SessionService {
    */
   async clear(canvasFilePath: string): Promise<void> {
     const filePath = this.sessionFilePath(canvasFilePath);
-    const exists = await this.app.vault.adapter.exists(filePath);
-    if (!exists) return;
-    await this.app.vault.adapter.remove(filePath);
+    await this.mutex.runExclusive(filePath, async () => {
+      const exists = await this.app.vault.adapter.exists(filePath);
+      if (!exists) return;
+      await this.app.vault.adapter.remove(filePath);
+    });
   }
 
   /**
