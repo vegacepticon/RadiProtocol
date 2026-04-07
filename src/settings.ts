@@ -9,6 +9,8 @@ export interface RadiProtocolSettings {
   maxLoopIterations: number;
   /** Vault-relative path for snippet JSON files (D-15, SNIP-08). Default: .radiprotocol/snippets */
   snippetFolderPath: string;
+  /** Vault-relative path for session JSON files (SESSION-01). Default: .radiprotocol/sessions */
+  sessionFolderPath: string;
 }
 
 export const DEFAULT_SETTINGS: RadiProtocolSettings = {
@@ -16,6 +18,7 @@ export const DEFAULT_SETTINGS: RadiProtocolSettings = {
   outputFolderPath: 'RadiProtocol Output',
   maxLoopIterations: 50,
   snippetFolderPath: '.radiprotocol/snippets',
+  sessionFolderPath: '.radiprotocol/sessions',
 };
 
 // Phase 3 will implement the full settings tab UI

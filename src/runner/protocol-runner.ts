@@ -288,6 +288,94 @@ export class ProtocolRunner {
     }
   }
 
+  /**
+   * Return a serializable snapshot of current runner state for session persistence (SESSION-01).
+   * Returns null when the runner is in idle, complete, or error state — these are not
+   * valid resume points (only 'at-node' and 'awaiting-snippet-fill' are resumable).
+   *
+   * The returned object is JSON-safe: all values are strings, numbers, arrays of those,
+   * or null. No Set values are present (SESSION-07 — verified by RESEARCH.md audit).
+   *
+   * Callers (RunnerView.autoSaveSession) add canvasFilePath, canvasMtimeAtSave,
+   * savedAt, and version to complete the PersistedSession shape before writing.
+   */
+  getSerializableState(): {
+    runnerStatus: 'at-node' | 'awaiting-snippet-fill';
+    currentNodeId: string;
+    accumulatedText: string;
+    undoStack: Array<{ nodeId: string; textSnapshot: string; loopContextStack: Array<{ loopStartId: string; iteration: number; textBeforeLoop: string }> }>;
+    loopContextStack: Array<{ loopStartId: string; iteration: number; textBeforeLoop: string }>;
+    snippetId: string | null;
+    snippetNodeId: string | null;
+  } | null {
+    if (this.runnerStatus !== 'at-node' && this.runnerStatus !== 'awaiting-snippet-fill') {
+      return null;
+    }
+    return {
+      runnerStatus: this.runnerStatus,
+      currentNodeId: this.currentNodeId ?? '',
+      accumulatedText: this.accumulator.current,
+      // Deep-copy arrays to prevent aliasing (Pitfall 1 — snapshot must be independent)
+      undoStack: this.undoStack.map(e => ({
+        nodeId: e.nodeId,
+        textSnapshot: e.textSnapshot,
+        loopContextStack: e.loopContextStack.map(f => ({ ...f })),
+      })),
+      loopContextStack: this.loopContextStack.map(f => ({ ...f })),
+      snippetId: this.snippetId,
+      snippetNodeId: this.snippetNodeId,
+    };
+  }
+
+  /**
+   * Set the graph reference without calling start() or advanceThrough() (SESSION-01).
+   * Must be called BEFORE restoreFrom() so subsequent runner method calls have a valid
+   * graph to traverse (Pitfall 2 in RESEARCH.md — restoreFrom before setGraph causes silent no-ops).
+   *
+   * Correct call order in RunnerView.openCanvas():
+   *   1. runner.setGraph(parsedGraph)
+   *   2. runner.restoreFrom(session)
+   *   3. this.render()
+   */
+  setGraph(graph: ProtocolGraph): void {
+    this.graph = graph;
+  }
+
+  /**
+   * Restore runner state from a persisted session snapshot (SESSION-01).
+   * Directly assigns all private fields — does NOT call start() or advanceThrough().
+   *
+   * PRECONDITION: setGraph() must be called first (Pitfall 2).
+   * POSTCONDITION: getState() returns the same status/nodeId/text as was present at save time.
+   *
+   * errorMessage is always reset to null after a valid restore (a restored session
+   * is never in error state).
+   */
+  restoreFrom(session: {
+    runnerStatus: 'at-node' | 'awaiting-snippet-fill';
+    currentNodeId: string;
+    accumulatedText: string;
+    undoStack: Array<{ nodeId: string; textSnapshot: string; loopContextStack: Array<{ loopStartId: string; iteration: number; textBeforeLoop: string }> }>;
+    loopContextStack: Array<{ loopStartId: string; iteration: number; textBeforeLoop: string }>;
+    snippetId: string | null;
+    snippetNodeId: string | null;
+  }): void {
+    this.runnerStatus = session.runnerStatus;
+    this.currentNodeId = session.currentNodeId;
+    this.accumulator.restoreTo(session.accumulatedText);
+    // Deep-copy to prevent aliasing between the session object and internal state
+    this.undoStack = session.undoStack.map(e => ({
+      nodeId: e.nodeId,
+      textSnapshot: e.textSnapshot,
+      loopContextStack: e.loopContextStack.map(f => ({ ...f })),
+    }));
+    this.loopContextStack = session.loopContextStack.map(f => ({ ...f }));
+    this.snippetId = session.snippetId;
+    this.snippetNodeId = session.snippetNodeId;
+    // errorMessage is always null after a valid restore (SESSION-06)
+    this.errorMessage = null;
+  }
+
   // ── Private helpers ──────────────────────────────────────────────────────────
 
   /**
