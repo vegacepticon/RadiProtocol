@@ -30,16 +30,30 @@ Full details: `.planning/milestones/v1.0-ROADMAP.md`
 
 ---
 
-## Backlog
+## v1.1 — UX & Community Release
 
-### Phase 999.1: Canvas selector dropdown in runner view (BACKLOG)
+### Phase 8: Settings + Full-Tab Runner View
 
-**Goal:** Let users choose which canvas/scenario to run from within the plugin panel via a dropdown or similar UX — without having to close the panel and invoke the command again on a different canvas.
+**Goal:** Add a "Runner view mode" setting (Sidebar panel / Editor tab) to the plugin settings tab, and make `activateRunnerView()` respect that setting on every invocation. Also fully implement the settings tab stub with all existing controls.
+**Requirements:** RUNTAB-01, RUNTAB-02, RUNTAB-03
+**Plans:** 2 plans
+
+### Phase 9: Canvas Selector Dropdown
+
+**Goal:** Let users choose which canvas/scenario to run from within the plugin panel via a dropdown — without having to close the panel and invoke the command again on a different canvas.
+**Requirements:** SELECTOR-01, SELECTOR-02, SELECTOR-03, SELECTOR-04
 **Plans:** 0 plans
 
-### Phase 999.2: Full-tab runner view (BACKLOG)
+### Phase 10: Insert Into Current Note Output
 
-**Goal:** Open the protocol runner as a full editor tab (like a new note) instead of a sidebar panel — full-width layout for better readability and UX.
+**Goal:** Add an output destination option that inserts protocol results directly into the currently active note at the cursor position, in addition to the existing dedicated output file option.
+**Requirements:** OUTPUT-01, OUTPUT-02, OUTPUT-03
+**Plans:** 0 plans
+
+### Phase 11: Live Canvas Editing
+
+**Goal:** Allow users to edit canvas nodes while the canvas is open in the editor, using the internal Canvas View API with Strategy A fallback. Eliminates the requirement to close the canvas before making node edits.
+**Requirements:** LIVE-01, LIVE-02, LIVE-03, LIVE-04
 **Plans:** 0 plans
 
 ---
@@ -55,3 +69,7 @@ Full details: `.planning/milestones/v1.0-ROADMAP.md`
 | 5. Dynamic Snippets | v1.0 | 5/5 | Complete | 2026-04-06 |
 | 6. Loop Support | v1.0 | 3/3 | Complete | 2026-04-07 |
 | 7. Mid-Session Save and Resume | v1.0 | 3/3 | Complete | 2026-04-07 |
+| 8. Settings + Full-Tab Runner View | v1.1 | 2/2 | Needs Review | — |
+| 9. Canvas Selector Dropdown | v1.1 | 0/? | Pending | — |
+| 10. Insert Into Current Note Output | v1.1 | 0/? | Pending | — |
+| 11. Live Canvas Editing | v1.1 | 0/? | Pending | — |
