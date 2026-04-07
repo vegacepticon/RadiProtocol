@@ -181,6 +181,8 @@ export default class RadiProtocolPlugin extends Plugin {
     if (leaf !== null) {
       await leaf.setViewState({ type: RUNNER_VIEW_TYPE, active: true });
       workspace.revealLeaf(leaf);
+    } else {
+      new Notice('Could not open runner view: no available leaf.');
     }
 
     // After opening, trigger openCanvas on the active canvas file if any (preserved from v1.0)
