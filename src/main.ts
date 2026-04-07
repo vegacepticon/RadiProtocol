@@ -1,6 +1,6 @@
 // main.ts
-import { Plugin, Notice, Menu } from 'obsidian';
-import type { TFile, WorkspaceLeaf } from 'obsidian';
+import { Plugin, Notice, Menu, TFile } from 'obsidian';
+import type { WorkspaceLeaf } from 'obsidian';
 import { RadiProtocolSettings, DEFAULT_SETTINGS, RadiProtocolSettingsTab } from './settings';
 import { CanvasParser } from './graph/canvas-parser';
 import { EditorPanelView, EDITOR_PANEL_VIEW_TYPE } from './views/editor-panel-view';
@@ -213,8 +213,8 @@ export default class RadiProtocolPlugin extends Plugin {
     const notePath = `${folderPath}/Report-${timestamp}.md`;
     await vault.create(notePath, text);
     const file = vault.getAbstractFileByPath(notePath);
-    if (file !== null) {
-      await workspace.getLeaf('tab').openFile(file as TFile);
+    if (file instanceof TFile) {
+      await workspace.getLeaf('tab').openFile(file);
     }
   }
 
