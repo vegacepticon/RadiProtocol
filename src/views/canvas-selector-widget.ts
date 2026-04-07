@@ -147,7 +147,8 @@ export class CanvasSelectorWidget {
       const backIcon = backRow.createSpan({ cls: 'rp-selector-row-icon' });
       setIcon(backIcon, 'arrow-left');
       backRow.createSpan({ cls: 'rp-selector-row-label', text: 'Back' });
-      backRow.addEventListener('click', () => {
+      backRow.addEventListener('click', (e) => {
+        e.stopPropagation();
         this.currentPath.pop();
         this.renderPopoverContent(popover);
       });
@@ -174,7 +175,8 @@ export class CanvasSelectorWidget {
       row.createSpan({ cls: 'rp-selector-row-label', text: folder.name });
       const arrowEl = row.createSpan({ cls: 'rp-selector-row-arrow' });
       setIcon(arrowEl, 'chevron-right');
-      row.addEventListener('click', () => {
+      row.addEventListener('click', (e) => {
+        e.stopPropagation();
         this.currentPath.push(folder.name);
         this.renderPopoverContent(popover);
       });
