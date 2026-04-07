@@ -36,7 +36,15 @@ export class RunnerView extends ItemView {
   async setState(state: Record<string, unknown>): Promise<void> {
     const path = state['canvasFilePath'];
     if (typeof path === 'string' && path !== '') {
-      await this.openCanvas(path);
+      // Defer canvas restore to onLayoutReady so that vault I/O and any modal
+      // (e.g. ResumeSessionModal) only run after Obsidian's workspace is fully
+      // ready. Calling openCanvas() synchronously during layout restoration
+      // caused an infinite-loading hang when a session file existed (SESSION-07).
+      // onLayoutReady fires immediately when the layout is already ready, so
+      // this path is safe for both startup restore and runtime openCanvas calls.
+      this.app.workspace.onLayoutReady(() => {
+        void this.openCanvas(path);
+      });
     }
   }
 
