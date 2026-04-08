@@ -46,17 +46,29 @@ blocked: 1
 ## Gaps
 
 - truth: "Trigger button is visible and styled in sidebar mode"
-  status: failed
+  status: diagnosed
   reason: "User reported: Кнопки не вижу в сайдбаре"
   severity: major
   test: 1
-  artifacts: []
-  missing: []
+  root_cause: "CanvasSelectorWidget is mounted into headerEl — Obsidian's native title bar row. In sidebar mode this is a constrained flex row (~32px tall, overflow:hidden) with existing header controls. The injected rp-selector-wrapper becomes a flex-item in that row and is visually crushed/hidden. CSS rules are correct but cannot override Obsidian's layout constraints on headerEl."
+  artifacts:
+    - path: "src/views/runner-view.ts"
+      issue: "onOpen() mounts CanvasSelectorWidget into headerEl (Obsidian native title bar) — hostile parent in sidebar mode"
+    - path: "src/views/canvas-selector-widget.ts"
+      issue: "Widget renders correctly but is placed in a container it cannot control"
+  missing:
+    - "Mount CanvasSelectorWidget into contentEl (top of content area) instead of headerEl"
+    - "Create a persistent rp-selector-bar div as first child of contentEl in onOpen()"
 
 - truth: "Clicking Run again restarts the protocol immediately from the first node without any modal"
-  status: failed
+  status: diagnosed
   reason: "User reported: появляется модалка resume/start over — она не нужна. Resume откатывает на шаг назад. Run again должен сразу делать start over."
   severity: major
   test: 4
-  artifacts: []
-  missing: []
+  root_cause: "openCanvas() calls sessionService.load() which finds an existing session file (saved during the completed run). The 'Run again' click handler does not clear the session before calling openCanvas(), so openCanvas() sees a non-null session and shows ResumeSessionModal unconditionally. The 'resume' path restores to last mid-run saved state (not final state), explaining the apparent step-back."
+  artifacts:
+    - path: "src/views/runner-view.ts"
+      issue: "Run again click handler calls openCanvas(path) without clearing session first. openCanvas() unconditionally shows ResumeSessionModal when session exists."
+  missing:
+    - "Clear session before calling openCanvas in Run again handler (await sessionService.clear(path) then openCanvas)"
+    - "Or add a direct restartCanvas() method that bypasses the resume modal"
