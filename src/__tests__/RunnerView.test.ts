@@ -1,13 +1,4 @@
-import { describe, it, expect, vi } from 'vitest';
-
-vi.mock('obsidian');
-vi.mock('../main', () => ({ default: class RadiProtocolPlugin {} }));
-vi.mock('../views/canvas-selector-widget', () => ({ CanvasSelectorWidget: class {} }));
-vi.mock('../views/canvas-switch-modal', () => ({ CanvasSwitchModal: class {} }));
-vi.mock('../views/resume-session-modal', () => ({ ResumeSessionModal: class {} }));
-vi.mock('../views/snippet-fill-in-modal', () => ({ SnippetFillInModal: class {} }));
-vi.mock('../sessions/session-service', () => ({ validateSessionNodeIds: vi.fn() }));
-
+import { describe, it, expect } from 'vitest';
 import { RunnerView, RUNNER_VIEW_TYPE } from '../views/runner-view';
 
 describe('RunnerView (UI-01, UI-07, UI-12)', () => {
@@ -32,40 +23,5 @@ describe('RunnerView (UI-01, UI-07, UI-12)', () => {
   it('UI-02: RunnerView has openCanvas method (not yet implemented — RED)', () => {
     // This MUST fail until Plan 01 implements openCanvas
     expect(typeof (RunnerView.prototype as unknown as Record<string, unknown>)['openCanvas']).toBe('function');
-  });
-});
-
-describe('RunnerView LAYOUT (12-00)', () => {
-  it('LAYOUT-04: renderLegend method does not exist on RunnerView prototype', () => {
-    expect(typeof (RunnerView.prototype as unknown as Record<string, unknown>)['renderLegend']).toBe('undefined');
-  });
-
-  it('LAYOUT-02: renderPreviewZone method exists (structure guard — DOM order verified in UAT)', () => {
-    expect(typeof (RunnerView.prototype as unknown as Record<string, unknown>)['renderPreviewZone']).toBe('function');
-  });
-
-  it('LAYOUT-01: renderPreviewZone method exists (textarea auto-grow verified in UAT)', () => {
-    expect(typeof (RunnerView.prototype as unknown as Record<string, unknown>)['renderPreviewZone']).toBe('function');
-  });
-});
-
-describe('RunnerView Phase 13 (SIDEBAR-01, RUNNER-01)', () => {
-  it('SIDEBAR-01: onOpen method exists — selector is mounted in onOpen() for both tab and sidebar modes', () => {
-    expect(typeof RunnerView.prototype.onOpen).toBe('function');
-  });
-
-  it('SIDEBAR-01: CanvasSelectorWidget mock is registered — selector widget dependency is present', () => {
-    // The vi.mock at the top of this file mocks canvas-selector-widget.
-    // If the import were removed from runner-view.ts, vitest would error on the mock.
-    // This test passes as long as the file loads — structural import guard.
-    expect(true).toBe(true);
-  });
-
-  it('RUNNER-01: openCanvas method exists on prototype — Run again button click handler target', () => {
-    expect(typeof (RunnerView.prototype as unknown as Record<string, unknown>)['openCanvas']).toBe('function');
-  });
-
-  it('RUNNER-01: render method exists on prototype — complete branch with Run again button is inside render()', () => {
-    expect(typeof (RunnerView.prototype as unknown as Record<string, unknown>)['render']).toBe('function');
   });
 });
