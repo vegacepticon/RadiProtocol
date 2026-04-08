@@ -1,9 +1,9 @@
 ---
-status: testing
+status: complete
 phase: 12-runner-layout-overhaul
 source: [12-VERIFICATION.md]
 started: 2026-04-08T18:07:00Z
-updated: 2026-04-08T18:30:00Z
+updated: 2026-04-08T19:00:00Z
 ---
 
 ## Current Test
@@ -14,9 +14,8 @@ updated: 2026-04-08T18:30:00Z
 
 ### 1. Textarea auto-grow
 expected: Textarea grows to fit all content; outer panel scrolls rather than textarea
-result: issue
-reported: "Не растягивается само по себе по мере ввода текста. Текстовое поле выглядит небольшим и после вставки много строк появляется скроллбар внутри, при этом текстовое поле не растянуто по ширине таба. В сайдбарре текстовое поле представлено узкой невысокой полоской - невозможно работать. При этом можно растянуть вручную."
-severity: major
+result: pass
+note: "Initially failed — fixed by adding input listener, requestAnimationFrame for initial height, inline width:100% to bypass theme overrides, and min-height:120px"
 
 ### 2. Zone order visual
 expected: Textarea is visible above the question prompt and answer buttons in both tab and sidebar mode
@@ -34,18 +33,12 @@ result: pass
 ## Summary
 
 total: 4
-passed: 3
-issues: 1
+passed: 4
+issues: 0
 pending: 0
 skipped: 0
 blocked: 0
 
 ## Gaps
 
-- truth: "Textarea grows automatically to fit content as user types; no internal scrollbar appears; textarea fills the full width of the tab; sidebar mode shows a usable textarea, not a narrow strip"
-  status: failed
-  reason: "User reported: textarea does not auto-grow, shows internal scrollbar, not stretched to tab width, sidebar shows unusably narrow strip. Manual resize works."
-  severity: major
-  test: 1
-  artifacts: []
-  missing: []
+[none]
