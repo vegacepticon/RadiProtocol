@@ -224,12 +224,17 @@ export default class RadiProtocolPlugin extends Plugin {
     const activeView = workspace.getActiveViewOfType(MarkdownView);
     if (activeView === null || activeView.file === null) return;
     const file = activeView.file;
-    await this.insertMutex.runExclusive(file.path, async () => {
-      const existing = await vault.read(file);
-      const separator = existing.trim().length === 0 ? '' : '\n\n---\n\n';
-      await vault.modify(file, existing + separator + text);
-    });
-    new Notice(`Inserted into ${file.name}.`);
+    try {
+      await this.insertMutex.runExclusive(file.path, async () => {
+        const existing = await vault.read(file);
+        const separator = existing.trim().length === 0 ? '' : '\n\n---\n\n';
+        await vault.modify(file, existing + separator + text);
+      });
+      new Notice(`Inserted into ${file.name}.`);
+    } catch (err) {
+      console.error('[RadiProtocol] insertIntoCurrentNote failed:', err);
+      new Notice(`Failed to insert into ${file.name}. See console for details.`);
+    }
   }
 
   async openEditorPanelForNode(filePath: string, nodeId: string): Promise<void> {
