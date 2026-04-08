@@ -1,7 +1,7 @@
 # Roadmap: RadiProtocol
 
 **Project:** RadiProtocol
-**Last updated:** 2026-04-07
+**Last updated:** 2026-04-08
 
 ---
 
@@ -27,6 +27,43 @@
 Full details: `.planning/milestones/v1.0-ROADMAP.md`
 
 </details>
+
+---
+
+## v1.1 — UX & Community Release
+
+### Phase 8: Full-Tab Runner View
+
+**Goal:** Open the protocol runner as a full editor tab (like a new note) instead of a sidebar panel — full-width layout for better readability and UX.
+**Requirements:** RUNTAB-01, RUNTAB-02, RUNTAB-03
+**Status:** ✅ Complete
+
+---
+
+### Phase 9: Canvas Selector Dropdown
+
+**Goal:** Let users switch which canvas/scenario to run from within the runner view via a dropdown — without closing the panel and re-invoking the command.
+**Requirements:** SELECTOR-01, SELECTOR-02, SELECTOR-03, SELECTOR-04
+**Status:** ✅ Complete
+
+---
+
+### Phase 10: Insert Into Current Note
+
+**Goal:** Add "insert into current note" as an output destination — when the runner completes, the generated protocol text is appended to the currently active note in the editor.
+**Requirements:** OUTPUT-01, OUTPUT-02, OUTPUT-03
+**Canonical refs:** `src/views/runner-view.ts`, `src/main.ts`
+**Plans:** 1 plan
+
+Plans:
+- [ ] 10-01-PLAN.md — Add insertIntoCurrentNote() to main.ts and Insert into note button with active-leaf-change listener to runner-view.ts
+
+---
+
+### Phase 11: Live Canvas Editing
+
+**Goal:** Allow canvas nodes to be edited while the canvas is open in Canvas view, using the internal Canvas View API with Strategy A fallback.
+**Requirements:** LIVE-01, LIVE-02, LIVE-03, LIVE-04
 
 ---
 
