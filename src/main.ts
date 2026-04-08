@@ -1,5 +1,5 @@
 // main.ts
-import { Plugin, Notice, Menu, TFile } from 'obsidian';
+import { Plugin, Notice, Menu, TFile, MarkdownView } from 'obsidian';
 import type { WorkspaceLeaf } from 'obsidian';
 import { RadiProtocolSettings, DEFAULT_SETTINGS, RadiProtocolSettingsTab } from './settings';
 import { CanvasParser } from './graph/canvas-parser';
@@ -8,12 +8,14 @@ import { RunnerView, RUNNER_VIEW_TYPE } from './views/runner-view';
 import { SnippetManagerView, SNIPPET_MANAGER_VIEW_TYPE } from './views/snippet-manager-view';
 import { SnippetService } from './snippets/snippet-service';
 import { SessionService } from './sessions/session-service';
+import { WriteMutex } from './utils/write-mutex';
 
 export default class RadiProtocolPlugin extends Plugin {
   settings!: RadiProtocolSettings;
   canvasParser!: CanvasParser;
   snippetService!: SnippetService;
   sessionService!: SessionService;
+  private readonly insertMutex = new WriteMutex();
 
   async onload(): Promise<void> {
     // Load settings with defaults guard (NFR-08)
@@ -215,6 +217,19 @@ export default class RadiProtocolPlugin extends Plugin {
     if (file instanceof TFile) {
       await workspace.getLeaf('tab').openFile(file);
     }
+  }
+
+  async insertIntoCurrentNote(text: string): Promise<void> {
+    const { workspace, vault } = this.app;
+    const activeView = workspace.getActiveViewOfType(MarkdownView);
+    if (activeView === null || activeView.file === null) return;
+    const file = activeView.file;
+    await this.insertMutex.runExclusive(file.path, async () => {
+      const existing = await vault.read(file);
+      const separator = existing.trim().length === 0 ? '' : '\n\n---\n\n';
+      await vault.modify(file, existing + separator + text);
+    });
+    new Notice(`Inserted into ${file.name}.`);
   }
 
   async openEditorPanelForNode(filePath: string, nodeId: string): Promise<void> {
