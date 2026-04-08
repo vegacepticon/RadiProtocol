@@ -3,6 +3,7 @@
 .rp-runner-view {
   display: flex;
   flex-direction: column;
+  width: 100%;
   min-height: 100%;
   padding: var(--size-4-2); /* 16px */
   box-sizing: border-box;
