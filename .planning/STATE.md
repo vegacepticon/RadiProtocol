@@ -1,76 +1,87 @@
 ---
 gsd_state_version: 1.0
-milestone: v1.2
-milestone_name: Runner UX & Bug Fixes
-status: executing
-last_updated: "2026-04-08T14:43:06.289Z"
-last_activity: 2026-04-08 -- Phase 12 planning complete
+milestone: v1.0
+milestone_name: milestone
+status: completed
+last_updated: "2026-04-07T08:39:26.639Z"
 progress:
-  total_phases: 6
-  completed_phases: 0
-  total_plans: 1
-  completed_plans: 0
-  percent: 0
+  total_phases: 9
+  completed_phases: 7
+  total_plans: 28
+  completed_plans: 28
+  percent: 100
 ---
 
 # RadiProtocol — Project State
 
-**Updated:** 2026-04-08
-**Milestone:** v1.2 — Runner UX & Bug Fixes
-**Status:** Ready to execute
-
----
-
-## Current Position
-
-Phase: 12 — Runner Layout Overhaul (not started)
-Plan: —
-Status: Ready to execute
-Last activity: 2026-04-08 -- Phase 12 planning complete
-
-Progress: `[ ░░░░░░░░░░░░░░░░░░░░ ] 0/6 phases`
+**Updated:** 2026-04-07
+**Milestone:** v1.0 — Initial public release
+**Status:** v1.0 milestone complete
 
 ---
 
 ## Project Reference
 
-See: `.planning/PROJECT.md` (updated 2026-04-08)
+See: `.planning/PROJECT.md` (updated 2026-04-07)
 
-**Core value:** A radiologist can generate a structured, accurate protocol in seconds by answering a guided algorithm — without writing a single line of code.
-**Current focus:** v1.2 — Runner UX improvements and bug fixes
+**Core value:** A radiologist can generate a structured, accurate protocol in seconds by answering a guided algorithm — without writing a single line of code.  
+**Current focus:** Planning next milestone (community submission + v1.1 features)
+
+---
+
+## Phase Progress
+
+| Phase | Name | Status |
+|-------|------|--------|
+| 1 | Project Scaffold + Canvas Parsing Foundation | Complete |
+| 2 | Core Protocol Runner Engine | Complete |
+| 3 | Runner UI (ItemView) | Complete |
+| 4 | Canvas Node Editor Side Panel | Complete |
+| 5 | Dynamic Snippets | Complete |
+| 6 | Loop Support | Complete |
+| 7 | Mid-Session Save + Resume | Complete |
+
+---
+
+## Key Decisions Made
+
+| Decision | Rationale |
+|----------|-----------|
+| Read-only Canvas contract | No official Canvas runtime API; never modify `.canvas` while open |
+| TypeScript + esbuild + plain DOM | Standard Obsidian plugin toolchain; zero framework overhead for v1 |
+| Vitest for engine tests | Pure engine modules (parser, runner) have no Obsidian imports; fully unit-testable |
+| One-file-per-snippet storage | Minimizes vault.modify() race conditions and sync conflicts |
+| Discriminated union on `kind` for node types | Type-safe graph model; 7 node types: start, question, answer, text-block, free-text, loop-start, loop-end |
+| Snapshot undo stack | Simplest correct approach for step-back; protocol text is small (<5KB) |
+| `radiprotocol_*` property namespace | Avoids collisions with other plugins and future Obsidian updates |
+| Canvas write-back Strategy A | Require canvas closed before any vault.modify() — simple and safe; avoids undocumented internals (A4 resolved) |
+
+---
+
+## Open Assumptions (Require User Confirmation Before Phases 5 + 6)
+
+| ID | Assumption | Phase |
+|----|-----------|-------|
+| A1 | Loop-start node uses two outgoing edges (continue + exit) rather than a dedicated "loop again?" node | 6 |
+| A2 | Snippet placeholder syntax uses `{{placeholder_id}}` double-curly-brace format | 5 |
+| A3 | Session files stored vault-visible in `.radiprotocol/sessions/` (not hidden in plugin data.json) | 7 |
 
 ---
 
 ## Critical Pitfalls (Standing Reminders)
 
-1. **Never modify `.canvas` while open in Canvas view** — Phase 11 added live path (CanvasLiveEditor); Strategy A fallback still used when canvas is closed
+1. **Never modify `.canvas` while open in Canvas view** — Canvas view will overwrite on next interaction
 2. **`vault.modify()` race conditions** — use write mutex (async-mutex) per file path
 3. **No `innerHTML`** — use DOM API and Obsidian helpers; blocks community review if violated
 4. **No `require('fs')`** — use `app.vault.*` exclusively
 5. **`loadData()` returns null on first install** — always merge with defaults
 6. **Infinite loop cycles** — validate protocol graph before running; hard iteration cap (default 50)
 7. **`console.log` forbidden in production** — use `console.debug()` during dev; remove before release
-8. **Canvas selector destroyed on re-render** — render in `onOpen()` header, not `contentEl`
-9. **`requestSave()` race with canvas dirty cycle** — debounce 500ms in CanvasLiveEditor
-10. **vitest `resolve.alias` for `obsidian`** — required in vitest.config.ts; obsidian package has empty `main` field
 
 ---
 
-## Accumulated Context
+## Repository
 
-- v1.0 shipped 2026-04-07: 7 phases, 28 plans, ~43K LOC, all UAT approved
-- v1.1 shipped 2026-04-08: 4 phases, 9 plans, +7350/-120 lines, all UAT approved
-- CanvasLiveEditor uses Canvas internal API (getData/setData Pattern B) with requestSave() debounce 500ms
-- Strategy A (vault.modify when canvas closed) still the fallback path in saveNodeEdits()
-- 3 pre-existing RED stubs in runner-extensions.test.ts — known debt, deferred to future milestone
-- Canvas selector (CanvasSelectorWidget) currently rendered in RunnerView headerEl only in tab mode — Phase 13 extends to sidebar mode
-- RunnerView textarea is editable but accumulated text state overwrites user edits on each step — Phase 16 fixes with dirty-tracking
-- free-text-input / text-block node bug: nodes created manually on canvas + configured via Node Editor not appearing in runner — root cause likely radiprotocol_nodeType not written correctly — Phase 17 fixes
-- Snippet placeholder bug: label field clears on "Add" click without adding placeholder — event handler or state issue — Phase 17 fixes
-- BUG-02 and BUG-03 share the same root cause (nodeType read-back after Node Editor write) — fix together in Phase 17
-
----
-
-## Session Continuity
-
-To resume: read `.planning/ROADMAP.md` for phase structure, then run `/gsd-plan-phase 12`
+- Branch: `main`
+- Remote: (not yet configured)
+- Last commit: `2530427` — docs(04-02): finalize SUMMARY — human UAT approved, all 7 tests passed

@@ -1,22 +1,5 @@
 # Milestones
 
-## v1.1 UX & Community Release (Shipped: 2026-04-08)
-
-**Phases completed:** 4 phases, 9 plans
-**Timeline:** 2026-04-07 → 2026-04-08 (2 days)
-**Git:** ~115 commits, 47 files, +7350 / -120 lines
-
-**Key accomplishments:**
-
-- Phase 8: `runnerViewMode` setting + `activateRunnerView()` D-04 deduplication — runner now opens as full editor tab or sidebar panel, deduplicated across mode changes (RUNTAB-01, RUNTAB-02, RUNTAB-03)
-- Phase 9: `CanvasSelectorWidget` drill-down dropdown + `protocolFolderPath` setting — switch canvas/scenario from within the runner without re-invoking the command (SELECTOR-01–04)
-- Phase 10: `insertIntoCurrentNote()` + "Insert into note" button with `active-leaf-change` listener — protocol output appended to the active markdown note with `WriteMutex` guard (OUTPUT-01–03)
-- Phase 11: `CanvasLiveEditor` using Canvas internal API (getData/setData) + live-first/Strategy-A-fallback pattern in `saveNodeEdits()` — canvas node edits appear immediately while canvas is open; no "close canvas" blocking notice (LIVE-01–04)
-
-**Archive:** `.planning/milestones/v1.1-ROADMAP.md`
-
----
-
 ## v1.0 Community Plugin Release (Shipped: 2026-04-07)
 
 **Phases completed:** 7 phases, 28 plans  
