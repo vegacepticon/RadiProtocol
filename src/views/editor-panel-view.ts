@@ -60,8 +60,9 @@ export class EditorPanelView extends ItemView {
         new Notice('Node properties saved.');
         return;
       }
-    } catch {
+    } catch (err) {
       // D-03: requestSave() threw — canvas state has been rolled back by CanvasLiveEditor.
+      console.error('[RadiProtocol] saveLive threw — canvas state rolled back:', err);
       new Notice('Save failed \u2014 close the canvas and try again.');
       return;
     }
