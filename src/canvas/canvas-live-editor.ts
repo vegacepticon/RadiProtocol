@@ -107,7 +107,11 @@ export class CanvasLiveEditor {
       return true;
     } catch (err) {
       // Rollback: restore canvas to pre-edit state (D-03)
-      view.canvas.setData(originalData);
+      try {
+        view.canvas.setData(originalData);
+      } catch (rollbackErr) {
+        console.error('[RadiProtocol] Canvas rollback failed — canvas may be in inconsistent state:', rollbackErr);
+      }
       throw err;
     }
   }
