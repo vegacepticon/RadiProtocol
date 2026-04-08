@@ -45,7 +45,7 @@ Full details: `.planning/milestones/v1.1-ROADMAP.md`
 ### v1.2 Runner UX & Bug Fixes (Phases 12–17)
 
 - [ ] **Phase 12: Runner Layout Overhaul** — Auto-grow textarea, questions below output, equal buttons, remove legend
-- [ ] **Phase 13: Sidebar Canvas Selector and Run Again** — Canvas selector parity in sidebar mode, restart after completion
+- [x] **Phase 13: Sidebar Canvas Selector and Run Again** — Canvas selector parity in sidebar mode, restart after completion (completed 2026-04-08)
 - [ ] **Phase 14: Node Editor Auto-Switch and Unsaved Guard** — Auto-load node on click, guard unsaved edits on switch
 - [ ] **Phase 15: Text Separator Setting** — Global newline/space setting in Settings tab, per-node override in EditorPanel
 - [ ] **Phase 16: Runner Textarea Edit Preservation** — Manual textarea edits survive step advances
@@ -79,7 +79,7 @@ Plans:
   3. After a protocol completes, a "Run again" button is visible and clicking it restarts the same canvas from the beginning
 **Plans**: 1 plan
 Plans:
-- [ ] 13-01-PLAN.md — Add rp-selector-* CSS, "Run again" button, and structural tests
+- [x] 13-01-PLAN.md — Add rp-selector-* CSS, "Run again" button, and structural tests
 **UI hint**: yes
 
 ### Phase 14: Node Editor Auto-Switch and Unsaved Guard
@@ -90,7 +90,10 @@ Plans:
   1. When EditorPanel is open, clicking a canvas node immediately loads that node's settings without any additional action
   2. Clicking a different node while edits are unsaved presents a confirmation prompt before discarding
   3. Choosing to stay on the current node in the prompt leaves the editor unchanged and the unsaved edits intact
-**Plans**: TBD
+**Plans**: 2 plans
+Plans:
+- [ ] 14-01-PLAN.md — TDD: NodeSwitchGuardModal + tests (RED then GREEN) + canvas-internal.d.ts selection field
+- [ ] 14-02-PLAN.md — Wire auto-switch + unsaved guard into EditorPanelView + UAT checkpoint
 **UI hint**: yes
 
 ### Phase 15: Text Separator Setting
@@ -144,8 +147,8 @@ Plans:
 | 10. Insert Into Current Note | v1.1 | 1/1 | Complete | 2026-04-08 |
 | 11. Live Canvas Editing | v1.1 | 3/3 | Complete | 2026-04-08 |
 | 12. Runner Layout Overhaul | v1.2 | 0/1 | Not started | — |
-| 13. Sidebar Canvas Selector and Run Again | v1.2 | 0/1 | Not started | — |
-| 14. Node Editor Auto-Switch and Unsaved Guard | v1.2 | 0/? | Not started | — |
+| 13. Sidebar Canvas Selector and Run Again | v1.2 | 2/2 | Complete   | 2026-04-08 |
+| 14. Node Editor Auto-Switch and Unsaved Guard | v1.2 | 0/2 | Not started | — |
 | 15. Text Separator Setting | v1.2 | 0/? | Not started | — |
 | 16. Runner Textarea Edit Preservation | v1.2 | 0/? | Not started | — |
 | 17. Node Type Read-Back and Snippet Placeholder Fixes | v1.2 | 0/? | Not started | — |
