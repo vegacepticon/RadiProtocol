@@ -47,25 +47,26 @@ export class EditorPanelView extends ItemView {
     void this.renderNodeForm(canvasFilePath, nodeId);
   }
 
-  private isCanvasOpen(filePath: string): boolean {
-    return this.plugin.app.workspace
-      .getLeavesOfType('canvas')
-      .some(leaf => {
-        const view = leaf.view as { file?: { path: string } };
-        return view.file?.path === filePath;
-      });
-  }
-
   async saveNodeEdits(
     filePath: string,
     nodeId: string,
     edits: Record<string, unknown>
   ): Promise<void> {
-    // EDIT-04: Strategy A — require canvas closed before writing
-    if (this.isCanvasOpen(filePath)) {
-      new Notice('Close the canvas before editing node properties.');
+    // LIVE-03: Attempt live save via internal Canvas API first (D-02).
+    // If saveLive() returns true, the canvas view owns the write — do not call vault.modify().
+    try {
+      const savedLive = await this.plugin.canvasLiveEditor.saveLive(filePath, nodeId, edits);
+      if (savedLive) {
+        new Notice('Node properties saved.');
+        return;
+      }
+    } catch {
+      // D-03: requestSave() threw — canvas state has been rolled back by CanvasLiveEditor.
+      new Notice('Save failed \u2014 close the canvas and try again.');
       return;
     }
+    // saveLive() returned false: canvas is closed or API unavailable.
+    // Fall through to Strategy A (vault.modify() path below).
 
     const file = this.plugin.app.vault.getAbstractFileByPath(filePath);
     if (!file) {

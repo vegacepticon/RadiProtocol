@@ -5,9 +5,9 @@ import { Notice } from 'obsidian';
 
 vi.mock('obsidian');
 
-// Mock CanvasLiveEditor (virtual: true — file does not exist until Plan 01)
+// Mock CanvasLiveEditor (module now exists — Plan 01 created it)
 const mockSaveLive = vi.fn();
-vi.mock('../canvas/canvas-live-editor', { virtual: true }, () => ({
+vi.mock('../canvas/canvas-live-editor', () => ({
   CanvasLiveEditor: vi.fn().mockImplementation(() => ({
     saveLive: mockSaveLive,
     destroy: vi.fn(),
@@ -50,6 +50,7 @@ describe('saveNodeEdits — write-back contract (EDIT-03, EDIT-04)', () => {
         },
       },
       settings: {},
+      canvasLiveEditor: { saveLive: mockSaveLive },
     };
 
     const mockLeaf = { containerEl: {} };
@@ -115,16 +116,17 @@ describe('saveNodeEdits — write-back contract (EDIT-03, EDIT-04)', () => {
     expect(node).not.toHaveProperty('radiprotocol_displayLabel');
   });
 
-  it('canvas-open guard: vault.modify() not called when canvas is open', async () => {
+  it('canvas-open guard: vault.modify() not called when canvas is open and live save succeeds', async () => {
     // Simulate canvas open: getLeavesOfType returns a leaf whose view.file.path matches
     mockGetLeavesOfType.mockReturnValue([
       { view: { file: { path: 'test.canvas' } } },
     ]);
+    // Live API available — saveLive succeeds; Strategy A must NOT run
+    mockSaveLive.mockResolvedValue(true);
     await view.saveNodeEdits('test.canvas', 'node-1', {
       radiprotocol_nodeType: 'question',
     });
-    // With real implementation: Notice shown, vault.modify() NOT called
-    // With stub: also not called (no-op) — RED for different reason but documents contract
+    // LIVE-03: saveLive returned true — canvas owns the write; vault.modify() must NOT be called
     expect(mockVaultModify).not.toHaveBeenCalled();
   });
 
