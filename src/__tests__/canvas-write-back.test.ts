@@ -1,8 +1,18 @@
 // src/__tests__/canvas-write-back.test.ts
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { EditorPanelView } from '../views/editor-panel-view';
+import { Notice } from 'obsidian';
 
 vi.mock('obsidian');
+
+// Mock CanvasLiveEditor (virtual: true — file does not exist until Plan 01)
+const mockSaveLive = vi.fn();
+vi.mock('../canvas/canvas-live-editor', { virtual: true }, () => ({
+  CanvasLiveEditor: vi.fn().mockImplementation(() => ({
+    saveLive: mockSaveLive,
+    destroy: vi.fn(),
+  })),
+}));
 
 // Minimal canvas JSON with one node
 function makeCanvasJson(nodeExtra: Record<string, unknown> = {}): string {
@@ -25,6 +35,8 @@ describe('saveNodeEdits — write-back contract (EDIT-03, EDIT-04)', () => {
     mockVaultModify = vi.fn().mockResolvedValue(undefined);
     mockGetLeavesOfType = vi.fn().mockReturnValue([]); // canvas not open by default
     mockGetAbstractFileByPath = vi.fn().mockReturnValue({ path: 'test.canvas' }); // TFile mock
+
+    mockSaveLive.mockReset();
 
     mockPlugin = {
       app: {
@@ -134,5 +146,30 @@ describe('saveNodeEdits — write-back contract (EDIT-03, EDIT-04)', () => {
     const node = written.nodes[0];
     expect(node).not.toHaveProperty('radiprotocol_nodeType');
     expect(node).not.toHaveProperty('radiprotocol_questionText');
+  });
+
+  // LIVE-03 / LIVE-04: new tests for Phase 11 live path contracts
+  // These tests are RED until Plan 02 wires CanvasLiveEditor into EditorPanelView.
+
+  it('live path: when canvas is open and saveLive returns true, vault.modify is NOT called', async () => {
+    mockGetLeavesOfType.mockReturnValue([{ view: { file: { path: 'test.canvas' } } }]);
+    mockSaveLive.mockResolvedValue(true);
+    await view.saveNodeEdits('test.canvas', 'node-1', { radiprotocol_nodeType: 'question' });
+    expect(mockVaultModify).not.toHaveBeenCalled();
+  });
+
+  it('live path: no "Close the canvas before" Notice when canvas is open and live API available', async () => {
+    mockGetLeavesOfType.mockReturnValue([{ view: { file: { path: 'test.canvas' } } }]);
+    mockSaveLive.mockResolvedValue(true);
+    await view.saveNodeEdits('test.canvas', 'node-1', { radiprotocol_nodeType: 'question' });
+    const noticeArgs = vi.mocked(Notice).mock.calls.map(c => c[0]);
+    expect(noticeArgs).not.toContain('Close the canvas before editing node properties.');
+  });
+
+  it('fallback path: when saveLive returns false, vault.modify IS called (Strategy A)', async () => {
+    mockGetLeavesOfType.mockReturnValue([{ view: { file: { path: 'test.canvas' } } }]);
+    mockSaveLive.mockResolvedValue(false);
+    await view.saveNodeEdits('test.canvas', 'node-1', { radiprotocol_nodeType: 'question' });
+    expect(mockVaultModify).toHaveBeenCalled();
   });
 });
