@@ -489,8 +489,13 @@ export class RunnerView extends ItemView {
   private renderPreviewZone(zone: HTMLElement, text: string): void {
     const textarea = zone.createEl('textarea', { cls: 'rp-preview-textarea' });
     textarea.value = text;
-    textarea.style.height = 'auto';
-    textarea.style.height = textarea.scrollHeight + 'px';
+    // Force width inline so theme/app CSS cannot override it
+    textarea.style.width = '100%';
+    // Defer height calculation until the element has layout
+    requestAnimationFrame(() => {
+      textarea.style.height = 'auto';
+      textarea.style.height = textarea.scrollHeight + 'px';
+    });
     textarea.addEventListener('input', () => {
       textarea.style.height = 'auto';
       textarea.style.height = textarea.scrollHeight + 'px';
