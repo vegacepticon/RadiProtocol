@@ -26,6 +26,7 @@
 
 .rp-preview-textarea {
   width: 100%;
+  min-height: 120px;
   resize: none;
   overflow: hidden;
   height: auto;

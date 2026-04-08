@@ -491,6 +491,10 @@ export class RunnerView extends ItemView {
     textarea.value = text;
     textarea.style.height = 'auto';
     textarea.style.height = textarea.scrollHeight + 'px';
+    textarea.addEventListener('input', () => {
+      textarea.style.height = 'auto';
+      textarea.style.height = textarea.scrollHeight + 'px';
+    });
     this.previewTextarea = textarea;
   }
 
