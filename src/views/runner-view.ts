@@ -24,6 +24,7 @@ export class RunnerView extends ItemView {
   private lastActiveMarkdownFile: TFile | null = null;
   private graph: ProtocolGraph | null = null;
   private selector: CanvasSelectorWidget | null = null;
+  private selectorBarEl: HTMLDivElement | null = null;
 
   constructor(leaf: WorkspaceLeaf, plugin: RadiProtocolPlugin) {
     super(leaf);
@@ -137,15 +138,17 @@ export class RunnerView extends ItemView {
   }
 
   async onOpen(): Promise<void> {
-    // Render selector into headerEl (D-05) — headerEl persists across render() calls
-    // because render() only clears contentEl, never headerEl.
-    // headerEl is a real DOM element on every ItemView at runtime but is not
-    // declared in the public Obsidian type definitions — access via cast (D-05).
-    const headerEl = (this as unknown as { headerEl: HTMLElement }).headerEl;
+    // Create a persistent selector bar at the top of contentEl (gap-closure: SIDEBAR-01).
+    // headerEl is Obsidian's native 32px title bar row with overflow:hidden — in sidebar
+    // mode it crushes any injected child. contentEl has no such constraint.
+    // selectorBarEl is created once here and re-inserted at the top of contentEl in
+    // render() and renderError() so it survives the contentEl.empty() calls they make.
+    const selectorBarEl = this.contentEl.createDiv({ cls: 'rp-selector-bar' });
+    this.selectorBarEl = selectorBarEl;
     this.selector = new CanvasSelectorWidget(
       this.app,
       this.plugin,
-      headerEl,
+      selectorBarEl,
       (filePath) => { void this.handleSelectorSelect(filePath); },
     );
 
@@ -199,6 +202,7 @@ export class RunnerView extends ItemView {
   async onClose(): Promise<void> {
     this.selector?.destroy();
     this.selector = null;
+    this.selectorBarEl = null;
     this.contentEl.empty();
   }
 
@@ -238,10 +242,26 @@ export class RunnerView extends ItemView {
     await this.openCanvas(newPath);
   }
 
+  /**
+   * Restart the current canvas from the beginning without showing ResumeSessionModal.
+   * Called by the "Run again" button (gap-closure: RUNNER-01).
+   * Clears any persisted session before calling openCanvas() so that openCanvas()
+   * finds no session and skips the modal entirely.
+   */
+  private async restartCanvas(filePath: string): Promise<void> {
+    await this.plugin.sessionService.clear(filePath);
+    await this.openCanvas(filePath);
+  }
+
   // ── Render ────────────────────────────────────────────────────────────────
 
   private render(): void {
     this.contentEl.empty();
+    // Re-prepend the selector bar: contentEl.empty() removes it from the DOM
+    // but the element and its CanvasSelectorWidget subtree remain valid in memory.
+    if (this.selectorBarEl !== null) {
+      this.contentEl.prepend(this.selectorBarEl);
+    }
     this.previewTextarea = null;
 
     const root = this.contentEl.createDiv({ cls: 'rp-runner-view' });
@@ -407,7 +427,7 @@ export class RunnerView extends ItemView {
         } else {
           const path = this.canvasFilePath; // narrow to string
           this.registerDomEvent(runAgainBtn, 'click', () => {
-            void this.openCanvas(path);
+            void this.restartCanvas(path);
           });
         }
         this.renderPreviewZone(previewZone, state.finalText);
@@ -595,6 +615,10 @@ export class RunnerView extends ItemView {
 
   private renderError(errors: string[]): void {
     this.contentEl.empty();
+    // Re-prepend the selector bar after empty() — same guard as in render().
+    if (this.selectorBarEl !== null) {
+      this.contentEl.prepend(this.selectorBarEl);
+    }
     const root = this.contentEl.createDiv({ cls: 'rp-runner-view' });
     const questionZone = root.createDiv({ cls: 'rp-question-zone rp-validation-panel' });
     questionZone.createEl('p', { text: 'Protocol error' });
