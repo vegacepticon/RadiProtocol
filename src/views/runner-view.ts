@@ -128,6 +128,9 @@ export class RunnerView extends ItemView {
     }
 
     // Normal protocol start (no session, or user chose start-over)
+    // SESSION-01 Pitfall 3: clear any stale session file once per fresh run,
+    // here in openCanvas() rather than inside render() (Pitfall 6).
+    await this.plugin.sessionService.clear(filePath);
     this.graph = graph;
     this.runner.start(graph);
     this.render();
@@ -393,20 +396,20 @@ export class RunnerView extends ItemView {
       }
 
       case 'complete': {
-        // SESSION-01 Pitfall 3: clear session file when protocol finishes — no resume needed
-        if (this.canvasFilePath !== null) {
-          void this.plugin.sessionService.clear(this.canvasFilePath);
-        }
         questionZone.createEl('h2', { text: 'Protocol complete', cls: 'rp-complete-heading' });
         // RUNNER-01: "Run again" button — restarts the same canvas from the beginning.
-        // canvasFilePath is guaranteed non-null in the complete branch.
         const runAgainBtn = questionZone.createEl('button', {
           cls: 'rp-run-again-btn',
           text: 'Run again',
         });
-        this.registerDomEvent(runAgainBtn, 'click', () => {
-          void this.openCanvas(this.canvasFilePath!);
-        });
+        if (this.canvasFilePath === null) {
+          runAgainBtn.disabled = true;
+        } else {
+          const path = this.canvasFilePath; // narrow to string
+          this.registerDomEvent(runAgainBtn, 'click', () => {
+            void this.openCanvas(path);
+          });
+        }
         this.renderPreviewZone(previewZone, state.finalText);
         this.renderOutputToolbar(outputToolbar, state.finalText, true);
         break;
@@ -505,7 +508,7 @@ export class RunnerView extends ItemView {
       textarea.style.height = 'auto';
       textarea.style.height = textarea.scrollHeight + 'px';
     });
-    textarea.addEventListener('input', () => {
+    this.registerDomEvent(textarea, 'input', () => {
       textarea.style.height = 'auto';
       textarea.style.height = textarea.scrollHeight + 'px';
     });
