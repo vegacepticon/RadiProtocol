@@ -1,35 +1,32 @@
 ---
 gsd_state_version: 1.0
-milestone: v1.1
-milestone_name: UX & Community Release
-status: complete
+milestone: v1.2
+milestone_name: Runner UX & Bug Fixes
+status: planning
 last_updated: "2026-04-08T00:00:00.000Z"
-last_activity: 2026-04-08 -- v1.1 milestone complete
+last_activity: 2026-04-08 -- Milestone v1.2 started
 progress:
-  total_phases: 4
-  completed_phases: 4
-  total_plans: 9
-  completed_plans: 9
-  percent: 100
+  total_phases: 0
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
+  percent: 0
 ---
 
 # RadiProtocol — Project State
 
 **Updated:** 2026-04-08
-**Milestone:** v1.1 — UX & Community Release
-**Status:** COMPLETE — all 4 phases shipped, git tag v1.1 created
+**Milestone:** v1.2 — Runner UX & Bug Fixes
+**Status:** Defining requirements
 
 ---
 
 ## Current Position
 
-Phase: 11 (live-canvas-editing) — COMPLETE
-Status: v1.1 milestone archived. Next: `/gsd-new-milestone` to start v1.2.
-Last activity: 2026-04-08 -- v1.1 milestone complete
-
-```
-v1.1 Progress: [████████████████████] 100% (4/4 phases complete)
-```
+Phase: Not started (defining requirements)
+Plan: —
+Status: Defining requirements
+Last activity: 2026-04-08 — Milestone v1.2 started
 
 ---
 
@@ -38,18 +35,7 @@ v1.1 Progress: [████████████████████] 10
 See: `.planning/PROJECT.md` (updated 2026-04-08)
 
 **Core value:** A radiologist can generate a structured, accurate protocol in seconds by answering a guided algorithm — without writing a single line of code.
-**Current focus:** Planning next milestone (v1.2)
-
----
-
-## v1.1 Phase Summary
-
-| Phase | Goal | Status |
-|-------|------|--------|
-| 8 | Full-tab runner view + settings | Complete |
-| 9 | Canvas selector dropdown | Complete |
-| 10 | Insert into current note | Complete |
-| 11 | Live canvas editing | Complete |
+**Current focus:** v1.2 — Runner UX improvements and bug fixes
 
 ---
 
@@ -74,5 +60,8 @@ See: `.planning/PROJECT.md` (updated 2026-04-08)
 - v1.1 shipped 2026-04-08: 4 phases, 9 plans, +7350/-120 lines, all UAT approved
 - CanvasLiveEditor uses Canvas internal API (getData/setData Pattern B) with requestSave() debounce 500ms
 - Strategy A (vault.modify when canvas closed) still the fallback path in saveNodeEdits()
-- 3 pre-existing RED stubs in runner-extensions.test.ts — known debt for v1.2
-- No community plugin submission checklist completed — deferred to v1.2
+- 3 pre-existing RED stubs in runner-extensions.test.ts — known debt, deferred to future milestone
+- Canvas selector (CanvasSelectorWidget) currently rendered in RunnerView headerEl only in tab mode
+- RunnerView textarea is already editable but accumulated text state overwrites user edits on each step
+- free-text-input / text-block node bug: nodes created manually on canvas + configured via Node Editor not appearing in runner — likely radiprotocol_nodeType not being written correctly
+- Snippet placeholder bug: label field clears on "Add" click without adding placeholder — event handler or state issue

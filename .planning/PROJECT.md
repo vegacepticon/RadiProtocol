@@ -4,6 +4,22 @@
 
 An Obsidian community plugin that turns Canvas files into interactive protocol generators for medical imaging reports (CT, X-ray, MRI, Ultrasound). The user builds a question-and-answer algorithm visually on the Obsidian Canvas, then runs it through the plugin's protocol runner — which steps through questions, assembles the report text piece by piece, supports dynamic snippets with fill-in placeholders, repeating loops for multi-lesion workflows, and saves/resumes sessions across Obsidian restarts.
 
+## Current Milestone: v1.2 Runner UX & Bug Fixes
+
+**Goal:** Fix critical runner/editor/snippet bugs and improve protocol runner UX — layout, repeat run, canvas selector in sidebar, text separator control.
+
+**Target features:**
+- Canvas selector in sidebar mode (parity with tab mode)
+- "Run again" button after protocol completion
+- Auto-grow editable textarea with questions below it
+- Equal-size output buttons (Copy / Save / Insert)
+- Remove node type legend from runner
+- Auto-switch Node Editor when panel is open and node clicked
+- Global text separator setting (newline / space) + per-node override
+- Fix: manual text edits preserved across steps
+- Fix: free-text-input / text-block nodes not appearing after Node Editor config
+- Fix: placeholders not adding in snippet creator
+
 ## Core Value
 
 A radiologist can generate a structured, accurate protocol in seconds by answering a guided algorithm — without writing a single line of code to build that algorithm.
@@ -65,7 +81,31 @@ A radiologist can generate a structured, accurate protocol in seconds by answeri
 **Canvas Editor:**
 - ✓ Live canvas node editing while canvas is open — `CanvasLiveEditor` Pattern B (getData/setData), live-first/Strategy-A-fallback — v1.1
 
-### Active (Next Milestone)
+### Active (v1.2)
+
+**Runner UX:**
+- [ ] Canvas selector available in sidebar mode (parity with tab mode) — SIDEBAR-01
+- [ ] "Run again" button after protocol completion restarts same canvas — RUNNER-01
+- [ ] Text preview is auto-growing editable textarea, full width — LAYOUT-01
+- [ ] Question/answer controls appear below the text preview area — LAYOUT-02
+- [ ] Copy / Save / Insert buttons have equal sizes — LAYOUT-03
+- [ ] Node type legend removed from runner (tab and sidebar) — LAYOUT-04
+
+**Node Editor:**
+- [ ] Clicking a canvas node auto-loads its settings when EditorPanel is open — EDITOR-01
+- [ ] Unsaved-changes guard when switching nodes — EDITOR-02
+
+**Settings:**
+- [ ] Global text separator setting (newline / space) in Settings tab — SEP-01
+- [ ] Per-node text separator override in EditorPanel — SEP-02
+
+**Bug Fixes:**
+- [ ] Manual text edits in runner textarea preserved across steps — BUG-01
+- [ ] free-text-input nodes configured via Node Editor appear in runner — BUG-02
+- [ ] text-block nodes configured via Node Editor appear in runner — BUG-03
+- [ ] Placeholders can be added in snippet creator — BUG-04
+
+### Pending (Future Milestones)
 
 - [ ] Community plugin submission checklist (README, LICENSE, manifest review, plugin review)
 - [ ] Protocol authoring documentation / example canvases for community submission
@@ -138,4 +178,4 @@ A radiologist can generate a structured, accurate protocol in seconds by answeri
 4. Update Context with current state
 
 ---
-*Last updated: 2026-04-08 after v1.1 milestone*
+*Last updated: 2026-04-08 — v1.2 milestone started*
