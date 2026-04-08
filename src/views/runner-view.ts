@@ -242,9 +242,8 @@ export class RunnerView extends ItemView {
     this.previewTextarea = null;
 
     const root = this.contentEl.createDiv({ cls: 'rp-runner-view' });
-    const questionZone = root.createDiv({ cls: 'rp-question-zone' });
-    root.createEl('hr', { cls: 'rp-zone-divider' });
     const previewZone = root.createDiv({ cls: 'rp-preview-zone' });
+    const questionZone = root.createDiv({ cls: 'rp-question-zone' });
     const outputToolbar = root.createDiv({ cls: 'rp-output-toolbar' });
 
     const state = this.runner.getState();
@@ -417,8 +416,6 @@ export class RunnerView extends ItemView {
       }
     }
 
-    // Legend (UI-12) — always visible at bottom
-    this.renderLegend(root);
   }
 
   /** Wrapper so click handlers can call `void this.renderAsync()` */
@@ -490,9 +487,10 @@ export class RunnerView extends ItemView {
   // ── Sub-renders ───────────────────────────────────────────────────────────
 
   private renderPreviewZone(zone: HTMLElement, text: string): void {
-    zone.createEl('p', { text: 'Report preview', cls: 'rp-preview-heading' });
     const textarea = zone.createEl('textarea', { cls: 'rp-preview-textarea' });
     textarea.value = text;
+    textarea.style.height = 'auto';
+    textarea.style.height = textarea.scrollHeight + 'px';
     this.previewTextarea = textarea;
   }
 
@@ -585,20 +583,4 @@ export class RunnerView extends ItemView {
     }
   }
 
-  private renderLegend(root: HTMLElement): void {
-    const legend = root.createDiv({ cls: 'rp-legend' });
-    const legendItems: Array<{ color: string; label: string }> = [
-      { color: '#e07b39', label: 'Question / Answer node' },
-      { color: '#4a90d9', label: 'Free-text input node' },
-      { color: '#5a9e6f', label: 'Text-block node' },
-      { color: '#9b59b6', label: 'Snippet text-block node' },
-      { color: '#e0b030', label: 'Loop start / end node' },
-    ];
-    for (const item of legendItems) {
-      const row = legend.createDiv({ cls: 'rp-legend-row' });
-      const swatch = row.createEl('span', { cls: 'rp-legend-swatch' });
-      swatch.style.background = item.color;
-      row.createEl('span', { text: item.label });
-    }
-  }
 }
