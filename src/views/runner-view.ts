@@ -21,6 +21,7 @@ export class RunnerView extends ItemView {
   private canvasFilePath: string | null = null;
   private previewTextarea: HTMLTextAreaElement | null = null;
   private insertBtn: HTMLButtonElement | null = null;
+  private lastActiveMarkdownFile: TFile | null = null;
   private graph: ProtocolGraph | null = null;
   private selector: CanvasSelectorWidget | null = null;
 
@@ -541,18 +542,24 @@ export class RunnerView extends ItemView {
     });
 
     this.registerDomEvent(insertBtn, 'click', () => {
+      const file = this.lastActiveMarkdownFile;
+      if (file === null) return;
       const state = this.runner.getState();
       const finalText = state.status === 'complete'
         ? (state as CompleteState).finalText
         : capturedText;
-      void this.plugin.insertIntoCurrentNote(finalText);
+      void this.plugin.insertIntoCurrentNote(finalText, file);
     });
 
     // Keep insertBtn disabled state in sync with active leaf (D-07, D-08)
     this.registerEvent(
       this.app.workspace.on('active-leaf-change', () => {
+        const view = this.app.workspace.getActiveViewOfType(MarkdownView);
+        if (view !== null && view.file !== null) {
+          this.lastActiveMarkdownFile = view.file;
+        }
         if (this.insertBtn !== null) {
-          this.insertBtn.disabled = !hasActiveNote();
+          this.insertBtn.disabled = this.lastActiveMarkdownFile === null;
         }
       })
     );

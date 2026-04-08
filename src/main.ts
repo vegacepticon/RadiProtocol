@@ -1,5 +1,5 @@
 // main.ts
-import { Plugin, Notice, Menu, TFile, MarkdownView } from 'obsidian';
+import { Plugin, Notice, Menu, TFile } from 'obsidian';
 import type { WorkspaceLeaf } from 'obsidian';
 import { RadiProtocolSettings, DEFAULT_SETTINGS, RadiProtocolSettingsTab } from './settings';
 import { CanvasParser } from './graph/canvas-parser';
@@ -219,11 +219,8 @@ export default class RadiProtocolPlugin extends Plugin {
     }
   }
 
-  async insertIntoCurrentNote(text: string): Promise<void> {
-    const { workspace, vault } = this.app;
-    const activeView = workspace.getActiveViewOfType(MarkdownView);
-    if (activeView === null || activeView.file === null) return;
-    const file = activeView.file;
+  async insertIntoCurrentNote(text: string, file: TFile): Promise<void> {
+    const { vault } = this.app;
     try {
       await this.insertMutex.runExclusive(file.path, async () => {
         const existing = await vault.read(file);
