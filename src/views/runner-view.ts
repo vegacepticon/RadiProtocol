@@ -179,6 +179,17 @@ export class RunnerView extends ItemView {
       })
     );
 
+    // Initialize lastActiveMarkdownFile by scanning all open leaves (INSERT-01).
+    // active-leaf-change only fires on subsequent switches, so without this the
+    // button starts disabled even when a markdown note is already open.
+    this.app.workspace.iterateAllLeaves((leaf) => {
+      if (this.lastActiveMarkdownFile === null &&
+          leaf.view instanceof MarkdownView &&
+          leaf.view.file !== null) {
+        this.lastActiveMarkdownFile = leaf.view.file;
+      }
+    });
+
     this.render();
   }
 
@@ -504,11 +515,6 @@ export class RunnerView extends ItemView {
     });
     this.insertBtn = insertBtn;
 
-    const hasActiveNote = (): boolean => {
-      const view = this.app.workspace.getActiveViewOfType(MarkdownView);
-      return view !== null && view.file !== null;
-    };
-
     if (!enabled || text === null) {
       copyBtn.disabled = true;
       saveBtn.disabled = true;
@@ -517,7 +523,10 @@ export class RunnerView extends ItemView {
     }
 
     // Only reach here when enabled=true and text is non-null (D-05, D-08)
-    insertBtn.disabled = !hasActiveNote();
+    // Use lastActiveMarkdownFile (not getActiveViewOfType) so the initial state
+    // is consistent with the click handler — clicking the button shifts focus to
+    // the runner, making getActiveViewOfType return null at click time (INSERT-01).
+    insertBtn.disabled = this.lastActiveMarkdownFile === null;
 
     const capturedText = text;
 
