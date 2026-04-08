@@ -398,6 +398,15 @@ export class RunnerView extends ItemView {
           void this.plugin.sessionService.clear(this.canvasFilePath);
         }
         questionZone.createEl('h2', { text: 'Protocol complete', cls: 'rp-complete-heading' });
+        // RUNNER-01: "Run again" button — restarts the same canvas from the beginning.
+        // canvasFilePath is guaranteed non-null in the complete branch.
+        const runAgainBtn = questionZone.createEl('button', {
+          cls: 'rp-run-again-btn',
+          text: 'Run again',
+        });
+        this.registerDomEvent(runAgainBtn, 'click', () => {
+          void this.openCanvas(this.canvasFilePath!);
+        });
         this.renderPreviewZone(previewZone, state.finalText);
         this.renderOutputToolbar(outputToolbar, state.finalText, true);
         break;
