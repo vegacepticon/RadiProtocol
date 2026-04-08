@@ -1,5 +1,5 @@
 // views/runner-view.ts — Phase 5: Full RunnerView with awaiting-snippet-fill branch
-import { ItemView, WorkspaceLeaf, Notice, TFile, TFolder } from 'obsidian';
+import { ItemView, WorkspaceLeaf, Notice, TFile, TFolder, MarkdownView } from 'obsidian';
 import type RadiProtocolPlugin from '../main';
 import { ProtocolRunner } from '../runner/protocol-runner';
 import { GraphValidator } from '../graph/graph-validator';
@@ -20,6 +20,7 @@ export class RunnerView extends ItemView {
   private readonly validator = new GraphValidator();
   private canvasFilePath: string | null = null;
   private previewTextarea: HTMLTextAreaElement | null = null;
+  private insertBtn: HTMLButtonElement | null = null;
   private graph: ProtocolGraph | null = null;
   private selector: CanvasSelectorWidget | null = null;
 
@@ -496,10 +497,24 @@ export class RunnerView extends ItemView {
       cls: 'rp-save-btn',
       text: 'Save to note',
     });
+    const insertBtn = toolbar.createEl('button', {
+      cls: 'rp-insert-btn',
+      text: 'Insert into note',
+    });
+    this.insertBtn = insertBtn;
+
+    const hasActiveNote = (): boolean => {
+      const view = this.app.workspace.getActiveViewOfType(MarkdownView);
+      return view !== null && view.file !== null;
+    };
+
+    // Set initial disabled state for insertBtn (D-05, D-08)
+    insertBtn.disabled = !hasActiveNote();
 
     if (!enabled || text === null) {
       copyBtn.disabled = true;
       saveBtn.disabled = true;
+      insertBtn.disabled = true;
       return;
     }
 
@@ -524,6 +539,23 @@ export class RunnerView extends ItemView {
         new Notice('Report saved to note.');
       });
     });
+
+    this.registerDomEvent(insertBtn, 'click', () => {
+      const state = this.runner.getState();
+      const finalText = state.status === 'complete'
+        ? (state as CompleteState).finalText
+        : capturedText;
+      void this.plugin.insertIntoCurrentNote(finalText);
+    });
+
+    // Keep insertBtn disabled state in sync with active leaf (D-07, D-08)
+    this.registerEvent(
+      this.app.workspace.on('active-leaf-change', () => {
+        if (this.insertBtn !== null) {
+          this.insertBtn.disabled = !hasActiveNote();
+        }
+      })
+    );
   }
 
   private renderError(errors: string[]): void {
