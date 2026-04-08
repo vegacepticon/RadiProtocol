@@ -1,79 +1,61 @@
 ---
 gsd_state_version: 1.0
 milestone: v1.1
-milestone_name: — UX & Community Release
-status: executing
-last_updated: "2026-04-07T18:41:00.000Z"
-last_activity: 2026-04-07 -- Phase 09 complete
+milestone_name: UX & Community Release
+status: complete
+last_updated: "2026-04-08T00:00:00.000Z"
+last_activity: 2026-04-08 -- v1.1 milestone complete
 progress:
   total_phases: 4
-  completed_phases: 2
-  total_plans: 8
-  completed_plans: 5
-  percent: 50
+  completed_phases: 4
+  total_plans: 9
+  completed_plans: 9
+  percent: 100
 ---
 
 # RadiProtocol — Project State
 
-**Updated:** 2026-04-07
+**Updated:** 2026-04-08
 **Milestone:** v1.1 — UX & Community Release
-**Status:** Phase 09 complete — ready for Phase 10
+**Status:** COMPLETE — all 4 phases shipped, git tag v1.1 created
 
 ---
 
 ## Current Position
 
-Phase: 09 (canvas-selector-dropdown) — COMPLETE
-Status: Phase 09 complete. Next: Phase 10 (insert into current note)
-Last activity: 2026-04-07 -- Phase 09 complete
+Phase: 11 (live-canvas-editing) — COMPLETE
+Status: v1.1 milestone archived. Next: `/gsd-new-milestone` to start v1.2.
+Last activity: 2026-04-08 -- v1.1 milestone complete
 
 ```
-v1.1 Progress: [█████░░░░░░░░░░░░░░░] 25% (1/4 phases — Phase 08 complete, Phase 09 complete pending UAT)
+v1.1 Progress: [████████████████████] 100% (4/4 phases complete)
 ```
 
 ---
 
 ## Project Reference
 
-See: `.planning/PROJECT.md` (updated 2026-04-07)
+See: `.planning/PROJECT.md` (updated 2026-04-08)
 
 **Core value:** A radiologist can generate a structured, accurate protocol in seconds by answering a guided algorithm — without writing a single line of code.
-**Current focus:** Phase 09 — canvas-selector-dropdown
+**Current focus:** Planning next milestone (v1.2)
 
 ---
 
-## v1.1 Phase Overview
+## v1.1 Phase Summary
 
-| Phase | Goal | Requirements |
-|-------|------|--------------|
-| 8 | Runner opens as sidebar or full editor tab per Settings toggle | RUNTAB-01, RUNTAB-02, RUNTAB-03 |
-| 9 | Canvas selector dropdown — switch canvases without re-invoking command | SELECTOR-01, SELECTOR-02, SELECTOR-03, SELECTOR-04 |
-| 10 | Insert into current note output destination | OUTPUT-01, OUTPUT-02, OUTPUT-03 |
-| 11 | Live canvas editing while canvas is open (internal API + Strategy A fallback) | LIVE-01, LIVE-02, LIVE-03, LIVE-04 |
-
----
-
-## Key Decisions Made
-
-| Decision | Rationale |
-|----------|-----------|
-| Read-only Canvas contract during sessions | No official Canvas runtime API; never modify `.canvas` while open |
-| TypeScript + esbuild + plain DOM | Standard Obsidian plugin toolchain; zero framework overhead for v1 |
-| Vitest for engine tests | Pure engine modules (parser, runner) have no Obsidian imports; fully unit-testable |
-| One-file-per-snippet storage | Minimizes vault.modify() race conditions and sync conflicts |
-| Discriminated union on `kind` for node types | Type-safe graph model; 7 node types |
-| Snapshot undo stack | Simplest correct approach for step-back; protocol text is small (<5KB) |
-| `radiprotocol_*` property namespace | Avoids collisions with other plugins and future Obsidian updates |
-| Canvas write-back Strategy A | Require canvas closed before any vault.modify() — simple and safe |
-| Live canvas editing via internal Canvas View API | v1.1 decision: use canvas.requestSave() / internal API to allow node edits while canvas is open |
-| Canvas selector header rendered in onOpen() | Must render into dedicated headerEl, never contentEl — contentEl is wiped by render() on every state transition |
-| Live canvas editing deferred to Phase 11 | Highest risk feature (undocumented API); isolated last so it cannot block delivery of other features |
+| Phase | Goal | Status |
+|-------|------|--------|
+| 8 | Full-tab runner view + settings | Complete |
+| 9 | Canvas selector dropdown | Complete |
+| 10 | Insert into current note | Complete |
+| 11 | Live canvas editing | Complete |
 
 ---
 
 ## Critical Pitfalls (Standing Reminders)
 
-1. **Never modify `.canvas` while open in Canvas view** — Canvas view will overwrite on next interaction (Strategy A; Phase 11 lifts this with internal API + fallback)
+1. **Never modify `.canvas` while open in Canvas view** — Phase 11 added live path (CanvasLiveEditor); Strategy A fallback still used when canvas is closed
 2. **`vault.modify()` race conditions** — use write mutex (async-mutex) per file path
 3. **No `innerHTML`** — use DOM API and Obsidian helpers; blocks community review if violated
 4. **No `require('fs')`** — use `app.vault.*` exclusively
@@ -81,17 +63,16 @@ See: `.planning/PROJECT.md` (updated 2026-04-07)
 6. **Infinite loop cycles** — validate protocol graph before running; hard iteration cap (default 50)
 7. **`console.log` forbidden in production** — use `console.debug()` during dev; remove before release
 8. **Canvas selector destroyed on re-render** — render in `onOpen()` header, not `contentEl`
-9. **`requestSave()` race with canvas dirty cycle** — debounce 500ms in Phase 11
+9. **`requestSave()` race with canvas dirty cycle** — debounce 500ms in CanvasLiveEditor
+10. **vitest `resolve.alias` for `obsidian`** — required in vitest.config.ts; obsidian package has empty `main` field
 
 ---
 
 ## Accumulated Context
 
 - v1.0 shipped 2026-04-07: 7 phases, 28 plans, ~43K LOC, all UAT approved
-- Session restore uses `onLayoutReady` deferral to prevent startup hang
-- WriteMutex (async-mutex) required on all vault.modify() calls
-- Canvas editor (EditorPanelView) currently uses Strategy A: requires canvas closed before write
-- v1.1 engine unchanged: ProtocolRunner, CanvasParser, GraphValidator, SnippetService, SessionService all untouched
-- No new npm dependencies required for v1.1
-- New files expected: `src/canvas/canvas-live-editor.ts`, `src/types/canvas-internal.d.ts`
-- Modified files expected: `settings.ts`, `main.ts`, `runner-view.ts`, `editor-panel-view.ts`
+- v1.1 shipped 2026-04-08: 4 phases, 9 plans, +7350/-120 lines, all UAT approved
+- CanvasLiveEditor uses Canvas internal API (getData/setData Pattern B) with requestSave() debounce 500ms
+- Strategy A (vault.modify when canvas closed) still the fallback path in saveNodeEdits()
+- 3 pre-existing RED stubs in runner-extensions.test.ts — known debt for v1.2
+- No community plugin submission checklist completed — deferred to v1.2
