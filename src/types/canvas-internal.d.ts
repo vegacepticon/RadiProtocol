@@ -37,6 +37,13 @@ export interface CanvasInternal {
    * Fire-and-forget — does not return a Promise.
    */
   requestSave(): void;
+  /**
+   * Currently selected canvas nodes.
+   * Access via Array.from(canvas.selection) — Set does not support index access.
+   * Read only AFTER a setTimeout(0) deferral inside a pointerdown handler;
+   * Obsidian updates this Set after the pointer event, not synchronously.
+   */
+  selection?: Set<{ id: string; [key: string]: unknown }>;
 }
 
 export interface CanvasViewInternal {
