@@ -24,9 +24,8 @@ severity: minor
 
 ### 3. Button enabled when a markdown note is active
 expected: Открой любой markdown-файл в редакторе, запусти протокол до конца. Кнопка "Insert into note" активна и кликабельна.
-result: issue
-reported: "Кнопка не активна при первом открытии/завершении протокола с открытой заметкой. Становится кликабельной только после переключения на другую вкладку с заметкой — тогда срабатывает listener и кнопка оживает."
-severity: major
+result: pass
+notes: Fixed — initialized lastActiveMarkdownFile from workspace scan in onOpen()
 
 ### 4. Button appends text with separator and shows Notice
 expected: С открытой непустой заметкой, после завершения протокола нажми "Insert into note". Текст протокола добавляется в конец заметки с разделителем (---). Кратко появляется уведомление "Inserted into {имя файла}.".
@@ -41,8 +40,8 @@ severity: minor
 ## Summary
 
 total: 5
-passed: 2
-issues: 3
+passed: 3
+issues: 2
 pending: 0
 skipped: 0
 
@@ -53,15 +52,11 @@ skipped: 0
   reason: "User reported: кнопка всегда активна — плагин запоминает последнюю открытую заметку и сохраняет в неё вне зависимости от текущего состояния вкладок"
   severity: minor
   test: 2
-
-- truth: "Кнопка активна и кликабельна сразу после завершения протокола при открытой markdown-заметке"
-  status: failed
-  reason: "User reported: кнопка неактивна при первом открытии/завершении; становится кликабельной только после переключения на другую вкладку"
-  severity: major
-  test: 3
+  note: "By design — lastActiveMarkdownFile approach cannot be cleared on leaf-change without breaking click handler"
 
 - truth: "Кнопка становится серой при переключении на canvas/Settings и снова активной при возврате к заметке"
   status: failed
   reason: "User reported: кнопка всегда активна, не реагирует на переключение вкладок"
   severity: minor
   test: 5
+  note: "Same root cause as test 2"
