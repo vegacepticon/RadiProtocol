@@ -102,12 +102,13 @@ export class EditorPanelView extends ItemView {
 
     // Q3 resolution (RESEARCH.md): if nodeType is being unset (empty string),
     // remove ALL radiprotocol_* fields from the node to prevent orphaned keys.
-    const nodeTypeEdit = edits['radiprotocol_nodeType'];
-    const isUnmarking = nodeTypeEdit === '' || nodeTypeEdit === undefined;
+    const isUnmarking =
+      'radiprotocol_nodeType' in edits &&
+      (edits['radiprotocol_nodeType'] === '' || edits['radiprotocol_nodeType'] === undefined);
 
     const node = canvasData.nodes[nodeIndex];
     if (node !== undefined) {
-      if (isUnmarking && 'radiprotocol_nodeType' in edits) {
+      if (isUnmarking) {
         // Remove all radiprotocol_* fields from the node
         for (const key of Object.keys(node)) {
           if (key.startsWith('radiprotocol_')) {
