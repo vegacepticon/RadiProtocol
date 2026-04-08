@@ -289,34 +289,34 @@ Option 2 is simpler and keeps `main.ts` unchanged. `EditorPanelView` already hol
 
 Community plugin research reveals TWO access patterns for canvas data:
 
-**Pattern A (used in this phase per D-01/D-02):**
+**Pattern A (view.data in-place mutation — DEPRECATED, not used):**
 ```typescript
-// Direct array access via canvas view's data property
-view.data          // CanvasNodeData[] — the nodes array
-view.requestSave() // persists changes
+// Direct array access via canvas view's data property — DEPRECATED
+view.data          // CanvasNodeData[] — marked @deprecated in advanced-canvas typings
+view.requestSave() // may exist on view or only on view.canvas — unreliable location
 ```
 
-**Pattern B (used by obsidian-advanced-canvas, Obsidian-Link-Nodes-In-Canvas):**
+**Pattern B (used in this phase — confirmed approach in obsidian-advanced-canvas, Obsidian-Link-Nodes-In-Canvas, enchanted-canvas):**
 ```typescript
-// Via Canvas sub-object
-view.canvas.getData()  // returns CanvasData { nodes, edges }
-view.canvas.setData(data)
-view.canvas.requestSave()
+// Via Canvas sub-object — the stable API
+const data = view.canvas.getData();   // returns a deep copy: CanvasData { nodes, edges }
+const node = data.nodes.find(n => n.id === nodeId);
+// ... apply edits to node in the copy ...
+view.canvas.setData(data);            // writes the updated copy back to the canvas
+view.canvas.requestSave();            // triggers debounced file write
 ```
 
-Pattern A (`view.data`) is confirmed deprecated in advanced-canvas typings (`"@deprecated Use getData instead -> Can be outdated"`) but is the pattern specified in CONTEXT.md D-01 and D-02. It is simpler and sufficient for the in-place node mutation approach. Pattern B is more robust but requires different TypeScript declarations and a different integration approach.
+Pattern B is the confirmed approach. `view.canvas.getData()` returns a deep copy (not a live reference), so edits must be applied to the returned copy and committed back via `view.canvas.setData()`. This eliminates the uncertainty of A4 (in-place mutation risk). Detection probe checks `typeof leaf.view.canvas?.getData === 'function'` on the canvas sub-object.
 
-**IMPORTANT:** The CONTEXT.md detection pseudocode uses `Array.isArray(canvas?.data)` where `canvas` is the CanvasView — meaning `view.data`, not `view.canvas.data`. This is the pattern to implement. If `view.data` is absent or not an array (because the canvas version uses a different structure), the fallback silently activates. This is correct behavior.
-
-[CITED: https://raw.githubusercontent.com/Developer-Mike/obsidian-advanced-canvas/main/src/@types/Canvas.d.ts — deprecated `data: CanvasData` property confirmed]
-[CITED: https://raw.githubusercontent.com/Quorafind/Obsidian-Link-Nodes-In-Canvas/master/linkNodesInCanvasIndex.ts — `canvas.getData()` / `canvas.setData()` pattern confirmed]
+[CITED: https://raw.githubusercontent.com/Developer-Mike/obsidian-advanced-canvas/main/src/@types/Canvas.d.ts — `getData()`/`setData()`/`requestSave()` confirmed on Canvas sub-object]
+[CITED: https://raw.githubusercontent.com/Quorafind/Obsidian-Link-Nodes-In-Canvas/master/linkNodesInCanvasIndex.ts — `canvas.getData()` / `canvas.setData()` / `canvas.requestSave()` pattern confirmed]
 
 ### Anti-Patterns to Avoid
 
 - **Calling `vault.modify()` on an open canvas:** Canvas view overwrites the file on next interaction. The `CanvasLiveEditor.saveLive()` returning `true` MUST prevent any subsequent `vault.modify()` call. [VERIFIED: STATE.md pitfall #1]
 - **Not debouncing `requestSave()`:** Rapid consecutive saves (user clicks Save quickly) trigger Obsidian's dirty cycle repeatedly. 500ms debounce prevents this. [VERIFIED: STATE.md pitfall #9]
 - **Mutating a node before confirming `requestSave()` won't throw:** Mutation happens before the `try` block covers it. Always snapshot-then-mutate-then-requestSave with rollback on error. [ASSUMED: standard defensive pattern]
-- **Using `canvas.canvas.getData()` instead of `view.data`:** The CONTEXT.md decision uses `view.data` directly. Do not deviate to the `getData()/setData()` pattern — it would require different detection logic and different TypeScript declarations.
+- **Using in-place mutation of `view.data` instead of `canvas.getData()/setData()`:** Open question A4 is now resolved — the confirmed approach is Pattern B (`view.canvas.getData()` + merge + `view.canvas.setData()`). Do not attempt in-place mutation of `view.data`; the result may not persist when `requestSave()` is called.
 - **Forgetting the un-mark cleanup path:** When `radiprotocol_nodeType` is being set to `''` or `undefined`, ALL `radiprotocol_*` keys must be removed. This logic already exists in `saveNodeEdits()` Strategy A path — the same logic must apply in the live path. [VERIFIED: editor-panel-view.ts lines 104-126]
 
 ---
@@ -464,17 +464,13 @@ NOTE: This is the `canvas` sub-object pattern (Pattern B), NOT the `view.data` p
 
 ---
 
-## Open Questions
+## Open Questions (RESOLVED)
 
-1. **Is `view.data` truly a live mutable reference (A4)?**
-   - What we know: Community plugins use `canvas.getData()`/`canvas.setData()` (Pattern B, sub-object). The `view.data` direct property is deprecated in advanced-canvas typings.
-   - What's unclear: Whether in-place mutation of `view.data` items propagates to `requestSave()` output without a `setData()` call.
-   - Recommendation: Manual test in dev vault immediately after implementing. If mutation does not persist, switch to Pattern B (access via `view.canvas.getData()`/`view.canvas.setData()`); update `CanvasViewInternal` accordingly. This is a one-function change to `saveLive()`.
+**A4 — Is in-place mutation of `view.data` items reflected in `requestSave()` output? (RESOLVED)**
+User decision: Use Pattern B (`view.canvas.getData()` / `view.canvas.setData()`) — the confirmed approach in obsidian-advanced-canvas, Obsidian-Link-Nodes-In-Canvas, and enchanted-canvas. In-place mutation of `view.data` without `setData()` cannot be relied upon; the canvas sub-object's `getData()`/`setData()` API is the stable write path. This eliminates the in-place mutation risk entirely. Plans 01 and 02 are updated to reflect Pattern B.
 
-2. **Does `view.requestSave` exist at the view level or only at `view.canvas.requestSave`?**
-   - What we know: obsidian-advanced-canvas Canvas.d.ts shows `requestSave()` on `CanvasView` AND on `Canvas` sub-object. Detection probe checks `typeof canvas?.requestSave === 'function'` where `canvas` is `leaf.view`.
-   - What's unclear: Whether the actual Obsidian 1.12.x runtime has it on the view directly.
-   - Recommendation: Use `leaf.view` level probe as coded in D-01. If probe always returns false, try `(leaf.view as any).canvas?.requestSave` — but check this in dev before committing to a different interface shape.
+**Q2 — Does `requestSave` exist at the view level or only on `view.canvas`? (RESOLVED)**
+Pattern B uses `view.canvas.requestSave()`, not `view.requestSave()`. The detection probe in Plan 01 checks `typeof canvas?.canvas?.requestSave === 'function'` (checking the `canvas` sub-object, not the view directly). `CanvasViewInternal` is updated to expose the `canvas` sub-object with `getData(): CanvasData`, `setData(data: CanvasData): void`, and `requestSave(): void`.
 
 ---
 
