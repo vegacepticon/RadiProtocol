@@ -71,18 +71,17 @@ describe('saveNodeEdits — write-back contract (EDIT-03, EDIT-04)', () => {
       type: 'group',
       color: '#ff0000',
     });
-    // With real implementation: vault.modify() called but written JSON must not contain changed values
-    // With stub: vault.modify() never called — test documents the contract for Plan 02
-    if (mockVaultModify.mock.calls.length > 0) {
-      const written = JSON.parse(mockVaultModify.mock.calls[0]![1] as string) as {
-        nodes: Array<Record<string, unknown>>;
-      };
-      const node = written.nodes[0];
-      expect(node?.['id']).toBe('node-1');
-      expect(node?.['x']).toBe(10);
-      expect(node?.['y']).toBe(20);
-      expect(node?.['type']).toBe('text');
-    }
+    // vault.modify() must be called — PROTECTED_FIELDS contract requires the write to happen
+    // so we can assert the written JSON does not contain the caller-supplied protected values.
+    expect(mockVaultModify).toHaveBeenCalled();
+    const written = JSON.parse(mockVaultModify.mock.calls[0]![1] as string) as {
+      nodes: Array<Record<string, unknown>>;
+    };
+    const node = written.nodes[0];
+    expect(node?.['id']).toBe('node-1');
+    expect(node?.['x']).toBe(10);
+    expect(node?.['y']).toBe(20);
+    expect(node?.['type']).toBe('text');
   });
 
   it('radiprotocol_* fields are written to canvas JSON via vault.modify()', async () => {
