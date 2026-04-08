@@ -64,7 +64,9 @@ Full details: `.planning/milestones/v1.1-ROADMAP.md`
   2. Question prompt and answer buttons always appear below the text area, never above or interleaved
   3. Copy, Save, and Insert buttons are visually equal in size (same width/height)
   4. No node type legend is visible in runner view in either tab mode or sidebar mode
-**Plans**: TBD
+**Plans**: 1 plan
+Plans:
+- [ ] 12-00-PLAN.md — TDD: write LAYOUT tests (RED) then implement all four layout changes (GREEN)
 **UI hint**: yes
 
 ### Phase 13: Sidebar Canvas Selector and Run Again
@@ -139,7 +141,7 @@ Full details: `.planning/milestones/v1.1-ROADMAP.md`
 | 9. Canvas Selector Dropdown | v1.1 | 3/3 | Complete | 2026-04-07 |
 | 10. Insert Into Current Note | v1.1 | 1/1 | Complete | 2026-04-08 |
 | 11. Live Canvas Editing | v1.1 | 3/3 | Complete | 2026-04-08 |
-| 12. Runner Layout Overhaul | v1.2 | 0/? | Not started | — |
+| 12. Runner Layout Overhaul | v1.2 | 0/1 | Not started | — |
 | 13. Sidebar Canvas Selector and Run Again | v1.2 | 0/? | Not started | — |
 | 14. Node Editor Auto-Switch and Unsaved Guard | v1.2 | 0/? | Not started | — |
 | 15. Text Separator Setting | v1.2 | 0/? | Not started | — |
