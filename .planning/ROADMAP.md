@@ -53,10 +53,10 @@ Full details: `.planning/milestones/v1.0-ROADMAP.md`
 **Goal:** Add "insert into current note" as an output destination — when the runner completes, the generated protocol text is appended to the currently active note in the editor.
 **Requirements:** OUTPUT-01, OUTPUT-02, OUTPUT-03
 **Canonical refs:** `src/views/runner-view.ts`, `src/main.ts`
-**Plans:** 1 plan
+**Plans:** 1/1 plans complete
 
 Plans:
-- [ ] 10-01-PLAN.md — Add insertIntoCurrentNote() to main.ts and Insert into note button with active-leaf-change listener to runner-view.ts
+- [x] 10-01-PLAN.md — Add insertIntoCurrentNote() to main.ts and Insert into note button with active-leaf-change listener to runner-view.ts
 
 ---
 
@@ -64,6 +64,12 @@ Plans:
 
 **Goal:** Allow canvas nodes to be edited while the canvas is open in Canvas view, using the internal Canvas View API with Strategy A fallback.
 **Requirements:** LIVE-01, LIVE-02, LIVE-03, LIVE-04
+**Plans:** 3 plans
+
+Plans:
+- [ ] 11-00-PLAN.md — Wave 0: Create failing RED test stubs (canvas-live-editor.test.ts + canvas-write-back.test.ts updates)
+- [ ] 11-01-PLAN.md — Wave 1: Implement CanvasLiveEditor module and canvas-internal.d.ts type declarations
+- [ ] 11-02-PLAN.md — Wave 2: Wire CanvasLiveEditor into EditorPanelView.saveNodeEdits() and main.ts; remove Strategy A guard
 
 ---
 
