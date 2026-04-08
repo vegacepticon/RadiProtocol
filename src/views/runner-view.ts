@@ -508,15 +508,15 @@ export class RunnerView extends ItemView {
       return view !== null && view.file !== null;
     };
 
-    // Set initial disabled state for insertBtn (D-05, D-08)
-    insertBtn.disabled = !hasActiveNote();
-
     if (!enabled || text === null) {
       copyBtn.disabled = true;
       saveBtn.disabled = true;
       insertBtn.disabled = true;
       return;
     }
+
+    // Only reach here when enabled=true and text is non-null (D-05, D-08)
+    insertBtn.disabled = !hasActiveNote();
 
     const capturedText = text;
 
