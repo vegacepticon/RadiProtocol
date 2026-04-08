@@ -58,26 +58,26 @@
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| SIDEBAR-01 | — | Pending |
-| RUNNER-01 | — | Pending |
-| LAYOUT-01 | — | Pending |
-| LAYOUT-02 | — | Pending |
-| LAYOUT-03 | — | Pending |
-| LAYOUT-04 | — | Pending |
-| EDITOR-01 | — | Pending |
-| EDITOR-02 | — | Pending |
-| SEP-01 | — | Pending |
-| SEP-02 | — | Pending |
-| BUG-01 | — | Pending |
-| BUG-02 | — | Pending |
-| BUG-03 | — | Pending |
-| BUG-04 | — | Pending |
+| LAYOUT-01 | Phase 12 | Pending |
+| LAYOUT-02 | Phase 12 | Pending |
+| LAYOUT-03 | Phase 12 | Pending |
+| LAYOUT-04 | Phase 12 | Pending |
+| SIDEBAR-01 | Phase 13 | Pending |
+| RUNNER-01 | Phase 13 | Pending |
+| EDITOR-01 | Phase 14 | Pending |
+| EDITOR-02 | Phase 14 | Pending |
+| SEP-01 | Phase 15 | Pending |
+| SEP-02 | Phase 15 | Pending |
+| BUG-01 | Phase 16 | Pending |
+| BUG-02 | Phase 17 | Pending |
+| BUG-03 | Phase 17 | Pending |
+| BUG-04 | Phase 17 | Pending |
 
 **Coverage:**
 - v1.2 requirements: 14 total
-- Mapped to phases: 0 (pending roadmap)
-- Unmapped: 14 ⚠️
+- Mapped to phases: 14
+- Unmapped: 0 ✓
 
 ---
 *Requirements defined: 2026-04-08*
-*Last updated: 2026-04-08 — initial v1.2 definition*
+*Last updated: 2026-04-08 — traceability mapped to phases 12–17*

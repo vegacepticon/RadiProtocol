@@ -4,9 +4,9 @@ milestone: v1.2
 milestone_name: Runner UX & Bug Fixes
 status: planning
 last_updated: "2026-04-08T00:00:00.000Z"
-last_activity: 2026-04-08 -- Milestone v1.2 started
+last_activity: 2026-04-08 -- Roadmap created, v1.2 phases 12-17 defined
 progress:
-  total_phases: 0
+  total_phases: 6
   completed_phases: 0
   total_plans: 0
   completed_plans: 0
@@ -17,16 +17,18 @@ progress:
 
 **Updated:** 2026-04-08
 **Milestone:** v1.2 — Runner UX & Bug Fixes
-**Status:** Defining requirements
+**Status:** Roadmap ready — awaiting Phase 12
 
 ---
 
 ## Current Position
 
-Phase: Not started (defining requirements)
+Phase: 12 — Runner Layout Overhaul (not started)
 Plan: —
-Status: Defining requirements
-Last activity: 2026-04-08 — Milestone v1.2 started
+Status: Ready to plan
+Last activity: 2026-04-08 — Roadmap created for v1.2 (6 phases, 14 requirements)
+
+Progress: `[ ░░░░░░░░░░░░░░░░░░░░ ] 0/6 phases`
 
 ---
 
@@ -61,7 +63,14 @@ See: `.planning/PROJECT.md` (updated 2026-04-08)
 - CanvasLiveEditor uses Canvas internal API (getData/setData Pattern B) with requestSave() debounce 500ms
 - Strategy A (vault.modify when canvas closed) still the fallback path in saveNodeEdits()
 - 3 pre-existing RED stubs in runner-extensions.test.ts — known debt, deferred to future milestone
-- Canvas selector (CanvasSelectorWidget) currently rendered in RunnerView headerEl only in tab mode
-- RunnerView textarea is already editable but accumulated text state overwrites user edits on each step
-- free-text-input / text-block node bug: nodes created manually on canvas + configured via Node Editor not appearing in runner — likely radiprotocol_nodeType not being written correctly
-- Snippet placeholder bug: label field clears on "Add" click without adding placeholder — event handler or state issue
+- Canvas selector (CanvasSelectorWidget) currently rendered in RunnerView headerEl only in tab mode — Phase 13 extends to sidebar mode
+- RunnerView textarea is editable but accumulated text state overwrites user edits on each step — Phase 16 fixes with dirty-tracking
+- free-text-input / text-block node bug: nodes created manually on canvas + configured via Node Editor not appearing in runner — root cause likely radiprotocol_nodeType not written correctly — Phase 17 fixes
+- Snippet placeholder bug: label field clears on "Add" click without adding placeholder — event handler or state issue — Phase 17 fixes
+- BUG-02 and BUG-03 share the same root cause (nodeType read-back after Node Editor write) — fix together in Phase 17
+
+---
+
+## Session Continuity
+
+To resume: read `.planning/ROADMAP.md` for phase structure, then run `/gsd-plan-phase 12`
