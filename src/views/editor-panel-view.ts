@@ -47,14 +47,18 @@ export class EditorPanelView extends ItemView {
   }
 
   private attachCanvasListener(): void {
-    // Bookkeeping null-out only — registerDomEvent handles actual cleanup on unload.
-    this.canvasPointerdownHandler = null;
-    this.watchedCanvasContainer = null;
-
     const canvasLeaves = this.plugin.app.workspace.getLeavesOfType('canvas');
     const activeLeaf = this.plugin.app.workspace.getMostRecentLeaf();
     const canvasLeaf = canvasLeaves.find(l => l === activeLeaf) ?? canvasLeaves[0];
     if (!canvasLeaf) return;
+
+    // Early-return: already watching this exact container — do not re-register.
+    // Prevents listener accumulation when active-leaf-change fires on modal open/close.
+    if (this.watchedCanvasContainer === canvasLeaf.containerEl) return;
+
+    // Genuine switch to a different canvas leaf — reset bookkeeping.
+    this.canvasPointerdownHandler = null;
+    this.watchedCanvasContainer = null;
 
     const canvasView = canvasLeaf.view as unknown as {
       file?: { path: string };
@@ -64,23 +68,21 @@ export class EditorPanelView extends ItemView {
     this.watchedCanvasContainer = canvasLeaf.containerEl;
 
     this.canvasPointerdownHandler = () => {
-      setTimeout(() => {
-        const selection = canvasView.canvas?.selection;
-        if (!selection || selection.size !== 1) return; // ignore multi-select
+      const selection = canvasView.canvas?.selection;
+      if (!selection || selection.size !== 1) return; // ignore multi-select
 
-        const node = Array.from(selection)[0];
-        if (!node?.id) return;
+      const node = Array.from(selection)[0];
+      if (!node?.id) return;
 
-        const filePath = canvasView.file?.path;
-        if (!filePath) return;
+      const filePath = canvasView.file?.path;
+      if (!filePath) return;
 
-        void this.handleNodeClick(filePath, node.id);
-      }, 0);
+      void this.handleNodeClick(filePath, node.id);
     };
 
     this.registerDomEvent(
       this.watchedCanvasContainer,
-      'pointerdown',
+      'click',
       this.canvasPointerdownHandler
     );
   }
