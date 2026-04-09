@@ -1,7 +1,7 @@
 # Roadmap: RadiProtocol
 
 **Project:** RadiProtocol
-**Last updated:** 2026-04-08
+**Last updated:** 2026-04-09
 
 ---
 
@@ -46,7 +46,7 @@ Full details: `.planning/milestones/v1.1-ROADMAP.md`
 
 - [ ] **Phase 12: Runner Layout Overhaul** — Auto-grow textarea, questions below output, equal buttons, remove legend
 - [x] **Phase 13: Sidebar Canvas Selector and Run Again** — Canvas selector parity in sidebar mode, restart after completion (completed 2026-04-08)
-- [ ] **Phase 14: Node Editor Auto-Switch and Unsaved Guard** — Auto-load node on click, guard unsaved edits on switch
+- [x] **Phase 14: Node Editor Auto-Switch and Unsaved Guard** — Auto-load node on click, guard unsaved edits on switch (completed 2026-04-09)
 - [ ] **Phase 15: Text Separator Setting** — Global newline/space setting in Settings tab, per-node override in EditorPanel
 - [ ] **Phase 16: Runner Textarea Edit Preservation** — Manual textarea edits survive step advances
 - [ ] **Phase 17: Node Type Read-Back and Snippet Placeholder Fixes** — free-text-input/text-block nodes appear correctly, placeholder Add works
@@ -93,7 +93,7 @@ Plans:
 **Plans**: 2 plans
 Plans:
 - [x] 14-01-PLAN.md — TDD: NodeSwitchGuardModal + tests (RED then GREEN) + canvas-internal.d.ts selection field
-- [ ] 14-02-PLAN.md — Wire auto-switch + unsaved guard into EditorPanelView + UAT checkpoint
+- [x] 14-02-PLAN.md — Wire auto-switch + unsaved guard into EditorPanelView + UAT checkpoint
 **UI hint**: yes
 
 ### Phase 15: Text Separator Setting
@@ -105,7 +105,11 @@ Plans:
   2. Changing the global setting affects how output text is joined when no per-node override is set
   3. EditorPanel shows a per-node separator override field for each node type that produces text output
   4. A node with a per-node override joins its text with that separator regardless of the global setting
-**Plans**: TBD
+**Plans**: 3 plans
+Plans:
+- [ ] 15-01-PLAN.md — Type contracts: radiprotocol_separator on graph-model nodes; textSeparator in settings + Settings tab Runner section
+- [ ] 15-02-PLAN.md — Runner separator injection: appendWithSeparator on TextAccumulator, all 5 append sites in ProtocolRunner, RunnerView wiring
+- [ ] 15-03-PLAN.md — EditorPanel separator dropdown for answer, free-text-input, text-block node kinds
 **UI hint**: yes
 
 ### Phase 16: Runner Textarea Edit Preservation
@@ -148,7 +152,7 @@ Plans:
 | 11. Live Canvas Editing | v1.1 | 3/3 | Complete | 2026-04-08 |
 | 12. Runner Layout Overhaul | v1.2 | 0/1 | Not started | — |
 | 13. Sidebar Canvas Selector and Run Again | v1.2 | 2/2 | Complete   | 2026-04-08 |
-| 14. Node Editor Auto-Switch and Unsaved Guard | v1.2 | 1/2 | In Progress|  |
-| 15. Text Separator Setting | v1.2 | 0/? | Not started | — |
+| 14. Node Editor Auto-Switch and Unsaved Guard | v1.2 | 2/1 | Complete   | 2026-04-09 |
+| 15. Text Separator Setting | v1.2 | 0/3 | Not started | — |
 | 16. Runner Textarea Edit Preservation | v1.2 | 0/? | Not started | — |
 | 17. Node Type Read-Back and Snippet Placeholder Fixes | v1.2 | 0/? | Not started | — |
