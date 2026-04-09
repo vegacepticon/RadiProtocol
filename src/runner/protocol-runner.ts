@@ -187,6 +187,17 @@ export class ProtocolRunner {
   }
 
   /**
+   * Inject a manual textarea edit into the accumulator before an advance action (BUG-01, D-01).
+   * Must be called BEFORE chooseAnswer() / enterFreeText() / chooseLoopAction() so that
+   * the undo snapshot captured inside those methods includes the manual edit.
+   * No-op if runner is not in 'at-node' state.
+   */
+  syncManualEdit(text: string): void {
+    if (this.runnerStatus !== 'at-node') return;
+    this.accumulator.overwrite(text);
+  }
+
+  /**
    * User chooses to loop again or exit the loop at a loop-end node (LOOP-02).
    * Only valid in at-node state when current node is a loop-end node.
    * Pushes UndoEntry BEFORE mutation (same invariant as chooseAnswer).

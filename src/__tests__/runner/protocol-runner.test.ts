@@ -529,4 +529,72 @@ describe('ProtocolRunner', () => {
       expect(state.message).toMatch(/Maximum iterations/);
     });
   });
+
+  describe('syncManualEdit() (BUG-01)', () => {
+    it('syncManualEdit before chooseAnswer() causes stepBack() to restore to the manual edit', () => {
+      // Build: start → q1 → a1 (terminal)
+      const graph: ProtocolGraph = {
+        canvasFilePath: 'sync-edit.canvas',
+        nodes: new Map([
+          ['s', { id: 's', kind: 'start', x: 0, y: 0, width: 100, height: 60 }],
+          ['q1', { id: 'q1', kind: 'question', questionText: 'Q1', x: 0, y: 60, width: 100, height: 60 }],
+          ['a1', { id: 'a1', kind: 'answer', answerText: 'ans1', x: 0, y: 120, width: 100, height: 60 }],
+          ['q2', { id: 'q2', kind: 'question', questionText: 'Q2', x: 0, y: 180, width: 100, height: 60 }],
+        ]),
+        edges: [
+          { id: 'e1', fromNodeId: 's', toNodeId: 'q1' },
+          { id: 'e2', fromNodeId: 'q1', toNodeId: 'a1' },
+          { id: 'e3', fromNodeId: 'a1', toNodeId: 'q2' },
+        ],
+        adjacency: new Map([['s', ['q1']], ['q1', ['a1']], ['a1', ['q2']]]),
+        reverseAdjacency: new Map([['q1', ['s']], ['a1', ['q1']], ['q2', ['a1']]]),
+        startNodeId: 's',
+      };
+      const runner = new ProtocolRunner();
+      runner.start(graph);
+      // User types a manual edit into the textarea before clicking answer
+      runner.syncManualEdit('manual edit');
+      runner.chooseAnswer('a1');
+      // Now at q2; step back should restore buffer to 'manual edit'
+      runner.stepBack();
+      const state = runner.getState();
+      expect(state.status).toBe('at-node');
+      if (state.status !== 'at-node') return;
+      expect(state.accumulatedText).toBe('manual edit');
+    });
+
+    it('syncManualEdit is a no-op when runner is not in at-node state', () => {
+      const runner = new ProtocolRunner();
+      // runner is idle — syncManualEdit must not throw or change state
+      runner.syncManualEdit('should be ignored');
+      expect(runner.getState().status).toBe('idle');
+    });
+
+    it('syncManualEdit alone does NOT add an undo entry (undo stack length unchanged)', () => {
+      const graph: ProtocolGraph = {
+        canvasFilePath: 'sync-noop.canvas',
+        nodes: new Map([
+          ['s', { id: 's', kind: 'start', x: 0, y: 0, width: 100, height: 60 }],
+          ['q1', { id: 'q1', kind: 'question', questionText: 'Q1', x: 0, y: 60, width: 100, height: 60 }],
+        ]),
+        edges: [{ id: 'e1', fromNodeId: 's', toNodeId: 'q1' }],
+        adjacency: new Map([['s', ['q1']]]),
+        reverseAdjacency: new Map([['q1', ['s']]]),
+        startNodeId: 's',
+      };
+      const runner = new ProtocolRunner();
+      runner.start(graph);
+      // canStepBack should be false before syncManualEdit
+      const stateBefore = runner.getState();
+      expect(stateBefore.status).toBe('at-node');
+      if (stateBefore.status !== 'at-node') return;
+      expect(stateBefore.canStepBack).toBe(false);
+      // syncManualEdit must not push an undo entry
+      runner.syncManualEdit('hello');
+      const stateAfter = runner.getState();
+      expect(stateAfter.status).toBe('at-node');
+      if (stateAfter.status !== 'at-node') return;
+      expect(stateAfter.canStepBack).toBe(false);
+    });
+  });
 });

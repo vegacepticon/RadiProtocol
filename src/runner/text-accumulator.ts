@@ -52,4 +52,14 @@ export class TextAccumulator {
   restoreTo(snapshot: string): void {
     this.buffer = snapshot;
   }
+
+  /**
+   * Replace the buffer with the given text.
+   * Used only by ProtocolRunner.syncManualEdit() to inject a manual textarea edit
+   * into the accumulator before an advance action. Does NOT push an undo entry —
+   * the undo snapshot is captured inside the advance action immediately after.
+   */
+  overwrite(text: string): void {
+    this.buffer = text;
+  }
 }
