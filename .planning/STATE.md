@@ -1,22 +1,23 @@
 ---
 gsd_state_version: 1.0
-milestone: v1.0
-milestone_name: milestone
-status: completed
-last_updated: "2026-04-07T08:39:26.639Z"
+milestone: v1.2
+milestone_name: Runner UX & Bug Fixes
+status: executing
+last_updated: "2026-04-09T06:22:56.423Z"
 progress:
-  total_phases: 9
-  completed_phases: 7
-  total_plans: 28
-  completed_plans: 28
+  total_phases: 6
+  completed_phases: 1
+  total_plans: 4
+  completed_plans: 4
   percent: 100
 ---
 
 # RadiProtocol — Project State
 
-**Updated:** 2026-04-07
-**Milestone:** v1.0 — Initial public release
-**Status:** v1.0 milestone complete
+**Updated:** 2026-04-09
+**Milestone:** v1.2 — Runner UX & Bug Fixes
+**Status:** Phase 15 complete — all 3 plans done
+**Last session:** Completed 15-03-PLAN.md (per-node separator dropdown in EditorPanel)
 
 ---
 
@@ -25,7 +26,7 @@ progress:
 See: `.planning/PROJECT.md` (updated 2026-04-07)
 
 **Core value:** A radiologist can generate a structured, accurate protocol in seconds by answering a guided algorithm — without writing a single line of code.  
-**Current focus:** Planning next milestone (community submission + v1.1 features)
+**Current focus:** Phase 15 — text-separator-setting
 
 ---
 
@@ -55,6 +56,10 @@ See: `.planning/PROJECT.md` (updated 2026-04-07)
 | Snapshot undo stack | Simplest correct approach for step-back; protocol text is small (<5KB) |
 | `radiprotocol_*` property namespace | Avoids collisions with other plugins and future Obsidian updates |
 | Canvas write-back Strategy A | Require canvas closed before any vault.modify() — simple and safe; avoids undocumented internals (A4 resolved) |
+| plugin.saveSettings() not saveData() directly | Consistent with main.ts wrapper; all settings call sites use the wrapper |
+| maxLoopIterations moved into Runner section | D-07 groups related runner settings under one heading in Settings tab |
+| RunnerView reconstructs ProtocolRunner at openCanvas() start | Simplest way to pick up textSeparator from settings; no lazy init or observer needed |
+| resolveSeparator(node) single resolution point | node.radiprotocol_separator ?? defaultSeparator — avoids duplicated logic across 5 call sites |
 
 ---
 
