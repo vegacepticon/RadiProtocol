@@ -16,6 +16,21 @@ export class TextAccumulator {
     this.buffer += text;
   }
 
+  /**
+   * Append text with a separator prefix — but only when the buffer is already non-empty.
+   * First chunk in a session is never preceded by a separator (D-01).
+   *
+   * @param text      The text chunk to append.
+   * @param separator 'newline' inserts '\n'; 'space' inserts ' '.
+   */
+  appendWithSeparator(text: string, separator: 'newline' | 'space'): void {
+    if (this.buffer === '') {
+      this.buffer += text;
+    } else {
+      this.buffer += (separator === 'newline' ? '\n' : ' ') + text;
+    }
+  }
+
   /** Read the current accumulated text. */
   get current(): string {
     return this.buffer;
