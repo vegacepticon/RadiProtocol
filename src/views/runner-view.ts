@@ -14,7 +14,7 @@ export const RUNNER_VIEW_TYPE = 'radiprotocol-runner';
 
 export class RunnerView extends ItemView {
   private readonly plugin: RadiProtocolPlugin;
-  private runner: ProtocolRunner = new ProtocolRunner();
+  private readonly runner = new ProtocolRunner();
   private readonly validator = new GraphValidator();
   private canvasFilePath: string | null = null;
   private previewTextarea: HTMLTextAreaElement | null = null;
@@ -49,9 +49,6 @@ export class RunnerView extends ItemView {
   }
 
   async openCanvas(filePath: string): Promise<void> {
-    this.runner = new ProtocolRunner({
-      defaultSeparator: this.plugin.settings.textSeparator,
-    });
     this.canvasFilePath = filePath;
     const file = this.app.vault.getAbstractFileByPath(filePath);
     if (file === null) {

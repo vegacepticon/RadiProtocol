@@ -20,8 +20,4 @@ describe('Settings defaults (UI-10, UI-11, D-10)', () => {
     const { RadiProtocolSettingsTab } = await import('../settings');
     expect(typeof RadiProtocolSettingsTab.prototype.display).toBe('function');
   });
-
-  it('SEP-01: DEFAULT_SETTINGS.textSeparator is newline', () => {
-    expect(DEFAULT_SETTINGS.textSeparator).toBe('newline');
-  });
 });
