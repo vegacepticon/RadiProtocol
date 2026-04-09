@@ -2,13 +2,13 @@
 gsd_state_version: 1.0
 milestone: v1.2
 milestone_name: Runner UX & Bug Fixes
-status: executing
-last_updated: "2026-04-09T06:22:56.423Z"
+status: completed
+last_updated: "2026-04-09T08:28:12.174Z"
 progress:
   total_phases: 6
-  completed_phases: 1
+  completed_phases: 2
   total_plans: 4
-  completed_plans: 4
+  completed_plans: 7
   percent: 100
 ---
 
@@ -17,7 +17,7 @@ progress:
 **Updated:** 2026-04-09
 **Milestone:** v1.2 — Runner UX & Bug Fixes
 **Status:** Phase 15 complete — all 3 plans done
-**Last session:** Completed 15-03-PLAN.md (per-node separator dropdown in EditorPanel)
+**Last session:** 2026-04-09T08:28:12.169Z
 
 ---
 
