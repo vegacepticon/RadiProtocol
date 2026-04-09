@@ -105,11 +105,13 @@ Plans:
   2. Changing the global setting affects how output text is joined when no per-node override is set
   3. EditorPanel shows a per-node separator override field for each node type that produces text output
   4. A node with a per-node override joins its text with that separator regardless of the global setting
-**Plans**: 3 plans
+**Plans**: 5 plans (includes 2 gap-closure plans)
 Plans:
 - [x] 15-01-PLAN.md — Type contracts: radiprotocol_separator on graph-model nodes; textSeparator in settings + Settings tab Runner section
 - [x] 15-02-PLAN.md — Runner separator injection: appendWithSeparator on TextAccumulator, all 5 append sites in ProtocolRunner, RunnerView wiring
 - [x] 15-03-PLAN.md — EditorPanel separator dropdown for answer, free-text-input, text-block node kinds
+- [ ] 15-04-PLAN.md — Gap closure: restore deleted canvas files (canvas-live-editor, canvas-selector-widget, canvas-switch-modal) + repair settings.ts and main.ts
+- [ ] 15-05-PLAN.md — Gap closure: restore runner-view.ts (selector, Run again, Insert in note) + wire editor-panel-view.ts saveNodeEdits() to canvasLiveEditor
 **UI hint**: yes
 
 ### Phase 16: Runner Textarea Edit Preservation
