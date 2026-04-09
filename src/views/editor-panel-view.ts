@@ -1,7 +1,6 @@
 import { ItemView, WorkspaceLeaf, Setting, TFile, Notice } from 'obsidian';
 import type { RPNodeKind } from '../graph/graph-model';
 import type RadiProtocolPlugin from '../main';
-import { NodeSwitchGuardModal } from './node-switch-guard-modal';
 
 export const EDITOR_PANEL_VIEW_TYPE = 'radiprotocol-editor-panel';
 
@@ -14,9 +13,6 @@ export class EditorPanelView extends ItemView {
   // so onChange can call kindFormSection.empty() + rebuild without
   // clearing the node-type dropdown
   private kindFormSection: HTMLElement | null = null;
-  // Auto-switch canvas listener bookkeeping (EDITOR-01)
-  private canvasPointerdownHandler: (() => void) | null = null;
-  private watchedCanvasContainer: HTMLElement | null = null;
 
   constructor(leaf: WorkspaceLeaf, plugin: RadiProtocolPlugin) {
     super(leaf);
@@ -29,79 +25,10 @@ export class EditorPanelView extends ItemView {
 
   async onOpen(): Promise<void> {
     this.renderIdle();
-    this.attachCanvasListener();
-
-    // Re-attach when user switches active leaf (e.g. opens a second canvas)
-    type EventRef = import('obsidian').EventRef;
-    this.registerEvent(
-      (this.plugin.app.workspace as unknown as {
-        on(event: 'active-leaf-change', handler: () => void): EventRef;
-      }).on('active-leaf-change', () => {
-        this.attachCanvasListener();
-      })
-    );
   }
 
   async onClose(): Promise<void> {
     this.contentEl.empty();
-  }
-
-  private attachCanvasListener(): void {
-    const canvasLeaves = this.plugin.app.workspace.getLeavesOfType('canvas');
-    const activeLeaf = this.plugin.app.workspace.getMostRecentLeaf();
-    const canvasLeaf = canvasLeaves.find(l => l === activeLeaf) ?? canvasLeaves[0];
-    if (!canvasLeaf) return;
-
-    // Early-return: already watching this exact container — do not re-register.
-    // Prevents listener accumulation when active-leaf-change fires on modal open/close.
-    if (this.watchedCanvasContainer === canvasLeaf.containerEl) return;
-
-    // Genuine switch to a different canvas leaf — reset bookkeeping.
-    this.canvasPointerdownHandler = null;
-    this.watchedCanvasContainer = null;
-
-    const canvasView = canvasLeaf.view as unknown as {
-      file?: { path: string };
-      canvas?: { selection?: Set<{ id: string; [key: string]: unknown }> };
-    };
-
-    this.watchedCanvasContainer = canvasLeaf.containerEl;
-
-    this.canvasPointerdownHandler = () => {
-      const selection = canvasView.canvas?.selection;
-      if (!selection || selection.size !== 1) return; // ignore multi-select
-
-      const node = Array.from(selection)[0];
-      if (!node?.id) return;
-
-      const filePath = canvasView.file?.path;
-      if (!filePath) return;
-
-      void this.handleNodeClick(filePath, node.id);
-    };
-
-    this.registerDomEvent(
-      this.watchedCanvasContainer,
-      'click',
-      this.canvasPointerdownHandler
-    );
-  }
-
-  private async handleNodeClick(filePath: string, nodeId: string): Promise<void> {
-    // No-op: same node already loaded — avoids form flicker on re-click
-    if (this.currentFilePath === filePath && this.currentNodeId === nodeId) return;
-
-    // Dirty guard (EDITOR-02): only show when a node is loaded AND has unsaved edits.
-    // Guard does NOT fire when panel is in idle state (currentNodeId === null).
-    if (this.currentNodeId !== null && Object.keys(this.pendingEdits).length > 0) {
-      const modal = new NodeSwitchGuardModal(this.plugin.app);
-      modal.open();
-      const confirmed = await modal.result; // true = discard and switch
-      if (!confirmed) return; // user chose Stay — leave editor unchanged
-      this.pendingEdits = {}; // clear before loadNode (explicit, even though loadNode also clears)
-    }
-
-    this.loadNode(filePath, nodeId);
   }
 
   private renderIdle(): void {
@@ -345,21 +272,6 @@ export class EditorPanelView extends ItemView {
             t.setValue((nodeRecord['radiprotocol_displayLabel'] as string | undefined) ?? '')
               .onChange(v => { this.pendingEdits['radiprotocol_displayLabel'] = v || undefined; });
           });
-        // Separator override dropdown (D-05, D-06, SEP-02)
-        new Setting(container)
-          .setName('Text separator')
-          .setDesc('How this node\'s text is joined to the accumulated report. "Use global" inherits the setting from Settings > Runner.')
-          .addDropdown(drop => {
-            drop
-              .addOption('', 'Use global (default)')
-              .addOption('newline', 'Newline')
-              .addOption('space', 'Space')
-              .setValue((nodeRecord['radiprotocol_separator'] as string | undefined) ?? '')
-              .onChange(value => {
-                this.pendingEdits['radiprotocol_separator'] =
-                  value === '' ? undefined : (value as 'newline' | 'space');
-              });
-          });
         break;
       }
 
@@ -386,21 +298,6 @@ export class EditorPanelView extends ItemView {
             t.setValue((nodeRecord['radiprotocol_suffix'] as string | undefined) ?? '')
               .onChange(v => { this.pendingEdits['radiprotocol_suffix'] = v || undefined; });
           });
-        // Separator override dropdown (D-05, D-06, SEP-02)
-        new Setting(container)
-          .setName('Text separator')
-          .setDesc('How this node\'s text is joined to the accumulated report. "Use global" inherits the setting from Settings > Runner.')
-          .addDropdown(drop => {
-            drop
-              .addOption('', 'Use global (default)')
-              .addOption('newline', 'Newline')
-              .addOption('space', 'Space')
-              .setValue((nodeRecord['radiprotocol_separator'] as string | undefined) ?? '')
-              .onChange(value => {
-                this.pendingEdits['radiprotocol_separator'] =
-                  value === '' ? undefined : (value as 'newline' | 'space');
-              });
-          });
         break;
       }
 
@@ -419,21 +316,6 @@ export class EditorPanelView extends ItemView {
           .addText(t => {
             t.setValue((nodeRecord['radiprotocol_snippetId'] as string | undefined) ?? '')
               .onChange(v => { this.pendingEdits['radiprotocol_snippetId'] = v || undefined; });
-          });
-        // Separator override dropdown (D-05, D-06, SEP-02)
-        new Setting(container)
-          .setName('Text separator')
-          .setDesc('How this node\'s text is joined to the accumulated report. "Use global" inherits the setting from Settings > Runner.')
-          .addDropdown(drop => {
-            drop
-              .addOption('', 'Use global (default)')
-              .addOption('newline', 'Newline')
-              .addOption('space', 'Space')
-              .setValue((nodeRecord['radiprotocol_separator'] as string | undefined) ?? '')
-              .onChange(value => {
-                this.pendingEdits['radiprotocol_separator'] =
-                  value === '' ? undefined : (value as 'newline' | 'space');
-              });
           });
         break;
       }
