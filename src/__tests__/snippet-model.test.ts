@@ -73,4 +73,8 @@ describe('slugifyLabel (D-04)', () => {
   it('converts "Size (mm)" to "size-mm"', () => {
     expect(slugifyLabel('Size (mm)')).toBe('size-mm');
   });
+
+  it('converts Cyrillic label to cyrillic slug', () => {
+    expect(slugifyLabel('Возраст пациента')).toBe('возраст-пациента');
+  });
 });
