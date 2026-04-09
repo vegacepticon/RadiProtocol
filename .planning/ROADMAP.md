@@ -135,7 +135,10 @@ Plans:
   1. A free-text-input node created on canvas and configured via Node Editor prompts for text input when the runner reaches it
   2. A text-block node created on canvas and configured via Node Editor auto-advances with its text appended when the runner reaches it
   3. In the snippet creator, clicking "Add" after entering a placeholder label appends that placeholder to the list and clears the label field
-**Plans**: TBD
+**Plans**: 2 plans
+Plans:
+- [ ] 17-01-PLAN.md — TDD: add getCanvasJSON() to CanvasLiveEditor + live-data fallback in openCanvas() (BUG-02, BUG-03)
+- [ ] 17-02-PLAN.md — Fix miniAddBtn type=button in snippet-manager-view + UAT (BUG-04)
 
 ---
 
