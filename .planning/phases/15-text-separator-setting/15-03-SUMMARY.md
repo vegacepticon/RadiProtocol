@@ -115,6 +115,15 @@ None - no external service configuration required.
 - Plans 01, 02, and 03 are all complete. Phase 15 is done.
 - The runner separator logic (Plan 02) reads `radiprotocol_separator` from nodes — that plan's implementation is independent of this EditorPanel work.
 
+## Self-Check: PASSED
+
+- FOUND: src/views/editor-panel-view.ts
+- FOUND: src/__tests__/editor-panel.test.ts
+- FOUND: .planning/phases/15-text-separator-setting/15-03-SUMMARY.md
+- FOUND commit: ffa123e (RED — failing tests)
+- FOUND commit: 909ab94 (GREEN — implementation)
+- FOUND commit: 9b7e89b (docs — SUMMARY + STATE + ROADMAP)
+
 ---
 *Phase: 15-text-separator-setting*
 *Completed: 2026-04-09*
