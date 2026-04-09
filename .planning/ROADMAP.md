@@ -122,7 +122,9 @@ Plans:
   1. Typing directly into the runner text area and then pressing an answer button does not discard the typed text
   2. The accumulated protocol text after advancing includes both the runner-appended content and any manual edits made before that step
   3. Pressing the back (undo) button restores the text area to the state it was in before the last advance, including any manual edits from that step
-**Plans**: TBD
+**Plans**: 1 plan
+Plans:
+- [ ] 16-01-PLAN.md — Add TextAccumulator.overwrite(), ProtocolRunner.syncManualEdit(), wire capture-before-advance into runner-view.ts
 **UI hint**: yes
 
 ### Phase 17: Node Type Read-Back and Snippet Placeholder Fixes
@@ -156,5 +158,5 @@ Plans:
 | 13. Sidebar Canvas Selector and Run Again | v1.2 | 2/2 | Complete   | 2026-04-08 |
 | 14. Node Editor Auto-Switch and Unsaved Guard | v1.2 | 2/1 | Complete   | 2026-04-09 |
 | 15. Text Separator Setting | v1.2 | 3/3 | Complete   | 2026-04-09 |
-| 16. Runner Textarea Edit Preservation | v1.2 | 0/? | Not started | — |
+| 16. Runner Textarea Edit Preservation | v1.2 | 0/1 | Not started | — |
 | 17. Node Type Read-Back and Snippet Placeholder Fixes | v1.2 | 0/? | Not started | — |
