@@ -41,7 +41,7 @@ Scale: multiples of 4px only, expressed via Obsidian tokens.
 | `var(--size-2-1)` | 4px | Tight gaps within a row (option list items, mini-form internal gap) |
 | `var(--size-4-1)` | 8px | Standard gaps between form sections and button rows |
 | `var(--size-4-2)` | 16px | Panel padding, textarea padding |
-| `var(--size-2-2)` | ~6px | Loop button vertical padding (established in Phase 6) |
+| `var(--size-2-2)` | 4px | Loop button vertical padding (established in Phase 6; resolves to 4px per Obsidian developer docs — obsidian-developer-docs Spacing reference, 2-pixel grid system) |
 | `var(--size-2-3)` | 8px | Loop iteration row margin (established in Phase 6) |
 
 No new spacing values are introduced in this phase.
@@ -255,6 +255,7 @@ No new accessibility requirements introduced. Existing conventions apply:
 | Artifact | Source |
 |----------|--------|
 | Spacing tokens | `src/styles.css` — all phases |
+| `--size-2-2` resolved value | Obsidian developer docs — Spacing reference (2-pixel grid system, value: 4px) |
 | Typography tokens | `src/styles.css` — Phase 3 `.rp-preview-textarea`, Phase 5 `.rp-snippet-form-section label` |
 | Color tokens | `src/styles.css` — Phase 3 `.rp-question-zone`, Phase 5 `.rp-add-placeholder-form` |
 | free-text-input CSS | `src/styles.css` line 115–122 `.rp-free-text-input` |
