@@ -8,16 +8,16 @@ progress:
   total_phases: 6
   completed_phases: 1
   total_plans: 4
-  completed_plans: 3
-  percent: 75
+  completed_plans: 4
+  percent: 100
 ---
 
 # RadiProtocol — Project State
 
 **Updated:** 2026-04-09
 **Milestone:** v1.2 — Runner UX & Bug Fixes
-**Status:** Executing Phase 15 — Plan 02 next
-**Last session:** Completed 15-01-PLAN.md (textSeparator contracts + settings infrastructure)
+**Status:** Executing Phase 15 — Plan 03 next
+**Last session:** Completed 15-02-PLAN.md (separator-aware text accumulation in runner layer)
 
 ---
 
@@ -58,6 +58,8 @@ See: `.planning/PROJECT.md` (updated 2026-04-07)
 | Canvas write-back Strategy A | Require canvas closed before any vault.modify() — simple and safe; avoids undocumented internals (A4 resolved) |
 | plugin.saveSettings() not saveData() directly | Consistent with main.ts wrapper; all settings call sites use the wrapper |
 | maxLoopIterations moved into Runner section | D-07 groups related runner settings under one heading in Settings tab |
+| RunnerView reconstructs ProtocolRunner at openCanvas() start | Simplest way to pick up textSeparator from settings; no lazy init or observer needed |
+| resolveSeparator(node) single resolution point | node.radiprotocol_separator ?? defaultSeparator — avoids duplicated logic across 5 call sites |
 
 ---
 
