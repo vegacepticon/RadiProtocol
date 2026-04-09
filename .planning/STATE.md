@@ -3,7 +3,7 @@ gsd_state_version: 1.0
 milestone: v1.2
 milestone_name: Runner UX & Bug Fixes
 status: executing
-last_updated: "2026-04-09T08:37:06.225Z"
+last_updated: "2026-04-09T08:39:04.583Z"
 progress:
   total_phases: 6
   completed_phases: 2
@@ -16,8 +16,9 @@ progress:
 
 **Updated:** 2026-04-09
 **Milestone:** v1.2 — Runner UX & Bug Fixes
-**Status:** Ready to execute
-**Last session:** 2026-04-09T08:28:12.169Z
+**Status:** Phase 16 complete (1/1 plans)
+**Last session:** 2026-04-09T11:43:00Z
+**Stopped at:** Completed 16-01-PLAN.md
 
 ---
 
@@ -26,7 +27,7 @@ progress:
 See: `.planning/PROJECT.md` (updated 2026-04-07)
 
 **Core value:** A radiologist can generate a structured, accurate protocol in seconds by answering a guided algorithm — without writing a single line of code.  
-**Current focus:** Phase 15 — text-separator-setting
+**Current focus:** Phase 16 — runner-textarea-edit-preservation
 
 ---
 
@@ -60,6 +61,9 @@ See: `.planning/PROJECT.md` (updated 2026-04-07)
 | maxLoopIterations moved into Runner section | D-07 groups related runner settings under one heading in Settings tab |
 | RunnerView reconstructs ProtocolRunner at openCanvas() start | Simplest way to pick up textSeparator from settings; no lazy init or observer needed |
 | resolveSeparator(node) single resolution point | node.radiprotocol_separator ?? defaultSeparator — avoids duplicated logic across 5 call sites |
+| capture-before-advance pattern (BUG-01) | syncManualEdit() called before each advance action so undo snapshot includes manual textarea edit |
+| overwrite() semantically separate from restoreTo() | restoreTo = undo revert of a snapshot; overwrite = inject caller's text — clearer intent at call sites |
+| live textarea read in complete-state toolbar (D-03) | previewTextarea?.value ?? capturedText replaces stale closure to honour final edits before copy/save/insert |
 
 ---
 

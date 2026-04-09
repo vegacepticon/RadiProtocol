@@ -48,7 +48,7 @@ Full details: `.planning/milestones/v1.1-ROADMAP.md`
 - [x] **Phase 13: Sidebar Canvas Selector and Run Again** — Canvas selector parity in sidebar mode, restart after completion (completed 2026-04-08)
 - [x] **Phase 14: Node Editor Auto-Switch and Unsaved Guard** — Auto-load node on click, guard unsaved edits on switch (completed 2026-04-09)
 - [x] **Phase 15: Text Separator Setting** — Global newline/space setting in Settings tab, per-node override in EditorPanel (completed 2026-04-09)
-- [ ] **Phase 16: Runner Textarea Edit Preservation** — Manual textarea edits survive step advances
+- [x] **Phase 16: Runner Textarea Edit Preservation** — Manual textarea edits survive step advances
 - [ ] **Phase 17: Node Type Read-Back and Snippet Placeholder Fixes** — free-text-input/text-block nodes appear correctly, placeholder Add works
 
 ---
@@ -124,7 +124,7 @@ Plans:
   3. Pressing the back (undo) button restores the text area to the state it was in before the last advance, including any manual edits from that step
 **Plans**: 1 plan
 Plans:
-- [ ] 16-01-PLAN.md — Add TextAccumulator.overwrite(), ProtocolRunner.syncManualEdit(), wire capture-before-advance into runner-view.ts
+- [x] 16-01-PLAN.md — Add TextAccumulator.overwrite(), ProtocolRunner.syncManualEdit(), wire capture-before-advance into runner-view.ts
 **UI hint**: yes
 
 ### Phase 17: Node Type Read-Back and Snippet Placeholder Fixes
@@ -158,5 +158,5 @@ Plans:
 | 13. Sidebar Canvas Selector and Run Again | v1.2 | 2/2 | Complete   | 2026-04-08 |
 | 14. Node Editor Auto-Switch and Unsaved Guard | v1.2 | 2/1 | Complete   | 2026-04-09 |
 | 15. Text Separator Setting | v1.2 | 3/3 | Complete   | 2026-04-09 |
-| 16. Runner Textarea Edit Preservation | v1.2 | 0/1 | Not started | — |
+| 16. Runner Textarea Edit Preservation | v1.2 | 1/1 | Complete | 2026-04-09 |
 | 17. Node Type Read-Back and Snippet Placeholder Fixes | v1.2 | 0/? | Not started | — |
