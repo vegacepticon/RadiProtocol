@@ -3,7 +3,6 @@ import { ItemView, WorkspaceLeaf, Notice, TFile, TFolder, MarkdownView } from 'o
 import type RadiProtocolPlugin from '../main';
 import { ProtocolRunner } from '../runner/protocol-runner';
 import { GraphValidator } from '../graph/graph-validator';
-import type { CompleteState } from '../runner/runner-state';
 import type { ProtocolGraph } from '../graph/graph-model';
 import { SnippetFillInModal } from './snippet-fill-in-modal';
 import { ResumeSessionModal } from './resume-session-modal';
@@ -316,6 +315,7 @@ export class RunnerView extends ItemView {
                 text: answerNode.displayLabel ?? answerNode.answerText,
               });
               this.registerDomEvent(btn, 'click', () => {
+                this.runner.syncManualEdit(this.previewTextarea?.value ?? '');  // BUG-01: capture manual edit (D-01)
                 this.runner.chooseAnswer(answerNode.id);
                 void this.autoSaveSession();   // SESSION-01 — save after answer
                 void this.renderAsync();
@@ -332,6 +332,7 @@ export class RunnerView extends ItemView {
             const textarea = questionZone.createEl('textarea', { cls: 'rp-free-text-input' });
             const submitBtn = questionZone.createEl('button', { text: 'Submit' });
             this.registerDomEvent(submitBtn, 'click', () => {
+              this.runner.syncManualEdit(this.previewTextarea?.value ?? '');  // BUG-01: capture manual edit (D-01)
               this.runner.enterFreeText(textarea.value);
               void this.autoSaveSession();   // SESSION-01 — save after free-text
               void this.renderAsync();
@@ -369,11 +370,13 @@ export class RunnerView extends ItemView {
             });
 
             this.registerDomEvent(againBtn, 'click', () => {
+              this.runner.syncManualEdit(this.previewTextarea?.value ?? '');  // BUG-01: capture manual edit (D-01)
               this.runner.chooseLoopAction('again');
               void this.autoSaveSession();
               void this.renderAsync();
             });
             this.registerDomEvent(doneBtn, 'click', () => {
+              this.runner.syncManualEdit(this.previewTextarea?.value ?? '');  // BUG-01: capture manual edit (D-01)
               this.runner.chooseLoopAction('done');
               void this.autoSaveSession();
               void this.renderAsync();
@@ -576,20 +579,14 @@ export class RunnerView extends ItemView {
     const capturedText = text;
 
     this.registerDomEvent(copyBtn, 'click', () => {
-      const state = this.runner.getState();
-      const finalText = state.status === 'complete'
-        ? (state as CompleteState).finalText
-        : capturedText;
+      const finalText = this.previewTextarea?.value ?? capturedText;  // D-03: live textarea read
       void navigator.clipboard.writeText(finalText).then(() => {
         new Notice('Copied to clipboard.');
       });
     });
 
     this.registerDomEvent(saveBtn, 'click', () => {
-      const state = this.runner.getState();
-      const finalText = state.status === 'complete'
-        ? (state as CompleteState).finalText
-        : capturedText;
+      const finalText = this.previewTextarea?.value ?? capturedText;  // D-03: live textarea read
       void this.plugin.saveOutputToNote(finalText).then(() => {
         new Notice('Report saved to note.');
       });
@@ -598,10 +595,7 @@ export class RunnerView extends ItemView {
     this.registerDomEvent(insertBtn, 'click', () => {
       const file = this.lastActiveMarkdownFile;
       if (file === null) return;
-      const state = this.runner.getState();
-      const finalText = state.status === 'complete'
-        ? (state as CompleteState).finalText
-        : capturedText;
+      const finalText = this.previewTextarea?.value ?? capturedText;  // D-03: live textarea read
       void this.plugin.insertIntoCurrentNote(finalText, file);
     });
 
