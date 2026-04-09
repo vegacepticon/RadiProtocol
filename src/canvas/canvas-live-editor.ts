@@ -54,6 +54,20 @@ export class CanvasLiveEditor {
   }
 
   /**
+   * Returns JSON.stringify(canvas.getData()) when the canvas view for filePath
+   * is open and exposes the internal Pattern B API. Returns null when the canvas
+   * is closed or the API is unavailable.
+   *
+   * Used by RunnerView.openCanvas() to read live in-memory state instead of
+   * potentially stale vault.read() data (BUG-02, BUG-03).
+   */
+  getCanvasJSON(filePath: string): string | null {
+    const view = this.getCanvasView(filePath);
+    if (!view) return null;
+    return JSON.stringify(view.canvas.getData());
+  }
+
+  /**
    * Saves edits into the live canvas using Pattern B (getData/setData/requestSave).
    * Returns true if live save succeeded, false if caller should use Strategy A.
    * Throws if setData() or requestSave() throws — callers handle with Notice per D-03.

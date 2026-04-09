@@ -69,11 +69,18 @@ export class RunnerView extends ItemView {
     }
 
     let content: string;
-    try {
-      content = await this.app.vault.read(file);
-    } catch {
-      this.renderError([`Could not read canvas file: "${filePath}".`]);
-      return;
+    // BUG-02/03: If canvas is open, read live in-memory data to avoid stale disk
+    // state from the debounced saveLive() write path (D-05, D-06).
+    const liveJson = this.plugin.canvasLiveEditor.getCanvasJSON(filePath);
+    if (liveJson !== null) {
+      content = liveJson;
+    } else {
+      try {
+        content = await this.app.vault.read(file);
+      } catch {
+        this.renderError([`Could not read canvas file: "${filePath}".`]);
+        return;
+      }
     }
 
     const parseResult = this.plugin.canvasParser.parse(content, filePath);
