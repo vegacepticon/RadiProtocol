@@ -1,6 +1,7 @@
 import { ItemView, WorkspaceLeaf, Setting, TFile, Notice } from 'obsidian';
 import type { RPNodeKind } from '../graph/graph-model';
 import type RadiProtocolPlugin from '../main';
+import { NodeSwitchGuardModal } from './node-switch-guard-modal';
 
 export const EDITOR_PANEL_VIEW_TYPE = 'radiprotocol-editor-panel';
 
@@ -13,6 +14,9 @@ export class EditorPanelView extends ItemView {
   // so onChange can call kindFormSection.empty() + rebuild without
   // clearing the node-type dropdown
   private kindFormSection: HTMLElement | null = null;
+  // Auto-switch canvas listener bookkeeping (EDITOR-01)
+  private canvasPointerdownHandler: (() => void) | null = null;
+  private watchedCanvasContainer: HTMLElement | null = null;
 
   constructor(leaf: WorkspaceLeaf, plugin: RadiProtocolPlugin) {
     super(leaf);
@@ -25,10 +29,77 @@ export class EditorPanelView extends ItemView {
 
   async onOpen(): Promise<void> {
     this.renderIdle();
+    this.attachCanvasListener();
+
+    // Re-attach when user switches active leaf (e.g. opens a second canvas)
+    type EventRef = import('obsidian').EventRef;
+    this.registerEvent(
+      (this.plugin.app.workspace as unknown as {
+        on(event: 'active-leaf-change', handler: () => void): EventRef;
+      }).on('active-leaf-change', () => {
+        this.attachCanvasListener();
+      })
+    );
   }
 
   async onClose(): Promise<void> {
     this.contentEl.empty();
+  }
+
+  private attachCanvasListener(): void {
+    // Bookkeeping null-out only — registerDomEvent handles actual cleanup on unload.
+    this.canvasPointerdownHandler = null;
+    this.watchedCanvasContainer = null;
+
+    const canvasLeaves = this.plugin.app.workspace.getLeavesOfType('canvas');
+    const activeLeaf = this.plugin.app.workspace.getMostRecentLeaf();
+    const canvasLeaf = canvasLeaves.find(l => l === activeLeaf) ?? canvasLeaves[0];
+    if (!canvasLeaf) return;
+
+    const canvasView = canvasLeaf.view as unknown as {
+      file?: { path: string };
+      canvas?: { selection?: Set<{ id: string; [key: string]: unknown }> };
+    };
+
+    this.watchedCanvasContainer = canvasLeaf.containerEl;
+
+    this.canvasPointerdownHandler = () => {
+      setTimeout(() => {
+        const selection = canvasView.canvas?.selection;
+        if (!selection || selection.size !== 1) return; // ignore multi-select
+
+        const node = Array.from(selection)[0];
+        if (!node?.id) return;
+
+        const filePath = canvasView.file?.path;
+        if (!filePath) return;
+
+        void this.handleNodeClick(filePath, node.id);
+      }, 0);
+    };
+
+    this.registerDomEvent(
+      this.watchedCanvasContainer,
+      'pointerdown',
+      this.canvasPointerdownHandler
+    );
+  }
+
+  private async handleNodeClick(filePath: string, nodeId: string): Promise<void> {
+    // No-op: same node already loaded — avoids form flicker on re-click
+    if (this.currentFilePath === filePath && this.currentNodeId === nodeId) return;
+
+    // Dirty guard (EDITOR-02): only show when a node is loaded AND has unsaved edits.
+    // Guard does NOT fire when panel is in idle state (currentNodeId === null).
+    if (this.currentNodeId !== null && Object.keys(this.pendingEdits).length > 0) {
+      const modal = new NodeSwitchGuardModal(this.plugin.app);
+      modal.open();
+      const confirmed = await modal.result; // true = discard and switch
+      if (!confirmed) return; // user chose Stay — leave editor unchanged
+      this.pendingEdits = {}; // clear before loadNode (explicit, even though loadNode also clears)
+    }
+
+    this.loadNode(filePath, nodeId);
   }
 
   private renderIdle(): void {
@@ -47,27 +118,25 @@ export class EditorPanelView extends ItemView {
     void this.renderNodeForm(canvasFilePath, nodeId);
   }
 
+  private isCanvasOpen(filePath: string): boolean {
+    return this.plugin.app.workspace
+      .getLeavesOfType('canvas')
+      .some(leaf => {
+        const view = leaf.view as { file?: { path: string } };
+        return view.file?.path === filePath;
+      });
+  }
+
   async saveNodeEdits(
     filePath: string,
     nodeId: string,
     edits: Record<string, unknown>
   ): Promise<void> {
-    // LIVE-03: Attempt live save via internal Canvas API first (D-02).
-    // If saveLive() returns true, the canvas view owns the write — do not call vault.modify().
-    try {
-      const savedLive = await this.plugin.canvasLiveEditor.saveLive(filePath, nodeId, edits);
-      if (savedLive) {
-        new Notice('Node properties saved.');
-        return;
-      }
-    } catch (err) {
-      // D-03: requestSave() threw — canvas state has been rolled back by CanvasLiveEditor.
-      console.error('[RadiProtocol] saveLive threw — canvas state rolled back:', err);
-      new Notice('Save failed \u2014 close the canvas and try again.');
+    // EDIT-04: Strategy A — require canvas closed before writing
+    if (this.isCanvasOpen(filePath)) {
+      new Notice('Close the canvas before editing node properties.');
       return;
     }
-    // saveLive() returned false: canvas is closed or API unavailable.
-    // Fall through to Strategy A (vault.modify() path below).
 
     const file = this.plugin.app.vault.getAbstractFileByPath(filePath);
     if (!file) {
@@ -103,13 +172,12 @@ export class EditorPanelView extends ItemView {
 
     // Q3 resolution (RESEARCH.md): if nodeType is being unset (empty string),
     // remove ALL radiprotocol_* fields from the node to prevent orphaned keys.
-    const isUnmarking =
-      'radiprotocol_nodeType' in edits &&
-      (edits['radiprotocol_nodeType'] === '' || edits['radiprotocol_nodeType'] === undefined);
+    const nodeTypeEdit = edits['radiprotocol_nodeType'];
+    const isUnmarking = nodeTypeEdit === '' || nodeTypeEdit === undefined;
 
     const node = canvasData.nodes[nodeIndex];
     if (node !== undefined) {
-      if (isUnmarking) {
+      if (isUnmarking && 'radiprotocol_nodeType' in edits) {
         // Remove all radiprotocol_* fields from the node
         for (const key of Object.keys(node)) {
           if (key.startsWith('radiprotocol_')) {
