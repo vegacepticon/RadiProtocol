@@ -1,22 +1,23 @@
 ---
 gsd_state_version: 1.0
-milestone: v1.0
-milestone_name: milestone
-status: completed
-last_updated: "2026-04-07T08:39:26.639Z"
+milestone: v1.2
+milestone_name: Runner UX & Bug Fixes
+status: executing
+last_updated: "2026-04-09T06:22:56.423Z"
 progress:
-  total_phases: 9
-  completed_phases: 7
-  total_plans: 28
-  completed_plans: 28
-  percent: 100
+  total_phases: 6
+  completed_phases: 1
+  total_plans: 4
+  completed_plans: 3
+  percent: 75
 ---
 
 # RadiProtocol — Project State
 
-**Updated:** 2026-04-07
-**Milestone:** v1.0 — Initial public release
-**Status:** v1.0 milestone complete
+**Updated:** 2026-04-09
+**Milestone:** v1.2 — Runner UX & Bug Fixes
+**Status:** Executing Phase 15 — Plan 02 next
+**Last session:** Completed 15-01-PLAN.md (textSeparator contracts + settings infrastructure)
 
 ---
 
@@ -25,7 +26,7 @@ progress:
 See: `.planning/PROJECT.md` (updated 2026-04-07)
 
 **Core value:** A radiologist can generate a structured, accurate protocol in seconds by answering a guided algorithm — without writing a single line of code.  
-**Current focus:** Planning next milestone (community submission + v1.1 features)
+**Current focus:** Phase 15 — text-separator-setting
 
 ---
 
@@ -55,6 +56,8 @@ See: `.planning/PROJECT.md` (updated 2026-04-07)
 | Snapshot undo stack | Simplest correct approach for step-back; protocol text is small (<5KB) |
 | `radiprotocol_*` property namespace | Avoids collisions with other plugins and future Obsidian updates |
 | Canvas write-back Strategy A | Require canvas closed before any vault.modify() — simple and safe; avoids undocumented internals (A4 resolved) |
+| plugin.saveSettings() not saveData() directly | Consistent with main.ts wrapper; all settings call sites use the wrapper |
+| maxLoopIterations moved into Runner section | D-07 groups related runner settings under one heading in Settings tab |
 
 ---
 

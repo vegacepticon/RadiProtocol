@@ -107,7 +107,7 @@ Plans:
   4. A node with a per-node override joins its text with that separator regardless of the global setting
 **Plans**: 3 plans
 Plans:
-- [ ] 15-01-PLAN.md — Type contracts: radiprotocol_separator on graph-model nodes; textSeparator in settings + Settings tab Runner section
+- [x] 15-01-PLAN.md — Type contracts: radiprotocol_separator on graph-model nodes; textSeparator in settings + Settings tab Runner section
 - [ ] 15-02-PLAN.md — Runner separator injection: appendWithSeparator on TextAccumulator, all 5 append sites in ProtocolRunner, RunnerView wiring
 - [ ] 15-03-PLAN.md — EditorPanel separator dropdown for answer, free-text-input, text-block node kinds
 **UI hint**: yes
@@ -153,6 +153,6 @@ Plans:
 | 12. Runner Layout Overhaul | v1.2 | 0/1 | Not started | — |
 | 13. Sidebar Canvas Selector and Run Again | v1.2 | 2/2 | Complete   | 2026-04-08 |
 | 14. Node Editor Auto-Switch and Unsaved Guard | v1.2 | 2/1 | Complete   | 2026-04-09 |
-| 15. Text Separator Setting | v1.2 | 0/3 | Not started | — |
+| 15. Text Separator Setting | v1.2 | 1/3 | In Progress|  |
 | 16. Runner Textarea Edit Preservation | v1.2 | 0/? | Not started | — |
 | 17. Node Type Read-Back and Snippet Placeholder Fixes | v1.2 | 0/? | Not started | — |
