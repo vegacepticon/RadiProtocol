@@ -16,8 +16,8 @@ progress:
 
 **Updated:** 2026-04-09
 **Milestone:** v1.2 — Runner UX & Bug Fixes
-**Status:** Executing Phase 15 — Plan 03 next
-**Last session:** Completed 15-02-PLAN.md (separator-aware text accumulation in runner layer)
+**Status:** Phase 15 complete — all 3 plans done
+**Last session:** Completed 15-03-PLAN.md (per-node separator dropdown in EditorPanel)
 
 ---
 
