@@ -76,8 +76,9 @@ describe('EditorPanelView', () => {
     kind: string
   ): string[] {
     const names: string[] = [];
-    const setNameSpy = vi.spyOn(Setting.prototype, 'setName').mockImplementation(function (this: Setting, name: string) {
-      names.push(name);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const setNameSpy = vi.spyOn(Setting.prototype, 'setName').mockImplementation(function (this: Setting, name: any) {
+      names.push(name as string);
       return this;
     });
 
@@ -99,14 +100,16 @@ describe('EditorPanelView', () => {
     let capturedOnChange: ((v: string) => void) | undefined;
     let settingNameContext = '';
 
-    const setNameSpy = vi.spyOn(Setting.prototype, 'setName').mockImplementation(function (this: Setting, name: string) {
-      settingNameContext = name;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const setNameSpy = vi.spyOn(Setting.prototype, 'setName').mockImplementation(function (this: Setting, name: any) {
+      settingNameContext = name as string;
       return this;
     });
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const addDropdownSpy = vi.spyOn(Setting.prototype, 'addDropdown').mockImplementation(function (
       this: Setting,
-      cb: (drop: unknown) => void
+      cb: (drop: any) => void
     ) {
       if (settingNameContext === 'Text separator') {
         const mockDrop = {
@@ -167,13 +170,15 @@ describe('EditorPanelView', () => {
     it('Test F: buildKindForm for answer pre-selects the existing radiprotocol_separator value', () => {
       let capturedSetValue: string | undefined;
 
-      const setNameSpy = vi.spyOn(Setting.prototype, 'setName').mockImplementation(function (this: Setting, name: string) {
-        (this as unknown as Record<string, string>)['_lastName'] = name;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const setNameSpy = vi.spyOn(Setting.prototype, 'setName').mockImplementation(function (this: Setting, name: any) {
+        (this as unknown as Record<string, string>)['_lastName'] = name as string;
         return this;
       });
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const addDropdownSpy = vi.spyOn(Setting.prototype, 'addDropdown').mockImplementation(function (
         this: Setting,
-        cb: (drop: unknown) => void
+        cb: (drop: any) => void
       ) {
         const lastName = (this as unknown as Record<string, string>)['_lastName'];
         if (lastName === 'Text separator') {

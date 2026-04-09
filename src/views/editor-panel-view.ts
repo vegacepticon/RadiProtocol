@@ -345,6 +345,21 @@ export class EditorPanelView extends ItemView {
             t.setValue((nodeRecord['radiprotocol_displayLabel'] as string | undefined) ?? '')
               .onChange(v => { this.pendingEdits['radiprotocol_displayLabel'] = v || undefined; });
           });
+        // Separator override dropdown (D-05, D-06, SEP-02)
+        new Setting(container)
+          .setName('Text separator')
+          .setDesc('How this node\'s text is joined to the accumulated report. "Use global" inherits the setting from Settings > Runner.')
+          .addDropdown(drop => {
+            drop
+              .addOption('', 'Use global (default)')
+              .addOption('newline', 'Newline')
+              .addOption('space', 'Space')
+              .setValue((nodeRecord['radiprotocol_separator'] as string | undefined) ?? '')
+              .onChange(value => {
+                this.pendingEdits['radiprotocol_separator'] =
+                  value === '' ? undefined : (value as 'newline' | 'space');
+              });
+          });
         break;
       }
 
@@ -371,6 +386,21 @@ export class EditorPanelView extends ItemView {
             t.setValue((nodeRecord['radiprotocol_suffix'] as string | undefined) ?? '')
               .onChange(v => { this.pendingEdits['radiprotocol_suffix'] = v || undefined; });
           });
+        // Separator override dropdown (D-05, D-06, SEP-02)
+        new Setting(container)
+          .setName('Text separator')
+          .setDesc('How this node\'s text is joined to the accumulated report. "Use global" inherits the setting from Settings > Runner.')
+          .addDropdown(drop => {
+            drop
+              .addOption('', 'Use global (default)')
+              .addOption('newline', 'Newline')
+              .addOption('space', 'Space')
+              .setValue((nodeRecord['radiprotocol_separator'] as string | undefined) ?? '')
+              .onChange(value => {
+                this.pendingEdits['radiprotocol_separator'] =
+                  value === '' ? undefined : (value as 'newline' | 'space');
+              });
+          });
         break;
       }
 
@@ -389,6 +419,21 @@ export class EditorPanelView extends ItemView {
           .addText(t => {
             t.setValue((nodeRecord['radiprotocol_snippetId'] as string | undefined) ?? '')
               .onChange(v => { this.pendingEdits['radiprotocol_snippetId'] = v || undefined; });
+          });
+        // Separator override dropdown (D-05, D-06, SEP-02)
+        new Setting(container)
+          .setName('Text separator')
+          .setDesc('How this node\'s text is joined to the accumulated report. "Use global" inherits the setting from Settings > Runner.')
+          .addDropdown(drop => {
+            drop
+              .addOption('', 'Use global (default)')
+              .addOption('newline', 'Newline')
+              .addOption('space', 'Space')
+              .setValue((nodeRecord['radiprotocol_separator'] as string | undefined) ?? '')
+              .onChange(value => {
+                this.pendingEdits['radiprotocol_separator'] =
+                  value === '' ? undefined : (value as 'newline' | 'space');
+              });
           });
         break;
       }
