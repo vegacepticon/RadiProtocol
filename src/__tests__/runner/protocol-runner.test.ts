@@ -80,7 +80,7 @@ describe('ProtocolRunner', () => {
       // After choosing n-a1, runner auto-advances through n-tb1 (text-block) → complete
       expect(state.status).toBe('complete');
       if (state.status !== 'complete') return;
-      expect(state.finalText).toBe('Size: normalFindings: normal liver.');
+      expect(state.finalText).toBe('Size: normal\nFindings: normal liver.');
     });
 
     it('enables canStepBack after first answer', () => {
@@ -193,15 +193,15 @@ describe('ProtocolRunner', () => {
       const runner = new ProtocolRunner();
       runner.start(graph);
       runner.chooseAnswer('a1'); // text: 'ans1', now at q2
-      runner.chooseAnswer('a2'); // text: 'ans1ans2', now at q3
-      runner.chooseAnswer('a3'); // text: 'ans1ans2ans3', now complete
+      runner.chooseAnswer('a2'); // text: 'ans1\nans2', now at q3
+      runner.chooseAnswer('a3'); // text: 'ans1\nans2\nans3', now complete
 
-      runner.stepBack(); // reverts ans3 → at q3, text = 'ans1ans2'
+      runner.stepBack(); // reverts ans3 → at q3, text = 'ans1\nans2'
       const s1 = runner.getState();
       expect(s1.status).toBe('at-node');
       if (s1.status !== 'at-node') return;
       expect(s1.currentNodeId).toBe('q3');
-      expect(s1.accumulatedText).toBe('ans1ans2');
+      expect(s1.accumulatedText).toBe('ans1\nans2');
 
       runner.stepBack(); // reverts ans2 → at q2, text = 'ans1'
       const s2 = runner.getState();
@@ -484,7 +484,7 @@ describe('ProtocolRunner', () => {
       const state = runner.getState();
       expect(state.status).toBe('complete');
       if (state.status !== 'complete') return;
-      expect(state.finalText).toBe('LiverEnd of protocol.');
+      expect(state.finalText).toBe('Liver\nEnd of protocol.');
     });
 
     it("getState() returns loopIterationLabel='Lesion 1' when halted at loop-end on iteration 1 (LOOP-04)", () => {

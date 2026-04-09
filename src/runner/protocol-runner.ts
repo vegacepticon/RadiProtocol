@@ -7,6 +7,8 @@ import { TextAccumulator } from './text-accumulator';
 export interface ProtocolRunnerOptions {
   /** Hard maximum loop iteration count before transitioning to error state. Default: 50. (D-08, RUN-09) */
   maxIterations?: number;
+  /** Separator inserted between text chunks when no per-node override is set. Default: 'newline'. (D-08, SEP-01) */
+  defaultSeparator?: 'newline' | 'space';
 }
 
 /**
@@ -24,6 +26,7 @@ export interface ProtocolRunnerOptions {
  */
 export class ProtocolRunner {
   private readonly maxIterations: number;
+  private readonly defaultSeparator: 'newline' | 'space';
 
   private graph: ProtocolGraph | null = null;
   private currentNodeId: string | null = null;
@@ -39,6 +42,7 @@ export class ProtocolRunner {
 
   constructor(options: ProtocolRunnerOptions = {}) {
     this.maxIterations = options.maxIterations ?? 50;
+    this.defaultSeparator = options.defaultSeparator ?? 'newline';
   }
 
   // ── Public API ──────────────────────────────────────────────────────────────
@@ -84,7 +88,7 @@ export class ProtocolRunner {
     });
 
     // Append the answer text
-    this.accumulator.append(answerNode.answerText);
+    this.accumulator.appendWithSeparator(answerNode.answerText, this.resolveSeparator(answerNode));
 
     // Advance to the next node after this answer
     const neighbors = this.graph.adjacency.get(answerId);
@@ -122,7 +126,7 @@ export class ProtocolRunner {
     // Assemble final string with optional prefix/suffix (RUN-04)
     const prefix = node.prefix ?? '';
     const suffix = node.suffix ?? '';
-    this.accumulator.append(prefix + text + suffix);
+    this.accumulator.appendWithSeparator(prefix + text + suffix, this.resolveSeparator(node));
 
     // Advance to the next node
     const neighbors = this.graph.adjacency.get(this.currentNodeId);
@@ -162,10 +166,13 @@ export class ProtocolRunner {
     if (this.runnerStatus !== 'awaiting-snippet-fill') return;
     if (this.graph === null || this.snippetNodeId === null) return;
 
-    this.accumulator.append(renderedText);
-    this.snippetId = null;
-
     const pendingNodeId = this.snippetNodeId;
+    const snippetNode = this.graph.nodes.get(pendingNodeId);
+    const snippetSep = (snippetNode?.kind === 'text-block')
+      ? this.resolveSeparator(snippetNode)
+      : this.defaultSeparator;
+    this.accumulator.appendWithSeparator(renderedText, snippetSep);
+    this.snippetId = null;
     this.snippetNodeId = null;
     this.runnerStatus = 'at-node'; // Reset before advanceThrough determines next state
 
@@ -379,6 +386,18 @@ export class ProtocolRunner {
   // ── Private helpers ──────────────────────────────────────────────────────────
 
   /**
+   * Resolve the effective separator for a node that produces text (D-04).
+   * Per-node radiprotocol_separator takes priority over the global default.
+   */
+  private resolveSeparator(
+    node: import('../graph/graph-model').AnswerNode
+          | import('../graph/graph-model').FreeTextInputNode
+          | import('../graph/graph-model').TextBlockNode,
+  ): 'newline' | 'space' {
+    return node.radiprotocol_separator ?? this.defaultSeparator;
+  }
+
+  /**
    * Internal auto-advance loop.
    * Processes nodes that do not require user input (start, text-block, answer) and
    * halts at nodes that require input (question, free-text-input) or terminal conditions.
@@ -430,7 +449,7 @@ export class ProtocolRunner {
             return;
           }
           // RUN-05: auto-append static text — no user interaction required
-          this.accumulator.append(node.content);
+          this.accumulator.appendWithSeparator(node.content, this.resolveSeparator(node));
           const next = this.firstNeighbour(cursor);
           if (next === undefined) {
             this.transitionToComplete();
@@ -449,7 +468,7 @@ export class ProtocolRunner {
         case 'answer': {
           // Answer nodes are traversed as pass-through: append text, follow edge.
           // This handles answer → text-block → question chains correctly.
-          this.accumulator.append(node.answerText);
+          this.accumulator.appendWithSeparator(node.answerText, this.resolveSeparator(node));
           const next = this.firstNeighbour(cursor);
           if (next === undefined) {
             this.transitionToComplete();
