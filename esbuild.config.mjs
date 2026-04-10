@@ -25,6 +25,24 @@ if you want to view the source, please visit the GitHub repository of this plugi
 const prod = process.argv[2] === 'production';
 
 /**
+ * Copies src/styles.css → styles.css after each successful build.
+ * Obsidian loads styles.css from the plugin root; src/styles.css is the source.
+ */
+const cssPlugin = {
+  name: 'css-copy',
+  setup(build) {
+    build.onEnd((result) => {
+      if (result.errors.length > 0) return;
+      try {
+        fs.copyFileSync('src/styles.css', 'styles.css');
+      } catch (err) {
+        console.error(`[radiprotocol] CSS copy failed: ${err.message}`);
+      }
+    });
+  },
+};
+
+/**
  * Copies main.js and manifest.json to the dev vault plugin directory after each build.
  * Only runs when OBSIDIAN_DEV_VAULT_PATH is set in .env and build succeeds.
  */
@@ -84,7 +102,7 @@ const context = await esbuild.context({
   treeShaking: true,
   outfile: 'main.js',
   minify: prod,
-  plugins: [devVaultCopyPlugin],
+  plugins: [cssPlugin, devVaultCopyPlugin],
 });
 
 if (prod) {

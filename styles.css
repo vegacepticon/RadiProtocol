@@ -1,1 +1,624 @@
-/* RadiProtocol styles — Phase 3 will populate this file */
+/* Phase 3: RunnerView ──────────────────────────────────────────────────── */
+
+.rp-runner-view {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  padding: var(--size-4-2); /* 16px */
+  box-sizing: border-box;
+}
+
+.rp-question-zone {
+  flex: 0 0 auto;
+  overflow-y: auto;
+  background: var(--background-secondary);
+  border-radius: var(--radius-s);
+  padding: var(--size-4-2);
+}
+
+.rp-zone-divider {
+  border: none;
+  border-bottom: 1px solid var(--background-modifier-border);
+  margin: var(--size-4-1) 0; /* 8px 0 */
+}
+
+.rp-preview-zone {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  gap: var(--size-2-1); /* 4px */
+  min-height: 0; /* prevent flex overflow */
+}
+
+.rp-preview-heading {
+  font-size: var(--font-smaller); /* 13px */
+  font-weight: var(--font-semibold); /* 600 */
+  line-height: 1.4;
+}
+
+.rp-preview-textarea {
+  flex: 1 1 auto;
+  width: 100%;
+  resize: none;
+  font-family: var(--font-monospace);
+  font-size: var(--font-text-size); /* 14px */
+  font-weight: var(--font-normal); /* 400 */
+  line-height: 1.5;
+  background: var(--background-primary);
+  border: 1px solid var(--background-modifier-border);
+  padding: var(--size-4-2);
+  box-sizing: border-box;
+  min-height: 80px;
+}
+
+.rp-output-toolbar {
+  display: flex;
+  flex-direction: row;
+  gap: var(--size-4-1); /* 8px */
+  flex: 0 0 auto;
+}
+
+.rp-copy-btn,
+.rp-save-btn,
+.rp-insert-btn {
+  flex: 1;
+}
+
+.rp-legend {
+  flex: 0 0 auto;
+  border-top: 1px solid var(--background-modifier-border);
+  margin-top: var(--size-4-1); /* 8px */
+  padding-top: var(--size-4-1);
+  font-size: var(--font-text-size);
+}
+
+.rp-legend-row {
+  display: flex;
+  align-items: center;
+  gap: var(--size-2-1); /* 4px */
+  padding: 2px 0;
+  font-size: var(--font-text-size);
+  line-height: 1.5;
+}
+
+.rp-legend-swatch {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  border-radius: 2px;
+  flex-shrink: 0;
+}
+
+.rp-question-text {
+  font-size: var(--font-smaller); /* 13px */
+  font-weight: var(--font-semibold); /* 600 */
+  line-height: 1.4;
+  margin-bottom: var(--size-4-1);
+}
+
+.rp-answer-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--size-2-1); /* 4px */
+}
+
+.rp-answer-btn {
+  width: 100%;
+  text-align: left;
+  min-height: 40px;
+  padding: var(--size-4-1) var(--size-4-2); /* 8px 16px */
+  white-space: normal;
+  word-break: break-word;
+  font-size: var(--font-text-size);
+  line-height: 1.5;
+}
+
+.rp-free-text-input {
+  width: 100%;
+  padding: var(--size-4-2);
+  font-size: var(--font-text-size);
+  line-height: 1.5;
+  resize: vertical;
+  box-sizing: border-box;
+}
+
+.rp-step-back-btn {
+  margin-top: var(--size-4-1);
+  display: flex;
+  align-items: center;
+  gap: var(--size-2-1);
+}
+
+.rp-text-block-indicator {
+  font-style: italic;
+  color: var(--text-muted);
+  font-size: var(--font-text-size);
+}
+
+.rp-validation-panel {
+  /* inherits question zone background */
+}
+
+.rp-error-list {
+  padding-left: var(--size-4-2);
+  margin: var(--size-4-1) 0;
+}
+
+.rp-empty-state-body {
+  color: var(--text-muted);
+  font-size: var(--font-text-size);
+}
+
+.rp-complete-heading {
+  font-size: var(--font-ui-medium); /* 16px */
+  font-weight: var(--font-semibold);
+  margin-bottom: var(--size-4-1);
+}
+
+.rp-run-again-btn {
+  margin-top: var(--size-4-1);
+  background: var(--interactive-accent);
+  color: var(--text-on-accent);
+  border: none;
+  border-radius: var(--radius-s);
+  padding: var(--size-2-2) var(--size-4-2);
+  cursor: pointer;
+  font-size: var(--font-ui-small);
+  width: 100%;
+}
+
+.rp-run-again-btn:hover {
+  background: var(--interactive-accent-hover);
+}
+
+.rp-run-again-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Phase 13: CanvasSelectorWidget ─────────────────────────────────────────── */
+
+.rp-selector-bar {
+  flex: 0 0 auto;
+  padding: var(--size-2-1) var(--size-4-2);
+  border-bottom: 1px solid var(--background-modifier-border);
+}
+
+.rp-selector-wrapper {
+  position: relative;
+  width: 100%;
+}
+
+.rp-selector-trigger {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--size-2-1);
+  padding: var(--size-2-1) var(--size-4-1);
+  font-size: var(--font-text-size);
+  text-align: left;
+  background: var(--background-secondary);
+  border: 1px solid var(--background-modifier-border);
+  border-radius: var(--radius-s);
+  cursor: pointer;
+}
+
+.rp-selector-trigger:hover {
+  background: var(--background-modifier-hover);
+}
+
+.rp-selector-trigger-label {
+  flex: 1 1 auto;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.rp-selector-placeholder {
+  color: var(--text-muted);
+}
+
+.rp-selector-chevron {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+}
+
+.rp-selector-popover {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  z-index: 100;
+  background: var(--background-primary);
+  border: 1px solid var(--background-modifier-border);
+  border-radius: var(--radius-s);
+  box-shadow: var(--shadow-s);
+  max-height: 240px;
+  overflow-y: auto;
+  margin-top: 2px;
+}
+
+.rp-selector-row {
+  display: flex;
+  align-items: center;
+  gap: var(--size-2-1);
+  padding: var(--size-2-1) var(--size-4-1);
+  min-height: 32px;
+  cursor: pointer;
+  font-size: var(--font-text-size);
+}
+
+.rp-selector-row:hover {
+  background: var(--background-modifier-hover);
+}
+
+.rp-selector-row.is-selected {
+  background: var(--background-modifier-active-hover);
+  font-weight: var(--font-semibold);
+}
+
+.rp-selector-row-icon {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  color: var(--text-muted);
+}
+
+.rp-selector-row-label {
+  flex: 1 1 auto;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.rp-selector-row-arrow {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  color: var(--text-muted);
+}
+
+.rp-selector-empty-hint {
+  padding: var(--size-4-1) var(--size-4-2);
+  color: var(--text-muted);
+  font-size: var(--font-text-size);
+  font-style: italic;
+}
+
+/* Phase 4: EditorPanelView ─────────────────────────────────────────────── */
+
+.rp-editor-panel {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  padding: var(--size-4-2); /* 16px */
+  box-sizing: border-box;
+  overflow-y: auto;
+}
+
+.rp-editor-idle {
+  color: var(--text-muted);
+  font-size: var(--font-text-size);
+  padding: var(--size-4-2); /* 16px */
+}
+
+.rp-editor-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--size-2-1); /* 4px */
+  flex: 1 1 auto;
+  overflow-y: auto;
+}
+
+.rp-editor-save-row {
+  flex: 0 0 auto;
+  padding-top: var(--size-4-1); /* 8px */
+  border-top: 1px solid var(--background-modifier-border);
+}
+
+.rp-editor-start-note {
+  color: var(--text-muted);
+  font-style: italic;
+  font-size: var(--font-text-size);
+  padding: var(--size-4-1) 0; /* 8px 0 */
+}
+
+/* Phase 5: SnippetManagerView ──────────────────────────────────────────── */
+
+.rp-snippet-manager {
+  display: flex;
+  flex-direction: row;
+  height: 100%;
+  overflow: hidden;
+}
+
+.rp-snippet-list-panel {
+  width: 200px;
+  flex: 0 0 200px;
+  display: flex;
+  flex-direction: column;
+  background: var(--background-secondary);
+  border-right: 1px solid var(--background-modifier-border);
+  overflow-y: auto;
+}
+
+.rp-snippet-list-item {
+  padding: var(--size-4-1) var(--size-4-2); /* 8px 16px */
+  min-height: 32px;
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  font-size: var(--font-text-size);
+  font-weight: var(--font-normal);
+  line-height: 1.5;
+}
+
+.rp-snippet-list-item.is-active {
+  background: var(--background-modifier-active-hover);
+}
+
+.rp-snippet-form {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  background: var(--background-primary);
+  padding: var(--size-4-2); /* 16px */
+  overflow-y: auto;
+  gap: var(--size-4-1); /* 8px */
+}
+
+.rp-snippet-form-section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--size-2-1); /* 4px */
+}
+
+.rp-snippet-form-section label {
+  font-size: var(--font-smaller); /* 13px */
+  font-weight: var(--font-semibold); /* 600 */
+  line-height: 1.4;
+}
+
+.rp-snippet-form-section textarea {
+  resize: vertical;
+  min-height: 80px;
+  font-family: var(--font-monospace);
+  font-size: var(--font-text-size);
+  line-height: 1.5;
+  padding: var(--size-4-1);
+  box-sizing: border-box;
+  width: 100%;
+}
+
+.rp-snippet-action-row {
+  display: flex;
+  flex-direction: row;
+  gap: var(--size-4-1); /* 8px */
+  margin-top: auto;
+  padding-top: var(--size-4-1);
+  border-top: 1px solid var(--background-modifier-border);
+  flex: 0 0 auto;
+}
+
+.rp-add-placeholder-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--size-2-1); /* 4px */
+  padding: var(--size-4-1);
+  background: var(--background-secondary);
+  border: 1px solid var(--background-modifier-border);
+  border-radius: var(--radius-s);
+}
+
+.rp-placeholder-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--size-2-1); /* 4px */
+}
+
+.rp-placeholder-row {
+  display: flex;
+  flex-direction: column;
+  gap: var(--size-2-1);
+  padding: var(--size-2-1) var(--size-4-1);
+  border: 1px solid var(--background-modifier-border);
+  border-radius: var(--radius-s);
+  cursor: pointer;
+}
+
+.rp-placeholder-row.is-expanded {
+  cursor: default;
+  background: var(--background-secondary);
+}
+
+.rp-placeholder-row-header {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: var(--size-4-1); /* 8px */
+  min-height: 32px;
+}
+
+.rp-placeholder-type-badge {
+  font-size: var(--font-smaller);
+  color: var(--text-muted);
+}
+
+.rp-placeholder-orphan-badge {
+  font-size: var(--font-smaller);
+  color: var(--text-warning);
+  padding: var(--size-2-1) var(--size-4-1);
+  border: 1px solid var(--text-warning);
+  border-radius: var(--radius-s);
+}
+
+.rp-option-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--size-2-1); /* 4px */
+}
+
+.rp-option-row {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: var(--size-2-1);
+}
+
+.rp-option-row input {
+  flex: 1 1 auto;
+}
+
+.rp-option-row button {
+  width: 24px;
+  height: 24px;
+  flex: 0 0 24px;
+  padding: 0;
+  font-size: var(--font-smaller);
+}
+
+/* Phase 5: SnippetFillInModal ──────────────────────────────────────────────── */
+
+.rp-snippet-modal {
+  padding: var(--size-4-2); /* 16px */
+  display: flex;
+  flex-direction: column;
+  gap: var(--size-4-1); /* 8px */
+}
+
+.rp-snippet-modal-field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--size-2-1); /* 4px */
+}
+
+.rp-snippet-modal-label {
+  font-size: var(--font-smaller); /* 13px */
+  font-weight: var(--font-semibold); /* 600 */
+  line-height: 1.4;
+}
+
+.rp-snippet-modal-options {
+  display: flex;
+  flex-direction: column;
+  gap: var(--size-2-1); /* 4px */
+}
+
+.rp-snippet-modal-custom-row {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: var(--size-2-1); /* 4px */
+  margin-top: var(--size-2-1); /* 4px — separates custom row from predefined options */
+}
+
+.rp-snippet-modal-custom-row label {
+  font-size: var(--font-text-size);
+  font-weight: var(--font-normal);
+  flex: 0 0 auto;
+}
+
+.rp-snippet-modal-custom-row input {
+  flex: 1 1 auto;
+}
+
+.rp-snippet-preview-label {
+  font-size: var(--font-smaller); /* 13px */
+  font-weight: var(--font-semibold); /* 600 */
+  line-height: 1.4;
+}
+
+.rp-snippet-preview {
+  width: 100%;
+  min-height: 80px;
+  resize: none;
+  font-family: var(--font-monospace);
+  font-size: var(--font-text-size);
+  font-weight: var(--font-normal);
+  line-height: 1.5;
+  background: var(--background-primary);
+  border: 1px solid var(--background-modifier-border);
+  padding: var(--size-4-1);
+  box-sizing: border-box;
+}
+
+.rp-snippet-modal-btn-row {
+  display: flex;
+  flex-direction: row;
+  justify-content: flex-end;
+  gap: var(--size-4-1); /* 8px */
+  flex: 0 0 auto;
+  padding-top: var(--size-4-1); /* 8px */
+  border-top: 1px solid var(--background-modifier-border);
+}
+
+
+
+.rp-snippet-preview-label {
+  font-size: var(--font-smaller); /* 13px */
+  font-weight: var(--font-semibold); /* 600 */
+  line-height: 1.4;
+  margin-bottom: var(--size-2-1); /* 4px */
+}
+
+.rp-snippet-preview {
+  width: 100%;
+  resize: none;
+  font-family: var(--font-monospace);
+  font-size: var(--font-text-size); /* 14px */
+  font-weight: var(--font-normal); /* 400 */
+  line-height: 1.5;
+  background: var(--background-primary);
+  border: 1px solid var(--background-modifier-border);
+  padding: var(--size-4-2); /* 16px */
+  box-sizing: border-box;
+  min-height: 80px;
+}
+
+/* Phase 6: Loop Support ─────────────────────────────────────────────────── */
+
+.rp-loop-iteration-label {
+  font-size: var(--font-ui-small);
+  font-weight: var(--font-semibold);
+  color: var(--color-yellow);
+  margin-bottom: var(--size-2-3); /* 8px */
+  letter-spacing: 0.02em;
+}
+
+.rp-loop-btn-row {
+  display: flex;
+  gap: var(--size-2-3); /* 8px */
+  flex-wrap: wrap;
+  margin-top: var(--size-2-3);
+}
+
+.rp-loop-again-btn {
+  background: var(--interactive-accent);
+  color: var(--text-on-accent);
+  border: none;
+  border-radius: var(--radius-s);
+  padding: var(--size-2-2) var(--size-4-2);
+  cursor: pointer;
+  font-size: var(--font-ui-small);
+}
+
+.rp-loop-again-btn:hover {
+  background: var(--interactive-accent-hover);
+}
+
+.rp-loop-done-btn {
+  background: var(--background-modifier-border);
+  color: var(--text-normal);
+  border: none;
+  border-radius: var(--radius-s);
+  padding: var(--size-2-2) var(--size-4-2);
+  cursor: pointer;
+  font-size: var(--font-ui-small);
+}
+
+.rp-loop-done-btn:hover {
+  background: var(--background-modifier-border-hover, var(--background-modifier-border));
+  opacity: 0.8;
+}
