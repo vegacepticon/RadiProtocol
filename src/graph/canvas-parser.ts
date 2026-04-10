@@ -198,9 +198,6 @@ export class CanvasParser {
           displayLabel: props['radiprotocol_displayLabel'] !== undefined
             ? getString(props, 'radiprotocol_displayLabel')
             : undefined,
-          radiprotocol_separator: props['radiprotocol_separator'] === 'space' ? 'space'
-            : props['radiprotocol_separator'] === 'newline' ? 'newline'
-            : undefined,
         };
         return node;
       }
@@ -215,9 +212,6 @@ export class CanvasParser {
           suffix: props['radiprotocol_suffix'] !== undefined
             ? getString(props, 'radiprotocol_suffix')
             : undefined,
-          radiprotocol_separator: props['radiprotocol_separator'] === 'space' ? 'space'
-            : props['radiprotocol_separator'] === 'newline' ? 'newline'
-            : undefined,
         };
         return node;
       }
@@ -228,9 +222,6 @@ export class CanvasParser {
           content: getString(props, 'radiprotocol_content', raw.text ?? ''),
           snippetId: props['radiprotocol_snippetId'] !== undefined
             ? getString(props, 'radiprotocol_snippetId')
-            : undefined,
-          radiprotocol_separator: props['radiprotocol_separator'] === 'space' ? 'space'
-            : props['radiprotocol_separator'] === 'newline' ? 'newline'
             : undefined,
         };
         return node;
