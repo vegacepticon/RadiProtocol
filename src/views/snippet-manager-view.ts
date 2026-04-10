@@ -223,9 +223,7 @@ export class SnippetManagerView extends ItemView {
 
     const miniAddBtn = miniActionRow.createEl('button', { text: 'Add' });
     miniAddBtn.addClass('mod-cta');
-    miniAddBtn.setAttribute('type', 'button');
     const miniCancelBtn = miniActionRow.createEl('button', { text: 'Cancel' });
-    miniCancelBtn.setAttribute('type', 'button');
 
     // Placeholder list (built/rebuilt below)
     const placeholderSection = this.formPanel.createDiv({ cls: 'rp-snippet-form-section' });

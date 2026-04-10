@@ -1,25 +1,22 @@
 ---
 gsd_state_version: 1.0
-milestone: v1.2
-milestone_name: Runner UX & Bug Fixes
+milestone: v1.0
+milestone_name: milestone
 status: completed
-stopped_at: Phase 17 complete — all plans executed, UAT passed, verified
-last_updated: "2026-04-09T21:10:00.000Z"
+last_updated: "2026-04-07T08:39:26.639Z"
 progress:
-  total_phases: 6
-  completed_phases: 4
-  total_plans: 7
-  completed_plans: 10
+  total_phases: 9
+  completed_phases: 7
+  total_plans: 28
+  completed_plans: 28
   percent: 100
 ---
 
 # RadiProtocol — Project State
 
-**Updated:** 2026-04-09
-**Milestone:** v1.2 — Runner UX & Bug Fixes
-**Status:** Phase 17 complete (2/2 plans)
-**Last session:** 2026-04-09T21:10:00.000Z
-**Stopped at:** Phase 17 complete — BUG-02, BUG-03, BUG-04 fixed, UAT passed, verified
+**Updated:** 2026-04-07
+**Milestone:** v1.0 — Initial public release
+**Status:** v1.0 milestone complete
 
 ---
 
@@ -28,7 +25,7 @@ progress:
 See: `.planning/PROJECT.md` (updated 2026-04-07)
 
 **Core value:** A radiologist can generate a structured, accurate protocol in seconds by answering a guided algorithm — without writing a single line of code.  
-**Current focus:** Phase 16 — runner-textarea-edit-preservation
+**Current focus:** Planning next milestone (community submission + v1.1 features)
 
 ---
 
@@ -58,13 +55,6 @@ See: `.planning/PROJECT.md` (updated 2026-04-07)
 | Snapshot undo stack | Simplest correct approach for step-back; protocol text is small (<5KB) |
 | `radiprotocol_*` property namespace | Avoids collisions with other plugins and future Obsidian updates |
 | Canvas write-back Strategy A | Require canvas closed before any vault.modify() — simple and safe; avoids undocumented internals (A4 resolved) |
-| plugin.saveSettings() not saveData() directly | Consistent with main.ts wrapper; all settings call sites use the wrapper |
-| maxLoopIterations moved into Runner section | D-07 groups related runner settings under one heading in Settings tab |
-| RunnerView reconstructs ProtocolRunner at openCanvas() start | Simplest way to pick up textSeparator from settings; no lazy init or observer needed |
-| resolveSeparator(node) single resolution point | node.radiprotocol_separator ?? defaultSeparator — avoids duplicated logic across 5 call sites |
-| capture-before-advance pattern (BUG-01) | syncManualEdit() called before each advance action so undo snapshot includes manual textarea edit |
-| overwrite() semantically separate from restoreTo() | restoreTo = undo revert of a snapshot; overwrite = inject caller's text — clearer intent at call sites |
-| live textarea read in complete-state toolbar (D-03) | previewTextarea?.value ?? capturedText replaces stale closure to honour final edits before copy/save/insert |
 
 ---
 
