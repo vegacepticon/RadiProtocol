@@ -151,7 +151,9 @@ Plans:
   1. `.rp-insert-btn` has `flex: 1` rule in styles.css — Insert button renders same width as Copy and Save
   2. `rp-selector-bar`, `rp-selector-wrapper`, `rp-selector-trigger`, `rp-selector-popover`, `rp-selector-row` CSS rules present — sidebar selector widget is styled
   3. `rp-run-again-btn` CSS rule present — Run Again button is styled
-**Plans**: TBD
+**Plans**: 1 plan
+Plans:
+- [ ] 18-01-PLAN.md — Add rp-insert-btn flex rule, rp-selector-* section, and rp-run-again-btn rule to src/styles.css
 
 ### Phase 19: Phase 12–14 Formal Verification
 **Goal**: Write VERIFICATION.md artifacts for phases 12, 13, and 14 to formally close all outstanding requirement gaps and bring the milestone to audit-pass state
@@ -187,5 +189,5 @@ Plans:
 | 15. Text Separator Setting | v1.2 | 3/3 | Complete   | 2026-04-09 |
 | 16. Runner Textarea Edit Preservation | v1.2 | 1/1 | Complete | 2026-04-09 |
 | 17. Node Type Read-Back and Snippet Placeholder Fixes | v1.2 | 2/2 | Complete | 2026-04-10 |
-| 18. CSS Gap Fixes | v1.2 | 0/? | Not started | — |
+| 18. CSS Gap Fixes | v1.2 | 0/1 | Not started | — |
 | 19. Phase 12–14 Formal Verification | v1.2 | 0/? | Not started | — |
