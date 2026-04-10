@@ -1,5 +1,6 @@
 ---
-status: draft
+status: approved
+reviewed_at: "2026-04-10"
 phase: 20
 phase_name: housekeeping-removals
 created: "2026-04-10"
