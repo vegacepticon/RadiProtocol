@@ -48,14 +48,13 @@ export function renderSnippet(
 
 /**
  * Convert a human-readable label to a valid placeholder id slug (D-04).
- * "Patient age"    → "patient-age"
- * "Size (mm)"      → "size-mm"
- * "Возраст пациента" → "возраст-пациента"
+ * "Patient age" → "patient-age"
+ * "Size (mm)"   → "size-mm"
  */
 export function slugifyLabel(label: string): string {
   return label
     .toLowerCase()
     .trim()
-    .replace(/[^\p{L}\p{N}]+/gu, '-')
+    .replace(/[^a-z0-9]+/g, '-')
     .replace(/^-+|-+$/g, '');
 }

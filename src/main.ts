@@ -1,6 +1,6 @@
 // main.ts
-import { Plugin, Notice, Menu, TFile } from 'obsidian';
-import type { WorkspaceLeaf } from 'obsidian';
+import { Plugin, Notice, Menu } from 'obsidian';
+import type { TFile } from 'obsidian';
 import { RadiProtocolSettings, DEFAULT_SETTINGS, RadiProtocolSettingsTab } from './settings';
 import { CanvasParser } from './graph/canvas-parser';
 import { EditorPanelView, EDITOR_PANEL_VIEW_TYPE } from './views/editor-panel-view';
@@ -8,16 +8,12 @@ import { RunnerView, RUNNER_VIEW_TYPE } from './views/runner-view';
 import { SnippetManagerView, SNIPPET_MANAGER_VIEW_TYPE } from './views/snippet-manager-view';
 import { SnippetService } from './snippets/snippet-service';
 import { SessionService } from './sessions/session-service';
-import { WriteMutex } from './utils/write-mutex';
-import { CanvasLiveEditor } from './canvas/canvas-live-editor';
 
 export default class RadiProtocolPlugin extends Plugin {
   settings!: RadiProtocolSettings;
   canvasParser!: CanvasParser;
   snippetService!: SnippetService;
   sessionService!: SessionService;
-  canvasLiveEditor!: CanvasLiveEditor;
-  private readonly insertMutex = new WriteMutex();
 
   async onload(): Promise<void> {
     // Load settings with defaults guard (NFR-08)
@@ -32,10 +28,10 @@ export default class RadiProtocolPlugin extends Plugin {
     // Instantiate session persistence service (SESSION-01)
     this.sessionService = new SessionService(this.app, this.settings.sessionFolderPath);
 
-    // Instantiate live canvas editor (LIVE-01)
-    this.canvasLiveEditor = new CanvasLiveEditor(this.app);
-
-    this.addRibbonIcon('activity', 'Radiprotocol', () => { void this.activateRunnerView(); });
+    // Ribbon icon (Phase 3 will open the runner view)
+    this.addRibbonIcon('activity', 'Radiprotocol', () => {
+      new Notice('Radiprotocol loaded. Open a canvas file to run a protocol.');
+    });
 
     // Commands — IDs intentionally omit plugin name prefix (NFR-06)
     this.addCommand({
@@ -117,7 +113,6 @@ export default class RadiProtocolPlugin extends Plugin {
   }
 
   async onunload(): Promise<void> {
-    this.canvasLiveEditor.destroy();
     console.debug('[RadiProtocol] Plugin unloaded');
   }
 
@@ -153,48 +148,19 @@ export default class RadiProtocolPlugin extends Plugin {
 
   async activateRunnerView(): Promise<void> {
     const { workspace } = this.app;
-    const existingLeaves = workspace.getLeavesOfType(RUNNER_VIEW_TYPE);
-
-    if (existingLeaves.length > 0 && existingLeaves[0] !== undefined) {
-      const existingLeaf = existingLeaves[0];
-      // Detect whether the existing leaf is in the sidebar or main tab area.
-      // leaf.getRoot() === workspace.rightSplit is true for sidebar leaves.
-      // Do NOT use leaf.parent instanceof WorkspaceSidedock — parent is WorkspaceTabs.
-      const leafIsInSidebar = existingLeaf.getRoot() === workspace.rightSplit;
-      const targetIsSidebar = this.settings.runnerViewMode === 'sidebar';
-
-      if (leafIsInSidebar === targetIsSidebar) {
-        // RUNTAB-03: mode unchanged — reveal existing leaf, no duplicate
-        workspace.revealLeaf(existingLeaf);
-        return;
-      }
-
-      // Mode changed — close the old leaf, fall through to open fresh in new mode
-      existingLeaf.detach();
+    const existing = workspace.getLeavesOfType(RUNNER_VIEW_TYPE);
+    if (existing.length > 0 && existing[0] !== undefined) {
+      workspace.revealLeaf(existing[0]);
+      return;
     }
-
-    // Open in the configured mode
-    let leaf: WorkspaceLeaf | null;
-    if (this.settings.runnerViewMode === 'tab') {
-      // RUNTAB-02: open in main workspace tab strip
-      leaf = workspace.getLeaf('tab');
-    } else {
-      // RUNTAB-01 sidebar default: v1.0 behavior preserved
-      leaf = workspace.getRightLeaf(false);
-    }
-
+    const leaf = workspace.getRightLeaf(false);
     if (leaf !== null) {
       await leaf.setViewState({ type: RUNNER_VIEW_TYPE, active: true });
       workspace.revealLeaf(leaf);
-    } else {
-      new Notice('Could not open runner view: no available leaf.');
     }
-
-    // After opening, trigger openCanvas on the active canvas file if any (preserved from v1.0)
+    // After RunnerView opens, trigger openCanvas on the active canvas file if any
     const canvasLeaves = workspace.getLeavesOfType('canvas');
-    // Prefer the most-recently-active canvas leaf; fall back to the first in the list (WR-03)
-    const mostRecentCanvasLeaf = canvasLeaves.find(l => l === workspace.getMostRecentLeaf());
-    const activeCanvas = mostRecentCanvasLeaf ?? canvasLeaves[0];
+    const activeCanvas = canvasLeaves[0];
     if (activeCanvas !== undefined) {
       const filePath = (activeCanvas.view as { file?: { path: string } } | undefined)?.file?.path;
       if (filePath !== undefined) {
@@ -220,23 +186,8 @@ export default class RadiProtocolPlugin extends Plugin {
     const notePath = `${folderPath}/Report-${timestamp}.md`;
     await vault.create(notePath, text);
     const file = vault.getAbstractFileByPath(notePath);
-    if (file instanceof TFile) {
-      await workspace.getLeaf('tab').openFile(file);
-    }
-  }
-
-  async insertIntoCurrentNote(text: string, file: TFile): Promise<void> {
-    const { vault } = this.app;
-    try {
-      await this.insertMutex.runExclusive(file.path, async () => {
-        const existing = await vault.read(file);
-        const separator = existing.trim().length === 0 ? '' : '\n\n---\n\n';
-        await vault.modify(file, existing + separator + text);
-      });
-      new Notice(`Inserted into ${file.name}.`);
-    } catch (err) {
-      console.error('[RadiProtocol] insertIntoCurrentNote failed:', err);
-      new Notice(`Failed to insert into ${file.name}. See console for details.`);
+    if (file !== null) {
+      await workspace.getLeaf('tab').openFile(file as TFile);
     }
   }
 

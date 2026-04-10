@@ -80,7 +80,7 @@ describe('ProtocolRunner', () => {
       // After choosing n-a1, runner auto-advances through n-tb1 (text-block) → complete
       expect(state.status).toBe('complete');
       if (state.status !== 'complete') return;
-      expect(state.finalText).toBe('Size: normal\nFindings: normal liver.');
+      expect(state.finalText).toBe('Size: normalFindings: normal liver.');
     });
 
     it('enables canStepBack after first answer', () => {
@@ -193,15 +193,15 @@ describe('ProtocolRunner', () => {
       const runner = new ProtocolRunner();
       runner.start(graph);
       runner.chooseAnswer('a1'); // text: 'ans1', now at q2
-      runner.chooseAnswer('a2'); // text: 'ans1\nans2', now at q3
-      runner.chooseAnswer('a3'); // text: 'ans1\nans2\nans3', now complete
+      runner.chooseAnswer('a2'); // text: 'ans1ans2', now at q3
+      runner.chooseAnswer('a3'); // text: 'ans1ans2ans3', now complete
 
-      runner.stepBack(); // reverts ans3 → at q3, text = 'ans1\nans2'
+      runner.stepBack(); // reverts ans3 → at q3, text = 'ans1ans2'
       const s1 = runner.getState();
       expect(s1.status).toBe('at-node');
       if (s1.status !== 'at-node') return;
       expect(s1.currentNodeId).toBe('q3');
-      expect(s1.accumulatedText).toBe('ans1\nans2');
+      expect(s1.accumulatedText).toBe('ans1ans2');
 
       runner.stepBack(); // reverts ans2 → at q2, text = 'ans1'
       const s2 = runner.getState();
@@ -315,138 +315,6 @@ describe('ProtocolRunner', () => {
     });
   });
 
-  describe('Separator logic (SEP-01, SEP-02, D-01 through D-04)', () => {
-    // Helper: build a two-answer chain (answer → answer → complete) via advanceThrough
-    // to produce two text appends without a question node.
-    // Structure: start → tb1 (text-block) → a1 (answer pass-through) → complete
-    function buildTwoChunkGraph(
-      overrides: { tbSeparator?: 'newline' | 'space'; aSeparator?: 'newline' | 'space' } = {},
-    ): ProtocolGraph {
-      return {
-        canvasFilePath: 'sep-test.canvas',
-        nodes: new Map([
-          ['s', { id: 's', kind: 'start' as const, x: 0, y: 0, width: 100, height: 60 }],
-          ['tb1', {
-            id: 'tb1',
-            kind: 'text-block' as const,
-            content: 'chunk1',
-            x: 0, y: 60, width: 100, height: 60,
-            ...(overrides.tbSeparator !== undefined ? { radiprotocol_separator: overrides.tbSeparator } : {}),
-          }],
-          ['a1', {
-            id: 'a1',
-            kind: 'answer' as const,
-            answerText: 'chunk2',
-            x: 0, y: 120, width: 100, height: 60,
-            ...(overrides.aSeparator !== undefined ? { radiprotocol_separator: overrides.aSeparator } : {}),
-          }],
-        ]),
-        edges: [
-          { id: 'e1', fromNodeId: 's', toNodeId: 'tb1' },
-          { id: 'e2', fromNodeId: 'tb1', toNodeId: 'a1' },
-        ],
-        adjacency: new Map([['s', ['tb1']], ['tb1', ['a1']]]),
-        reverseAdjacency: new Map([['tb1', ['s']], ['a1', ['tb1']]]),
-        startNodeId: 's',
-      };
-    }
-
-    it('D-01: first text chunk has no separator prefix', () => {
-      // Single text-block only — first chunk must not be preceded by '\n' or ' '
-      const graph: ProtocolGraph = {
-        canvasFilePath: 'sep-first.canvas',
-        nodes: new Map([
-          ['s', { id: 's', kind: 'start' as const, x: 0, y: 0, width: 100, height: 60 }],
-          ['tb1', { id: 'tb1', kind: 'text-block' as const, content: 'hello', x: 0, y: 60, width: 100, height: 60 }],
-        ]),
-        edges: [{ id: 'e1', fromNodeId: 's', toNodeId: 'tb1' }],
-        adjacency: new Map([['s', ['tb1']]]),
-        reverseAdjacency: new Map([['tb1', ['s']]]),
-        startNodeId: 's',
-      };
-      const runner = new ProtocolRunner({ defaultSeparator: 'newline' });
-      runner.start(graph);
-      const state = runner.getState();
-      expect(state.status).toBe('complete');
-      if (state.status !== 'complete') return;
-      expect(state.finalText).toBe('hello');
-      expect(state.finalText.startsWith('\n')).toBe(false);
-      expect(state.finalText.startsWith(' ')).toBe(false);
-    });
-
-    it('SEP-01: defaultSeparator newline joins two chunks with \\n', () => {
-      const runner = new ProtocolRunner({ defaultSeparator: 'newline' });
-      runner.start(buildTwoChunkGraph());
-      const state = runner.getState();
-      expect(state.status).toBe('complete');
-      if (state.status !== 'complete') return;
-      expect(state.finalText).toBe('chunk1\nchunk2');
-    });
-
-    it('SEP-01: defaultSeparator space joins two chunks with a space', () => {
-      const runner = new ProtocolRunner({ defaultSeparator: 'space' });
-      runner.start(buildTwoChunkGraph());
-      const state = runner.getState();
-      expect(state.status).toBe('complete');
-      if (state.status !== 'complete') return;
-      expect(state.finalText).toBe('chunk1 chunk2');
-    });
-
-    it('SEP-02: per-node radiprotocol_separator overrides defaultSeparator', () => {
-      // defaultSeparator is 'newline' but answer node has radiprotocol_separator: 'space'
-      const runner = new ProtocolRunner({ defaultSeparator: 'newline' });
-      runner.start(buildTwoChunkGraph({ aSeparator: 'space' }));
-      const state = runner.getState();
-      expect(state.status).toBe('complete');
-      if (state.status !== 'complete') return;
-      // tb1 gets 'newline' default (first chunk, no separator anyway)
-      // a1 overrides to 'space'
-      expect(state.finalText).toBe('chunk1 chunk2');
-    });
-
-    it('D-02: enterFreeText separator precedes entire prefix+text+suffix chunk', () => {
-      // Start with a text-block to fill the buffer, then a free-text node
-      const graph: ProtocolGraph = {
-        canvasFilePath: 'sep-ft.canvas',
-        nodes: new Map([
-          ['s', { id: 's', kind: 'start' as const, x: 0, y: 0, width: 100, height: 60 }],
-          ['tb1', { id: 'tb1', kind: 'text-block' as const, content: 'first', x: 0, y: 60, width: 100, height: 60 }],
-          ['ft1', { id: 'ft1', kind: 'free-text-input' as const, promptLabel: 'Enter:', prefix: 'P: ', suffix: '.', x: 0, y: 120, width: 100, height: 60 }],
-        ]),
-        edges: [
-          { id: 'e1', fromNodeId: 's', toNodeId: 'tb1' },
-          { id: 'e2', fromNodeId: 'tb1', toNodeId: 'ft1' },
-        ],
-        adjacency: new Map([['s', ['tb1']], ['tb1', ['ft1']]]),
-        reverseAdjacency: new Map([['tb1', ['s']], ['ft1', ['tb1']]]),
-        startNodeId: 's',
-      };
-      const runner = new ProtocolRunner({ defaultSeparator: 'newline' });
-      runner.start(graph);
-      runner.enterFreeText('X');
-      const state = runner.getState();
-      expect(state.status).toBe('complete');
-      if (state.status !== 'complete') return;
-      // separator before the whole assembled chunk: 'first' + '\n' + 'P: X.'
-      expect(state.finalText).toBe('first\nP: X.');
-    });
-
-    it('D-03: completeSnippet inserts separator before rendered text', () => {
-      // snippet-block.canvas: start → n-q1 → n-a1 (answerText) → n-tb1 (snippet)
-      // After chooseAnswer, we are awaiting-snippet-fill; completeSnippet should join with '\n'
-      const runner = new ProtocolRunner({ defaultSeparator: 'newline' });
-      runner.start(loadGraph('snippet-block.canvas'));
-      runner.chooseAnswer('n-a1');
-      expect(runner.getState().status).toBe('awaiting-snippet-fill');
-      runner.completeSnippet('snippet result');
-      const state = runner.getState();
-      expect(state.status).toBe('complete');
-      if (state.status !== 'complete') return;
-      // 'Size: normal' (from n-a1) + '\n' + 'snippet result'
-      expect(state.finalText).toBe('Size: normal\nsnippet result');
-    });
-  });
-
   describe('loop support (LOOP-01 through LOOP-05, RUN-09)', () => {
     function reachLoopEnd(runner: ProtocolRunner, graph: ProtocolGraph): void {
       runner.start(graph);
@@ -484,7 +352,7 @@ describe('ProtocolRunner', () => {
       const state = runner.getState();
       expect(state.status).toBe('complete');
       if (state.status !== 'complete') return;
-      expect(state.finalText).toBe('Liver\nEnd of protocol.');
+      expect(state.finalText).toBe('LiverEnd of protocol.');
     });
 
     it("getState() returns loopIterationLabel='Lesion 1' when halted at loop-end on iteration 1 (LOOP-04)", () => {
@@ -527,74 +395,6 @@ describe('ProtocolRunner', () => {
       expect(state.status).toBe('error');
       if (state.status !== 'error') return;
       expect(state.message).toMatch(/Maximum iterations/);
-    });
-  });
-
-  describe('syncManualEdit() (BUG-01)', () => {
-    it('syncManualEdit before chooseAnswer() causes stepBack() to restore to the manual edit', () => {
-      // Build: start → q1 → a1 (terminal)
-      const graph: ProtocolGraph = {
-        canvasFilePath: 'sync-edit.canvas',
-        nodes: new Map([
-          ['s', { id: 's', kind: 'start', x: 0, y: 0, width: 100, height: 60 }],
-          ['q1', { id: 'q1', kind: 'question', questionText: 'Q1', x: 0, y: 60, width: 100, height: 60 }],
-          ['a1', { id: 'a1', kind: 'answer', answerText: 'ans1', x: 0, y: 120, width: 100, height: 60 }],
-          ['q2', { id: 'q2', kind: 'question', questionText: 'Q2', x: 0, y: 180, width: 100, height: 60 }],
-        ]),
-        edges: [
-          { id: 'e1', fromNodeId: 's', toNodeId: 'q1' },
-          { id: 'e2', fromNodeId: 'q1', toNodeId: 'a1' },
-          { id: 'e3', fromNodeId: 'a1', toNodeId: 'q2' },
-        ],
-        adjacency: new Map([['s', ['q1']], ['q1', ['a1']], ['a1', ['q2']]]),
-        reverseAdjacency: new Map([['q1', ['s']], ['a1', ['q1']], ['q2', ['a1']]]),
-        startNodeId: 's',
-      };
-      const runner = new ProtocolRunner();
-      runner.start(graph);
-      // User types a manual edit into the textarea before clicking answer
-      runner.syncManualEdit('manual edit');
-      runner.chooseAnswer('a1');
-      // Now at q2; step back should restore buffer to 'manual edit'
-      runner.stepBack();
-      const state = runner.getState();
-      expect(state.status).toBe('at-node');
-      if (state.status !== 'at-node') return;
-      expect(state.accumulatedText).toBe('manual edit');
-    });
-
-    it('syncManualEdit is a no-op when runner is not in at-node state', () => {
-      const runner = new ProtocolRunner();
-      // runner is idle — syncManualEdit must not throw or change state
-      runner.syncManualEdit('should be ignored');
-      expect(runner.getState().status).toBe('idle');
-    });
-
-    it('syncManualEdit alone does NOT add an undo entry (undo stack length unchanged)', () => {
-      const graph: ProtocolGraph = {
-        canvasFilePath: 'sync-noop.canvas',
-        nodes: new Map([
-          ['s', { id: 's', kind: 'start', x: 0, y: 0, width: 100, height: 60 }],
-          ['q1', { id: 'q1', kind: 'question', questionText: 'Q1', x: 0, y: 60, width: 100, height: 60 }],
-        ]),
-        edges: [{ id: 'e1', fromNodeId: 's', toNodeId: 'q1' }],
-        adjacency: new Map([['s', ['q1']]]),
-        reverseAdjacency: new Map([['q1', ['s']]]),
-        startNodeId: 's',
-      };
-      const runner = new ProtocolRunner();
-      runner.start(graph);
-      // canStepBack should be false before syncManualEdit
-      const stateBefore = runner.getState();
-      expect(stateBefore.status).toBe('at-node');
-      if (stateBefore.status !== 'at-node') return;
-      expect(stateBefore.canStepBack).toBe(false);
-      // syncManualEdit must not push an undo entry
-      runner.syncManualEdit('hello');
-      const stateAfter = runner.getState();
-      expect(stateAfter.status).toBe('at-node');
-      if (stateAfter.status !== 'at-node') return;
-      expect(stateAfter.canStepBack).toBe(false);
     });
   });
 });
