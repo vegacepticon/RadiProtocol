@@ -100,49 +100,6 @@ describe('ProtocolRunner', () => {
     });
   });
 
-  describe('enterFreeText() — free-text input node (RUN-04)', () => {
-    it('wraps user text with prefix/suffix and appends to accumulatedText', () => {
-      // free-text.canvas: start → n-ft1 (promptLabel, prefix="Findings: ", suffix=".")
-      const runner = new ProtocolRunner();
-      runner.start(loadGraph('free-text.canvas'));
-      const stateAtFT = runner.getState();
-      expect(stateAtFT.status).toBe('at-node');
-      if (stateAtFT.status !== 'at-node') return;
-      expect(stateAtFT.currentNodeId).toBe('n-ft1');
-
-      runner.enterFreeText('enlarged spleen');
-      const state = runner.getState();
-      // n-ft1 has no outgoing edge → complete
-      expect(state.status).toBe('complete');
-      if (state.status !== 'complete') return;
-      // Expected: prefix + text + suffix = "Findings: enlarged spleen."
-      expect(state.finalText).toBe('Findings: enlarged spleen.');
-    });
-
-    it('handles free-text node with no prefix/suffix — appends raw text', () => {
-      // Build a minimal inline graph with a free-text node that has no prefix/suffix
-      // We construct a ProtocolGraph directly to avoid needing a new fixture.
-      const graph: ProtocolGraph = {
-        canvasFilePath: 'inline.canvas',
-        nodes: new Map([
-          ['n-start', { id: 'n-start', kind: 'start', x: 0, y: 0, width: 100, height: 60 }],
-          ['n-ft1', { id: 'n-ft1', kind: 'free-text-input', promptLabel: 'Notes:', x: 0, y: 120, width: 100, height: 60 }],
-        ]),
-        edges: [{ id: 'e1', fromNodeId: 'n-start', toNodeId: 'n-ft1' }],
-        adjacency: new Map([['n-start', ['n-ft1']]]),
-        reverseAdjacency: new Map([['n-ft1', ['n-start']]]),
-        startNodeId: 'n-start',
-      };
-      const runner = new ProtocolRunner();
-      runner.start(graph);
-      runner.enterFreeText('raw note');
-      const state = runner.getState();
-      expect(state.status).toBe('complete');
-      if (state.status !== 'complete') return;
-      expect(state.finalText).toBe('raw note');
-    });
-  });
-
   describe('stepBack() — undo last user action (RUN-06, RUN-07)', () => {
     it('reverts currentNodeId and accumulatedText to state before last chooseAnswer', () => {
       // text-block.canvas: start → n-q1 → n-a1 → n-tb1 (terminal)
@@ -223,33 +180,6 @@ describe('ProtocolRunner', () => {
       expect(stateAfter.status).toBe('at-node');
       if (stateAfter.status !== 'at-node') return;
       expect(stateAfter.currentNodeId).toBe(stateBefore.currentNodeId);
-    });
-  });
-
-  describe('awaiting-snippet-fill state (RUN-08, D-06, D-07)', () => {
-    it('transitions to awaiting-snippet-fill when reaching a text-block with snippetId', () => {
-      // snippet-block.canvas: start → n-q1 → n-a1 → n-tb1 (has snippetId="snip-liver-001")
-      const runner = new ProtocolRunner();
-      runner.start(loadGraph('snippet-block.canvas'));
-      runner.chooseAnswer('n-a1');
-      const state = runner.getState();
-      expect(state.status).toBe('awaiting-snippet-fill');
-      if (state.status !== 'awaiting-snippet-fill') return;
-      expect(state.snippetId).toBe('snip-liver-001');
-      expect(state.nodeId).toBe('n-tb1');
-    });
-
-    it('completeSnippet() appends rendered text and advances to complete', () => {
-      const runner = new ProtocolRunner();
-      runner.start(loadGraph('snippet-block.canvas'));
-      runner.chooseAnswer('n-a1');
-      expect(runner.getState().status).toBe('awaiting-snippet-fill');
-      runner.completeSnippet('Findings: normal liver with snippet text.');
-      const state = runner.getState();
-      // n-tb1 has no outgoing edge → complete
-      expect(state.status).toBe('complete');
-      if (state.status !== 'complete') return;
-      expect(state.finalText).toContain('Findings: normal liver with snippet text.');
     });
   });
 
@@ -404,46 +334,63 @@ describe('ProtocolRunner', () => {
       expect(state.finalText).toBe('chunk1 chunk2');
     });
 
-    it('D-02: enterFreeText separator precedes entire prefix+text+suffix chunk', () => {
-      // Start with a text-block to fill the buffer, then a free-text node
+  });
+
+  describe('text-block with legacy snippetId — plain-text advance (NTYPE-03)', () => {
+    it('auto-advances through text-block even when canvas JSON contains radiprotocol_snippetId', () => {
+      // After Plan 02 removes the snippetId branch from advanceThrough(), this passes.
+      // Currently fails because the runner transitions to awaiting-snippet-fill.
       const graph: ProtocolGraph = {
-        canvasFilePath: 'sep-ft.canvas',
+        canvasFilePath: 'test.canvas',
         nodes: new Map([
           ['s', { id: 's', kind: 'start' as const, x: 0, y: 0, width: 100, height: 60 }],
-          ['tb1', { id: 'tb1', kind: 'text-block' as const, content: 'first', x: 0, y: 60, width: 100, height: 60 }],
-          ['ft1', { id: 'ft1', kind: 'free-text-input' as const, promptLabel: 'Enter:', prefix: 'P: ', suffix: '.', x: 0, y: 120, width: 100, height: 60 }],
+          // TextBlockNode no longer has snippetId field after Plan 02, but we simulate
+          // a node that WOULD have had it (content is what matters after removal):
+          ['tb1', { id: 'tb1', kind: 'text-block' as const, content: 'static content', x: 0, y: 60, width: 100, height: 60 }],
         ]),
-        edges: [
-          { id: 'e1', fromNodeId: 's', toNodeId: 'tb1' },
-          { id: 'e2', fromNodeId: 'tb1', toNodeId: 'ft1' },
-        ],
-        adjacency: new Map([['s', ['tb1']], ['tb1', ['ft1']]]),
-        reverseAdjacency: new Map([['tb1', ['s']], ['ft1', ['tb1']]]),
+        edges: [{ id: 'e1', fromNodeId: 's', toNodeId: 'tb1' }],
+        adjacency: new Map([['s', ['tb1']]]),
+        reverseAdjacency: new Map([['tb1', ['s']]]),
         startNodeId: 's',
       };
-      const runner = new ProtocolRunner({ defaultSeparator: 'newline' });
+      const runner = new ProtocolRunner();
       runner.start(graph);
-      runner.enterFreeText('X');
+      // Must auto-advance through the text-block and reach 'complete' (no outgoing edge from tb1)
       const state = runner.getState();
       expect(state.status).toBe('complete');
       if (state.status !== 'complete') return;
-      // separator before the whole assembled chunk: 'first' + '\n' + 'P: X.'
-      expect(state.finalText).toBe('first\nP: X.');
+      expect(state.finalText).toBe('static content');
     });
 
-    it('D-03: completeSnippet inserts separator before rendered text', () => {
-      // snippet-block.canvas: start → n-q1 → n-a1 (answerText) → n-tb1 (snippet)
-      // After chooseAnswer, we are awaiting-snippet-fill; completeSnippet should join with '\n'
-      const runner = new ProtocolRunner({ defaultSeparator: 'newline' });
-      runner.start(loadGraph('snippet-block.canvas'));
-      runner.chooseAnswer('n-a1');
-      expect(runner.getState().status).toBe('awaiting-snippet-fill');
-      runner.completeSnippet('snippet result');
-      const state = runner.getState();
-      expect(state.status).toBe('complete');
-      if (state.status !== 'complete') return;
-      // 'Size: normal' (from n-a1) + '\n' + 'snippet result'
-      expect(state.finalText).toBe('Size: normal\nsnippet result');
+    it('getSerializableState() never returns runnerStatus "awaiting-snippet-fill" (NTYPE-04)', () => {
+      // After Plan 02, awaiting-snippet-fill is no longer a valid status.
+      // This test verifies getSerializableState() return type is only 'at-node'.
+      const graph: ProtocolGraph = {
+        canvasFilePath: 'test.canvas',
+        nodes: new Map([
+          ['s', { id: 's', kind: 'start' as const, x: 0, y: 0, width: 100, height: 60 }],
+          ['q1', { id: 'q1', kind: 'question' as const, questionText: 'Q?', x: 0, y: 60, width: 100, height: 60 }],
+          ['a1', { id: 'a1', kind: 'answer' as const, answerText: 'A', x: 0, y: 120, width: 100, height: 60 }],
+        ]),
+        edges: [
+          { id: 'e1', fromNodeId: 's', toNodeId: 'q1' },
+          { id: 'e2', fromNodeId: 'q1', toNodeId: 'a1' },
+        ],
+        adjacency: new Map([['s', ['q1']], ['q1', ['a1']]]),
+        reverseAdjacency: new Map([['q1', ['s']], ['a1', ['q1']]]),
+        startNodeId: 's',
+      };
+      const runner = new ProtocolRunner();
+      runner.start(graph);
+      const state = runner.getSerializableState();
+      // Must be at-node (halted at q1), not null, not awaiting-snippet-fill
+      expect(state).not.toBeNull();
+      if (state === null) return;
+      expect(state.runnerStatus).toBe('at-node');
+      // After Plan 02, snippetId and snippetNodeId are removed from this return type.
+      // The test documents the expected shape:
+      expect('snippetId' in state).toBe(false); // removed field
+      expect('snippetNodeId' in state).toBe(false); // removed field
     });
   });
 
