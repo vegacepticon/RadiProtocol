@@ -1,30 +1,24 @@
 // views/runner-view.ts — Phase 5: Full RunnerView with awaiting-snippet-fill branch
-import { ItemView, WorkspaceLeaf, Notice, TFile, TFolder, MarkdownView } from 'obsidian';
+import { ItemView, WorkspaceLeaf, Notice, TFile } from 'obsidian';
 import type RadiProtocolPlugin from '../main';
 import { ProtocolRunner } from '../runner/protocol-runner';
 import { GraphValidator } from '../graph/graph-validator';
+import type { CompleteState } from '../runner/runner-state';
 import type { ProtocolGraph } from '../graph/graph-model';
 import { SnippetFillInModal } from './snippet-fill-in-modal';
 import { ResumeSessionModal } from './resume-session-modal';
 import type { PersistedSession } from '../sessions/session-model';
 import { validateSessionNodeIds } from '../sessions/session-service';
-import { CanvasSelectorWidget } from './canvas-selector-widget';
-import { CanvasSwitchModal } from './canvas-switch-modal';
 
 export const RUNNER_VIEW_TYPE = 'radiprotocol-runner';
 
 export class RunnerView extends ItemView {
   private readonly plugin: RadiProtocolPlugin;
-  // Phase 15: runner is re-created in openCanvas() to pick up textSeparator
-  private runner: ProtocolRunner = new ProtocolRunner();
+  private readonly runner = new ProtocolRunner();
   private readonly validator = new GraphValidator();
   private canvasFilePath: string | null = null;
   private previewTextarea: HTMLTextAreaElement | null = null;
-  private insertBtn: HTMLButtonElement | null = null;
-  private lastActiveMarkdownFile: TFile | null = null;
   private graph: ProtocolGraph | null = null;
-  private selector: CanvasSelectorWidget | null = null;
-  private selectorBarEl: HTMLDivElement | null = null;
 
   constructor(leaf: WorkspaceLeaf, plugin: RadiProtocolPlugin) {
     super(leaf);
@@ -55,32 +49,19 @@ export class RunnerView extends ItemView {
   }
 
   async openCanvas(filePath: string): Promise<void> {
-    // Phase 15: re-create runner to pick up the current textSeparator setting
-    this.runner = new ProtocolRunner({
-      defaultSeparator: this.plugin.settings.textSeparator,
-    });
-
     this.canvasFilePath = filePath;
-    this.selector?.setSelectedPath(filePath);
     const file = this.app.vault.getAbstractFileByPath(filePath);
-    if (!(file instanceof TFile)) {
+    if (file === null) {
       this.renderError([`Canvas file not found: "${filePath}".`]);
       return;
     }
 
     let content: string;
-    // BUG-02/03: If canvas is open, read live in-memory data to avoid stale disk
-    // state from the debounced saveLive() write path (D-05, D-06).
-    const liveJson = this.plugin.canvasLiveEditor.getCanvasJSON(filePath);
-    if (liveJson !== null) {
-      content = liveJson;
-    } else {
-      try {
-        content = await this.app.vault.read(file);
-      } catch {
-        this.renderError([`Could not read canvas file: "${filePath}".`]);
-        return;
-      }
+    try {
+      content = await this.app.vault.read(file as TFile);
+    } catch {
+      this.renderError([`Could not read canvas file: "${filePath}".`]);
+      return;
     }
 
     const parseResult = this.plugin.canvasParser.parse(content, filePath);
@@ -141,152 +122,38 @@ export class RunnerView extends ItemView {
     }
 
     // Normal protocol start (no session, or user chose start-over)
-    // SESSION-01 Pitfall 3: clear any stale session file once per fresh run,
-    // here in openCanvas() rather than inside render() (Pitfall 6).
-    await this.plugin.sessionService.clear(filePath);
     this.graph = graph;
     this.runner.start(graph);
     this.render();
   }
 
   async onOpen(): Promise<void> {
-    // Create a persistent selector bar at the top of contentEl (gap-closure: SIDEBAR-01).
-    // headerEl is Obsidian's native 32px title bar row with overflow:hidden — in sidebar
-    // mode it crushes any injected child. contentEl has no such constraint.
-    // selectorBarEl is created once here and re-inserted at the top of contentEl in
-    // render() and renderError() so it survives the contentEl.empty() calls they make.
-    const selectorBarEl = this.contentEl.createDiv({ cls: 'rp-selector-bar' });
-    this.selectorBarEl = selectorBarEl;
-    this.selector = new CanvasSelectorWidget(
-      this.app,
-      this.plugin,
-      selectorBarEl,
-      (filePath) => { void this.handleSelectorSelect(filePath); },
-    );
-
-    // Sync selector label if a canvas is already set (e.g. restored from state)
-    if (this.canvasFilePath !== null) {
-      this.selector.setSelectedPath(this.canvasFilePath);
-    }
-
-    // Vault file-change listeners — rebuild widget when .canvas files in the
-    // protocol folder are created, deleted, or renamed (D-11).
-    this.registerEvent(
-      this.app.vault.on('create', (file) => {
-        if (file instanceof TFile && file.extension === 'canvas') {
-          this.selector?.rebuildIfOpen();
-        }
-      })
-    );
-    this.registerEvent(
-      this.app.vault.on('delete', (file) => {
-        if (file instanceof TFile && file.extension === 'canvas') {
-          this.selector?.rebuildIfOpen();
-        }
-      })
-    );
-    this.registerEvent(
-      this.app.vault.on('rename', (file, oldPath) => {
-        if (file instanceof TFile && file.extension === 'canvas') {
-          this.selector?.rebuildIfOpen();
-          if (oldPath === this.canvasFilePath) {
-            this.canvasFilePath = file.path;
-            this.selector?.setSelectedPath(file.path);
-          }
-        }
-      })
-    );
-
-    // Initialize lastActiveMarkdownFile by scanning all open leaves (INSERT-01).
-    // active-leaf-change only fires on subsequent switches, so without this the
-    // button starts disabled even when a markdown note is already open.
-    this.app.workspace.iterateAllLeaves((leaf) => {
-      if (this.lastActiveMarkdownFile === null &&
-          leaf.view instanceof MarkdownView &&
-          leaf.view.file !== null) {
-        this.lastActiveMarkdownFile = leaf.view.file;
-      }
-    });
-
     this.render();
   }
 
   async onClose(): Promise<void> {
-    this.selector?.destroy();
-    this.selector = null;
-    this.selectorBarEl = null;
     this.contentEl.empty();
-  }
-
-  /**
-   * Called by CanvasSelectorWidget when a file is picked.
-   * Implements D-12 / D-13 mid-session confirmation logic.
-   */
-  private async handleSelectorSelect(newPath: string): Promise<void> {
-    // No-op if the user selects the already-active canvas
-    if (newPath === this.canvasFilePath) return;
-
-    const state = this.runner.getState();
-    const needsConfirmation =
-      state.status === 'at-node' || state.status === 'awaiting-snippet-fill';
-
-    if (needsConfirmation) {
-      // D-12: show confirmation modal; runner state is in-progress
-      const modal = new CanvasSwitchModal(this.app);
-      modal.open();
-      const confirmed = await modal.result;
-
-      if (!confirmed) {
-        // D-12: user cancelled — revert selector label to previous canvas
-        this.selector?.setSelectedPath(this.canvasFilePath);
-        return;
-      }
-
-      // D-12: confirmed — clear active session before switching (D-14: already auto-saved)
-      if (this.canvasFilePath !== null) {
-        await this.plugin.sessionService.clear(this.canvasFilePath);
-      }
-    }
-    // D-13: idle or complete — switch without confirmation; fall through directly
-
-    // Update selector label to the new canvas, then load it
-    this.selector?.setSelectedPath(newPath);
-    await this.openCanvas(newPath);
-  }
-
-  /**
-   * Restart the current canvas from the beginning without showing ResumeSessionModal.
-   * Called by the "Run again" button (gap-closure: RUNNER-01).
-   * Clears any persisted session before calling openCanvas() so that openCanvas()
-   * finds no session and skips the modal entirely.
-   */
-  private async restartCanvas(filePath: string): Promise<void> {
-    await this.plugin.sessionService.clear(filePath);
-    await this.openCanvas(filePath);
   }
 
   // ── Render ────────────────────────────────────────────────────────────────
 
   private render(): void {
     this.contentEl.empty();
-    // Re-prepend the selector bar: contentEl.empty() removes it from the DOM
-    // but the element and its CanvasSelectorWidget subtree remain valid in memory.
-    if (this.selectorBarEl !== null) {
-      this.contentEl.prepend(this.selectorBarEl);
-    }
     this.previewTextarea = null;
 
     const root = this.contentEl.createDiv({ cls: 'rp-runner-view' });
-    const previewZone = root.createDiv({ cls: 'rp-preview-zone' });
     const questionZone = root.createDiv({ cls: 'rp-question-zone' });
+    root.createEl('hr', { cls: 'rp-zone-divider' });
+    const previewZone = root.createDiv({ cls: 'rp-preview-zone' });
     const outputToolbar = root.createDiv({ cls: 'rp-output-toolbar' });
 
     const state = this.runner.getState();
 
     switch (state.status) {
       case 'idle': {
+        questionZone.createEl('h2', { text: 'Open a canvas file to start' });
         questionZone.createEl('p', {
-          text: 'Select a protocol above to get started.',
+          text: "Use the 'Run protocol' command from the command palette.",
           cls: 'rp-empty-state-body',
         });
         this.renderPreviewZone(previewZone, '');
@@ -322,7 +189,6 @@ export class RunnerView extends ItemView {
                 text: answerNode.displayLabel ?? answerNode.answerText,
               });
               this.registerDomEvent(btn, 'click', () => {
-                this.runner.syncManualEdit(this.previewTextarea?.value ?? '');  // BUG-01: capture manual edit (D-01)
                 this.runner.chooseAnswer(answerNode.id);
                 void this.autoSaveSession();   // SESSION-01 — save after answer
                 void this.renderAsync();
@@ -339,7 +205,6 @@ export class RunnerView extends ItemView {
             const textarea = questionZone.createEl('textarea', { cls: 'rp-free-text-input' });
             const submitBtn = questionZone.createEl('button', { text: 'Submit' });
             this.registerDomEvent(submitBtn, 'click', () => {
-              this.runner.syncManualEdit(this.previewTextarea?.value ?? '');  // BUG-01: capture manual edit (D-01)
               this.runner.enterFreeText(textarea.value);
               void this.autoSaveSession();   // SESSION-01 — save after free-text
               void this.renderAsync();
@@ -377,13 +242,11 @@ export class RunnerView extends ItemView {
             });
 
             this.registerDomEvent(againBtn, 'click', () => {
-              this.runner.syncManualEdit(this.previewTextarea?.value ?? '');  // BUG-01: capture manual edit (D-01)
               this.runner.chooseLoopAction('again');
               void this.autoSaveSession();
               void this.renderAsync();
             });
             this.registerDomEvent(doneBtn, 'click', () => {
-              this.runner.syncManualEdit(this.previewTextarea?.value ?? '');  // BUG-01: capture manual edit (D-01)
               this.runner.chooseLoopAction('done');
               void this.autoSaveSession();
               void this.renderAsync();
@@ -432,20 +295,11 @@ export class RunnerView extends ItemView {
       }
 
       case 'complete': {
-        questionZone.createEl('h2', { text: 'Protocol complete', cls: 'rp-complete-heading' });
-        // RUNNER-01: "Run again" button — restarts the same canvas from the beginning.
-        const runAgainBtn = questionZone.createEl('button', {
-          cls: 'rp-run-again-btn',
-          text: 'Run again',
-        });
-        if (this.canvasFilePath === null) {
-          runAgainBtn.disabled = true;
-        } else {
-          const path = this.canvasFilePath; // narrow to string
-          this.registerDomEvent(runAgainBtn, 'click', () => {
-            void this.restartCanvas(path);
-          });
+        // SESSION-01 Pitfall 3: clear session file when protocol finishes — no resume needed
+        if (this.canvasFilePath !== null) {
+          void this.plugin.sessionService.clear(this.canvasFilePath);
         }
+        questionZone.createEl('h2', { text: 'Protocol complete', cls: 'rp-complete-heading' });
         this.renderPreviewZone(previewZone, state.finalText);
         this.renderOutputToolbar(outputToolbar, state.finalText, true);
         break;
@@ -464,6 +318,8 @@ export class RunnerView extends ItemView {
       }
     }
 
+    // Legend (UI-12) — always visible at bottom
+    this.renderLegend(root);
   }
 
   /** Wrapper so click handlers can call `void this.renderAsync()` */
@@ -535,19 +391,9 @@ export class RunnerView extends ItemView {
   // ── Sub-renders ───────────────────────────────────────────────────────────
 
   private renderPreviewZone(zone: HTMLElement, text: string): void {
+    zone.createEl('p', { text: 'Report preview', cls: 'rp-preview-heading' });
     const textarea = zone.createEl('textarea', { cls: 'rp-preview-textarea' });
     textarea.value = text;
-    // Force width inline so theme/app CSS cannot override it
-    textarea.style.width = '100%';
-    // Defer height calculation until the element has layout
-    requestAnimationFrame(() => {
-      textarea.style.height = 'auto';
-      textarea.style.height = textarea.scrollHeight + 'px';
-    });
-    this.registerDomEvent(textarea, 'input', () => {
-      textarea.style.height = 'auto';
-      textarea.style.height = textarea.scrollHeight + 'px';
-    });
     this.previewTextarea = textarea;
   }
 
@@ -564,68 +410,38 @@ export class RunnerView extends ItemView {
       cls: 'rp-save-btn',
       text: 'Save to note',
     });
-    const insertBtn = toolbar.createEl('button', {
-      cls: 'rp-insert-btn',
-      text: 'Insert into note',
-    });
-    this.insertBtn = insertBtn;
 
     if (!enabled || text === null) {
       copyBtn.disabled = true;
       saveBtn.disabled = true;
-      insertBtn.disabled = true;
       return;
     }
-
-    // Only reach here when enabled=true and text is non-null (D-05, D-08)
-    // Use lastActiveMarkdownFile (not getActiveViewOfType) so the initial state
-    // is consistent with the click handler — clicking the button shifts focus to
-    // the runner, making getActiveViewOfType return null at click time (INSERT-01).
-    insertBtn.disabled = this.lastActiveMarkdownFile === null;
 
     const capturedText = text;
 
     this.registerDomEvent(copyBtn, 'click', () => {
-      const finalText = this.previewTextarea?.value ?? capturedText;  // D-03: live textarea read
+      const state = this.runner.getState();
+      const finalText = state.status === 'complete'
+        ? (state as CompleteState).finalText
+        : capturedText;
       void navigator.clipboard.writeText(finalText).then(() => {
         new Notice('Copied to clipboard.');
       });
     });
 
     this.registerDomEvent(saveBtn, 'click', () => {
-      const finalText = this.previewTextarea?.value ?? capturedText;  // D-03: live textarea read
+      const state = this.runner.getState();
+      const finalText = state.status === 'complete'
+        ? (state as CompleteState).finalText
+        : capturedText;
       void this.plugin.saveOutputToNote(finalText).then(() => {
         new Notice('Report saved to note.');
       });
     });
-
-    this.registerDomEvent(insertBtn, 'click', () => {
-      const file = this.lastActiveMarkdownFile;
-      if (file === null) return;
-      const finalText = this.previewTextarea?.value ?? capturedText;  // D-03: live textarea read
-      void this.plugin.insertIntoCurrentNote(finalText, file);
-    });
-
-    // Keep insertBtn disabled state in sync with active leaf (D-07, D-08)
-    this.registerEvent(
-      this.app.workspace.on('active-leaf-change', () => {
-        const view = this.app.workspace.getActiveViewOfType(MarkdownView);
-        if (view !== null && view.file !== null) {
-          this.lastActiveMarkdownFile = view.file;
-        }
-        if (this.insertBtn !== null) {
-          this.insertBtn.disabled = this.lastActiveMarkdownFile === null;
-        }
-      })
-    );
   }
 
   private renderError(errors: string[]): void {
     this.contentEl.empty();
-    // Re-prepend the selector bar after empty() — same guard as in render().
-    if (this.selectorBarEl !== null) {
-      this.contentEl.prepend(this.selectorBarEl);
-    }
     const root = this.contentEl.createDiv({ cls: 'rp-runner-view' });
     const questionZone = root.createDiv({ cls: 'rp-question-zone rp-validation-panel' });
     questionZone.createEl('p', { text: 'Protocol error' });
@@ -635,4 +451,20 @@ export class RunnerView extends ItemView {
     }
   }
 
+  private renderLegend(root: HTMLElement): void {
+    const legend = root.createDiv({ cls: 'rp-legend' });
+    const legendItems: Array<{ color: string; label: string }> = [
+      { color: '#e07b39', label: 'Question / Answer node' },
+      { color: '#4a90d9', label: 'Free-text input node' },
+      { color: '#5a9e6f', label: 'Text-block node' },
+      { color: '#9b59b6', label: 'Snippet text-block node' },
+      { color: '#e0b030', label: 'Loop start / end node' },
+    ];
+    for (const item of legendItems) {
+      const row = legend.createDiv({ cls: 'rp-legend-row' });
+      const swatch = row.createEl('span', { cls: 'rp-legend-swatch' });
+      swatch.style.background = item.color;
+      row.createEl('span', { text: item.label });
+    }
+  }
 }

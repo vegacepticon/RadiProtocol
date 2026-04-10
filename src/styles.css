@@ -59,8 +59,7 @@
 }
 
 .rp-copy-btn,
-.rp-save-btn,
-.rp-insert-btn {
+.rp-save-btn {
   flex: 1;
 }
 
@@ -153,138 +152,6 @@
   font-size: var(--font-ui-medium); /* 16px */
   font-weight: var(--font-semibold);
   margin-bottom: var(--size-4-1);
-}
-
-.rp-run-again-btn {
-  margin-top: var(--size-4-1);
-  background: var(--interactive-accent);
-  color: var(--text-on-accent);
-  border: none;
-  border-radius: var(--radius-s);
-  padding: var(--size-2-2) var(--size-4-2);
-  cursor: pointer;
-  font-size: var(--font-ui-small);
-  width: 100%;
-}
-
-.rp-run-again-btn:hover {
-  background: var(--interactive-accent-hover);
-}
-
-.rp-run-again-btn:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
-/* Phase 13: CanvasSelectorWidget ─────────────────────────────────────────── */
-
-.rp-selector-bar {
-  flex: 0 0 auto;
-  padding: var(--size-2-1) var(--size-4-2);
-  border-bottom: 1px solid var(--background-modifier-border);
-}
-
-.rp-selector-wrapper {
-  position: relative;
-  width: 100%;
-}
-
-.rp-selector-trigger {
-  width: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--size-2-1);
-  padding: var(--size-2-1) var(--size-4-1);
-  font-size: var(--font-text-size);
-  text-align: left;
-  background: var(--background-secondary);
-  border: 1px solid var(--background-modifier-border);
-  border-radius: var(--radius-s);
-  cursor: pointer;
-}
-
-.rp-selector-trigger:hover {
-  background: var(--background-modifier-hover);
-}
-
-.rp-selector-trigger-label {
-  flex: 1 1 auto;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.rp-selector-placeholder {
-  color: var(--text-muted);
-}
-
-.rp-selector-chevron {
-  flex: 0 0 auto;
-  display: flex;
-  align-items: center;
-}
-
-.rp-selector-popover {
-  position: absolute;
-  top: 100%;
-  left: 0;
-  right: 0;
-  z-index: 100;
-  background: var(--background-primary);
-  border: 1px solid var(--background-modifier-border);
-  border-radius: var(--radius-s);
-  box-shadow: var(--shadow-s);
-  max-height: 240px;
-  overflow-y: auto;
-  margin-top: 2px;
-}
-
-.rp-selector-row {
-  display: flex;
-  align-items: center;
-  gap: var(--size-2-1);
-  padding: var(--size-2-1) var(--size-4-1);
-  min-height: 32px;
-  cursor: pointer;
-  font-size: var(--font-text-size);
-}
-
-.rp-selector-row:hover {
-  background: var(--background-modifier-hover);
-}
-
-.rp-selector-row.is-selected {
-  background: var(--background-modifier-active-hover);
-  font-weight: var(--font-semibold);
-}
-
-.rp-selector-row-icon {
-  flex: 0 0 auto;
-  display: flex;
-  align-items: center;
-  color: var(--text-muted);
-}
-
-.rp-selector-row-label {
-  flex: 1 1 auto;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.rp-selector-row-arrow {
-  flex: 0 0 auto;
-  display: flex;
-  align-items: center;
-  color: var(--text-muted);
-}
-
-.rp-selector-empty-hint {
-  padding: var(--size-4-1) var(--size-4-2);
-  color: var(--text-muted);
-  font-size: var(--font-text-size);
-  font-style: italic;
 }
 
 /* Phase 4: EditorPanelView ─────────────────────────────────────────────── */
