@@ -79,20 +79,7 @@ A radiologist can generate a structured, accurate protocol in seconds by answeri
 - ✓ text-block node type read-back when canvas open (BUG-03) — v1.2
 - ✓ Add button in snippet placeholder mini-form (BUG-04) — v1.2
 
-### Active (v1.3)
-
-- [ ] Remove hover color change on Protocol Runner textarea (UX polish)
-- [ ] Larger answer textarea in Node Editor
-- [ ] Node Editor auto-save with debounce — replace Save button, remove dirty guard
-- [ ] Canvas node color coding by type (live, via CanvasLiveEditor)
-- [ ] Auto-switch to Node Editor tab when canvas node selected while Runner is open in sidebar
-- [ ] Remove free-text-input node type (ignore in validator, silently skip in parser)
-- [ ] text-block — plain text only, remove snippet insertion logic
-- [ ] New snippet node type: appears as button in Runner (like Answer), opens file picker from configured folder, supports .md and JSON snippets, placeholder fill via SnippetFillInModal
-- [ ] Snippet folder config: global setting + per-node override
-- [ ] Interactive placeholder editor in Snippet Editor: colored chips, drag-and-drop
-
-### Deferred (Post-v1.3)
+### Active (Next Milestone)
 
 - [ ] Canvas selector dropdown in runner view — choose protocol without reopening command
 - [ ] Full-tab runner view — open as editor tab instead of sidebar panel
@@ -113,20 +100,6 @@ A radiologist can generate a structured, accurate protocol in seconds by answeri
 - Linked placeholders across report sections — deferred after core snippet system validated
 - Optional sections in snippets — deferred to v2
 - Automatic impression generation — requires NLP/AI
-
-## Current Milestone: v1.3 Node Editor Overhaul & Snippet Node
-
-**Goal:** Переработать Node Editor на auto-save, добавить новый Snippet node type, улучшить UX Protocol Runner и Snippet Editor.
-
-**Target features:**
-- Protocol Runner textarea: убрать hover color change
-- Node Editor: увеличить answer textarea, auto-save с дебаунсом, удалить Save кнопку и dirty guard
-- Canvas node color coding по типу (live через CanvasLiveEditor)
-- Авто-переключение на вкладку Node Editor при выборе узла на канвасе
-- Удалить free-text-input node type; text-block — только plain text
-- Новый snippet node type с file picker, поддержкой .md и JSON, placeholder fill modal
-- Snippet folder: глобальная настройка + per-node override
-- Интерактивный placeholder editor в Snippet Editor (chips + drag-and-drop)
 
 ## Context
 
@@ -179,4 +152,4 @@ A radiologist can generate a structured, accurate protocol in seconds by answeri
 4. Update Context with current state
 
 ---
-*Last updated: 2026-04-10 — milestone v1.3 started*
+*Last updated: 2026-04-10 after v1.2 milestone*

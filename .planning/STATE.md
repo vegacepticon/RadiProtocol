@@ -1,25 +1,25 @@
 ---
 gsd_state_version: 1.0
-milestone: v1.3
-milestone_name: Node Editor Overhaul & Snippet Node
-status: executing
-stopped_at: Phase 20 UI-SPEC approved
-last_updated: "2026-04-10T16:02:48.706Z"
+milestone: v1.2
+milestone_name: Runner UX & Bug Fixes
+status: milestone_complete
+stopped_at: v1.2 milestone archived — 8 phases, 11 plans, 14/14 requirements, 8/8 UAT passed
+last_updated: "2026-04-10T18:00:00.000Z"
 progress:
-  total_phases: 10
-  completed_phases: 0
-  total_plans: 3
-  completed_plans: 0
-  percent: 0
+  total_phases: 8
+  completed_phases: 8
+  total_plans: 11
+  completed_plans: 11
+  percent: 100
 ---
 
 # RadiProtocol — Project State
 
-**Updated:** 2026-04-10  
-**Milestone:** v1.3 — Node Editor Overhaul & Snippet Node  
-**Status:** Ready to execute
-**Last session:** 2026-04-10T15:51:46.312Z
-**Stopped at:** Phase 20 UI-SPEC approved
+**Updated:** 2026-04-10
+**Milestone:** v1.2 — Runner UX & Bug Fixes
+**Status:** ✅ MILESTONE COMPLETE — archived 2026-04-10
+**Last session:** 2026-04-10T18:00:00.000Z
+**Stopped at:** v1.2 milestone archived — 8 phases, 11 plans, 14/14 requirements, 8/8 UAT passed
 
 ---
 
@@ -28,20 +28,7 @@ progress:
 See: `.planning/PROJECT.md` (updated 2026-04-10)
 
 **Core value:** A radiologist can generate a structured, accurate protocol in seconds by answering a guided algorithm — without writing a single line of code.  
-**Current focus:** v1.3 — Node Editor auto-save, Snippet node type, canvas color coding, UX polish
-
----
-
-## Current Position
-
-**Milestone:** v1.3 — Node Editor Overhaul & Snippet Node  
-**Phase:** 20 — Housekeeping Removals (not started)  
-**Plan:** None yet  
-**Status:** Not started
-
-```
-Progress: [░░░░░░░░░░░░░░░░░░░░] 0/8 phases complete (0%)
-```
+**Current focus:** Planning next milestone (run `/gsd-new-milestone`)
 
 ---
 
@@ -49,14 +36,21 @@ Progress: [░░░░░░░░░░░░░░░░░░░░] 0/8 pha
 
 | Phase | Name | Status |
 |-------|------|--------|
-| 20 | Housekeeping Removals | Not started |
-| 21 | Color Infrastructure | Not started |
-| 22 | Snippet Node — Graph and Runner Layer | Not started |
-| 23 | Node Editor Auto-Save and Color-on-Type-Change | Not started |
-| 24 | Settings — Snippet Node Folder | Not started |
-| 25 | Snippet Node Runner UI | Not started |
-| 26 | Auto-Switch to Node Editor Tab | Not started |
-| 27 | Interactive Placeholder Editor | Not started |
+| 1 | Project Scaffold + Canvas Parsing Foundation | Complete |
+| 2 | Core Protocol Runner Engine | Complete |
+| 3 | Runner UI (ItemView) | Complete |
+| 4 | Canvas Node Editor Side Panel | Complete |
+| 5 | Dynamic Snippets | Complete |
+| 6 | Loop Support | Complete |
+| 7 | Mid-Session Save + Resume | Complete |
+| 12 | Runner Layout Overhaul | Complete |
+| 13 | Sidebar Canvas Selector and Run Again | Complete |
+| 14 | Node Editor Auto-Switch and Unsaved Guard | Complete |
+| 15 | Text Separator Setting | Complete |
+| 16 | Runner Textarea Edit Preservation | Complete |
+| 17 | Node Type Read-Back and Snippet Placeholder Fixes | Complete |
+| 18 | CSS Gap Fixes (INSERTED) | Complete |
+| 19 | Phase 12–14 Formal Verification | Complete |
 
 ---
 
@@ -64,65 +58,44 @@ Progress: [░░░░░░░░░░░░░░░░░░░░] 0/8 pha
 
 | Decision | Rationale |
 |----------|-----------|
-| Read-only Canvas contract (Strategy A) | No official Canvas runtime API; never modify `.canvas` while open — fallback when canvas closed |
-| CanvasLiveEditor Pattern B | getData/setData/requestSave for live edits when canvas is open — undocumented but widely used |
-| TypeScript + esbuild + plain DOM | Standard Obsidian plugin toolchain; zero framework overhead |
+| Read-only Canvas contract | No official Canvas runtime API; never modify `.canvas` while open |
+| TypeScript + esbuild + plain DOM | Standard Obsidian plugin toolchain; zero framework overhead for v1 |
 | Vitest for engine tests | Pure engine modules (parser, runner) have no Obsidian imports; fully unit-testable |
 | One-file-per-snippet storage | Minimizes vault.modify() race conditions and sync conflicts |
-| Discriminated union on `kind` for node types | Type-safe graph model; snippet added, free-text-input removed in v1.3 |
+| Discriminated union on `kind` for node types | Type-safe graph model; 7 node types: start, question, answer, text-block, free-text, loop-start, loop-end |
 | Snapshot undo stack | Simplest correct approach for step-back; protocol text is small (<5KB) |
 | `radiprotocol_*` property namespace | Avoids collisions with other plugins and future Obsidian updates |
-| Canvas node colors are fully plugin-controlled | Always overwrite on type assignment; no user-color preservation, no opt-in setting |
-| free-text-input silently degrades to text-block | Parser DEPRECATED_KINDS silent-skip; no user-facing errors on legacy canvases |
-| In-textarea chip overlay deferred | Requires rich-text framework; v1.3 scope is list drag-and-drop only |
-| Snippet node file picker: global + per-node override | radiprotocol_snippetFolder per-node takes precedence over global snippetNodeFolderPath |
-| Auto-save captures nodeId at schedule time | Closure over argument values, never over this.currentNodeId — prevents cross-node write |
-| awaiting-snippet-fill state retired | Sessions with this status cleared to fresh start; chooseSnippet() uses at-node halt pattern |
+| Canvas write-back Strategy A | Require canvas closed before any vault.modify() — simple and safe; avoids undocumented internals (A4 resolved) |
+| plugin.saveSettings() not saveData() directly | Consistent with main.ts wrapper; all settings call sites use the wrapper |
+| maxLoopIterations moved into Runner section | D-07 groups related runner settings under one heading in Settings tab |
+| RunnerView reconstructs ProtocolRunner at openCanvas() start | Simplest way to pick up textSeparator from settings; no lazy init or observer needed |
+| resolveSeparator(node) single resolution point | node.radiprotocol_separator ?? defaultSeparator — avoids duplicated logic across 5 call sites |
+| capture-before-advance pattern (BUG-01) | syncManualEdit() called before each advance action so undo snapshot includes manual textarea edit |
+| overwrite() semantically separate from restoreTo() | restoreTo = undo revert of a snapshot; overwrite = inject caller's text — clearer intent at call sites |
+| live textarea read in complete-state toolbar (D-03) | previewTextarea?.value ?? capturedText replaces stale closure to honour final edits before copy/save/insert |
+| getCanvasJSON() for runner read path | Reads live in-memory canvas data; vault.read() retained only in EditorPanel form load (pre-existing gap) |
+
+---
+
+## Open Assumptions (Require User Confirmation Before Phases 5 + 6)
+
+| ID | Assumption | Phase |
+|----|-----------|-------|
+| A1 | Loop-start node uses two outgoing edges (continue + exit) rather than a dedicated "loop again?" node | 6 |
+| A2 | Snippet placeholder syntax uses `{{placeholder_id}}` double-curly-brace format | 5 |
+| A3 | Session files stored vault-visible in `.radiprotocol/sessions/` (not hidden in plugin data.json) | 7 |
 
 ---
 
 ## Critical Pitfalls (Standing Reminders)
 
-1. **Never modify `.canvas` while open in Canvas view** — use CanvasLiveEditor Pattern B instead
+1. **Never modify `.canvas` while open in Canvas view** — Canvas view will overwrite on next interaction
 2. **`vault.modify()` race conditions** — use write mutex (async-mutex) per file path
-3. **No `innerHTML`** — use DOM API and Obsidian helpers
+3. **No `innerHTML`** — use DOM API and Obsidian helpers; blocks community review if violated
 4. **No `require('fs')`** — use `app.vault.*` exclusively
 5. **`loadData()` returns null on first install** — always merge with defaults
 6. **Infinite loop cycles** — validate protocol graph before running; hard iteration cap (default 50)
 7. **`console.log` forbidden in production** — use `console.debug()` during dev; remove before release
-8. **PROTECTED_FIELDS has two copies** — canvas-live-editor.ts (line 14) AND editor-panel-view.ts (line 181); both must be updated in Phase 21 or color writes silently fail on one save path
-9. **Auto-save closure pitfall** — scheduleAutoSave(filePath, nodeId, edits) must close over argument values; if user switches nodes before timer fires, old snapshot must write to old nodeId
-10. **Stale DOM after async save** — after awaiting saveLive(), check this.currentNodeId === savedNodeId before touching any DOM element
-11. **vault.modify + requestSave race** — if isLiveAvailable() returns false, skip color write entirely; do not fall through to Strategy A
-12. **free-text-input parser removal** — keep DEPRECATED_KINDS silent-skip set in canvas-parser.ts; do not error or warn on legacy nodes
-13. **awaiting-snippet-fill session load** — treat unknown runnerStatus values as stale; start fresh (same code path as missing node IDs)
-14. **revealLeaf timing** — use setTimeout(0) inside handleNodeClick(); do not use deprecated workspace.activeLeaf
-15. **DnD event listener leak** — event delegation on stable container (one listener), not per-chip listeners
-
----
-
-## Accumulated Context
-
-### Architecture Notes (v1.3)
-
-- **New file:** `src/canvas/node-color-map.ts` — pure constant, zero Obsidian imports, immediately Vitest-testable
-- **New file:** `src/views/snippet-picker-modal.ts` — extends FuzzySuggestModal<TFile>
-- **Deleted file:** `src/views/node-switch-guard-modal.ts` — dirty guard replaced by auto-save
-- **awaiting-snippet-fill** removed from RunnerState union, protocol-runner.ts, runner-view.ts
-- **Snippet execution pattern:** at-node halt + chooseSnippet() call — no runner state machine change needed
-
-### Files With Significant v1.3 Changes
-
-| File | Changes |
-|------|---------|
-| graph-model.ts | Add SnippetNode + snippet to RPNodeKind; remove FreeTextInputNode and free-text-input; remove snippetId from TextBlockNode |
-| canvas-parser.ts | Add snippet parse case; DEPRECATED_KINDS silent-skip for free-text-input; remove snippetId from text-block case |
-| protocol-runner.ts | Add chooseSnippet(); add snippet halt; remove enterFreeText(), completeSnippet(), awaiting-snippet-fill, snippetId/snippetNodeId |
-| editor-panel-view.ts | Debounced auto-save; remove NodeSwitchGuardModal; add snippet form fields; color on type change; revealLeaf on node click |
-| canvas-live-editor.ts | Remove color from PROTECTED_FIELDS (line 14) |
-| runner-view.ts | Add snippet button at snippet node; handleSnippetNodeClick(); remove handleSnippetFill() |
-| snippet-manager-view.ts | Drag-to-reorder placeholder list via event delegation |
-| settings.ts | Add snippetNodeFolderPath: string |
 
 ---
 
@@ -130,4 +103,4 @@ Progress: [░░░░░░░░░░░░░░░░░░░░] 0/8 pha
 
 - Branch: `main`
 - Remote: (not yet configured)
-- Last commit: `5308b1d` — chore: archive phase directories from completed milestones
+- Last commit: `209e285` — docs(audit): update v1.2 milestone audit — all 14 requirements satisfied
