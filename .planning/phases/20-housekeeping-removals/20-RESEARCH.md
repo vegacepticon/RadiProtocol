@@ -410,7 +410,7 @@ This phase removes dead code and adds no new surface. No ASVS categories are app
 
 ---
 
-## Open Questions
+## Open Questions (RESOLVED)
 
 1. **CSS specificity of Obsidian's textarea hover**
    - What we know: CONTEXT.md specifies `.rp-preview-textarea:hover { background: var(--background-primary); }` as the fix
