@@ -71,7 +71,12 @@ Full details: `.planning/milestones/v1.2-ROADMAP.md`
   3. Running a text-block node advances automatically and inserts plain text only — no snippet selection UI appears
   4. The Protocol Runner textarea shows the same background colour at rest and on mouse hover
   5. The answer text field in Node Editor accepts multi-line input (at least 6 visible rows)
-**Plans**: TBD
+**Plans**: 3 plans
+
+Plans:
+- [ ] 20-01-PLAN.md — Wave 0 test scaffolding (RED tests for all 6 requirements)
+- [ ] 20-02-PLAN.md — Engine layer: types, parser, validator, runner dead-code removal (NTYPE-01–04)
+- [ ] 20-03-PLAN.md — View layer and CSS: form cleanup, legacy session guard, hover fix, rows (NTYPE-01, NTYPE-04, UX-01, UX-02)
 
 ### Phase 21: Color Infrastructure
 **Goal**: Every canvas node whose type is assigned by the plugin displays the correct palette colour in real-time; clearing a node's type removes the colour; both PROTECTED_FIELDS copies permit color writes
