@@ -41,10 +41,10 @@ export interface PersistedSession {
   savedAt: number;
   /**
    * Runner status at save time.
-   * Only 'at-node' and 'awaiting-snippet-fill' are valid resume states.
+   * Only 'at-node' is a valid resume state.
    * idle/complete/error sessions are never written to disk.
    */
-  runnerStatus: 'at-node' | 'awaiting-snippet-fill';
+  runnerStatus: 'at-node';
   /** currentNodeId from the runner */
   currentNodeId: string;
   /** accumulatedText snapshotted at save time (SESSION-05) */
@@ -53,8 +53,4 @@ export interface PersistedSession {
   undoStack: PersistedUndoEntry[];
   /** Full loop context stack at time of save */
   loopContextStack: PersistedLoopContext[];
-  /** snippetId if status is 'awaiting-snippet-fill'; null otherwise */
-  snippetId: string | null;
-  /** snippetNodeId if status is 'awaiting-snippet-fill'; null otherwise */
-  snippetNodeId: string | null;
 }

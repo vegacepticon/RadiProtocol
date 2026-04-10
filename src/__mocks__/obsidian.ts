@@ -29,7 +29,7 @@ interface MockElement {
 /** Mock TextComponent / TextAreaComponent returned by addText / addTextArea */
 function makeMockTextComponent(): MockTextComponent {
   const tc: MockTextComponent = {
-    inputEl: { type: '', min: '', rows: 2 },
+    inputEl: { type: '', min: '' },
     setValue: (_v: string) => tc,
     onChange: (_cb: (v: string) => void) => tc,
   };
@@ -37,7 +37,7 @@ function makeMockTextComponent(): MockTextComponent {
 }
 
 interface MockTextComponent {
-  inputEl: { type: string; min: string; rows: number };
+  inputEl: { type: string; min: string };
   setValue: (v: string) => MockTextComponent;
   onChange: (cb: (v: string) => void) => MockTextComponent;
 }
