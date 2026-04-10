@@ -58,6 +58,7 @@ created: 2026-04-10
 | Audit Date | Threats Total | Closed | Open | Run By |
 |------------|---------------|--------|------|--------|
 | 2026-04-10 | 8 | 8 | 0 | gsd-security-auditor (automated) |
+| 2026-04-10 | 8 | 8 | 0 | /gsd-secure-phase re-verification — mitigations confirmed in codebase |
 
 ---
 
