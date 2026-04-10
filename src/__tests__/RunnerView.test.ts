@@ -88,19 +88,18 @@ describe('NTYPE-04 — legacy awaiting-snippet-fill session degradation', () => 
     });
 
     // Legacy session saved when runner was in awaiting-snippet-fill state
-    const legacySession: PersistedSession = {
+    // Cast to PersistedSession to simulate a pre-migration session with the old status value
+    const legacySession = {
       version: 1,
       canvasFilePath: 'test.canvas',
       canvasMtimeAtSave: 0,
       savedAt: Date.now(),
-      runnerStatus: 'awaiting-snippet-fill',
+      runnerStatus: 'awaiting-snippet-fill' as 'at-node', // legacy value — cast for test simulation
       currentNodeId: 'n-q1',
       accumulatedText: 'some text',
       undoStack: [],
       loopContextStack: [],
-      snippetId: 'snip-001',
-      snippetNodeId: 'n-q1',
-    };
+    } as PersistedSession;
 
     const clearSpy = vi.fn().mockResolvedValue(undefined);
 
@@ -123,7 +122,7 @@ describe('NTYPE-04 — legacy awaiting-snippet-fill session degradation', () => 
       },
       app: {
         vault: {
-          getAbstractFileByPath: vi.fn().mockReturnValue(Object.assign(new TFile('test.canvas'), { stat: { mtime: 0 } })),
+          getAbstractFileByPath: vi.fn().mockReturnValue(Object.assign(new (TFile as unknown as new (p: string) => TFile)('test.canvas'), { stat: { mtime: 0 } })),
           read: vi.fn().mockResolvedValue(canvasJson),
         },
         workspace: {
