@@ -83,32 +83,30 @@
 
 ## Traceability
 
-*(Filled by roadmapper)*
-
 | REQ-ID | Phase |
 |--------|-------|
-| UX-01 | — |
-| UX-02 | — |
-| AUTOSAVE-01 | — |
-| AUTOSAVE-02 | — |
-| AUTOSAVE-03 | — |
-| AUTOSAVE-04 | — |
-| COLOR-01 | — |
-| COLOR-02 | — |
-| COLOR-03 | — |
-| COLOR-04 | — |
-| TAB-01 | — |
-| NTYPE-01 | — |
-| NTYPE-02 | — |
-| NTYPE-03 | — |
-| NTYPE-04 | — |
-| SNIPPET-01 | — |
-| SNIPPET-02 | — |
-| SNIPPET-03 | — |
-| SNIPPET-04 | — |
-| SNIPPET-05 | — |
-| SNIPPET-06 | — |
-| SNIPPET-07 | — |
-| CHIP-01 | — |
-| CHIP-02 | — |
-| CHIP-03 | — |
+| UX-01 | Phase 20 |
+| UX-02 | Phase 20 |
+| AUTOSAVE-01 | Phase 23 |
+| AUTOSAVE-02 | Phase 23 |
+| AUTOSAVE-03 | Phase 23 |
+| AUTOSAVE-04 | Phase 23 |
+| COLOR-01 | Phase 21 |
+| COLOR-02 | Phase 21 |
+| COLOR-03 | Phase 21 |
+| COLOR-04 | Phase 21 |
+| TAB-01 | Phase 26 |
+| NTYPE-01 | Phase 20 |
+| NTYPE-02 | Phase 20 |
+| NTYPE-03 | Phase 20 |
+| NTYPE-04 | Phase 20 |
+| SNIPPET-01 | Phase 22 |
+| SNIPPET-02 | Phase 25 |
+| SNIPPET-03 | Phase 25 |
+| SNIPPET-04 | Phase 25 |
+| SNIPPET-05 | Phase 25 |
+| SNIPPET-06 | Phase 24 |
+| SNIPPET-07 | Phase 25 |
+| CHIP-01 | Phase 27 |
+| CHIP-02 | Phase 27 |
+| CHIP-03 | Phase 27 |
