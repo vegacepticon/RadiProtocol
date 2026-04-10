@@ -4,7 +4,6 @@ import type RadiProtocolPlugin from '../main';
 import { ProtocolRunner } from '../runner/protocol-runner';
 import { GraphValidator } from '../graph/graph-validator';
 import type { ProtocolGraph } from '../graph/graph-model';
-import { SnippetFillInModal } from './snippet-fill-in-modal';
 import { ResumeSessionModal } from './resume-session-modal';
 import type { PersistedSession } from '../sessions/session-model';
 import { validateSessionNodeIds } from '../sessions/session-service';
@@ -101,43 +100,44 @@ export class RunnerView extends ItemView {
     const session = await this.plugin.sessionService.load(filePath);
 
     if (session !== null) {
-      // SESSION-03: validate that all saved node IDs still exist in the current graph
-      const missingIds = validateSessionNodeIds(session, graph);
-      if (missingIds.length > 0) {
-        // Hard failure — cannot resume safely; clear the session and show error
+      // NTYPE-04: treat legacy awaiting-snippet-fill sessions as stale — start fresh silently
+      const rawStatus = (session as unknown as { runnerStatus: string }).runnerStatus;
+      if (rawStatus === 'awaiting-snippet-fill') {
         await this.plugin.sessionService.clear(filePath);
-        this.renderError([
-          `Cannot resume session: ${missingIds.length} node(s) referenced in the saved session no longer exist in the canvas.`,
-          'The canvas may have been edited since the session was saved.',
-          'Starting over. Run the protocol again to begin a fresh session.',
-        ]);
-        return;
+        // fall through to normal start below — no error, no modal shown
+      } else {
+        // Existing session handling: validate node IDs, check mtime, show ResumeSessionModal
+        const missingIds = validateSessionNodeIds(session, graph);
+        if (missingIds.length > 0) {
+          await this.plugin.sessionService.clear(filePath);
+          this.renderError([
+            `Cannot resume session: ${missingIds.length} node(s) referenced in the saved session no longer exist in the canvas.`,
+            'The canvas may have been edited since the session was saved.',
+            'Starting over. Run the protocol again to begin a fresh session.',
+          ]);
+          return;
+        }
+
+        const warnings: string[] = [];
+        if (file instanceof TFile && file.stat.mtime > session.canvasMtimeAtSave) {
+          warnings.push('The canvas file has been modified since this session was saved.');
+          warnings.push('Resuming may produce unexpected results if nodes or their content changed.');
+        }
+
+        const modal = new ResumeSessionModal(this.app, warnings);
+        modal.open();
+        const choice = await modal.result;
+
+        if (choice === 'resume') {
+          this.graph = graph;
+          this.runner.setGraph(graph);
+          this.runner.restoreFrom(session);
+          this.render();
+          return;
+        }
+
+        await this.plugin.sessionService.clear(filePath);
       }
-
-      // SESSION-04: check canvas mtime against the saved timestamp
-      const warnings: string[] = [];
-      if (file instanceof TFile && file.stat.mtime > session.canvasMtimeAtSave) {
-        warnings.push('The canvas file has been modified since this session was saved.');
-        warnings.push('Resuming may produce unexpected results if nodes or their content changed.');
-      }
-
-      // SESSION-06: present resume/start-over choice to the user
-      const modal = new ResumeSessionModal(this.app, warnings);
-      modal.open();
-      const choice = await modal.result;
-
-      if (choice === 'resume') {
-        // Restore the runner from the saved session snapshot
-        // Order is critical: setGraph first, then restoreFrom (Pitfall 2)
-        this.graph = graph;
-        this.runner.setGraph(graph);
-        this.runner.restoreFrom(session);
-        this.render();
-        return;
-      }
-
-      // 'start-over' — clear the stale session and fall through to normal start
-      await this.plugin.sessionService.clear(filePath);
     }
 
     // Normal protocol start (no session, or user chose start-over)
@@ -227,8 +227,7 @@ export class RunnerView extends ItemView {
     if (newPath === this.canvasFilePath) return;
 
     const state = this.runner.getState();
-    const needsConfirmation =
-      state.status === 'at-node' || state.status === 'awaiting-snippet-fill';
+    const needsConfirmation = state.status === 'at-node';
 
     if (needsConfirmation) {
       // D-12: show confirmation modal; runner state is in-progress
@@ -331,22 +330,6 @@ export class RunnerView extends ItemView {
             break;
           }
 
-          case 'free-text-input': {
-            questionZone.createEl('p', {
-              text: node.promptLabel,
-              cls: 'rp-question-text',
-            });
-            const textarea = questionZone.createEl('textarea', { cls: 'rp-free-text-input' });
-            const submitBtn = questionZone.createEl('button', { text: 'Submit' });
-            this.registerDomEvent(submitBtn, 'click', () => {
-              this.runner.syncManualEdit(this.previewTextarea?.value ?? '');  // BUG-01: capture manual edit (D-01)
-              this.runner.enterFreeText(textarea.value);
-              void this.autoSaveSession();   // SESSION-01 — save after free-text
-              void this.renderAsync();
-            });
-            break;
-          }
-
           case 'loop-end': {
             // Display iteration label if inside a loop body (LOOP-04)
             if (state.loopIterationLabel !== undefined) {
@@ -419,18 +402,6 @@ export class RunnerView extends ItemView {
         break;
       }
 
-      case 'awaiting-snippet-fill': {
-        questionZone.createEl('p', {
-          text: 'Loading snippet...',
-          cls: 'rp-empty-state-body',
-        });
-        this.renderPreviewZone(previewZone, state.accumulatedText);
-        this.renderOutputToolbar(outputToolbar, state.accumulatedText, false);
-        // Async: load snippet and open modal (SNIP-06, D-17)
-        void this.handleSnippetFill(state.snippetId, questionZone);
-        break;
-      }
-
       case 'complete': {
         questionZone.createEl('h2', { text: 'Protocol complete', cls: 'rp-complete-heading' });
         // RUNNER-01: "Run again" button — restarts the same canvas from the beginning.
@@ -468,32 +439,6 @@ export class RunnerView extends ItemView {
 
   /** Wrapper so click handlers can call `void this.renderAsync()` */
   private async renderAsync(): Promise<void> {
-    this.render();
-  }
-
-  /** Load snippet and open SnippetFillInModal; update runner with result (SNIP-06). */
-  private async handleSnippetFill(snippetId: string, questionZone: HTMLElement): Promise<void> {
-    const snippet = await this.plugin.snippetService.load(snippetId);
-
-    if (snippet === null) {
-      questionZone.empty();
-      questionZone.createEl('p', {
-        text: `Snippet '${snippetId}' not found. The snippet may have been deleted. Use step-back to continue.`,
-        cls: 'rp-empty-state-body',
-      });
-      return;
-    }
-
-    const modal = new SnippetFillInModal(this.app, snippet);
-    modal.open();
-    const rendered = await modal.result;
-    if (rendered !== null) {
-      this.runner.completeSnippet(rendered);
-    } else {
-      // D-11: Cancel = skip — advance runner with empty string
-      this.runner.completeSnippet('');
-    }
-    void this.autoSaveSession();   // SESSION-01 — save after snippet completion
     this.render();
   }
 
