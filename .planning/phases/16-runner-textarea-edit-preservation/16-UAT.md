@@ -18,9 +18,8 @@ result: pass
 
 ### 2. Manual edit preserved — Free-text submit
 expected: Open a protocol in the runner that reaches a free-text input node. Manually edit the preview textarea before submitting. Click the free-text submit button. Undo. The textarea should restore to your manually typed text.
-result: blocked
-blocked_by: prior-phase
-reason: "text block and free-text input node types not working yet, expected to be fixed in next phase"
+result: pass
+note: Retested after phase 17 fixed free-text input node type support.
 
 ### 3. Manual edit preserved — Loop "again"
 expected: Open a protocol in the runner at a loop node. Manually edit the preview textarea. Click the "again" button to loop. Undo. The textarea should restore to your manually typed text.
@@ -37,11 +36,11 @@ result: pass
 ## Summary
 
 total: 5
-passed: 4
+passed: 5
 issues: 0
 pending: 0
 skipped: 0
-blocked: 1
+blocked: 0
 
 ## Gaps
 
