@@ -44,12 +44,14 @@ Full details: `.planning/milestones/v1.1-ROADMAP.md`
 
 ### v1.2 Runner UX & Bug Fixes (Phases 12–17)
 
-- [ ] **Phase 12: Runner Layout Overhaul** — Auto-grow textarea, questions below output, equal buttons, remove legend
+- [x] **Phase 12: Runner Layout Overhaul** — Auto-grow textarea, questions below output, equal buttons, remove legend (completed 2026-04-09)
 - [x] **Phase 13: Sidebar Canvas Selector and Run Again** — Canvas selector parity in sidebar mode, restart after completion (completed 2026-04-08)
 - [x] **Phase 14: Node Editor Auto-Switch and Unsaved Guard** — Auto-load node on click, guard unsaved edits on switch (completed 2026-04-09)
 - [x] **Phase 15: Text Separator Setting** — Global newline/space setting in Settings tab, per-node override in EditorPanel (completed 2026-04-09)
 - [x] **Phase 16: Runner Textarea Edit Preservation** — Manual textarea edits survive step advances
-- [ ] **Phase 17: Node Type Read-Back and Snippet Placeholder Fixes** — free-text-input/text-block nodes appear correctly, placeholder Add works
+- [x] **Phase 17: Node Type Read-Back and Snippet Placeholder Fixes** — free-text-input/text-block nodes appear correctly, placeholder Add works
+- [ ] **Phase 18: CSS Gap Fixes** — Fix missing flex rule for Insert button, add selector widget CSS, add Run Again button CSS
+- [ ] **Phase 19: Phase 12–14 Formal Verification** — Write VERIFICATION.md for phases 12, 13, and 14 to formally satisfy LAYOUT-01–04, SIDEBAR-01, RUNNER-01, EDITOR-01, EDITOR-02
 
 ---
 
@@ -140,6 +142,28 @@ Plans:
 - [ ] 17-01-PLAN.md — TDD: add getCanvasJSON() to CanvasLiveEditor + live-data fallback in openCanvas() (BUG-02, BUG-03)
 - [ ] 17-02-PLAN.md — Fix miniAddBtn type=button in snippet-manager-view + UAT (BUG-04)
 
+### Phase 18: CSS Gap Fixes
+**Goal**: Fix three CSS code gaps identified by milestone audit — Insert button renders equal to Copy/Save, canvas selector widget is styled, Run Again button is styled
+**Depends on**: Phase 17
+**Requirements**: LAYOUT-03, SIDEBAR-01, RUNNER-01
+**Gap Closure**: Closes CSS code gaps from v1.2 milestone audit
+**Success Criteria** (what must be TRUE):
+  1. `.rp-insert-btn` has `flex: 1` rule in styles.css — Insert button renders same width as Copy and Save
+  2. `rp-selector-bar`, `rp-selector-wrapper`, `rp-selector-trigger`, `rp-selector-popover`, `rp-selector-row` CSS rules present — sidebar selector widget is styled
+  3. `rp-run-again-btn` CSS rule present — Run Again button is styled
+**Plans**: TBD
+
+### Phase 19: Phase 12–14 Formal Verification
+**Goal**: Write VERIFICATION.md artifacts for phases 12, 13, and 14 to formally close all outstanding requirement gaps and bring the milestone to audit-pass state
+**Depends on**: Phase 18
+**Requirements**: LAYOUT-01, LAYOUT-02, LAYOUT-03, LAYOUT-04, SIDEBAR-01, RUNNER-01, EDITOR-01, EDITOR-02
+**Gap Closure**: Closes formal verification gaps from v1.2 milestone audit
+**Success Criteria** (what must be TRUE):
+  1. Phase 12 has VERIFICATION.md confirming LAYOUT-01–04 satisfied
+  2. Phase 13 has VERIFICATION.md confirming SIDEBAR-01 and RUNNER-01 satisfied
+  3. Phase 14 has VERIFICATION.md confirming EDITOR-01 and EDITOR-02 satisfied
+**Plans**: TBD
+
 ---
 
 ## Progress
@@ -157,9 +181,11 @@ Plans:
 | 9. Canvas Selector Dropdown | v1.1 | 3/3 | Complete | 2026-04-07 |
 | 10. Insert Into Current Note | v1.1 | 1/1 | Complete | 2026-04-08 |
 | 11. Live Canvas Editing | v1.1 | 3/3 | Complete | 2026-04-08 |
-| 12. Runner Layout Overhaul | v1.2 | 0/1 | Not started | — |
+| 12. Runner Layout Overhaul | v1.2 | 1/1 | Complete | 2026-04-09 |
 | 13. Sidebar Canvas Selector and Run Again | v1.2 | 2/2 | Complete   | 2026-04-08 |
 | 14. Node Editor Auto-Switch and Unsaved Guard | v1.2 | 2/1 | Complete   | 2026-04-09 |
 | 15. Text Separator Setting | v1.2 | 3/3 | Complete   | 2026-04-09 |
 | 16. Runner Textarea Edit Preservation | v1.2 | 1/1 | Complete | 2026-04-09 |
-| 17. Node Type Read-Back and Snippet Placeholder Fixes | v1.2 | 0/? | Not started | — |
+| 17. Node Type Read-Back and Snippet Placeholder Fixes | v1.2 | 2/2 | Complete | 2026-04-10 |
+| 18. CSS Gap Fixes | v1.2 | 0/? | Not started | — |
+| 19. Phase 12–14 Formal Verification | v1.2 | 0/? | Not started | — |
