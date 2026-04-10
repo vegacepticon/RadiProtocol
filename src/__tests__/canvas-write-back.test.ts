@@ -17,6 +17,7 @@ describe('saveNodeEdits — write-back contract (EDIT-03, EDIT-04)', () => {
   let mockVaultModify: ReturnType<typeof vi.fn>;
   let mockGetLeavesOfType: ReturnType<typeof vi.fn>;
   let mockGetAbstractFileByPath: ReturnType<typeof vi.fn>;
+  let mockSaveLive: ReturnType<typeof vi.fn>;
   let mockPlugin: Record<string, unknown>;
   let view: EditorPanelView;
 
@@ -25,6 +26,8 @@ describe('saveNodeEdits — write-back contract (EDIT-03, EDIT-04)', () => {
     mockVaultModify = vi.fn().mockResolvedValue(undefined);
     mockGetLeavesOfType = vi.fn().mockReturnValue([]); // canvas not open by default
     mockGetAbstractFileByPath = vi.fn().mockReturnValue({ path: 'test.canvas' }); // TFile mock
+    // LIVE-03: saveLive returns false = canvas closed, fall through to vault.modify()
+    mockSaveLive = vi.fn().mockResolvedValue(false);
 
     mockPlugin = {
       app: {
@@ -35,9 +38,13 @@ describe('saveNodeEdits — write-back contract (EDIT-03, EDIT-04)', () => {
         },
         workspace: {
           getLeavesOfType: mockGetLeavesOfType,
+          getMostRecentLeaf: vi.fn().mockReturnValue(null),
         },
       },
       settings: {},
+      canvasLiveEditor: {
+        saveLive: mockSaveLive,
+      },
     };
 
     const mockLeaf = { containerEl: {} };
@@ -77,7 +84,7 @@ describe('saveNodeEdits — write-back contract (EDIT-03, EDIT-04)', () => {
       radiprotocol_nodeType: 'question',
       radiprotocol_questionText: 'What is the finding?',
     });
-    // Stub never calls vault.modify() — RED
+    // saveLive returns false → falls through to vault.modify()
     expect(mockVaultModify).toHaveBeenCalled();
     const written = JSON.parse(mockVaultModify.mock.calls[0]![1] as string) as {
       nodes: Array<Record<string, unknown>>;
@@ -94,7 +101,7 @@ describe('saveNodeEdits — write-back contract (EDIT-03, EDIT-04)', () => {
     await view.saveNodeEdits('test.canvas', 'node-1', {
       radiprotocol_displayLabel: undefined,
     });
-    // Stub never calls vault.modify() — RED
+    // saveLive returns false → falls through to vault.modify()
     expect(mockVaultModify).toHaveBeenCalled();
     const written = JSON.parse(mockVaultModify.mock.calls[0]![1] as string) as {
       nodes: Array<Record<string, unknown>>;
@@ -103,17 +110,17 @@ describe('saveNodeEdits — write-back contract (EDIT-03, EDIT-04)', () => {
     expect(node).not.toHaveProperty('radiprotocol_displayLabel');
   });
 
-  it('canvas-open guard: vault.modify() not called when canvas is open', async () => {
-    // Simulate canvas open: getLeavesOfType returns a leaf whose view.file.path matches
-    mockGetLeavesOfType.mockReturnValue([
-      { view: { file: { path: 'test.canvas' } } },
-    ]);
+  it('live-save: vault.modify() NOT called when saveLive() returns true', async () => {
+    // Simulate canvas open: saveLive returns true (live save succeeded)
+    mockSaveLive.mockResolvedValue(true);
     await view.saveNodeEdits('test.canvas', 'node-1', {
       radiprotocol_nodeType: 'question',
     });
-    // With real implementation: Notice shown, vault.modify() NOT called
-    // With stub: also not called (no-op) — RED for different reason but documents contract
+    // Live path: vault.modify() must NOT be called — canvas owns the write
     expect(mockVaultModify).not.toHaveBeenCalled();
+    expect(mockSaveLive).toHaveBeenCalledWith('test.canvas', 'node-1', {
+      radiprotocol_nodeType: 'question',
+    });
   });
 
   it('un-mark cleanup: removing nodeType (empty string) removes all radiprotocol_* fields', async () => {
@@ -126,7 +133,7 @@ describe('saveNodeEdits — write-back contract (EDIT-03, EDIT-04)', () => {
     await view.saveNodeEdits('test.canvas', 'node-1', {
       radiprotocol_nodeType: '',
     });
-    // Stub never calls vault.modify() — RED
+    // saveLive returns false → falls through to vault.modify()
     expect(mockVaultModify).toHaveBeenCalled();
     const written = JSON.parse(mockVaultModify.mock.calls[0]![1] as string) as {
       nodes: Array<Record<string, unknown>>;

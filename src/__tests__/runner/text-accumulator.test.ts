@@ -50,4 +50,33 @@ describe('TextAccumulator', () => {
     acc.restoreTo(snap);
     expect(acc.current).toBe('Measurement: 3.5 cm² at 37°C');
   });
+
+  describe('overwrite()', () => {
+    it('overwrite("hello") sets acc.current to "hello"', () => {
+      acc.overwrite('hello');
+      expect(acc.current).toBe('hello');
+    });
+
+    it('overwrite("") sets acc.current to empty string', () => {
+      acc.append('some text');
+      acc.overwrite('');
+      expect(acc.current).toBe('');
+    });
+
+    it('overwrite does NOT affect prior snapshots taken before the overwrite', () => {
+      acc.append('original');
+      const snap = acc.snapshot(); // captures 'original'
+      acc.overwrite('new value');
+      // snap was taken before overwrite — must still be 'original'
+      expect(snap).toBe('original');
+      expect(acc.current).toBe('new value');
+    });
+
+    it('snapshot() after overwrite() returns the new value', () => {
+      acc.append('old');
+      acc.overwrite('replaced');
+      const snap = acc.snapshot();
+      expect(snap).toBe('replaced');
+    });
+  });
 });

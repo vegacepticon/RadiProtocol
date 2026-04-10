@@ -33,6 +33,7 @@ export interface AnswerNode extends RPNodeBase {
   kind: 'answer';
   answerText: string;
   displayLabel?: string;
+  radiprotocol_separator?: 'newline' | 'space';
 }
 
 export interface FreeTextInputNode extends RPNodeBase {
@@ -40,12 +41,14 @@ export interface FreeTextInputNode extends RPNodeBase {
   promptLabel: string;
   prefix?: string;
   suffix?: string;
+  radiprotocol_separator?: 'newline' | 'space';
 }
 
 export interface TextBlockNode extends RPNodeBase {
   kind: 'text-block';
   content: string;
   snippetId?: string;
+  radiprotocol_separator?: 'newline' | 'space';
 }
 
 export interface LoopStartNode extends RPNodeBase {

@@ -1,6 +1,7 @@
 import { ItemView, WorkspaceLeaf, Setting, TFile, Notice } from 'obsidian';
 import type { RPNodeKind } from '../graph/graph-model';
 import type RadiProtocolPlugin from '../main';
+import { NodeSwitchGuardModal } from './node-switch-guard-modal';
 
 export const EDITOR_PANEL_VIEW_TYPE = 'radiprotocol-editor-panel';
 
@@ -13,6 +14,9 @@ export class EditorPanelView extends ItemView {
   // so onChange can call kindFormSection.empty() + rebuild without
   // clearing the node-type dropdown
   private kindFormSection: HTMLElement | null = null;
+  // Auto-switch canvas listener bookkeeping (EDITOR-01)
+  private canvasPointerdownHandler: (() => void) | null = null;
+  private watchedCanvasContainer: HTMLElement | null = null;
 
   constructor(leaf: WorkspaceLeaf, plugin: RadiProtocolPlugin) {
     super(leaf);
@@ -25,10 +29,87 @@ export class EditorPanelView extends ItemView {
 
   async onOpen(): Promise<void> {
     this.renderIdle();
+    this.attachCanvasListener();
+
+    // Re-attach when user switches active leaf (e.g. opens a second canvas)
+    type EventRef = import('obsidian').EventRef;
+    this.registerEvent(
+      (this.plugin.app.workspace as unknown as {
+        on(event: 'active-leaf-change', handler: () => void): EventRef;
+      }).on('active-leaf-change', () => {
+        this.attachCanvasListener();
+      })
+    );
   }
 
   async onClose(): Promise<void> {
     this.contentEl.empty();
+  }
+
+  private attachCanvasListener(): void {
+    const canvasLeaves = this.plugin.app.workspace.getLeavesOfType('canvas');
+    const activeLeaf = this.plugin.app.workspace.getMostRecentLeaf();
+    const canvasLeaf = canvasLeaves.find(l => l === activeLeaf) ?? canvasLeaves[0];
+    if (!canvasLeaf) return;
+
+    // containerEl is an undocumented but stable property on WorkspaceLeaf (EDITOR-01).
+    const canvasLeafInternal = canvasLeaf as unknown as {
+      containerEl: HTMLElement;
+      view: unknown;
+    };
+
+    // Early-return: already watching this exact container — do not re-register.
+    // Prevents listener accumulation when active-leaf-change fires on modal open/close.
+    if (this.watchedCanvasContainer === canvasLeafInternal.containerEl) return;
+
+    // Genuine switch to a different canvas leaf — reset bookkeeping.
+    this.canvasPointerdownHandler = null;
+    this.watchedCanvasContainer = null;
+
+    const canvasView = canvasLeaf.view as unknown as {
+      file?: { path: string };
+      canvas?: { selection?: Set<{ id: string; [key: string]: unknown }> };
+    };
+
+    this.watchedCanvasContainer = canvasLeafInternal.containerEl;
+
+    this.canvasPointerdownHandler = () => {
+      const selection = canvasView.canvas?.selection;
+      if (!selection || selection.size !== 1) return; // ignore multi-select
+
+      const node = Array.from(selection)[0];
+      if (!node?.id) return;
+
+      const filePath = canvasView.file?.path;
+      if (!filePath) return;
+
+      void this.handleNodeClick(filePath, node.id);
+    };
+
+    if (this.watchedCanvasContainer !== null) {
+      this.registerDomEvent(
+        this.watchedCanvasContainer,
+        'click',
+        this.canvasPointerdownHandler
+      );
+    }
+  }
+
+  private async handleNodeClick(filePath: string, nodeId: string): Promise<void> {
+    // No-op: same node already loaded — avoids form flicker on re-click
+    if (this.currentFilePath === filePath && this.currentNodeId === nodeId) return;
+
+    // Dirty guard (EDITOR-02): only show when a node is loaded AND has unsaved edits.
+    // Guard does NOT fire when panel is in idle state (currentNodeId === null).
+    if (this.currentNodeId !== null && Object.keys(this.pendingEdits).length > 0) {
+      const modal = new NodeSwitchGuardModal(this.plugin.app);
+      modal.open();
+      const confirmed = await modal.result; // true = discard and switch
+      if (!confirmed) return; // user chose Stay — leave editor unchanged
+      this.pendingEdits = {}; // clear before loadNode (explicit, even though loadNode also clears)
+    }
+
+    this.loadNode(filePath, nodeId);
   }
 
   private renderIdle(): void {
@@ -47,25 +128,27 @@ export class EditorPanelView extends ItemView {
     void this.renderNodeForm(canvasFilePath, nodeId);
   }
 
-  private isCanvasOpen(filePath: string): boolean {
-    return this.plugin.app.workspace
-      .getLeavesOfType('canvas')
-      .some(leaf => {
-        const view = leaf.view as { file?: { path: string } };
-        return view.file?.path === filePath;
-      });
-  }
-
   async saveNodeEdits(
     filePath: string,
     nodeId: string,
     edits: Record<string, unknown>
   ): Promise<void> {
-    // EDIT-04: Strategy A — require canvas closed before writing
-    if (this.isCanvasOpen(filePath)) {
-      new Notice('Close the canvas before editing node properties.');
+    // LIVE-03: Attempt live save via internal Canvas API first (Pattern B).
+    // If saveLive() returns true, the canvas view owns the write — do not call vault.modify().
+    try {
+      const savedLive = await this.plugin.canvasLiveEditor.saveLive(filePath, nodeId, edits);
+      if (savedLive) {
+        new Notice('Node properties saved.');
+        return;
+      }
+    } catch (err) {
+      // D-03: requestSave() threw — canvas state has been rolled back by CanvasLiveEditor.
+      console.error('[RadiProtocol] saveLive threw — canvas state rolled back:', err);
+      new Notice('Save failed \u2014 close the canvas and try again.');
       return;
     }
+    // saveLive() returned false: canvas is closed or Pattern B API unavailable.
+    // Fall through to Strategy A (vault.modify() with canvas closed requirement).
 
     const file = this.plugin.app.vault.getAbstractFileByPath(filePath);
     if (!file) {
@@ -95,19 +178,14 @@ export class EditorPanelView extends ItemView {
       return;
     }
 
-    // Patch only radiprotocol_* fields and the native 'text' field (cosmetic sync).
-    // NEVER modify: id, x, y, width, height, type, color.
     const PROTECTED_FIELDS = new Set(['id', 'x', 'y', 'width', 'height', 'type', 'color']);
 
-    // Q3 resolution (RESEARCH.md): if nodeType is being unset (empty string),
-    // remove ALL radiprotocol_* fields from the node to prevent orphaned keys.
     const nodeTypeEdit = edits['radiprotocol_nodeType'];
     const isUnmarking = nodeTypeEdit === '' || nodeTypeEdit === undefined;
 
     const node = canvasData.nodes[nodeIndex];
     if (node !== undefined) {
       if (isUnmarking && 'radiprotocol_nodeType' in edits) {
-        // Remove all radiprotocol_* fields from the node
         for (const key of Object.keys(node)) {
           if (key.startsWith('radiprotocol_')) {
             delete node[key];
@@ -272,6 +350,21 @@ export class EditorPanelView extends ItemView {
             t.setValue((nodeRecord['radiprotocol_displayLabel'] as string | undefined) ?? '')
               .onChange(v => { this.pendingEdits['radiprotocol_displayLabel'] = v || undefined; });
           });
+        // Separator override dropdown (D-05, D-06, SEP-02)
+        new Setting(container)
+          .setName('Text separator')
+          .setDesc('How this node\'s text is joined to the accumulated report. "Use global" inherits the setting from Settings > Runner.')
+          .addDropdown(drop => {
+            drop
+              .addOption('', 'Use global (default)')
+              .addOption('newline', 'Newline')
+              .addOption('space', 'Space')
+              .setValue((nodeRecord['radiprotocol_separator'] as string | undefined) ?? '')
+              .onChange(value => {
+                this.pendingEdits['radiprotocol_separator'] =
+                  value === '' ? undefined : (value as 'newline' | 'space');
+              });
+          });
         break;
       }
 
@@ -298,6 +391,21 @@ export class EditorPanelView extends ItemView {
             t.setValue((nodeRecord['radiprotocol_suffix'] as string | undefined) ?? '')
               .onChange(v => { this.pendingEdits['radiprotocol_suffix'] = v || undefined; });
           });
+        // Separator override dropdown (D-05, D-06, SEP-02)
+        new Setting(container)
+          .setName('Text separator')
+          .setDesc('How this node\'s text is joined to the accumulated report. "Use global" inherits the setting from Settings > Runner.')
+          .addDropdown(drop => {
+            drop
+              .addOption('', 'Use global (default)')
+              .addOption('newline', 'Newline')
+              .addOption('space', 'Space')
+              .setValue((nodeRecord['radiprotocol_separator'] as string | undefined) ?? '')
+              .onChange(value => {
+                this.pendingEdits['radiprotocol_separator'] =
+                  value === '' ? undefined : (value as 'newline' | 'space');
+              });
+          });
         break;
       }
 
@@ -316,6 +424,21 @@ export class EditorPanelView extends ItemView {
           .addText(t => {
             t.setValue((nodeRecord['radiprotocol_snippetId'] as string | undefined) ?? '')
               .onChange(v => { this.pendingEdits['radiprotocol_snippetId'] = v || undefined; });
+          });
+        // Separator override dropdown (D-05, D-06, SEP-02)
+        new Setting(container)
+          .setName('Text separator')
+          .setDesc('How this node\'s text is joined to the accumulated report. "Use global" inherits the setting from Settings > Runner.')
+          .addDropdown(drop => {
+            drop
+              .addOption('', 'Use global (default)')
+              .addOption('newline', 'Newline')
+              .addOption('space', 'Space')
+              .setValue((nodeRecord['radiprotocol_separator'] as string | undefined) ?? '')
+              .onChange(value => {
+                this.pendingEdits['radiprotocol_separator'] =
+                  value === '' ? undefined : (value as 'newline' | 'space');
+              });
           });
         break;
       }
