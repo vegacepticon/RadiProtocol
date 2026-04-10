@@ -1,5 +1,24 @@
 # Milestones
 
+## v1.2 Runner UX & Bug Fixes (Shipped: 2026-04-10)
+
+**Phases completed:** 8 phases (12–19), 11 plans  
+**Timeline:** 2026-04-07 → 2026-04-10 (3 days)  
+**Git:** ~200 commits, ~7K LOC TypeScript in src/
+
+**Key accomplishments:**
+
+- Phase 12: Redesigned RunnerView layout — auto-grow textarea, correct zone ordering, equal-size buttons, legend removed (LAYOUT-01–04)
+- Phase 13: Canvas selector widget in sidebar + Run Again button after protocol completion (SIDEBAR-01, RUNNER-01)
+- Phase 14: Click-to-load node auto-switch in EditorPanel + unsaved edit guard modal (EDITOR-01, EDITOR-02)
+- Phase 15–16: Global + per-node text separator settings; manual textarea edits preserved across step advances (SEP-01, SEP-02, BUG-01)
+- Phase 17: Fixed free-text-input/text-block node type read-back when canvas open; fixed Add button in snippet placeholder mini-form (BUG-02, BUG-03, BUG-04)
+- Phase 18–19: Closed 3 CSS styling gaps; wrote retroactive VERIFICATION.md for Phases 12–14; 8/8 UAT passed in live Obsidian
+
+**Archive:** `.planning/milestones/v1.2-ROADMAP.md`, `.planning/milestones/v1.2-MILESTONE-AUDIT.md`
+
+---
+
 ## v1.0 Community Plugin Release (Shipped: 2026-04-07)
 
 **Phases completed:** 7 phases, 28 plans  

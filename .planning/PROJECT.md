@@ -55,6 +55,30 @@ A radiologist can generate a structured, accurate protocol in seconds by answeri
 - ✓ ESLint flat config: all 23 `eslint-plugin-obsidianmd` rules, strict TS, no-console, no-innerHTML — v1.0
 - ✓ Vitest for pure engine modules with zero Obsidian imports — v1.0
 
+### Validated (v1.2)
+
+**Runner UX:**
+- ✓ Auto-grow preview textarea (LAYOUT-01) — v1.2
+- ✓ Question zone always below text area in layout (LAYOUT-02) — v1.2
+- ✓ Copy/Save/Insert buttons equal-size (LAYOUT-03) — v1.2
+- ✓ Node legend removed from runner view (LAYOUT-04) — v1.2
+- ✓ Canvas selector widget in sidebar runner mode (SIDEBAR-01) — v1.2
+- ✓ Run Again button after protocol completion (RUNNER-01) — v1.2
+
+**Node Editor:**
+- ✓ Click canvas node → auto-load in EditorPanel (EDITOR-01) — v1.2
+- ✓ Unsaved edit guard modal on node switch (EDITOR-02) — v1.2
+
+**Settings & Separator:**
+- ✓ Global text separator setting with per-protocol default (SEP-01) — v1.2
+- ✓ Per-node separator override in EditorPanel dropdowns (SEP-02) — v1.2
+
+**Bug Fixes:**
+- ✓ Manual textarea edits preserved across step advances (BUG-01) — v1.2
+- ✓ free-text-input node type read-back when canvas open (BUG-02) — v1.2
+- ✓ text-block node type read-back when canvas open (BUG-03) — v1.2
+- ✓ Add button in snippet placeholder mini-form (BUG-04) — v1.2
+
 ### Active (Next Milestone)
 
 - [ ] Canvas selector dropdown in runner view — choose protocol without reopening command
@@ -63,6 +87,8 @@ A radiologist can generate a structured, accurate protocol in seconds by answeri
 - [ ] Community plugin submission checklist (README, LICENSE, manifest review, plugin review)
 - [ ] Node templates — save frequently-used node structures for reuse
 - [ ] Configurable output destination: insert into current note
+- [ ] UI hint when global separator change requires canvas reopen to take effect
+- [ ] Retroactive Nyquist VALIDATION.md for phases 12–19 (tech debt)
 
 ### Out of Scope
 
@@ -77,12 +103,13 @@ A radiologist can generate a structured, accurate protocol in seconds by answeri
 
 ## Context
 
-- Shipped v1.0 with 7 phases, 28 plans, ~43K LOC across TypeScript + planning docs
+- Shipped v1.0 (7 phases, 28 plans) + v1.2 (8 phases, 11 plans); ~7K LOC TypeScript in src/
 - Tech stack: TypeScript + Obsidian Plugin API + esbuild + Vitest
 - Target: public release on Obsidian Community Plugins
 - Primary author: radiologist (CT focus), designed for all imaging modalities
-- All 7 phases human-UAT approved; loop and session features verified end-to-end
+- All phases human-UAT approved; 8/8 v1.2 UAT tests passed in live Obsidian
 - All engine code (parser, runner, snippets, sessions) has zero Obsidian imports and is fully unit-testable
+- Known tech debt: Nyquist VALIDATION.md missing for phases 12–19; pre-existing TS errors in editor-panel-view.ts; dead CSS (.rp-legend*); 3 RED test stubs in runner-extensions.test.ts
 
 ## Constraints
 
@@ -110,6 +137,11 @@ A radiologist can generate a structured, accurate protocol in seconds by answeri
 | Session files in `.radiprotocol/sessions/` | Vault-visible, survives plugin reinstalls | ✓ Good |
 | `WriteMutex` (async-mutex) per file path | Prevents race-condition corruption on snippet/session writes | ✓ Good — required fix in Phase 7 code review |
 | `onLayoutReady` deferral for session restore | Prevents Obsidian startup hang on workspace restore | ✓ Good — caught in Phase 7 UAT |
+| `capture-before-advance` pattern (BUG-01) | syncManualEdit() before each advance action — undo snapshot includes textarea edit | ✓ Good — simple, 4 call sites |
+| `resolveSeparator(node)` single resolution point | node.radiprotocol_separator ?? defaultSeparator — avoids duplication across 5 call sites | ✓ Good |
+| RunnerView reconstructs ProtocolRunner at openCanvas() | Picks up textSeparator from settings; no lazy init or observer needed | ✓ Good — mid-session setting change requires reopen (by design) |
+| Live textarea read in complete-state toolbar | previewTextarea?.value ?? capturedText — honours final edits before copy/save/insert | ✓ Good — fixed stale closure bug |
+| getCanvasJSON() for runner read path (Phases 17+) | Reads live in-memory canvas data; vault.read() retained only in EditorPanel form load | ✓ Good — BUG-02/03 resolved |
 
 ## Evolution
 
@@ -120,4 +152,4 @@ A radiologist can generate a structured, accurate protocol in seconds by answeri
 4. Update Context with current state
 
 ---
-*Last updated: 2026-04-07 after v1.0 milestone*
+*Last updated: 2026-04-10 after v1.2 milestone*

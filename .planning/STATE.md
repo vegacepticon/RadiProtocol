@@ -2,12 +2,12 @@
 gsd_state_version: 1.0
 milestone: v1.2
 milestone_name: Runner UX & Bug Fixes
-status: human_needed
-stopped_at: Phase 19 complete — 8/8 requirements verified, awaiting human UAT
-last_updated: "2026-04-10T12:00:00.000Z"
+status: milestone_complete
+stopped_at: v1.2 milestone archived — 8 phases, 11 plans, 14/14 requirements, 8/8 UAT passed
+last_updated: "2026-04-10T18:00:00.000Z"
 progress:
   total_phases: 8
-  completed_phases: 5
+  completed_phases: 8
   total_plans: 11
   completed_plans: 11
   percent: 100
@@ -17,18 +17,18 @@ progress:
 
 **Updated:** 2026-04-10
 **Milestone:** v1.2 — Runner UX & Bug Fixes
-**Status:** Phase 19 complete — human UAT pending for 8 requirements
-**Last session:** 2026-04-10T12:00:00.000Z
-**Stopped at:** Phase 19 complete — 8/8 requirements verified, awaiting human UAT
+**Status:** ✅ MILESTONE COMPLETE — archived 2026-04-10
+**Last session:** 2026-04-10T18:00:00.000Z
+**Stopped at:** v1.2 milestone archived — 8 phases, 11 plans, 14/14 requirements, 8/8 UAT passed
 
 ---
 
 ## Project Reference
 
-See: `.planning/PROJECT.md` (updated 2026-04-07)
+See: `.planning/PROJECT.md` (updated 2026-04-10)
 
 **Core value:** A radiologist can generate a structured, accurate protocol in seconds by answering a guided algorithm — without writing a single line of code.  
-**Current focus:** Phase 19 — phase-12-14-formal-verification
+**Current focus:** Planning next milestone (run `/gsd-new-milestone`)
 
 ---
 
@@ -43,6 +43,14 @@ See: `.planning/PROJECT.md` (updated 2026-04-07)
 | 5 | Dynamic Snippets | Complete |
 | 6 | Loop Support | Complete |
 | 7 | Mid-Session Save + Resume | Complete |
+| 12 | Runner Layout Overhaul | Complete |
+| 13 | Sidebar Canvas Selector and Run Again | Complete |
+| 14 | Node Editor Auto-Switch and Unsaved Guard | Complete |
+| 15 | Text Separator Setting | Complete |
+| 16 | Runner Textarea Edit Preservation | Complete |
+| 17 | Node Type Read-Back and Snippet Placeholder Fixes | Complete |
+| 18 | CSS Gap Fixes (INSERTED) | Complete |
+| 19 | Phase 12–14 Formal Verification | Complete |
 
 ---
 
@@ -65,6 +73,7 @@ See: `.planning/PROJECT.md` (updated 2026-04-07)
 | capture-before-advance pattern (BUG-01) | syncManualEdit() called before each advance action so undo snapshot includes manual textarea edit |
 | overwrite() semantically separate from restoreTo() | restoreTo = undo revert of a snapshot; overwrite = inject caller's text — clearer intent at call sites |
 | live textarea read in complete-state toolbar (D-03) | previewTextarea?.value ?? capturedText replaces stale closure to honour final edits before copy/save/insert |
+| getCanvasJSON() for runner read path | Reads live in-memory canvas data; vault.read() retained only in EditorPanel form load (pre-existing gap) |
 
 ---
 
@@ -94,4 +103,4 @@ See: `.planning/PROJECT.md` (updated 2026-04-07)
 
 - Branch: `main`
 - Remote: (not yet configured)
-- Last commit: `2530427` — docs(04-02): finalize SUMMARY — human UAT approved, all 7 tests passed
+- Last commit: `209e285` — docs(audit): update v1.2 milestone audit — all 14 requirements satisfied

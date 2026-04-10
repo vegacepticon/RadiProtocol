@@ -8,6 +8,7 @@
 ## Milestones
 
 - ✅ **v1.0 Community Plugin Release** — Phases 1–7 (shipped 2026-04-07)
+- ✅ **v1.2 Runner UX & Bug Fixes** — Phases 12–19 (shipped 2026-04-10)
 
 ---
 
@@ -25,6 +26,22 @@
 - [x] Phase 7: Mid-Session Save and Resume (3/3 plans) — completed 2026-04-07
 
 Full details: `.planning/milestones/v1.0-ROADMAP.md`
+
+</details>
+
+<details>
+<summary>✅ v1.2 Runner UX & Bug Fixes (Phases 12–19) — SHIPPED 2026-04-10</summary>
+
+- [x] Phase 12: Runner Layout Overhaul — completed 2026-04-08
+- [x] Phase 13: Sidebar Canvas Selector and Run Again — completed 2026-04-08
+- [x] Phase 14: Node Editor Auto-Switch and Unsaved Guard — completed 2026-04-09
+- [x] Phase 15: Text Separator Setting — completed 2026-04-09
+- [x] Phase 16: Runner Textarea Edit Preservation — completed 2026-04-09
+- [x] Phase 17: Node Type Read-Back and Snippet Placeholder Fixes — completed 2026-04-09
+- [x] Phase 18: CSS Gap Fixes (INSERTED) — completed 2026-04-10
+- [x] Phase 19: Phase 12–14 Formal Verification — completed 2026-04-10
+
+Full details: `.planning/milestones/v1.2-ROADMAP.md`
 
 </details>
 
@@ -55,3 +72,11 @@ Full details: `.planning/milestones/v1.0-ROADMAP.md`
 | 5. Dynamic Snippets | v1.0 | 5/5 | Complete | 2026-04-06 |
 | 6. Loop Support | v1.0 | 3/3 | Complete | 2026-04-07 |
 | 7. Mid-Session Save and Resume | v1.0 | 3/3 | Complete | 2026-04-07 |
+| 12. Runner Layout Overhaul | v1.2 | 2/2 | Complete | 2026-04-08 |
+| 13. Sidebar Canvas Selector and Run Again | v1.2 | 2/2 | Complete | 2026-04-08 |
+| 14. Node Editor Auto-Switch and Unsaved Guard | v1.2 | 1/1 | Complete | 2026-04-09 |
+| 15. Text Separator Setting | v1.2 | 2/2 | Complete | 2026-04-09 |
+| 16. Runner Textarea Edit Preservation | v1.2 | 2/2 | Complete | 2026-04-09 |
+| 17. Node Type Read-Back and Snippet Placeholder Fixes | v1.2 | 2/2 | Complete | 2026-04-09 |
+| 18. CSS Gap Fixes (INSERTED) | v1.2 | 1/1 | Complete | 2026-04-10 |
+| 19. Phase 12–14 Formal Verification | v1.2 | 3/3 | Complete | 2026-04-10 |
