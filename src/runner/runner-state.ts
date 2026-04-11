@@ -30,6 +30,8 @@ export interface AtNodeState {
   loopIterationLabel?: string;
   /** true when currentNodeId refers to a loop-end node — drives UI branch (LOOP-02) */
   isAtLoopEnd?: boolean;
+  /** true when currentNodeId refers to a snippet node — Phase 25 renders file-picker button (D-05) */
+  isAtSnippetNode?: boolean;
 }
 
 /** All nodes have been traversed and there is no next node. */

@@ -208,6 +208,7 @@ export class ProtocolRunner {
           canStepBack: this.undoStack.length > 0,
           loopIterationLabel,
           isAtLoopEnd: this.graph?.nodes.get(this.currentNodeId ?? '')?.kind === 'loop-end',
+          isAtSnippetNode: this.graph?.nodes.get(this.currentNodeId ?? '')?.kind === 'snippet',
         };
       }
       case 'complete':
@@ -406,6 +407,13 @@ export class ProtocolRunner {
         }
         case 'loop-end': {
           // Halt here — RunnerView will render "loop again / done" prompt (LOOP-02)
+          this.currentNodeId = cursor;
+          this.runnerStatus = 'at-node';
+          return;
+        }
+        case 'snippet': {
+          // Halt here — RunnerView will render file-picker button (Phase 25) (D-06)
+          // No undo push — no mutation has occurred yet (D-07)
           this.currentNodeId = cursor;
           this.runnerStatus = 'at-node';
           return;
