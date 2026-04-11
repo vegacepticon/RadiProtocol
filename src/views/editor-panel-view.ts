@@ -2,6 +2,7 @@ import { ItemView, WorkspaceLeaf, Setting, TFile, Notice } from 'obsidian';
 import type { RPNodeKind } from '../graph/graph-model';
 import type RadiProtocolPlugin from '../main';
 import { NodeSwitchGuardModal } from './node-switch-guard-modal';
+import { NODE_COLOR_MAP } from '../canvas/node-color-map';
 
 export const EDITOR_PANEL_VIEW_TYPE = 'radiprotocol-editor-panel';
 
@@ -178,7 +179,7 @@ export class EditorPanelView extends ItemView {
       return;
     }
 
-    const PROTECTED_FIELDS = new Set(['id', 'x', 'y', 'width', 'height', 'type', 'color']);
+    const PROTECTED_FIELDS = new Set(['id', 'x', 'y', 'width', 'height', 'type']);
 
     const nodeTypeEdit = edits['radiprotocol_nodeType'];
     const isUnmarking = nodeTypeEdit === '' || nodeTypeEdit === undefined;
@@ -191,6 +192,8 @@ export class EditorPanelView extends ItemView {
             delete node[key];
           }
         }
+        // COLOR-02, D-06: also clear the canvas node's colour on unmark (Strategy A path)
+        delete node['color'];
       } else {
         for (const [key, value] of Object.entries(edits)) {
           if (PROTECTED_FIELDS.has(key)) continue;
@@ -251,6 +254,9 @@ export class EditorPanelView extends ItemView {
 
   private renderForm(nodeRecord: Record<string, unknown>, currentKind: RPNodeKind | null): void {
     this.contentEl.empty();
+    // Pitfall 3 fix: initialize pendingEdits with the current type so the save path
+    // always has a type for color lookup — even if the user doesn't touch the dropdown.
+    this.pendingEdits['radiprotocol_nodeType'] = currentKind ?? '';
     const panel = this.contentEl.createDiv({ cls: 'rp-editor-panel' });
     const formArea = panel.createDiv({ cls: 'rp-editor-form' });
 
@@ -295,10 +301,21 @@ export class EditorPanelView extends ItemView {
           .setCta()
           .onClick(() => {
             if (this.currentFilePath && this.currentNodeId) {
+              const edits = { ...this.pendingEdits };
+              // COLOR-01, D-04: look up palette color for the selected type and include
+              // it in edits (color travels through the standard saveLive() path — no writeColor()).
+              const selectedType = edits['radiprotocol_nodeType'] as string | undefined;
+              if (selectedType && selectedType !== '') {
+                // Assign path: type is set — write its palette color
+                edits['color'] = NODE_COLOR_MAP[selectedType];
+              } else if ('radiprotocol_nodeType' in edits) {
+                // Unmark path: type is cleared — signal color deletion via undefined
+                edits['color'] = undefined;
+              }
               void this.saveNodeEdits(
                 this.currentFilePath,
                 this.currentNodeId,
-                { ...this.pendingEdits }
+                edits
               );
             }
           });
