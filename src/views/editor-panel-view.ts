@@ -178,7 +178,7 @@ export class EditorPanelView extends ItemView {
       return;
     }
 
-    const PROTECTED_FIELDS = new Set(['id', 'x', 'y', 'width', 'height', 'type', 'color']);
+    const PROTECTED_FIELDS = new Set(['id', 'x', 'y', 'width', 'height', 'type']);
 
     const nodeTypeEdit = edits['radiprotocol_nodeType'];
     const isUnmarking = nodeTypeEdit === '' || nodeTypeEdit === undefined;
@@ -191,6 +191,8 @@ export class EditorPanelView extends ItemView {
             delete node[key];
           }
         }
+        // COLOR-02, D-06: also clear the canvas node's colour on unmark (Strategy A path)
+        delete node['color'];
       } else {
         for (const [key, value] of Object.entries(edits)) {
           if (PROTECTED_FIELDS.has(key)) continue;

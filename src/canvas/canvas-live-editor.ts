@@ -11,7 +11,7 @@
 import type { App } from 'obsidian';
 import type { CanvasViewInternal, CanvasNodeData, CanvasData } from '../types/canvas-internal';
 
-const PROTECTED_FIELDS = new Set(['id', 'x', 'y', 'width', 'height', 'type', 'color']);
+const PROTECTED_FIELDS = new Set(['id', 'x', 'y', 'width', 'height', 'type']);
 
 export class CanvasLiveEditor {
   private readonly app: App;
@@ -103,6 +103,8 @@ export class CanvasLiveEditor {
           delete node[key as keyof CanvasNodeData];
         }
       }
+      // COLOR-02, D-06: also clear the canvas node's colour on unmark
+      delete (node as Record<string, unknown>)['color'];
     } else {
       // Apply edits to the copy, skipping PROTECTED_FIELDS
       for (const [key, value] of Object.entries(edits)) {
