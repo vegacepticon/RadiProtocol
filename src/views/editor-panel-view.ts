@@ -497,9 +497,11 @@ export class EditorPanelView extends ItemView {
 
     this._debounceTimer = setTimeout(() => {
       this._debounceTimer = null;
-      void this.saveNodeEdits(filePath, nodeId, edits).then(() => {
-        this.showSavedIndicator();
-      });
+      void this.saveNodeEdits(filePath, nodeId, edits)
+        .then(() => { this.showSavedIndicator(); })
+        .catch(err => {
+          console.error('[RadiProtocol] auto-save failed:', err);
+        });
     }, 800);
   }
 
