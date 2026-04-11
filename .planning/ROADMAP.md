@@ -82,7 +82,10 @@ Full details: `.planning/milestones/v1.2-ROADMAP.md`
   2. Each of the seven node types (start, question, answer, text-block, snippet, loop-start, loop-end) displays a distinct palette colour — no two types share the same colour
   3. Removing a node's type (unmarking it) immediately clears its colour back to the default canvas node colour
   4. Vitest tests for src/canvas/node-color-map.ts confirm all seven type-to-palette mappings and the unmark-clears-color path
-**Plans**: TBD
+**Plans**: 2 plans
+Plans:
+- [ ] 21-01-PLAN.md — Create node-color-map.ts constant and test scaffold (TDD + test updates)
+- [ ] 21-02-PLAN.md — Wire color into PROTECTED_FIELDS and editor-panel-view.ts save path
 **UI hint**: yes
 
 ### Phase 22: Snippet Node — Graph and Runner Layer
@@ -188,7 +191,7 @@ Full details: `.planning/milestones/v1.2-ROADMAP.md`
 | 18. CSS Gap Fixes (INSERTED) | v1.2 | 1/1 | Complete | 2026-04-10 |
 | 19. Phase 12–14 Formal Verification | v1.2 | 3/3 | Complete | 2026-04-10 |
 | 20. Housekeeping Removals | v1.3 | 0/? | Not started | - |
-| 21. Color Infrastructure | v1.3 | 0/? | Not started | - |
+| 21. Color Infrastructure | v1.3 | 0/2 | Not started | - |
 | 22. Snippet Node — Graph and Runner Layer | v1.3 | 0/? | Not started | - |
 | 23. Node Editor Auto-Save and Color-on-Type-Change | v1.3 | 0/? | Not started | - |
 | 24. Settings — Snippet Node Folder | v1.3 | 0/? | Not started | - |
