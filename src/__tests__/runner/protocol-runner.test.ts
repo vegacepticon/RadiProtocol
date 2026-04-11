@@ -308,6 +308,44 @@ describe('ProtocolRunner', () => {
     });
   });
 
+  describe('snippet node — halt and completeSnippetFile (SNIPPET-02, Task 25-01-02)', () => {
+    it('runner halts at snippet node with isAtSnippetNode: true after traversing answer', () => {
+      // snippet-node.canvas: start → n-q1 → n-a1 → n-snippet1
+      const runner = new ProtocolRunner();
+      runner.start(loadGraph('snippet-node.canvas'));
+      runner.chooseAnswer('n-a1');
+      const state = runner.getState();
+      expect(state.status).toBe('at-node');
+      if (state.status !== 'at-node') return;
+      expect(state.currentNodeId).toBe('n-snippet1');
+      expect(state.isAtSnippetNode).toBe(true);
+    });
+
+    it('completeSnippetFile() appends text with defaultSeparator and advances runner to complete', () => {
+      // snippet-node.canvas: n-snippet1 is terminal (no outgoing edge)
+      const runner = new ProtocolRunner({ defaultSeparator: 'newline' });
+      runner.start(loadGraph('snippet-node.canvas'));
+      runner.chooseAnswer('n-a1');
+      expect(runner.getState().status).toBe('at-node');
+
+      runner.completeSnippetFile('snippet file content', 'n-snippet1');
+      const state = runner.getState();
+      // n-snippet1 has no outgoing edge → complete
+      expect(state.status).toBe('complete');
+      if (state.status !== 'complete') return;
+      expect(state.finalText).toContain('snippet file content');
+      // Answer text "Choice A" was appended first, then separator + snippet text
+      expect(state.finalText).toBe('Choice A\nsnippet file content');
+    });
+
+    it('completeSnippetFile() is a no-op when runner is not in at-node state', () => {
+      const runner = new ProtocolRunner();
+      // Runner is idle — completeSnippetFile must not throw or change state
+      runner.completeSnippetFile('should be ignored', 'n-snippet1');
+      expect(runner.getState().status).toBe('idle');
+    });
+  });
+
   describe('ProtocolRunner has zero Obsidian API imports (NFR-01)', () => {
     it('module can be imported without Obsidian runtime', () => {
       // If this test file loaded, the import succeeded in pure Node.js env.
