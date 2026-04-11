@@ -367,17 +367,19 @@ it('unmark path: color is deleted from canvas JSON when nodeType cleared', async
 
 ---
 
-## Open Questions
+## Open Questions (RESOLVED)
 
 1. **Strategy A color write behavior (A1 above)**
    - What we know: D-05 says color is written "only via the live path" and "color will appear on next canvas open" when canvas is closed
    - What's unclear: Does D-05 prohibit Strategy A from writing color, or does it merely describe the fallback behavior (color will be there on next open because Strategy A wrote it to disk)?
    - Recommendation: Interpret D-05 as "live is preferred, Strategy A also writes color to disk." Remove `'color'` from both PROTECTED_FIELDS copies. This is consistent with the goal of color persistence. If the user wants explicit skip, they can re-add color to Strategy A's set only.
+   - **RESOLVED (21-02 Task 1):** Remove `'color'` from both PROTECTED_FIELDS copies — Strategy A also writes color to disk. Consistent with D-05 goal of color persistence on next canvas open.
 
 2. **`pendingEdits` initialization for existing typed nodes (A2 above)**
    - What we know: `pendingEdits` starts empty; only user interactions populate it
    - What's unclear: Should `renderForm()` pre-populate `pendingEdits['radiprotocol_nodeType']` with `currentKind`?
    - Recommendation: Yes — initialize at form render time. This also fixes a subtle bug: if a user opens a typed node and clicks Save without changing anything, the save currently sends empty edits. Initializing the type ensures color is always written on any save.
+   - **RESOLVED (21-02 Task 2 Change 2):** `renderForm()` pre-populates `this.pendingEdits['radiprotocol_nodeType'] = currentKind ?? ''` to ensure color is written on any save.
 
 ---
 

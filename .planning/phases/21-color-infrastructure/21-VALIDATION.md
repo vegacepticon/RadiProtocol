@@ -41,9 +41,8 @@ created: 2026-04-11
 | 21-01-01 | 01 | 0 | COLOR-01, COLOR-03 | — | N/A | unit | `npm test -- --reporter=dot node-color-map` | ❌ W0 | ⬜ pending |
 | 21-01-02 | 01 | 0 | COLOR-02 | — | N/A | unit | `npm test -- --reporter=dot canvas-write-back` | ✅ existing | ⬜ pending |
 | 21-01-03 | 01 | 0 | COLOR-04 | — | N/A | unit | `npm test -- --reporter=dot canvas-live-editor` | ✅ existing | ⬜ pending |
-| 21-02-01 | 02 | 1 | COLOR-01 | — | Palette strings are constants, not user input | unit | `npm test -- --reporter=dot node-color-map` | ❌ W0 | ⬜ pending |
-| 21-02-02 | 02 | 1 | COLOR-02 | — | N/A | unit | `npm test -- --reporter=dot canvas-write-back` | ✅ existing | ⬜ pending |
-| 21-03-01 | 03 | 2 | COLOR-04 | — | N/A | unit | `npm test -- --reporter=dot canvas-live-editor` | ✅ existing | ⬜ pending |
+| 21-02-01 | 02 | 2 | COLOR-01, COLOR-04 | — | Palette strings are constants, not user input | unit | `npm test -- --reporter=dot node-color-map` | ❌ W0 | ⬜ pending |
+| 21-02-02 | 02 | 2 | COLOR-02, COLOR-04 | — | N/A | unit | `npm test -- --reporter=dot canvas-live-editor` | ✅ existing | ⬜ pending |
 
 *Status: ⬜ pending · ✅ green · ❌ red · ⚠️ flaky*
 
