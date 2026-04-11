@@ -1,25 +1,26 @@
 ---
 gsd_state_version: 1.0
-milestone: v1.2
-milestone_name: Runner UX & Bug Fixes
-status: milestone_complete
-stopped_at: v1.2 milestone archived — 8 phases, 11 plans, 14/14 requirements, 8/8 UAT passed
-last_updated: "2026-04-10T18:00:00.000Z"
+milestone: v1.3
+milestone_name: Node Editor Overhaul & Snippet Node
+status: in_progress
+current_phase: "25"
+current_phase_name: snippet-node-runner-ui
+last_updated: "2026-04-11T21:17:00.000Z"
 progress:
-  total_phases: 8
-  completed_phases: 8
-  total_plans: 11
-  completed_plans: 11
+  total_phases: 2
+  completed_phases: 2
+  total_plans: 3
+  completed_plans: 3
   percent: 100
 ---
 
 # RadiProtocol — Project State
 
-**Updated:** 2026-04-10
-**Milestone:** v1.2 — Runner UX & Bug Fixes
-**Status:** ✅ MILESTONE COMPLETE — archived 2026-04-10
-**Last session:** 2026-04-10T18:00:00.000Z
-**Stopped at:** v1.2 milestone archived — 8 phases, 11 plans, 14/14 requirements, 8/8 UAT passed
+**Updated:** 2026-04-11
+**Milestone:** v1.3 — Node Editor Overhaul & Snippet Node
+**Status:** Phase 25 complete — snippet node runner UI delivered
+**Last session:** 2026-04-11T21:17:00.000Z
+**Stopped at:** Phase 25 complete (2/2 plans, SNIPPET-02/03/04/05/07 satisfied)
 
 ---
 
