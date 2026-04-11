@@ -9,6 +9,8 @@ function loadFixture(name: string): string {
   return fs.readFileSync(path.join(fixturesDir, name), 'utf-8');
 }
 
+const parser = new CanvasParser();
+
 describe('CanvasParser', () => {
   describe('parse() — valid fixtures', () => {
     it('parses linear.canvas and returns a ProtocolGraph with correct node kinds', () => {
@@ -61,6 +63,29 @@ describe('CanvasParser', () => {
       // If this test file loads, the import at the top succeeded in a pure Node.js env.
       // This proves CanvasParser has no obsidian imports.
       expect(typeof CanvasParser).toBe('function');
+    });
+  });
+
+  describe('DEPRECATED_KINDS silent skip', () => {
+    it('silently skips a free-text-input node and drops its edges', () => {
+      const json = JSON.stringify({
+        nodes: [
+          { id: 'n-start', type: 'text', text: 'Start', x: 0, y: 0, width: 200, height: 60, radiprotocol_nodeType: 'start' },
+          { id: 'n-fti', type: 'text', text: 'Old', x: 0, y: 120, width: 200, height: 60, radiprotocol_nodeType: 'free-text-input', radiprotocol_promptLabel: 'Enter text' },
+        ],
+        edges: [
+          { id: 'e1', fromNode: 'n-start', toNode: 'n-fti' },
+        ],
+      });
+      const result = parser.parse(json, 'test.canvas');
+      expect(result.success).toBe(true);
+      if (!result.success) return;
+      // free-text-input node silently excluded
+      expect(result.graph.nodes.has('n-fti')).toBe(false);
+      // only start node present
+      expect(result.graph.nodes.size).toBe(1);
+      // edge to dropped node also dropped
+      expect(result.graph.edges.length).toBe(0);
     });
   });
 });
