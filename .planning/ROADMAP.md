@@ -140,7 +140,10 @@ Plans:
   3. Selecting a `.md` file appends its plain-text content to the protocol report textarea and advances the runner
   4. Selecting a `.json` snippet file opens SnippetFillInModal; after filling placeholders and confirming, the filled text is appended to the report textarea and the runner advances
   5. The per-node folder path set in the Node Editor form takes precedence over the global setting when both are configured
-**Plans**: TBD
+**Plans**: 2 plans
+Plans:
+- [ ] 25-01-PLAN.md — Graph/runner layer: SnippetNode in model, parser, halt in runner, completeSnippetFile(), isAtSnippetNode in state (Wave 1)
+- [ ] 25-02-PLAN.md — UI layer: SnippetFilePickerModal, runner-view case 'snippet', .md/.json dispatch, all error states (Wave 2)
 **UI hint**: yes
 
 ### Phase 26: Auto-Switch to Node Editor Tab
@@ -204,6 +207,6 @@ Plans:
 | 22. Snippet Node — Graph and Runner Layer | v1.3 | 3/3 | Complete   | 2026-04-11 |
 | 23. Node Editor Auto-Save and Color-on-Type-Change | v1.3 | 2/2 | Complete   | 2026-04-11 |
 | 24. Settings — Snippet Node Folder | v1.3 | 0/1 | Not started | - |
-| 25. Snippet Node Runner UI | v1.3 | 0/? | Not started | - |
+| 25. Snippet Node Runner UI | v1.3 | 0/2 | Not started | - |
 | 26. Auto-Switch to Node Editor Tab | v1.3 | 0/? | Not started | - |
 | 27. Interactive Placeholder Editor | v1.3 | 0/? | Not started | - |
