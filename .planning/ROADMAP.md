@@ -50,7 +50,7 @@ Full details: `.planning/milestones/v1.2-ROADMAP.md`
 
 - [x] **Phase 20: Housekeeping Removals** — completed 2026-04-11 — Remove free-text-input type, retire awaiting-snippet-fill state, strip text-block snippet logic, polish Runner textarea
 - [x] **Phase 21: Color Infrastructure** — Canvas node color coding by type via CanvasLiveEditor, node-color-map constant, both PROTECTED_FIELDS copies updated (completed 2026-04-11)
-- [x] **Phase 22: Snippet Node — Graph and Runner Layer** — Add snippet to RPNodeKind, parser, validator, and runner halt/advance logic (completed 2026-04-11)
+- [x] **Phase 22: Snippet Node — Graph and Runner Layer** — Add snippet to RPNodeKind, parser, validator, and runner halt/advance logic (completed 2026-04-11)
 - [ ] **Phase 23: Node Editor Auto-Save and Color-on-Type-Change** — Debounced auto-save replaces Save button, color written/cleared on type assignment, dirty guard removed
 - [ ] **Phase 24: Settings — Snippet Node Folder** — Global snippetNodeFolderPath setting added to plugin Settings tab
 - [ ] **Phase 25: Snippet Node Runner UI** — FuzzySuggestModal picker, .md/.json dispatch, per-node folder override wired into runner
@@ -113,7 +113,10 @@ Plans:
   3. Switching from one canvas node to another while a debounced save is pending writes the first node's edits to the first node's ID, not the second node's ID
   4. Switching between canvas nodes requires no confirmation modal — the Node Editor loads the new node immediately
   5. A transient "Saved" indicator appears inline in the editor after each successful auto-save
-**Plans**: TBD
+**Plans**: 2 plans
+Plans:
+- [ ] 23-01-PLAN.md — TDD red phase: write 7 failing auto-save tests, add CSS .rp-editor-saved-indicator, delete node-switch-guard-modal.ts
+- [ ] 23-02-PLAN.md — Implement debounce, flush-on-switch, type-change immediate save, saved indicator in editor-panel-view.ts
 **UI hint**: yes
 
 ### Phase 24: Settings — Snippet Node Folder
@@ -197,7 +200,7 @@ Plans:
 | 20. Housekeeping Removals | v1.3 | 0/? | Not started | - |
 | 21. Color Infrastructure | v1.3 | 2/2 | Complete   | 2026-04-11 |
 | 22. Snippet Node — Graph and Runner Layer | v1.3 | 3/3 | Complete   | 2026-04-11 |
-| 23. Node Editor Auto-Save and Color-on-Type-Change | v1.3 | 0/? | Not started | - |
+| 23. Node Editor Auto-Save and Color-on-Type-Change | v1.3 | 0/2 | Not started | - |
 | 24. Settings — Snippet Node Folder | v1.3 | 0/? | Not started | - |
 | 25. Snippet Node Runner UI | v1.3 | 0/? | Not started | - |
 | 26. Auto-Switch to Node Editor Tab | v1.3 | 0/? | Not started | - |
