@@ -5,7 +5,7 @@ import { NODE_COLOR_MAP } from '../canvas/node-color-map';
 
 describe('NODE_COLOR_MAP', () => {
   it('maps all 7 node types to valid palette strings ("1"–"6")', () => {
-    const types = ['start', 'question', 'answer', 'text-block', 'snippet', 'loop-start', 'loop-end'];
+    const types: import('../graph/graph-model').RPNodeKind[] = ['start', 'question', 'answer', 'text-block', 'snippet', 'loop-start', 'loop-end'];
     for (const type of types) {
       expect(NODE_COLOR_MAP[type], `type "${type}" must have a palette string`).toMatch(/^[1-6]$/);
     }
@@ -26,8 +26,9 @@ describe('NODE_COLOR_MAP', () => {
   });
 
   it('unknown or empty type returns undefined (unmark path: no color written)', () => {
-    expect(NODE_COLOR_MAP['']).toBeUndefined();
-    expect(NODE_COLOR_MAP['free-text']).toBeUndefined();
-    expect(NODE_COLOR_MAP['unknown-type']).toBeUndefined();
+    const map = NODE_COLOR_MAP as Record<string, string | undefined>;
+    expect(map['']).toBeUndefined();
+    expect(map['free-text']).toBeUndefined();
+    expect(map['unknown-type']).toBeUndefined();
   });
 });

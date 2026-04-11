@@ -270,7 +270,6 @@ export class EditorPanelView extends ItemView {
           .addOption('start', 'Start')
           .addOption('question', 'Question')
           .addOption('answer', 'Answer')
-          .addOption('free-text-input', 'Free-text input')
           .addOption('text-block', 'Text block')
           .addOption('loop-start', 'Loop start')
           .addOption('loop-end', 'Loop end')
@@ -307,7 +306,7 @@ export class EditorPanelView extends ItemView {
               const selectedType = edits['radiprotocol_nodeType'] as string | undefined;
               if (selectedType && selectedType !== '') {
                 // Assign path: type is set — write its palette color
-                edits['color'] = NODE_COLOR_MAP[selectedType];
+                edits['color'] = (NODE_COLOR_MAP as Record<string, string | undefined>)[selectedType];
               } else if ('radiprotocol_nodeType' in edits) {
                 // Unmark path: type is cleared — signal color deletion via undefined
                 edits['color'] = undefined;
@@ -366,47 +365,6 @@ export class EditorPanelView extends ItemView {
           .addText(t => {
             t.setValue((nodeRecord['radiprotocol_displayLabel'] as string | undefined) ?? '')
               .onChange(v => { this.pendingEdits['radiprotocol_displayLabel'] = v || undefined; });
-          });
-        // Separator override dropdown (D-05, D-06, SEP-02)
-        new Setting(container)
-          .setName('Text separator')
-          .setDesc('How this node\'s text is joined to the accumulated report. "Use global" inherits the setting from Settings > Runner.')
-          .addDropdown(drop => {
-            drop
-              .addOption('', 'Use global (default)')
-              .addOption('newline', 'Newline')
-              .addOption('space', 'Space')
-              .setValue((nodeRecord['radiprotocol_separator'] as string | undefined) ?? '')
-              .onChange(value => {
-                this.pendingEdits['radiprotocol_separator'] =
-                  value === '' ? undefined : (value as 'newline' | 'space');
-              });
-          });
-        break;
-      }
-
-      case 'free-text-input': {
-        new Setting(container).setHeading().setName('Free-text input node');
-        new Setting(container)
-          .setName('Prompt label')
-          .setDesc('Shown to the user above the text input field during the session.')
-          .addText(t => {
-            t.setValue((nodeRecord['radiprotocol_promptLabel'] as string | undefined) ?? (nodeRecord['text'] as string | undefined) ?? '')
-              .onChange(v => { this.pendingEdits['radiprotocol_promptLabel'] = v; this.pendingEdits['text'] = v; });
-          });
-        new Setting(container)
-          .setName('Prefix (optional)')
-          .setDesc('Prepended to the user\'s input in the accumulated text.')
-          .addText(t => {
-            t.setValue((nodeRecord['radiprotocol_prefix'] as string | undefined) ?? '')
-              .onChange(v => { this.pendingEdits['radiprotocol_prefix'] = v || undefined; });
-          });
-        new Setting(container)
-          .setName('Suffix (optional)')
-          .setDesc('Appended to the user\'s input in the accumulated text.')
-          .addText(t => {
-            t.setValue((nodeRecord['radiprotocol_suffix'] as string | undefined) ?? '')
-              .onChange(v => { this.pendingEdits['radiprotocol_suffix'] = v || undefined; });
           });
         // Separator override dropdown (D-05, D-06, SEP-02)
         new Setting(container)

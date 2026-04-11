@@ -228,7 +228,7 @@ export class RunnerView extends ItemView {
 
     const state = this.runner.getState();
     const needsConfirmation =
-      state.status === 'at-node' || state.status === 'awaiting-snippet-fill';
+      state.status === 'at-node';
 
     if (needsConfirmation) {
       // D-12: show confirmation modal; runner state is in-progress
@@ -331,22 +331,6 @@ export class RunnerView extends ItemView {
             break;
           }
 
-          case 'free-text-input': {
-            questionZone.createEl('p', {
-              text: node.promptLabel,
-              cls: 'rp-question-text',
-            });
-            const textarea = questionZone.createEl('textarea', { cls: 'rp-free-text-input' });
-            const submitBtn = questionZone.createEl('button', { text: 'Submit' });
-            this.registerDomEvent(submitBtn, 'click', () => {
-              this.runner.syncManualEdit(this.previewTextarea?.value ?? '');  // BUG-01: capture manual edit (D-01)
-              this.runner.enterFreeText(textarea.value);
-              void this.autoSaveSession();   // SESSION-01 — save after free-text
-              void this.renderAsync();
-            });
-            break;
-          }
-
           case 'loop-end': {
             // Display iteration label if inside a loop body (LOOP-04)
             if (state.loopIterationLabel !== undefined) {
@@ -419,18 +403,6 @@ export class RunnerView extends ItemView {
         break;
       }
 
-      case 'awaiting-snippet-fill': {
-        questionZone.createEl('p', {
-          text: 'Loading snippet...',
-          cls: 'rp-empty-state-body',
-        });
-        this.renderPreviewZone(previewZone, state.accumulatedText);
-        this.renderOutputToolbar(outputToolbar, state.accumulatedText, false);
-        // Async: load snippet and open modal (SNIP-06, D-17)
-        void this.handleSnippetFill(state.snippetId, questionZone);
-        break;
-      }
-
       case 'complete': {
         questionZone.createEl('h2', { text: 'Protocol complete', cls: 'rp-complete-heading' });
         // RUNNER-01: "Run again" button — restarts the same canvas from the beginning.
@@ -471,31 +443,6 @@ export class RunnerView extends ItemView {
     this.render();
   }
 
-  /** Load snippet and open SnippetFillInModal; update runner with result (SNIP-06). */
-  private async handleSnippetFill(snippetId: string, questionZone: HTMLElement): Promise<void> {
-    const snippet = await this.plugin.snippetService.load(snippetId);
-
-    if (snippet === null) {
-      questionZone.empty();
-      questionZone.createEl('p', {
-        text: `Snippet '${snippetId}' not found. The snippet may have been deleted. Use step-back to continue.`,
-        cls: 'rp-empty-state-body',
-      });
-      return;
-    }
-
-    const modal = new SnippetFillInModal(this.app, snippet);
-    modal.open();
-    const rendered = await modal.result;
-    if (rendered !== null) {
-      this.runner.completeSnippet(rendered);
-    } else {
-      // D-11: Cancel = skip — advance runner with empty string
-      this.runner.completeSnippet('');
-    }
-    void this.autoSaveSession();   // SESSION-01 — save after snippet completion
-    this.render();
-  }
 
   /**
    * Fire-and-forget session auto-save (SESSION-01).
