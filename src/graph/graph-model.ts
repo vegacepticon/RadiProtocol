@@ -7,7 +7,8 @@ export type RPNodeKind =
   | 'answer'
   | 'text-block'
   | 'loop-start'
-  | 'loop-end';
+  | 'loop-end'
+  | 'snippet';
 
 export interface RPNodeBase {
   id: string;
@@ -53,6 +54,16 @@ export interface LoopEndNode extends RPNodeBase {
   loopStartId: string;
 }
 
+export interface SnippetNode extends RPNodeBase {
+  kind: 'snippet';
+  /** Per-node override for the folder from which the file picker opens.
+   *  undefined means use the global setting (Phase 24). */
+  folderPath?: string;
+  /** Label for the file-picker button rendered in Phase 25.
+   *  Falls back to canvas node text, then to "Select file". */
+  buttonLabel?: string;
+}
+
 /**
  * One frame on the loop context stack.
  * Pushed when the runner enters a loop-start node.
@@ -74,7 +85,8 @@ export type RPNode =
   | AnswerNode
   | TextBlockNode
   | LoopStartNode
-  | LoopEndNode;
+  | LoopEndNode
+  | SnippetNode;
 
 export interface RPEdge {
   id: string;
