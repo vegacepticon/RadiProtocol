@@ -1,0 +1,13 @@
+{
+  "nodes": [
+    { "id": "n-start", "type": "text", "text": "Start", "x": 0, "y": 0, "width": 200, "height": 60, "radiprotocol_nodeType": "start" },
+    { "id": "n-q1", "type": "text", "text": "Q1", "x": 0, "y": 120, "width": 200, "height": 60, "radiprotocol_nodeType": "question", "radiprotocol_questionText": "Insert report?" },
+    { "id": "n-a1", "type": "text", "text": "Yes", "x": 0, "y": 240, "width": 200, "height": 60, "radiprotocol_nodeType": "answer", "radiprotocol_answerText": "Yes" },
+    { "id": "n-snip1", "type": "text", "text": "Select file", "x": 0, "y": 360, "width": 200, "height": 60, "radiprotocol_nodeType": "snippet", "radiprotocol_buttonLabel": "Select template", "radiprotocol_snippetFolderPath": "Templates" }
+  ],
+  "edges": [
+    { "id": "e1", "fromNode": "n-start", "toNode": "n-q1" },
+    { "id": "e2", "fromNode": "n-q1", "toNode": "n-a1" },
+    { "id": "e3", "fromNode": "n-a1", "toNode": "n-snip1" }
+  ]
+}
