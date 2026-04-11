@@ -1,7 +1,6 @@
 import { ItemView, WorkspaceLeaf, Setting, TFile, Notice } from 'obsidian';
 import type { RPNodeKind } from '../graph/graph-model';
 import type RadiProtocolPlugin from '../main';
-import { NodeSwitchGuardModal } from './node-switch-guard-modal';
 import { NODE_COLOR_MAP } from '../canvas/node-color-map';
 
 export const EDITOR_PANEL_VIEW_TYPE = 'radiprotocol-editor-panel';
@@ -100,16 +99,9 @@ export class EditorPanelView extends ItemView {
     // No-op: same node already loaded — avoids form flicker on re-click
     if (this.currentFilePath === filePath && this.currentNodeId === nodeId) return;
 
-    // Dirty guard (EDITOR-02): only show when a node is loaded AND has unsaved edits.
-    // Guard does NOT fire when panel is in idle state (currentNodeId === null).
-    if (this.currentNodeId !== null && Object.keys(this.pendingEdits).length > 0) {
-      const modal = new NodeSwitchGuardModal(this.plugin.app);
-      modal.open();
-      const confirmed = await modal.result; // true = discard and switch
-      if (!confirmed) return; // user chose Stay — leave editor unchanged
-      this.pendingEdits = {}; // clear before loadNode (explicit, even though loadNode also clears)
-    }
-
+    // AUTOSAVE-03: flush any pending debounced save before switching nodes.
+    // Plan 02 will implement scheduleAutoSave / flush logic here.
+    // For now, simply proceed to load the new node (guard modal removed per D-05).
     this.loadNode(filePath, nodeId);
   }
 
