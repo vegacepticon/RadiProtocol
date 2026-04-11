@@ -20,4 +20,8 @@ describe('Settings defaults (UI-10, UI-11, D-10)', () => {
     const { RadiProtocolSettingsTab } = await import('../settings');
     expect(typeof RadiProtocolSettingsTab.prototype.display).toBe('function');
   });
+
+  it('SNIPPET-06: DEFAULT_SETTINGS.snippetNodeFolderPath is empty string', () => {
+    expect(DEFAULT_SETTINGS.snippetNodeFolderPath).toBe('');
+  });
 });

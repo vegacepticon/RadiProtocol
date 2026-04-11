@@ -51,10 +51,6 @@
   min-height: 80px;
 }
 
-.rp-preview-textarea:hover {
-  background: var(--background-primary);
-}
-
 .rp-output-toolbar {
   display: flex;
   flex-direction: row;
@@ -320,23 +316,6 @@
   flex: 0 0 auto;
   padding-top: var(--size-4-1); /* 8px */
   border-top: 1px solid var(--background-modifier-border);
-}
-
-.rp-editor-saved-indicator {
-  display: flex;
-  align-items: center;
-  min-height: 32px;
-  padding-top: var(--size-4-1);          /* 8px */
-  border-top: 1px solid var(--background-modifier-border);
-  font-size: var(--font-text-size);      /* 14px */
-  font-weight: var(--font-normal);       /* 400 */
-  color: var(--interactive-accent);
-  opacity: 0;
-  transition: opacity 150ms ease-out;
-}
-
-.rp-editor-saved-indicator.is-visible {
-  opacity: 1;
 }
 
 .rp-editor-start-note {

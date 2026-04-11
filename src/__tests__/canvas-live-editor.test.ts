@@ -97,66 +97,6 @@ describe('CanvasLiveEditor.getCanvasJSON()', () => {
   });
 });
 
-// ── Describe: saveLive() color write contract (COLOR-01, COLOR-04) ────────────
-describe('CanvasLiveEditor.saveLive() — color write contract', () => {
-  it('color field is written to canvas node when passed in edits (not PROTECTED)', async () => {
-    const fakeData = makeFakeData(); // node n1 with radiprotocol_nodeType: 'question'
-    const fakeLeaf = makeLeafWithData('test.canvas', fakeData);
-
-    const mockApp = {
-      workspace: {
-        getLeavesOfType: vi.fn().mockReturnValue([fakeLeaf]),
-      },
-    };
-
-    const editor = new CanvasLiveEditor(mockApp as unknown as App);
-    const savedLive = await editor.saveLive('test.canvas', 'n1', {
-      radiprotocol_nodeType: 'question',
-      color: '5',
-    });
-
-    expect(savedLive).toBe(true);
-    // setData was called with the updated node data
-    expect(fakeLeaf.view.canvas.setData).toHaveBeenCalled();
-    // The data passed to setData must contain color: '5' on node n1
-    const calledWith = (fakeLeaf.view.canvas.setData as ReturnType<typeof vi.fn>).mock.calls[0]![0] as { nodes: Array<Record<string, unknown>> };
-    const node = calledWith.nodes.find((n: Record<string, unknown>) => n['id'] === 'n1');
-    expect(node?.['color']).toBe('5');
-  });
-
-  it('color field is deleted from canvas node on unmark path (COLOR-02, D-06)', async () => {
-    const fakeData: CanvasData = {
-      nodes: [
-        {
-          id: 'n1',
-          radiprotocol_nodeType: 'question',
-          color: '5',
-          x: 0, y: 0, width: 100, height: 50, type: 'text',
-        },
-      ],
-      edges: [],
-    };
-    const fakeLeaf = makeLeafWithData('test.canvas', fakeData);
-
-    const mockApp = {
-      workspace: {
-        getLeavesOfType: vi.fn().mockReturnValue([fakeLeaf]),
-      },
-    };
-
-    const editor = new CanvasLiveEditor(mockApp as unknown as App);
-    await editor.saveLive('test.canvas', 'n1', {
-      radiprotocol_nodeType: '',
-      color: undefined,
-    });
-
-    const calledWith = (fakeLeaf.view.canvas.setData as ReturnType<typeof vi.fn>).mock.calls[0]![0] as { nodes: Array<Record<string, unknown>> };
-    const node = calledWith.nodes.find((n: Record<string, unknown>) => n['id'] === 'n1');
-    expect(node).not.toHaveProperty('radiprotocol_nodeType');
-    expect(node).not.toHaveProperty('color');
-  });
-});
-
 // ── Describe: RunnerView.openCanvas() structural contract ────────────────────
 describe('RunnerView.openCanvas() live-data contract (BUG-02, BUG-03)', () => {
   it('Test 4: RunnerView.prototype.openCanvas exists (regression guard for live-data integration)', () => {

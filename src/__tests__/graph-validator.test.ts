@@ -143,36 +143,6 @@ describe('GraphValidator', () => {
     });
   });
 
-  describe('snippet node — dead-end is valid (D-04)', () => {
-    it('does not error when snippet node has no outgoing edges', () => {
-      // Build minimal graph: start → answer → snippet (terminal)
-      const graph = {
-        canvasFilePath: 'test.canvas',
-        startNodeId: 'n-start',
-        nodes: new Map([
-          ['n-start', { id: 'n-start', kind: 'start' as const, x: 0, y: 0, width: 200, height: 60 }],
-          ['n-a1', { id: 'n-a1', kind: 'answer' as const, answerText: 'Yes', x: 0, y: 120, width: 200, height: 60 }],
-          ['n-snip', { id: 'n-snip', kind: 'snippet' as const, x: 0, y: 240, width: 200, height: 60 }],
-        ]),
-        edges: [
-          { id: 'e1', fromNodeId: 'n-start', toNodeId: 'n-a1' },
-          { id: 'e2', fromNodeId: 'n-a1', toNodeId: 'n-snip' },
-        ],
-        adjacency: new Map([
-          ['n-start', ['n-a1']],
-          ['n-a1', ['n-snip']],
-        ]),
-        reverseAdjacency: new Map([
-          ['n-a1', ['n-start']],
-          ['n-snip', ['n-a1']],
-        ]),
-      };
-      const validator = new GraphValidator();
-      const errors = validator.validate(graph);
-      expect(errors).toHaveLength(0);
-    });
-  });
-
   describe('loop validation (LOOP-01, LOOP-06)', () => {
     it('valid loop-body graph passes validation with zero errors (LOOP-01)', () => {
       const graph = parseFixture('loop-body.canvas');

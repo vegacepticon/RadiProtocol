@@ -51,10 +51,6 @@
   min-height: 80px;
 }
 
-.rp-preview-textarea:hover {
-  background: var(--background-primary);
-}
-
 .rp-output-toolbar {
   display: flex;
   flex-direction: row;

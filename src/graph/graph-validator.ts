@@ -1,7 +1,7 @@
 // graph/graph-validator.ts
 // Pure module — zero Obsidian API imports (PARSE-07, NFR-01)
 
-import type { ProtocolGraph, RPNode, SnippetNode } from './graph-model';
+import type { ProtocolGraph, RPNode } from './graph-model';
 
 export class GraphValidator {
   /**
@@ -194,10 +194,10 @@ export class GraphValidator {
       case 'start': return `start (${node.id})`;
       case 'question': return node.questionText || node.id;
       case 'answer': return (node.displayLabel ?? node.answerText) || node.id;
+      case 'free-text-input': return node.promptLabel || node.id;
       case 'text-block': return node.content.slice(0, 30) || node.id;
       case 'loop-start': return node.loopLabel || node.id;
       case 'loop-end': return `loop-end (${node.id})`;
-      case 'snippet': return (node as SnippetNode).buttonLabel || node.id;
     }
   }
 }

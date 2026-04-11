@@ -10,10 +10,10 @@ import type {
   StartNode,
   QuestionNode,
   AnswerNode,
+  FreeTextInputNode,
   TextBlockNode,
   LoopStartNode,
   LoopEndNode,
-  SnippetNode,
 } from './graph-model';
 
 // Minimal canvas JSON shape we need from the JSON Canvas v1.0 spec.
@@ -53,10 +53,6 @@ function getNumber(obj: Record<string, unknown>, key: string, fallback = 0): num
   const v = obj[key];
   return typeof v === 'number' ? v : fallback;
 }
-
-/** Node types that existed in older plugin versions but are no longer supported.
- * Nodes with these types are silently excluded from the ProtocolGraph (NTYPE-01, NTYPE-02). */
-const DEPRECATED_KINDS = new Set<string>(['free-text-input']);
 
 export class CanvasParser {
   /**
@@ -159,11 +155,9 @@ export class CanvasParser {
       return { parseError: `Node "${raw.id}" has non-string radiprotocol_nodeType` };
     }
 
-    if (DEPRECATED_KINDS.has(kind)) return null; // silently skip deprecated node type (NTYPE-01)
-
     const validKinds: RPNodeKind[] = [
-      'start', 'question', 'answer',
-      'text-block', 'loop-start', 'loop-end', 'snippet',
+      'start', 'question', 'answer', 'free-text-input',
+      'text-block', 'loop-start', 'loop-end',
     ];
 
     if (!(validKinds as string[]).includes(kind)) {
@@ -210,11 +204,31 @@ export class CanvasParser {
         };
         return node;
       }
+      case 'free-text-input': {
+        const node: FreeTextInputNode = {
+          ...base,
+          kind: 'free-text-input',
+          promptLabel: getString(props, 'radiprotocol_promptLabel', raw.text ?? ''),
+          prefix: props['radiprotocol_prefix'] !== undefined
+            ? getString(props, 'radiprotocol_prefix')
+            : undefined,
+          suffix: props['radiprotocol_suffix'] !== undefined
+            ? getString(props, 'radiprotocol_suffix')
+            : undefined,
+          radiprotocol_separator: props['radiprotocol_separator'] === 'space' ? 'space'
+            : props['radiprotocol_separator'] === 'newline' ? 'newline'
+            : undefined,
+        };
+        return node;
+      }
       case 'text-block': {
         const node: TextBlockNode = {
           ...base,
           kind: 'text-block',
           content: getString(props, 'radiprotocol_content', raw.text ?? ''),
+          snippetId: props['radiprotocol_snippetId'] !== undefined
+            ? getString(props, 'radiprotocol_snippetId')
+            : undefined,
           radiprotocol_separator: props['radiprotocol_separator'] === 'space' ? 'space'
             : props['radiprotocol_separator'] === 'newline' ? 'newline'
             : undefined,
@@ -240,19 +254,6 @@ export class CanvasParser {
           ...base,
           kind: 'loop-end',
           loopStartId,
-        };
-        return node;
-      }
-      case 'snippet': {
-        const node: SnippetNode = {
-          ...base,
-          kind: 'snippet',
-          folderPath: props['radiprotocol_snippetFolderPath'] !== undefined
-            ? getString(props, 'radiprotocol_snippetFolderPath')
-            : undefined,
-          buttonLabel: props['radiprotocol_buttonLabel'] !== undefined
-            ? getString(props, 'radiprotocol_buttonLabel')
-            : undefined,
         };
         return node;
       }

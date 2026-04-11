@@ -36,6 +36,8 @@ function makeSession(overrides: Partial<PersistedSession> = {}): PersistedSessio
     accumulatedText: 'Liver',
     undoStack: [{ nodeId: 'n-start', textSnapshot: '', loopContextStack: [] }],
     loopContextStack: [],
+    snippetId: null,
+    snippetNodeId: null,
     ...overrides,
   };
 }

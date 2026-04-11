@@ -9,8 +9,6 @@ function loadFixture(name: string): string {
   return fs.readFileSync(path.join(fixturesDir, name), 'utf-8');
 }
 
-const parser = new CanvasParser();
-
 describe('CanvasParser', () => {
   describe('parse() — valid fixtures', () => {
     it('parses linear.canvas and returns a ProtocolGraph with correct node kinds', () => {
@@ -63,80 +61,6 @@ describe('CanvasParser', () => {
       // If this test file loads, the import at the top succeeded in a pure Node.js env.
       // This proves CanvasParser has no obsidian imports.
       expect(typeof CanvasParser).toBe('function');
-    });
-  });
-
-  describe('snippet node parsing', () => {
-    const snippetJson = fs.readFileSync(
-      path.join(fixturesDir, 'snippet-node.canvas'),
-      'utf-8',
-    );
-
-    it('parses canvas with snippet node without errors', () => {
-      const result = parser.parse(snippetJson, 'snippet-node.canvas');
-      expect(result.success).toBe(true);
-    });
-
-    it('assigns kind "snippet" to snippet node', () => {
-      const result = parser.parse(snippetJson, 'snippet-node.canvas');
-      if (!result.success) throw new Error(result.error);
-      const node = result.graph.nodes.get('n-snip1');
-      expect(node?.kind).toBe('snippet');
-    });
-
-    it('maps radiprotocol_snippetFolderPath to folderPath', () => {
-      const result = parser.parse(snippetJson, 'snippet-node.canvas');
-      if (!result.success) throw new Error(result.error);
-      const node = result.graph.nodes.get('n-snip1');
-      if (node?.kind !== 'snippet') throw new Error('not a snippet node');
-      expect(node.folderPath).toBe('Templates');
-    });
-
-    it('maps radiprotocol_buttonLabel to buttonLabel', () => {
-      const result = parser.parse(snippetJson, 'snippet-node.canvas');
-      if (!result.success) throw new Error(result.error);
-      const node = result.graph.nodes.get('n-snip1');
-      if (node?.kind !== 'snippet') throw new Error('not a snippet node');
-      expect(node.buttonLabel).toBe('Select template');
-    });
-
-    it('parses snippet node with no optional fields as undefined', () => {
-      const json = JSON.stringify({
-        nodes: [
-          { id: 'n-start', type: 'text', text: 'S', x: 0, y: 0, width: 200, height: 60, radiprotocol_nodeType: 'start' },
-          { id: 'n-snip', type: 'text', text: 'Snip', x: 0, y: 120, width: 200, height: 60, radiprotocol_nodeType: 'snippet' },
-        ],
-        edges: [{ id: 'e1', fromNode: 'n-start', toNode: 'n-snip' }],
-      });
-      const result = parser.parse(json, 'test.canvas');
-      if (!result.success) throw new Error(result.error);
-      const node = result.graph.nodes.get('n-snip');
-      if (node?.kind !== 'snippet') throw new Error('not a snippet node');
-      expect(node.folderPath).toBeUndefined();
-      expect(node.buttonLabel).toBeUndefined();
-    });
-  });
-
-  describe('DEPRECATED_KINDS silent skip', () => {
-    it('silently skips a free-text-input node and drops its edges', () => {
-      const json = JSON.stringify({
-        nodes: [
-          { id: 'n-start', type: 'text', text: 'Start', x: 0, y: 0, width: 200, height: 60, radiprotocol_nodeType: 'start' },
-          { id: 'n-fti', type: 'text', text: 'Old', x: 0, y: 120, width: 200, height: 60, radiprotocol_nodeType: 'free-text-input', radiprotocol_promptLabel: 'Enter text' },
-        ],
-        edges: [
-          { id: 'e1', fromNode: 'n-start', toNode: 'n-fti' },
-        ],
-      });
-      const result = parser.parse(json, 'test.canvas');
-      expect(result.success).toBe(true);
-      if (!result.success) return;
-      // free-text-input node silently excluded
-      expect(result.graph.nodes.has('n-fti')).toBe(false);
-      // only start node present
-      expect(result.graph.nodes.size).toBe(1);
-      // edge to dropped node also dropped
-      expect(result.graph.edges.length).toBe(0);
     });
   });
 });

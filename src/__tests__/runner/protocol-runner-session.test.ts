@@ -70,6 +70,9 @@ describe('ProtocolRunner.getSerializableState() (SESSION-01)', () => {
     expect(typeof serialized.accumulatedText).toBe('string');
     expect(Array.isArray(serialized.undoStack)).toBe(true);
     expect(Array.isArray(serialized.loopContextStack)).toBe(true);
+    // snippetId and snippetNodeId must exist (null when not in snippet state)
+    expect('snippetId' in serialized).toBe(true);
+    expect('snippetNodeId' in serialized).toBe(true);
   });
 });
 

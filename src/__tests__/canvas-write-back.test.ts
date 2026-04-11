@@ -54,7 +54,7 @@ describe('saveNodeEdits — write-back contract (EDIT-03, EDIT-04)', () => {
     );
   });
 
-  it('PROTECTED_FIELDS: structural fields id, x, y, width, height, type are never written (color is now writable)', async () => {
+  it('PROTECTED_FIELDS: id, x, y, width, height, type, color are never written', async () => {
     // Even if caller passes these, they must be stripped before vault.modify()
     await view.saveNodeEdits('test.canvas', 'node-1', {
       id: 'hacked-id',
@@ -121,24 +121,6 @@ describe('saveNodeEdits — write-back contract (EDIT-03, EDIT-04)', () => {
     expect(mockSaveLive).toHaveBeenCalledWith('test.canvas', 'node-1', {
       radiprotocol_nodeType: 'question',
     });
-  });
-
-  it('unmark path: color field is deleted from canvas JSON when nodeType is cleared (COLOR-02)', async () => {
-    mockVaultRead.mockResolvedValue(
-      makeCanvasJson({ radiprotocol_nodeType: 'question', color: '5' })
-    );
-    await view.saveNodeEdits('test.canvas', 'node-1', {
-      radiprotocol_nodeType: '',
-      color: undefined,
-    });
-    // saveLive returns false → falls through to vault.modify()
-    expect(mockVaultModify).toHaveBeenCalled();
-    const written = JSON.parse(mockVaultModify.mock.calls[0]![1] as string) as {
-      nodes: Array<Record<string, unknown>>;
-    };
-    const node = written.nodes[0];
-    expect(node).not.toHaveProperty('radiprotocol_nodeType');
-    expect(node).not.toHaveProperty('color');
   });
 
   it('un-mark cleanup: removing nodeType (empty string) removes all radiprotocol_* fields', async () => {

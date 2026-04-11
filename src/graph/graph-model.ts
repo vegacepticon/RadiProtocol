@@ -5,10 +5,10 @@ export type RPNodeKind =
   | 'start'
   | 'question'
   | 'answer'
+  | 'free-text-input'
   | 'text-block'
   | 'loop-start'
-  | 'loop-end'
-  | 'snippet';
+  | 'loop-end';
 
 export interface RPNodeBase {
   id: string;
@@ -36,9 +36,18 @@ export interface AnswerNode extends RPNodeBase {
   radiprotocol_separator?: 'newline' | 'space';
 }
 
+export interface FreeTextInputNode extends RPNodeBase {
+  kind: 'free-text-input';
+  promptLabel: string;
+  prefix?: string;
+  suffix?: string;
+  radiprotocol_separator?: 'newline' | 'space';
+}
+
 export interface TextBlockNode extends RPNodeBase {
   kind: 'text-block';
   content: string;
+  snippetId?: string;
   radiprotocol_separator?: 'newline' | 'space';
 }
 
@@ -52,16 +61,6 @@ export interface LoopStartNode extends RPNodeBase {
 export interface LoopEndNode extends RPNodeBase {
   kind: 'loop-end';
   loopStartId: string;
-}
-
-export interface SnippetNode extends RPNodeBase {
-  kind: 'snippet';
-  /** Per-node override for the folder from which the file picker opens.
-   *  undefined means use the global setting (Phase 24). */
-  folderPath?: string;
-  /** Label for the file-picker button rendered in Phase 25.
-   *  Falls back to canvas node text, then to "Select file". */
-  buttonLabel?: string;
 }
 
 /**
@@ -83,10 +82,10 @@ export type RPNode =
   | StartNode
   | QuestionNode
   | AnswerNode
+  | FreeTextInputNode
   | TextBlockNode
   | LoopStartNode
-  | LoopEndNode
-  | SnippetNode;
+  | LoopEndNode;
 
 export interface RPEdge {
   id: string;
