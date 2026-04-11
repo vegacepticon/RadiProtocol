@@ -17,6 +17,8 @@ export interface RadiProtocolSettings {
   protocolFolderPath: string;
   /** Separator inserted before each new text chunk in the runner (D-08, SEP-01). Default: 'newline'. */
   textSeparator: 'newline' | 'space';
+  /** Default vault-relative folder for snippet markdown files (SNIPPET-07). Default: '' (empty = whole vault). */
+  snippetNodeFolderPath: string;
 }
 
 export const DEFAULT_SETTINGS: RadiProtocolSettings = {
@@ -28,6 +30,7 @@ export const DEFAULT_SETTINGS: RadiProtocolSettings = {
   runnerViewMode: 'sidebar',
   protocolFolderPath: '',
   textSeparator: 'newline',
+  snippetNodeFolderPath: '',
 };
 
 export class RadiProtocolSettingsTab extends PluginSettingTab {
@@ -150,6 +153,18 @@ export class RadiProtocolSettingsTab extends PluginSettingTab {
         .setValue(this.plugin.settings.snippetFolderPath)
         .onChange(async (value) => {
           this.plugin.settings.snippetFolderPath = value.trim() || '.radiprotocol/snippets';
+          await this.plugin.saveSettings();
+        })
+      );
+
+    new Setting(containerEl)
+      .setName('Default snippet files folder')
+      .setDesc('Vault-relative folder scanned when a snippet node has no per-node folder configured. Leave empty to search the whole vault.')
+      .addText(text => text
+        .setPlaceholder('e.g. Templates/Snippets')
+        .setValue(this.plugin.settings.snippetNodeFolderPath)
+        .onChange(async (value) => {
+          this.plugin.settings.snippetNodeFolderPath = value.trim();
           await this.plugin.saveSettings();
         })
       );

@@ -20,7 +20,7 @@ function makeAppMock(existsResult = false) {
   return { vault: makeVaultMock(existsResult) };
 }
 
-const settings = { snippetFolderPath: '.radiprotocol/snippets', sessionFolderPath: '.radiprotocol/sessions', outputDestination: 'clipboard' as const, outputFolderPath: '', maxLoopIterations: 50, runnerViewMode: 'sidebar' as const, protocolFolderPath: '', textSeparator: 'newline' as const };
+const settings = { snippetFolderPath: '.radiprotocol/snippets', sessionFolderPath: '.radiprotocol/sessions', outputDestination: 'clipboard' as const, outputFolderPath: '', maxLoopIterations: 50, runnerViewMode: 'sidebar' as const, protocolFolderPath: '', textSeparator: 'newline' as const, snippetNodeFolderPath: '' };
 
 describe('SnippetService (SNIP-01)', () => {
   it('has list() method', () => {
