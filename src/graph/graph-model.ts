@@ -8,7 +8,8 @@ export type RPNodeKind =
   | 'free-text-input'
   | 'text-block'
   | 'loop-start'
-  | 'loop-end';
+  | 'loop-end'
+  | 'snippet';
 
 export interface RPNodeBase {
   id: string;
@@ -63,6 +64,14 @@ export interface LoopEndNode extends RPNodeBase {
   loopStartId: string;
 }
 
+export interface SnippetNode extends RPNodeBase {
+  kind: 'snippet';
+  /** Per-node folder override (Phase 25). Overrides global snippetNodeFolderPath setting. */
+  folderPath?: string;
+  /** Button label in runner. Fallback chain: buttonLabel ?? canvasNodeText ?? "Select file" (D-09). */
+  buttonLabel?: string;
+}
+
 /**
  * One frame on the loop context stack.
  * Pushed when the runner enters a loop-start node.
@@ -85,7 +94,8 @@ export type RPNode =
   | FreeTextInputNode
   | TextBlockNode
   | LoopStartNode
-  | LoopEndNode;
+  | LoopEndNode
+  | SnippetNode;
 
 export interface RPEdge {
   id: string;

@@ -14,6 +14,7 @@ import type {
   TextBlockNode,
   LoopStartNode,
   LoopEndNode,
+  SnippetNode,
 } from './graph-model';
 
 // Minimal canvas JSON shape we need from the JSON Canvas v1.0 spec.
@@ -157,7 +158,7 @@ export class CanvasParser {
 
     const validKinds: RPNodeKind[] = [
       'start', 'question', 'answer', 'free-text-input',
-      'text-block', 'loop-start', 'loop-end',
+      'text-block', 'loop-start', 'loop-end', 'snippet',
     ];
 
     if (!(validKinds as string[]).includes(kind)) {
@@ -254,6 +255,21 @@ export class CanvasParser {
           ...base,
           kind: 'loop-end',
           loopStartId,
+        };
+        return node;
+      }
+      case 'snippet': {
+        const node: SnippetNode = {
+          ...base,
+          kind: 'snippet',
+          folderPath: typeof props['radiprotocol_folderPath'] === 'string' && props['radiprotocol_folderPath'] !== ''
+            ? getString(props, 'radiprotocol_folderPath')
+            : undefined,
+          // D-09: fallback chain — radiprotocol_buttonLabel ?? raw.text (canvas node text) ?? undefined
+          // Runner UI then does: buttonLabel ?? "Select file"
+          buttonLabel: (typeof props['radiprotocol_buttonLabel'] === 'string' && props['radiprotocol_buttonLabel'] !== ''
+            ? getString(props, 'radiprotocol_buttonLabel')
+            : (raw.text ?? '')) || undefined,
         };
         return node;
       }
