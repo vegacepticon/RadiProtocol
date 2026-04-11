@@ -1,7 +1,7 @@
 # Roadmap: RadiProtocol
 
 **Project:** RadiProtocol
-**Last updated:** 2026-04-10
+**Last updated:** 2026-04-11
 
 ---
 
@@ -51,7 +51,7 @@ Full details: `.planning/milestones/v1.2-ROADMAP.md`
 - [x] **Phase 20: Housekeeping Removals** — completed 2026-04-11 — Remove free-text-input type, retire awaiting-snippet-fill state, strip text-block snippet logic, polish Runner textarea
 - [x] **Phase 21: Color Infrastructure** — Canvas node color coding by type via CanvasLiveEditor, node-color-map constant, both PROTECTED_FIELDS copies updated (completed 2026-04-11)
 - [x] **Phase 22: Snippet Node — Graph and Runner Layer** — Add snippet to RPNodeKind, parser, validator, and runner halt/advance logic (completed 2026-04-11)
-- [ ] **Phase 23: Node Editor Auto-Save and Color-on-Type-Change** — Debounced auto-save replaces Save button, color written/cleared on type assignment, dirty guard removed
+- [x] **Phase 23: Node Editor Auto-Save and Color-on-Type-Change** — Debounced auto-save replaces Save button, color written/cleared on type assignment, dirty guard removed (completed 2026-04-11)
 - [ ] **Phase 24: Settings — Snippet Node Folder** — Global snippetNodeFolderPath setting added to plugin Settings tab
 - [ ] **Phase 25: Snippet Node Runner UI** — FuzzySuggestModal picker, .md/.json dispatch, per-node folder override wired into runner
 - [ ] **Phase 26: Auto-Switch to Node Editor Tab** — revealLeaf() on canvas node click brings Node Editor tab to front
@@ -115,8 +115,8 @@ Plans:
   5. A transient "Saved" indicator appears inline in the editor after each successful auto-save
 **Plans**: 2 plans
 Plans:
-- [ ] 23-01-PLAN.md — TDD red phase: write 7 failing auto-save tests, add CSS .rp-editor-saved-indicator, delete node-switch-guard-modal.ts
-- [ ] 23-02-PLAN.md — Implement debounce, flush-on-switch, type-change immediate save, saved indicator in editor-panel-view.ts
+- [x] 23-01-PLAN.md — TDD red phase: write 7 failing auto-save tests, add CSS .rp-editor-saved-indicator, delete node-switch-guard-modal.ts
+- [x] 23-02-PLAN.md — Implement debounce, flush-on-switch, type-change immediate save, saved indicator in editor-panel-view.ts
 **UI hint**: yes
 
 ### Phase 24: Settings — Snippet Node Folder
@@ -126,7 +126,9 @@ Plans:
 **Success Criteria** (what must be TRUE):
   1. The plugin Settings tab contains a "Snippet node folder" text field; entering a folder path and reloading Obsidian preserves the value
   2. Leaving the field empty does not break plugin load or existing features — a configuration notice is shown when a snippet node button is pressed without a folder configured
-**Plans**: TBD
+**Plans**: 1 plan
+Plans:
+- [ ] 24-01-PLAN.md — Add snippetNodeFolderPath to RadiProtocolSettings interface, DEFAULT_SETTINGS, and Storage group UI
 
 ### Phase 25: Snippet Node Runner UI
 **Goal**: Pressing a snippet node button in the Protocol Runner opens a scoped file picker; selecting a file inserts its content into the report textarea; .md and .json files are handled correctly; per-node folder override is respected
@@ -169,7 +171,7 @@ Plans:
 ### Phase 999.1: Canvas selector dropdown in runner view (BACKLOG)
 
 **Goal:** Let users choose which canvas/scenario to run from within the plugin panel via a dropdown or similar UX — without having to close the panel and invoke the command again on a different canvas.
-**Plans:** 3/3 plans complete
+**Plans:** 2/2 plans complete
 
 ### Phase 999.2: Full-tab runner view (BACKLOG)
 
@@ -200,8 +202,8 @@ Plans:
 | 20. Housekeeping Removals | v1.3 | 0/? | Not started | - |
 | 21. Color Infrastructure | v1.3 | 2/2 | Complete   | 2026-04-11 |
 | 22. Snippet Node — Graph and Runner Layer | v1.3 | 3/3 | Complete   | 2026-04-11 |
-| 23. Node Editor Auto-Save and Color-on-Type-Change | v1.3 | 0/2 | Not started | - |
-| 24. Settings — Snippet Node Folder | v1.3 | 0/? | Not started | - |
+| 23. Node Editor Auto-Save and Color-on-Type-Change | v1.3 | 2/2 | Complete   | 2026-04-11 |
+| 24. Settings — Snippet Node Folder | v1.3 | 0/1 | Not started | - |
 | 25. Snippet Node Runner UI | v1.3 | 0/? | Not started | - |
 | 26. Auto-Switch to Node Editor Tab | v1.3 | 0/? | Not started | - |
 | 27. Interactive Placeholder Editor | v1.3 | 0/? | Not started | - |
