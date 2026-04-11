@@ -133,6 +133,17 @@ export class SuggestModal<T> {
   close(): void {}
 }
 
+export class FuzzySuggestModal<T> {
+  app: unknown;
+  constructor(app: unknown) { this.app = app; }
+  getItems(): T[] { return []; }
+  getItemText(_item: T): string { return ''; }
+  onChooseItem(_item: T, _evt: unknown): void {}
+  setPlaceholder(_placeholder: string): void {}
+  open(): void {}
+  close(): void {}
+}
+
 export class Notice {
   constructor(_message: string, _timeout?: number) {}
 }
