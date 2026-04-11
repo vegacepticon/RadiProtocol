@@ -49,7 +49,7 @@ Full details: `.planning/milestones/v1.2-ROADMAP.md`
 ### v1.3 Node Editor Overhaul & Snippet Node (Phases 20–27) — ACTIVE
 
 - [x] **Phase 20: Housekeeping Removals** — completed 2026-04-11 — Remove free-text-input type, retire awaiting-snippet-fill state, strip text-block snippet logic, polish Runner textarea
-- [ ] **Phase 21: Color Infrastructure** — Canvas node color coding by type via CanvasLiveEditor, node-color-map constant, both PROTECTED_FIELDS copies updated
+- [x] **Phase 21: Color Infrastructure** — Canvas node color coding by type via CanvasLiveEditor, node-color-map constant, both PROTECTED_FIELDS copies updated (completed 2026-04-11)
 - [ ] **Phase 22: Snippet Node — Graph and Runner Layer** — Add snippet to RPNodeKind, parser, validator, and runner halt/advance logic
 - [ ] **Phase 23: Node Editor Auto-Save and Color-on-Type-Change** — Debounced auto-save replaces Save button, color written/cleared on type assignment, dirty guard removed
 - [ ] **Phase 24: Settings — Snippet Node Folder** — Global snippetNodeFolderPath setting added to plugin Settings tab
@@ -84,8 +84,8 @@ Full details: `.planning/milestones/v1.2-ROADMAP.md`
   4. Vitest tests for src/canvas/node-color-map.ts confirm all seven type-to-palette mappings and the unmark-clears-color path
 **Plans**: 2 plans
 Plans:
-- [ ] 21-01-PLAN.md — Create node-color-map.ts constant and test scaffold (TDD + test updates)
-- [ ] 21-02-PLAN.md — Wire color into PROTECTED_FIELDS and editor-panel-view.ts save path
+- [x] 21-01-PLAN.md — Create node-color-map.ts constant and test scaffold (TDD + test updates)
+- [x] 21-02-PLAN.md — Wire color into PROTECTED_FIELDS and editor-panel-view.ts save path
 **UI hint**: yes
 
 ### Phase 22: Snippet Node — Graph and Runner Layer
@@ -97,7 +97,11 @@ Plans:
   2. A canvas file with a snippet-type node parses without errors and appears in the ProtocolGraph
   3. The graph validator accepts a snippet node connected in a valid protocol graph and rejects one that violates graph rules
   4. The protocol runner halts at a snippet node in the `at-node` state (does not auto-advance and does not error)
-**Plans**: TBD
+**Plans**: 3 plans
+Plans:
+- [ ] 22-01-PLAN.md — Phase 20 recovery: purge free-text-input dead code, DEPRECATED_KINDS, test cleanup (Wave 0)
+- [ ] 22-02-PLAN.md — Add SnippetNode to graph-model, canvas-parser, graph-validator, node-color-map, fixture, tests
+- [ ] 22-03-PLAN.md — Runner halt at snippet node, AtNodeState.isAtSnippetNode, runner tests
 
 ### Phase 23: Node Editor Auto-Save and Color-on-Type-Change
 **Goal**: Node Editor changes save automatically without a Save button; the colour of the canvas node updates whenever its type changes; the dirty-guard modal is gone; the auto-save timer is immune to cross-node write corruption
@@ -162,7 +166,7 @@ Plans:
 ### Phase 999.1: Canvas selector dropdown in runner view (BACKLOG)
 
 **Goal:** Let users choose which canvas/scenario to run from within the plugin panel via a dropdown or similar UX — without having to close the panel and invoke the command again on a different canvas.
-**Plans:** 0 plans
+**Plans:** 2/2 plans complete
 
 ### Phase 999.2: Full-tab runner view (BACKLOG)
 
@@ -191,8 +195,8 @@ Plans:
 | 18. CSS Gap Fixes (INSERTED) | v1.2 | 1/1 | Complete | 2026-04-10 |
 | 19. Phase 12–14 Formal Verification | v1.2 | 3/3 | Complete | 2026-04-10 |
 | 20. Housekeeping Removals | v1.3 | 0/? | Not started | - |
-| 21. Color Infrastructure | v1.3 | 0/2 | Not started | - |
-| 22. Snippet Node — Graph and Runner Layer | v1.3 | 0/? | Not started | - |
+| 21. Color Infrastructure | v1.3 | 2/2 | Complete   | 2026-04-11 |
+| 22. Snippet Node — Graph and Runner Layer | v1.3 | 0/3 | In progress | - |
 | 23. Node Editor Auto-Save and Color-on-Type-Change | v1.3 | 0/? | Not started | - |
 | 24. Settings — Snippet Node Folder | v1.3 | 0/? | Not started | - |
 | 25. Snippet Node Runner UI | v1.3 | 0/? | Not started | - |
