@@ -69,9 +69,9 @@ export class RadiProtocolSettingsTab extends PluginSettingTab {
           .addOption('newline', 'Newline (default)')
           .addOption('space', 'Space')
           .setValue(this.plugin.settings.textSeparator)
-          .onChange(value => {
+          .onChange(async (value) => {
             this.plugin.settings.textSeparator = value as 'newline' | 'space';
-            void this.plugin.saveSettings();
+            await this.plugin.saveSettings();
           });
       });
 
