@@ -486,4 +486,43 @@ describe('ProtocolRunner', () => {
       expect(stateAfter.canStepBack).toBe(false);
     });
   });
+
+  describe('snippet node — runner halt (D-06, D-07)', () => {
+    function makeSnippetGraph(): ProtocolGraph {
+      return {
+        canvasFilePath: 'test.canvas',
+        startNodeId: 'n-start',
+        nodes: new Map([
+          ['n-start', { id: 'n-start', kind: 'start', x: 0, y: 0, width: 200, height: 60 }],
+          ['n-snip', { id: 'n-snip', kind: 'snippet', x: 0, y: 120, width: 200, height: 60 }],
+        ]),
+        edges: [{ id: 'e1', fromNodeId: 'n-start', toNodeId: 'n-snip' }],
+        adjacency: new Map([['n-start', ['n-snip']]]),
+        reverseAdjacency: new Map([['n-snip', ['n-start']]]),
+      };
+    }
+
+    it('halts at snippet node in at-node state (D-06)', () => {
+      const runner = new ProtocolRunner();
+      runner.start(makeSnippetGraph());
+      const state = runner.getState();
+      expect(state.status).toBe('at-node');
+    });
+
+    it('sets isAtSnippetNode: true when halted at snippet (D-05)', () => {
+      const runner = new ProtocolRunner();
+      runner.start(makeSnippetGraph());
+      const state = runner.getState();
+      if (state.status !== 'at-node') throw new Error(`expected at-node, got ${state.status}`);
+      expect(state.isAtSnippetNode).toBe(true);
+    });
+
+    it('canStepBack is false immediately after halt at snippet (D-07 — no undo push)', () => {
+      const runner = new ProtocolRunner();
+      runner.start(makeSnippetGraph());
+      const state = runner.getState();
+      if (state.status !== 'at-node') throw new Error(`expected at-node, got ${state.status}`);
+      expect(state.canStepBack).toBe(false);
+    });
+  });
 });
