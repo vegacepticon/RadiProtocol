@@ -517,13 +517,20 @@ export class EditorPanelView extends ItemView {
       const selectedType = edits['radiprotocol_nodeType'] as string | undefined;
       if (selectedType && selectedType !== '') {
         // Assign path: write palette color for type
-        edits['color'] = (NODE_COLOR_MAP as Record<string, string | undefined>)[selectedType];
+        const mappedColor = (NODE_COLOR_MAP as Record<string, string | undefined>)[selectedType];
+        if (mappedColor !== undefined) {
+          edits['color'] = mappedColor;
+        }
+        // else: no color assignment — leaves existing color intact for unknown types
       } else if ('radiprotocol_nodeType' in edits) {
         // Unmark path: clear color
         edits['color'] = undefined;
       }
       void this.saveNodeEdits(this.currentFilePath, this.currentNodeId, edits)
-        .then(() => { this.showSavedIndicator(); });
+        .then(() => { this.showSavedIndicator(); })
+        .catch(err => {
+          console.error('[RadiProtocol] type-change save failed:', err);
+        });
     }
   }
 
