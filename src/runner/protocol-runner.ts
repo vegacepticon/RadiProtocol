@@ -17,9 +17,7 @@ export interface ProtocolRunnerOptions {
  * Public API (D-01):
  *   start(graph)              — begin a session
  *   chooseAnswer(answerId)    — user selects a preset-text answer
- *   enterFreeText(text)       — user submits free-text input
  *   stepBack()                — undo last user action
- *   completeSnippet(text)     — Phase 5 submits rendered snippet text
  *   getState()                — read-only snapshot of current state (D-02)
  *
  * No Obsidian API — fully unit-testable with Vitest in a pure Node.js environment.
@@ -36,8 +34,6 @@ export class ProtocolRunner {
 
   // Extra fields for non-at-node states
   private errorMessage: string | null = null;
-  private snippetId: string | null = null;
-  private snippetNodeId: string | null = null;
   private loopContextStack: LoopContext[] = [];
 
   constructor(options: ProtocolRunnerOptions = {}) {
@@ -57,8 +53,6 @@ export class ProtocolRunner {
     this.accumulator = new TextAccumulator();
     this.undoStack = [];
     this.errorMessage = null;
-    this.snippetId = null;
-    this.snippetNodeId = null;
     this.loopContextStack = [];
     this.runnerStatus = 'at-node';
     // Auto-advance from the start node
@@ -101,47 +95,9 @@ export class ProtocolRunner {
   }
 
   /**
-   * User submits free-text input.
-   * Only valid in at-node state when the current node is a free-text-input node.
-   * Wraps text with prefix/suffix if present (RUN-04).
-   * Pushes undo entry BEFORE mutation (D-03, D-04).
-   */
-  enterFreeText(text: string): void {
-    if (this.runnerStatus !== 'at-node') return;
-    if (this.graph === null || this.currentNodeId === null) return;
-
-    const node = this.graph.nodes.get(this.currentNodeId);
-    if (node === undefined || node.kind !== 'free-text-input') {
-      this.transitionToError(`Current node '${this.currentNodeId}' is not a free-text-input node.`);
-      return;
-    }
-
-    // Push undo entry BEFORE any mutation
-    this.undoStack.push({
-      nodeId: this.currentNodeId,
-      textSnapshot: this.accumulator.snapshot(),
-      loopContextStack: [...this.loopContextStack],
-    });
-
-    // Assemble final string with optional prefix/suffix (RUN-04)
-    const prefix = node.prefix ?? '';
-    const suffix = node.suffix ?? '';
-    this.accumulator.appendWithSeparator(prefix + text + suffix, this.resolveSeparator(node));
-
-    // Advance to the next node
-    const neighbors = this.graph.adjacency.get(this.currentNodeId);
-    const next = neighbors !== undefined ? neighbors[0] : undefined;
-    if (next === undefined) {
-      this.transitionToComplete();
-      return;
-    }
-    this.advanceThrough(next);
-  }
-
-  /**
    * Undo the last user action (RUN-06).
    * Reverts both currentNodeId and accumulatedText to the state before the last
-   * chooseAnswer() or enterFreeText() call (D-03).
+   * chooseAnswer() call (D-03).
    * No-op if canStepBack is false.
    */
   stepBack(): void {
@@ -153,42 +109,11 @@ export class ProtocolRunner {
     this.loopContextStack = [...entry.loopContextStack]; // restore from snapshot (LOOP-05)
     this.runnerStatus = 'at-node';
     this.errorMessage = null;
-    this.snippetId = null;
-    this.snippetNodeId = null;
-  }
-
-  /**
-   * Phase 5 calls this after the user completes the snippet fill-in modal.
-   * Only valid in awaiting-snippet-fill state (D-06, D-07).
-   * Appends the pre-rendered text and advances past the snippet text-block node.
-   */
-  completeSnippet(renderedText: string): void {
-    if (this.runnerStatus !== 'awaiting-snippet-fill') return;
-    if (this.graph === null || this.snippetNodeId === null) return;
-
-    const pendingNodeId = this.snippetNodeId;
-    const snippetNode = this.graph.nodes.get(pendingNodeId);
-    const snippetSep = (snippetNode?.kind === 'text-block')
-      ? this.resolveSeparator(snippetNode)
-      : this.defaultSeparator;
-    this.accumulator.appendWithSeparator(renderedText, snippetSep);
-    this.snippetId = null;
-    this.snippetNodeId = null;
-    this.runnerStatus = 'at-node'; // Reset before advanceThrough determines next state
-
-    // Advance from the node that had the snippetId
-    const neighbors = this.graph.adjacency.get(pendingNodeId);
-    const next = neighbors !== undefined ? neighbors[0] : undefined;
-    if (next === undefined) {
-      this.transitionToComplete();
-      return;
-    }
-    this.advanceThrough(next);
   }
 
   /**
    * Inject a manual textarea edit into the accumulator before an advance action (BUG-01, D-01).
-   * Must be called BEFORE chooseAnswer() / enterFreeText() / chooseLoopAction() so that
+   * Must be called BEFORE chooseAnswer() / chooseLoopAction() so that
    * the undo snapshot captured inside those methods includes the manual edit.
    * No-op if runner is not in 'at-node' state.
    */
@@ -285,14 +210,6 @@ export class ProtocolRunner {
           isAtLoopEnd: this.graph?.nodes.get(this.currentNodeId ?? '')?.kind === 'loop-end',
         };
       }
-      case 'awaiting-snippet-fill':
-        return {
-          status: 'awaiting-snippet-fill',
-          snippetId: this.snippetId ?? '',
-          nodeId: this.snippetNodeId ?? '',
-          accumulatedText: this.accumulator.current,
-          canStepBack: this.undoStack.length > 0,
-        };
       case 'complete':
         return { status: 'complete', finalText: this.accumulator.current };
       case 'error':
@@ -309,7 +226,7 @@ export class ProtocolRunner {
   /**
    * Return a serializable snapshot of current runner state for session persistence (SESSION-01).
    * Returns null when the runner is in idle, complete, or error state — these are not
-   * valid resume points (only 'at-node' and 'awaiting-snippet-fill' are resumable).
+   * valid resume points (only 'at-node' is resumable).
    *
    * The returned object is JSON-safe: all values are strings, numbers, arrays of those,
    * or null. No Set values are present (SESSION-07 — verified by RESEARCH.md audit).
@@ -318,15 +235,13 @@ export class ProtocolRunner {
    * savedAt, and version to complete the PersistedSession shape before writing.
    */
   getSerializableState(): {
-    runnerStatus: 'at-node' | 'awaiting-snippet-fill';
+    runnerStatus: 'at-node';
     currentNodeId: string;
     accumulatedText: string;
     undoStack: Array<{ nodeId: string; textSnapshot: string; loopContextStack: Array<{ loopStartId: string; iteration: number; textBeforeLoop: string }> }>;
     loopContextStack: Array<{ loopStartId: string; iteration: number; textBeforeLoop: string }>;
-    snippetId: string | null;
-    snippetNodeId: string | null;
   } | null {
-    if (this.runnerStatus !== 'at-node' && this.runnerStatus !== 'awaiting-snippet-fill') {
+    if (this.runnerStatus !== 'at-node') {
       return null;
     }
     return {
@@ -340,8 +255,6 @@ export class ProtocolRunner {
         loopContextStack: e.loopContextStack.map(f => ({ ...f })),
       })),
       loopContextStack: this.loopContextStack.map(f => ({ ...f })),
-      snippetId: this.snippetId,
-      snippetNodeId: this.snippetNodeId,
     };
   }
 
@@ -370,13 +283,11 @@ export class ProtocolRunner {
    * is never in error state).
    */
   restoreFrom(session: {
-    runnerStatus: 'at-node' | 'awaiting-snippet-fill';
+    runnerStatus: 'at-node';
     currentNodeId: string;
     accumulatedText: string;
     undoStack: Array<{ nodeId: string; textSnapshot: string; loopContextStack: Array<{ loopStartId: string; iteration: number; textBeforeLoop: string }> }>;
     loopContextStack: Array<{ loopStartId: string; iteration: number; textBeforeLoop: string }>;
-    snippetId: string | null;
-    snippetNodeId: string | null;
   }): void {
     this.runnerStatus = session.runnerStatus;
     this.currentNodeId = session.currentNodeId;
@@ -388,8 +299,6 @@ export class ProtocolRunner {
       loopContextStack: e.loopContextStack.map(f => ({ ...f })),
     }));
     this.loopContextStack = session.loopContextStack.map(f => ({ ...f }));
-    this.snippetId = session.snippetId;
-    this.snippetNodeId = session.snippetNodeId;
     // errorMessage is always null after a valid restore (SESSION-06)
     this.errorMessage = null;
   }
@@ -402,7 +311,6 @@ export class ProtocolRunner {
    */
   private resolveSeparator(
     node: import('../graph/graph-model').AnswerNode
-          | import('../graph/graph-model').FreeTextInputNode
           | import('../graph/graph-model').TextBlockNode,
   ): 'newline' | 'space' {
     return node.radiprotocol_separator ?? this.defaultSeparator;
@@ -452,13 +360,6 @@ export class ProtocolRunner {
           break;
         }
         case 'text-block': {
-          if (node.snippetId !== undefined) {
-            // D-06: transition to awaiting-snippet-fill for Phase 5 to handle
-            this.runnerStatus = 'awaiting-snippet-fill';
-            this.snippetId = node.snippetId;
-            this.snippetNodeId = cursor;
-            return;
-          }
           // RUN-05: auto-append static text — no user interaction required
           this.accumulator.appendWithSeparator(node.content, this.resolveSeparator(node));
           const next = this.firstNeighbour(cursor);
@@ -469,8 +370,7 @@ export class ProtocolRunner {
           cursor = next;
           break;
         }
-        case 'question':
-        case 'free-text-input': {
+        case 'question': {
           // Halts here — awaiting user input
           this.currentNodeId = cursor;
           this.runnerStatus = 'at-node';

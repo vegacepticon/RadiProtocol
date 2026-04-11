@@ -2,11 +2,10 @@
 // Pure module — zero Obsidian API imports (NFR-01)
 import type { LoopContext } from '../graph/graph-model';
 
-// Five runner statuses — used as the discriminant field in RunnerState
+// Four runner statuses — used as the discriminant field in RunnerState
 export type RunnerStatus =
   | 'idle'
   | 'at-node'
-  | 'awaiting-snippet-fill'
   | 'complete'
   | 'error';
 
@@ -19,8 +18,7 @@ export interface IdleState {
 
 /**
  * Runner is paused at a node awaiting user input.
- * The node is either a question (awaiting chooseAnswer) or a
- * free-text-input node (awaiting enterFreeText).
+ * The node is a question (awaiting chooseAnswer).
  */
 export interface AtNodeState {
   status: 'at-node';
@@ -32,19 +30,6 @@ export interface AtNodeState {
   loopIterationLabel?: string;
   /** true when currentNodeId refers to a loop-end node — drives UI branch (LOOP-02) */
   isAtLoopEnd?: boolean;
-}
-
-/**
- * Runner has reached a text-block node with a snippetId.
- * Phase 5 will call runner.completeSnippet(renderedText) to resume.
- * The runner carries snippetId and nodeId so the caller can open the correct modal.
- */
-export interface AwaitingSnippetFillState {
-  status: 'awaiting-snippet-fill';
-  snippetId: string;
-  nodeId: string;
-  accumulatedText: string;
-  canStepBack: boolean;
 }
 
 /** All nodes have been traversed and there is no next node. */
@@ -62,11 +47,10 @@ export interface ErrorState {
   message: string;
 }
 
-/** Discriminated union over all five runner states. */
+/** Discriminated union over all four runner states. */
 export type RunnerState =
   | IdleState
   | AtNodeState
-  | AwaitingSnippetFillState
   | CompleteState
   | ErrorState;
 
@@ -74,7 +58,7 @@ export type RunnerState =
 
 /**
  * One entry on the undo stack.
- * Captured BEFORE any mutation inside chooseAnswer() or enterFreeText().
+ * Captured BEFORE any mutation inside chooseAnswer().
  * Text-block auto-advances do NOT create separate UndoEntry values (D-03).
  */
 export interface UndoEntry {
