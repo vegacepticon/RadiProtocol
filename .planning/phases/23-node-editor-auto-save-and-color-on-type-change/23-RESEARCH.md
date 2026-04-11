@@ -391,12 +391,13 @@ No new threat patterns introduced. Timer-based writes use the same vault.modify(
 
 ---
 
-## Open Questions
+## Open Questions (RESOLVED)
 
 1. **Should `saveNodeEdits()` return a `boolean` to distinguish live-save vs. Strategy-A success?**
    - What we know: Currently returns `Promise<void>`; failures surface via `Notice()` which is being removed.
    - What's unclear: Whether `showSavedIndicator()` should fire only on success or unconditionally after the call.
    - Recommendation: Per Claude's Discretion — simplest correct approach is to show the indicator unconditionally after `saveNodeEdits()` resolves (errors are logged to console; the indicator signals "save attempted", not "save confirmed"). If the planner wants strict success-only indication, add a `boolean` return to `saveNodeEdits()`.
+   - **RESOLVED: показывать индикатор безусловно после resolve (Claude's Discretion). Plan 02 реализует `showSavedIndicator()` в `.then()` без проверки boolean-результата — `saveNodeEdits()` остаётся `Promise<void>`.**
 
 ---
 
