@@ -264,6 +264,7 @@ export class EditorPanelView extends ItemView {
           .addOption('start', 'Start')
           .addOption('question', 'Question')
           .addOption('answer', 'Answer')
+          .addOption('free-text-input', 'Free-text input')
           .addOption('text-block', 'Text block')
           .addOption('loop-start', 'Loop start')
           .addOption('loop-end', 'Loop end')
@@ -339,7 +340,6 @@ export class EditorPanelView extends ItemView {
           .setName('Answer text')
           .setDesc('Appended to the accumulated report text when this answer is chosen.')
           .addTextArea(ta => {
-            ta.inputEl.rows = 6; // UX-02: minimum 6 visible rows
             ta.setValue((nodeRecord['radiprotocol_answerText'] as string | undefined) ?? (nodeRecord['text'] as string | undefined) ?? '')
               .onChange(v => { this.pendingEdits['radiprotocol_answerText'] = v; this.pendingEdits['text'] = v; });
           });
@@ -368,6 +368,47 @@ export class EditorPanelView extends ItemView {
         break;
       }
 
+      case 'free-text-input': {
+        new Setting(container).setHeading().setName('Free-text input node');
+        new Setting(container)
+          .setName('Prompt label')
+          .setDesc('Shown to the user above the text input field during the session.')
+          .addText(t => {
+            t.setValue((nodeRecord['radiprotocol_promptLabel'] as string | undefined) ?? (nodeRecord['text'] as string | undefined) ?? '')
+              .onChange(v => { this.pendingEdits['radiprotocol_promptLabel'] = v; this.pendingEdits['text'] = v; });
+          });
+        new Setting(container)
+          .setName('Prefix (optional)')
+          .setDesc('Prepended to the user\'s input in the accumulated text.')
+          .addText(t => {
+            t.setValue((nodeRecord['radiprotocol_prefix'] as string | undefined) ?? '')
+              .onChange(v => { this.pendingEdits['radiprotocol_prefix'] = v || undefined; });
+          });
+        new Setting(container)
+          .setName('Suffix (optional)')
+          .setDesc('Appended to the user\'s input in the accumulated text.')
+          .addText(t => {
+            t.setValue((nodeRecord['radiprotocol_suffix'] as string | undefined) ?? '')
+              .onChange(v => { this.pendingEdits['radiprotocol_suffix'] = v || undefined; });
+          });
+        // Separator override dropdown (D-05, D-06, SEP-02)
+        new Setting(container)
+          .setName('Text separator')
+          .setDesc('How this node\'s text is joined to the accumulated report. "Use global" inherits the setting from Settings > Runner.')
+          .addDropdown(drop => {
+            drop
+              .addOption('', 'Use global (default)')
+              .addOption('newline', 'Newline')
+              .addOption('space', 'Space')
+              .setValue((nodeRecord['radiprotocol_separator'] as string | undefined) ?? '')
+              .onChange(value => {
+                this.pendingEdits['radiprotocol_separator'] =
+                  value === '' ? undefined : (value as 'newline' | 'space');
+              });
+          });
+        break;
+      }
+
       case 'text-block': {
         new Setting(container).setHeading().setName('Text-block node');
         new Setting(container)
@@ -376,6 +417,13 @@ export class EditorPanelView extends ItemView {
           .addTextArea(ta => {
             ta.setValue((nodeRecord['radiprotocol_content'] as string | undefined) ?? (nodeRecord['text'] as string | undefined) ?? '')
               .onChange(v => { this.pendingEdits['radiprotocol_content'] = v; this.pendingEdits['text'] = v; });
+          });
+        new Setting(container)
+          .setName('Snippet ID (optional)')
+          .setDesc('Snippet ID for Phase 5 dynamic snippet fill-in. Leave blank if not using snippets.')
+          .addText(t => {
+            t.setValue((nodeRecord['radiprotocol_snippetId'] as string | undefined) ?? '')
+              .onChange(v => { this.pendingEdits['radiprotocol_snippetId'] = v || undefined; });
           });
         // Separator override dropdown (D-05, D-06, SEP-02)
         new Setting(container)

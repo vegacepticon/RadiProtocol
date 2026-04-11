@@ -51,10 +51,6 @@
   min-height: 80px;
 }
 
-.rp-preview-textarea:hover {
-  background: var(--background-primary);
-}
-
 .rp-output-toolbar {
   display: flex;
   flex-direction: row;
@@ -115,6 +111,15 @@
   word-break: break-word;
   font-size: var(--font-text-size);
   line-height: 1.5;
+}
+
+.rp-free-text-input {
+  width: 100%;
+  padding: var(--size-4-2);
+  font-size: var(--font-text-size);
+  line-height: 1.5;
+  resize: vertical;
+  box-sizing: border-box;
 }
 
 .rp-step-back-btn {

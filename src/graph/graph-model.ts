@@ -5,6 +5,7 @@ export type RPNodeKind =
   | 'start'
   | 'question'
   | 'answer'
+  | 'free-text-input'
   | 'text-block'
   | 'loop-start'
   | 'loop-end';
@@ -35,9 +36,18 @@ export interface AnswerNode extends RPNodeBase {
   radiprotocol_separator?: 'newline' | 'space';
 }
 
+export interface FreeTextInputNode extends RPNodeBase {
+  kind: 'free-text-input';
+  promptLabel: string;
+  prefix?: string;
+  suffix?: string;
+  radiprotocol_separator?: 'newline' | 'space';
+}
+
 export interface TextBlockNode extends RPNodeBase {
   kind: 'text-block';
   content: string;
+  snippetId?: string;
   radiprotocol_separator?: 'newline' | 'space';
 }
 
@@ -72,6 +82,7 @@ export type RPNode =
   | StartNode
   | QuestionNode
   | AnswerNode
+  | FreeTextInputNode
   | TextBlockNode
   | LoopStartNode
   | LoopEndNode;
