@@ -17,6 +17,10 @@ export class EditorPanelView extends ItemView {
   // Auto-switch canvas listener bookkeeping (EDITOR-01)
   private canvasPointerdownHandler: (() => void) | null = null;
   private watchedCanvasContainer: HTMLElement | null = null;
+  // Auto-save (Phase 23)
+  private _debounceTimer: ReturnType<typeof setTimeout> | null = null;
+  private _savedIndicatorEl: HTMLElement | null = null;
+  private _indicatorTimer: ReturnType<typeof setTimeout> | null = null;
 
   constructor(leaf: WorkspaceLeaf, plugin: RadiProtocolPlugin) {
     super(leaf);
@@ -96,12 +100,23 @@ export class EditorPanelView extends ItemView {
   }
 
   private async handleNodeClick(filePath: string, nodeId: string): Promise<void> {
-    // No-op: same node already loaded — avoids form flicker on re-click
+    // Same-node guard — no-op (preserved from original)
     if (this.currentFilePath === filePath && this.currentNodeId === nodeId) return;
 
-    // AUTOSAVE-03: flush any pending debounced save before switching nodes.
-    // Plan 02 will implement scheduleAutoSave / flush logic here.
-    // For now, simply proceed to load the new node (guard modal removed per D-05).
+    // D-02: Flush pending debounce before switching nodes
+    if (this._debounceTimer !== null) {
+      clearTimeout(this._debounceTimer);
+      this._debounceTimer = null;
+      if (this.currentFilePath && this.currentNodeId) {
+        const editsSnapshot = { ...this.pendingEdits };
+        try {
+          await this.saveNodeEdits(this.currentFilePath, this.currentNodeId, editsSnapshot);
+        } catch {
+          // D-03: flush save failure does not block navigation — silent
+        }
+      }
+    }
+
     this.loadNode(filePath, nodeId);
   }
 
@@ -115,6 +130,11 @@ export class EditorPanelView extends ItemView {
   }
 
   loadNode(canvasFilePath: string, nodeId: string): void {
+    // Safety net: clear any stale timer if loadNode is called outside handleNodeClick
+    if (this._debounceTimer !== null) {
+      clearTimeout(this._debounceTimer);
+      this._debounceTimer = null;
+    }
     this.currentFilePath = canvasFilePath;
     this.currentNodeId = nodeId;
     this.pendingEdits = {};
@@ -131,7 +151,6 @@ export class EditorPanelView extends ItemView {
     try {
       const savedLive = await this.plugin.canvasLiveEditor.saveLive(filePath, nodeId, edits);
       if (savedLive) {
-        new Notice('Node properties saved.');
         return;
       }
     } catch (err) {
@@ -200,7 +219,6 @@ export class EditorPanelView extends ItemView {
 
     try {
       await this.plugin.app.vault.modify(file as TFile, JSON.stringify(canvasData, null, 2));
-      new Notice('Node properties saved.');
     } catch {
       new Notice('Could not save — write failed. Check file permissions.');
     }
@@ -267,7 +285,7 @@ export class EditorPanelView extends ItemView {
           .addOption('loop-end', 'Loop end')
           .setValue(currentKind ?? '')
           .onChange(value => {
-            this.pendingEdits['radiprotocol_nodeType'] = value || undefined;
+            // Rebuild kind form section (existing logic — preserved)
             if (this.kindFormSection) {
               this.kindFormSection.empty();
               this.buildKindForm(
@@ -276,6 +294,8 @@ export class EditorPanelView extends ItemView {
                 value ? (value as RPNodeKind) : null
               );
             }
+            // Immediate save with color + cancel debounce (D-04)
+            this.onTypeDropdownChange(value);
           });
       });
 
@@ -283,34 +303,12 @@ export class EditorPanelView extends ItemView {
     this.kindFormSection = formArea.createDiv();
     this.buildKindForm(this.kindFormSection, nodeRecord, currentKind);
 
-    // Save row
-    const saveRow = panel.createDiv({ cls: 'rp-editor-save-row' });
-    new Setting(saveRow)
-      .addButton(btn => {
-        btn
-          .setButtonText('Save changes')
-          .setCta()
-          .onClick(() => {
-            if (this.currentFilePath && this.currentNodeId) {
-              const edits = { ...this.pendingEdits };
-              // COLOR-01, D-04: look up palette color for the selected type and include
-              // it in edits (color travels through the standard saveLive() path — no writeColor()).
-              const selectedType = edits['radiprotocol_nodeType'] as string | undefined;
-              if (selectedType && selectedType !== '') {
-                // Assign path: type is set — write its palette color
-                edits['color'] = (NODE_COLOR_MAP as Record<string, string | undefined>)[selectedType];
-              } else if ('radiprotocol_nodeType' in edits) {
-                // Unmark path: type is cleared — signal color deletion via undefined
-                edits['color'] = undefined;
-              }
-              void this.saveNodeEdits(
-                this.currentFilePath,
-                this.currentNodeId,
-                edits
-              );
-            }
-          });
-      });
+    // "Saved ✓" indicator — replaces Save button slot (D-01)
+    const indicatorRow = panel.createDiv({ cls: 'rp-editor-saved-indicator' });
+    indicatorRow.setText('Saved ✓');
+    this._savedIndicatorEl = indicatorRow;
+    // Reset indicator visibility on each form render (Pitfall 2 fix)
+    indicatorRow.removeClass?.('is-visible');
   }
 
   private buildKindForm(
@@ -337,7 +335,11 @@ export class EditorPanelView extends ItemView {
           .setDesc('Displayed to the user during the protocol session.')
           .addTextArea(ta => {
             ta.setValue((nodeRecord['radiprotocol_questionText'] as string | undefined) ?? (nodeRecord['text'] as string | undefined) ?? '')
-              .onChange(v => { this.pendingEdits['radiprotocol_questionText'] = v; this.pendingEdits['text'] = v; });
+              .onChange(v => {
+                this.pendingEdits['radiprotocol_questionText'] = v;
+                this.pendingEdits['text'] = v;
+                this.scheduleAutoSave();
+              });
           });
         break;
       }
@@ -349,14 +351,21 @@ export class EditorPanelView extends ItemView {
           .setDesc('Appended to the accumulated report text when this answer is chosen.')
           .addTextArea(ta => {
             ta.setValue((nodeRecord['radiprotocol_answerText'] as string | undefined) ?? (nodeRecord['text'] as string | undefined) ?? '')
-              .onChange(v => { this.pendingEdits['radiprotocol_answerText'] = v; this.pendingEdits['text'] = v; });
+              .onChange(v => {
+                this.pendingEdits['radiprotocol_answerText'] = v;
+                this.pendingEdits['text'] = v;
+                this.scheduleAutoSave();
+              });
           });
         new Setting(container)
           .setName('Display label (optional)')
           .setDesc('Short label shown in the runner button if set. Leave blank to use answer text.')
           .addText(t => {
             t.setValue((nodeRecord['radiprotocol_displayLabel'] as string | undefined) ?? '')
-              .onChange(v => { this.pendingEdits['radiprotocol_displayLabel'] = v || undefined; });
+              .onChange(v => {
+                this.pendingEdits['radiprotocol_displayLabel'] = v || undefined;
+                this.scheduleAutoSave();
+              });
           });
         // Separator override dropdown (D-05, D-06, SEP-02)
         new Setting(container)
@@ -371,6 +380,7 @@ export class EditorPanelView extends ItemView {
               .onChange(value => {
                 this.pendingEdits['radiprotocol_separator'] =
                   value === '' ? undefined : (value as 'newline' | 'space');
+                this.scheduleAutoSave();
               });
           });
         break;
@@ -383,14 +393,21 @@ export class EditorPanelView extends ItemView {
           .setDesc('Auto-appended to the accumulated text when this node is reached.')
           .addTextArea(ta => {
             ta.setValue((nodeRecord['radiprotocol_content'] as string | undefined) ?? (nodeRecord['text'] as string | undefined) ?? '')
-              .onChange(v => { this.pendingEdits['radiprotocol_content'] = v; this.pendingEdits['text'] = v; });
+              .onChange(v => {
+                this.pendingEdits['radiprotocol_content'] = v;
+                this.pendingEdits['text'] = v;
+                this.scheduleAutoSave();
+              });
           });
         new Setting(container)
           .setName('Snippet ID (optional)')
           .setDesc('Snippet ID for Phase 5 dynamic snippet fill-in. Leave blank if not using snippets.')
           .addText(t => {
             t.setValue((nodeRecord['radiprotocol_snippetId'] as string | undefined) ?? '')
-              .onChange(v => { this.pendingEdits['radiprotocol_snippetId'] = v || undefined; });
+              .onChange(v => {
+                this.pendingEdits['radiprotocol_snippetId'] = v || undefined;
+                this.scheduleAutoSave();
+              });
           });
         // Separator override dropdown (D-05, D-06, SEP-02)
         new Setting(container)
@@ -405,6 +422,7 @@ export class EditorPanelView extends ItemView {
               .onChange(value => {
                 this.pendingEdits['radiprotocol_separator'] =
                   value === '' ? undefined : (value as 'newline' | 'space');
+                this.scheduleAutoSave();
               });
           });
         break;
@@ -417,14 +435,20 @@ export class EditorPanelView extends ItemView {
           .setDesc('Shown as iteration prefix in the runner (e.g., "Lesion 2"). Default: Loop.')
           .addText(t => {
             t.setValue((nodeRecord['radiprotocol_loopLabel'] as string | undefined) ?? 'Loop')
-              .onChange(v => { this.pendingEdits['radiprotocol_loopLabel'] = v || 'Loop'; });
+              .onChange(v => {
+                this.pendingEdits['radiprotocol_loopLabel'] = v || 'Loop';
+                this.scheduleAutoSave();
+              });
           });
         new Setting(container)
           .setName('Exit label')
           .setDesc('Text on the exit button shown at the loop-end node. Default: Done.')
           .addText(t => {
             t.setValue((nodeRecord['radiprotocol_exitLabel'] as string | undefined) ?? 'Done')
-              .onChange(v => { this.pendingEdits['radiprotocol_exitLabel'] = v || 'Done'; });
+              .onChange(v => {
+                this.pendingEdits['radiprotocol_exitLabel'] = v || 'Done';
+                this.scheduleAutoSave();
+              });
           });
         new Setting(container)
           .setName('Max iterations')
@@ -437,6 +461,7 @@ export class EditorPanelView extends ItemView {
               .onChange(v => {
                 const n = parseInt(v, 10);
                 this.pendingEdits['radiprotocol_maxIterations'] = isNaN(n) ? 50 : Math.max(1, n);
+                this.scheduleAutoSave();
               });
           });
         break;
@@ -449,11 +474,65 @@ export class EditorPanelView extends ItemView {
           .setDesc('Must match the ID of the corresponding loop-start node on the canvas.')
           .addText(t => {
             t.setValue((nodeRecord['radiprotocol_loopStartId'] as string | undefined) ?? '')
-              .onChange(v => { this.pendingEdits['radiprotocol_loopStartId'] = v; });
+              .onChange(v => {
+                this.pendingEdits['radiprotocol_loopStartId'] = v;
+                this.scheduleAutoSave();
+              });
           });
         break;
       }
     }
+  }
+
+  private scheduleAutoSave(): void {
+    if (this._debounceTimer !== null) {
+      clearTimeout(this._debounceTimer);
+    }
+    // Snapshot at schedule time — NOT at fire time (critical correctness invariant)
+    const filePath = this.currentFilePath;
+    const nodeId = this.currentNodeId;
+    const edits = { ...this.pendingEdits };
+
+    if (!filePath || !nodeId) return;
+
+    this._debounceTimer = setTimeout(() => {
+      this._debounceTimer = null;
+      void this.saveNodeEdits(filePath, nodeId, edits).then(() => {
+        this.showSavedIndicator();
+      });
+    }, 800);
+  }
+
+  private onTypeDropdownChange(value: string): void {
+    this.pendingEdits['radiprotocol_nodeType'] = value || undefined;
+    // Cancel any pending debounce
+    if (this._debounceTimer !== null) {
+      clearTimeout(this._debounceTimer);
+      this._debounceTimer = null;
+    }
+    if (this.currentFilePath && this.currentNodeId) {
+      const edits = { ...this.pendingEdits };
+      const selectedType = edits['radiprotocol_nodeType'] as string | undefined;
+      if (selectedType && selectedType !== '') {
+        // Assign path: write palette color for type
+        edits['color'] = (NODE_COLOR_MAP as Record<string, string | undefined>)[selectedType];
+      } else if ('radiprotocol_nodeType' in edits) {
+        // Unmark path: clear color
+        edits['color'] = undefined;
+      }
+      void this.saveNodeEdits(this.currentFilePath, this.currentNodeId, edits)
+        .then(() => { this.showSavedIndicator(); });
+    }
+  }
+
+  private showSavedIndicator(): void {
+    if (!this._savedIndicatorEl) return;
+    this._savedIndicatorEl.addClass('is-visible');
+    if (this._indicatorTimer !== null) clearTimeout(this._indicatorTimer);
+    this._indicatorTimer = setTimeout(() => {
+      this._savedIndicatorEl?.removeClass('is-visible');
+      this._indicatorTimer = null;
+    }, 2000);
   }
 
   private renderError(message: string): void {
