@@ -212,7 +212,7 @@ export class EditorPanelView extends ItemView {
       return;
     }
 
-    const PROTECTED_FIELDS = new Set(['id', 'x', 'y', 'width', 'height', 'type', 'color']);
+    const PROTECTED_FIELDS = new Set(['id', 'x', 'y', 'width', 'height', 'type']);
 
     const nodeTypeEdit = edits['radiprotocol_nodeType'];
     const isUnmarking = nodeTypeEdit === '' || nodeTypeEdit === undefined;
