@@ -55,7 +55,7 @@ Full details: `.planning/milestones/v1.2-ROADMAP.md`
 - [x] Phase 23: Node Editor Auto-Save and Color-on-Type-Change — completed 2026-04-11
 - [x] Phase 24: Settings — Snippet Node Folder (1/1 plans) — completed 2026-04-11
 - [x] Phase 25: Snippet Node Runner UI (2/2 plans) — completed 2026-04-11
-- [ ] **Phase 26: Auto-Switch to Node Editor Tab** — revealLeaf() on canvas node click brings Node Editor tab to front
+- [x] Phase 26: Auto-Switch to Node Editor Tab — completed 2026-04-12
 - [ ] **Phase 27: Interactive Placeholder Editor** — Drag-and-drop chip reorder in SnippetManagerView updates placeholder list order
 
 </details>
@@ -85,7 +85,9 @@ Plans:
   1. Opening any snippet in Snippet Editor shows each placeholder as a distinct coloured chip — the raw `{{syntax}}` text is not visible in the chips list
   2. Dragging a placeholder chip to a new position in the list and releasing updates the visual order immediately
   3. After reordering chips, opening SnippetFillInModal for that snippet presents the input fields in the new order (tab key moves through fields in reordered sequence)
-**Plans**: TBD
+**Plans**: 1 plan
+Plans:
+- [ ] 27-01-PLAN.md — Replace renderPlaceholderRow with chip renderer + HTML5 DnD + auto-save on drop
 **UI hint**: yes
 
 ---
@@ -129,5 +131,5 @@ Plans:
 | 23. Node Editor Auto-Save and Color-on-Type-Change | v1.3 | 2/2 | Complete | 2026-04-11 |
 | 24. Settings — Snippet Node Folder | v1.3 | 1/1 | Complete | 2026-04-11 |
 | 25. Snippet Node Runner UI | v1.3 | 2/2 | Complete | 2026-04-11 |
-| 26. Auto-Switch to Node Editor Tab | v1.3 | 2/2 | Complete   | 2026-04-12 |
-| 27. Interactive Placeholder Editor | v1.3 | 0/? | Planned | — |
+| 26. Auto-Switch to Node Editor Tab | v1.3 | 2/2 | Complete | 2026-04-12 |
+| 27. Interactive Placeholder Editor | v1.3 | 0/1 | Planned | — |
