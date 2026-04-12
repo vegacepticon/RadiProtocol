@@ -16,6 +16,14 @@ function insertAtCursor(textarea: HTMLTextAreaElement, text: string): void {
   textarea.dispatchEvent(new Event('input'));
 }
 
+// Phase 27 D-02: fixed colour bar per placeholder type
+const PH_COLOR: Record<SnippetPlaceholder['type'], string> = {
+  'free-text':    'var(--color-cyan)',
+  'choice':       'var(--color-orange)',
+  'multi-choice': 'var(--color-purple)',
+  'number':       'var(--color-green)',
+};
+
 // ---------------------------------------------------------------------------------
 
 export class SnippetManagerView extends ItemView {
@@ -330,76 +338,104 @@ export class SnippetManagerView extends ItemView {
     for (let i = 0; i < draft.placeholders.length; i++) {
       const ph = draft.placeholders[i];
       if (!ph) continue;
-      this.renderPlaceholderRow(draft, ph, i, container, templateArea);
+      this.renderPlaceholderChip(draft, ph, i, container, templateArea);
     }
   }
 
-  private renderPlaceholderRow(
+  private renderPlaceholderChip(
     draft: SnippetFile,
     ph: SnippetPlaceholder,
     index: number,
     container: HTMLElement,
     templateArea: HTMLTextAreaElement
   ): void {
-    const row = container.createDiv({ cls: 'rp-placeholder-row' });
+    const chip = container.createDiv({ cls: 'rp-placeholder-chip' });
+    // D-02: colour bar via border-left inline style
+    chip.style.borderLeftColor = PH_COLOR[ph.type] ?? 'transparent';
+    chip.setAttribute('draggable', 'true');
 
-    // Row header: label, type badge, [×] remove
-    const header = row.createDiv({ cls: 'rp-placeholder-row-header' });
-    const labelSpan = header.createSpan();
+    // D-04: drag handle — far-left, 24px, cursor:grab via CSS
+    const handle = chip.createSpan({ cls: 'rp-placeholder-chip-handle' });
+    handle.textContent = '⠿';
+    handle.setAttribute('aria-label', `Drag to reorder ${ph.label}`);
+
+    // D-01: label — human-readable, NEVER {{id}} (CHIP-01)
+    const labelSpan = chip.createSpan({ cls: 'rp-placeholder-chip-label' });
     labelSpan.textContent = ph.label;
-    const badge = header.createSpan({ cls: 'rp-placeholder-type-badge' });
+
+    // D-01: type badge — reuses rp-placeholder-type-badge token
+    const badge = chip.createSpan({ cls: 'rp-placeholder-chip-badge' });
     badge.textContent = ph.type;
 
-    // Spacer
-    header.createSpan().style.flex = '1';
-
-    const removeBtn = header.createEl('button', { text: '×' });
+    // D-01 / D-08: [×] remove button — always visible at right edge
+    const removeBtn = chip.createEl('button', {
+      cls: 'rp-placeholder-chip-remove',
+      text: '×',
+    });
     removeBtn.setAttribute('aria-label', `Remove placeholder ${ph.label}`);
-    removeBtn.style.padding = '0 var(--size-4-1)';
 
+    // D-05: HTML5 native drag events (addEventListener — chips recreated on each re-render)
+    chip.addEventListener('dragstart', (e: DragEvent) => {
+      e.dataTransfer?.setData('text/plain', String(index));
+    });
+    chip.addEventListener('dragover', (e: DragEvent) => {
+      e.preventDefault(); // REQUIRED or drop will never fire
+      chip.addClass('drag-over');
+    });
+    chip.addEventListener('dragenter', (e: DragEvent) => {
+      e.preventDefault();
+      chip.addClass('drag-over');
+    });
+    chip.addEventListener('dragleave', () => {
+      chip.removeClass('drag-over');
+    });
+    chip.addEventListener('drop', (e: DragEvent) => {
+      e.preventDefault();
+      chip.removeClass('drag-over');
+      const from = parseInt(e.dataTransfer?.getData('text/plain') ?? '-1', 10);
+      const to = index;
+      if (from === -1 || from === to) return;
+      const [moved] = draft.placeholders.splice(from, 1);
+      if (moved) draft.placeholders.splice(to, 0, moved);
+      this.renderPlaceholderList(draft, container, templateArea);
+      void this.autoSaveAfterDrop(draft);
+    });
+    chip.addEventListener('dragend', () => {
+      // Cleanup guard: dragover may not fire dragleave on every chip if drag exits list
+      container.querySelectorAll('.drag-over').forEach(el => el.removeClass('drag-over'));
+    });
+
+    // D-03: click-to-expand — guard: not handle, not removeBtn
+    this.registerDomEvent(chip, 'click', (e: MouseEvent) => {
+      if (
+        e.target === removeBtn ||
+        (e.target as HTMLElement).closest('.rp-placeholder-chip-handle')
+      ) return;
+      chip.toggleClass('is-expanded', !chip.hasClass('is-expanded'));
+      if (chip.hasClass('is-expanded')) {
+        if (ph.type === 'number') {
+          this.renderNumberExpanded(ph, chip);
+        } else {
+          this.renderExpandedPlaceholder(draft, ph, chip, templateArea, container, labelSpan, badge);
+        }
+      } else {
+        chip.querySelector('.rp-placeholder-expanded')?.remove();
+      }
+    });
+
+    // D-08: remove button click — stopPropagation so chip click handler doesn't fire
     this.registerDomEvent(removeBtn, 'click', (e: MouseEvent) => {
       e.stopPropagation();
       const removedId = ph.id;
       draft.placeholders.splice(index, 1);
-
-      // Check for orphaned {{id}} in template (D-05)
       const isOrphaned = draft.template.includes(`{{${removedId}}}`);
-
       this.renderPlaceholderList(draft, container, templateArea);
-
       if (isOrphaned) {
         const orphanBadge = container.createDiv({ cls: 'rp-placeholder-orphan-badge' });
         orphanBadge.setAttribute('role', 'alert');
         orphanBadge.textContent = `Template still contains {{${removedId}}} — remove from template or re-add this placeholder.`;
       }
     });
-
-    // Expand inline for choice/multi-choice (D-06) or show unit for number (D-08)
-    if (ph.type === 'choice' || ph.type === 'multi-choice') {
-      this.registerDomEvent(header, 'click', (e: MouseEvent) => {
-        // Don't expand when clicking remove
-        if (e.target === removeBtn) return;
-        row.toggleClass('is-expanded', !row.hasClass('is-expanded'));
-        if (row.hasClass('is-expanded')) {
-          this.renderExpandedPlaceholder(draft, ph, row, templateArea, container, labelSpan, badge);
-        } else {
-          // Collapse: remove expanded content
-          const expanded = row.querySelector('.rp-placeholder-expanded');
-          if (expanded) expanded.remove();
-        }
-      });
-    } else if (ph.type === 'number') {
-      this.registerDomEvent(header, 'click', (e: MouseEvent) => {
-        if (e.target === removeBtn) return;
-        row.toggleClass('is-expanded', !row.hasClass('is-expanded'));
-        if (row.hasClass('is-expanded')) {
-          this.renderNumberExpanded(ph, row);
-        } else {
-          const expanded = row.querySelector('.rp-placeholder-expanded');
-          if (expanded) expanded.remove();
-        }
-      });
-    }
   }
 
   private renderExpandedPlaceholder(
@@ -638,6 +674,18 @@ export class SnippetManagerView extends ItemView {
       this.renderFormPanel();
     } catch {
       new Notice('Failed to delete snippet. Check file permissions and try again.');
+    }
+  }
+
+  private async autoSaveAfterDrop(draft: SnippetFile): Promise<void> {
+    try {
+      await this.plugin.snippetService.save(draft);
+      // Sync this.snippets so list panel reflects new order if user switches snippet
+      const idx = this.snippets.findIndex(s => s.id === draft.id);
+      if (idx !== -1) this.snippets[idx] = draft;
+      new Notice('Snippet saved.');
+    } catch {
+      new Notice('Failed to save snippet. Check that the vault is writable and try again.');
     }
   }
 }
