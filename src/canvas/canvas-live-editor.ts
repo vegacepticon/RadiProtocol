@@ -11,7 +11,7 @@
 import type { App } from 'obsidian';
 import type { CanvasViewInternal, CanvasNodeData, CanvasData } from '../types/canvas-internal';
 
-const PROTECTED_FIELDS = new Set(['id', 'x', 'y', 'width', 'height', 'type']);
+const PROTECTED_FIELDS = new Set(['id', 'x', 'y', 'width', 'height', 'type', 'color']);
 
 export class CanvasLiveEditor {
   private readonly app: App;
@@ -103,8 +103,6 @@ export class CanvasLiveEditor {
           delete node[key as keyof CanvasNodeData];
         }
       }
-      // Also clear the canvas colour on unmark (mirrors Strategy A path)
-      delete node['color' as keyof CanvasNodeData];
     } else {
       // Apply edits to the copy, skipping PROTECTED_FIELDS
       for (const [key, value] of Object.entries(edits)) {

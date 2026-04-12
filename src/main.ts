@@ -127,12 +127,6 @@ export default class RadiProtocolPlugin extends Plugin {
 
   async activateEditorPanelView(): Promise<void> {
     const { workspace } = this.app;
-    // Flush any pending auto-save before detaching the view (WR-02)
-    const existingLeaves = workspace.getLeavesOfType(EDITOR_PANEL_VIEW_TYPE);
-    const existingView = existingLeaves[0]?.view;
-    if (existingView instanceof EditorPanelView) {
-      await existingView.flushPendingSave();
-    }
     workspace.detachLeavesOfType(EDITOR_PANEL_VIEW_TYPE);
     const leaf = workspace.getRightLeaf(false);
     if (leaf) {
@@ -140,24 +134,6 @@ export default class RadiProtocolPlugin extends Plugin {
       const activeLeaf = workspace.getLeavesOfType(EDITOR_PANEL_VIEW_TYPE)[0];
       if (activeLeaf !== undefined) {
         workspace.revealLeaf(activeLeaf);
-      }
-    }
-  }
-
-  async ensureEditorPanelVisible(): Promise<void> {
-    const { workspace } = this.app;
-    const leaves = workspace.getLeavesOfType(EDITOR_PANEL_VIEW_TYPE);
-    if (leaves.length > 0 && leaves[0] !== undefined) {
-      workspace.revealLeaf(leaves[0]);
-      return;
-    }
-    // No existing leaf — create one in the right sidebar
-    const leaf = workspace.getRightLeaf(false);
-    if (leaf) {
-      await leaf.setViewState({ type: EDITOR_PANEL_VIEW_TYPE, active: true });
-      const newLeaves = workspace.getLeavesOfType(EDITOR_PANEL_VIEW_TYPE);
-      if (newLeaves[0] !== undefined) {
-        workspace.revealLeaf(newLeaves[0]);
       }
     }
   }

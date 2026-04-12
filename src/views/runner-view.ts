@@ -3,9 +3,7 @@ import { ItemView, WorkspaceLeaf, Notice, TFile, TFolder, MarkdownView } from 'o
 import type RadiProtocolPlugin from '../main';
 import { ProtocolRunner } from '../runner/protocol-runner';
 import { GraphValidator } from '../graph/graph-validator';
-import type { ProtocolGraph, SnippetNode } from '../graph/graph-model';
-import { SnippetFilePickerModal } from './snippet-file-picker-modal';
-import type { SnippetFile } from '../snippets/snippet-model';
+import type { ProtocolGraph } from '../graph/graph-model';
 import { SnippetFillInModal } from './snippet-fill-in-modal';
 import { ResumeSessionModal } from './resume-session-modal';
 import type { PersistedSession } from '../sessions/session-model';
@@ -393,21 +391,6 @@ export class RunnerView extends ItemView {
             break;
           }
 
-          case 'snippet': {
-            const snippetNode = node as SnippetNode;
-            // D-09: button label fallback chain: buttonLabel ?? "Select file"
-            const resolvedLabel = snippetNode.buttonLabel ?? 'Select file';
-            const snippetBtn = questionZone.createEl('button', {
-              cls: 'rp-answer-btn',
-              text: resolvedLabel,
-            });
-            this.registerDomEvent(snippetBtn, 'click', () => {
-              this.runner.syncManualEdit(this.previewTextarea?.value ?? '');  // BUG-01 pattern
-              void this.handleSnippetFilePick(snippetNode, state.currentNodeId);
-            });
-            break;
-          }
-
           default: {
             // text-block, answer, start — auto-advance nodes should not halt here,
             // but handle gracefully in case they do
@@ -511,97 +494,6 @@ export class RunnerView extends ItemView {
       this.runner.completeSnippet('');
     }
     void this.autoSaveSession();   // SESSION-01 — save after snippet completion
-    this.render();
-  }
-
-  /**
-   * Resolves folder, filters files, opens SnippetFilePickerModal, dispatches .md/.json (SNIPPET-03..07).
-   * Cancel at any step leaves runner on the snippet node (D-03, D-07).
-   */
-  private async handleSnippetFilePick(node: SnippetNode, nodeId: string): Promise<void> {
-    // SNIPPET-07 / D-05: resolve effective folder (per-node override > global setting)
-    const rawFolder = node.folderPath?.trim() ?? '';
-    const globalFolder = this.plugin.settings.snippetNodeFolderPath.trim();
-    const folderPath = rawFolder !== '' ? rawFolder : globalFolder;
-
-    if (folderPath === '') {
-      // D-05: no folder configured at all
-      new Notice('Snippet folder not configured. Set a path in plugin Settings \u2192 Storage.');
-      return;  // runner stays on node
-    }
-
-    // D-02: recursively filter vault files by folder prefix (.md and .json only)
-    const files = this.app.vault.getFiles().filter(f =>
-      (f.extension === 'md' || f.extension === 'json') &&
-      f.path.startsWith(folderPath + '/')
-    );
-
-    if (files.length === 0) {
-      // D-04: folder exists but no eligible files
-      new Notice(`No files found in ${folderPath}`);
-      return;  // runner stays on node
-    }
-
-    // D-03: cancel = onChoose never called = runner stays on node (no render() call)
-    new SnippetFilePickerModal(this.app, files, (chosenFile) => {
-      void this.handleChosenSnippetFile(chosenFile, nodeId);
-    }).open();
-  }
-
-  private async handleChosenSnippetFile(file: TFile, nodeId: string): Promise<void> {
-    if (file.extension === 'md') {
-      const content = await this.app.vault.read(file);
-      this.runner.completeSnippetFile(content, nodeId);
-      void this.autoSaveSession();
-      this.render();
-    } else {
-      await this.handleSnippetJsonFile(file, nodeId);
-    }
-  }
-
-  /** D-06: validate .json as SnippetFile and open fill-in modal. */
-  private async handleSnippetJsonFile(file: TFile, nodeId: string): Promise<void> {
-    let content: string;
-    try {
-      content = await this.app.vault.read(file);
-    } catch {
-      new Notice('Could not read file.');
-      return;  // runner stays on node
-    }
-
-    let parsed: unknown;
-    try {
-      parsed = JSON.parse(content);
-    } catch {
-      new Notice('Not a valid snippet file');
-      return;  // D-06: invalid JSON
-    }
-
-    // D-06: structural validation — must have id, name, template as strings
-    if (
-      typeof parsed !== 'object' || parsed === null ||
-      typeof (parsed as Record<string, unknown>)['id'] !== 'string' ||
-      typeof (parsed as Record<string, unknown>)['name'] !== 'string' ||
-      typeof (parsed as Record<string, unknown>)['template'] !== 'string'
-    ) {
-      new Notice('Not a valid snippet file');
-      return;  // D-06: missing required fields
-    }
-
-    const snippetFile = parsed as SnippetFile;
-
-    // SNIPPET-05: open SnippetFillInModal
-    const modal = new SnippetFillInModal(this.app, snippetFile);
-    modal.open();
-    const rendered = await modal.result;
-
-    if (rendered === null) {
-      // D-07: user cancelled SnippetFillInModal — runner stays on node
-      return;
-    }
-
-    this.runner.completeSnippetFile(rendered, nodeId);
-    void this.autoSaveSession();
     this.render();
   }
 

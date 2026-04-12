@@ -187,42 +187,6 @@ export class ProtocolRunner {
   }
 
   /**
-   * Called by RunnerView after user selects a file for the snippet node (SNIPPET-04, SNIPPET-05).
-   * Appends text using the runner's defaultSeparator and advances past the snippet node.
-   * Only valid in at-node state with the current node being a snippet node (D-08).
-   * Pushes UndoEntry BEFORE mutation (BUG-01 pattern).
-   *
-   * @param text - rendered file content to append
-   * @param snippetNodeId - the ID of the snippet node being completed
-   */
-  completeSnippetFile(text: string, snippetNodeId: string): void {
-    if (this.runnerStatus !== 'at-node') return;
-    if (this.graph === null) return;
-
-    const snippetNode = this.graph.nodes.get(snippetNodeId);
-    if (snippetNode === undefined || snippetNode.kind !== 'snippet') return;
-
-    // Push undo entry BEFORE mutation (BUG-01 / D-08)
-    this.undoStack.push({
-      nodeId: snippetNodeId,
-      textSnapshot: this.accumulator.snapshot(),
-      loopContextStack: [...this.loopContextStack],
-    });
-
-    // SnippetNode does not have radiprotocol_separator — use defaultSeparator (RESEARCH.md Pattern 6)
-    this.accumulator.appendWithSeparator(text, this.defaultSeparator);
-
-    // Advance past the snippet node
-    const neighbors = this.graph.adjacency.get(snippetNodeId);
-    const next = neighbors !== undefined ? neighbors[0] : undefined;
-    if (next === undefined) {
-      this.transitionToComplete();
-      return;
-    }
-    this.advanceThrough(next);
-  }
-
-  /**
    * Inject a manual textarea edit into the accumulator before an advance action (BUG-01, D-01).
    * Must be called BEFORE chooseAnswer() / enterFreeText() / chooseLoopAction() so that
    * the undo snapshot captured inside those methods includes the manual edit.
@@ -319,7 +283,6 @@ export class ProtocolRunner {
           canStepBack: this.undoStack.length > 0,
           loopIterationLabel,
           isAtLoopEnd: this.graph?.nodes.get(this.currentNodeId ?? '')?.kind === 'loop-end',
-          isAtSnippetNode: this.graph?.nodes.get(this.currentNodeId ?? '')?.kind === 'snippet',
         };
       }
       case 'awaiting-snippet-fill':
@@ -543,12 +506,6 @@ export class ProtocolRunner {
         }
         case 'loop-end': {
           // Halt here — RunnerView will render "loop again / done" prompt (LOOP-02)
-          this.currentNodeId = cursor;
-          this.runnerStatus = 'at-node';
-          return;
-        }
-        case 'snippet': {
-          // Halt — RunnerView renders file-picker button (SNIPPET-02)
           this.currentNodeId = cursor;
           this.runnerStatus = 'at-node';
           return;

@@ -198,7 +198,6 @@ export class GraphValidator {
       case 'text-block': return node.content.slice(0, 30) || node.id;
       case 'loop-start': return node.loopLabel || node.id;
       case 'loop-end': return `loop-end (${node.id})`;
-      case 'snippet': return node.buttonLabel ?? node.id;
     }
   }
 }

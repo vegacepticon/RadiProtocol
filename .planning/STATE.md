@@ -1,25 +1,25 @@
 ---
 gsd_state_version: 1.0
-milestone: v1.0
-milestone_name: milestone
-status: executing
-stopped_at: "Phases 26 and 27 restored to ROADMAP (were accidentally dropped); next up: Phase 26"
-last_updated: "2026-04-12T06:33:55.487Z"
+milestone: v1.2
+milestone_name: Runner UX & Bug Fixes
+status: milestone_complete
+stopped_at: v1.2 milestone archived — 8 phases, 11 plans, 14/14 requirements, 8/8 UAT passed
+last_updated: "2026-04-10T18:00:00.000Z"
 progress:
-  total_phases: 4
-  completed_phases: 0
-  total_plans: 2
-  completed_plans: 0
-  percent: 0
+  total_phases: 8
+  completed_phases: 8
+  total_plans: 11
+  completed_plans: 11
+  percent: 100
 ---
 
 # RadiProtocol — Project State
 
-**Updated:** 2026-04-11
-**Milestone:** v1.3 — Node Editor Overhaul & Snippet Node
-**Status:** Executing Phase 26
-**Last session:** 2026-04-11T21:17:00.000Z
-**Stopped at:** Phases 26 and 27 restored to ROADMAP (were accidentally dropped); next up: Phase 26
+**Updated:** 2026-04-10
+**Milestone:** v1.2 — Runner UX & Bug Fixes
+**Status:** ✅ MILESTONE COMPLETE — archived 2026-04-10
+**Last session:** 2026-04-10T18:00:00.000Z
+**Stopped at:** v1.2 milestone archived — 8 phases, 11 plans, 14/14 requirements, 8/8 UAT passed
 
 ---
 
@@ -28,7 +28,7 @@ progress:
 See: `.planning/PROJECT.md` (updated 2026-04-10)
 
 **Core value:** A radiologist can generate a structured, accurate protocol in seconds by answering a guided algorithm — without writing a single line of code.  
-**Current focus:** Phase 26 — auto-switch-to-node-editor-tab
+**Current focus:** Planning next milestone (run `/gsd-new-milestone`)
 
 ---
 
