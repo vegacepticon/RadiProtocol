@@ -110,6 +110,53 @@
 
 ---
 
+## Milestone: v1.3 — Interactive Placeholder Editor
+
+**Shipped:** 2026-04-12  
+**Phases:** 1 (Phase 27) | **Plans:** 1 | **Timeline:** single day (~3.5 hours)
+
+### What Was Built
+
+- Chip-based placeholder list in SnippetManagerView replacing expandable row list — type-colour bars (PH_COLOR), human-readable labels, type badges, drag handles, remove buttons (CHIP-01)
+- HTML5 native drag-and-drop reorder with 6-event handler per chip, correct splice pattern, dragleave child-flicker guard, dragend cleanup (CHIP-02)
+- `autoSaveAfterDrop()` persists reordered array via `snippetService.save()` — SnippetFillInModal tab order follows persisted order at zero modal changes (CHIP-03)
+- UUID guard preventing auto-save on unsaved drafts; 25 automated Vitest tests covering DnD guards, splice algorithm, and UUID check
+- 5 code review issues (WR-01–05) found and fixed: stale DnD closure, dragleave child flicker, UUID guard, dragend cast, bare addEventListener for ephemeral elements
+
+### What Worked
+
+- **Bare `addEventListener` for ephemeral chip elements:** Code review (WR-05) correctly identified that `registerDomEvent` is only for persistent elements; chips are recreated on every re-render so `addEventListener` is the right choice — a subtle Obsidian-specific pattern now documented
+- **UUID guard before auto-save:** Caught by code review as WR-03; prevents a real data integrity bug where an unsaved draft with a generated UUID would be permanently written before the user confirms
+- **Chip renderer pattern:** `renderPlaceholderChip()` is self-contained — all DnD state local to the closure, no shared mutable drag state on the class — clean and easy to test
+- **25 automated tests in a single phase:** Nyquist Wave 0 test-first structure for DnD logic caught the stale closure bug before it reached UAT
+
+### What Was Inefficient
+
+- **v1.3 executed outside the formal milestone workflow** — Phase 27 was started directly after v1.2 archive without running `/gsd-new-milestone`. ROADMAP.md, STATE.md, and REQUIREMENTS.md were never formally updated for v1.3. Required manual repair at milestone close.
+- **styles.css not committed at phase completion** — The root `styles.css` (built output) had uncommitted Phase 27 CSS changes that were only discovered at milestone audit. Phase executor should commit all modified files before writing SUMMARY.md.
+- **Branch name mismatch** — All Phase 27 work landed on `gsd/phase-26-auto-switch-to-node-editor-tab`. The branch was never renamed or a new branch created for Phase 27.
+
+### Patterns Established
+
+- `PH_COLOR` record — centralised type-to-CSS-var colour mapping; extend when adding new placeholder types
+- Chip renderer pattern: `renderPlaceholderChip()` — self-contained chip with inline DnD listeners for ephemeral DOM elements
+- `splice(from, 1)` then `splice(to, 0, moved)` — stable array reorder pattern for DnD
+- Bare `addEventListener` for ephemeral elements; `registerDomEvent` only for persistent/long-lived elements
+
+### Key Lessons
+
+1. **Run `/gsd-new-milestone` before starting work after a milestone archive** — skipping it creates structural debt that must be repaired manually at the next close
+2. **Commit all files before writing SUMMARY.md** — if `git status` is not clean at phase completion, the executor should commit or explain why before marking done
+3. **Code review before UAT pays off at this scale** — WR-01–05 were all real bugs caught by review; UAT would have caught some but not the stale closure subtlety (WR-01/WR-04)
+
+### Cost Observations
+
+- Model mix: quality profile (Sonnet 4.6 primary)
+- Sessions: 1 session (single day)
+- Notable: Smallest milestone yet (1 phase, 18 min execution); overhead of code review + UAT + Nyquist audit was larger than implementation time — appropriate for a UI feature with complex DnD interaction
+
+---
+
 ## Cross-Milestone Trends
 
 ### Process Evolution
@@ -118,6 +165,7 @@
 |-----------|--------|-------|------------|
 | v1.0 | 7 | 28 | First milestone — baseline established |
 | v1.2 | 8 | 11 | Retrofit verification pattern; inserted phases for gap closure; milestone audit pre-archival |
+| v1.3 | 1 | 1 | Smallest milestone — single feature; skipped `/gsd-new-milestone`; structural debt repaired at close |
 
 ### Cumulative Quality
 
@@ -125,6 +173,7 @@
 |-----------|-------|------------------------|
 | v1.0 | 28+ passing | parser, runner, snippets, sessions |
 | v1.2 | 28+ passing + 8/8 UAT | same; no new engine modules added |
+| v1.3 | 53+ passing + 5/5 UAT | same; +25 DnD/splice/UUID tests |
 
 ### Top Lessons (Verified Across Milestones)
 

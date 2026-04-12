@@ -79,6 +79,13 @@ A radiologist can generate a structured, accurate protocol in seconds by answeri
 - ✓ text-block node type read-back when canvas open (BUG-03) — v1.2
 - ✓ Add button in snippet placeholder mini-form (BUG-04) — v1.2
 
+### Validated (v1.3)
+
+**Snippet Placeholder Editor:**
+- ✓ Chip-based placeholder list with type-colour bars, human-readable labels, type badge, drag handle, remove button (CHIP-01) — v1.3
+- ✓ HTML5 drag-and-drop reorder with correct splice pattern and dragleave child-flicker guard (CHIP-02) — v1.3
+- ✓ `autoSaveAfterDrop()` persists reordered array to disk — SnippetFillInModal tab order follows persisted order (CHIP-03) — v1.3
+
 ### Active (Next Milestone)
 
 - [ ] Canvas selector dropdown in runner view — choose protocol without reopening command
@@ -103,7 +110,7 @@ A radiologist can generate a structured, accurate protocol in seconds by answeri
 
 ## Context
 
-- Shipped v1.0 (7 phases, 28 plans) + v1.2 (8 phases, 11 plans); ~7K LOC TypeScript in src/
+- Shipped v1.0 (7 phases, 28 plans) + v1.2 (8 phases, 11 plans) + v1.3 (1 phase, 1 plan); ~7K LOC TypeScript in src/
 - Tech stack: TypeScript + Obsidian Plugin API + esbuild + Vitest
 - Target: public release on Obsidian Community Plugins
 - Primary author: radiologist (CT focus), designed for all imaging modalities
@@ -152,4 +159,4 @@ A radiologist can generate a structured, accurate protocol in seconds by answeri
 4. Update Context with current state
 
 ---
-*Last updated: 2026-04-10 after v1.2 milestone*
+*Last updated: 2026-04-12 after v1.3 milestone*

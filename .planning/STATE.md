@@ -1,31 +1,31 @@
 ---
 gsd_state_version: 1.0
-milestone: v1.2
-milestone_name: Runner UX & Bug Fixes
+milestone: v1.3
+milestone_name: Interactive Placeholder Editor
 status: milestone_complete
-stopped_at: v1.2 milestone archived — 8 phases, 11 plans, 14/14 requirements, 8/8 UAT passed
-last_updated: "2026-04-10T18:00:00.000Z"
+stopped_at: v1.3 milestone archived — 1 phase, 1 plan, 3/3 requirements, 5/5 UAT passed
+last_updated: "2026-04-12T00:00:00.000Z"
 progress:
-  total_phases: 8
-  completed_phases: 8
-  total_plans: 11
-  completed_plans: 11
+  total_phases: 1
+  completed_phases: 1
+  total_plans: 1
+  completed_plans: 1
   percent: 100
 ---
 
 # RadiProtocol — Project State
 
-**Updated:** 2026-04-10
-**Milestone:** v1.2 — Runner UX & Bug Fixes
-**Status:** ✅ MILESTONE COMPLETE — archived 2026-04-10
-**Last session:** 2026-04-10T18:00:00.000Z
-**Stopped at:** v1.2 milestone archived — 8 phases, 11 plans, 14/14 requirements, 8/8 UAT passed
+**Updated:** 2026-04-12
+**Milestone:** v1.3 — Interactive Placeholder Editor
+**Status:** ✅ MILESTONE COMPLETE — archived 2026-04-12
+**Last session:** 2026-04-12T00:00:00.000Z
+**Stopped at:** v1.3 milestone archived — 1 phase, 1 plan, 3/3 requirements, 5/5 UAT passed
 
 ---
 
 ## Project Reference
 
-See: `.planning/PROJECT.md` (updated 2026-04-10)
+See: `.planning/PROJECT.md` (updated 2026-04-12)
 
 **Core value:** A radiologist can generate a structured, accurate protocol in seconds by answering a guided algorithm — without writing a single line of code.  
 **Current focus:** Planning next milestone (run `/gsd-new-milestone`)
@@ -51,6 +51,7 @@ See: `.planning/PROJECT.md` (updated 2026-04-10)
 | 17 | Node Type Read-Back and Snippet Placeholder Fixes | Complete |
 | 18 | CSS Gap Fixes (INSERTED) | Complete |
 | 19 | Phase 12–14 Formal Verification | Complete |
+| 27 | Interactive Placeholder Editor | Complete |
 
 ---
 
@@ -67,23 +68,13 @@ See: `.planning/PROJECT.md` (updated 2026-04-10)
 | `radiprotocol_*` property namespace | Avoids collisions with other plugins and future Obsidian updates |
 | Canvas write-back Strategy A | Require canvas closed before any vault.modify() — simple and safe; avoids undocumented internals (A4 resolved) |
 | plugin.saveSettings() not saveData() directly | Consistent with main.ts wrapper; all settings call sites use the wrapper |
-| maxLoopIterations moved into Runner section | D-07 groups related runner settings under one heading in Settings tab |
 | RunnerView reconstructs ProtocolRunner at openCanvas() start | Simplest way to pick up textSeparator from settings; no lazy init or observer needed |
 | resolveSeparator(node) single resolution point | node.radiprotocol_separator ?? defaultSeparator — avoids duplicated logic across 5 call sites |
 | capture-before-advance pattern (BUG-01) | syncManualEdit() called before each advance action so undo snapshot includes manual textarea edit |
-| overwrite() semantically separate from restoreTo() | restoreTo = undo revert of a snapshot; overwrite = inject caller's text — clearer intent at call sites |
 | live textarea read in complete-state toolbar (D-03) | previewTextarea?.value ?? capturedText replaces stale closure to honour final edits before copy/save/insert |
 | getCanvasJSON() for runner read path | Reads live in-memory canvas data; vault.read() retained only in EditorPanel form load (pre-existing gap) |
-
----
-
-## Open Assumptions (Require User Confirmation Before Phases 5 + 6)
-
-| ID | Assumption | Phase |
-|----|-----------|-------|
-| A1 | Loop-start node uses two outgoing edges (continue + exit) rather than a dedicated "loop again?" node | 6 |
-| A2 | Snippet placeholder syntax uses `{{placeholder_id}}` double-curly-brace format | 5 |
-| A3 | Session files stored vault-visible in `.radiprotocol/sessions/` (not hidden in plugin data.json) | 7 |
+| HTML5 native DnD for chip reorder (Phase 27) | Chips recreated on re-render so addEventListener is correct; no drag library overhead |
+| UUID guard in autoSaveAfterDrop() (Phase 27) | Prevents saving snippets with unsaved placeholder IDs |
 
 ---
 
@@ -103,4 +94,4 @@ See: `.planning/PROJECT.md` (updated 2026-04-10)
 
 - Branch: `main`
 - Remote: (not yet configured)
-- Last commit: `209e285` — docs(audit): update v1.2 milestone audit — all 14 requirements satisfied
+- Last commit: `215cf41` — feat(27): commit built styles.css with Phase 27 chip CSS classes

@@ -9,6 +9,7 @@
 
 - ✅ **v1.0 Community Plugin Release** — Phases 1–7 (shipped 2026-04-07)
 - ✅ **v1.2 Runner UX & Bug Fixes** — Phases 12–19 (shipped 2026-04-10)
+- ✅ **v1.3 Interactive Placeholder Editor** — Phase 27 (shipped 2026-04-12)
 
 ---
 
@@ -42,6 +43,15 @@ Full details: `.planning/milestones/v1.0-ROADMAP.md`
 - [x] Phase 19: Phase 12–14 Formal Verification — completed 2026-04-10
 
 Full details: `.planning/milestones/v1.2-ROADMAP.md`
+
+</details>
+
+<details>
+<summary>✅ v1.3 Interactive Placeholder Editor (Phase 27) — SHIPPED 2026-04-12</summary>
+
+- [x] Phase 27: Interactive Placeholder Editor (1/1 plans) — completed 2026-04-12
+
+Full details: `.planning/milestones/v1.3-ROADMAP.md`
 
 </details>
 
@@ -80,3 +90,4 @@ Full details: `.planning/milestones/v1.2-ROADMAP.md`
 | 17. Node Type Read-Back and Snippet Placeholder Fixes | v1.2 | 2/2 | Complete | 2026-04-09 |
 | 18. CSS Gap Fixes (INSERTED) | v1.2 | 1/1 | Complete | 2026-04-10 |
 | 19. Phase 12–14 Formal Verification | v1.2 | 3/3 | Complete | 2026-04-10 |
+| 27. Interactive Placeholder Editor | v1.3 | 1/1 | Complete | 2026-04-12 |

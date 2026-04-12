@@ -1,5 +1,23 @@
 # Milestones
 
+## v1.3 Interactive Placeholder Editor (Shipped: 2026-04-12)
+
+**Phases completed:** 1 phase (27), 1 plan  
+**Timeline:** 2026-04-12 (single day, ~3.5 hours)  
+**Git:** 17 commits, 2 source files, +266 lines (snippet-manager-view.ts +172, styles.css +94)
+
+**Key accomplishments:**
+
+- Phase 27: Replaced expandable row list with chip-based placeholder UI — type-coloured left bar (PH_COLOR), human-readable label, type badge, drag handle, remove button (CHIP-01)
+- Phase 27: HTML5 native drag-and-drop reorder with 6-event DnD per chip, correct splice pattern, dragleave child-flicker guard (CHIP-02)
+- Phase 27: `autoSaveAfterDrop()` persists reordered array via `snippetService.save()` — SnippetFillInModal tab order follows persisted order at zero modal changes (CHIP-03)
+- Phase 27: UUID guard in `autoSaveAfterDrop()` prevents saving unsaved drafts; 25 automated Vitest tests cover DnD guard conditions, splice algorithm, and UUID guard
+- Code review found 5 issues (WR-01–05); all fixed and verified; 5/5 UAT passed in live Obsidian
+
+**Archive:** `.planning/milestones/v1.3-ROADMAP.md`, `.planning/milestones/v1.3-MILESTONE-AUDIT.md`
+
+---
+
 ## v1.2 Runner UX & Bug Fixes (Shipped: 2026-04-10)
 
 **Phases completed:** 8 phases (12–19), 11 plans  
