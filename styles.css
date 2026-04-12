@@ -454,6 +454,86 @@
   border-radius: var(--radius-s);
 }
 
+/* ── Phase 27: Chip-based placeholder list ─────────────────────── */
+
+/* Chip row — replaces .rp-placeholder-row */
+.rp-placeholder-chip {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: var(--size-4-1);            /* 8px between handle / label / badge / remove */
+  padding: 0 var(--size-4-1);      /* 8px horizontal padding */
+  border-left: 4px solid transparent; /* colour overridden inline per type */
+  border-radius: var(--radius-s);
+  min-height: 32px;
+  cursor: pointer;
+  /* expanded state nested content flows below */
+  flex-wrap: wrap;
+}
+
+.rp-placeholder-chip:hover:not(.is-expanded) {
+  background: var(--background-modifier-hover);
+}
+
+.rp-placeholder-chip.is-expanded {
+  background: var(--background-secondary);
+  cursor: default;
+}
+
+.rp-placeholder-chip.drag-over {
+  background: var(--background-modifier-hover);
+  outline: 1px dashed var(--interactive-accent);
+}
+
+/* Drag handle */
+.rp-placeholder-chip-handle {
+  cursor: grab;
+  width: 24px;
+  flex: 0 0 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: var(--font-text-size);
+  color: var(--text-muted);
+  user-select: none;
+}
+
+.rp-placeholder-chip-handle:active {
+  cursor: grabbing;
+}
+
+/* Label — flex-grows to fill available space */
+.rp-placeholder-chip-label {
+  flex: 1 1 auto;
+  font-size: var(--font-text-size);
+  line-height: 1.5;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Type badge — reuses .rp-placeholder-type-badge token */
+.rp-placeholder-chip-badge {
+  font-size: var(--font-smaller);
+  color: var(--text-muted);
+  flex-shrink: 0;
+}
+
+/* Remove button — matches existing .rp-option-row button 24×24 pattern */
+.rp-placeholder-chip-remove {
+  width: 24px;
+  height: 24px;
+  flex: 0 0 24px;
+  padding: 0;
+  font-size: var(--font-smaller);
+}
+
+/* Expanded inline editor — full-width row below chip header content */
+.rp-placeholder-chip > .rp-placeholder-expanded {
+  flex-basis: 100%;
+  padding: var(--size-4-1) 0 var(--size-2-1) 28px; /* indent to align under label */
+}
+
 .rp-option-list {
   display: flex;
   flex-direction: column;
