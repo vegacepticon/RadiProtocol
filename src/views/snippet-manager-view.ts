@@ -470,7 +470,9 @@ export class SnippetManagerView extends ItemView {
     const labelInput = labelSec.createEl('input', { type: 'text' });
     labelInput.id = `rp-ph-label-${ph.id}`;
     labelInput.value = ph.label;
-    this.registerDomEvent(labelInput, 'input', () => {
+    // WR-05: use bare addEventListener — this element is transient (destroyed on collapse),
+    // so registerDomEvent would accumulate ghost listeners in the view registry.
+    labelInput.addEventListener('input', () => {
       ph.label = labelInput.value;
       labelSpan.textContent = ph.label;
     });
@@ -493,7 +495,8 @@ export class SnippetManagerView extends ItemView {
       opt.value = value;
     }
     typeSelect.value = ph.type;
-    this.registerDomEvent(typeSelect, 'change', () => {
+    // WR-05: bare addEventListener — transient element, avoid view-registry accumulation
+    typeSelect.addEventListener('change', () => {
       ph.type = typeSelect.value as SnippetPlaceholder['type'];
       badge.textContent = ph.type;
       // Update options/joinSeparator/unit based on new type
@@ -535,12 +538,13 @@ export class SnippetManagerView extends ItemView {
         optInput.id = `rp-opt-${ph.id}-${oi}`;
         optInput.value = opt;
         optInput.placeholder = `Option ${oi + 1}`;
-        this.registerDomEvent(optInput, 'input', () => {
+        // WR-05: bare addEventListener — transient elements inside expanded section
+        optInput.addEventListener('input', () => {
           if (ph.options) ph.options[oi] = optInput.value;
         });
         const removeOptBtn = optRow.createEl('button', { text: '×' });
         removeOptBtn.setAttribute('aria-label', `Remove ${opt || `option ${oi + 1}`}`);
-        this.registerDomEvent(removeOptBtn, 'click', () => {
+        removeOptBtn.addEventListener('click', () => {
           ph.options?.splice(oi, 1);
           renderOptionRows();
         });
@@ -549,7 +553,8 @@ export class SnippetManagerView extends ItemView {
     renderOptionRows();
 
     const addOptionBtn = optionsSec.createEl('button', { text: '+ Add option' });
-    this.registerDomEvent(addOptionBtn, 'click', () => {
+    // WR-05: bare addEventListener — transient element
+    addOptionBtn.addEventListener('click', () => {
       if (!ph.options) ph.options = [];
       ph.options.push('');
       renderOptionRows();
@@ -565,7 +570,8 @@ export class SnippetManagerView extends ItemView {
       sepInput.id = `rp-ph-sep-${ph.id}`;
       sepInput.value = ph.joinSeparator ?? ', ';
       sepInput.placeholder = ', ';
-      this.registerDomEvent(sepInput, 'input', () => {
+      // WR-05: bare addEventListener — transient element
+      sepInput.addEventListener('input', () => {
         ph.joinSeparator = sepInput.value;
       });
     }
@@ -586,7 +592,8 @@ export class SnippetManagerView extends ItemView {
     unitInput.id = `rp-ph-unit-${ph.id}`;
     unitInput.value = ph.unit ?? '';
     unitInput.placeholder = 'e.g. mm';
-    this.registerDomEvent(unitInput, 'input', () => {
+    // WR-05: bare addEventListener — transient element, avoid view-registry accumulation
+    unitInput.addEventListener('input', () => {
       ph.unit = unitInput.value || undefined;
     });
   }
