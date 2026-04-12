@@ -687,6 +687,12 @@ export class SnippetManagerView extends ItemView {
   }
 
   private async autoSaveAfterDrop(draft: SnippetFile): Promise<void> {
+    // WR-03: new drafts still carry a raw UUID id (set in handleNewSnippet).
+    // Auto-saving them here would bypass the id-from-name slug logic in handleSave
+    // and create an orphaned UUID-keyed file. Skip silently; the in-memory order
+    // is already correct and will be persisted when the user clicks "Save snippet".
+    const isNewDraft = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(draft.id);
+    if (isNewDraft) return;
     try {
       await this.plugin.snippetService.save(draft);
       // Sync this.snippets so list panel reflects new order if user switches snippet
