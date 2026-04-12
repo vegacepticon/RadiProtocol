@@ -394,17 +394,13 @@ The chip remove button matches this 24×24 pattern.
 
 ---
 
-## Open Questions
+## Open Questions (RESOLVED)
 
-1. **Re-render collapses expanded chip after drop**
-   - What we know: `renderPlaceholderList()` calls `container.empty()` — all chips are recreated on drop.
-   - What's unclear: Is it acceptable for an expanded chip to collapse after a drag-drop? CONTEXT.md does not address this.
-   - Recommendation: Accept as acceptable behaviour for v1 (the user intended to reorder, not to edit); document in plan as a known limitation. If required, save `expandedIndex` before re-render and restore after.
+1. **Re-render collapses expanded chip after drop** — RESOLVED: Acceptable behaviour.
+   Drop triggers a save + full re-render via `container.empty()`; any expanded chip collapses. Documented as a known limitation for Phase 27. No mitigation required — the user intended to reorder, not to edit.
 
-2. **`.rp-placeholder-row` and `.rp-placeholder-row-header` CSS class cleanup**
-   - What we know: These classes exist in styles.css and snippet-manager-view.ts only; the new chips use `.rp-placeholder-chip` hierarchy.
-   - What's unclear: Whether to remove old classes or leave them as dead CSS.
-   - Recommendation: Remove from both files in the same plan to keep the codebase clean. Low-risk since grep confirms no other usage.
+2. **`.rp-placeholder-row` CSS class cleanup** — RESOLVED: Dead CSS left in styles.css.
+   `renderPlaceholderRow` and its `.rp-placeholder-row` / `.rp-placeholder-row-header` class references are removed from `snippet-manager-view.ts` (Task 2 section E). The corresponding CSS rules in `styles.css` are left as dead CSS — harmless, no other files reference them. Researcher recommended removal from both files; plan opts to leave CSS as dead code to minimise diff scope.
 
 ---
 
