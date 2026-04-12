@@ -138,6 +138,24 @@ export default class RadiProtocolPlugin extends Plugin {
     }
   }
 
+  async ensureEditorPanelVisible(): Promise<void> {
+    const { workspace } = this.app;
+    const leaves = workspace.getLeavesOfType(EDITOR_PANEL_VIEW_TYPE);
+    if (leaves.length > 0 && leaves[0] !== undefined) {
+      workspace.revealLeaf(leaves[0]);
+      return;
+    }
+    // No existing leaf — create one in the right sidebar
+    const leaf = workspace.getRightLeaf(false);
+    if (leaf) {
+      await leaf.setViewState({ type: EDITOR_PANEL_VIEW_TYPE, active: true });
+      const newLeaves = workspace.getLeavesOfType(EDITOR_PANEL_VIEW_TYPE);
+      if (newLeaves[0] !== undefined) {
+        workspace.revealLeaf(newLeaves[0]);
+      }
+    }
+  }
+
   async activateSnippetManagerView(): Promise<void> {
     const { workspace } = this.app;
     workspace.detachLeavesOfType(SNIPPET_MANAGER_VIEW_TYPE);
