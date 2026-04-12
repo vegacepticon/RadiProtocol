@@ -375,8 +375,11 @@ export class SnippetManagerView extends ItemView {
     removeBtn.setAttribute('aria-label', `Remove placeholder ${ph.label}`);
 
     // D-05: HTML5 native drag events (addEventListener — chips recreated on each re-render)
+    // WR-01: store drag index on dataset so it reflects the current render cycle index
+    chip.dataset['dragIndex'] = String(index);
+
     chip.addEventListener('dragstart', (e: DragEvent) => {
-      e.dataTransfer?.setData('text/plain', String(index));
+      e.dataTransfer?.setData('text/plain', chip.dataset['dragIndex'] ?? String(index));
     });
     chip.addEventListener('dragover', (e: DragEvent) => {
       e.preventDefault(); // REQUIRED or drop will never fire
@@ -386,15 +389,20 @@ export class SnippetManagerView extends ItemView {
       e.preventDefault();
       chip.addClass('drag-over');
     });
-    chip.addEventListener('dragleave', () => {
+    // WR-02: only remove drag-over when pointer truly leaves this chip (not a child element)
+    chip.addEventListener('dragleave', (e: DragEvent) => {
+      if (chip.contains(e.relatedTarget as Node | null)) return;
       chip.removeClass('drag-over');
     });
     chip.addEventListener('drop', (e: DragEvent) => {
       e.preventDefault();
       chip.removeClass('drag-over');
-      const from = parseInt(e.dataTransfer?.getData('text/plain') ?? '-1', 10);
-      const to = index;
-      if (from === -1 || from === to) return;
+      const fromStr = e.dataTransfer?.getData('text/plain');
+      const from = fromStr !== undefined ? parseInt(fromStr, 10) : -1;
+      const to = parseInt(chip.dataset['dragIndex'] ?? '-1', 10);
+      // WR-01: guard against NaN, same-slot, and out-of-range indices
+      if (isNaN(from) || isNaN(to) || from === to || from < 0 || to < 0) return;
+      if (from >= draft.placeholders.length || to >= draft.placeholders.length) return;
       const [moved] = draft.placeholders.splice(from, 1);
       if (moved) draft.placeholders.splice(to, 0, moved);
       this.renderPlaceholderList(draft, container, templateArea);
@@ -402,7 +410,8 @@ export class SnippetManagerView extends ItemView {
     });
     chip.addEventListener('dragend', () => {
       // Cleanup guard: dragover may not fire dragleave on every chip if drag exits list
-      container.querySelectorAll('.drag-over').forEach(el => el.removeClass('drag-over'));
+      // WR-04: cast to HTMLElement so Obsidian's removeClass is available
+      container.querySelectorAll('.drag-over').forEach(el => (el as HTMLElement).removeClass('drag-over'));
     });
 
     // D-03: click-to-expand — guard: not handle, not removeBtn
