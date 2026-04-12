@@ -565,19 +565,19 @@ export class EditorPanelView extends ItemView {
       this._debounceTimer = null;
     }
     if (this.currentFilePath && this.currentNodeId) {
-      const edits = { ...this.pendingEdits };
-      const selectedType = edits['radiprotocol_nodeType'] as string | undefined;
+      const selectedType = this.pendingEdits['radiprotocol_nodeType'] as string | undefined;
       if (selectedType && selectedType !== '') {
         // Assign path: write palette color for type
         const mappedColor = (NODE_COLOR_MAP as Record<string, string | undefined>)[selectedType];
         if (mappedColor !== undefined) {
-          edits['color'] = mappedColor;
+          this.pendingEdits['color'] = mappedColor;  // write back so debounced save includes color
         }
         // else: no color assignment — leaves existing color intact for unknown types
-      } else if ('radiprotocol_nodeType' in edits) {
+      } else if ('radiprotocol_nodeType' in this.pendingEdits) {
         // Unmark path: clear color
-        edits['color'] = undefined;
+        this.pendingEdits['color'] = undefined;  // write back so debounced save clears color
       }
+      const edits = { ...this.pendingEdits };
       void this.saveNodeEdits(this.currentFilePath, this.currentNodeId, edits)
         .then(() => { this.showSavedIndicator(); })
         .catch(err => {
