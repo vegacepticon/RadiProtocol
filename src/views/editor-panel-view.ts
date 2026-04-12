@@ -109,6 +109,8 @@ export class EditorPanelView extends ItemView {
       this.pendingEdits = {}; // clear before loadNode (explicit, even though loadNode also clears)
     }
 
+    // D-03: Reveal the Node Editor tab before loading the node form (TAB-01)
+    await this.plugin.ensureEditorPanelVisible();
     this.loadNode(filePath, nodeId);
   }
 
