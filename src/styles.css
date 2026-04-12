@@ -316,10 +316,18 @@
   overflow-y: auto;
 }
 
-.rp-editor-save-row {
+.rp-editor-saved-indicator {
   flex: 0 0 auto;
   padding-top: var(--size-4-1); /* 8px */
   border-top: 1px solid var(--background-modifier-border);
+  font-size: var(--font-ui-small);
+  color: var(--color-green);
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+.rp-editor-saved-indicator.is-visible {
+  opacity: 1;
 }
 
 .rp-editor-start-note {
