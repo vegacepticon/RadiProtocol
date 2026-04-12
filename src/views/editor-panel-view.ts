@@ -17,6 +17,7 @@ export class EditorPanelView extends ItemView {
   // Auto-switch canvas listener bookkeeping (EDITOR-01)
   private canvasPointerdownHandler: (() => void) | null = null;
   private watchedCanvasContainer: HTMLElement | null = null;
+  private _prevContainerCleanup: (() => void) | null = null;
   // Auto-save (Phase 23)
   private _debounceTimer: ReturnType<typeof setTimeout> | null = null;
   private _savedIndicatorEl: HTMLElement | null = null;
@@ -66,7 +67,11 @@ export class EditorPanelView extends ItemView {
     // Prevents listener accumulation when active-leaf-change fires on modal open/close.
     if (this.watchedCanvasContainer === canvasLeafInternal.containerEl) return;
 
-    // Genuine switch to a different canvas leaf — reset bookkeeping.
+    // Genuine switch to a different canvas leaf — clean up previous listener first (WR-03).
+    if (this._prevContainerCleanup) {
+      this._prevContainerCleanup();
+      this._prevContainerCleanup = null;
+    }
     this.canvasPointerdownHandler = null;
     this.watchedCanvasContainer = null;
 
@@ -91,11 +96,10 @@ export class EditorPanelView extends ItemView {
     };
 
     if (this.watchedCanvasContainer !== null) {
-      this.registerDomEvent(
-        this.watchedCanvasContainer,
-        'click',
-        this.canvasPointerdownHandler
-      );
+      const handler = this.canvasPointerdownHandler;
+      this.watchedCanvasContainer.addEventListener('click', handler);
+      this._prevContainerCleanup = () =>
+        this.watchedCanvasContainer?.removeEventListener('click', handler);
     }
   }
 
