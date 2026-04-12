@@ -73,8 +73,8 @@ Full details: `.planning/milestones/v1.2-ROADMAP.md`
   2. If the Node Editor panel is not yet open (e.g. first launch), it is created and brought to front before loading the node form
 **Plans**: 2 plans
 Plans:
-- [ ] 26-01-PLAN.md — Add ensureEditorPanelVisible() to main.ts and wire into handleNodeClick()
-- [ ] 26-02-PLAN.md — Restore Phase 23 auto-save, remove NodeSwitchGuardModal, add CSS indicator
+- [x] 26-01-PLAN.md — Add ensureEditorPanelVisible() to main.ts and wire into handleNodeClick()
+- [x] 26-02-PLAN.md — Restore Phase 23 auto-save, remove NodeSwitchGuardModal, add CSS indicator
 **UI hint**: yes
 
 ### Phase 27: Interactive Placeholder Editor
@@ -95,7 +95,7 @@ Plans:
 ### Phase 999.1: Canvas selector dropdown in runner view (BACKLOG)
 
 **Goal:** Let users choose which canvas/scenario to run from within the plugin panel via a dropdown or similar UX — without having to close the panel and invoke the command again on a different canvas.
-**Plans:** 0 plans
+**Plans:** 2/2 plans complete
 
 ### Phase 999.2: Full-tab runner view (BACKLOG)
 
@@ -129,5 +129,5 @@ Plans:
 | 23. Node Editor Auto-Save and Color-on-Type-Change | v1.3 | 2/2 | Complete | 2026-04-11 |
 | 24. Settings — Snippet Node Folder | v1.3 | 1/1 | Complete | 2026-04-11 |
 | 25. Snippet Node Runner UI | v1.3 | 2/2 | Complete | 2026-04-11 |
-| 26. Auto-Switch to Node Editor Tab | v1.3 | 0/2 | Planned | — |
+| 26. Auto-Switch to Node Editor Tab | v1.3 | 2/2 | Complete   | 2026-04-12 |
 | 27. Interactive Placeholder Editor | v1.3 | 0/? | Planned | — |
