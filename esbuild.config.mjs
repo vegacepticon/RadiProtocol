@@ -25,18 +25,38 @@ if you want to view the source, please visit the GitHub repository of this plugi
 const prod = process.argv[2] === 'production';
 
 /**
- * Copies src/styles.css → styles.css after each successful build.
- * Obsidian loads styles.css from the plugin root; src/styles.css is the source.
+ * CSS files in src/styles/ — order matters, edit here when adding a new feature file.
+ * Each file owns one feature; agents should only edit the relevant file.
+ */
+const CSS_FILES = [
+  'runner-view',
+  'canvas-selector',
+  'editor-panel',
+  'snippet-manager',
+  'snippet-fill-modal',
+  'loop-support',
+];
+
+/**
+ * Concatenates src/styles/*.css in CSS_FILES order → styles.css after each build.
+ * Obsidian loads styles.css from the plugin root.
+ * src/styles.css is kept in sync as a convenience copy for tools that expect it.
  */
 const cssPlugin = {
-  name: 'css-copy',
+  name: 'css-concat',
   setup(build) {
     build.onEnd((result) => {
       if (result.errors.length > 0) return;
       try {
-        fs.copyFileSync('src/styles.css', 'styles.css');
+        const parts = CSS_FILES.map((name) => {
+          const filePath = `src/styles/${name}.css`;
+          return fs.readFileSync(filePath, 'utf8');
+        });
+        const combined = parts.join('\n');
+        fs.writeFileSync('styles.css', combined);
+        fs.writeFileSync('src/styles.css', combined);
       } catch (err) {
-        console.error(`[radiprotocol] CSS copy failed: ${err.message}`);
+        console.error(`[radiprotocol] CSS concat failed: ${err.message}`);
       }
     });
   },

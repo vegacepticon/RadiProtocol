@@ -1,0 +1,181 @@
+/* Phase 3: RunnerView ──────────────────────────────────────────────────── */
+
+.rp-runner-view {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  padding: var(--size-4-2); /* 16px */
+  box-sizing: border-box;
+}
+
+.rp-question-zone {
+  flex: 0 0 auto;
+  overflow-y: auto;
+  background: var(--background-secondary);
+  border-radius: var(--radius-s);
+  padding: var(--size-4-2);
+}
+
+.rp-zone-divider {
+  border: none;
+  border-bottom: 1px solid var(--background-modifier-border);
+  margin: var(--size-4-1) 0; /* 8px 0 */
+}
+
+.rp-preview-zone {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  gap: var(--size-2-1); /* 4px */
+  min-height: 0; /* prevent flex overflow */
+}
+
+.rp-preview-heading {
+  font-size: var(--font-smaller); /* 13px */
+  font-weight: var(--font-semibold); /* 600 */
+  line-height: 1.4;
+}
+
+.rp-preview-textarea {
+  flex: 1 1 auto;
+  width: 100%;
+  resize: none;
+  font-family: var(--font-monospace);
+  font-size: var(--font-text-size); /* 14px */
+  font-weight: var(--font-normal); /* 400 */
+  line-height: 1.5;
+  background: var(--background-primary);
+  border: 1px solid var(--background-modifier-border);
+  padding: var(--size-4-2);
+  box-sizing: border-box;
+  min-height: 80px;
+}
+
+.rp-preview-textarea:hover {
+  background: var(--background-primary);
+}
+
+.rp-output-toolbar {
+  display: flex;
+  flex-direction: row;
+  gap: var(--size-4-1); /* 8px */
+  flex: 0 0 auto;
+}
+
+.rp-copy-btn,
+.rp-save-btn,
+.rp-insert-btn {
+  flex: 1;
+}
+
+.rp-legend {
+  flex: 0 0 auto;
+  border-top: 1px solid var(--background-modifier-border);
+  margin-top: var(--size-4-1); /* 8px */
+  padding-top: var(--size-4-1);
+  font-size: var(--font-text-size);
+}
+
+.rp-legend-row {
+  display: flex;
+  align-items: center;
+  gap: var(--size-2-1); /* 4px */
+  padding: 2px 0;
+  font-size: var(--font-text-size);
+  line-height: 1.5;
+}
+
+.rp-legend-swatch {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  border-radius: 2px;
+  flex-shrink: 0;
+}
+
+.rp-question-text {
+  font-size: var(--font-smaller); /* 13px */
+  font-weight: var(--font-semibold); /* 600 */
+  line-height: 1.4;
+  margin-bottom: var(--size-4-1);
+}
+
+.rp-answer-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--size-2-1); /* 4px */
+}
+
+.rp-answer-btn {
+  width: 100%;
+  text-align: left;
+  min-height: 40px;
+  padding: var(--size-4-1) var(--size-4-2); /* 8px 16px */
+  white-space: normal;
+  word-break: break-word;
+  font-size: var(--font-text-size);
+  line-height: 1.5;
+}
+
+.rp-free-text-input {
+  width: 100%;
+  padding: var(--size-4-2);
+  font-size: var(--font-text-size);
+  line-height: 1.5;
+  resize: vertical;
+  box-sizing: border-box;
+}
+
+.rp-step-back-btn {
+  margin-top: var(--size-4-1);
+  display: flex;
+  align-items: center;
+  gap: var(--size-2-1);
+}
+
+.rp-text-block-indicator {
+  font-style: italic;
+  color: var(--text-muted);
+  font-size: var(--font-text-size);
+}
+
+.rp-validation-panel {
+  /* inherits question zone background */
+}
+
+.rp-error-list {
+  padding-left: var(--size-4-2);
+  margin: var(--size-4-1) 0;
+}
+
+.rp-empty-state-body {
+  color: var(--text-muted);
+  font-size: var(--font-text-size);
+}
+
+.rp-complete-heading {
+  font-size: var(--font-ui-medium); /* 16px */
+  font-weight: var(--font-semibold);
+  margin-bottom: var(--size-4-1);
+}
+
+.rp-run-again-btn {
+  margin-top: var(--size-4-1);
+  background: var(--interactive-accent);
+  color: var(--text-on-accent);
+  border: none;
+  border-radius: var(--radius-s);
+  padding: var(--size-2-2) var(--size-4-2);
+  cursor: pointer;
+  font-size: var(--font-ui-small);
+  width: 100%;
+}
+
+.rp-run-again-btn:hover {
+  background: var(--interactive-accent-hover);
+}
+
+.rp-run-again-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}

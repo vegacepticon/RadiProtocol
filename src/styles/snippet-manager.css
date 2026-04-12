@@ -1,0 +1,233 @@
+/* Phase 5: SnippetManagerView ──────────────────────────────────────────── */
+
+.rp-snippet-manager {
+  display: flex;
+  flex-direction: row;
+  height: 100%;
+  overflow: hidden;
+}
+
+.rp-snippet-list-panel {
+  width: 200px;
+  flex: 0 0 200px;
+  display: flex;
+  flex-direction: column;
+  background: var(--background-secondary);
+  border-right: 1px solid var(--background-modifier-border);
+  overflow-y: auto;
+}
+
+.rp-snippet-list-item {
+  padding: var(--size-4-1) var(--size-4-2); /* 8px 16px */
+  min-height: 32px;
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  font-size: var(--font-text-size);
+  font-weight: var(--font-normal);
+  line-height: 1.5;
+}
+
+.rp-snippet-list-item.is-active {
+  background: var(--background-modifier-active-hover);
+}
+
+.rp-snippet-form {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  background: var(--background-primary);
+  padding: var(--size-4-2); /* 16px */
+  overflow-y: auto;
+  gap: var(--size-4-1); /* 8px */
+}
+
+.rp-snippet-form-section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--size-2-1); /* 4px */
+}
+
+.rp-snippet-form-section label {
+  font-size: var(--font-smaller); /* 13px */
+  font-weight: var(--font-semibold); /* 600 */
+  line-height: 1.4;
+}
+
+.rp-snippet-form-section textarea {
+  resize: vertical;
+  min-height: 80px;
+  font-family: var(--font-monospace);
+  font-size: var(--font-text-size);
+  line-height: 1.5;
+  padding: var(--size-4-1);
+  box-sizing: border-box;
+  width: 100%;
+}
+
+.rp-snippet-action-row {
+  display: flex;
+  flex-direction: row;
+  gap: var(--size-4-1); /* 8px */
+  margin-top: auto;
+  padding-top: var(--size-4-1);
+  border-top: 1px solid var(--background-modifier-border);
+  flex: 0 0 auto;
+}
+
+.rp-add-placeholder-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--size-2-1); /* 4px */
+  padding: var(--size-4-1);
+  background: var(--background-secondary);
+  border: 1px solid var(--background-modifier-border);
+  border-radius: var(--radius-s);
+}
+
+.rp-placeholder-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--size-2-1); /* 4px */
+}
+
+.rp-placeholder-row {
+  display: flex;
+  flex-direction: column;
+  gap: var(--size-2-1);
+  padding: var(--size-2-1) var(--size-4-1);
+  border: 1px solid var(--background-modifier-border);
+  border-radius: var(--radius-s);
+  cursor: pointer;
+}
+
+.rp-placeholder-row.is-expanded {
+  cursor: default;
+  background: var(--background-secondary);
+}
+
+.rp-placeholder-row-header {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: var(--size-4-1); /* 8px */
+  min-height: 32px;
+}
+
+.rp-placeholder-type-badge {
+  font-size: var(--font-smaller);
+  color: var(--text-muted);
+}
+
+.rp-placeholder-orphan-badge {
+  font-size: var(--font-smaller);
+  color: var(--text-warning);
+  padding: var(--size-2-1) var(--size-4-1);
+  border: 1px solid var(--text-warning);
+  border-radius: var(--radius-s);
+}
+
+/* ── Phase 27: Chip-based placeholder list ─────────────────────── */
+
+/* Chip row — replaces .rp-placeholder-row */
+.rp-placeholder-chip {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: var(--size-4-1);            /* 8px between handle / label / badge / remove */
+  padding: 0 var(--size-4-1);      /* 8px horizontal padding */
+  border-left: 4px solid transparent; /* colour overridden inline per type */
+  border-radius: var(--radius-s);
+  min-height: 32px;
+  cursor: pointer;
+  /* expanded state nested content flows below */
+  flex-wrap: wrap;
+}
+
+.rp-placeholder-chip:hover:not(.is-expanded) {
+  background: var(--background-modifier-hover);
+}
+
+.rp-placeholder-chip.is-expanded {
+  background: var(--background-secondary);
+  cursor: default;
+}
+
+.rp-placeholder-chip.drag-over {
+  background: var(--background-modifier-hover);
+  outline: 1px dashed var(--interactive-accent);
+}
+
+/* Drag handle */
+.rp-placeholder-chip-handle {
+  cursor: grab;
+  width: 24px;
+  flex: 0 0 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: var(--font-text-size);
+  color: var(--text-muted);
+  user-select: none;
+}
+
+.rp-placeholder-chip-handle:active {
+  cursor: grabbing;
+}
+
+/* Label — flex-grows to fill available space */
+.rp-placeholder-chip-label {
+  flex: 1 1 auto;
+  font-size: var(--font-text-size);
+  line-height: 1.5;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Type badge — reuses .rp-placeholder-type-badge token */
+.rp-placeholder-chip-badge {
+  font-size: var(--font-smaller);
+  color: var(--text-muted);
+  flex-shrink: 0;
+}
+
+/* Remove button — matches existing .rp-option-row button 24×24 pattern */
+.rp-placeholder-chip-remove {
+  width: 24px;
+  height: 24px;
+  flex: 0 0 24px;
+  padding: 0;
+  font-size: var(--font-smaller);
+}
+
+/* Expanded inline editor — full-width row below chip header content */
+.rp-placeholder-chip > .rp-placeholder-expanded {
+  flex-basis: 100%;
+  padding: var(--size-4-1) 0 var(--size-2-1) 28px; /* indent to align under label */
+}
+
+.rp-option-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--size-2-1); /* 4px */
+}
+
+.rp-option-row {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: var(--size-2-1);
+}
+
+.rp-option-row input {
+  flex: 1 1 auto;
+}
+
+.rp-option-row button {
+  width: 24px;
+  height: 24px;
+  flex: 0 0 24px;
+  padding: 0;
+  font-size: var(--font-smaller);
+}
