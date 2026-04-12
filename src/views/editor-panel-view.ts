@@ -122,6 +122,22 @@ export class EditorPanelView extends ItemView {
     this.loadNode(filePath, nodeId);
   }
 
+  /** Flush any pending debounced auto-save. Called by activateEditorPanelView before detaching the view. */
+  async flushPendingSave(): Promise<void> {
+    if (this._debounceTimer !== null) {
+      clearTimeout(this._debounceTimer);
+      this._debounceTimer = null;
+      if (this.currentFilePath && this.currentNodeId) {
+        const editsSnapshot = { ...this.pendingEdits };
+        try {
+          await this.saveNodeEdits(this.currentFilePath, this.currentNodeId, editsSnapshot);
+        } catch {
+          // flush save failure does not block view teardown — silent
+        }
+      }
+    }
+  }
+
   private renderIdle(): void {
     this.contentEl.empty();
     const container = this.contentEl.createDiv({ cls: 'rp-editor-idle' });

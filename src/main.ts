@@ -127,6 +127,12 @@ export default class RadiProtocolPlugin extends Plugin {
 
   async activateEditorPanelView(): Promise<void> {
     const { workspace } = this.app;
+    // Flush any pending auto-save before detaching the view (WR-02)
+    const existingLeaves = workspace.getLeavesOfType(EDITOR_PANEL_VIEW_TYPE);
+    const existingView = existingLeaves[0]?.view;
+    if (existingView instanceof EditorPanelView) {
+      await existingView.flushPendingSave();
+    }
     workspace.detachLeavesOfType(EDITOR_PANEL_VIEW_TYPE);
     const leaf = workspace.getRightLeaf(false);
     if (leaf) {
