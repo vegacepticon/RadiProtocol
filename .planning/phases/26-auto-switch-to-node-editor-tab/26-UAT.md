@@ -45,9 +45,10 @@ skipped: 0
 ## Gaps
 
 - truth: "Changing node type in the dropdown immediately updates the canvas node's color to match the new type"
-  status: failed
+  status: fixed
   reason: "User reported: цвета перестали меняться при выборе того или иного типа узла"
   severity: major
   test: 3
-  artifacts: []
-  missing: []
+  root_cause: "'color' was in PROTECTED_FIELDS in both canvas-live-editor.ts and editor-panel-view.ts, silently skipping color on every save path"
+  fix_commit: "0539332"
+  verified: true
