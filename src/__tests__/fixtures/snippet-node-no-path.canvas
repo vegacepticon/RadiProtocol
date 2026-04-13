@@ -1,0 +1,21 @@
+{
+  "nodes": [
+    {
+      "id": "n-start",
+      "type": "text",
+      "text": "Start",
+      "x": 0, "y": 0, "width": 200, "height": 60,
+      "radiprotocol_nodeType": "start"
+    },
+    {
+      "id": "n-snippet1",
+      "type": "text",
+      "text": "",
+      "x": 0, "y": 120, "width": 200, "height": 60,
+      "radiprotocol_nodeType": "snippet"
+    }
+  ],
+  "edges": [
+    { "id": "e1", "fromNode": "n-start", "toNode": "n-snippet1" }
+  ]
+}
