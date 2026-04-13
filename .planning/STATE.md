@@ -2,11 +2,11 @@
 gsd_state_version: 1.0
 milestone: v1.4
 milestone_name: Snippets and Colors, Colors and Snippets
-status: requirements
-stopped_at: Milestone v1.4 started — defining requirements
+status: roadmap
+stopped_at: Roadmap created — ready to plan Phase 28
 last_updated: "2026-04-13T00:00:00.000Z"
 progress:
-  total_phases: 0
+  total_phases: 3
   completed_phases: 0
   total_plans: 0
   completed_plans: 0
@@ -17,9 +17,9 @@ progress:
 
 **Updated:** 2026-04-13
 **Milestone:** v1.4 — Snippets and Colors, Colors and Snippets
-**Status:** Defining requirements
+**Status:** Roadmap created — ready to plan Phase 28
 **Last session:** 2026-04-13T00:00:00.000Z
-**Stopped at:** Milestone v1.4 started — defining requirements
+**Stopped at:** Roadmap created — ready to plan Phase 28
 
 ---
 
@@ -52,6 +52,9 @@ See: `.planning/PROJECT.md` (updated 2026-04-13)
 | 18 | CSS Gap Fixes (INSERTED) | Complete |
 | 19 | Phase 12–14 Formal Verification | Complete |
 | 27 | Interactive Placeholder Editor | Complete |
+| 28 | Auto Node Coloring | Not started |
+| 29 | Snippet Node — Model, Editor, Validator | Not started |
+| 30 | Snippet Node — Runner Integration | Not started |
 
 ---
 

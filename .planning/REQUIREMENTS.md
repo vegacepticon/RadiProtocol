@@ -53,14 +53,14 @@
 
 | REQ-ID | Phase | Status |
 |--------|-------|--------|
-| NODE-COLOR-01 | — | Pending |
-| NODE-COLOR-02 | — | Pending |
-| NODE-COLOR-03 | — | Pending |
-| SNIPPET-NODE-01 | — | Pending |
-| SNIPPET-NODE-02 | — | Pending |
-| SNIPPET-NODE-03 | — | Pending |
-| SNIPPET-NODE-04 | — | Pending |
-| SNIPPET-NODE-05 | — | Pending |
-| SNIPPET-NODE-06 | — | Pending |
-| SNIPPET-NODE-07 | — | Pending |
-| SNIPPET-NODE-08 | — | Pending |
+| NODE-COLOR-01 | Phase 28 | Pending |
+| NODE-COLOR-02 | Phase 28 | Pending |
+| NODE-COLOR-03 | Phase 28 | Pending |
+| SNIPPET-NODE-01 | Phase 29 | Pending |
+| SNIPPET-NODE-02 | Phase 29 | Pending |
+| SNIPPET-NODE-08 | Phase 29 | Pending |
+| SNIPPET-NODE-03 | Phase 30 | Pending |
+| SNIPPET-NODE-04 | Phase 30 | Pending |
+| SNIPPET-NODE-05 | Phase 30 | Pending |
+| SNIPPET-NODE-06 | Phase 30 | Pending |
+| SNIPPET-NODE-07 | Phase 30 | Pending |

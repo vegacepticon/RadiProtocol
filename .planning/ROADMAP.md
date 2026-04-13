@@ -1,7 +1,7 @@
 # Roadmap: RadiProtocol
 
 **Project:** RadiProtocol
-**Last updated:** 2026-04-07
+**Last updated:** 2026-04-13
 
 ---
 
@@ -10,6 +10,7 @@
 - ✅ **v1.0 Community Plugin Release** — Phases 1–7 (shipped 2026-04-07)
 - ✅ **v1.2 Runner UX & Bug Fixes** — Phases 12–19 (shipped 2026-04-10)
 - ✅ **v1.3 Interactive Placeholder Editor** — Phase 27 (shipped 2026-04-12)
+- 🔄 **v1.4 Snippets and Colors, Colors and Snippets** — Phases 28–30 (active)
 
 ---
 
@@ -55,6 +56,52 @@ Full details: `.planning/milestones/v1.3-ROADMAP.md`
 
 </details>
 
+### v1.4 Snippets and Colors, Colors and Snippets (Phases 28–30) — ACTIVE
+
+- [ ] **Phase 28: Auto Node Coloring** — Color written on every save via EditorPanel (both paths) and programmatic canvas creation
+- [ ] **Phase 29: Snippet Node — Model, Editor, Validator** — 8th node kind in parser/model; EditorPanel subfolder picker form; GraphValidator check
+- [ ] **Phase 30: Snippet Node — Runner Integration** — Runner folder picker UI, state machine extension, SnippetFillInModal wiring, terminal/non-terminal behavior
+
+---
+
+## Phase Details
+
+### Phase 28: Auto Node Coloring
+**Goal**: Saving any node type always writes the correct color to the canvas node, regardless of prior state
+**Depends on**: Nothing new (extends existing EditorPanel + canvas write paths)
+**Requirements**: NODE-COLOR-01, NODE-COLOR-02, NODE-COLOR-03
+**Success Criteria** (what must be TRUE):
+  1. User saves a node via EditorPanel with canvas open (Pattern B) and the node's color immediately reflects its type
+  2. User saves a node via EditorPanel with canvas closed (Strategy A) and the written canvas JSON contains the correct color field
+  3. User saves a node that already had a different color set — the color is overwritten to match the current node type
+  4. Programmatically created test canvases include the correct color field for every node based on its radiprotocol_nodeType
+**Plans**: TBD
+
+### Phase 29: Snippet Node — Model, Editor, Validator
+**Goal**: The snippet node type exists as a first-class 8th node kind that authors can configure in EditorPanel with a subfolder path
+**Depends on**: Phase 28 (color will be applied to snippet nodes automatically)
+**Requirements**: SNIPPET-NODE-01, SNIPPET-NODE-02, SNIPPET-NODE-08
+**Success Criteria** (what must be TRUE):
+  1. CanvasParser recognizes radiprotocol_nodeType = "snippet" and produces a typed SnippetNode in the graph model
+  2. EditorPanel shows a dedicated form for snippet nodes with a subfolder picker that lets the user browse and select a path under .radiprotocol/snippets/
+  3. Saving a snippet node via EditorPanel writes radiprotocol_nodeType = "snippet" and the configured subfolder path to the canvas JSON
+  4. GraphValidator emits a plain-language warning when a snippet node has no subfolder path configured
+**Plans**: TBD
+**UI hint**: yes
+
+### Phase 30: Snippet Node — Runner Integration
+**Goal**: A radiologist running a protocol that hits a snippet node can browse and select a snippet from the configured folder, fill in any placeholders, and have the result appended to the report
+**Depends on**: Phase 29 (snippet node type must exist in graph model)
+**Requirements**: SNIPPET-NODE-03, SNIPPET-NODE-04, SNIPPET-NODE-05, SNIPPET-NODE-06, SNIPPET-NODE-07
+**Success Criteria** (what must be TRUE):
+  1. Runner presents a list of snippets from the snippet node's configured subfolder when the state machine reaches a snippet node
+  2. User can navigate into subfolders within the configured folder to find snippets nested deeper
+  3. Selecting a snippet that has placeholders opens SnippetFillInModal; after confirmation the filled text is appended to the protocol textarea
+  4. Selecting a snippet with no placeholders appends its text directly to the protocol textarea without opening any modal
+  5. After snippet insertion, a snippet node with outgoing edges advances to the next node; a snippet node with no outgoing edges terminates the protocol
+**Plans**: TBD
+**UI hint**: yes
+
 ---
 
 ## Backlog
@@ -91,3 +138,6 @@ Full details: `.planning/milestones/v1.3-ROADMAP.md`
 | 18. CSS Gap Fixes (INSERTED) | v1.2 | 1/1 | Complete | 2026-04-10 |
 | 19. Phase 12–14 Formal Verification | v1.2 | 3/3 | Complete | 2026-04-10 |
 | 27. Interactive Placeholder Editor | v1.3 | 1/1 | Complete | 2026-04-12 |
+| 28. Auto Node Coloring | v1.4 | 0/? | Not started | - |
+| 29. Snippet Node — Model, Editor, Validator | v1.4 | 0/? | Not started | - |
+| 30. Snippet Node — Runner Integration | v1.4 | 0/? | Not started | - |
