@@ -77,7 +77,7 @@ Full details: `.planning/milestones/v1.3-ROADMAP.md`
   4. Programmatically created test canvases include the correct color field for every node based on its radiprotocol_nodeType
 **Plans**: 2 plans
 Plans:
-- [ ] 28-00-PLAN.md — Wave 0: тест-инфраструктура (обновить контракт + makeCanvasNode helper)
+- [x] 28-00-PLAN.md — Wave 0: тест-инфраструктура (обновить контракт + makeCanvasNode helper)
 - [ ] 28-01-PLAN.md — Wave 1: инъекция цвета в saveNodeEdits (Pattern B + Strategy A)
 
 ### Phase 29: Snippet Node — Model, Editor, Validator
@@ -112,7 +112,7 @@ Plans:
 ### Phase 999.1: Canvas selector dropdown in runner view (BACKLOG)
 
 **Goal:** Let users choose which canvas/scenario to run from within the plugin panel via a dropdown or similar UX — without having to close the panel and invoke the command again on a different canvas.
-**Plans:** 0 plans
+**Plans:** 1/2 plans executed
 
 ### Phase 999.2: Full-tab runner view (BACKLOG)
 
@@ -141,6 +141,6 @@ Plans:
 | 18. CSS Gap Fixes (INSERTED) | v1.2 | 1/1 | Complete | 2026-04-10 |
 | 19. Phase 12–14 Formal Verification | v1.2 | 3/3 | Complete | 2026-04-10 |
 | 27. Interactive Placeholder Editor | v1.3 | 1/1 | Complete | 2026-04-12 |
-| 28. Auto Node Coloring | v1.4 | 0/2 | Not started | - |
+| 28. Auto Node Coloring | v1.4 | 1/2 | In Progress|  |
 | 29. Snippet Node — Model, Editor, Validator | v1.4 | 0/? | Not started | - |
 | 30. Snippet Node — Runner Integration | v1.4 | 0/? | Not started | - |
