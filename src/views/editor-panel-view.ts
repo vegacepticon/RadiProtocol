@@ -311,6 +311,7 @@ export class EditorPanelView extends ItemView {
           .addOption('text-block', 'Text block')
           .addOption('loop-start', 'Loop start')
           .addOption('loop-end', 'Loop end')
+          .addOption('snippet', 'Snippet')         // Phase 29: D-06
           .setValue(currentKind ?? '')
           .onChange(value => {
             // Rebuild kind form section (existing logic — preserved)
@@ -561,6 +562,55 @@ export class EditorPanelView extends ItemView {
           });
         break;
       }
+
+      case 'snippet': {
+        new Setting(container).setHeading().setName('Snippet node');
+        const subfolderSetting = new Setting(container)
+          .setName('Subfolder path')
+          .setDesc(
+            'Select the subfolder within .radiprotocol/snippets/ that this node offers to the runner. ' +
+            'Leave as root to use all snippets from the top-level folder.'
+          );
+
+        // Async populate — buildKindForm is synchronous; use void IIFE pattern (per RESEARCH.md)
+        void (async () => {
+          try {
+            const basePath = this.plugin.settings.snippetFolderPath;
+            const subfolders = await this.listSnippetSubfolders(basePath);
+
+            subfolderSetting.addDropdown(drop => {
+              drop.addOption('', '\u2014 root (all snippets) \u2014');  // D-09
+
+              if (subfolders.length === 0) {
+                // D-08: empty state — disabled placeholder via DOM API (no innerHTML)
+                const disabledOpt = drop.selectEl.createEl('option', {
+                  text: 'No subfolders found',
+                });
+                disabledOpt.disabled = true;
+              } else {
+                for (const sub of subfolders) {
+                  drop.addOption(sub, sub);
+                }
+              }
+
+              const currentPath = (nodeRecord['radiprotocol_subfolderPath'] as string | undefined) ?? '';
+              drop.setValue(currentPath);
+
+              drop.onChange(v => {
+                // D-09: empty value -> undefined (root fallback at runtime)
+                this.pendingEdits['radiprotocol_subfolderPath'] = v || undefined;
+                // D-10: text field mirrors the subfolder path value only
+                this.pendingEdits['text'] = v;  // empty string when root selected
+                this.scheduleAutoSave();
+              });
+            });
+          } catch {
+            // Pitfall 2: async errors silent in void IIFE — show fallback text
+            subfolderSetting.setDesc('Could not load subfolders. Check that .radiprotocol/snippets/ exists.');
+          }
+        })();
+        break;
+      }
     }
   }
 
@@ -618,5 +668,40 @@ export class EditorPanelView extends ItemView {
     this.contentEl.empty();
     const container = this.contentEl.createDiv({ cls: 'rp-editor-idle' });
     container.createEl('p', { text: message });
+  }
+
+  /**
+   * Recursively lists all subfolder paths (relative to basePath) within basePath.
+   * Uses BFS via vault.adapter.list(). Returns [] if basePath does not exist.
+   * Phase 29, D-07.
+   */
+  private async listSnippetSubfolders(basePath: string): Promise<string[]> {
+    const exists = await this.plugin.app.vault.adapter.exists(basePath);
+    if (!exists) return [];
+
+    const results: string[] = [];
+    const queue: string[] = [basePath];
+
+    while (queue.length > 0) {
+      const current = queue.shift()!;
+      let listing: { files: string[]; folders: string[] };
+      try {
+        listing = await this.plugin.app.vault.adapter.list(current);
+      } catch {
+        continue; // Skip inaccessible directories silently
+      }
+
+      for (const folder of listing.folders) {
+        // vault.adapter.list returns full vault-relative paths (e.g. .radiprotocol/snippets/CT/adrenal)
+        // Compute relative path: strip basePath + '/' prefix (Pitfall 3 from RESEARCH.md)
+        const rel = folder.slice(basePath.length + 1);
+        if (rel) {
+          results.push(rel);
+        }
+        queue.push(folder); // BFS: recurse into subfolder
+      }
+    }
+
+    return results;
   }
 }
