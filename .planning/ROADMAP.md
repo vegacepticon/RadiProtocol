@@ -75,7 +75,10 @@ Full details: `.planning/milestones/v1.3-ROADMAP.md`
   2. User saves a node via EditorPanel with canvas closed (Strategy A) and the written canvas JSON contains the correct color field
   3. User saves a node that already had a different color set — the color is overwritten to match the current node type
   4. Programmatically created test canvases include the correct color field for every node based on its radiprotocol_nodeType
-**Plans**: TBD
+**Plans**: 2 plans
+Plans:
+- [ ] 28-00-PLAN.md — Wave 0: тест-инфраструктура (обновить контракт + makeCanvasNode helper)
+- [ ] 28-01-PLAN.md — Wave 1: инъекция цвета в saveNodeEdits (Pattern B + Strategy A)
 
 ### Phase 29: Snippet Node — Model, Editor, Validator
 **Goal**: The snippet node type exists as a first-class 8th node kind that authors can configure in EditorPanel with a subfolder path
@@ -138,6 +141,6 @@ Full details: `.planning/milestones/v1.3-ROADMAP.md`
 | 18. CSS Gap Fixes (INSERTED) | v1.2 | 1/1 | Complete | 2026-04-10 |
 | 19. Phase 12–14 Formal Verification | v1.2 | 3/3 | Complete | 2026-04-10 |
 | 27. Interactive Placeholder Editor | v1.3 | 1/1 | Complete | 2026-04-12 |
-| 28. Auto Node Coloring | v1.4 | 0/? | Not started | - |
+| 28. Auto Node Coloring | v1.4 | 0/2 | Not started | - |
 | 29. Snippet Node — Model, Editor, Validator | v1.4 | 0/? | Not started | - |
 | 30. Snippet Node — Runner Integration | v1.4 | 0/? | Not started | - |
