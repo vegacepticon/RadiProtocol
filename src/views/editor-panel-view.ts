@@ -594,18 +594,8 @@ export class EditorPanelView extends ItemView {
     }
     if (this.currentFilePath && this.currentNodeId) {
       const edits = { ...this.pendingEdits };
-      const selectedType = edits['radiprotocol_nodeType'] as string | undefined;
-      if (selectedType && selectedType !== '') {
-        // Assign path: write palette color for type
-        const mappedColor = (NODE_COLOR_MAP as Record<string, string | undefined>)[selectedType];
-        if (mappedColor !== undefined) {
-          edits['color'] = mappedColor;
-        }
-        // else: no color assignment — leaves existing color intact for unknown types
-      } else if ('radiprotocol_nodeType' in edits) {
-        // Unmark path: clear color
-        edits['color'] = undefined;
-      }
+      // Color injection and color-clearing are handled entirely inside saveNodeEdits
+      // (D-04, D-06). Do not duplicate the NODE_COLOR_MAP lookup here — divergence risk.
       void this.saveNodeEdits(this.currentFilePath, this.currentNodeId, edits)
         .then(() => { this.showSavedIndicator(); })
         .catch(err => {
