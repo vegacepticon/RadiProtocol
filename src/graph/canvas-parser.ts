@@ -259,11 +259,13 @@ export class CanvasParser {
         return node;
       }
       case 'snippet': {
+        const rawPath = props['radiprotocol_subfolderPath'];
         const node: SnippetNode = {
           ...base,
           kind: 'snippet',
-          subfolderPath: props['radiprotocol_subfolderPath'] !== undefined
-            ? getString(props, 'radiprotocol_subfolderPath')
+          // WR-02: treat JSON null and empty string identically to undefined — all mean "root"
+          subfolderPath: (typeof rawPath === 'string' && rawPath !== '')
+            ? rawPath
             : undefined,
         };
         return node;
