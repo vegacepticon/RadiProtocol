@@ -54,29 +54,75 @@ describe('saveNodeEdits — write-back contract (EDIT-03, EDIT-04)', () => {
     );
   });
 
-  it('PROTECTED_FIELDS: id, x, y, width, height, type, color are never written', async () => {
-    // Even if caller passes these, they must be stripped before vault.modify()
+  // Phase 28: color is always written correctly for known types (NODE-COLOR-01, NODE-COLOR-02)
+  // Replaces old "color are never written" contract (D-03)
+
+  it('TYPE-CHANGE: radiprotocol_nodeType question → color "5" written in canvas JSON (NODE-COLOR-01)', async () => {
     await view.saveNodeEdits('test.canvas', 'node-1', {
-      id: 'hacked-id',
-      x: 999,
-      y: 999,
-      width: 1,
-      height: 1,
-      type: 'group',
-      color: '#ff0000',
+      radiprotocol_nodeType: 'question',
     });
-    // With real implementation: vault.modify() called but written JSON must not contain changed values
-    // With stub: vault.modify() never called — test documents the contract for Plan 02
-    if (mockVaultModify.mock.calls.length > 0) {
-      const written = JSON.parse(mockVaultModify.mock.calls[0]![1] as string) as {
-        nodes: Array<Record<string, unknown>>;
-      };
-      const node = written.nodes[0];
-      expect(node?.['id']).toBe('node-1');
-      expect(node?.['x']).toBe(10);
-      expect(node?.['y']).toBe(20);
-      expect(node?.['type']).toBe('text');
-    }
+    expect(mockVaultModify).toHaveBeenCalled();
+    const written = JSON.parse(mockVaultModify.mock.calls[0]![1] as string) as {
+      nodes: Array<Record<string, unknown>>;
+    };
+    const node = written.nodes[0];
+    expect(node?.['color']).toBe('5');
+  });
+
+  it('TYPE-CHANGE: radiprotocol_nodeType start → color "4" written in canvas JSON (NODE-COLOR-01)', async () => {
+    await view.saveNodeEdits('test.canvas', 'node-1', {
+      radiprotocol_nodeType: 'start',
+    });
+    expect(mockVaultModify).toHaveBeenCalled();
+    const written = JSON.parse(mockVaultModify.mock.calls[0]![1] as string) as {
+      nodes: Array<Record<string, unknown>>;
+    };
+    const node = written.nodes[0];
+    expect(node?.['color']).toBe('4');
+  });
+
+  it('FIELD-ONLY: saving non-type field on already-typed node writes correct color (NODE-COLOR-02)', async () => {
+    // Node already has radiprotocol_nodeType: 'question' in canvas JSON
+    mockVaultRead.mockResolvedValueOnce(
+      makeCanvasJson({ radiprotocol_nodeType: 'question' })
+    );
+    await view.saveNodeEdits('test.canvas', 'node-1', {
+      radiprotocol_questionText: 'What is the finding?',
+    });
+    expect(mockVaultModify).toHaveBeenCalled();
+    const written = JSON.parse(mockVaultModify.mock.calls[0]![1] as string) as {
+      nodes: Array<Record<string, unknown>>;
+    };
+    const node = written.nodes[0];
+    expect(node?.['color']).toBe('5');
+  });
+
+  it('OVERWRITE: node had wrong color — saving overwrites with correct color for type (NODE-COLOR-02)', async () => {
+    // Node has wrong color '6' (purple) but is a 'question' node (should be '5' cyan)
+    mockVaultRead.mockResolvedValueOnce(
+      makeCanvasJson({ radiprotocol_nodeType: 'question', color: '6' })
+    );
+    await view.saveNodeEdits('test.canvas', 'node-1', {
+      radiprotocol_questionText: 'x',
+    });
+    expect(mockVaultModify).toHaveBeenCalled();
+    const written = JSON.parse(mockVaultModify.mock.calls[0]![1] as string) as {
+      nodes: Array<Record<string, unknown>>;
+    };
+    const node = written.nodes[0];
+    expect(node?.['color']).toBe('5');
+  });
+
+  it('UNKNOWN TYPE: radiprotocol_nodeType not in NODE_COLOR_MAP → color NOT written (D-05)', async () => {
+    await view.saveNodeEdits('test.canvas', 'node-1', {
+      radiprotocol_nodeType: 'custom-unknown',
+    });
+    expect(mockVaultModify).toHaveBeenCalled();
+    const written = JSON.parse(mockVaultModify.mock.calls[0]![1] as string) as {
+      nodes: Array<Record<string, unknown>>;
+    };
+    const node = written.nodes[0];
+    expect(node?.['color']).toBeUndefined();
   });
 
   it('radiprotocol_* fields are written to canvas JSON via vault.modify()', async () => {
@@ -110,7 +156,7 @@ describe('saveNodeEdits — write-back contract (EDIT-03, EDIT-04)', () => {
     expect(node).not.toHaveProperty('radiprotocol_displayLabel');
   });
 
-  it('live-save: vault.modify() NOT called when saveLive() returns true', async () => {
+  it('live-save: vault.modify() NOT called when saveLive() returns true; saveLive receives enriched edits with color (NODE-COLOR-01)', async () => {
     // Simulate canvas open: saveLive returns true (live save succeeded)
     mockSaveLive.mockResolvedValue(true);
     await view.saveNodeEdits('test.canvas', 'node-1', {
@@ -118,8 +164,10 @@ describe('saveNodeEdits — write-back contract (EDIT-03, EDIT-04)', () => {
     });
     // Live path: vault.modify() must NOT be called — canvas owns the write
     expect(mockVaultModify).not.toHaveBeenCalled();
+    // Phase 28: saveLive receives enriched edits including color injected by saveNodeEdits (D-01, D-02)
     expect(mockSaveLive).toHaveBeenCalledWith('test.canvas', 'node-1', {
       radiprotocol_nodeType: 'question',
+      color: '5',
     });
   });
 
