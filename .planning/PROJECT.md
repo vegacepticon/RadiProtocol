@@ -86,7 +86,12 @@ A radiologist can generate a structured, accurate protocol in seconds by answeri
 - ✓ HTML5 drag-and-drop reorder with correct splice pattern and dragleave child-flicker guard (CHIP-02) — v1.3
 - ✓ `autoSaveAfterDrop()` persists reordered array to disk — SnippetFillInModal tab order follows persisted order (CHIP-03) — v1.3
 
-### Active (Next Milestone)
+### Active (v1.4)
+
+- [ ] Auto-color canvas nodes by type on save — always overwrite color when `radiprotocol_nodeType` is written (EditorPanel + programmatic canvas creation)
+- [ ] New "snippet" node type — 8th node kind; EditorPanel form with subfolder picker; Runner presents snippet list with subfolder navigation; SnippetFillInModal for placeholders; supports terminal or non-terminal graph position
+
+### Deferred (Future Milestones)
 
 - [ ] Canvas selector dropdown in runner view — choose protocol without reopening command
 - [ ] Full-tab runner view — open as editor tab instead of sidebar panel
@@ -107,6 +112,14 @@ A radiologist can generate a structured, accurate protocol in seconds by answeri
 - Linked placeholders across report sections — deferred after core snippet system validated
 - Optional sections in snippets — deferred to v2
 - Automatic impression generation — requires NLP/AI
+
+## Current Milestone: v1.4 Snippets and Colors, Colors and Snippets
+
+**Goal:** Автоматическая раскраска узлов канваса по типу и новый тип узла для динамического выбора сниппетов в Protocol Runner.
+
+**Target features:**
+- Auto-color nodes by type — color written on every save based on `radiprotocol_nodeType`, always overwrite
+- New "snippet" node type — subfolder-scoped snippet picker in Runner with SnippetFillInModal integration
 
 ## Context
 
@@ -159,4 +172,4 @@ A radiologist can generate a structured, accurate protocol in seconds by answeri
 4. Update Context with current state
 
 ---
-*Last updated: 2026-04-12 after v1.3 milestone*
+*Last updated: 2026-04-13 — milestone v1.4 started*

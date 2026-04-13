@@ -1,34 +1,34 @@
 ---
 gsd_state_version: 1.0
-milestone: v1.3
-milestone_name: Interactive Placeholder Editor
-status: milestone_complete
-stopped_at: v1.3 milestone archived — 1 phase, 1 plan, 3/3 requirements, 5/5 UAT passed
-last_updated: "2026-04-12T00:00:00.000Z"
+milestone: v1.4
+milestone_name: Snippets and Colors, Colors and Snippets
+status: requirements
+stopped_at: Milestone v1.4 started — defining requirements
+last_updated: "2026-04-13T00:00:00.000Z"
 progress:
-  total_phases: 1
-  completed_phases: 1
-  total_plans: 1
-  completed_plans: 1
-  percent: 100
+  total_phases: 0
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
+  percent: 0
 ---
 
 # RadiProtocol — Project State
 
-**Updated:** 2026-04-12
-**Milestone:** v1.3 — Interactive Placeholder Editor
-**Status:** ✅ MILESTONE COMPLETE — archived 2026-04-12
-**Last session:** 2026-04-12T00:00:00.000Z
-**Stopped at:** v1.3 milestone archived — 1 phase, 1 plan, 3/3 requirements, 5/5 UAT passed
+**Updated:** 2026-04-13
+**Milestone:** v1.4 — Snippets and Colors, Colors and Snippets
+**Status:** Defining requirements
+**Last session:** 2026-04-13T00:00:00.000Z
+**Stopped at:** Milestone v1.4 started — defining requirements
 
 ---
 
 ## Project Reference
 
-See: `.planning/PROJECT.md` (updated 2026-04-12)
+See: `.planning/PROJECT.md` (updated 2026-04-13)
 
 **Core value:** A radiologist can generate a structured, accurate protocol in seconds by answering a guided algorithm — without writing a single line of code.  
-**Current focus:** Planning next milestone (run `/gsd-new-milestone`)
+**Current focus:** v1.4 — Auto node coloring + Snippet node type
 
 ---
 
@@ -67,6 +67,7 @@ See: `.planning/PROJECT.md` (updated 2026-04-12)
 | Snapshot undo stack | Simplest correct approach for step-back; protocol text is small (<5KB) |
 | `radiprotocol_*` property namespace | Avoids collisions with other plugins and future Obsidian updates |
 | Canvas write-back Strategy A | Require canvas closed before any vault.modify() — simple and safe; avoids undocumented internals (A4 resolved) |
+| Pattern B (CanvasLiveEditor) | Live write via internal getData/setData/requestSave when canvas is open; falls back to Strategy A |
 | plugin.saveSettings() not saveData() directly | Consistent with main.ts wrapper; all settings call sites use the wrapper |
 | RunnerView reconstructs ProtocolRunner at openCanvas() start | Simplest way to pick up textSeparator from settings; no lazy init or observer needed |
 | resolveSeparator(node) single resolution point | node.radiprotocol_separator ?? defaultSeparator — avoids duplicated logic across 5 call sites |
@@ -80,7 +81,7 @@ See: `.planning/PROJECT.md` (updated 2026-04-12)
 
 ## Critical Pitfalls (Standing Reminders)
 
-1. **Never modify `.canvas` while open in Canvas view** — Canvas view will overwrite on next interaction
+1. **Never modify `.canvas` while open in Canvas view** — Canvas view will overwrite on next interaction (unless Pattern B path is used via CanvasLiveEditor)
 2. **`vault.modify()` race conditions** — use write mutex (async-mutex) per file path
 3. **No `innerHTML`** — use DOM API and Obsidian helpers; blocks community review if violated
 4. **No `require('fs')`** — use `app.vault.*` exclusively
@@ -94,4 +95,4 @@ See: `.planning/PROJECT.md` (updated 2026-04-12)
 
 - Branch: `main`
 - Remote: (not yet configured)
-- Last commit: `215cf41` — feat(27): commit built styles.css with Phase 27 chip CSS classes
+- Last commit: `24b4ef3` — infra: add regression protection — CSS split, smoke tests, CLAUDE.md
