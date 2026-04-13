@@ -510,6 +510,12 @@ export class ProtocolRunner {
           this.runnerStatus = 'at-node';
           return;
         }
+        case 'snippet': {
+          // Phase 29: snippet node halts here — Runner Integration in Phase 30
+          this.currentNodeId = cursor;
+          this.runnerStatus = 'at-node';
+          return;
+        }
         default: {
           // TypeScript exhaustiveness check — should never reach here with correct graph
           const _exhaustive: never = node;

@@ -14,6 +14,7 @@ import type {
   TextBlockNode,
   LoopStartNode,
   LoopEndNode,
+  SnippetNode,  // Phase 29
 } from './graph-model';
 
 // Minimal canvas JSON shape we need from the JSON Canvas v1.0 spec.
@@ -157,7 +158,7 @@ export class CanvasParser {
 
     const validKinds: RPNodeKind[] = [
       'start', 'question', 'answer', 'free-text-input',
-      'text-block', 'loop-start', 'loop-end',
+      'text-block', 'loop-start', 'loop-end', 'snippet',  // Phase 29
     ];
 
     if (!(validKinds as string[]).includes(kind)) {
@@ -254,6 +255,16 @@ export class CanvasParser {
           ...base,
           kind: 'loop-end',
           loopStartId,
+        };
+        return node;
+      }
+      case 'snippet': {
+        const node: SnippetNode = {
+          ...base,
+          kind: 'snippet',
+          subfolderPath: props['radiprotocol_subfolderPath'] !== undefined
+            ? getString(props, 'radiprotocol_subfolderPath')
+            : undefined,
         };
         return node;
       }

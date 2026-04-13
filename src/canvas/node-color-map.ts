@@ -17,4 +17,5 @@ export const NODE_COLOR_MAP: Record<RPNodeKind, string> = {
   'text-block':      '3',  // yellow — passive content
   'loop-start':      '1',  // red    — loop boundary
   'loop-end':        '1',  // red    — loop boundary (intentional share with loop-start, D-01)
+  'snippet':         '6',  // purple — snippet node (Phase 29, D-11)
 };
