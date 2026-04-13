@@ -681,6 +681,7 @@ export class EditorPanelView extends ItemView {
 
     const results: string[] = [];
     const queue: string[] = [basePath];
+    const visited = new Set<string>([basePath]); // WR-01: cycle guard for symlink/junction loops
 
     while (queue.length > 0) {
       const current = queue.shift()!;
@@ -692,6 +693,8 @@ export class EditorPanelView extends ItemView {
       }
 
       for (const folder of listing.folders) {
+        if (visited.has(folder)) continue; // WR-01: skip already-seen paths
+        visited.add(folder);
         // vault.adapter.list returns full vault-relative paths (e.g. .radiprotocol/snippets/CT/adrenal)
         // Compute relative path: strip basePath + '/' prefix (Pitfall 3 from RESEARCH.md)
         const rel = folder.slice(basePath.length + 1);
