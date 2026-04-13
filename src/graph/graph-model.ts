@@ -8,7 +8,8 @@ export type RPNodeKind =
   | 'free-text-input'
   | 'text-block'
   | 'loop-start'
-  | 'loop-end';
+  | 'loop-end'
+  | 'snippet';  // Phase 29
 
 export interface RPNodeBase {
   id: string;
@@ -63,6 +64,11 @@ export interface LoopEndNode extends RPNodeBase {
   loopStartId: string;
 }
 
+export interface SnippetNode extends RPNodeBase {
+  kind: 'snippet';
+  subfolderPath?: string;  // отсутствие = корень .radiprotocol/snippets (D-02, D-03)
+}
+
 /**
  * One frame on the loop context stack.
  * Pushed when the runner enters a loop-start node.
@@ -85,7 +91,8 @@ export type RPNode =
   | FreeTextInputNode
   | TextBlockNode
   | LoopStartNode
-  | LoopEndNode;
+  | LoopEndNode
+  | SnippetNode;  // Phase 29
 
 export interface RPEdge {
   id: string;
