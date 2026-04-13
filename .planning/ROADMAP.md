@@ -58,7 +58,7 @@ Full details: `.planning/milestones/v1.3-ROADMAP.md`
 
 ### v1.4 Snippets and Colors, Colors and Snippets (Phases 28–30) — ACTIVE
 
-- [ ] **Phase 28: Auto Node Coloring** — Color written on every save via EditorPanel (both paths) and programmatic canvas creation
+- [x] **Phase 28: Auto Node Coloring** — Color written on every save via EditorPanel (both paths) and programmatic canvas creation (completed 2026-04-13)
 - [ ] **Phase 29: Snippet Node — Model, Editor, Validator** — 8th node kind in parser/model; EditorPanel subfolder picker form; GraphValidator check
 - [ ] **Phase 30: Snippet Node — Runner Integration** — Runner folder picker UI, state machine extension, SnippetFillInModal wiring, terminal/non-terminal behavior
 
@@ -78,7 +78,7 @@ Full details: `.planning/milestones/v1.3-ROADMAP.md`
 **Plans**: 2 plans
 Plans:
 - [x] 28-00-PLAN.md — Wave 0: тест-инфраструктура (обновить контракт + makeCanvasNode helper)
-- [ ] 28-01-PLAN.md — Wave 1: инъекция цвета в saveNodeEdits (Pattern B + Strategy A)
+- [x] 28-01-PLAN.md — Wave 1: инъекция цвета в saveNodeEdits (Pattern B + Strategy A)
 
 ### Phase 29: Snippet Node — Model, Editor, Validator
 **Goal**: The snippet node type exists as a first-class 8th node kind that authors can configure in EditorPanel with a subfolder path
@@ -112,7 +112,7 @@ Plans:
 ### Phase 999.1: Canvas selector dropdown in runner view (BACKLOG)
 
 **Goal:** Let users choose which canvas/scenario to run from within the plugin panel via a dropdown or similar UX — without having to close the panel and invoke the command again on a different canvas.
-**Plans:** 1/2 plans executed
+**Plans:** 2/2 plans complete
 
 ### Phase 999.2: Full-tab runner view (BACKLOG)
 
@@ -141,6 +141,6 @@ Plans:
 | 18. CSS Gap Fixes (INSERTED) | v1.2 | 1/1 | Complete | 2026-04-10 |
 | 19. Phase 12–14 Formal Verification | v1.2 | 3/3 | Complete | 2026-04-10 |
 | 27. Interactive Placeholder Editor | v1.3 | 1/1 | Complete | 2026-04-12 |
-| 28. Auto Node Coloring | v1.4 | 1/2 | In Progress|  |
+| 28. Auto Node Coloring | v1.4 | 2/2 | Complete   | 2026-04-13 |
 | 29. Snippet Node — Model, Editor, Validator | v1.4 | 0/? | Not started | - |
 | 30. Snippet Node — Runner Integration | v1.4 | 0/? | Not started | - |
