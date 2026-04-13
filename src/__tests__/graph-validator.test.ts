@@ -152,3 +152,12 @@ describe('GraphValidator', () => {
     });
   });
 });
+
+describe('GraphValidator — snippet node (Phase 29, D-12)', () => {
+  it('returns no errors for snippet-node-no-path.canvas (missing subfolderPath is valid per D-12)', () => {
+    const graph = parseFixture('snippet-node-no-path.canvas');
+    const validator = new GraphValidator();
+    const errors = validator.validate(graph);
+    expect(errors).toHaveLength(0);
+  });
+});

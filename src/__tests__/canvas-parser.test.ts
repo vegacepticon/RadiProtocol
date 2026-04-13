@@ -64,3 +64,29 @@ describe('CanvasParser', () => {
     });
   });
 });
+
+describe('CanvasParser — snippet node (Phase 29)', () => {
+  it('parses snippet-node.canvas — returns SnippetNode with kind "snippet" and subfolderPath "CT/adrenal"', () => {
+    const parser = new CanvasParser();
+    const result = parser.parse(loadFixture('snippet-node.canvas'), 'snippet-node.canvas');
+    expect(result.success).toBe(true);
+    if (!result.success) return;
+    const node = result.graph.nodes.get('n-snippet1');
+    expect(node).toBeDefined();
+    expect(node?.kind).toBe('snippet');
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    expect((node as any).subfolderPath).toBe('CT/adrenal');
+  });
+
+  it('parses snippet-node-no-path.canvas — returns SnippetNode with subfolderPath undefined', () => {
+    const parser = new CanvasParser();
+    const result = parser.parse(loadFixture('snippet-node-no-path.canvas'), 'snippet-node-no-path.canvas');
+    expect(result.success).toBe(true);
+    if (!result.success) return;
+    const node = result.graph.nodes.get('n-snippet1');
+    expect(node).toBeDefined();
+    expect(node?.kind).toBe('snippet');
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    expect((node as any).subfolderPath).toBeUndefined();
+  });
+});
