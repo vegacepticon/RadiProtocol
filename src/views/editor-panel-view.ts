@@ -148,10 +148,25 @@ export class EditorPanelView extends ItemView {
     nodeId: string,
     edits: Record<string, unknown>
   ): Promise<void> {
+    // Phase 28: D-01, D-02 — inject color before forking into Pattern B / Strategy A
+    const enrichedEdits = { ...edits };
+    const editedType = enrichedEdits['radiprotocol_nodeType'] as string | undefined;
+    // D-06: unmark path — type is '' or key present with undefined/empty value
+    const isTypeChange = 'radiprotocol_nodeType' in enrichedEdits;
+    const isUnmarkingType = isTypeChange && (editedType === '' || editedType === undefined);
+
+    if (!isUnmarkingType && editedType) {
+      // D-04 priority 1: type explicitly changed — inject color immediately
+      const mapped = (NODE_COLOR_MAP as Record<string, string | undefined>)[editedType];
+      if (mapped !== undefined) {
+        enrichedEdits['color'] = mapped; // D-02: overwrite regardless of prior color
+      }
+    }
+
     // LIVE-03: Attempt live save via internal Canvas API first (Pattern B).
     // If saveLive() returns true, the canvas view owns the write — do not call vault.modify().
     try {
-      const savedLive = await this.plugin.canvasLiveEditor.saveLive(filePath, nodeId, edits);
+      const savedLive = await this.plugin.canvasLiveEditor.saveLive(filePath, nodeId, enrichedEdits);
       if (savedLive) {
         return;
       }
@@ -192,14 +207,26 @@ export class EditorPanelView extends ItemView {
       return;
     }
 
+    // Phase 28: D-04 — fallback type resolution for field-only saves (type not in edits)
+    if (!isTypeChange && !isUnmarkingType) {
+      const existingNode = canvasData.nodes[nodeIndex] as Record<string, unknown> | undefined;
+      const existingType = existingNode?.['radiprotocol_nodeType'] as string | undefined;
+      if (existingType) {
+        const mapped = (NODE_COLOR_MAP as Record<string, string | undefined>)[existingType];
+        if (mapped !== undefined) {
+          enrichedEdits['color'] = mapped; // D-02: always overwrite
+        }
+      }
+    }
+
     const PROTECTED_FIELDS = new Set(['id', 'x', 'y', 'width', 'height', 'type']);
 
-    const nodeTypeEdit = edits['radiprotocol_nodeType'];
+    const nodeTypeEdit = enrichedEdits['radiprotocol_nodeType'];
     const isUnmarking = nodeTypeEdit === '' || nodeTypeEdit === undefined;
 
     const node = canvasData.nodes[nodeIndex];
     if (node !== undefined) {
-      if (isUnmarking && 'radiprotocol_nodeType' in edits) {
+      if (isUnmarking && 'radiprotocol_nodeType' in enrichedEdits) {
         for (const key of Object.keys(node)) {
           if (key.startsWith('radiprotocol_')) {
             delete node[key];
@@ -208,7 +235,7 @@ export class EditorPanelView extends ItemView {
         // COLOR-02, D-06: also clear the canvas node's colour on unmark (Strategy A path)
         delete node['color'];
       } else {
-        for (const [key, value] of Object.entries(edits)) {
+        for (const [key, value] of Object.entries(enrichedEdits)) {
           if (PROTECTED_FIELDS.has(key)) continue;
           if (value === undefined) {
             delete node[key];
