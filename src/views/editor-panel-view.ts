@@ -208,7 +208,8 @@ export class EditorPanelView extends ItemView {
     }
 
     // Phase 28: D-04 — fallback type resolution for field-only saves (type not in edits)
-    if (!isTypeChange && !isUnmarkingType) {
+    // Note: isUnmarkingType implies isTypeChange, so !isTypeChange already covers !isUnmarkingType
+    if (!isTypeChange) {
       const existingNode = canvasData.nodes[nodeIndex] as Record<string, unknown> | undefined;
       const existingType = existingNode?.['radiprotocol_nodeType'] as string | undefined;
       if (existingType) {
