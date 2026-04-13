@@ -88,9 +88,12 @@ Plans:
   1. CanvasParser recognizes radiprotocol_nodeType = "snippet" and produces a typed SnippetNode in the graph model
   2. EditorPanel shows a dedicated form for snippet nodes with a subfolder picker that lets the user browse and select a path under .radiprotocol/snippets/
   3. Saving a snippet node via EditorPanel writes radiprotocol_nodeType = "snippet" and the configured subfolder path to the canvas JSON
-  4. GraphValidator emits a plain-language warning when a snippet node has no subfolder path configured
-**Plans**: TBD
-**UI hint**: yes
+  4. Missing subfolderPath is valid — absence means root fallback at runtime (D-12 supersedes success criterion 4)
+**Plans**: 3 plans
+Plans:
+- [ ] 29-00-PLAN.md — Wave 0: TDD fixtures + failing tests для парсера и валидатора
+- [ ] 29-01-PLAN.md — Wave 1: graph-model + node-color-map + canvas-parser + graph-validator
+- [ ] 29-02-PLAN.md — Wave 2: EditorPanel subfolder picker form (buildKindForm case snippet)
 
 ### Phase 30: Snippet Node — Runner Integration
 **Goal**: A radiologist running a protocol that hits a snippet node can browse and select a snippet from the configured folder, fill in any placeholders, and have the result appended to the report
@@ -142,5 +145,5 @@ Plans:
 | 19. Phase 12–14 Formal Verification | v1.2 | 3/3 | Complete | 2026-04-10 |
 | 27. Interactive Placeholder Editor | v1.3 | 1/1 | Complete | 2026-04-12 |
 | 28. Auto Node Coloring | v1.4 | 2/2 | Complete   | 2026-04-13 |
-| 29. Snippet Node — Model, Editor, Validator | v1.4 | 0/? | Not started | - |
+| 29. Snippet Node — Model, Editor, Validator | v1.4 | 0/3 | Not started | - |
 | 30. Snippet Node — Runner Integration | v1.4 | 0/? | Not started | - |
