@@ -59,7 +59,7 @@ Full details: `.planning/milestones/v1.3-ROADMAP.md`
 ### v1.4 Snippets and Colors, Colors and Snippets (Phases 28–30) — ACTIVE
 
 - [x] **Phase 28: Auto Node Coloring** — Color written on every save via EditorPanel (both paths) and programmatic canvas creation (completed 2026-04-13)
-- [ ] **Phase 29: Snippet Node — Model, Editor, Validator** — 8th node kind in parser/model; EditorPanel subfolder picker form; GraphValidator check
+- [x] **Phase 29: Snippet Node — Model, Editor, Validator** — 8th node kind in parser/model; EditorPanel subfolder picker form; GraphValidator check (completed 2026-04-13)
 - [ ] **Phase 30: Snippet Node — Runner Integration** — Runner folder picker UI, state machine extension, SnippetFillInModal wiring, terminal/non-terminal behavior
 
 ---
@@ -91,9 +91,9 @@ Plans:
   4. Missing subfolderPath is valid — absence means root fallback at runtime (D-12 supersedes success criterion 4)
 **Plans**: 3 plans
 Plans:
-- [ ] 29-00-PLAN.md — Wave 0: TDD fixtures + failing tests для парсера и валидатора
-- [ ] 29-01-PLAN.md — Wave 1: graph-model + node-color-map + canvas-parser + graph-validator
-- [ ] 29-02-PLAN.md — Wave 2: EditorPanel subfolder picker form (buildKindForm case snippet)
+- [x] 29-00-PLAN.md — Wave 0: TDD fixtures + failing tests для парсера и валидатора
+- [x] 29-01-PLAN.md — Wave 1: graph-model + node-color-map + canvas-parser + graph-validator
+- [x] 29-02-PLAN.md — Wave 2: EditorPanel subfolder picker form (buildKindForm case snippet)
 
 ### Phase 30: Snippet Node — Runner Integration
 **Goal**: A radiologist running a protocol that hits a snippet node can browse and select a snippet from the configured folder, fill in any placeholders, and have the result appended to the report
@@ -105,7 +105,11 @@ Plans:
   3. Selecting a snippet that has placeholders opens SnippetFillInModal; after confirmation the filled text is appended to the protocol textarea
   4. Selecting a snippet with no placeholders appends its text directly to the protocol textarea without opening any modal
   5. After snippet insertion, a snippet node with outgoing edges advances to the next node; a snippet node with no outgoing edges terminates the protocol
-**Plans**: TBD
+**Plans**: 3 plans
+Plans:
+- [x] 30-01-PLAN.md — SnippetService.listFolder + path safety (D-18..D-21, T-30-01)
+- [ ] 30-02-PLAN.md — Runner state machine: awaiting-snippet-pick + pickSnippet + session support (D-06..D-12, D-22, D-23)
+- [ ] 30-03-PLAN.md — RunnerView picker rendering + CSS + UAT (D-01..D-05, D-09, D-13..D-17)
 **UI hint**: yes
 
 ---
@@ -115,7 +119,7 @@ Plans:
 ### Phase 999.1: Canvas selector dropdown in runner view (BACKLOG)
 
 **Goal:** Let users choose which canvas/scenario to run from within the plugin panel via a dropdown or similar UX — without having to close the panel and invoke the command again on a different canvas.
-**Plans:** 2/2 plans complete
+**Plans:** 1/3 plans executed
 
 ### Phase 999.2: Full-tab runner view (BACKLOG)
 
@@ -145,5 +149,5 @@ Plans:
 | 19. Phase 12–14 Formal Verification | v1.2 | 3/3 | Complete | 2026-04-10 |
 | 27. Interactive Placeholder Editor | v1.3 | 1/1 | Complete | 2026-04-12 |
 | 28. Auto Node Coloring | v1.4 | 2/2 | Complete   | 2026-04-13 |
-| 29. Snippet Node — Model, Editor, Validator | v1.4 | 0/3 | Not started | - |
-| 30. Snippet Node — Runner Integration | v1.4 | 0/? | Not started | - |
+| 29. Snippet Node — Model, Editor, Validator | v1.4 | 3/3 | Complete   | 2026-04-13 |
+| 30. Snippet Node — Runner Integration | v1.4 | 1/3 | In Progress|  |

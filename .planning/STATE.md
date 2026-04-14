@@ -3,23 +3,23 @@ gsd_state_version: 1.0
 milestone: v1.4
 milestone_name: Snippets and Colors, Colors and Snippets
 status: executing
-stopped_at: Completed 28-01-PLAN.md — Wave 1 color injection in saveNodeEdits
-last_updated: "2026-04-13T13:42:21.781Z"
+stopped_at: Completed 30-01-PLAN.md
+last_updated: "2026-04-14T05:41:26.155Z"
 progress:
   total_phases: 5
-  completed_phases: 1
-  total_plans: 2
-  completed_plans: 2
-  percent: 100
+  completed_phases: 2
+  total_plans: 8
+  completed_plans: 6
+  percent: 75
 ---
 
 # RadiProtocol — Project State
 
 **Updated:** 2026-04-13
 **Milestone:** v1.4 — Snippets and Colors, Colors and Snippets
-**Status:** Executing Phase 28
-**Last session:** 2026-04-13T13:42:21.778Z
-**Stopped at:** Completed 28-01-PLAN.md — Wave 1 color injection in saveNodeEdits
+**Status:** Executing Phase 30
+**Last session:** 2026-04-14T05:41:26.150Z
+**Stopped at:** Completed 30-01-PLAN.md
 
 ---
 
@@ -28,7 +28,7 @@ progress:
 See: `.planning/PROJECT.md` (updated 2026-04-13)
 
 **Core value:** A radiologist can generate a structured, accurate protocol in seconds by answering a guided algorithm — without writing a single line of code.  
-**Current focus:** Phase 28 — auto-node-coloring
+**Current focus:** Phase 30 — snippet-node-runner-integration
 
 ---
 
@@ -52,8 +52,8 @@ See: `.planning/PROJECT.md` (updated 2026-04-13)
 | 18 | CSS Gap Fixes (INSERTED) | Complete |
 | 19 | Phase 12–14 Formal Verification | Complete |
 | 27 | Interactive Placeholder Editor | Complete |
-| 28 | Auto Node Coloring | Not started |
-| 29 | Snippet Node — Model, Editor, Validator | Not started |
+| 28 | Auto Node Coloring | Complete |
+| 29 | Snippet Node — Model, Editor, Validator | Complete |
 | 30 | Snippet Node — Runner Integration | Not started |
 
 ---
@@ -62,11 +62,11 @@ See: `.planning/PROJECT.md` (updated 2026-04-13)
 
 | Decision | Rationale |
 |----------|-----------|
-| Read-only Canvas contract | No official Canvas runtime API; never modify `.canvas` while open |
+| Read-only Canvas contract | No official Canvas runtime API; never modify `.canvas` while open (unless Pattern B path is used via CanvasLiveEditor) |
 | TypeScript + esbuild + plain DOM | Standard Obsidian plugin toolchain; zero framework overhead for v1 |
 | Vitest for engine tests | Pure engine modules (parser, runner) have no Obsidian imports; fully unit-testable |
 | One-file-per-snippet storage | Minimizes vault.modify() race conditions and sync conflicts |
-| Discriminated union on `kind` for node types | Type-safe graph model; 7 node types: start, question, answer, text-block, free-text, loop-start, loop-end |
+| Discriminated union on `kind` for node types | Type-safe graph model; 8 node types: start, question, answer, text-block, free-text, loop-start, loop-end, snippet |
 | Snapshot undo stack | Simplest correct approach for step-back; protocol text is small (<5KB) |
 | `radiprotocol_*` property namespace | Avoids collisions with other plugins and future Obsidian updates |
 | Canvas write-back Strategy A | Require canvas closed before any vault.modify() — simple and safe; avoids undocumented internals (A4 resolved) |
@@ -79,6 +79,9 @@ See: `.planning/PROJECT.md` (updated 2026-04-13)
 | getCanvasJSON() for runner read path | Reads live in-memory canvas data; vault.read() retained only in EditorPanel form load (pre-existing gap) |
 | HTML5 native DnD for chip reorder (Phase 27) | Chips recreated on re-render so addEventListener is correct; no drag library overhead |
 | UUID guard in autoSaveAfterDrop() (Phase 27) | Prevents saving snippets with unsaved placeholder IDs |
+| SnippetNode subfolderPath optional string (Phase 29) | Absence = root `.radiprotocol/snippets/`; consistent with D-02, D-03 |
+| NODE_COLOR_MAP snippet = '6' purple (Phase 29) | Semantic color per D-11; purple distinguishes snippet nodes from all other kinds |
+| void IIFE for async inside sync buildKindForm (Phase 29) | Preserves synchronous signature throughout; consistent with existing loadNode → renderNodeForm pattern |
 
 ---
 
@@ -98,4 +101,4 @@ See: `.planning/PROJECT.md` (updated 2026-04-13)
 
 - Branch: `main`
 - Remote: (not yet configured)
-- Last commit: `24b4ef3` — infra: add regression protection — CSS split, smoke tests, CLAUDE.md
+- Last commit: `8d16b94` — feat(29-02): add snippet case to EditorPanel — dropdown option, subfolder picker, listSnippetSubfolders
