@@ -5,6 +5,7 @@ import { ProtocolRunner } from '../runner/protocol-runner';
 import { GraphValidator } from '../graph/graph-validator';
 import type { ProtocolGraph } from '../graph/graph-model';
 import { SnippetFillInModal } from './snippet-fill-in-modal';
+import type { SnippetFile } from '../snippets/snippet-model';
 import { ResumeSessionModal } from './resume-session-modal';
 import type { PersistedSession } from '../sessions/session-model';
 import { validateSessionNodeIds } from '../sessions/session-service';
@@ -25,6 +26,9 @@ export class RunnerView extends ItemView {
   private graph: ProtocolGraph | null = null;
   private selector: CanvasSelectorWidget | null = null;
   private selectorBarEl: HTMLDivElement | null = null;
+  /** Phase 30 D-05/D-23: local picker drill-down segments, reset on exit from picker state. */
+  private snippetPickerPath: string[] = [];
+  private snippetPickerNodeId: string | null = null;
 
   constructor(leaf: WorkspaceLeaf, plugin: RadiProtocolPlugin) {
     super(leaf);
@@ -228,7 +232,9 @@ export class RunnerView extends ItemView {
 
     const state = this.runner.getState();
     const needsConfirmation =
-      state.status === 'at-node' || state.status === 'awaiting-snippet-fill';
+      state.status === 'at-node' ||
+      state.status === 'awaiting-snippet-pick' ||
+      state.status === 'awaiting-snippet-fill';
 
     if (needsConfirmation) {
       // D-12: show confirmation modal; runner state is in-progress
@@ -420,14 +426,20 @@ export class RunnerView extends ItemView {
       }
 
       case 'awaiting-snippet-pick': {
-        // Phase 30-02: engine-only landing case — Plan 30-03 replaces this
-        // with the real snippet picker UI bound to state.subfolderPath.
-        questionZone.createEl('p', {
-          text: 'Snippet picker — coming in Plan 30-03',
-          cls: 'rp-empty-state-body',
-        });
         this.renderPreviewZone(previewZone, state.accumulatedText);
         this.renderOutputToolbar(outputToolbar, state.accumulatedText, false);
+
+        // Phase 30 D-05/D-23: reset picker drill-down when we enter a new snippet node
+        if (this.snippetPickerNodeId !== state.nodeId) {
+          this.snippetPickerNodeId = state.nodeId;
+          this.snippetPickerPath = [];
+        }
+
+        questionZone.createEl('p', {
+          text: 'Loading snippets...',
+          cls: 'rp-empty-state-body',
+        });
+        void this.renderSnippetPicker(state, questionZone);
         break;
       }
 
@@ -480,6 +492,150 @@ export class RunnerView extends ItemView {
 
   /** Wrapper so click handlers can call `void this.renderAsync()` */
   private async renderAsync(): Promise<void> {
+    this.render();
+  }
+
+  /**
+   * Phase 30 D-01..D-05, D-13..D-17: render the drill-down picker for a snippet node.
+   * Local state only — drill-down does NOT push undo.
+   */
+  private async renderSnippetPicker(
+    state: {
+      status: 'awaiting-snippet-pick';
+      nodeId: string;
+      subfolderPath: string | undefined;
+      accumulatedText: string;
+      canStepBack: boolean;
+    },
+    questionZone: HTMLElement,
+  ): Promise<void> {
+    const rootPath = this.plugin.settings.snippetFolderPath;
+    const nodeRootRel = state.subfolderPath ?? '';
+    const nodeRootAbs = nodeRootRel === '' ? rootPath : `${rootPath}/${nodeRootRel}`;
+    const currentAbs =
+      this.snippetPickerPath.length === 0
+        ? nodeRootAbs
+        : `${nodeRootAbs}/${this.snippetPickerPath.join('/')}`;
+
+    const listing = await this.plugin.snippetService.listFolder(currentAbs);
+
+    // T-30-04: drop stale results if runner has moved on
+    const currentState = this.runner.getState();
+    if (
+      currentState.status !== 'awaiting-snippet-pick' ||
+      currentState.nodeId !== state.nodeId
+    ) {
+      return;
+    }
+
+    questionZone.empty();
+
+    // Breadcrumb (D-02)
+    const crumbBar = questionZone.createDiv({ cls: 'rp-snippet-breadcrumb' });
+    const crumbLabel =
+      this.snippetPickerPath.length === 0
+        ? nodeRootRel === ''
+          ? '/'
+          : nodeRootRel
+        : nodeRootRel === ''
+          ? this.snippetPickerPath.join('/')
+          : `${nodeRootRel}/${this.snippetPickerPath.join('/')}`;
+    crumbBar.createEl('span', { cls: 'rp-snippet-breadcrumb-label', text: crumbLabel });
+
+    if (this.snippetPickerPath.length > 0) {
+      const upBtn = crumbBar.createEl('button', {
+        cls: 'rp-snippet-up-btn',
+        text: 'Up',
+      });
+      this.registerDomEvent(upBtn, 'click', () => {
+        this.snippetPickerPath.pop();
+        this.render(); // D-05: local nav, no undo
+      });
+    }
+
+    // Empty state (D-15, D-17)
+    if (listing.folders.length === 0 && listing.snippets.length === 0) {
+      questionZone.createEl('p', {
+        cls: 'rp-empty-state-body',
+        text: `No snippets found in ${crumbLabel}`,
+      });
+    } else {
+      const list = questionZone.createDiv({ cls: 'rp-snippet-picker-list' });
+
+      // D-03: folders first
+      for (const folderName of listing.folders) {
+        const row = list.createEl('button', {
+          cls: 'rp-snippet-folder-row',
+          text: `📁 ${folderName}`,
+        });
+        this.registerDomEvent(row, 'click', () => {
+          this.snippetPickerPath.push(folderName);
+          this.render(); // D-05: local nav, no undo
+        });
+      }
+
+      // Then snippets
+      for (const snippet of listing.snippets) {
+        const row = list.createEl('button', {
+          cls: 'rp-snippet-item-row',
+          text: snippet.name,
+        });
+        this.registerDomEvent(row, 'click', () => {
+          void this.handleSnippetPickerSelection(snippet);
+        });
+      }
+    }
+
+    // Step-back (D-11) — mirrors existing pattern
+    if (state.canStepBack) {
+      const stepBackBtn = questionZone.createEl('button', {
+        cls: 'rp-step-back-btn',
+        text: 'Step back',
+      });
+      this.registerDomEvent(stepBackBtn, 'click', () => {
+        this.snippetPickerPath = [];
+        this.snippetPickerNodeId = null;
+        this.runner.stepBack();
+        void this.autoSaveSession();
+        this.render();
+      });
+    }
+  }
+
+  /**
+   * Phase 30 D-08, D-09, D-14: user clicked a snippet row.
+   *  - Push pickSnippet to runner (undo-before-mutate inside the runner).
+   *  - If snippet has zero placeholders → completeSnippet(template) directly (D-09).
+   *  - Else open SnippetFillInModal; on resolve → completeSnippet(rendered); on cancel → completeSnippet('') (D-14).
+   */
+  private async handleSnippetPickerSelection(snippet: SnippetFile): Promise<void> {
+    // BUG-01: capture any manual edit before advancing
+    this.runner.syncManualEdit(this.previewTextarea?.value ?? '');
+    this.runner.pickSnippet(snippet.id);
+    void this.autoSaveSession();
+
+    if (snippet.placeholders.length === 0) {
+      // D-09: no-placeholder path — skip modal, append template directly
+      this.runner.completeSnippet(snippet.template);
+      void this.autoSaveSession();
+      this.snippetPickerPath = [];
+      this.snippetPickerNodeId = null;
+      this.render();
+      return;
+    }
+
+    const modal = new SnippetFillInModal(this.app, snippet);
+    modal.open();
+    const rendered = await modal.result;
+    if (rendered !== null) {
+      this.runner.completeSnippet(rendered);
+    } else {
+      // D-14: cancel = empty insertion, runner still advances
+      this.runner.completeSnippet('');
+    }
+    void this.autoSaveSession();
+    this.snippetPickerPath = [];
+    this.snippetPickerNodeId = null;
     this.render();
   }
 
