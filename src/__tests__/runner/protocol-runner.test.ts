@@ -597,4 +597,125 @@ describe('ProtocolRunner', () => {
       expect(stateAfter.canStepBack).toBe(false);
     });
   });
+
+  describe('awaiting-snippet-pick state (D-06..D-12, SNIPPET-NODE-03..07)', () => {
+    // Helper: start runner on the given fixture and drive it through the
+    // question → answer prelude so the runner halts at the snippet node
+    // WITH a non-empty undo stack (chooseAnswer pushed one entry).
+    function startAtSnippet(fixture: string): ProtocolRunner {
+      const runner = new ProtocolRunner();
+      runner.start(loadGraph(fixture));
+      runner.chooseAnswer('n-a1');
+      return runner;
+    }
+
+    it('halts at snippet node with subfolderPath exposed', () => {
+      const runner = startAtSnippet('snippet-node-with-exit.canvas');
+      const state = runner.getState();
+      expect(state.status).toBe('awaiting-snippet-pick');
+      if (state.status !== 'awaiting-snippet-pick') return;
+      expect(state.nodeId).toBe('n-snippet1');
+      expect(state.canStepBack).toBe(true);
+      expect(state.subfolderPath).toBe('CT');
+      expect(state.accumulatedText).toBe('');
+    });
+
+    it('subfolderPath is undefined when snippet node has none', () => {
+      // Inline graph: start → snippet (no subfolderPath)
+      const graph: ProtocolGraph = {
+        canvasFilePath: 'snippet-no-sub.canvas',
+        nodes: new Map<string, import('../../graph/graph-model').RPNode>([
+          ['s', { id: 's', kind: 'start', x: 0, y: 0, width: 100, height: 60 }],
+          ['sn', { id: 'sn', kind: 'snippet', x: 0, y: 60, width: 100, height: 60 }],
+        ]),
+        edges: [{ id: 'e1', fromNodeId: 's', toNodeId: 'sn' }],
+        adjacency: new Map([['s', ['sn']]]),
+        reverseAdjacency: new Map([['sn', ['s']]]),
+        startNodeId: 's',
+      };
+      const runner = new ProtocolRunner();
+      runner.start(graph);
+      const state = runner.getState();
+      expect(state.status).toBe('awaiting-snippet-pick');
+      if (state.status !== 'awaiting-snippet-pick') return;
+      expect(state.subfolderPath).toBeUndefined();
+    });
+
+    it('pickSnippet transitions to awaiting-snippet-fill', () => {
+      const runner = startAtSnippet('snippet-node-with-exit.canvas');
+      runner.pickSnippet('some-id');
+      const state = runner.getState();
+      expect(state.status).toBe('awaiting-snippet-fill');
+      if (state.status !== 'awaiting-snippet-fill') return;
+      expect(state.snippetId).toBe('some-id');
+      expect(state.nodeId).toBe('n-snippet1');
+    });
+
+    it('pickSnippet is undo-before-mutate: stepBack from awaiting-snippet-fill reverts to snippet node', () => {
+      const runner = startAtSnippet('snippet-node-with-exit.canvas');
+      runner.pickSnippet('x');
+      runner.stepBack();
+      const state = runner.getState();
+      expect(state.status).toBe('at-node');
+      if (state.status !== 'at-node') return;
+      // pickSnippet snapshotted currentNodeId=n-snippet1 BEFORE mutating, so stepBack
+      // restores to the snippet node itself (not n-a1 / n-q1). snippetId is cleared.
+      expect(state.currentNodeId).toBe('n-snippet1');
+    });
+
+    it('pickSnippet is a no-op outside awaiting-snippet-pick', () => {
+      const runner = new ProtocolRunner();
+      runner.start(loadGraph('linear.canvas'));
+      const before = runner.getState();
+      expect(before.status).toBe('at-node');
+      runner.pickSnippet('x');
+      const after = runner.getState();
+      expect(after.status).toBe('at-node');
+      if (before.status !== 'at-node' || after.status !== 'at-node') return;
+      expect(after.currentNodeId).toBe(before.currentNodeId);
+    });
+
+    it('completeSnippet after pickSnippet advances to outgoing neighbour', () => {
+      const runner = startAtSnippet('snippet-node-with-exit.canvas');
+      runner.pickSnippet('snippetA');
+      runner.completeSnippet('rendered text');
+      const state = runner.getState();
+      expect(state.status).toBe('at-node');
+      if (state.status !== 'at-node') return;
+      expect(state.currentNodeId).toBe('n-tb1');
+      expect(state.accumulatedText).toContain('rendered text');
+    });
+
+    it('terminal snippet transitions to complete after completeSnippet', () => {
+      const runner = startAtSnippet('snippet-node-terminal.canvas');
+      const pre = runner.getState();
+      expect(pre.status).toBe('awaiting-snippet-pick');
+      runner.pickSnippet('snippetA');
+      runner.completeSnippet('final');
+      const state = runner.getState();
+      expect(state.status).toBe('complete');
+      if (state.status !== 'complete') return;
+      expect(state.finalText).toContain('final');
+    });
+
+    it('stepBack from awaiting-snippet-pick reverts to prior at-node', () => {
+      // Drive: start → question (halts). chooseAnswer('n-a1') → advances through
+      // answer → snippet, halting at awaiting-snippet-pick. The chooseAnswer call
+      // pushed an UndoEntry with nodeId=n-q1. stepBack from awaiting-snippet-pick
+      // pops that entry → at-node at n-q1 with snippet fields cleared.
+      const runner = startAtSnippet('snippet-node-with-exit.canvas');
+      const pre = runner.getState();
+      expect(pre.status).toBe('awaiting-snippet-pick');
+      runner.stepBack();
+      const state = runner.getState();
+      expect(state.status).toBe('at-node');
+      if (state.status !== 'at-node') return;
+      expect(state.currentNodeId).toBe('n-q1');
+      // No snippet fields leaked — the 'at-node' state interface has no snippetId field,
+      // so TypeScript + shape check guards this. Re-serializing confirms null internals.
+      const ser = runner.getSerializableState();
+      expect(ser?.snippetId).toBeNull();
+      expect(ser?.snippetNodeId).toBeNull();
+    });
+  });
 });

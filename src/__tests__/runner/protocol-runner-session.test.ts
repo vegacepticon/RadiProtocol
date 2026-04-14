@@ -175,6 +175,43 @@ describe('ProtocolRunner session round-trip serialization (SESSION-01, SESSION-0
 
 // ── Loop context round-trip — SESSION-05 ─────────────────────────────────────
 
+describe('session — awaiting-snippet-pick (D-22)', () => {
+  it('serializes awaiting-snippet-pick state with snippet node id', () => {
+    const runner = new ProtocolRunner();
+    runner.start(loadGraph('snippet-node-with-exit.canvas'));
+    runner.chooseAnswer('n-a1');
+    expect(runner.getState().status).toBe('awaiting-snippet-pick');
+    const serialized = runner.getSerializableState();
+    expect(serialized).not.toBeNull();
+    if (serialized === null) return;
+    expect(serialized.runnerStatus).toBe('awaiting-snippet-pick');
+    expect(serialized.currentNodeId).toBe('n-snippet1');
+  });
+
+  it('restores awaiting-snippet-pick round-trip', () => {
+    const graph = loadGraph('snippet-node-with-exit.canvas');
+    const runner = new ProtocolRunner();
+    runner.start(graph);
+    runner.chooseAnswer('n-a1');
+    const saved = runner.getSerializableState();
+    expect(saved).not.toBeNull();
+    if (saved === null) return;
+    const json = JSON.stringify(saved);
+    const deserialized = JSON.parse(json) as typeof saved;
+
+    const restored = new ProtocolRunner();
+    restored.setGraph(graph);
+    restored.restoreFrom(deserialized);
+
+    const state = restored.getState();
+    expect(state.status).toBe('awaiting-snippet-pick');
+    if (state.status !== 'awaiting-snippet-pick') return;
+    expect(state.nodeId).toBe('n-snippet1');
+    expect(state.accumulatedText).toBe(saved.accumulatedText);
+    expect(state.subfolderPath).toBe('CT');
+  });
+});
+
 describe('Loop context stack survives session round-trip (SESSION-05)', () => {
   it('loopContextStack with iteration=2 is restored correctly and getState() reflects loopIterationLabel', () => {
     const graph = loadGraph('loop-body.canvas');
