@@ -179,3 +179,60 @@
   opacity: 0.5;
   cursor: not-allowed;
 }
+
+/* Phase 30: snippet picker — drill-down list, breadcrumb, folder rows */
+.rp-snippet-breadcrumb {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+  font-size: var(--font-ui-small);
+  color: var(--text-muted);
+}
+
+.rp-snippet-breadcrumb-label {
+  font-family: var(--font-monospace);
+}
+
+.rp-snippet-up-btn {
+  padding: 2px 8px;
+  font-size: var(--font-ui-small);
+  background: var(--background-modifier-hover);
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.rp-snippet-up-btn:hover {
+  background: var(--background-modifier-active-hover);
+}
+
+.rp-snippet-picker-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-bottom: 12px;
+}
+
+.rp-snippet-folder-row,
+.rp-snippet-item-row {
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: 8px 12px;
+  background: var(--background-secondary);
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: var(--font-ui-medium);
+  color: var(--text-normal);
+}
+
+.rp-snippet-folder-row:hover,
+.rp-snippet-item-row:hover {
+  background: var(--background-modifier-hover);
+}
+
+.rp-snippet-folder-row {
+  font-weight: 600;
+}
