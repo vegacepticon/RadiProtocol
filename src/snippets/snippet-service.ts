@@ -49,6 +49,76 @@ export class SnippetService {
     return snippets;
   }
 
+  /**
+   * List direct children of a folder within the snippet root.
+   * Phase 30 D-18..D-21. Used by the runner picker.
+   *
+   * @param folderPath Full vault-relative path (D-19). Caller composes
+   *   `${settings.snippetFolderPath}/${node.subfolderPath}` when subfolderPath is set.
+   * @returns Direct-children folders (basenames, sorted) and parsed SnippetFile objects (sorted by name).
+   *   Missing folder → empty. Corrupt JSON → skipped silently.
+   *   Path outside snippet root → silently rejected (T-30-01).
+   */
+  async listFolder(
+    folderPath: string,
+  ): Promise<{ folders: string[]; snippets: SnippetFile[] }> {
+    const root = this.settings.snippetFolderPath;
+
+    // D-20 / T-30-01: Enforce snippet-root containment BEFORE any disk I/O.
+    // Reject any path that contains traversal segments, is absolute, or is
+    // not exactly root or a child of `root + '/'`. Sibling-prefix matches
+    // (e.g. `.radiprotocol/snippets-evil`) are rejected by the trailing-slash
+    // requirement on the startsWith check.
+    const stripped = folderPath.replace(/^\/+/, '');
+    const rawSegments = stripped.split('/');
+    const hasTraversal = rawSegments.some((s) => s === '..' || s === '.');
+    const isAbsolute = folderPath.startsWith('/');
+    const normalized = rawSegments.filter((s) => s !== '').join('/');
+
+    const insideRoot =
+      !hasTraversal &&
+      !isAbsolute &&
+      (normalized === root || normalized.startsWith(root + '/'));
+    if (!insideRoot) {
+      console.error('[RadiProtocol] listFolder rejected unsafe path:', folderPath);
+      return { folders: [], snippets: [] };
+    }
+
+    const exists = await this.app.vault.adapter.exists(normalized);
+    if (!exists) return { folders: [], snippets: [] };
+
+    let listing: { files: string[]; folders: string[] };
+    try {
+      listing = await this.app.vault.adapter.list(normalized);
+    } catch {
+      return { folders: [], snippets: [] };
+    }
+
+    // Folder basenames (strip `${normalized}/` prefix). Only direct children.
+    const folders: string[] = [];
+    for (const f of listing.folders) {
+      const rel = f.slice(normalized.length + 1);
+      if (rel !== '' && !rel.includes('/')) folders.push(rel);
+    }
+    folders.sort((a, b) => a.localeCompare(b));
+
+    // Parse direct-child .json files; skip corrupt silently (mirrors list()).
+    const snippets: SnippetFile[] = [];
+    for (const filePath of listing.files) {
+      if (!filePath.endsWith('.json')) continue;
+      try {
+        const raw = await this.app.vault.adapter.read(filePath);
+        const parsed = JSON.parse(raw) as SnippetFile;
+        snippets.push(parsed);
+      } catch {
+        // Corrupt file — skip silently.
+      }
+    }
+    snippets.sort((a, b) => a.name.localeCompare(b.name));
+
+    return { folders, snippets };
+  }
+
   /** Load a single snippet by id. Returns null if file does not exist or JSON is corrupt. */
   async load(id: string): Promise<SnippetFile | null> {
     const path = this.filePath(id);
