@@ -61,6 +61,6 @@
 | SNIPPET-NODE-08 | Phase 29 | Pending |
 | SNIPPET-NODE-03 | Phase 30 | Complete |
 | SNIPPET-NODE-04 | Phase 30 | Complete |
-| SNIPPET-NODE-05 | Phase 30 | Pending |
-| SNIPPET-NODE-06 | Phase 30 | Pending |
-| SNIPPET-NODE-07 | Phase 30 | Pending |
+| SNIPPET-NODE-05 | Phase 30 | Complete |
+| SNIPPET-NODE-06 | Phase 30 | Complete |
+| SNIPPET-NODE-07 | Phase 30 | Complete |

@@ -108,7 +108,7 @@ Plans:
 **Plans**: 3 plans
 Plans:
 - [x] 30-01-PLAN.md — SnippetService.listFolder + path safety (D-18..D-21, T-30-01)
-- [ ] 30-02-PLAN.md — Runner state machine: awaiting-snippet-pick + pickSnippet + session support (D-06..D-12, D-22, D-23)
+- [x] 30-02-PLAN.md — Runner state machine: awaiting-snippet-pick + pickSnippet + session support (D-06..D-12, D-22, D-23)
 - [ ] 30-03-PLAN.md — RunnerView picker rendering + CSS + UAT (D-01..D-05, D-09, D-13..D-17)
 **UI hint**: yes
 
@@ -119,7 +119,7 @@ Plans:
 ### Phase 999.1: Canvas selector dropdown in runner view (BACKLOG)
 
 **Goal:** Let users choose which canvas/scenario to run from within the plugin panel via a dropdown or similar UX — without having to close the panel and invoke the command again on a different canvas.
-**Plans:** 1/3 plans executed
+**Plans:** 2/3 plans executed
 
 ### Phase 999.2: Full-tab runner view (BACKLOG)
 
@@ -150,4 +150,4 @@ Plans:
 | 27. Interactive Placeholder Editor | v1.3 | 1/1 | Complete | 2026-04-12 |
 | 28. Auto Node Coloring | v1.4 | 2/2 | Complete   | 2026-04-13 |
 | 29. Snippet Node — Model, Editor, Validator | v1.4 | 3/3 | Complete   | 2026-04-13 |
-| 30. Snippet Node — Runner Integration | v1.4 | 1/3 | In Progress|  |
+| 30. Snippet Node — Runner Integration | v1.4 | 2/3 | In Progress|  |
