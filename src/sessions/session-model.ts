@@ -41,10 +41,10 @@ export interface PersistedSession {
   savedAt: number;
   /**
    * Runner status at save time.
-   * Only 'at-node' and 'awaiting-snippet-fill' are valid resume states.
-   * idle/complete/error sessions are never written to disk.
+   * Only 'at-node', 'awaiting-snippet-pick' and 'awaiting-snippet-fill' are valid
+   * resume states. idle/complete/error sessions are never written to disk.
    */
-  runnerStatus: 'at-node' | 'awaiting-snippet-fill';
+  runnerStatus: 'at-node' | 'awaiting-snippet-pick' | 'awaiting-snippet-fill';
   /** currentNodeId from the runner */
   currentNodeId: string;
   /** accumulatedText snapshotted at save time (SESSION-05) */

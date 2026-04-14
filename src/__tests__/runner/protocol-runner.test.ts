@@ -617,7 +617,8 @@ describe('ProtocolRunner', () => {
       expect(state.nodeId).toBe('n-snippet1');
       expect(state.canStepBack).toBe(true);
       expect(state.subfolderPath).toBe('CT');
-      expect(state.accumulatedText).toBe('');
+      // The chooseAnswer('n-a1') prelude appended 'A1' — accumulatedText mirrors that
+      expect(state.accumulatedText).toBe('A1');
     });
 
     it('subfolderPath is undefined when snippet node has none', () => {
@@ -675,15 +676,17 @@ describe('ProtocolRunner', () => {
       expect(after.currentNodeId).toBe(before.currentNodeId);
     });
 
-    it('completeSnippet after pickSnippet advances to outgoing neighbour', () => {
+    it('completeSnippet after pickSnippet advances through outgoing neighbour', () => {
+      // Fixture: ... → n-snippet1 → n-tb1 (text-block "after snippet", terminal).
+      // completeSnippet advances from n-snippet1 → n-tb1 (auto-append) → complete.
       const runner = startAtSnippet('snippet-node-with-exit.canvas');
       runner.pickSnippet('snippetA');
       runner.completeSnippet('rendered text');
       const state = runner.getState();
-      expect(state.status).toBe('at-node');
-      if (state.status !== 'at-node') return;
-      expect(state.currentNodeId).toBe('n-tb1');
-      expect(state.accumulatedText).toContain('rendered text');
+      expect(state.status).toBe('complete');
+      if (state.status !== 'complete') return;
+      expect(state.finalText).toContain('rendered text');
+      expect(state.finalText).toContain('after snippet');
     });
 
     it('terminal snippet transitions to complete after completeSnippet', () => {

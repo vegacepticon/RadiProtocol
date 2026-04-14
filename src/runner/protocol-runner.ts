@@ -158,6 +158,30 @@ export class ProtocolRunner {
   }
 
   /**
+   * Phase 30 D-08: user picks a snippet at the current snippet node.
+   * Valid only in 'awaiting-snippet-pick'. Pushes UndoEntry BEFORE any
+   * mutation so stepBack reverts to the snippet node's predecessor.
+   * Transitions to 'awaiting-snippet-fill'; RunnerView then either opens
+   * SnippetFillInModal (placeholders) or calls completeSnippet(template)
+   * directly (no placeholders, D-09).
+   */
+  pickSnippet(snippetId: string): void {
+    if (this.runnerStatus !== 'awaiting-snippet-pick') return;
+    if (this.currentNodeId === null) return;
+
+    // Pattern A: undo-before-mutate. Spread loopContextStack (LOOP-05).
+    this.undoStack.push({
+      nodeId: this.currentNodeId,
+      textSnapshot: this.accumulator.snapshot(),
+      loopContextStack: [...this.loopContextStack],
+    });
+
+    this.snippetId = snippetId;
+    this.snippetNodeId = this.currentNodeId;
+    this.runnerStatus = 'awaiting-snippet-fill';
+  }
+
+  /**
    * Phase 5 calls this after the user completes the snippet fill-in modal.
    * Only valid in awaiting-snippet-fill state (D-06, D-07).
    * Appends the pre-rendered text and advances past the snippet text-block node.
@@ -285,6 +309,21 @@ export class ProtocolRunner {
           isAtLoopEnd: this.graph?.nodes.get(this.currentNodeId ?? '')?.kind === 'loop-end',
         };
       }
+      case 'awaiting-snippet-pick': {
+        if (this.graph === null || this.currentNodeId === null) {
+          return { status: 'error', message: 'invalid awaiting-snippet-pick' };
+        }
+        const node = this.graph.nodes.get(this.currentNodeId);
+        const subfolderPath =
+          node !== undefined && node.kind === 'snippet' ? node.subfolderPath : undefined;
+        return {
+          status: 'awaiting-snippet-pick',
+          nodeId: this.currentNodeId,
+          subfolderPath,
+          accumulatedText: this.accumulator.current,
+          canStepBack: this.undoStack.length > 0,
+        };
+      }
       case 'awaiting-snippet-fill':
         return {
           status: 'awaiting-snippet-fill',
@@ -318,7 +357,7 @@ export class ProtocolRunner {
    * savedAt, and version to complete the PersistedSession shape before writing.
    */
   getSerializableState(): {
-    runnerStatus: 'at-node' | 'awaiting-snippet-fill';
+    runnerStatus: 'at-node' | 'awaiting-snippet-pick' | 'awaiting-snippet-fill';
     currentNodeId: string;
     accumulatedText: string;
     undoStack: Array<{ nodeId: string; textSnapshot: string; loopContextStack: Array<{ loopStartId: string; iteration: number; textBeforeLoop: string }> }>;
@@ -326,7 +365,11 @@ export class ProtocolRunner {
     snippetId: string | null;
     snippetNodeId: string | null;
   } | null {
-    if (this.runnerStatus !== 'at-node' && this.runnerStatus !== 'awaiting-snippet-fill') {
+    if (
+      this.runnerStatus !== 'at-node' &&
+      this.runnerStatus !== 'awaiting-snippet-fill' &&
+      this.runnerStatus !== 'awaiting-snippet-pick'
+    ) {
       return null;
     }
     return {
@@ -370,7 +413,7 @@ export class ProtocolRunner {
    * is never in error state).
    */
   restoreFrom(session: {
-    runnerStatus: 'at-node' | 'awaiting-snippet-fill';
+    runnerStatus: 'at-node' | 'awaiting-snippet-pick' | 'awaiting-snippet-fill';
     currentNodeId: string;
     accumulatedText: string;
     undoStack: Array<{ nodeId: string; textSnapshot: string; loopContextStack: Array<{ loopStartId: string; iteration: number; textBeforeLoop: string }> }>;
@@ -511,9 +554,9 @@ export class ProtocolRunner {
           return;
         }
         case 'snippet': {
-          // Phase 29: snippet node halts here — Runner Integration in Phase 30
+          // Phase 30 D-07: halt at snippet node, RunnerView renders the picker.
           this.currentNodeId = cursor;
-          this.runnerStatus = 'at-node';
+          this.runnerStatus = 'awaiting-snippet-pick';
           return;
         }
         default: {

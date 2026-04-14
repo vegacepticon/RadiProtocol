@@ -6,6 +6,7 @@ import type { LoopContext } from '../graph/graph-model';
 export type RunnerStatus =
   | 'idle'
   | 'at-node'
+  | 'awaiting-snippet-pick'
   | 'awaiting-snippet-fill'
   | 'complete'
   | 'error';
@@ -32,6 +33,19 @@ export interface AtNodeState {
   loopIterationLabel?: string;
   /** true when currentNodeId refers to a loop-end node — drives UI branch (LOOP-02) */
   isAtLoopEnd?: boolean;
+}
+
+/**
+ * Phase 30 D-06: runner paused at a snippet node while the user browses
+ * the configured subfolder and picks a snippet. Transitions to
+ * 'awaiting-snippet-fill' via pickSnippet().
+ */
+export interface AwaitingSnippetPickState {
+  status: 'awaiting-snippet-pick';
+  nodeId: string;
+  subfolderPath: string | undefined;
+  accumulatedText: string;
+  canStepBack: boolean;
 }
 
 /**
@@ -66,6 +80,7 @@ export interface ErrorState {
 export type RunnerState =
   | IdleState
   | AtNodeState
+  | AwaitingSnippetPickState
   | AwaitingSnippetFillState
   | CompleteState
   | ErrorState;

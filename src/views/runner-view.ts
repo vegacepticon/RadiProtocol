@@ -419,6 +419,18 @@ export class RunnerView extends ItemView {
         break;
       }
 
+      case 'awaiting-snippet-pick': {
+        // Phase 30-02: engine-only landing case — Plan 30-03 replaces this
+        // with the real snippet picker UI bound to state.subfolderPath.
+        questionZone.createEl('p', {
+          text: 'Snippet picker — coming in Plan 30-03',
+          cls: 'rp-empty-state-body',
+        });
+        this.renderPreviewZone(previewZone, state.accumulatedText);
+        this.renderOutputToolbar(outputToolbar, state.accumulatedText, false);
+        break;
+      }
+
       case 'awaiting-snippet-fill': {
         questionZone.createEl('p', {
           text: 'Loading snippet...',
