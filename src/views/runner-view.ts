@@ -212,6 +212,23 @@ export class RunnerView extends ItemView {
       }
     });
 
+    // Phase 30 WR-01: register active-leaf-change listener ONCE at view open.
+    // Previously this was registered inside renderOutputToolbar() which runs on
+    // every render (snippet pick, step, back), accumulating duplicate listeners
+    // over long sessions. Keep insertBtn disabled state in sync with active leaf
+    // (D-07, D-08).
+    this.registerEvent(
+      this.app.workspace.on('active-leaf-change', () => {
+        const view = this.app.workspace.getActiveViewOfType(MarkdownView);
+        if (view !== null && view.file !== null) {
+          this.lastActiveMarkdownFile = view.file;
+        }
+        if (this.insertBtn !== null) {
+          this.insertBtn.disabled = this.lastActiveMarkdownFile === null;
+        }
+      })
+    );
+
     this.render();
   }
 
@@ -774,18 +791,8 @@ export class RunnerView extends ItemView {
       void this.plugin.insertIntoCurrentNote(finalText, file);
     });
 
-    // Keep insertBtn disabled state in sync with active leaf (D-07, D-08)
-    this.registerEvent(
-      this.app.workspace.on('active-leaf-change', () => {
-        const view = this.app.workspace.getActiveViewOfType(MarkdownView);
-        if (view !== null && view.file !== null) {
-          this.lastActiveMarkdownFile = view.file;
-        }
-        if (this.insertBtn !== null) {
-          this.insertBtn.disabled = this.lastActiveMarkdownFile === null;
-        }
-      })
-    );
+    // Phase 30 WR-01: active-leaf-change listener moved to onOpen() so it is
+    // registered exactly once per view lifetime rather than on every render.
   }
 
   private renderError(errors: string[]): void {
