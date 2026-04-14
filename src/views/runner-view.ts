@@ -629,7 +629,10 @@ export class RunnerView extends ItemView {
     // BUG-01: capture any manual edit before advancing
     this.runner.syncManualEdit(this.previewTextarea?.value ?? '');
     this.runner.pickSnippet(snippet.id);
-    void this.autoSaveSession();
+    // Phase 30 WR-03: removed duplicate autoSaveSession here — the save at the
+    // end of this handler (after completeSnippet) supersedes this intermediate
+    // state. Two fire-and-forget writes could race on slow disks and produce a
+    // truncated session file.
 
     if (snippet.placeholders.length === 0) {
       // D-09: no-placeholder path — skip modal, append template directly
