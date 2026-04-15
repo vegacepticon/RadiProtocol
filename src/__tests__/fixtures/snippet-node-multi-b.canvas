@@ -1,0 +1,21 @@
+{
+  "nodes": [
+    {
+      "id": "s-prefix",
+      "type": "text",
+      "text": "a/b/sub",
+      "x": 0, "y": 0, "width": 200, "height": 60,
+      "radiprotocol_nodeType": "snippet",
+      "radiprotocol_subfolderPath": "a/b/sub"
+    },
+    {
+      "id": "s-root",
+      "type": "text",
+      "text": "root-snippet",
+      "x": 0, "y": 120, "width": 200, "height": 60,
+      "radiprotocol_nodeType": "snippet",
+      "radiprotocol_subfolderPath": ""
+    }
+  ],
+  "edges": []
+}
