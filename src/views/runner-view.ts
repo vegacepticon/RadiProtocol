@@ -657,7 +657,7 @@ export class RunnerView extends ItemView {
   private async handleSnippetPickerSelection(snippet: SnippetFile): Promise<void> {
     // BUG-01: capture any manual edit before advancing
     this.runner.syncManualEdit(this.previewTextarea?.value ?? '');
-    this.runner.pickSnippet(snippet.id);
+    this.runner.pickSnippet(snippet.id ?? snippet.name);
     // Phase 30 WR-03: removed duplicate autoSaveSession here — the save at the
     // end of this handler (after completeSnippet) supersedes this intermediate
     // state. Two fire-and-forget writes could race on slow disks and produce a

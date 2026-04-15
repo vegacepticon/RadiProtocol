@@ -28,6 +28,8 @@ describe('SnippetPlaceholder interface (SNIP-02, D-16)', () => {
 
 describe('renderSnippet (SNIP-02)', () => {
   const snippet: SnippetFile = {
+    kind: 'json',
+    path: '.radiprotocol/snippets/liver-report.json',
     id: 'liver-report',
     name: 'Liver report',
     template: 'Patient age: {{age}}. Side: {{laterality}}. Size: {{size}}.',
@@ -57,6 +59,8 @@ describe('renderSnippet (SNIP-02)', () => {
 describe('renderSnippet multi-choice (SNIP-02)', () => {
   it('joins multi-choice values with joinSeparator', () => {
     const s: SnippetFile = {
+      kind: 'json',
+      path: '.radiprotocol/snippets/findings.json',
       id: 'findings', name: 'Findings', template: 'Findings: {{f}}.',
       placeholders: [{ id: 'f', label: 'Findings', type: 'multi-choice', joinSeparator: ' and ' }],
     };

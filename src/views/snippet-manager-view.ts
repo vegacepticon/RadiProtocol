@@ -176,7 +176,7 @@ export class SnippetManagerView extends ItemView {
     this.registerDomEvent(nameInput, 'input', () => {
       draft.name = nameInput.value;
       // Update list row label in real time (D-08 copywriting)
-      const row = this.listPanel.querySelector(`[data-snippet-id="${draft.id}"]`) as HTMLElement | null;
+      const row = this.listPanel.querySelector(`[data-snippet-id="${(draft.id ?? draft.name)}"]`) as HTMLElement | null;
       if (row) {
         row.textContent = nameInput.value || 'Untitled';
       }
@@ -626,8 +626,11 @@ export class SnippetManagerView extends ItemView {
 
   private async handleNewSnippet(): Promise<void> {
     // D-03: create unsaved draft, add to top of list, select it
+    const newId = crypto.randomUUID();
     const newSnippet: SnippetFile = {
-      id: crypto.randomUUID(),
+      kind: 'json',
+      path: `${this.plugin.settings.snippetFolderPath}/${newId}.json`,
+      id: newId,
       name: 'Untitled',
       template: '',
       placeholders: [],
@@ -647,18 +650,18 @@ export class SnippetManagerView extends ItemView {
     saveBtn.disabled = true;
     try {
       // Derive id from name so canvas files can reference snippets by human-readable slug
-      const oldId = draft.id;
+      const oldId = (draft.id ?? draft.name);
       draft.id = slugifyLabel(draft.name) || oldId;
 
       // If the id changed (e.g. was a UUID on first save), delete the old file
-      if (oldId !== draft.id) {
+      if (oldId !== (draft.id ?? draft.name)) {
         await this.plugin.snippetService.delete(oldId);
       }
 
       await this.plugin.snippetService.save(draft);
 
       // Sync local list — update existing or add if not present
-      const idx = this.snippets.findIndex(s => s.id === draft.id);
+      const idx = this.snippets.findIndex(s => s.id === (draft.id ?? draft.name));
       if (idx !== -1) {
         this.snippets[idx] = draft;
       } else {
@@ -676,10 +679,10 @@ export class SnippetManagerView extends ItemView {
 
   private async handleDelete(draft: SnippetFile): Promise<void> {
     try {
-      await this.plugin.snippetService.delete(draft.id);
+      await this.plugin.snippetService.delete((draft.id ?? draft.name));
 
       // Remove from local list
-      const idx = this.snippets.findIndex(s => s.id === draft.id);
+      const idx = this.snippets.findIndex(s => s.id === (draft.id ?? draft.name));
       if (idx !== -1) {
         this.snippets.splice(idx, 1);
       }
@@ -698,12 +701,12 @@ export class SnippetManagerView extends ItemView {
     // Auto-saving them here would bypass the id-from-name slug logic in handleSave
     // and create an orphaned UUID-keyed file. Skip silently; the in-memory order
     // is already correct and will be persisted when the user clicks "Save snippet".
-    const isNewDraft = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(draft.id);
+    const isNewDraft = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test((draft.id ?? draft.name));
     if (isNewDraft) return;
     try {
       await this.plugin.snippetService.save(draft);
       // Sync this.snippets so list panel reflects new order if user switches snippet
-      const idx = this.snippets.findIndex(s => s.id === draft.id);
+      const idx = this.snippets.findIndex(s => s.id === (draft.id ?? draft.name));
       if (idx !== -1) this.snippets[idx] = draft;
       new Notice('Snippet saved.');
     } catch {

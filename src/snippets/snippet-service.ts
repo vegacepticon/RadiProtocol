@@ -140,7 +140,7 @@ export class SnippetService {
   async save(snippet: SnippetFile): Promise<void> {
     // Sanitize: strip control characters from all string fields to prevent JSON injection (T-5-01)
     const clean = this.sanitize(snippet);
-    const path = this.filePath(clean.id);
+    const path = this.filePath(clean.id ?? clean.name);
     const payload = JSON.stringify(clean, null, 2);
 
     await this.mutex.runExclusive(path, async () => {
