@@ -260,12 +260,20 @@ export class CanvasParser {
       }
       case 'snippet': {
         const rawPath = props['radiprotocol_subfolderPath'];
+        const rawLabel = props['radiprotocol_snippetLabel'];
+        const rawSep = props['radiprotocol_snippetSeparator'];
         const node: SnippetNode = {
           ...base,
           kind: 'snippet',
           // WR-02: treat JSON null and empty string identically to undefined — all mean "root"
           subfolderPath: (typeof rawPath === 'string' && rawPath !== '')
             ? rawPath
+            : undefined,
+          // Phase 31 D-01: empty string normalised to undefined (mirror WR-02 pattern)
+          snippetLabel: (typeof rawLabel === 'string' && rawLabel !== '') ? rawLabel : undefined,
+          // Phase 31 D-04: strict enum normalisation (mirror radiprotocol_separator pattern)
+          radiprotocol_snippetSeparator: rawSep === 'space' ? 'space'
+            : rawSep === 'newline' ? 'newline'
             : undefined,
         };
         return node;

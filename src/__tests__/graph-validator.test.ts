@@ -40,7 +40,7 @@ describe('GraphValidator', () => {
       const validator = new GraphValidator();
       const errors = validator.validate(graph);
       expect(errors.length).toBeGreaterThan(0);
-      expect(errors.some(e => e.toLowerCase().includes('q1') || e.toLowerCase().includes('answer') || e.toLowerCase().includes('dead'))).toBe(true);
+      expect(errors.some(e => e.includes('has no outgoing branches'))).toBe(true);
     });
 
     it('detects unintentional cycle not through loop-end node', () => {
@@ -150,6 +150,57 @@ describe('GraphValidator', () => {
       const errors = validator.validate(graph);
       expect(errors).toHaveLength(0);
     });
+  });
+});
+
+describe('GraphValidator — Phase 31: mixed and snippet-only question branches', () => {
+  it('allows question with outgoing edges only to snippet nodes (D-07)', () => {
+    const json = JSON.stringify({
+      nodes: [
+        { id: 'n-start', type: 'text', text: 'S', x: 0, y: 0, width: 100, height: 60,
+          radiprotocol_nodeType: 'start' },
+        { id: 'n-q1', type: 'text', text: 'Q1', x: 0, y: 120, width: 100, height: 60,
+          radiprotocol_nodeType: 'question', radiprotocol_questionText: 'Pick template' },
+        { id: 'n-sn1', type: 'text', text: 'Snippet', x: 0, y: 240, width: 100, height: 60,
+          radiprotocol_nodeType: 'snippet' },
+      ],
+      edges: [
+        { id: 'e1', fromNode: 'n-start', toNode: 'n-q1' },
+        { id: 'e2', fromNode: 'n-q1', toNode: 'n-sn1' },
+      ],
+    });
+    const parser = new CanvasParser();
+    const result = parser.parse(json, 'p31-snippet-only.canvas');
+    expect(result.success).toBe(true);
+    if (!result.success) return;
+    const errors = new GraphValidator().validate(result.graph);
+    expect(errors).toEqual([]);
+  });
+
+  it('allows question with mixed outgoing edges to answer + snippet (D-06)', () => {
+    const json = JSON.stringify({
+      nodes: [
+        { id: 'n-start', type: 'text', text: 'S', x: 0, y: 0, width: 100, height: 60,
+          radiprotocol_nodeType: 'start' },
+        { id: 'n-q1', type: 'text', text: 'Q1', x: 0, y: 120, width: 100, height: 60,
+          radiprotocol_nodeType: 'question', radiprotocol_questionText: 'Q1' },
+        { id: 'n-a1', type: 'text', text: 'A1', x: 0, y: 240, width: 100, height: 60,
+          radiprotocol_nodeType: 'answer', radiprotocol_answerText: 'yes' },
+        { id: 'n-sn1', type: 'text', text: 'Snippet', x: 150, y: 240, width: 100, height: 60,
+          radiprotocol_nodeType: 'snippet' },
+      ],
+      edges: [
+        { id: 'e1', fromNode: 'n-start', toNode: 'n-q1' },
+        { id: 'e2', fromNode: 'n-q1', toNode: 'n-a1' },
+        { id: 'e3', fromNode: 'n-q1', toNode: 'n-sn1' },
+      ],
+    });
+    const parser = new CanvasParser();
+    const result = parser.parse(json, 'p31-mixed.canvas');
+    expect(result.success).toBe(true);
+    if (!result.success) return;
+    const errors = new GraphValidator().validate(result.graph);
+    expect(errors).toEqual([]);
   });
 });
 

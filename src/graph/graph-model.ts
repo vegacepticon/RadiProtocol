@@ -67,6 +67,10 @@ export interface LoopEndNode extends RPNodeBase {
 export interface SnippetNode extends RPNodeBase {
   kind: 'snippet';
   subfolderPath?: string;  // отсутствие = корень .radiprotocol/snippets (D-02, D-03)
+  /** Phase 31 D-01: optional label shown on branch-list button when snippet node is reached as a variant. Fallback "📁 Snippet". */
+  snippetLabel?: string;
+  /** Phase 31 D-04: per-node separator override; applies to both branch-entered and auto-advanced snippet pickers. */
+  radiprotocol_snippetSeparator?: 'newline' | 'space';
 }
 
 /**

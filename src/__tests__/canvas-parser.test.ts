@@ -90,3 +90,80 @@ describe('CanvasParser — snippet node (Phase 29)', () => {
     expect((node as any).subfolderPath).toBeUndefined();
   });
 });
+
+describe('CanvasParser — snippet node extra fields (Phase 31)', () => {
+  function buildSnippetCanvas(extraProps: Record<string, unknown>): string {
+    return JSON.stringify({
+      nodes: [
+        {
+          id: 'n-start',
+          type: 'text',
+          text: 'Start',
+          x: 0,
+          y: 0,
+          width: 100,
+          height: 60,
+          radiprotocol_nodeType: 'start',
+        },
+        {
+          id: 'n-snippet1',
+          type: 'text',
+          text: 'Snippet',
+          x: 200,
+          y: 0,
+          width: 100,
+          height: 60,
+          radiprotocol_nodeType: 'snippet',
+          ...extraProps,
+        },
+      ],
+      edges: [{ id: 'e1', fromNode: 'n-start', toNode: 'n-snippet1' }],
+    });
+  }
+
+  function parseSnippet(extraProps: Record<string, unknown>) {
+    const parser = new CanvasParser();
+    const result = parser.parse(buildSnippetCanvas(extraProps), 'phase31-snippet.canvas');
+    if (!result.success) throw new Error(result.error);
+    const node = result.graph.nodes.get('n-snippet1');
+    expect(node).toBeDefined();
+    expect(node?.kind).toBe('snippet');
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    return node as any;
+  }
+
+  it('parses non-empty radiprotocol_snippetLabel into node.snippetLabel', () => {
+    const node = parseSnippet({ radiprotocol_snippetLabel: 'Adrenal templates' });
+    expect(node.snippetLabel).toBe('Adrenal templates');
+  });
+
+  it('normalises empty-string radiprotocol_snippetLabel to undefined', () => {
+    const node = parseSnippet({ radiprotocol_snippetLabel: '' });
+    expect(node.snippetLabel).toBeUndefined();
+  });
+
+  it('returns undefined snippetLabel when radiprotocol_snippetLabel is absent', () => {
+    const node = parseSnippet({});
+    expect(node.snippetLabel).toBeUndefined();
+  });
+
+  it('parses radiprotocol_snippetSeparator="space" as "space"', () => {
+    const node = parseSnippet({ radiprotocol_snippetSeparator: 'space' });
+    expect(node.radiprotocol_snippetSeparator).toBe('space');
+  });
+
+  it('parses radiprotocol_snippetSeparator="newline" as "newline"', () => {
+    const node = parseSnippet({ radiprotocol_snippetSeparator: 'newline' });
+    expect(node.radiprotocol_snippetSeparator).toBe('newline');
+  });
+
+  it('normalises invalid enum radiprotocol_snippetSeparator to undefined', () => {
+    const node = parseSnippet({ radiprotocol_snippetSeparator: 'garbage' });
+    expect(node.radiprotocol_snippetSeparator).toBeUndefined();
+  });
+
+  it('returns undefined radiprotocol_snippetSeparator when absent', () => {
+    const node = parseSnippet({});
+    expect(node.radiprotocol_snippetSeparator).toBeUndefined();
+  });
+});

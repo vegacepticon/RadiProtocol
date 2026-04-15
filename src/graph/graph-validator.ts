@@ -63,8 +63,8 @@ export class GraphValidator {
         const outgoing = graph.adjacency.get(id);
         if (!outgoing || outgoing.length === 0) {
           errors.push(
-            `Question "${node.questionText || id}" has no answers. ` +
-            'Add at least one answer node connected from this question.'
+            `Question "${node.questionText || id}" has no outgoing branches. ` +
+            'Add at least one answer or snippet node connected from this question.'
           );
         }
       }
