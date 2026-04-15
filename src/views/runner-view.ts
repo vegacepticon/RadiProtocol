@@ -5,7 +5,7 @@ import { ProtocolRunner } from '../runner/protocol-runner';
 import { GraphValidator } from '../graph/graph-validator';
 import type { ProtocolGraph, AnswerNode, SnippetNode } from '../graph/graph-model';
 import { SnippetFillInModal } from './snippet-fill-in-modal';
-import type { SnippetFile } from '../snippets/snippet-model';
+import type { Snippet, SnippetFile } from '../snippets/snippet-model';
 import { ResumeSessionModal } from './resume-session-modal';
 import type { PersistedSession } from '../sessions/session-model';
 import { validateSessionNodeIds } from '../sessions/session-service';
@@ -660,14 +660,28 @@ export class RunnerView extends ItemView {
    *  - If snippet has zero placeholders → completeSnippet(template) directly (D-09).
    *  - Else open SnippetFillInModal; on resolve → completeSnippet(rendered); on cancel → completeSnippet('') (D-14).
    */
-  private async handleSnippetPickerSelection(snippet: SnippetFile): Promise<void> {
+  private async handleSnippetPickerSelection(snippet: Snippet): Promise<void> {
     // BUG-01: capture any manual edit before advancing
     this.runner.syncManualEdit(this.previewTextarea?.value ?? '');
-    this.runner.pickSnippet(snippet.id ?? snippet.name);
+    // Phase 35: MD snippets have no `id`; use `path` for identity. JSON keeps
+    // legacy `id ?? name` fallback to preserve Phase 30 behavior.
+    const pickId = snippet.kind === 'md' ? snippet.path : (snippet.id ?? snippet.name);
+    this.runner.pickSnippet(pickId);
     // Phase 30 WR-03: removed duplicate autoSaveSession here — the save at the
     // end of this handler (after completeSnippet) supersedes this intermediate
     // state. Two fire-and-forget writes could race on slow disks and produce a
     // truncated session file.
+
+    // Phase 35 (MD-02, D-02, D-03, D-04): MD snippets insert verbatim, no modal.
+    // MUST be checked BEFORE JSON-only fields (placeholders/template).
+    if (snippet.kind === 'md') {
+      this.runner.completeSnippet(snippet.content);
+      void this.autoSaveSession();
+      this.snippetPickerPath = [];
+      this.snippetPickerNodeId = null;
+      this.render();
+      return;
+    }
 
     if (snippet.placeholders.length === 0) {
       // D-09: no-placeholder path — skip modal, append template directly
