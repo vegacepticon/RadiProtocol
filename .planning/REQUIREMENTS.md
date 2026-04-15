@@ -70,7 +70,7 @@
 - [ ] **MD-02**: Выбор `.md` сниппета в runner вставляет содержимое файла as-is в накапливаемый текст — без запуска fill-in модалки
 - [ ] **MD-03**: `.md` сниппеты корректно обрабатываются в `awaiting-snippet-pick` state (drill-down по папкам)
 - [ ] **MD-04**: `.md` сниппеты корректно участвуют в mixed answer+snippet branching (Phase 31 flow)
-- [ ] **MD-05**: SnippetService различает тип по расширению файла и возвращает правильную модель (JSON-snippet vs MD-snippet) из listFolder/load методов
+- [x] **MD-05**: SnippetService различает тип по расширению файла и возвращает правильную модель (JSON-snippet vs MD-snippet) из listFolder/load методов
 
 ---
 
@@ -129,6 +129,6 @@
 | MD-02 | Phase 35 | Pending |
 | MD-03 | Phase 35 | Pending |
 | MD-04 | Phase 35 | Pending |
-| MD-05 | Phase 32 | Pending |
+| MD-05 | Phase 32 | Complete |
 
 **Coverage:** 34/34 requirements mapped ✓
