@@ -60,7 +60,7 @@
 
 ### Delete
 
-- [ ] **DEL-01**: Удаление сниппета через context menu / кнопку в дереве физически перемещает файл в Obsidian trash через `vault.trash()`
+- [x] **DEL-01**: Удаление сниппета через context menu / кнопку в дереве физически перемещает файл в Obsidian trash через `vault.trash()`
 - [ ] **DEL-02**: Удаление требует подтверждения через confirm-модалку (показывает имя сниппета / папки)
 - [ ] **DEL-03**: После удаления сниппет не отображается ни в дереве, ни в Protocol Runner snippet picker (фиксит рассинхрон)
 
@@ -122,7 +122,7 @@
 | SYNC-01 | Phase 33 | Pending |
 | SYNC-02 | Phase 33 | Pending |
 | SYNC-03 | Phase 33 | Pending |
-| DEL-01 | Phase 32 | Pending |
+| DEL-01 | Phase 32 | Complete |
 | DEL-02 | Phase 33 | Pending |
 | DEL-03 | Phase 33 | Pending |
 | MD-01 | Phase 35 | Pending |
