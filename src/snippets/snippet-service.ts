@@ -2,7 +2,7 @@
 // Receives App and settings as constructor parameters — no direct Obsidian imports (NFR-01)
 import type { App, TFile } from 'obsidian';
 import type { RadiProtocolSettings } from '../settings';
-import type { SnippetFile } from './snippet-model';
+import type { Snippet, JsonSnippet, MdSnippet, SnippetFile } from './snippet-model';
 import { WriteMutex } from '../utils/write-mutex';
 import { ensureFolderPath } from '../utils/vault-utils';
 
@@ -23,6 +23,40 @@ export class SnippetService {
 
   private filePath(id: string): string {
     return `${this.settings.snippetFolderPath}/${id}.json`;
+  }
+
+  /**
+   * Phase 32 (D-10): Pre-I/O path-safety gate. Normalises and validates that
+   * `path` is inside `this.settings.snippetFolderPath`. Returns the normalised
+   * path on success, or null on rejection. Callers MUST return a safe
+   * empty/null result when this returns null.
+   */
+  private assertInsideRoot(path: string): string | null {
+    const root = this.settings.snippetFolderPath;
+    const stripped = path.replace(/^\/+/, '');
+    const rawSegments = stripped.split('/');
+    const hasTraversal = rawSegments.some((s) => s === '..' || s === '.');
+    const isAbsolute = path.startsWith('/');
+    const normalized = rawSegments.filter((s) => s !== '').join('/');
+    const insideRoot =
+      !hasTraversal &&
+      !isAbsolute &&
+      (normalized === root || normalized.startsWith(root + '/'));
+    if (!insideRoot) {
+      console.error('[RadiProtocol] snippet-service rejected unsafe path:', path);
+      return null;
+    }
+    return normalized;
+  }
+
+  /**
+   * Phase 32: basename of a vault-relative path with its extension stripped.
+   * Used to derive snippet `name` when loading/listing.
+   */
+  private basenameNoExt(path: string): string {
+    const base = path.slice(path.lastIndexOf('/') + 1);
+    const dot = base.lastIndexOf('.');
+    return dot > 0 ? base.slice(0, dot) : base;
   }
 
   /** List all snippet files in the configured folder. Returns [] if folder is missing or empty. */
@@ -61,28 +95,10 @@ export class SnippetService {
    */
   async listFolder(
     folderPath: string,
-  ): Promise<{ folders: string[]; snippets: SnippetFile[] }> {
-    const root = this.settings.snippetFolderPath;
-
-    // D-20 / T-30-01: Enforce snippet-root containment BEFORE any disk I/O.
-    // Reject any path that contains traversal segments, is absolute, or is
-    // not exactly root or a child of `root + '/'`. Sibling-prefix matches
-    // (e.g. `.radiprotocol/snippets-evil`) are rejected by the trailing-slash
-    // requirement on the startsWith check.
-    const stripped = folderPath.replace(/^\/+/, '');
-    const rawSegments = stripped.split('/');
-    const hasTraversal = rawSegments.some((s) => s === '..' || s === '.');
-    const isAbsolute = folderPath.startsWith('/');
-    const normalized = rawSegments.filter((s) => s !== '').join('/');
-
-    const insideRoot =
-      !hasTraversal &&
-      !isAbsolute &&
-      (normalized === root || normalized.startsWith(root + '/'));
-    if (!insideRoot) {
-      console.error('[RadiProtocol] listFolder rejected unsafe path:', folderPath);
-      return { folders: [], snippets: [] };
-    }
+  ): Promise<{ folders: string[]; snippets: Snippet[] }> {
+    // Phase 32 (D-10): path-safety gate via assertInsideRoot helper.
+    const normalized = this.assertInsideRoot(folderPath);
+    if (normalized === null) return { folders: [], snippets: [] };
 
     const exists = await this.app.vault.adapter.exists(normalized);
     if (!exists) return { folders: [], snippets: [] };
@@ -102,17 +118,39 @@ export class SnippetService {
     }
     folders.sort((a, b) => a.localeCompare(b));
 
-    // Parse direct-child .json files; skip corrupt silently (mirrors list()).
-    const snippets: SnippetFile[] = [];
+    // Phase 32 (D-01, D-02): parse .json as JsonSnippet, read .md as MdSnippet.
+    // basename is authoritative for `name` (D-02); corrupt files skipped silently.
+    const snippets: Snippet[] = [];
     for (const filePath of listing.files) {
-      if (!filePath.endsWith('.json')) continue;
-      try {
-        const raw = await this.app.vault.adapter.read(filePath);
-        const parsed = JSON.parse(raw) as SnippetFile;
-        snippets.push(parsed);
-      } catch {
-        // Corrupt file — skip silently.
+      const basename = this.basenameNoExt(filePath);
+      if (filePath.endsWith('.json')) {
+        try {
+          const raw = await this.app.vault.adapter.read(filePath);
+          const parsed = JSON.parse(raw) as Partial<JsonSnippet>;
+          snippets.push({
+            kind: 'json',
+            path: filePath,
+            name: parsed.name ?? basename,
+            template: parsed.template ?? '',
+            placeholders: parsed.placeholders ?? [],
+          });
+        } catch {
+          // Corrupt file — skip silently.
+        }
+      } else if (filePath.endsWith('.md')) {
+        try {
+          const raw = await this.app.vault.adapter.read(filePath);
+          snippets.push({
+            kind: 'md',
+            path: filePath,
+            name: basename,
+            content: raw,
+          });
+        } catch {
+          // Unreadable — skip silently.
+        }
       }
+      // Other extensions: skip.
     }
     snippets.sort((a, b) => a.name.localeCompare(b.name));
 

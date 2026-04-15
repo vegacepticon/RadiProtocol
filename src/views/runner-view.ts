@@ -620,14 +620,20 @@ export class RunnerView extends ItemView {
         });
       }
 
-      // Then snippets
+      // Then snippets.
+      // Phase 32: listing.snippets is now `Snippet[]` (JsonSnippet | MdSnippet).
+      // Full MD handling lands in Phase 35; for now the runner picker only
+      // surfaces JSON snippets — MD files are skipped silently. This keeps the
+      // existing handleSnippetPickerSelection(JsonSnippet) contract intact.
       for (const snippet of listing.snippets) {
+        if (snippet.kind !== 'json') continue;
+        const jsonSnippet = snippet;
         const row = list.createEl('button', {
           cls: 'rp-snippet-item-row',
-          text: snippet.name,
+          text: jsonSnippet.name,
         });
         this.registerDomEvent(row, 'click', () => {
-          void this.handleSnippetPickerSelection(snippet);
+          void this.handleSnippetPickerSelection(jsonSnippet);
         });
       }
     }
