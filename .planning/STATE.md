@@ -1,34 +1,34 @@
 ---
 gsd_state_version: 1.0
-milestone: v1.0
-milestone_name: milestone
+milestone: v1.5
+milestone_name: Snippet Editor Refactoring
 status: executing
-stopped_at: Completed 33-03-PLAN.md
-last_updated: "2026-04-15T11:39:53.209Z"
+stopped_at: Completed Phase 34 (5/5 plans, UAT approved)
+last_updated: "2026-04-15T16:16:00.000Z"
 last_activity: 2026-04-15
 progress:
   total_phases: 4
-  completed_phases: 1
-  total_plans: 10
-  completed_plans: 9
-  percent: 90
+  completed_phases: 3
+  total_plans: 16
+  completed_plans: 16
+  percent: 75
 ---
 
 # RadiProtocol — Project State
 
 **Updated:** 2026-04-15
 **Milestone:** v1.5 — Snippet Editor Refactoring
-**Status:** Ready to execute
-**Last session:** 2026-04-15T11:25:24.334Z
-**Stopped at:** Completed 33-03-PLAN.md
+**Status:** Phase 34 complete — ready for Phase 35
+**Last session:** 2026-04-15T16:16:00.000Z
+**Stopped at:** Completed Phase 34 (all 6 plans, UAT approved by Роман)
 
 ---
 
 ## Current Position
 
-Phase: 33 (tree-ui-modal-create-edit-folder-operations-vault-watcher) — EXECUTING
-Plan: 5 of 5
-Status: Ready to execute
+Phase: 34 (drag-and-drop-context-menu-rename-move-with-canvas-reference-updates) — **COMPLETE**
+Plan: 6 of 6 (Plans 34-00..34-05 all green, UAT signed 2026-04-15)
+Next: Phase 35 — Markdown Snippets in Protocol Runner
 Last activity: 2026-04-15
 
 ---
@@ -38,13 +38,13 @@ Last activity: 2026-04-15
 See: `.planning/PROJECT.md` (updated 2026-04-15)
 
 **Core value:** A radiologist can generate a structured, accurate protocol in seconds by answering a guided algorithm — without writing a single line of code.
-**Current focus:** Phase 33 — tree-ui-modal-create-edit-folder-operations-vault-watcher
+**Current focus:** Phase 35 — Markdown Snippets in Protocol Runner
 
 ### v1.5 Phases
 
-- Phase 32: SnippetService Refactor — MD Support, Trash Delete, Canvas Reference Sync
-- Phase 33: Tree UI, Modal Create/Edit, Folder Operations, Vault Watcher
-- Phase 34: Drag-and-Drop, Context Menu, Rename, Move with Canvas Reference Updates
+- Phase 32: SnippetService Refactor — MD Support, Trash Delete, Canvas Reference Sync ✅
+- Phase 33: Tree UI, Modal Create/Edit, Folder Operations, Vault Watcher ✅
+- Phase 34: Drag-and-Drop, Context Menu, Rename, Move with Canvas Reference Updates ✅
 - Phase 35: Markdown Snippets in Protocol Runner
 
 ---
@@ -69,6 +69,11 @@ See: `.planning/PROJECT.md` (updated 2026-04-15)
 7. `console.log` forbidden in production — use `console.debug()` during dev
 8. CSS files are append-only per phase — edit only the relevant feature file in `src/styles/`; never delete rules from earlier phases
 9. Shared files (main.ts, editor-panel-view.ts, snippet-manager-view.ts) — only modify code relevant to the current phase; never remove code you didn't add
+10. Real-DOM vs mock-DOM parent lookup: always use `parentElement` first, `.parent` mock fallback second — mock-only lookup paths silently break in real Obsidian (Phase 34 post-UAT fix 77b62c1)
+
+### Known Follow-ups (non-blocking)
+
+- **Node Editor panel stale `subfolderPath` display** after folder move/rename — see `.planning/phases/34-.../34-VERIFICATION.md` § Follow-up work. Cosmetic refresh gap in adjacent component, not a Phase 34 regression.
 
 ---
 

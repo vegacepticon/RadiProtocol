@@ -11,7 +11,7 @@
 - ✅ **v1.2 Runner UX & Bug Fixes** — Phases 12–19 (shipped 2026-04-10)
 - ✅ **v1.3 Interactive Placeholder Editor** — Phase 27 (shipped 2026-04-12)
 - ✅ **v1.4 Snippets and Colors, Colors and Snippets** — Phases 28–31 (shipped 2026-04-15)
-- 🔄 **v1.5 Snippet Editor Refactoring** — Phases 32–35 (planning)
+- 🔄 **v1.5 Snippet Editor Refactoring** — Phases 32–35 (in progress — 3/4 phases complete)
 
 ---
 
@@ -70,11 +70,11 @@ Full details: `.planning/milestones/v1.4-ROADMAP.md`
 </details>
 
 <details open>
-<summary>🔄 v1.5 Snippet Editor Refactoring (Phases 32–35) — PLANNING</summary>
+<summary>🔄 v1.5 Snippet Editor Refactoring (Phases 32–35) — IN PROGRESS</summary>
 
-- [ ] **Phase 32: SnippetService Refactor — MD Support, Trash Delete, Canvas Reference Sync** — service-layer foundation for the tree UI
-- [ ] **Phase 33: Tree UI, Modal Create/Edit, Folder Operations, Vault Watcher** — replaces master-detail layout with folder tree + modal editor
-- [ ] **Phase 34: Drag-and-Drop, Context Menu, Rename, Move with Canvas Reference Updates** — full move/rename flow with automatic Canvas link sync
+- [x] **Phase 32: SnippetService Refactor — MD Support, Trash Delete, Canvas Reference Sync** — completed 2026-04-15
+- [x] **Phase 33: Tree UI, Modal Create/Edit, Folder Operations, Vault Watcher** — completed 2026-04-15
+- [x] **Phase 34: Drag-and-Drop, Context Menu, Rename, Move with Canvas Reference Updates** — completed 2026-04-15 (UAT approved by Роман)
 - [ ] **Phase 35: Markdown Snippets in Protocol Runner** — `.md` files in picker, as-is insertion, mixed branching compatible
 
 ### Phase Details
@@ -115,17 +115,25 @@ Full details: `.planning/milestones/v1.4-ROADMAP.md`
   - [x] 33-05-PLAN.md — Full suite + build gates + human verification checkpoint (44-step UAT in a real Obsidian vault)
 **UI hint**: yes
 
-### Phase 34: Drag-and-Drop, Context Menu, Rename, Move with Canvas Reference Updates
+### Phase 34: Drag-and-Drop, Context Menu, Rename, Move with Canvas Reference Updates — COMPLETE
 **Goal**: Users can reorganize snippets and folders by dragging, via "Move to…" context menu, or via the modal folder field. Inline rename works via F2 and context menu. Every rename and move automatically rewrites the matching SnippetNode references in every Canvas in the vault.
 **Depends on**: Phase 33
-**Requirements**: MOVE-01, MOVE-02, MOVE-03, MOVE-04, MOVE-05, RENAME-01, RENAME-02, RENAME-03
+**Requirements**: MOVE-01, MOVE-02, MOVE-03, MOVE-04, MOVE-05, RENAME-01, RENAME-02, RENAME-03 — ALL MET
 **Success Criteria** (what must be TRUE):
-  1. Dragging a snippet file onto a folder in the tree moves it in the vault; dragging a folder onto another folder moves the whole subtree (MOVE-01, MOVE-02).
-  2. Context menu on a snippet or folder offers "Move to…" which opens a folder picker; the edit modal's "Папка" field moves the snippet on save (MOVE-03, MOVE-04).
-  3. Pressing F2 on a snippet or folder (or using context-menu "Rename") enters inline rename; pressing Enter commits, Escape cancels (RENAME-01, RENAME-02).
-  4. After any move or rename, all `.canvas` files in the vault that reference the affected SnippetNode(s) are updated so their `subfolderPath`/filename match the new location; opening one of those canvases in the runner resolves the snippet without error (MOVE-05, RENAME-03).
-  5. Moves and renames across nested subfolders preserve snippet content byte-for-byte and survive an Obsidian reload.
-**Plans**: TBD
+  1. Dragging a snippet file onto a folder in the tree moves it in the vault; dragging a folder onto another folder moves the whole subtree (MOVE-01, MOVE-02). ✅
+  2. Context menu on a snippet or folder offers "Move to…" which opens a folder picker; the edit modal's "Папка" field moves the snippet on save (MOVE-03, MOVE-04). ✅
+  3. Pressing F2 on a snippet or folder (or using context-menu "Rename") enters inline rename; pressing Enter commits, Escape cancels (RENAME-01, RENAME-02). ✅
+  4. After any move or rename, all `.canvas` files in the vault that reference the affected SnippetNode(s) are updated so their `subfolderPath`/filename match the new location; opening one of those canvases in the runner resolves the snippet without error (MOVE-05, RENAME-03). ✅
+  5. Moves and renames across nested subfolders preserve snippet content byte-for-byte and survive an Obsidian reload. ✅
+**Plans**: 6 plans (00..05)
+  - [x] 34-00-PLAN.md — SnippetService move/rename API + toCanvasKey helper
+  - [x] 34-01-PLAN.md — FolderPickerModal + «Переместить в…» context menu flow
+  - [x] 34-02-PLAN.md — HTML5 drag-and-drop lifecycle on snippet tree rows + CSS
+  - [x] 34-03-PLAN.md — F2 inline rename for files and folders
+  - [x] 34-04-PLAN.md — Atomic moveSnippet in modal move-on-save, remove canvas-sync placebo
+  - [x] 34-05-PLAN.md — Full gates + UAT checklist + human verify (UAT approved 2026-04-15 after post-UAT fixes 77b62c1, fd0d50d)
+**UAT:** Approved 2026-04-15 by Роман.
+**Follow-up (non-blocking):** Node Editor panel stale `subfolderPath` display after folder move/rename — cosmetic panel-refresh gap in adjacent Node Editor component, see `.planning/phases/34-.../34-VERIFICATION.md` § Follow-up work.
 **UI hint**: yes
 
 ### Phase 35: Markdown Snippets in Protocol Runner
@@ -156,9 +164,7 @@ Full details: `.planning/milestones/v1.4-ROADMAP.md`
 | 29. Snippet Node — Model, Editor, Validator | v1.4 | 3/3 | Complete | 2026-04-13 |
 | 30. Snippet Node — Runner Integration | v1.4 | 3/3 | Complete | 2026-04-14 |
 | 31. Mixed Answer + Snippet Branching at Question Nodes | v1.4 | 4/4 | Complete | 2026-04-15 |
-| 32. SnippetService Refactor — MD Support, Trash Delete, Canvas Reference Sync | v1.5 | 5/5 | Complete   | 2026-04-15 |
-| 33. Tree UI, Modal Create/Edit, Folder Operations, Vault Watcher | v1.5 | 5/5 | Complete   | 2026-04-15 |
-| 34. Drag-and-Drop, Context Menu, Rename, Move with Canvas Reference Updates | v1.5 | 0/0 | Not started | — |
+| 32. SnippetService Refactor — MD Support, Trash Delete, Canvas Reference Sync | v1.5 | 5/5 | Complete | 2026-04-15 |
+| 33. Tree UI, Modal Create/Edit, Folder Operations, Vault Watcher | v1.5 | 5/5 | Complete | 2026-04-15 |
+| 34. Drag-and-Drop, Context Menu, Rename, Move with Canvas Reference Updates | v1.5 | 6/6 | Complete | 2026-04-15 |
 | 35. Markdown Snippets in Protocol Runner | v1.5 | 0/0 | Not started | — |
-</content>
-</invoke>
