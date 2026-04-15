@@ -177,7 +177,18 @@ vi.mock('obsidian', () => {
     addSeparator(): this { return this; }
     showAtMouseEvent(_ev: unknown): void {}
   }
-  return { ItemView, WorkspaceLeaf, Notice, setIcon, Menu };
+  // Phase 34: SuggestModal stub — folder-picker-modal.ts imports it transitively
+  class SuggestModal<T> {
+    app: unknown;
+    constructor(app: unknown) { this.app = app; }
+    setPlaceholder(_p: string): void {}
+    getSuggestions(_q: string): T[] | Promise<T[]> { return []; }
+    renderSuggestion(_v: T, _el: unknown): void {}
+    onChooseSuggestion(_v: T, _ev: unknown): void {}
+    open(): void {}
+    close(): void {}
+  }
+  return { ItemView, WorkspaceLeaf, Notice, setIcon, Menu, SuggestModal };
 });
 
 // --- Mock SnippetEditorModal & ConfirmModal ------------------------------
