@@ -93,8 +93,8 @@ Full details: `.planning/milestones/v1.4-ROADMAP.md`
   - [x] 32-00-PLAN.md — snippet-model: Snippet = JsonSnippet | MdSnippet discriminated union
   - [x] 32-01-PLAN.md — SnippetService API refactor: listFolder / load / save / delete(path) / exists + assertInsideRoot + vault.trash
   - [x] 32-02-PLAN.md — canvas-ref-sync module: rewriteCanvasRefs(app, mapping) with prefix match + WriteMutex + best-effort
-  - [ ] 32-03-PLAN.md — Callsite updates (runner-view, snippet-fill-in-modal, snippet-manager-view) minimal build-fixing only
-  - [ ] 32-04-PLAN.md — Test suite: snippet-service extension routing / trash / path-safety + canvas-ref-sync fixtures
+  - [x] 32-03-PLAN.md — Callsite updates (runner-view, snippet-fill-in-modal, snippet-manager-view) minimal build-fixing only
+  - [x] 32-04-PLAN.md — Test suite: snippet-service extension routing / trash / path-safety + canvas-ref-sync fixtures
 **UI hint**: no
 
 ### Phase 33: Tree UI, Modal Create/Edit, Folder Operations, Vault Watcher
@@ -151,7 +151,7 @@ Full details: `.planning/milestones/v1.4-ROADMAP.md`
 | 29. Snippet Node — Model, Editor, Validator | v1.4 | 3/3 | Complete | 2026-04-13 |
 | 30. Snippet Node — Runner Integration | v1.4 | 3/3 | Complete | 2026-04-14 |
 | 31. Mixed Answer + Snippet Branching at Question Nodes | v1.4 | 4/4 | Complete | 2026-04-15 |
-| 32. SnippetService Refactor — MD Support, Trash Delete, Canvas Reference Sync | v1.5 | 3/5 | In Progress|  |
+| 32. SnippetService Refactor — MD Support, Trash Delete, Canvas Reference Sync | v1.5 | 5/5 | Complete   | 2026-04-15 |
 | 33. Tree UI, Modal Create/Edit, Folder Operations, Vault Watcher | v1.5 | 0/0 | Not started | — |
 | 34. Drag-and-Drop, Context Menu, Rename, Move with Canvas Reference Updates | v1.5 | 0/0 | Not started | — |
 | 35. Markdown Snippets in Protocol Runner | v1.5 | 0/0 | Not started | — |
