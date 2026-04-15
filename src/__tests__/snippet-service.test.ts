@@ -72,6 +72,7 @@ function makeVault(opts: MockVaultOptions = {}) {
 
 const settings = {
   snippetFolderPath: '.radiprotocol/snippets',
+  snippetTreeExpandedPaths: [] as string[],
   sessionFolderPath: '.radiprotocol/sessions',
   outputDestination: 'clipboard' as const,
   outputFolderPath: '',
@@ -638,4 +639,95 @@ describe('path-safety gate applies to every entry point (D-10)', () => {
       expect(vault.adapter.exists).toHaveBeenCalledTimes(0);
     });
   }
+});
+
+// ---------------------------------------------------------------------------
+// Phase 33 (D-17): folder operations
+// ---------------------------------------------------------------------------
+
+describe('createFolder (Phase 33 D-17)', () => {
+  it('creates the folder via ensureFolderPath inside the root', async () => {
+    const { vault, folderSet } = makeVault();
+    const svc = new SnippetService({ vault } as never, settings);
+    await svc.createFolder(`${ROOT}/new-folder`);
+    expect(folderSet.has(`${ROOT}/new-folder`)).toBe(true);
+    expect(vault.createFolder).toHaveBeenCalledTimes(1);
+  });
+
+  it('is idempotent — a second call does not throw', async () => {
+    const { vault } = makeVault();
+    const svc = new SnippetService({ vault } as never, settings);
+    await svc.createFolder(`${ROOT}/x`);
+    await expect(svc.createFolder(`${ROOT}/x`)).resolves.toBeUndefined();
+  });
+
+  it('rejects a path outside the root', async () => {
+    const { vault } = makeVault();
+    const svc = new SnippetService({ vault } as never, settings);
+    const errSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    await expect(svc.createFolder('../escape')).rejects.toThrow(/createFolder rejected/);
+    expect(vault.createFolder).toHaveBeenCalledTimes(0);
+    errSpy.mockRestore();
+  });
+});
+
+describe('deleteFolder (Phase 33 D-17)', () => {
+  it('trashes the folder via vault.trash(folder, false)', async () => {
+    const sub = `${ROOT}/sub`;
+    const { vault } = makeVault({
+      folders: [ROOT, sub],
+      abstractFiles: { [sub]: { path: sub } },
+    });
+    const svc = new SnippetService({ vault } as never, settings);
+    await svc.deleteFolder(sub);
+    expect(vault.trash).toHaveBeenCalledTimes(1);
+    expect(vault.trash.mock.calls[0]![1]).toBe(false);
+  });
+
+  it('is a no-op for unsafe paths', async () => {
+    const { vault } = makeVault();
+    const svc = new SnippetService({ vault } as never, settings);
+    const errSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    await svc.deleteFolder('../escape');
+    expect(vault.trash).toHaveBeenCalledTimes(0);
+    errSpy.mockRestore();
+  });
+
+  it('is a no-op when the folder does not exist', async () => {
+    const { vault } = makeVault();
+    const svc = new SnippetService({ vault } as never, settings);
+    await svc.deleteFolder(`${ROOT}/missing`);
+    expect(vault.trash).toHaveBeenCalledTimes(0);
+  });
+});
+
+describe('listFolderDescendants (Phase 33 D-15)', () => {
+  it('returns files, folders, and total', async () => {
+    const { vault } = makeVault({
+      files: {
+        [`${ROOT}/a/one.json`]: '{}',
+        [`${ROOT}/a/b/two.md`]: '',
+      },
+      folders: [ROOT, `${ROOT}/a`, `${ROOT}/a/b`],
+    });
+    const svc = new SnippetService({ vault } as never, settings);
+    const result = await svc.listFolderDescendants(`${ROOT}/a`);
+    expect(result.total).toBe(result.files.length + result.folders.length);
+    expect(result.files).toEqual(
+      expect.arrayContaining([
+        expect.stringMatching(/one\.json$/),
+        expect.stringMatching(/two\.md$/),
+      ]),
+    );
+    expect(result.folders).toEqual(expect.arrayContaining([`${ROOT}/a/b`]));
+  });
+
+  it('returns empty for unsafe path', async () => {
+    const { vault } = makeVault();
+    const svc = new SnippetService({ vault } as never, settings);
+    const errSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const result = await svc.listFolderDescendants('../escape');
+    expect(result).toEqual({ files: [], folders: [], total: 0 });
+    errSpy.mockRestore();
+  });
 });

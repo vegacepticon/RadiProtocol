@@ -9,6 +9,8 @@ export interface RadiProtocolSettings {
   maxLoopIterations: number;
   /** Vault-relative path for snippet JSON files (D-15, SNIP-08). Default: .radiprotocol/snippets */
   snippetFolderPath: string;
+  /** Phase 33 (D-17): Tree-view expanded-folder paths, persisted across sessions. */
+  snippetTreeExpandedPaths: string[];
   /** Vault-relative path for session JSON files (SESSION-01). Default: .radiprotocol/sessions */
   sessionFolderPath: string;
   /** Runner opens in sidebar panel or full editor tab (RUNTAB-01). Default: 'sidebar' */
@@ -24,6 +26,7 @@ export const DEFAULT_SETTINGS: RadiProtocolSettings = {
   outputFolderPath: 'RadiProtocol Output',
   maxLoopIterations: 50,
   snippetFolderPath: '.radiprotocol/snippets',
+  snippetTreeExpandedPaths: [],
   sessionFolderPath: '.radiprotocol/sessions',
   runnerViewMode: 'sidebar',
   protocolFolderPath: '',
