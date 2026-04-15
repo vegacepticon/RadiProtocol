@@ -156,10 +156,10 @@ export class SnippetEditorModal extends Modal {
     this.renderNameInput(contentEl);
 
     // Content region (chip editor or textarea)
+    // Phase 33 gap-fix: no separate «Содержимое» label above — the chip editor
+    // has its own Template/Placeholders sections, and Markdown mode uses a
+    // single textarea whose placeholder text is self-explanatory.
     this.contentRegionEl = contentEl.createDiv({ cls: 'radi-snippet-editor-content' });
-    const contentLabel = this.draftKind === 'json' ? 'Содержимое' : 'Содержимое (Markdown)';
-    const header = contentEl.createEl('label', { text: contentLabel });
-    header.addClass('radi-snippet-editor-content-label');
     this.renderContentRegion();
 
     // Save-error placeholder
@@ -299,9 +299,14 @@ export class SnippetEditorModal extends Modal {
 
     if (this.draftKind === 'json') {
       const jsonDraft = this.draft as JsonSnippet;
-      this.chipEditorHandle = mountChipEditor(this.contentRegionEl, jsonDraft, () => {
-        this.hasUnsavedChanges = true;
-      });
+      this.chipEditorHandle = mountChipEditor(
+        this.contentRegionEl,
+        jsonDraft,
+        () => {
+          this.hasUnsavedChanges = true;
+        },
+        { skipName: true },
+      );
     } else {
       const mdDraft = this.draft as MdSnippet;
       const ta = this.contentRegionEl.createEl('textarea') as HTMLTextAreaElement;

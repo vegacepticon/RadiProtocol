@@ -102,7 +102,7 @@ export class SnippetService {
           snippets.push({
             kind: 'json',
             path: filePath,
-            name: parsed.name ?? basename,
+            name: basename,
             template: parsed.template ?? '',
             placeholders: parsed.placeholders ?? [],
           });
@@ -147,7 +147,7 @@ export class SnippetService {
         return {
           kind: 'json',
           path: normalized,
-          name: parsed.name ?? basename,
+          name: basename,
           template: parsed.template ?? '',
           placeholders: parsed.placeholders ?? [],
         };

@@ -127,7 +127,10 @@ describe('listFolder (D-18..D-21, T-30-01)', () => {
     const result = await svc.listFolder(`${ROOT}/CT`);
 
     expect(result.folders).toEqual(['adrenal', 'kidney']);
-    expect(result.snippets.map((s) => s.name)).toEqual(['Apple', 'Zebra']);
+    // Phase 33 (D-02): basename is authoritative for `name` — JSON's inner
+    // `name` field is ignored at read time so external vault rename reflects
+    // in the tree immediately (SYNC-02).
+    expect(result.snippets.map((s) => s.name)).toEqual(['a', 'b']);
     expect(result.snippets.every((s) => s.kind === 'json')).toBe(true);
   });
 
@@ -155,7 +158,8 @@ describe('listFolder (D-18..D-21, T-30-01)', () => {
 
     const result = await svc.listFolder(`${ROOT}/CT`);
 
-    expect(result.snippets.map((s) => s.name)).toEqual(['Good']);
+    // Phase 33 (D-02): basename is authoritative — `name` comes from filename.
+    expect(result.snippets.map((s) => s.name)).toEqual(['good']);
   });
 
   it('rejects path with .. segments before any disk I/O', async () => {
@@ -229,7 +233,8 @@ describe('listFolder extension routing (MD-05)', () => {
     expect(snippets).toHaveLength(1);
     expect(snippets[0]!.kind).toBe('json');
     const s = snippets[0] as JsonSnippet;
-    expect(s.name).toBe('Alpha');
+    // Phase 33 (D-02): basename is authoritative for `name`.
+    expect(s.name).toBe('alpha');
     expect(s.template).toBe('hello {{x}}');
     expect(s.placeholders).toHaveLength(1);
     expect(s.path).toBe(p);
@@ -312,7 +317,8 @@ describe('load(path) routing (D-03)', () => {
 
     expect(snippet).not.toBeNull();
     expect(snippet!.kind).toBe('json');
-    expect((snippet as JsonSnippet).name).toBe('Alpha');
+    // Phase 33 (D-02): basename is authoritative — `a.json` → `a`.
+    expect((snippet as JsonSnippet).name).toBe('a');
     expect(snippet!.path).toBe(p);
   });
 

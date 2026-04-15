@@ -40,6 +40,15 @@ export interface ChipEditorHandle {
   destroy(): void;
 }
 
+export interface MountChipEditorOptions {
+  /**
+   * Phase 33 gap-fix: when mounted inside SnippetEditorModal the modal owns
+   * the name field («Имя»). Set true to skip the chip editor's own Name
+   * section so there's no duplicated input.
+   */
+  skipName?: boolean;
+}
+
 type ListenerTuple = {
   el: EventTarget;
   type: string;
@@ -60,9 +69,11 @@ export function mountChipEditor(
   container: HTMLElement,
   draft: JsonSnippet,
   onChange: () => void,
+  options: MountChipEditorOptions = {},
 ): ChipEditorHandle {
   container.empty();
   const listeners: ListenerTuple[] = [];
+  const skipName = options.skipName === true;
 
   // Local helper: track listeners for destroy()
   const on = <K extends keyof HTMLElementEventMap>(
@@ -79,18 +90,22 @@ export function mountChipEditor(
   };
 
   // --- Name section ---
-  const nameSection = container.createDiv({ cls: 'rp-snippet-form-section' });
-  const nameLabel = nameSection.createEl('label');
-  nameLabel.textContent = 'Name';
-  nameLabel.htmlFor = 'rp-snippet-name-input';
-  const nameInput = nameSection.createEl('input', { type: 'text' });
-  nameInput.id = 'rp-snippet-name-input';
-  nameInput.value = draft.name;
-  nameInput.placeholder = 'Snippet name';
-  on(nameInput, 'input', () => {
-    draft.name = nameInput.value;
-    onChange();
-  });
+  // Phase 33 gap-fix: skipped when mounted inside SnippetEditorModal (the modal
+  // owns the «Имя» field). Standalone callers still get the Name input.
+  if (!skipName) {
+    const nameSection = container.createDiv({ cls: 'rp-snippet-form-section' });
+    const nameLabel = nameSection.createEl('label');
+    nameLabel.textContent = 'Name';
+    nameLabel.htmlFor = 'rp-snippet-name-input';
+    const nameInput = nameSection.createEl('input', { type: 'text' });
+    nameInput.id = 'rp-snippet-name-input';
+    nameInput.value = draft.name;
+    nameInput.placeholder = 'Snippet name';
+    on(nameInput, 'input', () => {
+      draft.name = nameInput.value;
+      onChange();
+    });
+  }
 
   // --- Template section ---
   const templateSection = container.createDiv({ cls: 'rp-snippet-form-section' });
