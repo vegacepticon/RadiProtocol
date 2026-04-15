@@ -452,27 +452,55 @@ export class SnippetEditorModal extends Modal {
         return;
       }
 
-      // Phase 34 (MOVE-04 cleanup, D-03 / D-10): atomic move via service API.
-      // 1. Save any name/content changes to the OLD path first
-      //    (draftAtOldPath keeps existing path so service.save writes in place).
-      // 2. Then moveSnippet performs the atomic rename to the new folder.
-      // 3. No canvas-ref-sync — SnippetNode.subfolderPath is a folder-only
-      //    reference, so file moves are canvas-invisible (D-03 Phase 34).
+      // Phase 34 (MOVE-04 cleanup, D-03 / D-10): atomic move/rename via service API.
+      // 1. Save any content changes to the OLD path first.
+      // 2. If the folder changed, moveSnippet → atomic folder move.
+      // 3. If the basename also changed (or instead of folder), renameSnippet →
+      //    atomic in-folder rename. Post-UAT fix: previously moveSnippet was
+      //    called unconditionally, which silently dropped pure name changes
+      //    (basename delta with unchanged folder).
+      // 4. No canvas-ref-sync — SnippetNode.subfolderPath is a folder-only
+      //    reference, so file moves/renames are canvas-invisible (D-03 Phase 34).
       const draftAtOldPath: Snippet =
         this.draftKind === 'json'
           ? { ...(this.draft as JsonSnippet), path: oldPath }
           : { ...(this.draft as MdSnippet), path: oldPath };
       await this.plugin.snippetService.save(draftAtOldPath);
 
+      const oldFolder = dirname(oldPath);
       const newFolder = newPath.slice(0, newPath.lastIndexOf('/'));
-      const finalPath = await this.plugin.snippetService.moveSnippet(oldPath, newFolder);
+      const oldBasenameNoExt = oldPath
+        .slice(oldPath.lastIndexOf('/') + 1)
+        .replace(/\.(json|md)$/, '');
+      const newBasenameNoExt = newPath
+        .slice(newPath.lastIndexOf('/') + 1)
+        .replace(/\.(json|md)$/, '');
+
+      let currentPath = oldPath;
+      const folderChanged = newFolder !== oldFolder;
+      const basenameChanged = newBasenameNoExt !== oldBasenameNoExt;
+
+      if (folderChanged) {
+        currentPath = await this.plugin.snippetService.moveSnippet(currentPath, newFolder);
+      }
+      if (basenameChanged) {
+        currentPath = await this.plugin.snippetService.renameSnippet(currentPath, newBasenameNoExt);
+      }
 
       const finalDraft: Snippet =
         this.draftKind === 'json'
-          ? { ...(this.draft as JsonSnippet), path: finalPath }
-          : { ...(this.draft as MdSnippet), path: finalPath };
+          ? { ...(this.draft as JsonSnippet), path: currentPath }
+          : { ...(this.draft as MdSnippet), path: currentPath };
 
-      new Notice('Сниппет перемещён.');
+      // Phase 34 MOVE-04 regression guard: folder-only change still emits the
+      // exact string «Сниппет перемещён.» (asserted by the move-on-save test).
+      if (folderChanged && !basenameChanged) {
+        new Notice('Сниппет перемещён.');
+      } else if (basenameChanged && !folderChanged) {
+        new Notice('Сниппет переименован.');
+      } else {
+        new Notice('Сниппет перемещён и переименован.');
+      }
       this.safeResolve({ saved: true, snippet: finalDraft, movedFrom: oldPath });
       super.close();
     } catch (err) {
