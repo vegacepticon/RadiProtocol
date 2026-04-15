@@ -147,7 +147,7 @@ Full details: `.planning/milestones/v1.4-ROADMAP.md`
   4. A question node with mixed answer + snippet branches (Phase 31 flow) can route to a `.md` snippet branch; selecting it inserts content and follows any terminal/non-terminal edge from the snippet node (MD-04).
   5. Session save/resume correctly serializes and restores an in-progress protocol that has already inserted `.md` snippet content.
 **Plans**: 2 plans
-  - [ ] 35-01-PLAN.md — Wave 0: MD fixtures + failing test stubs (MD-01..MD-04, D-03, D-06, SC-05)
+  - [x] 35-01-PLAN.md — Wave 0: MD fixtures + failing test stubs (MD-01..MD-04, D-03, D-06, SC-05)
   - [ ] 35-02-PLAN.md — Wave 1: runner-view.ts расширение (Snippet union handler + MD prefix rendering) + human verify
 **UI hint**: yes
 
@@ -169,4 +169,4 @@ Full details: `.planning/milestones/v1.4-ROADMAP.md`
 | 32. SnippetService Refactor — MD Support, Trash Delete, Canvas Reference Sync | v1.5 | 5/5 | Complete | 2026-04-15 |
 | 33. Tree UI, Modal Create/Edit, Folder Operations, Vault Watcher | v1.5 | 5/5 | Complete | 2026-04-15 |
 | 34. Drag-and-Drop, Context Menu, Rename, Move with Canvas Reference Updates | v1.5 | 6/6 | Complete | 2026-04-15 |
-| 35. Markdown Snippets in Protocol Runner | v1.5 | 0/2 | Planned | — |
+| 35. Markdown Snippets in Protocol Runner | v1.5 | 1/2 | In Progress|  |

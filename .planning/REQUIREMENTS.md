@@ -66,10 +66,10 @@
 
 ### Markdown Snippet Support in Runner
 
-- [ ] **MD-01**: Protocol Runner snippet picker отображает `.md` файлы из папки сниппетов вместе с `.json`
-- [ ] **MD-02**: Выбор `.md` сниппета в runner вставляет содержимое файла as-is в накапливаемый текст — без запуска fill-in модалки
-- [ ] **MD-03**: `.md` сниппеты корректно обрабатываются в `awaiting-snippet-pick` state (drill-down по папкам)
-- [ ] **MD-04**: `.md` сниппеты корректно участвуют в mixed answer+snippet branching (Phase 31 flow)
+- [x] **MD-01**: Protocol Runner snippet picker отображает `.md` файлы из папки сниппетов вместе с `.json`
+- [x] **MD-02**: Выбор `.md` сниппета в runner вставляет содержимое файла as-is в накапливаемый текст — без запуска fill-in модалки
+- [x] **MD-03**: `.md` сниппеты корректно обрабатываются в `awaiting-snippet-pick` state (drill-down по папкам)
+- [x] **MD-04**: `.md` сниппеты корректно участвуют в mixed answer+snippet branching (Phase 31 flow)
 - [x] **MD-05**: SnippetService различает тип по расширению файла и возвращает правильную модель (JSON-snippet vs MD-snippet) из listFolder/load методов
 
 ---
@@ -125,10 +125,10 @@
 | DEL-01 | Phase 32 | Complete |
 | DEL-02 | Phase 33 | Complete |
 | DEL-03 | Phase 33 | Complete |
-| MD-01 | Phase 35 | Pending |
-| MD-02 | Phase 35 | Pending |
-| MD-03 | Phase 35 | Pending |
-| MD-04 | Phase 35 | Pending |
+| MD-01 | Phase 35 | Complete |
+| MD-02 | Phase 35 | Complete |
+| MD-03 | Phase 35 | Complete |
+| MD-04 | Phase 35 | Complete |
 | MD-05 | Phase 32 | Complete |
 
 **Coverage:** 34/34 requirements mapped ✓

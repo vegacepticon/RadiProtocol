@@ -1,33 +1,33 @@
 ---
 gsd_state_version: 1.0
-milestone: v1.5
-milestone_name: Snippet Editor Refactoring
+milestone: v1.0
+milestone_name: milestone
 status: executing
-stopped_at: Completed Phase 34 (5/5 plans, UAT approved)
-last_updated: "2026-04-15T16:16:00.000Z"
+stopped_at: Completed 35-01-PLAN.md
+last_updated: "2026-04-15T19:08:24.568Z"
 last_activity: 2026-04-15
 progress:
   total_phases: 4
   completed_phases: 3
-  total_plans: 16
-  completed_plans: 16
-  percent: 75
+  total_plans: 18
+  completed_plans: 17
+  percent: 94
 ---
 
 # RadiProtocol — Project State
 
 **Updated:** 2026-04-15
 **Milestone:** v1.5 — Snippet Editor Refactoring
-**Status:** Phase 34 complete — ready for Phase 35
-**Last session:** 2026-04-15T16:16:00.000Z
-**Stopped at:** Completed Phase 34 (all 6 plans, UAT approved by Роман)
+**Status:** Ready to execute
+**Last session:** 2026-04-15T19:08:24.565Z
+**Stopped at:** Completed 35-01-PLAN.md
 
 ---
 
 ## Current Position
 
-Phase: 34 (drag-and-drop-context-menu-rename-move-with-canvas-reference-updates) — **COMPLETE**
-Plan: 6 of 6 (Plans 34-00..34-05 all green, UAT signed 2026-04-15)
+Phase: 35 (markdown-snippets-in-protocol-runner) — EXECUTING
+Plan: 2 of 2
 Next: Phase 35 — Markdown Snippets in Protocol Runner
 Last activity: 2026-04-15
 
@@ -38,7 +38,7 @@ Last activity: 2026-04-15
 See: `.planning/PROJECT.md` (updated 2026-04-15)
 
 **Core value:** A radiologist can generate a structured, accurate protocol in seconds by answering a guided algorithm — without writing a single line of code.
-**Current focus:** Phase 35 — Markdown Snippets in Protocol Runner
+**Current focus:** Phase 35 — markdown-snippets-in-protocol-runner
 
 ### v1.5 Phases
 
