@@ -10,7 +10,8 @@
 //   - «Папка» dropdown populated from listFolderDescendants(root)
 //   - Name collision pre-flight via snippetService.exists (debounced, D-12)
 //   - Unsaved-changes 3-button guard via ConfirmModal (D-08)
-//   - D-09 move-on-save pipeline: save → delete → rewriteCanvasRefs → Notice
+//   - Phase 34 (MOVE-04 cleanup): move-on-save uses atomic snippetService.moveSnippet
+//     (replaces Phase 33 save+delete+placebo rewriteCanvasRefs pipeline, D-03/D-10)
 //
 // Not in scope here (deferred to Phase 34):
 //   - Multi-file / folder-level moves
@@ -19,7 +20,6 @@
 import { App, Modal, Notice } from 'obsidian';
 import type { Snippet, JsonSnippet, MdSnippet } from '../snippets/snippet-model';
 import { slugifyLabel } from '../snippets/snippet-model';
-import { rewriteCanvasRefs } from '../snippets/canvas-ref-sync';
 import { mountChipEditor, type ChipEditorHandle } from './snippet-chip-editor';
 import { ConfirmModal } from './confirm-modal';
 import type RadiProtocolPlugin from '../main';
@@ -445,29 +445,35 @@ export class SnippetEditorModal extends Modal {
 
     try {
       if (this.options.mode === 'create' || oldPath === null || oldPath === newPath) {
-        // Simple save (no move)
+        // Simple save (no move) — unchanged Phase 33 flow
         await this.plugin.snippetService.save(draftToSave);
         this.safeResolve({ saved: true, snippet: draftToSave, movedFrom: null });
         super.close();
         return;
       }
 
-      // Move-on-save pipeline (D-09)
-      await this.plugin.snippetService.save(draftToSave);
-      await this.plugin.snippetService.delete(oldPath);
-      // Phase 33 (D-09 resolved): single-file mapping — exact oldPath → newPath.
-      const syncResult = await rewriteCanvasRefs(
-        this.app,
-        new Map([[oldPath, newPath]]),
-      );
-      new Notice(
-        'Сниппет перемещён. Обновлено канвасов: ' +
-          syncResult.updated.length +
-          ', пропущено: ' +
-          syncResult.skipped.length +
-          '.',
-      );
-      this.safeResolve({ saved: true, snippet: draftToSave, movedFrom: oldPath });
+      // Phase 34 (MOVE-04 cleanup, D-03 / D-10): atomic move via service API.
+      // 1. Save any name/content changes to the OLD path first
+      //    (draftAtOldPath keeps existing path so service.save writes in place).
+      // 2. Then moveSnippet performs the atomic rename to the new folder.
+      // 3. No canvas-ref-sync — SnippetNode.subfolderPath is a folder-only
+      //    reference, so file moves are canvas-invisible (D-03 Phase 34).
+      const draftAtOldPath: Snippet =
+        this.draftKind === 'json'
+          ? { ...(this.draft as JsonSnippet), path: oldPath }
+          : { ...(this.draft as MdSnippet), path: oldPath };
+      await this.plugin.snippetService.save(draftAtOldPath);
+
+      const newFolder = newPath.slice(0, newPath.lastIndexOf('/'));
+      const finalPath = await this.plugin.snippetService.moveSnippet(oldPath, newFolder);
+
+      const finalDraft: Snippet =
+        this.draftKind === 'json'
+          ? { ...(this.draft as JsonSnippet), path: finalPath }
+          : { ...(this.draft as MdSnippet), path: finalPath };
+
+      new Notice('Сниппет перемещён.');
+      this.safeResolve({ saved: true, snippet: finalDraft, movedFrom: oldPath });
       super.close();
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);

@@ -311,12 +311,18 @@ interface MockSnippetService {
   delete: ReturnType<typeof vi.fn>;
   exists: ReturnType<typeof vi.fn>;
   listFolderDescendants: ReturnType<typeof vi.fn>;
+  moveSnippet: ReturnType<typeof vi.fn>;
 }
 
 function makeMockPlugin(opts: {
   existsReturns?: (path: string) => boolean;
   descendants?: { files: string[]; folders: string[]; total: number };
+  moveSnippetImpl?: (oldPath: string, newFolder: string) => Promise<string>;
 } = {}): { plugin: { app: unknown; settings: { snippetFolderPath: string }; snippetService: MockSnippetService }; service: MockSnippetService } {
+  const defaultMove = async (oldPath: string, newFolder: string): Promise<string> => {
+    const basename = oldPath.slice(oldPath.lastIndexOf('/') + 1);
+    return newFolder === '' ? basename : `${newFolder}/${basename}`;
+  };
   const service: MockSnippetService = {
     save: vi.fn().mockResolvedValue(undefined),
     delete: vi.fn().mockResolvedValue(undefined),
@@ -326,6 +332,7 @@ function makeMockPlugin(opts: {
     listFolderDescendants: vi
       .fn()
       .mockResolvedValue(opts.descendants ?? { files: [], folders: [], total: 0 }),
+    moveSnippet: vi.fn().mockImplementation(opts.moveSnippetImpl ?? defaultMove),
   };
   const plugin = {
     app: {},
@@ -574,7 +581,7 @@ describe('SnippetEditorModal', () => {
     expect(opts.cancelLabel).toBe('Отмена');
   });
 
-  it('D-09 pipeline: edit-mode save with folder change calls save → delete → rewriteCanvasRefs with exact file-path Map', async () => {
+  it('Phase 34 MOVE-04: edit-mode save with folder change calls moveSnippet (atomic), NOT delete+rewriteCanvasRefs', async () => {
     const { plugin, service } = makeMockPlugin({
       descendants: {
         files: [],
@@ -610,15 +617,128 @@ describe('SnippetEditorModal', () => {
     )!;
     saveBtn.dispatchEvent({ type: 'click' });
     await new Promise((r) => setTimeout(r, 20));
+    // Save-at-old-path first
     expect(service.save).toHaveBeenCalled();
-    expect(service.delete).toHaveBeenCalledWith('.radiprotocol/snippets/a/note.json');
-    expect(rewriteCanvasRefsSpy).toHaveBeenCalled();
-    const [, mappingArg] = rewriteCanvasRefsSpy.mock.calls[0] as [unknown, Map<string, string>];
-    // Exactly ONE entry, with full file paths — NOT folder paths.
-    expect(mappingArg.size).toBe(1);
-    const entries = Array.from(mappingArg.entries());
-    expect(entries[0]![0]).toBe('.radiprotocol/snippets/a/note.json');
-    expect(entries[0]![1]).toBe('.radiprotocol/snippets/b/note.json');
+    const savedArg = service.save.mock.calls[0]?.[0] as Snippet;
+    expect(savedArg.path).toBe('.radiprotocol/snippets/a/note.json');
+    // Atomic moveSnippet replaces save+delete pipeline
+    expect(service.moveSnippet).toHaveBeenCalledWith(
+      '.radiprotocol/snippets/a/note.json',
+      '.radiprotocol/snippets/b',
+    );
+    // Phase 34 cleanup: no delete, no rewriteCanvasRefs from the modal move branch
+    expect(service.delete).not.toHaveBeenCalled();
+    expect(rewriteCanvasRefsSpy).not.toHaveBeenCalled();
+  });
+
+  it('Phase 34 MOVE-04: move-on-save Notice is exactly «Сниппет перемещён.» (no canvas-count suffix)', async () => {
+    const noticeMessages: string[] = [];
+    // Re-hook Notice constructor to capture messages
+    // eslint-disable-next-line @typescript-eslint/no-require-imports, @typescript-eslint/no-var-requires
+    const obsidianMod = await import('obsidian');
+    const OrigNotice = (obsidianMod as unknown as { Notice: new (msg: string) => unknown }).Notice;
+    (obsidianMod as unknown as { Notice: new (msg: string) => unknown }).Notice = class {
+      constructor(msg: string) {
+        noticeMessages.push(msg);
+      }
+    };
+
+    try {
+      const { plugin } = makeMockPlugin({
+        descendants: {
+          files: [],
+          folders: ['.radiprotocol/snippets/a', '.radiprotocol/snippets/b'],
+          total: 2,
+        },
+      });
+      const snippet: JsonSnippet = {
+        kind: 'json',
+        path: '.radiprotocol/snippets/a/note.json',
+        name: 'note',
+        template: 'x',
+        placeholders: [],
+      };
+      const modal = new SnippetEditorModal({} as never, plugin as never, {
+        mode: 'edit',
+        initialFolder: '.radiprotocol/snippets/a',
+        snippet,
+      });
+      await modal.onOpen();
+      const select = findEl(
+        modal.contentEl as unknown as MockEl,
+        (el) => el.tagName === 'SELECT',
+      )!;
+      select.value = '.radiprotocol/snippets/b';
+      select.dispatchEvent({ type: 'change' });
+      const saveBtn = findEl(
+        modal.contentEl as unknown as MockEl,
+        (el) => el.tagName === 'BUTTON' && el._text === 'Сохранить',
+      )!;
+      saveBtn.dispatchEvent({ type: 'click' });
+      await new Promise((r) => setTimeout(r, 20));
+      expect(noticeMessages).toContain('Сниппет перемещён.');
+      expect(noticeMessages.some((m) => m.includes('Обновлено канвасов'))).toBe(false);
+    } finally {
+      (obsidianMod as unknown as { Notice: new (msg: string) => unknown }).Notice = OrigNotice;
+    }
+  });
+
+  it('Phase 34 MOVE-04: moveSnippet collision → error Notice shown, modal remains open', async () => {
+    const { plugin, service } = makeMockPlugin({
+      descendants: {
+        files: [],
+        folders: ['.radiprotocol/snippets/a', '.radiprotocol/snippets/b'],
+        total: 2,
+      },
+      moveSnippetImpl: async () => {
+        throw new Error('Путь уже существует: .radiprotocol/snippets/b/note.json');
+      },
+    });
+    const snippet: JsonSnippet = {
+      kind: 'json',
+      path: '.radiprotocol/snippets/a/note.json',
+      name: 'note',
+      template: 'x',
+      placeholders: [],
+    };
+    const modal = new SnippetEditorModal({} as never, plugin as never, {
+      mode: 'edit',
+      initialFolder: '.radiprotocol/snippets/a',
+      snippet,
+    });
+    await modal.onOpen();
+    // Spy on super.close via resolved flag: subscribe to result promise
+    let resolved = false;
+    void modal.result.then(() => {
+      resolved = true;
+    });
+    const select = findEl(
+      modal.contentEl as unknown as MockEl,
+      (el) => el.tagName === 'SELECT',
+    )!;
+    select.value = '.radiprotocol/snippets/b';
+    select.dispatchEvent({ type: 'change' });
+    const saveBtn = findEl(
+      modal.contentEl as unknown as MockEl,
+      (el) => el.tagName === 'BUTTON' && el._text === 'Сохранить',
+    )!;
+    saveBtn.dispatchEvent({ type: 'click' });
+    await new Promise((r) => setTimeout(r, 20));
+    // moveSnippet was attempted
+    expect(service.moveSnippet).toHaveBeenCalled();
+    // An error is surfaced via the in-modal save-error element
+    const errorEl = findEl(
+      modal.contentEl as unknown as MockEl,
+      (el) => el.classList.has('radi-snippet-editor-save-error'),
+    );
+    expect(errorEl).not.toBeNull();
+    expect(errorEl!._text).toContain('Не удалось сохранить');
+    expect(errorEl!.style['display']).not.toBe('none');
+    // Modal has NOT resolved (still open — result promise unresolved)
+    expect(resolved).toBe(false);
+    // No delete, no rewriteCanvasRefs from the failed move branch
+    expect(service.delete).not.toHaveBeenCalled();
+    expect(rewriteCanvasRefsSpy).not.toHaveBeenCalled();
   });
 
   it('Name collision disables Save and shows the inline error', async () => {
