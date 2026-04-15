@@ -16,10 +16,10 @@
 
 ### Tree UI (SnippetManagerView)
 
-- [ ] **TREE-01**: SnippetManagerView отображает сниппеты в виде раскрывающегося дерева папок/файлов (иерархия `.radiprotocol/snippets/`, expand/collapse на папках, индикатор типа .json/.md рядом с файлом)
-- [ ] **TREE-02**: Старый master-detail layout полностью удалён — дерево единственный режим просмотра
-- [ ] **TREE-03**: Клик по файлу в дереве открывает модалку редактирования этого сниппета
-- [ ] **TREE-04**: Пустые папки отображаются явно (можно создать пустую подпапку и увидеть её до добавления сниппетов)
+- [x] **TREE-01**: SnippetManagerView отображает сниппеты в виде раскрывающегося дерева папок/файлов (иерархия `.radiprotocol/snippets/`, expand/collapse на папках, индикатор типа .json/.md рядом с файлом)
+- [x] **TREE-02**: Старый master-detail layout полностью удалён — дерево единственный режим просмотра
+- [x] **TREE-03**: Клик по файлу в дереве открывает модалку редактирования этого сниппета
+- [x] **TREE-04**: Пустые папки отображаются явно (можно создать пустую подпапку и увидеть её до добавления сниппетов)
 
 ### Modal Create / Edit
 
@@ -34,9 +34,9 @@
 
 ### Folder Operations
 
-- [ ] **FOLDER-01**: Пользователь может создать новую подпапку внутри выбранной папки через context menu или кнопку в дереве
-- [ ] **FOLDER-02**: Пользователь может удалить пустую или непустую папку через context menu с confirm (показывающим список что будет удалено)
-- [ ] **FOLDER-03**: У каждой папки в дереве есть hover-кнопка «+ New» для быстрого создания сниппета с предзаполненным путём
+- [x] **FOLDER-01**: Пользователь может создать новую подпапку внутри выбранной папки через context menu или кнопку в дереве
+- [x] **FOLDER-02**: Пользователь может удалить пустую или непустую папку через context menu с confirm (показывающим список что будет удалено)
+- [x] **FOLDER-03**: У каждой папки в дереве есть hover-кнопка «+ New» для быстрого создания сниппета с предзаполненным путём
 
 ### Move / Drag-and-Drop
 
@@ -54,15 +54,15 @@
 
 ### Vault Sync
 
-- [ ] **SYNC-01**: SnippetManagerView подписан на `vault.on('create')`, `vault.on('delete')`, `vault.on('rename')` и перерисовывает дерево при изменениях извне
-- [ ] **SYNC-02**: Watcher фильтрует события только по `.radiprotocol/snippets/` префиксу — не реагирует на весь vault
-- [ ] **SYNC-03**: Watcher отписывается при закрытии view (cleanup в `onClose()`)
+- [x] **SYNC-01**: SnippetManagerView подписан на `vault.on('create')`, `vault.on('delete')`, `vault.on('rename')` и перерисовывает дерево при изменениях извне
+- [x] **SYNC-02**: Watcher фильтрует события только по `.radiprotocol/snippets/` префиксу — не реагирует на весь vault
+- [x] **SYNC-03**: Watcher отписывается при закрытии view (cleanup в `onClose()`)
 
 ### Delete
 
 - [x] **DEL-01**: Удаление сниппета через context menu / кнопку в дереве физически перемещает файл в Obsidian trash через `vault.trash()`
 - [x] **DEL-02**: Удаление требует подтверждения через confirm-модалку (показывает имя сниппета / папки)
-- [ ] **DEL-03**: После удаления сниппет не отображается ни в дереве, ни в Protocol Runner snippet picker (фиксит рассинхрон)
+- [x] **DEL-03**: После удаления сниппет не отображается ни в дереве, ни в Protocol Runner snippet picker (фиксит рассинхрон)
 
 ### Markdown Snippet Support in Runner
 
@@ -96,10 +96,10 @@
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| TREE-01 | Phase 33 | Pending |
-| TREE-02 | Phase 33 | Pending |
-| TREE-03 | Phase 33 | Pending |
-| TREE-04 | Phase 33 | Pending |
+| TREE-01 | Phase 33 | Complete |
+| TREE-02 | Phase 33 | Complete |
+| TREE-03 | Phase 33 | Complete |
+| TREE-04 | Phase 33 | Complete |
 | MODAL-01 | Phase 33 | Complete |
 | MODAL-02 | Phase 33 | Complete |
 | MODAL-03 | Phase 33 | Complete |
@@ -108,9 +108,9 @@
 | MODAL-06 | Phase 33 | Complete |
 | MODAL-07 | Phase 33 | Complete |
 | MODAL-08 | Phase 33 | Complete |
-| FOLDER-01 | Phase 33 | Pending |
-| FOLDER-02 | Phase 33 | Pending |
-| FOLDER-03 | Phase 33 | Pending |
+| FOLDER-01 | Phase 33 | Complete |
+| FOLDER-02 | Phase 33 | Complete |
+| FOLDER-03 | Phase 33 | Complete |
 | MOVE-01 | Phase 34 | Pending |
 | MOVE-02 | Phase 34 | Pending |
 | MOVE-03 | Phase 34 | Pending |
@@ -119,12 +119,12 @@
 | RENAME-01 | Phase 34 | Pending |
 | RENAME-02 | Phase 34 | Pending |
 | RENAME-03 | Phase 34 | Pending |
-| SYNC-01 | Phase 33 | Pending |
-| SYNC-02 | Phase 33 | Pending |
-| SYNC-03 | Phase 33 | Pending |
+| SYNC-01 | Phase 33 | Complete |
+| SYNC-02 | Phase 33 | Complete |
+| SYNC-03 | Phase 33 | Complete |
 | DEL-01 | Phase 32 | Complete |
 | DEL-02 | Phase 33 | Complete |
-| DEL-03 | Phase 33 | Pending |
+| DEL-03 | Phase 33 | Complete |
 | MD-01 | Phase 35 | Pending |
 | MD-02 | Phase 35 | Pending |
 | MD-03 | Phase 35 | Pending |
