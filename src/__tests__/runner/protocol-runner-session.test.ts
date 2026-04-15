@@ -212,6 +212,110 @@ describe('session — awaiting-snippet-pick (D-22)', () => {
   });
 });
 
+describe('Phase 31 D-09: branch-entered picker session round-trip', () => {
+  type RPNode = import('../../graph/graph-model').RPNode;
+
+  function buildBranchFixture(): ProtocolGraph {
+    const nodes = new Map<string, RPNode>([
+      ['n-start', { id: 'n-start', kind: 'start', x: 0, y: 0, width: 100, height: 60 }],
+      ['n-q1', { id: 'n-q1', kind: 'question', questionText: 'Q?', x: 0, y: 100, width: 100, height: 60 }],
+      ['n-a1', { id: 'n-a1', kind: 'answer', answerText: 'A1', x: 100, y: 200, width: 100, height: 60 }],
+      ['n-s1', { id: 'n-s1', kind: 'snippet', subfolderPath: 'foo', x: 300, y: 200, width: 100, height: 60 }],
+    ]);
+    return {
+      canvasFilePath: 'branch-fixture.canvas',
+      nodes,
+      edges: [
+        { id: 'e0', fromNodeId: 'n-start', toNodeId: 'n-q1' },
+        { id: 'e1', fromNodeId: 'n-q1', toNodeId: 'n-a1' },
+        { id: 'e2', fromNodeId: 'n-q1', toNodeId: 'n-s1' },
+      ],
+      adjacency: new Map([
+        ['n-start', ['n-q1']],
+        ['n-q1', ['n-a1', 'n-s1']],
+      ]),
+      reverseAdjacency: new Map([
+        ['n-q1', ['n-start']],
+        ['n-a1', ['n-q1']],
+        ['n-s1', ['n-q1']],
+      ]),
+      startNodeId: 'n-start',
+    };
+  }
+
+  it('Test 1: chooseSnippetBranch then round-trip preserves returnToBranchList flag', () => {
+    const graph = buildBranchFixture();
+    const runner = new ProtocolRunner();
+    runner.start(graph);
+    runner.chooseSnippetBranch('n-s1');
+
+    const saved = runner.getSerializableState();
+    expect(saved).not.toBeNull();
+    if (saved === null) return;
+    const deserialized = JSON.parse(JSON.stringify(saved)) as typeof saved;
+
+    const restored = new ProtocolRunner();
+    restored.setGraph(graph);
+    restored.restoreFrom(deserialized);
+
+    const state = restored.getState();
+    expect(state.status).toBe('awaiting-snippet-pick');
+    if (state.status !== 'awaiting-snippet-pick') return;
+    expect(state.nodeId).toBe('n-s1');
+
+    const restoredSer = restored.getSerializableState();
+    expect(restoredSer).not.toBeNull();
+    if (restoredSer === null) return;
+    expect(restoredSer.undoStack.length).toBe(1);
+    expect(restoredSer.undoStack[0]?.returnToBranchList).toBe(true);
+    expect(restoredSer.undoStack[0]?.nodeId).toBe('n-q1');
+  });
+
+  it('Test 2: after restore, stepBack returns to question node (flag semantics survived round-trip)', () => {
+    const graph = buildBranchFixture();
+    const runner = new ProtocolRunner();
+    runner.start(graph);
+    runner.chooseSnippetBranch('n-s1');
+
+    const saved = runner.getSerializableState();
+    if (saved === null) return;
+    const deserialized = JSON.parse(JSON.stringify(saved)) as typeof saved;
+
+    const restored = new ProtocolRunner();
+    restored.setGraph(graph);
+    restored.restoreFrom(deserialized);
+
+    restored.stepBack();
+    const state = restored.getState();
+    expect(state.status).toBe('at-node');
+    if (state.status !== 'at-node') return;
+    expect(state.currentNodeId).toBe('n-q1');
+  });
+
+  it('Test 3: at-node at question with no chooseSnippetBranch survives round-trip as at-node branch list', () => {
+    const graph = buildBranchFixture();
+    const runner = new ProtocolRunner();
+    runner.start(graph);
+    // Runner is at n-q1 at-node with empty undoStack — the branch list is open
+    const saved = runner.getSerializableState();
+    expect(saved).not.toBeNull();
+    if (saved === null) return;
+    expect(saved.runnerStatus).toBe('at-node');
+    expect(saved.currentNodeId).toBe('n-q1');
+    expect(saved.undoStack.length).toBe(0);
+
+    const deserialized = JSON.parse(JSON.stringify(saved)) as typeof saved;
+    const restored = new ProtocolRunner();
+    restored.setGraph(graph);
+    restored.restoreFrom(deserialized);
+
+    const state = restored.getState();
+    expect(state.status).toBe('at-node');
+    if (state.status !== 'at-node') return;
+    expect(state.currentNodeId).toBe('n-q1');
+  });
+});
+
 describe('Loop context stack survives session round-trip (SESSION-05)', () => {
   it('loopContextStack with iteration=2 is restored correctly and getState() reflects loopIterationLabel', () => {
     const graph = loadGraph('loop-body.canvas');

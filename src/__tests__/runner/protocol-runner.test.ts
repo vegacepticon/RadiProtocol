@@ -721,4 +721,262 @@ describe('ProtocolRunner', () => {
       expect(ser?.snippetNodeId).toBeNull();
     });
   });
+
+  describe('Phase 31: chooseSnippetBranch + branch-list step-back + per-node snippet separator', () => {
+    type RPNode = import('../../graph/graph-model').RPNode;
+
+    // Fixture: start → Q → { A1, A2, S1 (no sep), S2 (space sep, terminal) }.
+    // A1 is terminal ("A1"). A2 is terminal ("A2"). S1 has a downstream text-block
+    // "after-s1" so chooseSnippetBranch → pickSnippet → completeSnippet advances to complete.
+    function buildBranchFixture(): ProtocolGraph {
+      const nodes = new Map<string, RPNode>([
+        ['n-start', { id: 'n-start', kind: 'start', x: 0, y: 0, width: 100, height: 60 }],
+        ['n-q1', { id: 'n-q1', kind: 'question', questionText: 'Q?', x: 0, y: 100, width: 100, height: 60 }],
+        ['n-a1', { id: 'n-a1', kind: 'answer', answerText: 'A1', x: 100, y: 200, width: 100, height: 60 }],
+        ['n-a2', { id: 'n-a2', kind: 'answer', answerText: 'A2', x: 200, y: 200, width: 100, height: 60 }],
+        ['n-s1', { id: 'n-s1', kind: 'snippet', subfolderPath: 'foo', x: 300, y: 200, width: 100, height: 60 }],
+        ['n-s2', { id: 'n-s2', kind: 'snippet', radiprotocol_snippetSeparator: 'space', x: 400, y: 200, width: 100, height: 60 }],
+        ['n-tb-after-s1', { id: 'n-tb-after-s1', kind: 'text-block', content: 'after-s1', x: 300, y: 300, width: 100, height: 60 }],
+      ]);
+      const edges: import('../../graph/graph-model').RPEdge[] = [
+        { id: 'e0', fromNodeId: 'n-start', toNodeId: 'n-q1' },
+        { id: 'e1', fromNodeId: 'n-q1', toNodeId: 'n-a1' },
+        { id: 'e2', fromNodeId: 'n-q1', toNodeId: 'n-a2' },
+        { id: 'e3', fromNodeId: 'n-q1', toNodeId: 'n-s1' },
+        { id: 'e4', fromNodeId: 'n-q1', toNodeId: 'n-s2' },
+        { id: 'e5', fromNodeId: 'n-s1', toNodeId: 'n-tb-after-s1' },
+      ];
+      return {
+        canvasFilePath: 'branch-fixture.canvas',
+        nodes,
+        edges,
+        adjacency: new Map([
+          ['n-start', ['n-q1']],
+          ['n-q1', ['n-a1', 'n-a2', 'n-s1', 'n-s2']],
+          ['n-s1', ['n-tb-after-s1']],
+        ]),
+        reverseAdjacency: new Map([
+          ['n-q1', ['n-start']],
+          ['n-a1', ['n-q1']],
+          ['n-a2', ['n-q1']],
+          ['n-s1', ['n-q1']],
+          ['n-s2', ['n-q1']],
+          ['n-tb-after-s1', ['n-s1']],
+        ]),
+        startNodeId: 'n-start',
+      };
+    }
+
+    function startAtQuestion(): ProtocolRunner {
+      const runner = new ProtocolRunner();
+      runner.start(buildBranchFixture());
+      return runner;
+    }
+
+    it('Test 1: chooseSnippetBranch transitions to awaiting-snippet-pick at the snippet node without mutating accumulator', () => {
+      const runner = startAtQuestion();
+      runner.chooseSnippetBranch('n-s1');
+      const state = runner.getState();
+      expect(state.status).toBe('awaiting-snippet-pick');
+      if (state.status !== 'awaiting-snippet-pick') return;
+      expect(state.nodeId).toBe('n-s1');
+      expect(state.accumulatedText).toBe('');
+      expect(state.subfolderPath).toBe('foo');
+    });
+
+    it('Test 2: chooseSnippetBranch pushes an undo entry with returnToBranchList=true and nodeId=question', () => {
+      const runner = startAtQuestion();
+      runner.chooseSnippetBranch('n-s1');
+      const ser = runner.getSerializableState();
+      expect(ser).not.toBeNull();
+      if (ser === null) return;
+      expect(ser.undoStack.length).toBe(1);
+      expect(ser.undoStack[0]?.nodeId).toBe('n-q1');
+      expect(ser.undoStack[0]?.returnToBranchList).toBe(true);
+    });
+
+    it('Test 3: stepBack from branch-entered picker restores question node and clears snippet fields', () => {
+      const runner = startAtQuestion();
+      runner.chooseSnippetBranch('n-s1');
+      runner.stepBack();
+      const state = runner.getState();
+      expect(state.status).toBe('at-node');
+      if (state.status !== 'at-node') return;
+      expect(state.currentNodeId).toBe('n-q1');
+      const ser = runner.getSerializableState();
+      expect(ser?.snippetId).toBeNull();
+      expect(ser?.snippetNodeId).toBeNull();
+      expect(ser?.undoStack.length).toBe(0);
+    });
+
+    it('Test 4: chooseSnippetBranch with nonexistent snippet id transitions to error', () => {
+      const runner = startAtQuestion();
+      runner.chooseSnippetBranch('nonexistent');
+      const state = runner.getState();
+      expect(state.status).toBe('error');
+    });
+
+    it('Test 5: chooseSnippetBranch with wrong target kind (answer) transitions to error', () => {
+      const runner = startAtQuestion();
+      runner.chooseSnippetBranch('n-a1');
+      const state = runner.getState();
+      expect(state.status).toBe('error');
+    });
+
+    it('Test 6: chooseSnippetBranch when current node is not a question transitions to error', () => {
+      // Inline graph: start → free-text-input (halts at-node but not question)
+      const graph: ProtocolGraph = {
+        canvasFilePath: 'inline.canvas',
+        nodes: new Map<string, RPNode>([
+          ['n-start', { id: 'n-start', kind: 'start', x: 0, y: 0, width: 100, height: 60 }],
+          ['n-ft', { id: 'n-ft', kind: 'free-text-input', promptLabel: 'L', x: 0, y: 60, width: 100, height: 60 }],
+          ['n-s', { id: 'n-s', kind: 'snippet', x: 0, y: 120, width: 100, height: 60 }],
+        ]),
+        edges: [{ id: 'e1', fromNodeId: 'n-start', toNodeId: 'n-ft' }],
+        adjacency: new Map([['n-start', ['n-ft']]]),
+        reverseAdjacency: new Map([['n-ft', ['n-start']]]),
+        startNodeId: 'n-start',
+      };
+      const runner = new ProtocolRunner();
+      runner.start(graph);
+      expect(runner.getState().status).toBe('at-node');
+      runner.chooseSnippetBranch('n-s');
+      expect(runner.getState().status).toBe('error');
+    });
+
+    it('Test 7 (D-04): completeSnippet at S2 uses per-node space separator', () => {
+      // Put some text in the accumulator first by choosing A2 ... no wait A2 is terminal.
+      // Use a custom fixture: question → S2 (terminal) and pre-set accumulator via
+      // chooseSnippetBranch's undo path. Instead, build an inline graph where we put
+      // arbitrary text before the snippet via an answer.
+      const nodes = new Map<string, RPNode>([
+        ['n-start', { id: 'n-start', kind: 'start', x: 0, y: 0, width: 100, height: 60 }],
+        ['n-q1', { id: 'n-q1', kind: 'question', questionText: 'Q?', x: 0, y: 60, width: 100, height: 60 }],
+        ['n-a1', { id: 'n-a1', kind: 'answer', answerText: 'prefix', x: 0, y: 120, width: 100, height: 60 }],
+        ['n-q2', { id: 'n-q2', kind: 'question', questionText: 'Q2?', x: 0, y: 180, width: 100, height: 60 }],
+        ['n-s2', { id: 'n-s2', kind: 'snippet', radiprotocol_snippetSeparator: 'space', x: 0, y: 240, width: 100, height: 60 }],
+      ]);
+      const graph: ProtocolGraph = {
+        canvasFilePath: 'inline.canvas',
+        nodes,
+        edges: [
+          { id: 'e0', fromNodeId: 'n-start', toNodeId: 'n-q1' },
+          { id: 'e1', fromNodeId: 'n-q1', toNodeId: 'n-a1' },
+          { id: 'e2', fromNodeId: 'n-a1', toNodeId: 'n-q2' },
+          { id: 'e3', fromNodeId: 'n-q2', toNodeId: 'n-s2' },
+        ],
+        adjacency: new Map([
+          ['n-start', ['n-q1']],
+          ['n-q1', ['n-a1']],
+          ['n-a1', ['n-q2']],
+          ['n-q2', ['n-s2']],
+        ]),
+        reverseAdjacency: new Map([
+          ['n-q1', ['n-start']],
+          ['n-a1', ['n-q1']],
+          ['n-q2', ['n-a1']],
+          ['n-s2', ['n-q2']],
+        ]),
+        startNodeId: 'n-start',
+      };
+      const runner = new ProtocolRunner();
+      runner.start(graph);
+      runner.chooseAnswer('n-a1'); // accumulator = 'prefix', advances to n-q2
+      runner.chooseSnippetBranch('n-s2');
+      runner.pickSnippet('sid');
+      runner.completeSnippet('hello');
+      const state = runner.getState();
+      expect(state.status).toBe('complete');
+      if (state.status !== 'complete') return;
+      // Separator is 'space' → join with a single space
+      expect(state.finalText).toBe('prefix hello');
+    });
+
+    it('Test 8 (D-04): completeSnippet at S1 without snippetSeparator uses default newline', () => {
+      // Similar fixture but S1 has no radiprotocol_snippetSeparator
+      const nodes = new Map<string, RPNode>([
+        ['n-start', { id: 'n-start', kind: 'start', x: 0, y: 0, width: 100, height: 60 }],
+        ['n-q1', { id: 'n-q1', kind: 'question', questionText: 'Q?', x: 0, y: 60, width: 100, height: 60 }],
+        ['n-a1', { id: 'n-a1', kind: 'answer', answerText: 'prefix', x: 0, y: 120, width: 100, height: 60 }],
+        ['n-q2', { id: 'n-q2', kind: 'question', questionText: 'Q2?', x: 0, y: 180, width: 100, height: 60 }],
+        ['n-s1', { id: 'n-s1', kind: 'snippet', x: 0, y: 240, width: 100, height: 60 }],
+      ]);
+      const graph: ProtocolGraph = {
+        canvasFilePath: 'inline.canvas',
+        nodes,
+        edges: [
+          { id: 'e0', fromNodeId: 'n-start', toNodeId: 'n-q1' },
+          { id: 'e1', fromNodeId: 'n-q1', toNodeId: 'n-a1' },
+          { id: 'e2', fromNodeId: 'n-a1', toNodeId: 'n-q2' },
+          { id: 'e3', fromNodeId: 'n-q2', toNodeId: 'n-s1' },
+        ],
+        adjacency: new Map([
+          ['n-start', ['n-q1']],
+          ['n-q1', ['n-a1']],
+          ['n-a1', ['n-q2']],
+          ['n-q2', ['n-s1']],
+        ]),
+        reverseAdjacency: new Map([
+          ['n-q1', ['n-start']],
+          ['n-a1', ['n-q1']],
+          ['n-q2', ['n-a1']],
+          ['n-s1', ['n-q2']],
+        ]),
+        startNodeId: 'n-start',
+      };
+      const runner = new ProtocolRunner();
+      runner.start(graph);
+      runner.chooseAnswer('n-a1');
+      runner.chooseSnippetBranch('n-s1');
+      runner.pickSnippet('sid');
+      runner.completeSnippet('hello');
+      const state = runner.getState();
+      expect(state.status).toBe('complete');
+      if (state.status !== 'complete') return;
+      expect(state.finalText).toBe('prefix\nhello');
+    });
+
+    it('Test 9 (Phase 30 regression): stepBack from auto-advanced snippet picker reverts to predecessor (not branch list)', () => {
+      const runner = new ProtocolRunner();
+      runner.start(loadGraph('snippet-node-with-exit.canvas'));
+      runner.chooseAnswer('n-a1');
+      expect(runner.getState().status).toBe('awaiting-snippet-pick');
+      runner.stepBack();
+      const state = runner.getState();
+      expect(state.status).toBe('at-node');
+      if (state.status !== 'at-node') return;
+      // Chosen via chooseAnswer (no returnToBranchList) → reverts to predecessor n-q1
+      expect(state.currentNodeId).toBe('n-q1');
+    });
+
+    it('Test 10: chain chooseSnippetBranch → pickSnippet → stepBack twice returns through picker → branch list', () => {
+      const runner = startAtQuestion();
+      runner.chooseSnippetBranch('n-s1');
+      runner.pickSnippet('sid');
+      expect(runner.getState().status).toBe('awaiting-snippet-fill');
+
+      // First stepBack: pickSnippet undo → back to awaiting-snippet-pick at n-s1
+      runner.stepBack();
+      let state = runner.getState();
+      expect(state.status).toBe('at-node');
+      if (state.status !== 'at-node') return;
+      // pickSnippet uses the default stepBack path (not returnToBranchList), so
+      // we land at n-s1 as a regular at-node restore.
+      expect(state.currentNodeId).toBe('n-s1');
+
+      // Second stepBack: chooseSnippetBranch undo with returnToBranchList → question
+      runner.stepBack();
+      state = runner.getState();
+      expect(state.status).toBe('at-node');
+      if (state.status !== 'at-node') return;
+      expect(state.currentNodeId).toBe('n-q1');
+
+      // A third stepBack — undoStack is empty (chooseAnswer was never called for Q)
+      runner.stepBack();
+      state = runner.getState();
+      expect(state.status).toBe('at-node');
+      if (state.status !== 'at-node') return;
+      expect(state.currentNodeId).toBe('n-q1');
+    });
+  });
 });

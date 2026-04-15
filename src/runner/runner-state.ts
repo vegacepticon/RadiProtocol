@@ -100,4 +100,8 @@ export interface UndoEntry {
   /** Deep snapshot of the loop context stack at the moment this entry was pushed.
    *  Must be a spread copy — NOT a live reference (LOOP-05, Pitfall 1 in RESEARCH.md). */
   loopContextStack: LoopContext[];
+  /** Phase 31 D-08: marks an entry pushed by chooseSnippetBranch. stepBack
+   *  restores currentNodeId (the question) and runnerStatus='at-node' — so the
+   *  user returns to the branch list, not the question's predecessor. */
+  returnToBranchList?: boolean;
 }

@@ -101,6 +101,58 @@ export class ProtocolRunner {
   }
 
   /**
+   * Phase 31 D-08: user picks a snippet-kind branch at a question node.
+   * Valid only in 'at-node' state when the current node is a question AND
+   * the target is a direct snippet neighbour of that question. Pushes an
+   * UndoEntry with returnToBranchList=true BEFORE any mutation so that
+   * stepBack() returns the user to the question's branch list (not the
+   * question's predecessor). Does NOT append anything to the accumulator —
+   * the snippet picker takes over and the actual text insertion happens
+   * later via completeSnippet().
+   */
+  chooseSnippetBranch(snippetNodeId: string): void {
+    if (this.runnerStatus !== 'at-node') return;
+    if (this.graph === null || this.currentNodeId === null) return;
+
+    const currentNode = this.graph.nodes.get(this.currentNodeId);
+    if (currentNode === undefined || currentNode.kind !== 'question') {
+      this.transitionToError(
+        `chooseSnippetBranch called when current node '${this.currentNodeId}' is not a question.`,
+      );
+      return;
+    }
+
+    const snippetNode = this.graph.nodes.get(snippetNodeId);
+    if (snippetNode === undefined || snippetNode.kind !== 'snippet') {
+      this.transitionToError(
+        `Snippet node '${snippetNodeId}' not found or is not a snippet node.`,
+      );
+      return;
+    }
+
+    const neighbours = this.graph.adjacency.get(this.currentNodeId);
+    if (neighbours === undefined || !neighbours.includes(snippetNodeId)) {
+      this.transitionToError(
+        `Snippet node '${snippetNodeId}' is not a direct branch of question '${this.currentNodeId}'.`,
+      );
+      return;
+    }
+
+    // Phase 31 Pitfall 1: undo-before-mutate with returnToBranchList flag.
+    this.undoStack.push({
+      nodeId: this.currentNodeId, // question id
+      textSnapshot: this.accumulator.snapshot(),
+      loopContextStack: [...this.loopContextStack],
+      returnToBranchList: true,
+    });
+
+    // Transition to picker at the snippet node — no accumulator mutation.
+    this.currentNodeId = snippetNodeId;
+    this.snippetNodeId = snippetNodeId;
+    this.runnerStatus = 'awaiting-snippet-pick';
+  }
+
+  /**
    * User submits free-text input.
    * Only valid in at-node state when the current node is a free-text-input node.
    * Wraps text with prefix/suffix if present (RUN-04).
@@ -148,6 +200,19 @@ export class ProtocolRunner {
     const entry = this.undoStack.pop();
     if (entry === undefined) return; // Nothing to undo
 
+    if (entry.returnToBranchList === true) {
+      // Phase 31 D-08: close the branch-entered picker, return to the
+      // question's branch list — not to the question's predecessor.
+      this.currentNodeId = entry.nodeId;
+      this.accumulator.restoreTo(entry.textSnapshot);
+      this.loopContextStack = [...entry.loopContextStack];
+      this.runnerStatus = 'at-node';
+      this.snippetId = null;
+      this.snippetNodeId = null;
+      this.errorMessage = null;
+      return;
+    }
+
     this.currentNodeId = entry.nodeId;
     this.accumulator.restoreTo(entry.textSnapshot);
     this.loopContextStack = [...entry.loopContextStack]; // restore from snapshot (LOOP-05)
@@ -192,7 +257,8 @@ export class ProtocolRunner {
 
     const pendingNodeId = this.snippetNodeId;
     const snippetNode = this.graph.nodes.get(pendingNodeId);
-    const snippetSep = (snippetNode?.kind === 'text-block')
+    // Phase 31 D-04: also honour per-node override on SnippetNode (branch-entered picker)
+    const snippetSep = (snippetNode?.kind === 'text-block' || snippetNode?.kind === 'snippet')
       ? this.resolveSeparator(snippetNode)
       : this.defaultSeparator;
     this.accumulator.appendWithSeparator(renderedText, snippetSep);
@@ -360,7 +426,7 @@ export class ProtocolRunner {
     runnerStatus: 'at-node' | 'awaiting-snippet-pick' | 'awaiting-snippet-fill';
     currentNodeId: string;
     accumulatedText: string;
-    undoStack: Array<{ nodeId: string; textSnapshot: string; loopContextStack: Array<{ loopStartId: string; iteration: number; textBeforeLoop: string }> }>;
+    undoStack: Array<{ nodeId: string; textSnapshot: string; loopContextStack: Array<{ loopStartId: string; iteration: number; textBeforeLoop: string }>; returnToBranchList?: boolean }>;
     loopContextStack: Array<{ loopStartId: string; iteration: number; textBeforeLoop: string }>;
     snippetId: string | null;
     snippetNodeId: string | null;
@@ -381,6 +447,7 @@ export class ProtocolRunner {
         nodeId: e.nodeId,
         textSnapshot: e.textSnapshot,
         loopContextStack: e.loopContextStack.map(f => ({ ...f })),
+        returnToBranchList: e.returnToBranchList,
       })),
       loopContextStack: this.loopContextStack.map(f => ({ ...f })),
       snippetId: this.snippetId,
@@ -416,7 +483,7 @@ export class ProtocolRunner {
     runnerStatus: 'at-node' | 'awaiting-snippet-pick' | 'awaiting-snippet-fill';
     currentNodeId: string;
     accumulatedText: string;
-    undoStack: Array<{ nodeId: string; textSnapshot: string; loopContextStack: Array<{ loopStartId: string; iteration: number; textBeforeLoop: string }> }>;
+    undoStack: Array<{ nodeId: string; textSnapshot: string; loopContextStack: Array<{ loopStartId: string; iteration: number; textBeforeLoop: string }>; returnToBranchList?: boolean }>;
     loopContextStack: Array<{ loopStartId: string; iteration: number; textBeforeLoop: string }>;
     snippetId: string | null;
     snippetNodeId: string | null;
@@ -429,6 +496,7 @@ export class ProtocolRunner {
       nodeId: e.nodeId,
       textSnapshot: e.textSnapshot,
       loopContextStack: e.loopContextStack.map(f => ({ ...f })),
+      returnToBranchList: e.returnToBranchList,
     }));
     this.loopContextStack = session.loopContextStack.map(f => ({ ...f }));
     this.snippetId = session.snippetId;
@@ -446,8 +514,13 @@ export class ProtocolRunner {
   private resolveSeparator(
     node: import('../graph/graph-model').AnswerNode
           | import('../graph/graph-model').FreeTextInputNode
-          | import('../graph/graph-model').TextBlockNode,
+          | import('../graph/graph-model').TextBlockNode
+          | import('../graph/graph-model').SnippetNode,
   ): 'newline' | 'space' {
+    // Phase 31 D-04: SnippetNode uses its own property name
+    if (node.kind === 'snippet') {
+      return node.radiprotocol_snippetSeparator ?? this.defaultSeparator;
+    }
     return node.radiprotocol_separator ?? this.defaultSeparator;
   }
 
