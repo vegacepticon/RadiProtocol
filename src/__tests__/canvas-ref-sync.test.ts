@@ -79,7 +79,7 @@ describe('rewriteCanvasRefs', () => {
     expect(result.updated).toEqual([canvasPath]);
     expect(result.skipped).toEqual([]);
     expect(app.modifySpy).toHaveBeenCalledTimes(1);
-    const parsed = JSON.parse(app.writes[canvasPath]) as {
+    const parsed = JSON.parse(app.writes[canvasPath]!) as {
       nodes: Array<Record<string, unknown>>;
     };
     const snippetNode = parsed.nodes.find(
@@ -98,7 +98,7 @@ describe('rewriteCanvasRefs', () => {
     const result = await rewriteCanvasRefs(app.app, mapping);
 
     expect(result.updated).toEqual([canvasPath]);
-    const parsed = JSON.parse(app.writes[canvasPath]) as {
+    const parsed = JSON.parse(app.writes[canvasPath]!) as {
       nodes: Array<Record<string, unknown>>;
     };
     const prefix = parsed.nodes.find((n) => n['id'] === 's-prefix')!;
@@ -114,7 +114,7 @@ describe('rewriteCanvasRefs', () => {
 
     await rewriteCanvasRefs(app.app, mapping);
 
-    const parsed = JSON.parse(app.writes[canvasPath]) as {
+    const parsed = JSON.parse(app.writes[canvasPath]!) as {
       nodes: Array<Record<string, unknown>>;
     };
     const rootNode = parsed.nodes.find((n) => n['id'] === 's-root')!;
@@ -170,8 +170,8 @@ describe('rewriteCanvasRefs', () => {
 
     // Broken was skipped with a JSON-related reason
     expect(result.skipped).toHaveLength(1);
-    expect(result.skipped[0].path).toBe(brokenPath);
-    expect(result.skipped[0].reason).toMatch(/JSON|invalid/i);
+    expect(result.skipped[0]!.path).toBe(brokenPath);
+    expect(result.skipped[0]!.reason).toMatch(/JSON|invalid/i);
     // Good canvas still processed
     expect(result.updated).toEqual([goodPath]);
     expect(app.writes[goodPath]).toBeDefined();
@@ -191,7 +191,7 @@ describe('rewriteCanvasRefs', () => {
     expect(result.updated.sort()).toEqual([aPath, bPath].sort());
     expect(app.modifySpy).toHaveBeenCalledTimes(2);
     // Exact-match fixture A → a/c
-    const parsedA = JSON.parse(app.writes[aPath]) as {
+    const parsedA = JSON.parse(app.writes[aPath]!) as {
       nodes: Array<Record<string, unknown>>;
     };
     expect(
@@ -200,7 +200,7 @@ describe('rewriteCanvasRefs', () => {
       ],
     ).toBe('a/c');
     // Prefix-match fixture B → a/c/sub
-    const parsedB = JSON.parse(app.writes[bPath]) as {
+    const parsedB = JSON.parse(app.writes[bPath]!) as {
       nodes: Array<Record<string, unknown>>;
     };
     expect(

@@ -226,7 +226,7 @@ describe('listFolder extension routing (MD-05)', () => {
     const { snippets } = await svc.listFolder(`${ROOT}/CT`);
 
     expect(snippets).toHaveLength(1);
-    expect(snippets[0].kind).toBe('json');
+    expect(snippets[0]!.kind).toBe('json');
     const s = snippets[0] as JsonSnippet;
     expect(s.name).toBe('Alpha');
     expect(s.template).toBe('hello {{x}}');
@@ -246,7 +246,7 @@ describe('listFolder extension routing (MD-05)', () => {
     const { snippets } = await svc.listFolder(`${ROOT}/CT`);
 
     expect(snippets).toHaveLength(1);
-    expect(snippets[0].kind).toBe('md');
+    expect(snippets[0]!.kind).toBe('md');
     const s = snippets[0] as MdSnippet;
     expect(s.name).toBe('notes');
     expect(s.content).toBe(raw);
@@ -289,7 +289,7 @@ describe('listFolder extension routing (MD-05)', () => {
     const { snippets } = await svc.listFolder(`${ROOT}/CT`);
 
     expect(snippets).toHaveLength(1);
-    expect(snippets[0].kind).toBe('json');
+    expect(snippets[0]!.kind).toBe('json');
   });
 });
 
@@ -381,7 +381,7 @@ describe('save(Snippet) branching (D-03, D-11)', () => {
     // Either create() or adapter.write() was used to persist payload
     const persisted = files[p];
     expect(persisted).toBeDefined();
-    const parsed = JSON.parse(persisted);
+    const parsed = JSON.parse(persisted!);
     expect(parsed).toEqual({
       name: 'Alpha',
       template: 'hello {{x}}',
@@ -452,10 +452,10 @@ describe('save(Snippet) branching (D-03, D-11)', () => {
 
     // Serialised: start/end must come in pairs, never interleaved
     expect(order).toHaveLength(4);
-    expect(order[0].startsWith('start:')).toBe(true);
-    expect(order[1].startsWith('end:')).toBe(true);
-    expect(order[2].startsWith('start:')).toBe(true);
-    expect(order[3].startsWith('end:')).toBe(true);
+    expect(order[0]!.startsWith('start:')).toBe(true);
+    expect(order[1]!.startsWith('end:')).toBe(true);
+    expect(order[2]!.startsWith('start:')).toBe(true);
+    expect(order[3]!.startsWith('end:')).toBe(true);
     // Final persisted value corresponds to one of the two writes
     expect(files[p]).toBeDefined();
   });
@@ -476,7 +476,7 @@ describe('save(Snippet) branching (D-03, D-11)', () => {
     };
     await svc.save(snippet);
 
-    const parsed = JSON.parse(files[p]);
+    const parsed = JSON.parse(files[p]!);
     expect(parsed.name).toBe('Name');
     expect(parsed.template).toBe('tmplhere');
     expect(parsed.placeholders[0].label).toBe('Lbl');
@@ -514,7 +514,7 @@ describe('delete(path) uses Obsidian trash (DEL-01, D-08)', () => {
     await svc.delete(p);
 
     expect(vault.trash).toHaveBeenCalledTimes(1);
-    const [file, system] = vault.trash.mock.calls[0];
+    const [file, system] = vault.trash.mock.calls[0]!;
     expect((file as { path: string }).path).toBe(p);
     // CRITICAL: system=false — goes to Obsidian .trash/, not OS trash
     expect(system).toBe(false);
