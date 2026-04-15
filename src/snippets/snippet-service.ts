@@ -7,6 +7,24 @@ import { WriteMutex } from '../utils/write-mutex';
 import { ensureFolderPath } from '../utils/vault-utils';
 
 /**
+ * Phase 34 (D-03): Build a canvas-ref mapping key from a vault-relative path.
+ * - Strips `snippetRoot + '/'` prefix if present
+ * - Strips trailing `.json` / `.md` (case-insensitive), once
+ * - Returns '' when vaultPath === snippetRoot
+ *
+ * This is the single source of truth for converting between vault-relative
+ * paths (what SnippetService deals in) and the snippet-root-relative,
+ * extension-less format that `rewriteCanvasRefs` expects.
+ */
+export function toCanvasKey(vaultPath: string, snippetRoot: string): string {
+  if (vaultPath === snippetRoot) return '';
+  const prefix = snippetRoot + '/';
+  let rel = vaultPath.startsWith(prefix) ? vaultPath.slice(prefix.length) : vaultPath;
+  rel = rel.replace(/\.(json|md)$/i, '');
+  return rel;
+}
+
+/**
  * Full CRUD for snippet JSON files stored in {snippetFolderPath}/{id}.json (SNIP-01, D-14, D-15).
  * Every vault.modify() / vault.adapter.write() is wrapped in WriteMutex.runExclusive().
  * Folder existence is guaranteed via ensureFolderPath() before every write.
@@ -287,6 +305,164 @@ export class SnippetService {
       }
     }
     return { files, folders, total: files.length + folders.length };
+  }
+
+  /**
+   * Phase 34 (MOVE-01, RENAME-03): Rename a snippet file in place (same folder).
+   * Preserves the original extension (.json or .md). Rejects basenames that
+   * contain slashes or are empty/whitespace-only. Collision-checks destination
+   * before touching the source. Wrapped in WriteMutex per normalized source.
+   * Returns the new normalized path. No-op (returns unchanged path) when the
+   * normalized old and new paths are identical.
+   */
+  async renameSnippet(oldPath: string, newBasename: string): Promise<string> {
+    const normalizedOld = this.assertInsideRoot(oldPath);
+    if (normalizedOld === null) {
+      throw new Error(`[RadiProtocol] renameSnippet rejected unsafe path: ${oldPath}`);
+    }
+    if (/[\\/]/.test(newBasename) || newBasename.trim() === '') {
+      throw new Error('Имя не может быть пустым и не должно содержать «/» или «\\».');
+    }
+    const lastSlash = normalizedOld.lastIndexOf('/');
+    const parent = lastSlash > 0 ? normalizedOld.slice(0, lastSlash) : '';
+    const lower = normalizedOld.toLowerCase();
+    const ext = lower.endsWith('.md') ? '.md' : '.json';
+    const newPath = parent === '' ? `${newBasename}${ext}` : `${parent}/${newBasename}${ext}`;
+    const normalizedNew = this.assertInsideRoot(newPath);
+    if (normalizedNew === null) {
+      throw new Error(`[RadiProtocol] renameSnippet rejected unsafe new path: ${newPath}`);
+    }
+    if (normalizedOld === normalizedNew) return normalizedNew;
+    if (await this.app.vault.adapter.exists(normalizedNew)) {
+      throw new Error(`Путь уже существует: ${normalizedNew}`);
+    }
+    await this.mutex.runExclusive(normalizedOld, async () => {
+      const file = this.app.vault.getAbstractFileByPath(normalizedOld);
+      if (file === null) throw new Error(`Файл не найден: ${normalizedOld}`);
+      await this.app.vault.rename(file, normalizedNew);
+    });
+    return normalizedNew;
+  }
+
+  /**
+   * Phase 34 (MOVE-01): Move a snippet file into another folder under the
+   * snippet root, preserving its basename + extension. Ensures the destination
+   * folder exists before the rename. Collision-checks destination.
+   */
+  async moveSnippet(oldPath: string, newFolder: string): Promise<string> {
+    const normalizedOld = this.assertInsideRoot(oldPath);
+    if (normalizedOld === null) {
+      throw new Error(`[RadiProtocol] moveSnippet rejected unsafe path: ${oldPath}`);
+    }
+    const normalizedFolder = this.assertInsideRoot(newFolder);
+    if (normalizedFolder === null) {
+      throw new Error(`[RadiProtocol] moveSnippet rejected unsafe destination: ${newFolder}`);
+    }
+    const basename = normalizedOld.slice(normalizedOld.lastIndexOf('/') + 1);
+    const normalizedNew =
+      normalizedFolder === '' ? basename : `${normalizedFolder}/${basename}`;
+    if (normalizedOld === normalizedNew) return normalizedNew;
+    if (await this.app.vault.adapter.exists(normalizedNew)) {
+      throw new Error(`Путь уже существует: ${normalizedNew}`);
+    }
+    await this.mutex.runExclusive(normalizedOld, async () => {
+      await ensureFolderPath(this.app.vault, normalizedFolder);
+      const file = this.app.vault.getAbstractFileByPath(normalizedOld);
+      if (file === null) throw new Error(`Файл не найден: ${normalizedOld}`);
+      await this.app.vault.rename(file, normalizedNew);
+    });
+    return normalizedNew;
+  }
+
+  /**
+   * Phase 34 (RENAME-03): Rename a folder in place (within the same parent).
+   * Rejects basenames with slashes. Collision-checks destination.
+   */
+  async renameFolder(oldPath: string, newBasename: string): Promise<string> {
+    const normalizedOld = this.assertInsideRoot(oldPath);
+    if (normalizedOld === null) {
+      throw new Error(`[RadiProtocol] renameFolder rejected unsafe path: ${oldPath}`);
+    }
+    if (/[\\/]/.test(newBasename) || newBasename.trim() === '') {
+      throw new Error('Имя не может быть пустым и не должно содержать «/» или «\\».');
+    }
+    const lastSlash = normalizedOld.lastIndexOf('/');
+    const parent = lastSlash > 0 ? normalizedOld.slice(0, lastSlash) : '';
+    const newPath = parent === '' ? newBasename : `${parent}/${newBasename}`;
+    const normalizedNew = this.assertInsideRoot(newPath);
+    if (normalizedNew === null) {
+      throw new Error(`[RadiProtocol] renameFolder rejected unsafe new path: ${newPath}`);
+    }
+    if (normalizedOld === normalizedNew) return normalizedNew;
+    // Self-descendant guard: renaming into own subtree is nonsensical but
+    // guard defensively (e.g. parent == '' edge cases).
+    if (
+      normalizedNew === normalizedOld ||
+      normalizedNew.startsWith(normalizedOld + '/')
+    ) {
+      throw new Error('Нельзя переместить папку внутрь самой себя.');
+    }
+    if (await this.app.vault.adapter.exists(normalizedNew)) {
+      throw new Error(`Путь уже существует: ${normalizedNew}`);
+    }
+    await this.mutex.runExclusive(normalizedOld, async () => {
+      const folder = this.app.vault.getAbstractFileByPath(normalizedOld);
+      if (folder === null) throw new Error(`Папка не найдена: ${normalizedOld}`);
+      await this.app.vault.rename(folder, normalizedNew);
+    });
+    return normalizedNew;
+  }
+
+  /**
+   * Phase 34 (MOVE-02): Move a folder into another parent folder under the
+   * snippet root. Guards against moving a folder into itself or into any of
+   * its descendants. Ensures the new parent exists. Collision-checks destination.
+   */
+  async moveFolder(oldPath: string, newParent: string): Promise<string> {
+    const normalizedOld = this.assertInsideRoot(oldPath);
+    if (normalizedOld === null) {
+      throw new Error(`[RadiProtocol] moveFolder rejected unsafe path: ${oldPath}`);
+    }
+    const normalizedParent = this.assertInsideRoot(newParent);
+    if (normalizedParent === null) {
+      throw new Error(`[RadiProtocol] moveFolder rejected unsafe destination: ${newParent}`);
+    }
+    const basename = normalizedOld.slice(normalizedOld.lastIndexOf('/') + 1);
+    const normalizedNew =
+      normalizedParent === '' ? basename : `${normalizedParent}/${basename}`;
+    // Self-descendant guard: reject move onto self OR into any descendant.
+    // Also reject when the target parent IS the source or inside the source
+    // subtree, since the resulting path would be nested under itself.
+    if (
+      normalizedParent === normalizedOld ||
+      normalizedParent.startsWith(normalizedOld + '/') ||
+      normalizedNew === normalizedOld ||
+      normalizedNew.startsWith(normalizedOld + '/')
+    ) {
+      throw new Error('Нельзя переместить папку внутрь самой себя.');
+    }
+    if (await this.app.vault.adapter.exists(normalizedNew)) {
+      throw new Error(`Путь уже существует: ${normalizedNew}`);
+    }
+    await this.mutex.runExclusive(normalizedOld, async () => {
+      await ensureFolderPath(this.app.vault, normalizedParent);
+      const folder = this.app.vault.getAbstractFileByPath(normalizedOld);
+      if (folder === null) throw new Error(`Папка не найдена: ${normalizedOld}`);
+      await this.app.vault.rename(folder, normalizedNew);
+    });
+    return normalizedNew;
+  }
+
+  /**
+   * Phase 34 (D-06): Return the sorted list of every folder under the snippet
+   * root, including the root itself. Used by FolderPickerModal and by
+   * SnippetEditorModal's "Папка" field. Delegates to listFolderDescendants.
+   */
+  async listAllFolders(): Promise<string[]> {
+    const root = this.settings.snippetFolderPath;
+    const { folders } = await this.listFolderDescendants(root);
+    const set = new Set<string>([root, ...folders]);
+    return Array.from(set).sort((a, b) => a.localeCompare(b));
   }
 
   /**
