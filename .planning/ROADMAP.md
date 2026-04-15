@@ -11,6 +11,7 @@
 - ✅ **v1.2 Runner UX & Bug Fixes** — Phases 12–19 (shipped 2026-04-10)
 - ✅ **v1.3 Interactive Placeholder Editor** — Phase 27 (shipped 2026-04-12)
 - ✅ **v1.4 Snippets and Colors, Colors and Snippets** — Phases 28–31 (shipped 2026-04-15)
+- 🔄 **v1.5 Snippet Editor Refactoring** — Phases 32–35 (planning)
 
 ---
 
@@ -68,6 +69,70 @@ Full details: `.planning/milestones/v1.4-ROADMAP.md`
 
 </details>
 
+<details open>
+<summary>🔄 v1.5 Snippet Editor Refactoring (Phases 32–35) — PLANNING</summary>
+
+- [ ] **Phase 32: SnippetService Refactor — MD Support, Trash Delete, Canvas Reference Sync** — service-layer foundation for the tree UI
+- [ ] **Phase 33: Tree UI, Modal Create/Edit, Folder Operations, Vault Watcher** — replaces master-detail layout with folder tree + modal editor
+- [ ] **Phase 34: Drag-and-Drop, Context Menu, Rename, Move with Canvas Reference Updates** — full move/rename flow with automatic Canvas link sync
+- [ ] **Phase 35: Markdown Snippets in Protocol Runner** — `.md` files in picker, as-is insertion, mixed branching compatible
+
+### Phase Details
+
+### Phase 32: SnippetService Refactor — MD Support, Trash Delete, Canvas Reference Sync
+**Goal**: SnippetService exposes a folder-tree data model, recognizes `.md` snippets as a first-class type, deletes via `vault.trash()`, and ships a vault-wide utility that rewrites Canvas `SnippetNode` references when a snippet is renamed or moved.
+**Depends on**: Phase 31 (SnippetNode model and references)
+**Requirements**: MD-05, DEL-01
+**Success Criteria** (what must be TRUE):
+  1. `SnippetService.listFolder()` returns entries discriminated by extension — JSON snippets with placeholders vs MD snippets with raw content (MD-05).
+  2. `SnippetService.load()` returns the correct typed model (`JsonSnippet` vs `MdSnippet`) based on file extension (MD-05).
+  3. Calling the new delete method removes a snippet via `vault.trash()` (Obsidian trash, not permanent delete) and the file disappears from the vault (DEL-01).
+  4. A Canvas-reference-sync utility can scan every `.canvas` in the vault and rewrite SnippetNode `subfolderPath` + filename references given an old → new path mapping, without corrupting other node data.
+  5. Unit tests cover extension routing, trash delete, and the Canvas rewrite utility with single- and multi-canvas fixtures.
+**Plans**: TBD
+**UI hint**: no
+
+### Phase 33: Tree UI, Modal Create/Edit, Folder Operations, Vault Watcher
+**Goal**: SnippetManagerView is a folder-tree view. Snippets are created and edited in a modal with JSON/Markdown type toggle. Folders can be created, deleted, and quickly populated. The tree stays in sync with the vault when files change from outside.
+**Depends on**: Phase 32
+**Requirements**: TREE-01, TREE-02, TREE-03, TREE-04, MODAL-01, MODAL-02, MODAL-03, MODAL-04, MODAL-05, MODAL-06, MODAL-07, MODAL-08, FOLDER-01, FOLDER-02, FOLDER-03, SYNC-01, SYNC-02, SYNC-03, DEL-02, DEL-03
+**Success Criteria** (what must be TRUE):
+  1. Opening SnippetManagerView shows a collapsible folder tree rooted at `.radiprotocol/snippets/`; each file shows its type indicator (JSON/MD); empty folders render explicitly; the old master-detail layout is gone (TREE-01/02/04).
+  2. Clicking a file opens the edit modal; clicking "+ New" (global or per-folder hover button) opens the create modal with the target folder pre-filled and a JSON/Markdown type toggle; JSON mode shows the v1.3 chip editor, MD mode shows an inline textarea; closing with unsaved changes prompts a guard (TREE-03, MODAL-01..08, FOLDER-03).
+  3. Context menu on a folder offers "New subfolder" and "Delete folder" — delete prompts with a list of contents before confirming (FOLDER-01, FOLDER-02).
+  4. Deleting a snippet prompts a confirm modal showing the name, then the file disappears from both the tree and the Protocol Runner snippet picker on next open (DEL-02, DEL-03).
+  5. Creating, renaming, or deleting a file in `.radiprotocol/snippets/` from outside the view (e.g., from Obsidian file explorer) causes the tree to redraw; events from other vault paths are ignored; the watcher is torn down in `onClose()` (SYNC-01..03).
+**Plans**: TBD
+**UI hint**: yes
+
+### Phase 34: Drag-and-Drop, Context Menu, Rename, Move with Canvas Reference Updates
+**Goal**: Users can reorganize snippets and folders by dragging, via "Move to…" context menu, or via the modal folder field. Inline rename works via F2 and context menu. Every rename and move automatically rewrites the matching SnippetNode references in every Canvas in the vault.
+**Depends on**: Phase 33
+**Requirements**: MOVE-01, MOVE-02, MOVE-03, MOVE-04, MOVE-05, RENAME-01, RENAME-02, RENAME-03
+**Success Criteria** (what must be TRUE):
+  1. Dragging a snippet file onto a folder in the tree moves it in the vault; dragging a folder onto another folder moves the whole subtree (MOVE-01, MOVE-02).
+  2. Context menu on a snippet or folder offers "Move to…" which opens a folder picker; the edit modal's "Папка" field moves the snippet on save (MOVE-03, MOVE-04).
+  3. Pressing F2 on a snippet or folder (or using context-menu "Rename") enters inline rename; pressing Enter commits, Escape cancels (RENAME-01, RENAME-02).
+  4. After any move or rename, all `.canvas` files in the vault that reference the affected SnippetNode(s) are updated so their `subfolderPath`/filename match the new location; opening one of those canvases in the runner resolves the snippet without error (MOVE-05, RENAME-03).
+  5. Moves and renames across nested subfolders preserve snippet content byte-for-byte and survive an Obsidian reload.
+**Plans**: TBD
+**UI hint**: yes
+
+### Phase 35: Markdown Snippets in Protocol Runner
+**Goal**: `.md` snippets appear in the Runner snippet picker alongside `.json` snippets, insert their content as-is without a fill-in modal, and work transparently inside `awaiting-snippet-pick` and mixed answer+snippet branching.
+**Depends on**: Phase 32 (service-layer MD support), Phase 34 (reference sync stability)
+**Requirements**: MD-01, MD-02, MD-03, MD-04
+**Success Criteria** (what must be TRUE):
+  1. The Runner snippet picker lists both `.md` and `.json` files in the target folder, with a type indicator so the user can tell them apart (MD-01).
+  2. Selecting a `.md` snippet appends its raw file content directly to the accumulated protocol text — no fill-in modal opens — and the runner advances as if the snippet completed normally (MD-02).
+  3. `.md` snippets work inside the full `awaiting-snippet-pick` drill-down (subfolder navigation, step-back) exactly like JSON snippets (MD-03).
+  4. A question node with mixed answer + snippet branches (Phase 31 flow) can route to a `.md` snippet branch; selecting it inserts content and follows any terminal/non-terminal edge from the snippet node (MD-04).
+  5. Session save/resume correctly serializes and restores an in-progress protocol that has already inserted `.md` snippet content.
+**Plans**: TBD
+**UI hint**: yes
+
+</details>
+
 ---
 
 ## Progress
@@ -81,3 +146,7 @@ Full details: `.planning/milestones/v1.4-ROADMAP.md`
 | 29. Snippet Node — Model, Editor, Validator | v1.4 | 3/3 | Complete | 2026-04-13 |
 | 30. Snippet Node — Runner Integration | v1.4 | 3/3 | Complete | 2026-04-14 |
 | 31. Mixed Answer + Snippet Branching at Question Nodes | v1.4 | 4/4 | Complete | 2026-04-15 |
+| 32. SnippetService Refactor — MD Support, Trash Delete, Canvas Reference Sync | v1.5 | 0/0 | Not started | — |
+| 33. Tree UI, Modal Create/Edit, Folder Operations, Vault Watcher | v1.5 | 0/0 | Not started | — |
+| 34. Drag-and-Drop, Context Menu, Rename, Move with Canvas Reference Updates | v1.5 | 0/0 | Not started | — |
+| 35. Markdown Snippets in Protocol Runner | v1.5 | 0/0 | Not started | — |

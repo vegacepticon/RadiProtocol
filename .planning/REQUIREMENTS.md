@@ -2,7 +2,7 @@
 
 **Milestone:** v1.5 Snippet Editor Refactoring
 **Date:** 2026-04-15
-**Status:** Draft — awaiting roadmap mapping
+**Status:** Mapped to roadmap (Phases 32–35)
 
 ---
 
@@ -94,4 +94,41 @@
 
 ## Traceability
 
-_(Populated by roadmapper — maps each REQ-ID to a phase.)_
+| Requirement | Phase | Status |
+|-------------|-------|--------|
+| TREE-01 | Phase 33 | Pending |
+| TREE-02 | Phase 33 | Pending |
+| TREE-03 | Phase 33 | Pending |
+| TREE-04 | Phase 33 | Pending |
+| MODAL-01 | Phase 33 | Pending |
+| MODAL-02 | Phase 33 | Pending |
+| MODAL-03 | Phase 33 | Pending |
+| MODAL-04 | Phase 33 | Pending |
+| MODAL-05 | Phase 33 | Pending |
+| MODAL-06 | Phase 33 | Pending |
+| MODAL-07 | Phase 33 | Pending |
+| MODAL-08 | Phase 33 | Pending |
+| FOLDER-01 | Phase 33 | Pending |
+| FOLDER-02 | Phase 33 | Pending |
+| FOLDER-03 | Phase 33 | Pending |
+| MOVE-01 | Phase 34 | Pending |
+| MOVE-02 | Phase 34 | Pending |
+| MOVE-03 | Phase 34 | Pending |
+| MOVE-04 | Phase 34 | Pending |
+| MOVE-05 | Phase 34 | Pending |
+| RENAME-01 | Phase 34 | Pending |
+| RENAME-02 | Phase 34 | Pending |
+| RENAME-03 | Phase 34 | Pending |
+| SYNC-01 | Phase 33 | Pending |
+| SYNC-02 | Phase 33 | Pending |
+| SYNC-03 | Phase 33 | Pending |
+| DEL-01 | Phase 32 | Pending |
+| DEL-02 | Phase 33 | Pending |
+| DEL-03 | Phase 33 | Pending |
+| MD-01 | Phase 35 | Pending |
+| MD-02 | Phase 35 | Pending |
+| MD-03 | Phase 35 | Pending |
+| MD-04 | Phase 35 | Pending |
+| MD-05 | Phase 32 | Pending |
+
+**Coverage:** 34/34 requirements mapped ✓

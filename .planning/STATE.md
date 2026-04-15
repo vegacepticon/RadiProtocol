@@ -3,10 +3,10 @@ gsd_state_version: 1.0
 milestone: v1.5
 milestone_name: Snippet Editor Refactoring
 status: planning
-stopped_at: Defining requirements
+stopped_at: Roadmap created — awaiting phase 32 planning
 last_updated: "2026-04-15T12:00:00.000Z"
 progress:
-  total_phases: 0
+  total_phases: 4
   completed_phases: 0
   total_plans: 0
   completed_plans: 0
@@ -17,18 +17,18 @@ progress:
 
 **Updated:** 2026-04-15
 **Milestone:** v1.5 — Snippet Editor Refactoring
-**Status:** Planning — defining requirements
+**Status:** Planning — roadmap created (Phases 32–35)
 **Last session:** 2026-04-15
-**Stopped at:** Defining requirements
+**Stopped at:** Roadmap created — awaiting phase 32 planning
 
 ---
 
 ## Current Position
 
-Phase: Not started (defining requirements)
+Phase: Not started (roadmap approved, Phase 32 next)
 Plan: —
-Status: Defining requirements
-Last activity: 2026-04-15 — Milestone v1.5 started
+Status: Roadmap created
+Last activity: 2026-04-15 — v1.5 roadmap written, 34/34 requirements mapped
 
 ---
 
@@ -38,6 +38,13 @@ See: `.planning/PROJECT.md` (updated 2026-04-15)
 
 **Core value:** A radiologist can generate a structured, accurate protocol in seconds by answering a guided algorithm — without writing a single line of code.
 **Current focus:** v1.5 Snippet Editor Refactoring — folder-tree UI, modal edit, vault sync, `.md` support
+
+### v1.5 Phases
+
+- Phase 32: SnippetService Refactor — MD Support, Trash Delete, Canvas Reference Sync
+- Phase 33: Tree UI, Modal Create/Edit, Folder Operations, Vault Watcher
+- Phase 34: Drag-and-Drop, Context Menu, Rename, Move with Canvas Reference Updates
+- Phase 35: Markdown Snippets in Protocol Runner
 
 ---
 
@@ -57,6 +64,8 @@ See: `.planning/PROJECT.md` (updated 2026-04-15)
 5. `loadData()` returns null on first install — always merge with defaults
 6. Infinite loop cycles — validate protocol graph before running; hard iteration cap (default 50)
 7. `console.log` forbidden in production — use `console.debug()` during dev
+8. CSS files are append-only per phase — edit only the relevant feature file in `src/styles/`; never delete rules from earlier phases
+9. Shared files (main.ts, editor-panel-view.ts, snippet-manager-view.ts) — only modify code relevant to the current phase; never remove code you didn't add
 
 ---
 
