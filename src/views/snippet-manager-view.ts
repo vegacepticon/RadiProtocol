@@ -656,24 +656,27 @@ export class SnippetManagerView extends ItemView {
     // T-5-06: disable during save to prevent rapid-click DoS
     saveBtn.disabled = true;
     try {
-      // Derive id from name so canvas files can reference snippets by human-readable slug
-      const oldId = (draft.id ?? draft.name);
-      draft.id = slugifyLabel(draft.name) || oldId;
+      // Phase 32 fix: draft.path is the authoritative on-disk location
+      // (listFolder sets it; handleNewSnippet sets it to a UUID path). Derive
+      // the new slug-based path from the current name; if it differs from
+      // draft.path, delete the old file before writing the new one. Using
+      // draft.path instead of draft.id avoids the stale-leftover bug where
+      // snippets loaded via listFolder have no id field and the fallback
+      // (draft.name) reads the already-updated name.
+      const oldPath = draft.path;
+      const slug = slugifyLabel(draft.name) || draft.id || 'untitled';
+      draft.id = slug;
+      const newPath = `${this.plugin.settings.snippetFolderPath}/${slug}.json`;
 
-      // If the id changed (e.g. was a UUID on first save), delete the old file
-      if (oldId !== (draft.id ?? draft.name)) {
-        // Phase 32 (D-03): delete is path-based — build path from legacy id.
-        const oldPath = `${this.plugin.settings.snippetFolderPath}/${oldId}.json`;
+      if (oldPath !== newPath) {
         await this.plugin.snippetService.delete(oldPath);
       }
 
-      // Phase 32 (D-03): ensure draft.path tracks the (possibly-renamed) id
-      // so save() writes to the correct file under the new path-based API.
-      draft.path = `${this.plugin.settings.snippetFolderPath}/${(draft.id ?? draft.name)}.json`;
+      draft.path = newPath;
       await this.plugin.snippetService.save(draft);
 
-      // Sync local list — update existing or add if not present
-      const idx = this.snippets.findIndex(s => s.id === (draft.id ?? draft.name));
+      // Sync local list — match by path (id is unreliable post-listFolder)
+      const idx = this.snippets.findIndex(s => s.path === oldPath || s.path === newPath);
       if (idx !== -1) {
         this.snippets[idx] = draft;
       } else {
@@ -691,12 +694,14 @@ export class SnippetManagerView extends ItemView {
 
   private async handleDelete(draft: SnippetFile): Promise<void> {
     try {
-      // Phase 32 (D-03): delete is path-based.
-      const p = `${this.plugin.settings.snippetFolderPath}/${(draft.id ?? draft.name)}.json`;
+      // Phase 32 fix: use draft.path (authoritative on-disk location).
+      // Snippets loaded via listFolder have no id field, so draft.id ?? draft.name
+      // would fall back to the (possibly-edited) name and miss the real file.
+      const p = draft.path;
       await this.plugin.snippetService.delete(p);
 
-      // Remove from local list
-      const idx = this.snippets.findIndex(s => s.id === (draft.id ?? draft.name));
+      // Remove from local list — match by path (id is unreliable post-listFolder)
+      const idx = this.snippets.findIndex(s => s.path === p);
       if (idx !== -1) {
         this.snippets.splice(idx, 1);
       }
