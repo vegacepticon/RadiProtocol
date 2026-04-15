@@ -1,5 +1,24 @@
 # Milestones
 
+## v1.4 Snippets and Colors, Colors and Snippets (Shipped: 2026-04-15)
+
+**Phases completed:** 4 phases (28–31), 12 plans
+**Timeline:** 2026-04-13 → 2026-04-15 (3 days)
+**Git:** 54 commits, 66 files changed, +8753/-110 LOC (`46656af` → `d6c6280`)
+
+**Key accomplishments:**
+
+- Phase 28: Auto node coloring — single injection point in `saveNodeEdits` writes the correct canvas color on every save across both Pattern B (canvas open) and Strategy A (canvas closed) paths; test helper `makeCanvasNode` auto-derives color from `radiprotocol_nodeType` (NODE-COLOR-01/02/03)
+- Phase 29: Snippet node model — 8th node kind in discriminated union; canvas-parser recognizes `radiprotocol_nodeType = "snippet"`; graph-validator warns on missing subfolder path; EditorPanel form with BFS-based subfolder picker under `.radiprotocol/snippets/` (SNIPPET-NODE-01/02/08)
+- Phase 30: Runner snippet integration — new `awaiting-snippet-pick` runner state, `ProtocolRunner.pickSnippet()` routing into the existing fill-in flow, session serialize/restore support, `SnippetService.listFolder` with pre-I/O path-safety gate (rejects `..`, absolute paths, sibling-prefix matches), RunnerView picker with subfolder drill-down (SNIPPET-NODE-03/04/05/06/07)
+- Phase 31: Mixed answer + snippet branching — question nodes can route to both answer and snippet nodes simultaneously; `chooseSnippetBranch` runner API with undo-before-mutate and `returnToBranchList` flag; per-node `snippetLabel` + separator override editable in Node Editor; RunnerView partitions branches into two render loops
+- All 11 v1.4 requirements satisfied; milestone audit re-passed after Phase 30 retroactive verification + Phase 29 live-vault UAT closure + Phase 31 UAT 5/5
+- Known deferred tech debt: Nyquist VALIDATION.md still in draft for phases 28–31 (matches existing v1.2 retroactive-Nyquist backlog entry)
+
+**Archive:** `.planning/milestones/v1.4-ROADMAP.md`, `.planning/milestones/v1.4-REQUIREMENTS.md`, `.planning/milestones/v1.4-MILESTONE-AUDIT.md`, `.planning/milestones/v1.4-phases/`
+
+---
+
 ## v1.3 Interactive Placeholder Editor (Shipped: 2026-04-12)
 
 **Phases completed:** 1 phase (27), 1 plan  

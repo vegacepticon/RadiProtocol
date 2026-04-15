@@ -1,7 +1,7 @@
 # Roadmap: RadiProtocol
 
 **Project:** RadiProtocol
-**Last updated:** 2026-04-13
+**Last updated:** 2026-04-15
 
 ---
 
@@ -10,7 +10,7 @@
 - ✅ **v1.0 Community Plugin Release** — Phases 1–7 (shipped 2026-04-07)
 - ✅ **v1.2 Runner UX & Bug Fixes** — Phases 12–19 (shipped 2026-04-10)
 - ✅ **v1.3 Interactive Placeholder Editor** — Phase 27 (shipped 2026-04-12)
-- 🔄 **v1.4 Snippets and Colors, Colors and Snippets** — Phases 28–30 (active)
+- ✅ **v1.4 Snippets and Colors, Colors and Snippets** — Phases 28–31 (shipped 2026-04-15)
 
 ---
 
@@ -56,74 +56,17 @@ Full details: `.planning/milestones/v1.3-ROADMAP.md`
 
 </details>
 
-### v1.4 Snippets and Colors, Colors and Snippets (Phases 28–30) — ACTIVE
+<details>
+<summary>✅ v1.4 Snippets and Colors, Colors and Snippets (Phases 28–31) — SHIPPED 2026-04-15</summary>
 
-- [x] **Phase 28: Auto Node Coloring** — Color written on every save via EditorPanel (both paths) and programmatic canvas creation (completed 2026-04-13)
-- [x] **Phase 29: Snippet Node — Model, Editor, Validator** — 8th node kind in parser/model; EditorPanel subfolder picker form; GraphValidator check (completed 2026-04-13)
-- [ ] **Phase 30: Snippet Node — Runner Integration** — Runner folder picker UI, state machine extension, SnippetFillInModal wiring, terminal/non-terminal behavior
+- [x] Phase 28: Auto Node Coloring (2/2 plans) — completed 2026-04-13
+- [x] Phase 29: Snippet Node — Model, Editor, Validator (3/3 plans) — completed 2026-04-13
+- [x] Phase 30: Snippet Node — Runner Integration (3/3 plans) — completed 2026-04-14
+- [x] Phase 31: Mixed Answer + Snippet Branching at Question Nodes (4/4 plans) — completed 2026-04-15
 
----
+Full details: `.planning/milestones/v1.4-ROADMAP.md`
 
-## Phase Details
-
-### Phase 28: Auto Node Coloring
-**Goal**: Saving any node type always writes the correct color to the canvas node, regardless of prior state
-**Depends on**: Nothing new (extends existing EditorPanel + canvas write paths)
-**Requirements**: NODE-COLOR-01, NODE-COLOR-02, NODE-COLOR-03
-**Success Criteria** (what must be TRUE):
-  1. User saves a node via EditorPanel with canvas open (Pattern B) and the node's color immediately reflects its type
-  2. User saves a node via EditorPanel with canvas closed (Strategy A) and the written canvas JSON contains the correct color field
-  3. User saves a node that already had a different color set — the color is overwritten to match the current node type
-  4. Programmatically created test canvases include the correct color field for every node based on its radiprotocol_nodeType
-**Plans**: 2 plans
-Plans:
-- [x] 28-00-PLAN.md — Wave 0: тест-инфраструктура (обновить контракт + makeCanvasNode helper)
-- [x] 28-01-PLAN.md — Wave 1: инъекция цвета в saveNodeEdits (Pattern B + Strategy A)
-
-### Phase 29: Snippet Node — Model, Editor, Validator
-**Goal**: The snippet node type exists as a first-class 8th node kind that authors can configure in EditorPanel with a subfolder path
-**Depends on**: Phase 28 (color will be applied to snippet nodes automatically)
-**Requirements**: SNIPPET-NODE-01, SNIPPET-NODE-02, SNIPPET-NODE-08
-**Success Criteria** (what must be TRUE):
-  1. CanvasParser recognizes radiprotocol_nodeType = "snippet" and produces a typed SnippetNode in the graph model
-  2. EditorPanel shows a dedicated form for snippet nodes with a subfolder picker that lets the user browse and select a path under .radiprotocol/snippets/
-  3. Saving a snippet node via EditorPanel writes radiprotocol_nodeType = "snippet" and the configured subfolder path to the canvas JSON
-  4. Missing subfolderPath is valid — absence means root fallback at runtime (D-12 supersedes success criterion 4)
-**Plans**: 3 plans
-Plans:
-- [x] 29-00-PLAN.md — Wave 0: TDD fixtures + failing tests для парсера и валидатора
-- [x] 29-01-PLAN.md — Wave 1: graph-model + node-color-map + canvas-parser + graph-validator
-- [x] 29-02-PLAN.md — Wave 2: EditorPanel subfolder picker form (buildKindForm case snippet)
-
-### Phase 30: Snippet Node — Runner Integration
-**Goal**: A radiologist running a protocol that hits a snippet node can browse and select a snippet from the configured folder, fill in any placeholders, and have the result appended to the report
-**Depends on**: Phase 29 (snippet node type must exist in graph model)
-**Requirements**: SNIPPET-NODE-03, SNIPPET-NODE-04, SNIPPET-NODE-05, SNIPPET-NODE-06, SNIPPET-NODE-07
-**Success Criteria** (what must be TRUE):
-  1. Runner presents a list of snippets from the snippet node's configured subfolder when the state machine reaches a snippet node
-  2. User can navigate into subfolders within the configured folder to find snippets nested deeper
-  3. Selecting a snippet that has placeholders opens SnippetFillInModal; after confirmation the filled text is appended to the protocol textarea
-  4. Selecting a snippet with no placeholders appends its text directly to the protocol textarea without opening any modal
-  5. After snippet insertion, a snippet node with outgoing edges advances to the next node; a snippet node with no outgoing edges terminates the protocol
-**Plans**: 3 plans
-Plans:
-- [x] 30-01-PLAN.md — SnippetService.listFolder + path safety (D-18..D-21, T-30-01)
-- [x] 30-02-PLAN.md — Runner state machine: awaiting-snippet-pick + pickSnippet + session support (D-06..D-12, D-22, D-23)
-- [ ] 30-03-PLAN.md — RunnerView picker rendering + CSS + UAT (D-01..D-05, D-09, D-13..D-17)
-**UI hint**: yes
-
-### Phase 31: Mixed Answer + Snippet Branching at Question Nodes
-**Goal**: A question node can have outgoing edges to both answer nodes and snippet nodes simultaneously. The runner presents all branches side-by-side as selectable options at the question step. Picking an answer inserts the answer text (current behavior); picking a snippet opens the snippet picker/fill-in modal and inserts only that snippet's rendered text into the accumulator (with a per-node configurable separator).
-**Depends on**: Phase 30 (snippet node runner integration must exist)
-**Requirements**: TBD
-**Success Criteria** (what must be TRUE):
-  1. A question node with outgoing edges to both answers and snippet nodes shows both as selectable options in the runner branch list
-  2. Selecting a snippet variant opens the standard snippet picker (reuse Phase 30) and inserts only the rendered snippet text into the accumulator
-  3. Snippet nodes have a configurable label (`radiprotocol_snippetLabel`) and per-node separator (`radiprotocol_snippetSeparator`) editable in the Node Editor
-  4. graph-validator allows mixed branches and snippet-only question branches without warnings
-  5. Step-back from an open snippet picker (entered via a branch choice) returns to the branch selection list, not the previous node
-**Plans**: TBD
-**UI hint**: yes
+</details>
 
 ---
 
@@ -131,23 +74,10 @@ Plans:
 
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
-| 1. Project Scaffold and Canvas Parsing Foundation | v1.0 | 6/6 | Complete | 2026-04-06 |
-| 2. Core Protocol Runner Engine | v1.0 | 3/3 | Complete | 2026-04-06 |
-| 3. Runner UI (ItemView) | v1.0 | 5/5 | Complete | 2026-04-06 |
-| 4. Canvas Node Editor Side Panel | v1.0 | 3/3 | Complete | 2026-04-06 |
-| 5. Dynamic Snippets | v1.0 | 5/5 | Complete | 2026-04-06 |
-| 6. Loop Support | v1.0 | 3/3 | Complete | 2026-04-07 |
-| 7. Mid-Session Save and Resume | v1.0 | 3/3 | Complete | 2026-04-07 |
-| 12. Runner Layout Overhaul | v1.2 | 2/2 | Complete | 2026-04-08 |
-| 13. Sidebar Canvas Selector and Run Again | v1.2 | 2/2 | Complete | 2026-04-08 |
-| 14. Node Editor Auto-Switch and Unsaved Guard | v1.2 | 1/1 | Complete | 2026-04-09 |
-| 15. Text Separator Setting | v1.2 | 2/2 | Complete | 2026-04-09 |
-| 16. Runner Textarea Edit Preservation | v1.2 | 2/2 | Complete | 2026-04-09 |
-| 17. Node Type Read-Back and Snippet Placeholder Fixes | v1.2 | 2/2 | Complete | 2026-04-09 |
-| 18. CSS Gap Fixes (INSERTED) | v1.2 | 1/1 | Complete | 2026-04-10 |
-| 19. Phase 12–14 Formal Verification | v1.2 | 3/3 | Complete | 2026-04-10 |
-| 27. Interactive Placeholder Editor | v1.3 | 1/1 | Complete | 2026-04-12 |
-| 28. Auto Node Coloring | v1.4 | 2/2 | Complete   | 2026-04-13 |
-| 29. Snippet Node — Model, Editor, Validator | v1.4 | 3/3 | Complete   | 2026-04-13 |
-| 30. Snippet Node — Runner Integration | v1.4 | 2/3 | In Progress|  |
-| 31. Mixed Answer + Snippet Branching at Question Nodes | v1.4 | 0/0 | Planned    |  |
+| 1–7 | v1.0 | 28/28 | Complete | 2026-04-07 |
+| 12–19 | v1.2 | 15/15 | Complete | 2026-04-10 |
+| 27 | v1.3 | 1/1 | Complete | 2026-04-12 |
+| 28. Auto Node Coloring | v1.4 | 2/2 | Complete | 2026-04-13 |
+| 29. Snippet Node — Model, Editor, Validator | v1.4 | 3/3 | Complete | 2026-04-13 |
+| 30. Snippet Node — Runner Integration | v1.4 | 3/3 | Complete | 2026-04-14 |
+| 31. Mixed Answer + Snippet Branching at Question Nodes | v1.4 | 4/4 | Complete | 2026-04-15 |

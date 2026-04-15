@@ -86,10 +86,28 @@ A radiologist can generate a structured, accurate protocol in seconds by answeri
 - ✓ HTML5 drag-and-drop reorder with correct splice pattern and dragleave child-flicker guard (CHIP-02) — v1.3
 - ✓ `autoSaveAfterDrop()` persists reordered array to disk — SnippetFillInModal tab order follows persisted order (CHIP-03) — v1.3
 
-### Active (v1.4)
+### Validated (v1.4)
 
-- [ ] Auto-color canvas nodes by type on save — always overwrite color when `radiprotocol_nodeType` is written (EditorPanel + programmatic canvas creation)
-- [ ] New "snippet" node type — 8th node kind; EditorPanel form with subfolder picker; Runner presents snippet list with subfolder navigation; SnippetFillInModal for placeholders; supports terminal or non-terminal graph position
+**Auto Node Coloring:**
+- ✓ Saving any node via EditorPanel writes the correct type color to canvas JSON (Pattern B + Strategy A) — v1.4 (NODE-COLOR-01)
+- ✓ Color is always overwritten on save regardless of prior state — v1.4 (NODE-COLOR-02)
+- ✓ Programmatically created test canvases include the correct color per node type — v1.4 (NODE-COLOR-03)
+
+**Snippet Node (8th kind):**
+- ✓ Parser/graph-model/validator recognize `snippet` as first-class node kind — v1.4 (SNIPPET-NODE-01, SNIPPET-NODE-08)
+- ✓ EditorPanel subfolder picker form with BFS traversal of `.radiprotocol/snippets/` — v1.4 (SNIPPET-NODE-02)
+- ✓ Runner `awaiting-snippet-pick` state with folder drill-down picker — v1.4 (SNIPPET-NODE-03, SNIPPET-NODE-04)
+- ✓ SnippetFillInModal wiring for placeholder snippets; direct append for non-placeholder snippets — v1.4 (SNIPPET-NODE-05, SNIPPET-NODE-06)
+- ✓ Terminal + non-terminal snippet node graph positions — v1.4 (SNIPPET-NODE-07)
+
+**Mixed Answer + Snippet Branching (Phase 31):**
+- ✓ Question nodes support mixed outgoing edges to answer and snippet nodes — v1.4
+- ✓ Per-node `snippetLabel` and separator override in Node Editor — v1.4
+- ✓ Step-back from open snippet picker returns to branch list — v1.4
+
+### Active (v1.5)
+
+_(No active requirements — planning next milestone via `/gsd-new-milestone`)_
 
 ### Deferred (Future Milestones)
 
@@ -113,23 +131,20 @@ A radiologist can generate a structured, accurate protocol in seconds by answeri
 - Optional sections in snippets — deferred to v2
 - Automatic impression generation — requires NLP/AI
 
-## Current Milestone: v1.4 Snippets and Colors, Colors and Snippets
+## Current State
 
-**Goal:** Автоматическая раскраска узлов канваса по типу и новый тип узла для динамического выбора сниппетов в Protocol Runner.
-
-**Target features:**
-- Auto-color nodes by type — color written on every save based on `radiprotocol_nodeType`, always overwrite
-- New "snippet" node type — subfolder-scoped snippet picker in Runner with SnippetFillInModal integration
+**Shipped:** v1.4 Snippets and Colors, Colors and Snippets (2026-04-15)
+**Next milestone:** TBD — plan via `/gsd-new-milestone`
 
 ## Context
 
-- Shipped v1.0 (7 phases, 28 plans) + v1.2 (8 phases, 11 plans) + v1.3 (1 phase, 1 plan); ~7K LOC TypeScript in src/
+- Shipped v1.0 (7 phases, 28 plans) + v1.2 (8 phases, 11 plans) + v1.3 (1 phase, 1 plan) + v1.4 (4 phases, 12 plans); TypeScript in src/
 - Tech stack: TypeScript + Obsidian Plugin API + esbuild + Vitest
 - Target: public release on Obsidian Community Plugins
 - Primary author: radiologist (CT focus), designed for all imaging modalities
-- All phases human-UAT approved; 8/8 v1.2 UAT tests passed in live Obsidian
+- All phases human-UAT approved; v1.4 milestone audit passed 11/11 requirements, 4/4 phases, 10/10 integration, 3/3 flows
 - All engine code (parser, runner, snippets, sessions) has zero Obsidian imports and is fully unit-testable
-- Known tech debt: Nyquist VALIDATION.md missing for phases 12–19; pre-existing TS errors in editor-panel-view.ts; dead CSS (.rp-legend*); 3 RED test stubs in runner-extensions.test.ts
+- Known tech debt: Nyquist VALIDATION.md draft for phases 12–19 and 28–31; pre-existing TS errors in editor-panel-view.ts; dead CSS (.rp-legend*); 3 RED test stubs in runner-extensions.test.ts; Phase 29 BFS cycle guard + null subfolderPath normalization resolved via WR-01/WR-02 fixes
 
 ## Constraints
 
@@ -162,6 +177,12 @@ A radiologist can generate a structured, accurate protocol in seconds by answeri
 | RunnerView reconstructs ProtocolRunner at openCanvas() | Picks up textSeparator from settings; no lazy init or observer needed | ✓ Good — mid-session setting change requires reopen (by design) |
 | Live textarea read in complete-state toolbar | previewTextarea?.value ?? capturedText — honours final edits before copy/save/insert | ✓ Good — fixed stale closure bug |
 | getCanvasJSON() for runner read path (Phases 17+) | Reads live in-memory canvas data; vault.read() retained only in EditorPanel form load | ✓ Good — BUG-02/03 resolved |
+| Single injection point in `saveNodeEdits` for auto-coloring (Phase 28) | `enrichedEdits` spread at top of function — one fork-point before Pattern B / Strategy A; two-priority type resolution (edits first, then existing canvas node) | ✓ Good — eliminates color drift |
+| BFS via `vault.adapter.list()` for snippet subfolder discovery (Phase 29) | Simple recursive directory walk, practical vault sizes don't need depth limit; visited set added post-review (WR-01) | ✓ Good |
+| Pre-I/O path-safety gate in `SnippetService.listFolder` (Phase 30) | Rejects `..`, absolute paths, sibling-prefix matches before any disk access — defense-in-depth over vault adapter | ✓ Good |
+| `awaiting-snippet-pick` as new runner state (Phase 30) | Routes through existing `awaiting-snippet-fill`/`completeSnippet` flow — no duplication; session serialize/restore support | ✓ Good |
+| `returnToBranchList` flag on UndoEntry (Phase 31) | Step-back from open snippet picker returns to branch selection, not previous node — preserves user mental model | ✓ Good |
+| Per-node `snippetLabel` + separator override on SnippetNode (Phase 31) | `v \|\| undefined` normalization; author can customize mixed-branch presentation per question | ✓ Good |
 
 ## Evolution
 
@@ -172,4 +193,4 @@ A radiologist can generate a structured, accurate protocol in seconds by answeri
 4. Update Context with current state
 
 ---
-*Last updated: 2026-04-13 — milestone v1.4 started*
+*Last updated: 2026-04-15 after v1.4 milestone*
