@@ -662,9 +662,14 @@ export class SnippetManagerView extends ItemView {
 
       // If the id changed (e.g. was a UUID on first save), delete the old file
       if (oldId !== (draft.id ?? draft.name)) {
-        await this.plugin.snippetService.delete(oldId);
+        // Phase 32 (D-03): delete is path-based — build path from legacy id.
+        const oldPath = `${this.plugin.settings.snippetFolderPath}/${oldId}.json`;
+        await this.plugin.snippetService.delete(oldPath);
       }
 
+      // Phase 32 (D-03): ensure draft.path tracks the (possibly-renamed) id
+      // so save() writes to the correct file under the new path-based API.
+      draft.path = `${this.plugin.settings.snippetFolderPath}/${(draft.id ?? draft.name)}.json`;
       await this.plugin.snippetService.save(draft);
 
       // Sync local list — update existing or add if not present
@@ -686,7 +691,9 @@ export class SnippetManagerView extends ItemView {
 
   private async handleDelete(draft: SnippetFile): Promise<void> {
     try {
-      await this.plugin.snippetService.delete((draft.id ?? draft.name));
+      // Phase 32 (D-03): delete is path-based.
+      const p = `${this.plugin.settings.snippetFolderPath}/${(draft.id ?? draft.name)}.json`;
+      await this.plugin.snippetService.delete(p);
 
       // Remove from local list
       const idx = this.snippets.findIndex(s => s.id === (draft.id ?? draft.name));

@@ -1,8 +1,10 @@
 // views/snippet-fill-in-modal.ts
 // Runtime fill-in modal for dynamic snippets (SNIP-04, SNIP-05, SNIP-09, D-10 through D-13)
 import { Modal, App } from 'obsidian';
-import type { SnippetFile, SnippetPlaceholder } from '../snippets/snippet-model';
+import type { JsonSnippet, SnippetPlaceholder } from '../snippets/snippet-model';
 import { renderSnippet } from '../snippets/snippet-model';
+// Phase 32 (D-01): JsonSnippet is the canonical type for fill-in modal input.
+// Previously typed as `SnippetFile`, which is now an alias for `JsonSnippet`.
 
 /**
  * SnippetFillInModal — presented by RunnerView when the runner reaches a text-block
@@ -21,7 +23,7 @@ import { renderSnippet } from '../snippets/snippet-model';
  * resolves its promise. The caller decides what to do with the result.
  */
 export class SnippetFillInModal extends Modal {
-  private readonly snippet: SnippetFile;
+  private readonly snippet: JsonSnippet;
   private resolve!: (value: string | null) => void;
   /** Double-resolve guard (T-5-11, RESEARCH.md Pitfall 3) */
   private resolved = false;
@@ -34,7 +36,7 @@ export class SnippetFillInModal extends Modal {
   /** Live preview textarea reference for updatePreview() calls */
   private previewTextarea: HTMLTextAreaElement | null = null;
 
-  constructor(app: App, snippet: SnippetFile) {
+  constructor(app: App, snippet: JsonSnippet) {
     super(app);
     this.snippet = snippet;
     this.result = new Promise<string | null>(res => {
