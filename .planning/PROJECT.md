@@ -107,7 +107,20 @@ A radiologist can generate a structured, accurate protocol in seconds by answeri
 
 ### Active (v1.5)
 
-_(No active requirements — planning next milestone via `/gsd-new-milestone`)_
+## Current Milestone: v1.5 Snippet Editor Refactoring
+
+**Goal:** Переработать Snippet Editor в file-system-подобное дерево с модальным редактированием, синхронизацией с vault, и добавить поддержку `.md` сниппетов в Protocol Runner.
+
+**Target features:**
+- Folder-tree UI в `SnippetManagerView` (раскрывающееся дерево, заменяет старый master-detail)
+- Modal create/edit (создание/редактирование сниппета через модалку, не inline)
+- Выбор типа (.json vs .md) в модалке создания
+- Drag-and-drop + context menu + "Move to" — перемещение между папками
+- Inline rename (F2 / context menu) с автообновлением Canvas-ссылок
+- Live vault watcher — дерево реагирует на внешние create/delete/rename
+- Удаление через `vault.trash()` с confirm (фиксит рассинхрон)
+- Поддержка `.md` сниппетов в Protocol Runner — вставка содержимого as-is
+- Inline textarea в модалке для редактирования `.md`
 
 ### Deferred (Future Milestones)
 
@@ -134,7 +147,7 @@ _(No active requirements — planning next milestone via `/gsd-new-milestone`)_
 ## Current State
 
 **Shipped:** v1.4 Snippets and Colors, Colors and Snippets (2026-04-15)
-**Next milestone:** TBD — plan via `/gsd-new-milestone`
+**Current milestone:** v1.5 Snippet Editor Refactoring (planning)
 
 ## Context
 
@@ -193,4 +206,4 @@ _(No active requirements — planning next milestone via `/gsd-new-milestone`)_
 4. Update Context with current state
 
 ---
-*Last updated: 2026-04-15 after v1.4 milestone*
+*Last updated: 2026-04-15 — v1.5 Snippet Editor Refactoring milestone started*
