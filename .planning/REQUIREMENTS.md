@@ -28,9 +28,9 @@
 - [ ] **MODAL-03**: Модалка создания имеет toggle/radio выбора типа: JSON (с плейсхолдерами) или Markdown (статическое содержимое)
 - [ ] **MODAL-04**: Модалка создания предзаполняется путём целевой папки — при нажатии кнопки «+ New» у конкретной папки в дереве
 - [ ] **MODAL-05**: Модалка содержит поле «Папка» (dropdown с деревом папок), позволяющее изменить путь перед сохранением
-- [ ] **MODAL-06**: Для JSON-сниппета модалка показывает существующий placeholder chip-editor из v1.3
+- [x] **MODAL-06**: Для JSON-сниппета модалка показывает существующий placeholder chip-editor из v1.3
 - [ ] **MODAL-07**: Для Markdown-сниппета модалка показывает inline textarea для редактирования содержимого
-- [ ] **MODAL-08**: Unsaved-changes guard: закрытие модалки с несохранёнными правками требует подтверждения
+- [x] **MODAL-08**: Unsaved-changes guard: закрытие модалки с несохранёнными правками требует подтверждения
 
 ### Folder Operations
 
@@ -61,7 +61,7 @@
 ### Delete
 
 - [x] **DEL-01**: Удаление сниппета через context menu / кнопку в дереве физически перемещает файл в Obsidian trash через `vault.trash()`
-- [ ] **DEL-02**: Удаление требует подтверждения через confirm-модалку (показывает имя сниппета / папки)
+- [x] **DEL-02**: Удаление требует подтверждения через confirm-модалку (показывает имя сниппета / папки)
 - [ ] **DEL-03**: После удаления сниппет не отображается ни в дереве, ни в Protocol Runner snippet picker (фиксит рассинхрон)
 
 ### Markdown Snippet Support in Runner
@@ -105,9 +105,9 @@
 | MODAL-03 | Phase 33 | Pending |
 | MODAL-04 | Phase 33 | Pending |
 | MODAL-05 | Phase 33 | Pending |
-| MODAL-06 | Phase 33 | Pending |
+| MODAL-06 | Phase 33 | Complete |
 | MODAL-07 | Phase 33 | Pending |
-| MODAL-08 | Phase 33 | Pending |
+| MODAL-08 | Phase 33 | Complete |
 | FOLDER-01 | Phase 33 | Pending |
 | FOLDER-02 | Phase 33 | Pending |
 | FOLDER-03 | Phase 33 | Pending |
@@ -123,7 +123,7 @@
 | SYNC-02 | Phase 33 | Pending |
 | SYNC-03 | Phase 33 | Pending |
 | DEL-01 | Phase 32 | Complete |
-| DEL-02 | Phase 33 | Pending |
+| DEL-02 | Phase 33 | Complete |
 | DEL-03 | Phase 33 | Pending |
 | MD-01 | Phase 35 | Pending |
 | MD-02 | Phase 35 | Pending |
