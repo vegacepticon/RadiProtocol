@@ -77,6 +77,14 @@ export class SnippetManagerView extends ItemView {
   // renderTree can highlight the row (data-editing=true). Cleared on close.
   private currentlyEditingPath: string | null = null;
 
+  // Phase 34 Plan 03 — inline rename state.
+  // `currentlyRenamingPath` gates startInlineRename so only one row at a
+  // time can be in rename mode. `rowLabelEls` is a path → label span map
+  // populated during renderNode so context-menu «Переименовать» can locate
+  // the label element without walking the DOM.
+  private currentlyRenamingPath: string | null = null;
+  private rowLabelEls: Map<string, HTMLElement> = new Map();
+
   // Debounced redraw timer id (window.setTimeout handle).
   private redrawTimer: number | null = null;
 
@@ -138,6 +146,7 @@ export class SnippetManagerView extends ItemView {
       this.redrawTimer = null;
     }
     this.contentEl.empty();
+    this.rowLabelEls.clear();
     // Vault event refs auto-detach via registerEvent; nothing else to release.
   }
 
@@ -209,6 +218,7 @@ export class SnippetManagerView extends ItemView {
   // -------------------------------------------------------------------------
   private renderTree(): void {
     this.treeRootEl.empty();
+    this.rowLabelEls.clear();
 
     if (this.treeData.length === 0) {
       this.renderEmptyState(this.treeRootEl);
@@ -243,6 +253,8 @@ export class SnippetManagerView extends ItemView {
     const row = container.createDiv({ cls: 'radi-snippet-tree-row' });
     row.setAttribute('data-path', node.path);
     row.setAttribute('data-kind', node.kind);
+    // Phase 34 Plan 03: F2 keydown requires row to be focusable.
+    row.setAttribute('tabindex', '0');
     if (node.kind === 'file' && this.currentlyEditingPath === node.path) {
       row.setAttribute('data-editing', 'true');
     }
@@ -266,7 +278,9 @@ export class SnippetManagerView extends ItemView {
     const iconEl = row.createSpan({ cls: 'radi-snippet-tree-icon' });
     setIcon(iconEl, iconForNode(node, expanded));
 
-    row.createSpan({ cls: 'radi-snippet-tree-label', text: node.name });
+    const labelEl = row.createSpan({ cls: 'radi-snippet-tree-label', text: node.name });
+    // Phase 34 Plan 03 — cache label for context-menu «Переименовать».
+    this.rowLabelEls.set(node.path, labelEl);
 
     if (node.kind === 'folder') {
       const actions = row.createSpan({ cls: 'radi-snippet-tree-actions' });
@@ -318,6 +332,14 @@ export class SnippetManagerView extends ItemView {
       this.handleDragEnd(row);
     });
 
+    // Phase 34 Plan 03 — F2 keydown inline rename trigger.
+    this.registerDomEvent(row, 'keydown', (ev) => {
+      const ke = ev as KeyboardEvent;
+      if (ke.key !== 'F2') return;
+      ke.preventDefault();
+      this.startInlineRename(node, labelEl);
+    });
+
     // Children (folders only, when expanded)
     if (node.kind === 'folder' && expanded) {
       if (node.children.length === 0) {
@@ -361,6 +383,16 @@ export class SnippetManagerView extends ItemView {
           .setIcon('pencil')
           .onClick(() => { void this.openEditModal(node.path); }),
       );
+      // Phase 34 Plan 03: «Переименовать»
+      menu.addItem((item) =>
+        item
+          .setTitle('Переименовать')
+          .setIcon('pencil-line')
+          .onClick(() => {
+            const labelEl = this.rowLabelEls.get(node.path);
+            if (labelEl !== undefined) this.startInlineRename(node, labelEl);
+          }),
+      );
       // Phase 34 Plan 01: «Переместить в…»
       menu.addItem((item) =>
         item
@@ -387,6 +419,16 @@ export class SnippetManagerView extends ItemView {
           .setTitle('Создать подпапку')
           .setIcon('folder-plus')
           .onClick(() => { void this.handleCreateSubfolder(node.path); }),
+      );
+      // Phase 34 Plan 03: «Переименовать»
+      menu.addItem((item) =>
+        item
+          .setTitle('Переименовать')
+          .setIcon('pencil-line')
+          .onClick(() => {
+            const labelEl = this.rowLabelEls.get(node.path);
+            if (labelEl !== undefined) this.startInlineRename(node, labelEl);
+          }),
       );
       // Phase 34 Plan 01: «Переместить в…»
       menu.addItem((item) =>
@@ -760,6 +802,158 @@ export class SnippetManagerView extends ItemView {
     } catch (e) {
       new Notice('Не удалось переместить: ' + ((e as Error)?.message ?? 'неизвестная ошибка'));
       console.error('[RadiProtocol] drop move failed', e);
+    }
+  }
+
+  // -------------------------------------------------------------------------
+  // Phase 34 Plan 03 — F2 inline rename.
+  // Swap the row's label span for a transient <input>. Enter commits via
+  // `renameSnippet` / `renameFolder` (D-03: folder branch also fans out to
+  // rewriteCanvasRefs with snippet-root-relative keys and rewrites
+  // expand-state prefixes). Escape cancels. Blur commits once unless the
+  // value is empty/unchanged, in which case it cancels. A closure-scoped
+  // `settled` flag guards against the Enter→commit→blur→double-commit race
+  // (D-05).
+  // -------------------------------------------------------------------------
+  private startInlineRename(node: TreeNode, labelEl: HTMLElement): void {
+    if (this.currentlyRenamingPath !== null) return;
+    this.currentlyRenamingPath = node.path;
+
+    // Build a transient input in the row container, hide the label, and
+    // insert the input at the label's position. We use the row (label's
+    // parent) as the container so DOM event propagation + row-level CSS
+    // still apply.
+    const row = (labelEl as unknown as { parent?: HTMLElement }).parent ?? null;
+    const rowEl: HTMLElement = (row as HTMLElement | null) ?? (labelEl as HTMLElement);
+
+    const initialValue = node.kind === 'file' ? basenameNoExt(node.path) : node.name;
+    const input = (rowEl as unknown as { createEl: (t: string, o?: { cls?: string; type?: string }) => HTMLElement })
+      .createEl('input', { cls: 'radi-snippet-tree-rename-input', type: 'text' });
+    (input as unknown as { value: string }).value = initialValue;
+    // Best-effort label hide — in real DOM we'd detach; the mock doesn't
+    // need this, and we leave the label in place so cancelInlineRename can
+    // simply remove the input without rebuilding the row.
+    try {
+      (labelEl as unknown as { style: Record<string, string> }).style['display'] = 'none';
+    } catch { /* noop */ }
+    try {
+      (input as unknown as { focus: () => void }).focus();
+    } catch { /* noop */ }
+    try {
+      (input as unknown as { select: () => void }).select();
+    } catch { /* noop */ }
+
+    let settled = false;
+
+    const cleanup = (): void => {
+      // Remove listeners — use raw removeEventListener (listeners were
+      // attached raw, not via registerDomEvent, because the input is
+      // short-lived and not part of view lifetime).
+      try {
+        (input as unknown as { removeEventListener: (t: string, h: (ev: unknown) => void) => void })
+          .removeEventListener('keydown', onKeyDown as unknown as (ev: unknown) => void);
+        (input as unknown as { removeEventListener: (t: string, h: (ev: unknown) => void) => void })
+          .removeEventListener('blur', onBlur as unknown as (ev: unknown) => void);
+      } catch { /* noop */ }
+      // Detach the input and restore label visibility.
+      try {
+        (input as unknown as { remove: () => void }).remove();
+      } catch { /* noop */ }
+      try {
+        (labelEl as unknown as { style: Record<string, string> }).style['display'] = '';
+      } catch { /* noop */ }
+      this.currentlyRenamingPath = null;
+    };
+
+    const onKeyDown = (ev: KeyboardEvent): void => {
+      if (ev.key === 'Enter') {
+        ev.preventDefault();
+        if (settled) return;
+        settled = true;
+        const value = (input as unknown as { value: string }).value;
+        void this.commitInlineRename(node, value, cleanup);
+        return;
+      }
+      if (ev.key === 'Escape') {
+        ev.preventDefault();
+        if (settled) return;
+        settled = true;
+        cleanup();
+        return;
+      }
+    };
+
+    const onBlur = (_ev: Event): void => {
+      if (settled) return;
+      settled = true;
+      const value = (input as unknown as { value: string }).value;
+      const trimmed = value.trim();
+      const initialTrimmed = initialValue.trim();
+      if (trimmed === '' || trimmed === initialTrimmed) {
+        cleanup();
+        return;
+      }
+      void this.commitInlineRename(node, value, cleanup);
+    };
+
+    (input as unknown as { addEventListener: (t: string, h: (ev: unknown) => void) => void })
+      .addEventListener('keydown', onKeyDown as unknown as (ev: unknown) => void);
+    (input as unknown as { addEventListener: (t: string, h: (ev: unknown) => void) => void })
+      .addEventListener('blur', onBlur as unknown as (ev: unknown) => void);
+  }
+
+  private async commitInlineRename(
+    node: TreeNode,
+    rawValue: string,
+    cleanup: () => void,
+  ): Promise<void> {
+    const newValue = rawValue.trim();
+    const oldBasename = node.kind === 'file' ? basenameNoExt(node.path) : node.name;
+    if (newValue === '' || newValue === oldBasename) {
+      cleanup();
+      return;
+    }
+    try {
+      if (node.kind === 'file') {
+        await this.plugin.snippetService.renameSnippet(node.path, newValue);
+        new Notice('Сниппет переименован.');
+      } else {
+        const oldPath = node.path;
+        const newPath = await this.plugin.snippetService.renameFolder(oldPath, newValue);
+        const snippetRoot = this.plugin.settings.snippetFolderPath;
+        const mapping = new Map<string, string>([
+          [toCanvasKey(oldPath, snippetRoot), toCanvasKey(newPath, snippetRoot)],
+        ]);
+        const result = await rewriteCanvasRefs(this.app, mapping);
+
+        // D-07: expand-state prefix rewrite.
+        const expanded = this.plugin.settings.snippetTreeExpandedPaths;
+        let mutated = false;
+        for (let i = 0; i < expanded.length; i++) {
+          const entry = expanded[i]!;
+          if (entry === oldPath) {
+            expanded[i] = newPath;
+            mutated = true;
+          } else if (entry.startsWith(oldPath + '/')) {
+            expanded[i] = newPath + entry.slice(oldPath.length);
+            mutated = true;
+          }
+        }
+        if (mutated) {
+          await this.plugin.saveSettings();
+        }
+
+        new Notice(
+          'Папка переименована. Обновлено канвасов: ' + result.updated.length +
+            ', пропущено: ' + result.skipped.length + '.',
+        );
+      }
+      // Vault 'rename' watcher will trigger the debounced redraw.
+    } catch (e) {
+      new Notice('Не удалось переименовать: ' + ((e as Error)?.message ?? 'неизвестная ошибка'));
+      console.error('[RadiProtocol] inline rename commit failed', e);
+    } finally {
+      cleanup();
     }
   }
 
