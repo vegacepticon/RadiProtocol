@@ -80,16 +80,21 @@ Full details: `.planning/milestones/v1.4-ROADMAP.md`
 ### Phase Details
 
 ### Phase 32: SnippetService Refactor — MD Support, Trash Delete, Canvas Reference Sync
-**Goal**: SnippetService exposes a folder-tree data model, recognizes `.md` snippets as a first-class type, deletes via `vault.trash()`, and ships a vault-wide utility that rewrites Canvas `SnippetNode` references when a snippet is renamed or moved.
+**Goal**: SnippetService exposes a folder-tree data model, recognizes `.md` snippets as a first-class type, deletes via `vault.trash()`, and ships a vault-wide utility that rewrites Canvas `SnippetNode.subfolderPath` references when a snippet folder is renamed or moved.
 **Depends on**: Phase 31 (SnippetNode model and references)
 **Requirements**: MD-05, DEL-01
 **Success Criteria** (what must be TRUE):
   1. `SnippetService.listFolder()` returns entries discriminated by extension — JSON snippets with placeholders vs MD snippets with raw content (MD-05).
   2. `SnippetService.load()` returns the correct typed model (`JsonSnippet` vs `MdSnippet`) based on file extension (MD-05).
   3. Calling the new delete method removes a snippet via `vault.trash()` (Obsidian trash, not permanent delete) and the file disappears from the vault (DEL-01).
-  4. A Canvas-reference-sync utility can scan every `.canvas` in the vault and rewrite SnippetNode `subfolderPath` + filename references given an old → new path mapping, without corrupting other node data.
+  4. A Canvas-reference-sync utility can scan every `.canvas` in the vault and rewrite SnippetNode `subfolderPath` references (D-07 — SnippetNode does not store a filename field) given an old → new folder-path mapping, without corrupting other node data.
   5. Unit tests cover extension routing, trash delete, and the Canvas rewrite utility with single- and multi-canvas fixtures.
-**Plans**: TBD
+**Plans**: 5 plans
+  - [ ] 32-00-PLAN.md — snippet-model: Snippet = JsonSnippet | MdSnippet discriminated union
+  - [ ] 32-01-PLAN.md — SnippetService API refactor: listFolder / load / save / delete(path) / exists + assertInsideRoot + vault.trash
+  - [ ] 32-02-PLAN.md — canvas-ref-sync module: rewriteCanvasRefs(app, mapping) with prefix match + WriteMutex + best-effort
+  - [ ] 32-03-PLAN.md — Callsite updates (runner-view, snippet-fill-in-modal, snippet-manager-view) minimal build-fixing only
+  - [ ] 32-04-PLAN.md — Test suite: snippet-service extension routing / trash / path-safety + canvas-ref-sync fixtures
 **UI hint**: no
 
 ### Phase 33: Tree UI, Modal Create/Edit, Folder Operations, Vault Watcher
@@ -146,7 +151,7 @@ Full details: `.planning/milestones/v1.4-ROADMAP.md`
 | 29. Snippet Node — Model, Editor, Validator | v1.4 | 3/3 | Complete | 2026-04-13 |
 | 30. Snippet Node — Runner Integration | v1.4 | 3/3 | Complete | 2026-04-14 |
 | 31. Mixed Answer + Snippet Branching at Question Nodes | v1.4 | 4/4 | Complete | 2026-04-15 |
-| 32. SnippetService Refactor — MD Support, Trash Delete, Canvas Reference Sync | v1.5 | 0/0 | Not started | — |
+| 32. SnippetService Refactor — MD Support, Trash Delete, Canvas Reference Sync | v1.5 | 0/5 | Planned | — |
 | 33. Tree UI, Modal Create/Edit, Folder Operations, Vault Watcher | v1.5 | 0/0 | Not started | — |
 | 34. Drag-and-Drop, Context Menu, Rename, Move with Canvas Reference Updates | v1.5 | 0/0 | Not started | — |
 | 35. Markdown Snippets in Protocol Runner | v1.5 | 0/0 | Not started | — |
