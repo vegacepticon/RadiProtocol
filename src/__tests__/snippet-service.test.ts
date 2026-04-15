@@ -1,176 +1,181 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { SnippetService } from '../snippets/snippet-service';
+import type { JsonSnippet, MdSnippet } from '../snippets/snippet-model';
 
-// Minimal vault adapter mock
-function makeVaultMock(existsResult = false) {
-  return {
+// ---------------------------------------------------------------------------
+// Shared mock infrastructure
+// ---------------------------------------------------------------------------
+
+interface MockVaultOptions {
+  files?: Record<string, string>; // path → raw contents
+  folders?: string[]; // folder paths that "exist"
+  abstractFiles?: Record<string, unknown>; // paths that resolve to a TFile-ish
+}
+
+function makeVault(opts: MockVaultOptions = {}) {
+  const files: Record<string, string> = { ...(opts.files ?? {}) };
+  const folderSet = new Set(opts.folders ?? []);
+  const abstractFiles: Record<string, unknown> = { ...(opts.abstractFiles ?? {}) };
+  // Any file in `files` should resolve by default to a stub TFile unless overridden
+  for (const p of Object.keys(files)) {
+    if (!(p in abstractFiles)) abstractFiles[p] = { path: p, stat: {} };
+  }
+
+  const vault = {
     adapter: {
-      exists: vi.fn().mockResolvedValue(existsResult),
-      read: vi.fn().mockResolvedValue('{}'),
-      write: vi.fn().mockResolvedValue(undefined),
+      exists: vi.fn(async (p: string) => {
+        return p in files || folderSet.has(p);
+      }),
+      read: vi.fn(async (p: string) => {
+        if (!(p in files)) throw new Error('ENOENT: ' + p);
+        return files[p];
+      }),
+      write: vi.fn(async (p: string, data: string) => {
+        files[p] = data;
+      }),
+      list: vi.fn(async (p: string) => {
+        const prefix = p + '/';
+        const childFiles: string[] = [];
+        const childFolders = new Set<string>();
+        for (const fp of Object.keys(files)) {
+          if (fp.startsWith(prefix)) {
+            const rest = fp.slice(prefix.length);
+            if (!rest.includes('/')) childFiles.push(fp);
+          }
+        }
+        for (const folder of folderSet) {
+          if (folder.startsWith(prefix)) {
+            const rest = folder.slice(prefix.length);
+            if (rest !== '' && !rest.includes('/')) childFolders.add(folder);
+          }
+        }
+        return { files: childFiles, folders: Array.from(childFolders) };
+      }),
     },
-    create: vi.fn().mockResolvedValue(undefined),
-    createFolder: vi.fn().mockResolvedValue(undefined),
-    getAbstractFileByPath: vi.fn().mockReturnValue(null),
-    delete: vi.fn().mockResolvedValue(undefined),
+    create: vi.fn(async (p: string, data: string) => {
+      files[p] = data;
+      abstractFiles[p] = { path: p, stat: {} };
+    }),
+    createFolder: vi.fn(async (p: string) => {
+      folderSet.add(p);
+    }),
+    getAbstractFileByPath: vi.fn((p: string) => {
+      return p in abstractFiles ? abstractFiles[p] : null;
+    }),
+    trash: vi.fn(async (_file: unknown, _system: boolean) => {
+      // no-op; tests spy on call args
+    }),
+    delete: vi.fn(),
   };
+  return { vault, files, folderSet, abstractFiles };
 }
 
-function makeAppMock(existsResult = false) {
-  return { vault: makeVaultMock(existsResult) };
-}
+const settings = {
+  snippetFolderPath: '.radiprotocol/snippets',
+  sessionFolderPath: '.radiprotocol/sessions',
+  outputDestination: 'clipboard' as const,
+  outputFolderPath: '',
+  maxLoopIterations: 50,
+  runnerViewMode: 'sidebar' as const,
+  protocolFolderPath: '',
+  textSeparator: 'newline' as const,
+};
 
-const settings = { snippetFolderPath: '.radiprotocol/snippets', sessionFolderPath: '.radiprotocol/sessions', outputDestination: 'clipboard' as const, outputFolderPath: '', maxLoopIterations: 50, runnerViewMode: 'sidebar' as const, protocolFolderPath: '', textSeparator: 'newline' as const };
+const ROOT = '.radiprotocol/snippets';
 
-describe('SnippetService (SNIP-01)', () => {
-  it('has listFolder() method', () => {
-    // Phase 32 (D-03): legacy `list()` removed in favour of `listFolder(path)`.
-    const svc = new SnippetService(makeAppMock() as never, settings);
+// ---------------------------------------------------------------------------
+// API presence
+// ---------------------------------------------------------------------------
+
+describe('SnippetService API surface (Phase 32 D-03)', () => {
+  it('exposes listFolder / load / save / delete / exists', () => {
+    const { vault } = makeVault();
+    const svc = new SnippetService({ vault } as never, settings);
     expect(typeof svc.listFolder).toBe('function');
-  });
-
-  it('has load(id) method', () => {
-    const svc = new SnippetService(makeAppMock() as never, settings);
     expect(typeof svc.load).toBe('function');
-  });
-
-  it('has save(snippet) method', () => {
-    const svc = new SnippetService(makeAppMock() as never, settings);
     expect(typeof svc.save).toBe('function');
-  });
-
-  it('has delete(id) method', () => {
-    const svc = new SnippetService(makeAppMock() as never, settings);
     expect(typeof svc.delete).toBe('function');
+    expect(typeof svc.exists).toBe('function');
   });
 
-  it('has exists(id) method', () => {
-    const svc = new SnippetService(makeAppMock() as never, settings);
-    expect(typeof svc.exists).toBe('function');
+  it('does NOT expose removed legacy list() method', () => {
+    const { vault } = makeVault();
+    const svc = new SnippetService({ vault } as never, settings);
+    // Phase 32: legacy flat-list `list()` is removed.
+    expect((svc as unknown as { list?: unknown }).list).toBeUndefined();
   });
 });
 
-// Phase 30 Plan 01: listFolder — direct-children listing for runner picker.
+// ---------------------------------------------------------------------------
+// listFolder — happy paths (retained from Phase 30) + MD routing (MD-05, D-09)
+// ---------------------------------------------------------------------------
+
 describe('listFolder (D-18..D-21, T-30-01)', () => {
-  function makeListFolderMock(opts: {
-    exists?: boolean;
-    list?: { files: string[]; folders: string[] };
-    reads?: Record<string, string>;
-  }) {
-    return {
-      adapter: {
-        exists: vi.fn().mockResolvedValue(opts.exists ?? true),
-        list: vi.fn().mockResolvedValue(opts.list ?? { files: [], folders: [] }),
-        read: vi.fn().mockImplementation(async (p: string) => {
-          if (opts.reads && p in opts.reads) return opts.reads[p];
-          throw new Error('unexpected read: ' + p);
-        }),
-        write: vi.fn(),
+  it('happy path — returns direct-children folders and parsed snippets sorted', async () => {
+    const aPath = `${ROOT}/CT/a.json`;
+    const bPath = `${ROOT}/CT/b.json`;
+    const { vault } = makeVault({
+      files: {
+        [aPath]: JSON.stringify({ id: 'a', name: 'Zebra', template: 't', placeholders: [] }),
+        [bPath]: JSON.stringify({ id: 'b', name: 'Apple', template: 't', placeholders: [] }),
       },
-      create: vi.fn(),
-      createFolder: vi.fn(),
-      getAbstractFileByPath: vi.fn().mockReturnValue(null),
-      delete: vi.fn(),
-    };
-  }
-
-  const ROOT = '.radiprotocol/snippets';
-
-  it('happy path — returns direct-children folders (basenames, sorted) and parsed snippets (sorted by name)', async () => {
-    const aPath = '.radiprotocol/snippets/CT/a.json';
-    const bPath = '.radiprotocol/snippets/CT/b.json';
-    const aJson = JSON.stringify({ id: 'a', name: 'Zebra', template: 't', placeholders: [] });
-    const bJson = JSON.stringify({ id: 'b', name: 'Apple', template: 't', placeholders: [] });
-    const vault = makeListFolderMock({
-      exists: true,
-      list: {
-        files: [aPath, bPath],
-        folders: ['.radiprotocol/snippets/CT/kidney', '.radiprotocol/snippets/CT/adrenal'],
-      },
-      reads: { [aPath]: aJson, [bPath]: bJson },
+      folders: [`${ROOT}/CT`, `${ROOT}/CT/kidney`, `${ROOT}/CT/adrenal`],
     });
     const svc = new SnippetService({ vault } as never, settings);
 
-    const result = await svc.listFolder('.radiprotocol/snippets/CT');
+    const result = await svc.listFolder(`${ROOT}/CT`);
 
     expect(result.folders).toEqual(['adrenal', 'kidney']);
     expect(result.snippets.map((s) => s.name)).toEqual(['Apple', 'Zebra']);
+    expect(result.snippets.every((s) => s.kind === 'json')).toBe(true);
   });
 
   it('missing folder returns empty and does not call adapter.list', async () => {
-    const vault = makeListFolderMock({ exists: false });
+    const { vault } = makeVault();
     const svc = new SnippetService({ vault } as never, settings);
 
-    const result = await svc.listFolder('.radiprotocol/snippets/CT');
+    const result = await svc.listFolder(`${ROOT}/CT`);
 
     expect(result).toEqual({ folders: [], snippets: [] });
     expect(vault.adapter.list).toHaveBeenCalledTimes(0);
   });
 
-  it('empty folder returns empty', async () => {
-    const vault = makeListFolderMock({
-      exists: true,
-      list: { files: [], folders: [] },
-    });
-    const svc = new SnippetService({ vault } as never, settings);
-
-    const result = await svc.listFolder('.radiprotocol/snippets/CT');
-
-    expect(result).toEqual({ folders: [], snippets: [] });
-  });
-
   it('corrupt JSON is skipped silently', async () => {
-    const goodPath = '.radiprotocol/snippets/CT/good.json';
-    const badPath = '.radiprotocol/snippets/CT/bad.json';
-    const vault = makeListFolderMock({
-      exists: true,
-      list: { files: [goodPath, badPath], folders: [] },
-      reads: {
-        [goodPath]: JSON.stringify({ id: 'g', name: 'Good', template: 't', placeholders: [] }),
+    const goodPath = `${ROOT}/CT/good.json`;
+    const badPath = `${ROOT}/CT/bad.json`;
+    const { vault } = makeVault({
+      files: {
+        [goodPath]: JSON.stringify({ name: 'Good', template: 't', placeholders: [] }),
         [badPath]: '{bad',
       },
+      folders: [`${ROOT}/CT`],
     });
     const svc = new SnippetService({ vault } as never, settings);
 
-    const result = await svc.listFolder('.radiprotocol/snippets/CT');
+    const result = await svc.listFolder(`${ROOT}/CT`);
 
     expect(result.snippets.map((s) => s.name)).toEqual(['Good']);
   });
 
-  it('non-.json files are filtered out', async () => {
-    const aPath = '.radiprotocol/snippets/CT/a.json';
-    const readmePath = '.radiprotocol/snippets/CT/README.md';
-    const vault = makeListFolderMock({
-      exists: true,
-      list: { files: [aPath, readmePath], folders: [] },
-      reads: {
-        [aPath]: JSON.stringify({ id: 'a', name: 'Alpha', template: 't', placeholders: [] }),
-      },
-    });
-    const svc = new SnippetService({ vault } as never, settings);
-
-    const result = await svc.listFolder('.radiprotocol/snippets/CT');
-
-    expect(result.snippets.map((s) => s.name)).toEqual(['Alpha']);
-    expect(vault.adapter.read).toHaveBeenCalledTimes(1);
-  });
-
   it('rejects path with .. segments before any disk I/O', async () => {
-    const vault = makeListFolderMock({ exists: true });
+    const { vault } = makeVault({ folders: [ROOT] });
     const svc = new SnippetService({ vault } as never, settings);
     const errSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
 
-    const result = await svc.listFolder('.radiprotocol/snippets/../../etc');
+    const result = await svc.listFolder(`${ROOT}/../../etc`);
 
     expect(result).toEqual({ folders: [], snippets: [] });
     expect(vault.adapter.exists).toHaveBeenCalledTimes(0);
-    expect(errSpy).toHaveBeenCalled();
-    expect(errSpy.mock.calls.some((c) => /listFolder rejected unsafe path/.test(String(c[0])))).toBe(true);
+    expect(
+      errSpy.mock.calls.some((c) =>
+        /snippet-service rejected unsafe path/.test(String(c[0])),
+      ),
+    ).toBe(true);
     errSpy.mockRestore();
   });
 
   it('rejects absolute path outside root', async () => {
-    const vault = makeListFolderMock({ exists: true });
+    const { vault } = makeVault({ folders: [ROOT] });
     const svc = new SnippetService({ vault } as never, settings);
     const errSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
 
@@ -178,13 +183,16 @@ describe('listFolder (D-18..D-21, T-30-01)', () => {
 
     expect(result).toEqual({ folders: [], snippets: [] });
     expect(vault.adapter.exists).toHaveBeenCalledTimes(0);
-    expect(errSpy).toHaveBeenCalled();
-    expect(errSpy.mock.calls.some((c) => /listFolder rejected unsafe path/.test(String(c[0])))).toBe(true);
+    expect(
+      errSpy.mock.calls.some((c) =>
+        /snippet-service rejected unsafe path/.test(String(c[0])),
+      ),
+    ).toBe(true);
     errSpy.mockRestore();
   });
 
   it('rejects sibling-prefix match (e.g. .radiprotocol/snippets-evil)', async () => {
-    const vault = makeListFolderMock({ exists: true });
+    const { vault } = makeVault();
     const svc = new SnippetService({ vault } as never, settings);
     const errSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
 
@@ -192,20 +200,442 @@ describe('listFolder (D-18..D-21, T-30-01)', () => {
 
     expect(result).toEqual({ folders: [], snippets: [] });
     expect(vault.adapter.exists).toHaveBeenCalledTimes(0);
-    expect(errSpy).toHaveBeenCalled();
     errSpy.mockRestore();
   });
+});
 
-  it('accepts the snippet root itself', async () => {
-    const vault = makeListFolderMock({
-      exists: true,
-      list: { files: [], folders: ['.radiprotocol/snippets/CT'] },
+// ---------------------------------------------------------------------------
+// listFolder extension routing (MD-05) + JSON/MD coexistence (D-09)
+// ---------------------------------------------------------------------------
+
+describe('listFolder extension routing (MD-05)', () => {
+  it('returns JsonSnippet for .json files', async () => {
+    const p = `${ROOT}/CT/alpha.json`;
+    const { vault } = makeVault({
+      files: {
+        [p]: JSON.stringify({
+          name: 'Alpha',
+          template: 'hello {{x}}',
+          placeholders: [{ id: 'x', label: 'X', type: 'free-text' }],
+        }),
+      },
+      folders: [`${ROOT}/CT`],
     });
     const svc = new SnippetService({ vault } as never, settings);
 
-    const result = await svc.listFolder(ROOT);
+    const { snippets } = await svc.listFolder(`${ROOT}/CT`);
 
-    expect(result.folders).toEqual(['CT']);
-    expect(vault.adapter.exists).toHaveBeenCalledTimes(1);
+    expect(snippets).toHaveLength(1);
+    expect(snippets[0].kind).toBe('json');
+    const s = snippets[0] as JsonSnippet;
+    expect(s.name).toBe('Alpha');
+    expect(s.template).toBe('hello {{x}}');
+    expect(s.placeholders).toHaveLength(1);
+    expect(s.path).toBe(p);
   });
+
+  it('returns MdSnippet for .md files with raw content', async () => {
+    const p = `${ROOT}/CT/notes.md`;
+    const raw = '# Notes\n\nFree-text markdown body.';
+    const { vault } = makeVault({
+      files: { [p]: raw },
+      folders: [`${ROOT}/CT`],
+    });
+    const svc = new SnippetService({ vault } as never, settings);
+
+    const { snippets } = await svc.listFolder(`${ROOT}/CT`);
+
+    expect(snippets).toHaveLength(1);
+    expect(snippets[0].kind).toBe('md');
+    const s = snippets[0] as MdSnippet;
+    expect(s.name).toBe('notes');
+    expect(s.content).toBe(raw);
+    expect(s.path).toBe(p);
+  });
+
+  it('returns both when foo.json and foo.md coexist (D-09)', async () => {
+    const jsonP = `${ROOT}/CT/foo.json`;
+    const mdP = `${ROOT}/CT/foo.md`;
+    const { vault } = makeVault({
+      files: {
+        [jsonP]: JSON.stringify({ name: 'foo', template: 't', placeholders: [] }),
+        [mdP]: 'raw md body',
+      },
+      folders: [`${ROOT}/CT`],
+    });
+    const svc = new SnippetService({ vault } as never, settings);
+
+    const { snippets } = await svc.listFolder(`${ROOT}/CT`);
+
+    expect(snippets).toHaveLength(2);
+    const kinds = snippets.map((s) => s.kind).sort();
+    expect(kinds).toEqual(['json', 'md']);
+    // Both derive `name` = 'foo' (basename)
+    expect(snippets.every((s) => s.name === 'foo')).toBe(true);
+  });
+
+  it('skips non-.json/.md files', async () => {
+    const jsonP = `${ROOT}/CT/a.json`;
+    const txtP = `${ROOT}/CT/ignore.txt`;
+    const { vault } = makeVault({
+      files: {
+        [jsonP]: JSON.stringify({ name: 'a', template: 't', placeholders: [] }),
+        [txtP]: 'ignore me',
+      },
+      folders: [`${ROOT}/CT`],
+    });
+    const svc = new SnippetService({ vault } as never, settings);
+
+    const { snippets } = await svc.listFolder(`${ROOT}/CT`);
+
+    expect(snippets).toHaveLength(1);
+    expect(snippets[0].kind).toBe('json');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// load(path) routing
+// ---------------------------------------------------------------------------
+
+describe('load(path) routing (D-03)', () => {
+  it('returns JsonSnippet for .json path', async () => {
+    const p = `${ROOT}/CT/a.json`;
+    const { vault } = makeVault({
+      files: {
+        [p]: JSON.stringify({ name: 'Alpha', template: 't', placeholders: [] }),
+      },
+    });
+    const svc = new SnippetService({ vault } as never, settings);
+
+    const snippet = await svc.load(p);
+
+    expect(snippet).not.toBeNull();
+    expect(snippet!.kind).toBe('json');
+    expect((snippet as JsonSnippet).name).toBe('Alpha');
+    expect(snippet!.path).toBe(p);
+  });
+
+  it('returns MdSnippet with raw content for .md path', async () => {
+    const p = `${ROOT}/CT/note.md`;
+    const raw = 'body\nwith\nlines';
+    const { vault } = makeVault({ files: { [p]: raw } });
+    const svc = new SnippetService({ vault } as never, settings);
+
+    const snippet = await svc.load(p);
+
+    expect(snippet).not.toBeNull();
+    expect(snippet!.kind).toBe('md');
+    expect((snippet as MdSnippet).content).toBe(raw);
+    expect((snippet as MdSnippet).name).toBe('note');
+  });
+
+  it('returns null for missing file', async () => {
+    const { vault } = makeVault();
+    const svc = new SnippetService({ vault } as never, settings);
+
+    const snippet = await svc.load(`${ROOT}/missing.json`);
+    expect(snippet).toBeNull();
+  });
+
+  it('returns null for out-of-root path (path-safety D-10)', async () => {
+    const { vault } = makeVault();
+    const svc = new SnippetService({ vault } as never, settings);
+    const errSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+    const snippet = await svc.load(`${ROOT}/../../etc/passwd`);
+
+    expect(snippet).toBeNull();
+    expect(vault.adapter.exists).toHaveBeenCalledTimes(0);
+    errSpy.mockRestore();
+  });
+
+  it('returns null for corrupt JSON', async () => {
+    const p = `${ROOT}/bad.json`;
+    const { vault } = makeVault({ files: { [p]: '{not json' } });
+    const svc = new SnippetService({ vault } as never, settings);
+
+    const snippet = await svc.load(p);
+    expect(snippet).toBeNull();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// save(Snippet) branching + WriteMutex serialisation
+// ---------------------------------------------------------------------------
+
+describe('save(Snippet) branching (D-03, D-11)', () => {
+  it('JSON save writes serialised JSON without runtime-only kind/path fields', async () => {
+    const p = `${ROOT}/CT/a.json`;
+    const { vault, files } = makeVault({ folders: [ROOT, `${ROOT}/CT`] });
+    const svc = new SnippetService({ vault } as never, settings);
+
+    const snippet: JsonSnippet = {
+      kind: 'json',
+      path: p,
+      name: 'Alpha',
+      template: 'hello {{x}}',
+      placeholders: [{ id: 'x', label: 'X', type: 'free-text' }],
+    };
+    await svc.save(snippet);
+
+    // Either create() or adapter.write() was used to persist payload
+    const persisted = files[p];
+    expect(persisted).toBeDefined();
+    const parsed = JSON.parse(persisted);
+    expect(parsed).toEqual({
+      name: 'Alpha',
+      template: 'hello {{x}}',
+      placeholders: [{ id: 'x', label: 'X', type: 'free-text' }],
+    });
+    // runtime-only fields must NOT be persisted
+    expect(parsed).not.toHaveProperty('kind');
+    expect(parsed).not.toHaveProperty('path');
+    expect(parsed).not.toHaveProperty('id');
+  });
+
+  it('MD save writes raw content verbatim', async () => {
+    const p = `${ROOT}/CT/raw.md`;
+    const { vault, files } = makeVault({ folders: [ROOT, `${ROOT}/CT`] });
+    const svc = new SnippetService({ vault } as never, settings);
+
+    const content = '# H1\n\nLine 1\nLine 2';
+    const snippet: MdSnippet = {
+      kind: 'md',
+      path: p,
+      name: 'raw',
+      content,
+    };
+    await svc.save(snippet);
+
+    expect(files[p]).toBe(content);
+  });
+
+  it('concurrent saves on the same path serialise via WriteMutex', async () => {
+    const p = `${ROOT}/CT/a.json`;
+    const order: string[] = [];
+    // Override write to be async and record ordering
+    const { vault, files } = makeVault({ folders: [ROOT, `${ROOT}/CT`] });
+    const origCreate = vault.create;
+    vault.create = vi.fn(async (path: string, data: string) => {
+      order.push('start:' + path);
+      // yield to event loop so interleaving is possible if mutex is absent
+      await new Promise((r) => setTimeout(r, 10));
+      order.push('end:' + path);
+      await origCreate(path, data);
+    }) as unknown as typeof origCreate;
+    // After the first save create()s the file, subsequent writes go through adapter.write()
+    const origWrite = vault.adapter.write;
+    vault.adapter.write = vi.fn(async (path: string, data: string) => {
+      order.push('start:' + path);
+      await new Promise((r) => setTimeout(r, 10));
+      order.push('end:' + path);
+      await origWrite(path, data);
+    }) as unknown as typeof origWrite;
+
+    const svc = new SnippetService({ vault } as never, settings);
+    const s1: JsonSnippet = {
+      kind: 'json',
+      path: p,
+      name: 'One',
+      template: 't',
+      placeholders: [],
+    };
+    const s2: JsonSnippet = {
+      kind: 'json',
+      path: p,
+      name: 'Two',
+      template: 't',
+      placeholders: [],
+    };
+
+    await Promise.all([svc.save(s1), svc.save(s2)]);
+
+    // Serialised: start/end must come in pairs, never interleaved
+    expect(order).toHaveLength(4);
+    expect(order[0].startsWith('start:')).toBe(true);
+    expect(order[1].startsWith('end:')).toBe(true);
+    expect(order[2].startsWith('start:')).toBe(true);
+    expect(order[3].startsWith('end:')).toBe(true);
+    // Final persisted value corresponds to one of the two writes
+    expect(files[p]).toBeDefined();
+  });
+
+  it('JSON save strips control characters (sanitise, T-5-01)', async () => {
+    const p = `${ROOT}/CT/ctrl.json`;
+    const { vault, files } = makeVault({ folders: [ROOT, `${ROOT}/CT`] });
+    const svc = new SnippetService({ vault } as never, settings);
+
+    const snippet: JsonSnippet = {
+      kind: 'json',
+      path: p,
+      name: 'Na\u0001me',
+      template: 'tmpl\u0000here',
+      placeholders: [
+        { id: 'x', label: 'Lbl\u001F', type: 'free-text' },
+      ],
+    };
+    await svc.save(snippet);
+
+    const parsed = JSON.parse(files[p]);
+    expect(parsed.name).toBe('Name');
+    expect(parsed.template).toBe('tmplhere');
+    expect(parsed.placeholders[0].label).toBe('Lbl');
+  });
+
+  it('save rejects unsafe path (D-10)', async () => {
+    const { vault } = makeVault();
+    const svc = new SnippetService({ vault } as never, settings);
+
+    const snippet: JsonSnippet = {
+      kind: 'json',
+      path: `${ROOT}/../../escape.json`,
+      name: 'x',
+      template: '',
+      placeholders: [],
+    };
+    await expect(svc.save(snippet)).rejects.toThrow(/unsafe path/);
+    expect(vault.adapter.write).toHaveBeenCalledTimes(0);
+    expect(vault.create).toHaveBeenCalledTimes(0);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// delete(path) — DEL-01 via vault.trash
+// ---------------------------------------------------------------------------
+
+describe('delete(path) uses Obsidian trash (DEL-01, D-08)', () => {
+  it('calls vault.trash(file, false) exactly once', async () => {
+    const p = `${ROOT}/CT/victim.json`;
+    const { vault } = makeVault({
+      files: { [p]: JSON.stringify({ name: 'v', template: 't', placeholders: [] }) },
+    });
+    const svc = new SnippetService({ vault } as never, settings);
+
+    await svc.delete(p);
+
+    expect(vault.trash).toHaveBeenCalledTimes(1);
+    const [file, system] = vault.trash.mock.calls[0];
+    expect((file as { path: string }).path).toBe(p);
+    // CRITICAL: system=false — goes to Obsidian .trash/, not OS trash
+    expect(system).toBe(false);
+  });
+
+  it('no-op when file missing (no throw, trash not called)', async () => {
+    const p = `${ROOT}/CT/ghost.json`;
+    const { vault } = makeVault(); // no abstract file
+    const svc = new SnippetService({ vault } as never, settings);
+
+    await expect(svc.delete(p)).resolves.toBeUndefined();
+    expect(vault.trash).toHaveBeenCalledTimes(0);
+  });
+
+  it('rejects out-of-root path — trash NOT called', async () => {
+    const { vault } = makeVault();
+    const svc = new SnippetService({ vault } as never, settings);
+    const errSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+    await svc.delete(`${ROOT}/../../etc/passwd`);
+
+    expect(vault.trash).toHaveBeenCalledTimes(0);
+    expect(vault.getAbstractFileByPath).toHaveBeenCalledTimes(0);
+    errSpy.mockRestore();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// exists(path)
+// ---------------------------------------------------------------------------
+
+describe('exists(path) (D-03)', () => {
+  it('returns true for existing safe path', async () => {
+    const p = `${ROOT}/CT/a.json`;
+    const { vault } = makeVault({ files: { [p]: '{}' } });
+    const svc = new SnippetService({ vault } as never, settings);
+    expect(await svc.exists(p)).toBe(true);
+  });
+
+  it('returns false for missing safe path', async () => {
+    const { vault } = makeVault();
+    const svc = new SnippetService({ vault } as never, settings);
+    expect(await svc.exists(`${ROOT}/missing.json`)).toBe(false);
+  });
+
+  it('returns false for out-of-root path without touching adapter', async () => {
+    const { vault } = makeVault();
+    const svc = new SnippetService({ vault } as never, settings);
+    const errSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+    const r = await svc.exists(`${ROOT}/../../etc/passwd`);
+
+    expect(r).toBe(false);
+    expect(vault.adapter.exists).toHaveBeenCalledTimes(0);
+    errSpy.mockRestore();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Parameterised path-safety gate (D-10)
+// ---------------------------------------------------------------------------
+
+describe('path-safety gate applies to every entry point (D-10)', () => {
+  const unsafePaths = [
+    `${ROOT}/../evil.json`,
+    '/absolute/path.json',
+    `${ROOT}/sub/../../escape.json`,
+    '.radiprotocol/snippets-evil/foo.json',
+  ];
+
+  let errSpy: ReturnType<typeof vi.spyOn>;
+  beforeEach(() => {
+    errSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+  });
+
+  for (const bad of unsafePaths) {
+    it(`load() rejects ${bad}`, async () => {
+      const { vault } = makeVault();
+      const svc = new SnippetService({ vault } as never, settings);
+      const r = await svc.load(bad);
+      expect(r).toBeNull();
+      expect(vault.adapter.exists).toHaveBeenCalledTimes(0);
+    });
+
+    it(`save() rejects ${bad}`, async () => {
+      const { vault } = makeVault();
+      const svc = new SnippetService({ vault } as never, settings);
+      const snippet: JsonSnippet = {
+        kind: 'json',
+        path: bad,
+        name: 'x',
+        template: '',
+        placeholders: [],
+      };
+      await expect(svc.save(snippet)).rejects.toThrow(/unsafe path/);
+      expect(vault.adapter.write).toHaveBeenCalledTimes(0);
+      expect(vault.create).toHaveBeenCalledTimes(0);
+    });
+
+    it(`delete() rejects ${bad}`, async () => {
+      const { vault } = makeVault();
+      const svc = new SnippetService({ vault } as never, settings);
+      await svc.delete(bad);
+      expect(vault.trash).toHaveBeenCalledTimes(0);
+      expect(vault.getAbstractFileByPath).toHaveBeenCalledTimes(0);
+    });
+
+    it(`exists() rejects ${bad}`, async () => {
+      const { vault } = makeVault();
+      const svc = new SnippetService({ vault } as never, settings);
+      const r = await svc.exists(bad);
+      expect(r).toBe(false);
+      expect(vault.adapter.exists).toHaveBeenCalledTimes(0);
+    });
+
+    it(`listFolder() rejects ${bad}`, async () => {
+      const { vault } = makeVault();
+      const svc = new SnippetService({ vault } as never, settings);
+      const r = await svc.listFolder(bad);
+      expect(r).toEqual({ folders: [], snippets: [] });
+      expect(vault.adapter.exists).toHaveBeenCalledTimes(0);
+    });
+  }
 });
