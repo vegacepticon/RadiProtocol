@@ -157,6 +157,59 @@
 
 ---
 
+## Milestone: v1.4 — Snippets and Colors, Colors and Snippets
+
+**Shipped:** 2026-04-15
+**Phases:** 4 (28–31) | **Plans:** 12 | **Timeline:** 3 days (2026-04-13 → 2026-04-15)
+**Git:** 54 commits, 66 files, +8753/-110 LOC
+
+### What Was Built
+
+- Phase 28: Auto node coloring — single `enrichedEdits` injection point in `saveNodeEdits` writes canvas color on every save across both Pattern B (canvas open) and Strategy A (canvas closed); two-priority type resolution (edits first, then existing node); `makeCanvasNode` test helper auto-derives color (NODE-COLOR-01/02/03)
+- Phase 29: Snippet node as 8th kind — discriminated union extension, canvas-parser case, graph-validator missing-path check, EditorPanel subfolder picker via void async IIFE and BFS vault traversal (with WR-01 visited set), `v || undefined` normalization so empty string becomes root-fallback (SNIPPET-NODE-01/02/08)
+- Phase 30: Runner snippet integration — `awaiting-snippet-pick` runner state, `ProtocolRunner.pickSnippet()` routes into existing fill-in flow, full session serialize/restore, `SnippetService.listFolder` with pre-I/O path-safety gate (rejects `..`, absolute paths, sibling-prefix matches), RunnerView picker with local (non-persisted) drill-down path state (SNIPPET-NODE-03/04/05/06/07)
+- Phase 31: Mixed answer + snippet branching — question nodes route to both answer and snippet nodes simultaneously; `chooseSnippetBranch` runner API with undo-before-mutate + `returnToBranchList` flag; per-node `snippetLabel` + separator override editable in Node Editor; RunnerView partitions branches via typed array + two render loops
+
+### What Worked
+
+- **TDD Wave 0 (RED) → Wave 1 (GREEN) structure** held up across all four phases — every plan landed with failing tests first, implementations went green in the next wave, no blind spots
+- **Code review before UAT** caught 6 real defects across v1.4 (28 WR-02/WR-03, 29 WR-01/WR-02, 30 WR-01/WR-03) including a BFS cycle risk and an auto-save race — all small but real
+- **Retroactive Phase 30 VERIFICATION.md** unblocked the milestone audit re-run; the gsd-verifier pattern continues to work as a recovery tool
+- **Discriminated union exhaustiveness** meant adding the 8th node kind forced compile-time fixes everywhere (runner, color-map, validator, parser) — no runtime surprises
+- **Single injection point for color** (Phase 28 `enrichedEdits`) is a clean design — one place to change, impossible to forget a path
+- **Pre-I/O path-safety gate** in SnippetService rejects traversal attempts before any disk access — defense in depth even though vault adapter would likely block them
+
+### What Was Inefficient
+
+- **Nyquist VALIDATION.md still draft for all four v1.4 phases** — same tech debt pattern as v1.2; enforcement was not gated at phase completion. Continues to accumulate.
+- **Phase 30-03 marked `partial-awaiting-uat` at initial close** — required a second audit pass after retroactive VERIFICATION.md + UAT closure; incremental verification at plan close would have avoided the re-audit
+- **ROADMAP.md Progress table went stale mid-milestone** (Phase 30 shown as 2/3, Phase 31 as Planned despite all commits landing) — same gap as v1.2. Executor still not updating ROADMAP.md as phases finish.
+- **Live-vault UAT items for Phase 29** (subfolder dropdown population + canvas write-back) were not testable in automated suite and had to be closed manually during re-audit
+
+### Patterns Established
+
+- **`enrichedEdits` spread pattern** for single-point data injection before fork in a multi-path save function — applicable anywhere Pattern B / Strategy A (or similar dual-path) exists
+- **Void async IIFE inside synchronous builder** — `void (async () => { ... })()` pattern populates async data into a synchronous form builder without refactoring the sync signature
+- **Pre-I/O path-safety gate** — validate user-supplied paths (reject `..`, absolute, sibling-prefix) *before* any disk access, even when the underlying adapter likely blocks them
+- **`returnToBranchList` flag on UndoEntry** — step-back from a sub-picker returns to the branch selection screen rather than to the previous node; preserves user mental model for mixed branches
+- **`v || undefined` empty-string normalization** — consistent across v1.4 for optional fields (subfolderPath, snippetLabel, separator override); keeps JSON clean and lets save logic delete keys
+- **Typed array partition + two render loops** for mixed-kind UI lists (Phase 31 branch rendering) — simpler than single loop with branching inside
+
+### Key Lessons
+
+1. **Exhaustiveness checks are free safety nets** — adding an 8th node kind forced the compiler to point at every switch statement; no runtime hunts required
+2. **Verify phase completion before closing the plan** — partial-awaiting-uat states at close cost re-audit work; plans should close only when verification is complete or explicitly deferred with an acknowledged audit item
+3. **Cycle guards are cheap insurance** — `listSnippetSubfolders` BFS without a visited set (WR-01) would never hit a cycle on normal filesystems, but NTFS junctions / symlinks / edge cases make it a must-have. Default to cycle-safe traversal.
+4. **The `/gsd-new-milestone` skip from v1.3 did NOT repeat** — v1.4 was planned formally. The v1.3 retrospective lesson carried forward successfully.
+
+### Cost Observations
+
+- Model mix: quality profile (Sonnet 4.6 primary)
+- Sessions: ~5 sessions across 3 days
+- Notable: Phase 31 was added mid-milestone as a natural extension when the mixed-branching scenario surfaced during Phase 30 UAT — flexible scope management worked
+
+---
+
 ## Cross-Milestone Trends
 
 ### Process Evolution
@@ -166,6 +219,7 @@
 | v1.0 | 7 | 28 | First milestone — baseline established |
 | v1.2 | 8 | 11 | Retrofit verification pattern; inserted phases for gap closure; milestone audit pre-archival |
 | v1.3 | 1 | 1 | Smallest milestone — single feature; skipped `/gsd-new-milestone`; structural debt repaired at close |
+| v1.4 | 4 | 12 | Formal `/gsd-new-milestone` used; mid-milestone scope extension (Phase 31 added); re-audit recovery pattern proven |
 
 ### Cumulative Quality
 
@@ -174,10 +228,13 @@
 | v1.0 | 28+ passing | parser, runner, snippets, sessions |
 | v1.2 | 28+ passing + 8/8 UAT | same; no new engine modules added |
 | v1.3 | 53+ passing + 5/5 UAT | same; +25 DnD/splice/UUID tests |
+| v1.4 | 53+ passing + 12/12 UAT (7+5) | same; +snippet node fixtures + canvas-parser/validator/runner coverage for 8th kind |
 
 ### Top Lessons (Verified Across Milestones)
 
 1. Human UAT checkpoint per UI phase catches bugs that automated tests miss
 2. Pure engine modules (zero Obsidian imports) make the test loop fast and reliable — worth the upfront discipline
 3. Always write SUMMARY.md per phase — missing artifacts cost a full recovery phase
-4. Keep ROADMAP.md current as phases execute — gsd-tools depends on it at milestone close
+4. Keep ROADMAP.md current as phases execute — gsd-tools depends on it at milestone close (repeat offense in v1.4)
+5. Nyquist VALIDATION.md must be gated at phase completion — retroactive backlog has grown across v1.2 and v1.4; pay the cost now or pay it compounded later
+6. Code review before UAT catches subtle defects that slip past both automated tests and human testers (stale closures, cycle guards, race conditions) — v1.3 and v1.4 both prove this
