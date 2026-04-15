@@ -126,6 +126,15 @@ Plans:
 **Goal:** Open the protocol runner as a full editor tab (like a new note) instead of a sidebar panel — full-width layout for better readability and UX.
 **Plans:** 0 plans
 
+### Phase 999.3: Mixed answer+snippet branching at question nodes (BACKLOG)
+
+**Goal:** Allow a question node to have outgoing edges to both answer nodes and snippet nodes simultaneously. The runner presents all branches side-by-side as selectable options at the question step. Picking an answer inserts the answer text (current behavior); picking a snippet opens the snippet picker/fill-in modal and inserts only that snippet's rendered text into the accumulator. Today snippet nodes must be chained after an answer, which forces one snippet per branch and is inflexible. Captured from Phase 30 UAT.
+**Requirements:** TBD
+**Plans:** 0 plans
+
+Plans:
+- [ ] TBD (promote with /gsd-review-backlog when ready)
+
 ---
 
 ## Progress
