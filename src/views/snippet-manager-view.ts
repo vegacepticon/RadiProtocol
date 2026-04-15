@@ -823,8 +823,13 @@ export class SnippetManagerView extends ItemView {
     // insert the input at the label's position. We use the row (label's
     // parent) as the container so DOM event propagation + row-level CSS
     // still apply.
-    const row = (labelEl as unknown as { parent?: HTMLElement }).parent ?? null;
-    const rowEl: HTMLElement = (row as HTMLElement | null) ?? (labelEl as HTMLElement);
+    //
+    // Phase 34 post-UAT fix: real DOM exposes `parentElement`, not `.parent`.
+    // The test mock sets `.parent`, so we check both — parentElement first
+    // for the real browser, `.parent` fallback for the mock.
+    const realParent = (labelEl as unknown as { parentElement?: HTMLElement | null }).parentElement;
+    const mockParent = (labelEl as unknown as { parent?: HTMLElement | null }).parent;
+    const rowEl: HTMLElement = (realParent ?? mockParent ?? labelEl) as HTMLElement;
 
     const initialValue = node.kind === 'file' ? basenameNoExt(node.path) : node.name;
     const input = (rowEl as unknown as { createEl: (t: string, o?: { cls?: string; type?: string }) => HTMLElement })
