@@ -8,9 +8,9 @@ import { App, SuggestModal } from 'obsidian';
 
 export class FolderPickerModal extends SuggestModal<string> {
   private readonly folders: string[];
-  private readonly onChooseCb: (folder: string) => void;
+  private readonly onChooseCb: (folder: string) => void | Promise<void>;
 
-  constructor(app: App, folders: string[], onChoose: (folder: string) => void) {
+  constructor(app: App, folders: string[], onChoose: (folder: string) => void | Promise<void>) {
     super(app);
     this.folders = folders;
     this.onChooseCb = onChoose;

@@ -11,6 +11,10 @@ import type RadiProtocolPlugin from '../main';
 import type { Snippet } from '../snippets/snippet-model';
 import { SnippetEditorModal } from './snippet-editor-modal';
 import { ConfirmModal } from './confirm-modal';
+// Phase 34 Plan 01: «Переместить в…» context-menu flow
+import { FolderPickerModal } from './folder-picker-modal';
+import { rewriteCanvasRefs } from '../snippets/canvas-ref-sync';
+import { toCanvasKey } from '../snippets/snippet-service';
 
 export const SNIPPET_MANAGER_VIEW_TYPE = 'radiprotocol-snippet-manager';
 
@@ -333,6 +337,13 @@ export class SnippetManagerView extends ItemView {
           .setIcon('pencil')
           .onClick(() => { void this.openEditModal(node.path); }),
       );
+      // Phase 34 Plan 01: «Переместить в…»
+      menu.addItem((item) =>
+        item
+          .setTitle('Переместить в…')
+          .setIcon('folder-input')
+          .onClick(() => { void this.openMovePicker(node); }),
+      );
       menu.addSeparator();
       menu.addItem((item) =>
         item
@@ -352,6 +363,13 @@ export class SnippetManagerView extends ItemView {
           .setTitle('Создать подпапку')
           .setIcon('folder-plus')
           .onClick(() => { void this.handleCreateSubfolder(node.path); }),
+      );
+      // Phase 34 Plan 01: «Переместить в…»
+      menu.addItem((item) =>
+        item
+          .setTitle('Переместить в…')
+          .setIcon('folder-input')
+          .onClick(() => { void this.openMovePicker(node); }),
       );
       menu.addSeparator();
       menu.addItem((item) =>
@@ -531,6 +549,83 @@ export class SnippetManagerView extends ItemView {
     } catch (e) {
       new Notice('Не удалось удалить папку: ' + ((e as Error)?.message ?? 'неизвестная ошибка'));
     }
+  }
+
+  // -------------------------------------------------------------------------
+  // Phase 34 Plan 01 — «Переместить в…» flow
+  // -------------------------------------------------------------------------
+  private async openMovePicker(node: TreeNode): Promise<void> {
+    let allFolders: string[];
+    try {
+      allFolders = await this.plugin.snippetService.listAllFolders();
+    } catch (e) {
+      new Notice('Не удалось получить список папок: ' + ((e as Error)?.message ?? 'неизвестная ошибка'));
+      console.error('[RadiProtocol] openMovePicker listAllFolders failed', e);
+      return;
+    }
+
+    // Build allowed-destination list.
+    let folders: string[];
+    if (node.kind === 'file') {
+      // For files: all folders are valid destinations except the current parent
+      // (no-op move). Still keep the current parent filtered so the UI is clean.
+      const currentParent = dirname(node.path);
+      folders = allFolders.filter((f) => f !== currentParent);
+    } else {
+      // For folders: exclude the folder itself AND all descendants (self-nest).
+      const src = node.path;
+      const prefix = src + '/';
+      folders = allFolders.filter((f) => f !== src && !f.startsWith(prefix));
+    }
+
+    const onChoose = async (chosen: string): Promise<void> => {
+      try {
+        if (node.kind === 'file') {
+          // D-03 следствие 2: file rename/move is canvas-invisible — no
+          // rewriteCanvasRefs, no «Обновлено канвасов» Notice.
+          await this.plugin.snippetService.moveSnippet(node.path, chosen);
+          new Notice('Сниппет перемещён.');
+        } else {
+          const oldPath = node.path;
+          const newPath = await this.plugin.snippetService.moveFolder(oldPath, chosen);
+          const snippetRoot = this.plugin.settings.snippetFolderPath;
+          const mapping = new Map<string, string>([
+            [toCanvasKey(oldPath, snippetRoot), toCanvasKey(newPath, snippetRoot)],
+          ]);
+          const result = await rewriteCanvasRefs(this.app, mapping);
+
+          // D-07: expand-state prefix rewrite. Walk the array, rewrite entries
+          // whose path equals oldPath or starts with oldPath + '/'.
+          const expanded = this.plugin.settings.snippetTreeExpandedPaths;
+          let mutated = false;
+          for (let i = 0; i < expanded.length; i++) {
+            const entry = expanded[i]!;
+            if (entry === oldPath) {
+              expanded[i] = newPath;
+              mutated = true;
+            } else if (entry.startsWith(oldPath + '/')) {
+              expanded[i] = newPath + entry.slice(oldPath.length);
+              mutated = true;
+            }
+          }
+          if (mutated) {
+            await this.plugin.saveSettings();
+          }
+
+          new Notice(
+            'Папка перемещена. Обновлено канвасов: ' + result.updated.length +
+              ', пропущено: ' + result.skipped.length + '.',
+          );
+        }
+        await this.rebuildTreeModel();
+        this.renderTree();
+      } catch (e) {
+        new Notice('Не удалось переместить: ' + ((e as Error)?.message ?? 'неизвестная ошибка'));
+        console.error('[RadiProtocol] openMovePicker move failed', e);
+      }
+    };
+
+    new FolderPickerModal(this.app, folders, onChoose).open();
   }
 }
 
