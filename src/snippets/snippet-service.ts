@@ -225,6 +225,71 @@ export class SnippetService {
   }
 
   /**
+   * Phase 33 (D-17): Create an empty folder inside the snippet root.
+   * Path-safety gated via assertInsideRoot; rejects unsafe path by throwing.
+   * Idempotent — ensureFolderPath is a no-op when the folder already exists.
+   * Wrapped in WriteMutex per normalized path.
+   */
+  async createFolder(path: string): Promise<void> {
+    const normalized = this.assertInsideRoot(path);
+    if (normalized === null) {
+      throw new Error(`[RadiProtocol] createFolder rejected unsafe path: ${path}`);
+    }
+    await this.mutex.runExclusive(normalized, async () => {
+      await ensureFolderPath(this.app.vault, normalized);
+    });
+  }
+
+  /**
+   * Phase 33 (D-16, D-17): Trash a folder (recursive) via a single vault.trash call.
+   * Path-safety gated; unsafe path or missing folder → silent no-op (no throw).
+   * Per D-17 refined: does NOT call rewriteCanvasRefs — deletes leave canvas refs broken.
+   * Wrapped in WriteMutex per normalized path.
+   */
+  async deleteFolder(path: string): Promise<void> {
+    const normalized = this.assertInsideRoot(path);
+    if (normalized === null) return;
+    await this.mutex.runExclusive(normalized, async () => {
+      const folder = this.app.vault.getAbstractFileByPath(normalized);
+      if (folder === null) return;
+      // D-08: Obsidian trash (.trash/), not system trash. Recursive = single call.
+      await this.app.vault.trash(folder, false);
+    });
+  }
+
+  /**
+   * Phase 33 (D-15): Recursively walk a folder and return every descendant
+   * file + subfolder (vault-relative paths as adapter.list returns them).
+   * Used by the folder-delete confirm dialog to display the exact count of
+   * items that will be trashed.
+   * Unsafe path → { files: [], folders: [], total: 0 }.
+   */
+  async listFolderDescendants(
+    path: string,
+  ): Promise<{ files: string[]; folders: string[]; total: number }> {
+    const normalized = this.assertInsideRoot(path);
+    if (normalized === null) return { files: [], folders: [], total: 0 };
+    const files: string[] = [];
+    const folders: string[] = [];
+    const queue: string[] = [normalized];
+    while (queue.length > 0) {
+      const current = queue.shift() as string;
+      let listing: { files: string[]; folders: string[] };
+      try {
+        listing = await this.app.vault.adapter.list(current);
+      } catch {
+        continue;
+      }
+      for (const f of listing.files) files.push(f);
+      for (const sub of listing.folders) {
+        folders.push(sub);
+        queue.push(sub);
+      }
+    }
+    return { files, folders, total: files.length + folders.length };
+  }
+
+  /**
    * Phase 32: Strip control characters (U+0000–U+001F, U+007F) from all
    * string values in a JsonSnippet and produce a plain disk payload object
    * (without runtime-only `kind` / `path` / deprecated `id`). Preserves
