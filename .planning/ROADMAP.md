@@ -112,28 +112,18 @@ Plans:
 - [ ] 30-03-PLAN.md — RunnerView picker rendering + CSS + UAT (D-01..D-05, D-09, D-13..D-17)
 **UI hint**: yes
 
----
-
-## Backlog
-
-### Phase 999.1: Canvas selector dropdown in runner view (BACKLOG)
-
-**Goal:** Let users choose which canvas/scenario to run from within the plugin panel via a dropdown or similar UX — without having to close the panel and invoke the command again on a different canvas.
-**Plans:** 2/3 plans executed
-
-### Phase 999.2: Full-tab runner view (BACKLOG)
-
-**Goal:** Open the protocol runner as a full editor tab (like a new note) instead of a sidebar panel — full-width layout for better readability and UX.
-**Plans:** 0 plans
-
-### Phase 999.3: Mixed answer+snippet branching at question nodes (BACKLOG)
-
-**Goal:** Allow a question node to have outgoing edges to both answer nodes and snippet nodes simultaneously. The runner presents all branches side-by-side as selectable options at the question step. Picking an answer inserts the answer text (current behavior); picking a snippet opens the snippet picker/fill-in modal and inserts only that snippet's rendered text into the accumulator. Today snippet nodes must be chained after an answer, which forces one snippet per branch and is inflexible. Captured from Phase 30 UAT.
-**Requirements:** TBD
-**Plans:** 0 plans
-
-Plans:
-- [ ] TBD (promote with /gsd-review-backlog when ready)
+### Phase 31: Mixed Answer + Snippet Branching at Question Nodes
+**Goal**: A question node can have outgoing edges to both answer nodes and snippet nodes simultaneously. The runner presents all branches side-by-side as selectable options at the question step. Picking an answer inserts the answer text (current behavior); picking a snippet opens the snippet picker/fill-in modal and inserts only that snippet's rendered text into the accumulator (with a per-node configurable separator).
+**Depends on**: Phase 30 (snippet node runner integration must exist)
+**Requirements**: TBD
+**Success Criteria** (what must be TRUE):
+  1. A question node with outgoing edges to both answers and snippet nodes shows both as selectable options in the runner branch list
+  2. Selecting a snippet variant opens the standard snippet picker (reuse Phase 30) and inserts only the rendered snippet text into the accumulator
+  3. Snippet nodes have a configurable label (`radiprotocol_snippetLabel`) and per-node separator (`radiprotocol_snippetSeparator`) editable in the Node Editor
+  4. graph-validator allows mixed branches and snippet-only question branches without warnings
+  5. Step-back from an open snippet picker (entered via a branch choice) returns to the branch selection list, not the previous node
+**Plans**: TBD
+**UI hint**: yes
 
 ---
 
@@ -160,3 +150,4 @@ Plans:
 | 28. Auto Node Coloring | v1.4 | 2/2 | Complete   | 2026-04-13 |
 | 29. Snippet Node — Model, Editor, Validator | v1.4 | 3/3 | Complete   | 2026-04-13 |
 | 30. Snippet Node — Runner Integration | v1.4 | 2/3 | In Progress|  |
+| 31. Mixed Answer + Snippet Branching at Question Nodes | v1.4 | 0/0 | Planned    |  |
