@@ -3,7 +3,7 @@ import { ItemView, WorkspaceLeaf, Notice, TFile, TFolder, MarkdownView } from 'o
 import type RadiProtocolPlugin from '../main';
 import { ProtocolRunner } from '../runner/protocol-runner';
 import { GraphValidator } from '../graph/graph-validator';
-import type { ProtocolGraph } from '../graph/graph-model';
+import type { ProtocolGraph, AnswerNode, SnippetNode } from '../graph/graph-model';
 import { SnippetFillInModal } from './snippet-fill-in-modal';
 import type { SnippetFile } from '../snippets/snippet-model';
 import { ResumeSessionModal } from './resume-session-modal';
@@ -334,22 +334,51 @@ export class RunnerView extends ItemView {
               text: node.questionText,
               cls: 'rp-question-text',
             });
-            const answerList = questionZone.createDiv({ cls: 'rp-answer-list' });
-            // Answer nodes are the direct neighbors of the question node
+            // Phase 31: partition outgoing neighbors into answer + snippet branches.
             const neighborIds = this.graph.adjacency.get(state.currentNodeId) ?? [];
-            for (const answerId of neighborIds) {
-              const answerNode = this.graph.nodes.get(answerId);
-              if (answerNode === undefined || answerNode.kind !== 'answer') continue;
-              const btn = answerList.createEl('button', {
-                cls: 'rp-answer-btn',
-                text: answerNode.displayLabel ?? answerNode.answerText,
-              });
-              this.registerDomEvent(btn, 'click', () => {
-                this.runner.syncManualEdit(this.previewTextarea?.value ?? '');  // BUG-01: capture manual edit (D-01)
-                this.runner.chooseAnswer(answerNode.id);
-                void this.autoSaveSession();   // SESSION-01 — save after answer
-                void this.renderAsync();
-              });
+            const answerNeighbors: AnswerNode[] = [];
+            const snippetNeighbors: SnippetNode[] = [];
+            for (const nid of neighborIds) {
+              const n = this.graph.nodes.get(nid);
+              if (n === undefined) continue;
+              if (n.kind === 'answer') answerNeighbors.push(n);
+              else if (n.kind === 'snippet') snippetNeighbors.push(n);
+            }
+
+            if (answerNeighbors.length > 0) {
+              const answerList = questionZone.createDiv({ cls: 'rp-answer-list' });
+              for (const answerNode of answerNeighbors) {
+                const btn = answerList.createEl('button', {
+                  cls: 'rp-answer-btn',
+                  text: answerNode.displayLabel ?? answerNode.answerText,
+                });
+                this.registerDomEvent(btn, 'click', () => {
+                  this.runner.syncManualEdit(this.previewTextarea?.value ?? '');  // BUG-01: capture manual edit (D-01)
+                  this.runner.chooseAnswer(answerNode.id);
+                  void this.autoSaveSession();   // SESSION-01 — save after answer
+                  void this.renderAsync();
+                });
+              }
+            }
+
+            if (snippetNeighbors.length > 0) {
+              // Phase 31 D-02: snippet branches rendered below answers, visually distinct.
+              const snippetList = questionZone.createDiv({ cls: 'rp-snippet-branch-list' });
+              for (const snippetNode of snippetNeighbors) {
+                const label = (snippetNode.snippetLabel !== undefined && snippetNode.snippetLabel.length > 0)
+                  ? `\uD83D\uDCC1 ${snippetNode.snippetLabel}`   // 📁
+                  : '\uD83D\uDCC1 Snippet';                      // D-01 fallback
+                const btn = snippetList.createEl('button', {
+                  cls: 'rp-snippet-branch-btn',
+                  text: label,
+                });
+                this.registerDomEvent(btn, 'click', () => {
+                  this.runner.syncManualEdit(this.previewTextarea?.value ?? '');  // BUG-01: capture manual edit (D-01)
+                  this.runner.chooseSnippetBranch(snippetNode.id);
+                  void this.autoSaveSession();   // SESSION-01 — save after snippet branch choice
+                  void this.renderAsync();
+                });
+              }
             }
             break;
           }

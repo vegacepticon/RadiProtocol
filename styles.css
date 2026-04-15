@@ -237,6 +237,27 @@
   font-weight: 600;
 }
 
+/* Phase 31: mixed answer + snippet branches at question nodes */
+.rp-snippet-branch-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--size-2-1);
+  margin-top: var(--size-4-2);
+}
+
+.rp-snippet-branch-btn {
+  width: 100%;
+  text-align: left;
+  min-height: 40px;
+  padding: var(--size-4-1) var(--size-4-2);
+  white-space: normal;
+  word-break: break-word;
+  font-size: var(--font-text-size);
+  line-height: 1.5;
+  /* визуально отделено от answer-кнопок — более мягкий accent */
+  border-style: dashed;
+}
+
 /* Phase 13: CanvasSelectorWidget ─────────────────────────────────────────── */
 
 .rp-selector-bar {
