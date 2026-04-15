@@ -609,6 +609,35 @@ export class EditorPanelView extends ItemView {
             subfolderSetting.setDesc('Could not load subfolders. Check that .radiprotocol/snippets/ exists.');
           }
         })();
+
+        // Phase 31 D-01: optional label shown on branch-list button when this snippet node
+        // is reached as a variant of a question. Empty fallback = "📁 Snippet".
+        new Setting(container)
+          .setName('Branch label')
+          .setDesc('Shown on the branch-list button when a question has outgoing edges to this snippet. Leave empty to use "📁 Snippet".')
+          .addText(text => {
+            text.setValue((nodeRecord['radiprotocol_snippetLabel'] as string | undefined) ?? '');
+            text.onChange(v => {
+              this.pendingEdits['radiprotocol_snippetLabel'] = v || undefined;
+              this.scheduleAutoSave();
+            });
+          });
+
+        // Phase 31 D-04: per-node separator override. '' = use global default from settings.
+        new Setting(container)
+          .setName('Separator override')
+          .setDesc('How the rendered snippet text is joined to the accumulated protocol. Default uses the global Text Separator setting.')
+          .addDropdown(drop => {
+            drop.addOption('', '\u2014 use global default \u2014');
+            drop.addOption('newline', 'Newline');
+            drop.addOption('space', 'Space');
+            const current = (nodeRecord['radiprotocol_snippetSeparator'] as string | undefined) ?? '';
+            drop.setValue(current);
+            drop.onChange(v => {
+              this.pendingEdits['radiprotocol_snippetSeparator'] = (v === 'space' || v === 'newline') ? v : undefined;
+              this.scheduleAutoSave();
+            });
+          });
         break;
       }
     }
