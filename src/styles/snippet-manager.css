@@ -438,3 +438,31 @@
   justify-content: flex-end;
   gap: var(--size-4-1);
 }
+
+/* Phase 34: drag-and-drop, inline rename */
+
+.radi-snippet-tree-row.is-dragging {
+  opacity: 0.5;
+}
+
+.radi-snippet-tree-row.radi-snippet-tree-drop-target {
+  background: var(--background-modifier-active-hover);
+  outline: 2px dashed var(--interactive-accent);
+  outline-offset: -2px;
+}
+
+.radi-snippet-tree-row.radi-snippet-tree-drop-forbidden {
+  cursor: not-allowed;
+  outline: 2px dashed var(--text-error);
+  outline-offset: -2px;
+}
+
+.radi-snippet-tree-rename-input {
+  flex: 1 1 auto;
+  font-size: inherit;
+  padding: 0 var(--size-2-1);
+  border: 1px solid var(--interactive-accent);
+  border-radius: var(--radius-s);
+  background: var(--background-primary);
+  color: var(--text-normal);
+}
