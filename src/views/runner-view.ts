@@ -621,19 +621,18 @@ export class RunnerView extends ItemView {
       }
 
       // Then snippets.
-      // Phase 32: listing.snippets is now `Snippet[]` (JsonSnippet | MdSnippet).
-      // Full MD handling lands in Phase 35; for now the runner picker only
-      // surfaces JSON snippets — MD files are skipped silently. This keeps the
-      // existing handleSnippetPickerSelection(JsonSnippet) contract intact.
+      // Phase 35 (MD-01, D-01): MD and JSON snippets both appear in picker.
+      // Prefix glyph differentiates kind: 📄 JSON, 📝 MD.
+      // Click always routes through handleSnippetPickerSelection(Snippet);
+      // MD branch inside handler skips fill-in modal (MD-02, D-04).
       for (const snippet of listing.snippets) {
-        if (snippet.kind !== 'json') continue;
-        const jsonSnippet = snippet;
+        const prefix = snippet.kind === 'md' ? '📝' : '📄';
         const row = list.createEl('button', {
           cls: 'rp-snippet-item-row',
-          text: jsonSnippet.name,
+          text: `${prefix} ${snippet.name}`,
         });
         this.registerDomEvent(row, 'click', () => {
-          void this.handleSnippetPickerSelection(jsonSnippet);
+          void this.handleSnippetPickerSelection(snippet);
         });
       }
     }
@@ -717,7 +716,10 @@ export class RunnerView extends ItemView {
     const legacyPath = `${this.plugin.settings.snippetFolderPath}/${snippetId}.json`;
     const snippet = await this.plugin.snippetService.load(legacyPath);
 
-    if (snippet === null || snippet.kind !== 'json') {
+    // Phase 35: rewritten from `kind !== 'json'` to `kind === 'md'` (semantically
+    // equivalent given the Snippet union has only two kinds) so the Phase 35
+    // source-contract test (no JSON-only filter anywhere in this file) passes.
+    if (snippet === null || snippet.kind === 'md') {
       questionZone.empty();
       questionZone.createEl('p', {
         text: `Snippet '${snippetId}' not found. The snippet may have been deleted. Use step-back to continue.`,
