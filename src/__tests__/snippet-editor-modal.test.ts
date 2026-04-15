@@ -113,10 +113,10 @@ function makeEl(tag = 'div'): MockEl {
       return child;
     },
     createDiv(opts?: { cls?: string; text?: string }): MockEl {
-      return this.createEl('div', opts);
+      return (this as unknown as MockEl).createEl('div', opts);
     },
     createSpan(opts?: { cls?: string; text?: string }): MockEl {
-      return this.createEl('span', opts);
+      return (this as unknown as MockEl).createEl('span', opts);
     },
     empty(): void {
       children.length = 0;
@@ -381,9 +381,10 @@ describe('SnippetEditorModal', () => {
 
   it('MODAL-01: create mode sets «Новый сниппет» title and renders type toggle', async () => {
     const { plugin } = makeMockPlugin();
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const modal = new SnippetEditorModal(
-      {} as unknown as Parameters<typeof SnippetEditorModal>[0] extends infer T ? T : never,
-      plugin as unknown as Parameters<typeof SnippetEditorModal>[1] extends infer T ? T : never,
+      {} as any, // eslint-disable-line @typescript-eslint/no-explicit-any
+      plugin as any, // eslint-disable-line @typescript-eslint/no-explicit-any
       { mode: 'create', initialFolder: '.radiprotocol/snippets' },
     );
     await modal.onOpen();
