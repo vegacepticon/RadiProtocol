@@ -110,7 +110,7 @@ Full details: `.planning/milestones/v1.4-ROADMAP.md`
 **Plans**: 5 plans
   - [x] 33-01-PLAN.md — SnippetService folder ops (createFolder/deleteFolder/listFolderDescendants) + settings.snippetTreeExpandedPaths + Wave 0 test stubs
   - [x] 33-02-PLAN.md — Extract chip editor into snippet-chip-editor.ts + generic ConfirmModal (2/3-button variants)
-  - [ ] 33-03-PLAN.md — SnippetEditorModal (unified create/edit, JSON↔MD toggle, «Папка» dropdown, D-09 move-on-save → rewriteCanvasRefs, unsaved-changes guard, collision pre-flight)
+  - [x] 33-03-PLAN.md — SnippetEditorModal (unified create/edit, JSON↔MD toggle, «Папка» dropdown, D-09 move-on-save → rewriteCanvasRefs, unsaved-changes guard, collision pre-flight)
   - [ ] 33-04-PLAN.md — Rewrite SnippetManagerView as folder-tree ItemView (context menus, hover + New, vault watcher 120ms debounced redraw, expand-state persistence, tree+modal CSS)
   - [ ] 33-05-PLAN.md — Full suite + build gates + human verification checkpoint (44-step UAT in a real Obsidian vault)
 **UI hint**: yes
@@ -157,7 +157,7 @@ Full details: `.planning/milestones/v1.4-ROADMAP.md`
 | 30. Snippet Node — Runner Integration | v1.4 | 3/3 | Complete | 2026-04-14 |
 | 31. Mixed Answer + Snippet Branching at Question Nodes | v1.4 | 4/4 | Complete | 2026-04-15 |
 | 32. SnippetService Refactor — MD Support, Trash Delete, Canvas Reference Sync | v1.5 | 5/5 | Complete   | 2026-04-15 |
-| 33. Tree UI, Modal Create/Edit, Folder Operations, Vault Watcher | v1.5 | 2/5 | In Progress|  |
+| 33. Tree UI, Modal Create/Edit, Folder Operations, Vault Watcher | v1.5 | 3/5 | In Progress|  |
 | 34. Drag-and-Drop, Context Menu, Rename, Move with Canvas Reference Updates | v1.5 | 0/0 | Not started | — |
 | 35. Markdown Snippets in Protocol Runner | v1.5 | 0/0 | Not started | — |
 </content>

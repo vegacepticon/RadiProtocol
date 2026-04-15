@@ -23,13 +23,13 @@
 
 ### Modal Create / Edit
 
-- [ ] **MODAL-01**: Создание сниппета происходит через модалку, а не inline в сайдбаре
-- [ ] **MODAL-02**: Редактирование существующего сниппета (имя, плейсхолдеры, содержимое) происходит через модалку
-- [ ] **MODAL-03**: Модалка создания имеет toggle/radio выбора типа: JSON (с плейсхолдерами) или Markdown (статическое содержимое)
-- [ ] **MODAL-04**: Модалка создания предзаполняется путём целевой папки — при нажатии кнопки «+ New» у конкретной папки в дереве
-- [ ] **MODAL-05**: Модалка содержит поле «Папка» (dropdown с деревом папок), позволяющее изменить путь перед сохранением
+- [x] **MODAL-01**: Создание сниппета происходит через модалку, а не inline в сайдбаре
+- [x] **MODAL-02**: Редактирование существующего сниппета (имя, плейсхолдеры, содержимое) происходит через модалку
+- [x] **MODAL-03**: Модалка создания имеет toggle/radio выбора типа: JSON (с плейсхолдерами) или Markdown (статическое содержимое)
+- [x] **MODAL-04**: Модалка создания предзаполняется путём целевой папки — при нажатии кнопки «+ New» у конкретной папки в дереве
+- [x] **MODAL-05**: Модалка содержит поле «Папка» (dropdown с деревом папок), позволяющее изменить путь перед сохранением
 - [x] **MODAL-06**: Для JSON-сниппета модалка показывает существующий placeholder chip-editor из v1.3
-- [ ] **MODAL-07**: Для Markdown-сниппета модалка показывает inline textarea для редактирования содержимого
+- [x] **MODAL-07**: Для Markdown-сниппета модалка показывает inline textarea для редактирования содержимого
 - [x] **MODAL-08**: Unsaved-changes guard: закрытие модалки с несохранёнными правками требует подтверждения
 
 ### Folder Operations
@@ -100,13 +100,13 @@
 | TREE-02 | Phase 33 | Pending |
 | TREE-03 | Phase 33 | Pending |
 | TREE-04 | Phase 33 | Pending |
-| MODAL-01 | Phase 33 | Pending |
-| MODAL-02 | Phase 33 | Pending |
-| MODAL-03 | Phase 33 | Pending |
-| MODAL-04 | Phase 33 | Pending |
-| MODAL-05 | Phase 33 | Pending |
+| MODAL-01 | Phase 33 | Complete |
+| MODAL-02 | Phase 33 | Complete |
+| MODAL-03 | Phase 33 | Complete |
+| MODAL-04 | Phase 33 | Complete |
+| MODAL-05 | Phase 33 | Complete |
 | MODAL-06 | Phase 33 | Complete |
-| MODAL-07 | Phase 33 | Pending |
+| MODAL-07 | Phase 33 | Complete |
 | MODAL-08 | Phase 33 | Complete |
 | FOLDER-01 | Phase 33 | Pending |
 | FOLDER-02 | Phase 33 | Pending |
