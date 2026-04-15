@@ -696,9 +696,14 @@ export class RunnerView extends ItemView {
 
   /** Load snippet and open SnippetFillInModal; update runner with result (SNIP-06). */
   private async handleSnippetFill(snippetId: string, questionZone: HTMLElement): Promise<void> {
-    const snippet = await this.plugin.snippetService.load(snippetId);
+    // Phase 32 (D-03): load now takes a path. snippetId here is a legacy
+    // id-string from the runner state machine — resolve it to a path under
+    // the snippet root. Full callsite refactor to pass paths end-to-end is
+    // Phase 33/35 scope.
+    const legacyPath = `${this.plugin.settings.snippetFolderPath}/${snippetId}.json`;
+    const snippet = await this.plugin.snippetService.load(legacyPath);
 
-    if (snippet === null) {
+    if (snippet === null || snippet.kind !== 'json') {
       questionZone.empty();
       questionZone.createEl('p', {
         text: `Snippet '${snippetId}' not found. The snippet may have been deleted. Use step-back to continue.`,

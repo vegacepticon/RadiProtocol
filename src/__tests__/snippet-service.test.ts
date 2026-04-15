@@ -23,9 +23,10 @@ function makeAppMock(existsResult = false) {
 const settings = { snippetFolderPath: '.radiprotocol/snippets', sessionFolderPath: '.radiprotocol/sessions', outputDestination: 'clipboard' as const, outputFolderPath: '', maxLoopIterations: 50, runnerViewMode: 'sidebar' as const, protocolFolderPath: '', textSeparator: 'newline' as const };
 
 describe('SnippetService (SNIP-01)', () => {
-  it('has list() method', () => {
+  it('has listFolder() method', () => {
+    // Phase 32 (D-03): legacy `list()` removed in favour of `listFolder(path)`.
     const svc = new SnippetService(makeAppMock() as never, settings);
-    expect(typeof svc.list).toBe('function');
+    expect(typeof svc.listFolder).toBe('function');
   });
 
   it('has load(id) method', () => {

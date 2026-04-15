@@ -60,8 +60,15 @@ export class SnippetManagerView extends ItemView {
   // ---------------------------------------------------------------------------
 
   private async loadAndRender(): Promise<void> {
+    // Phase 32 (D-03): legacy `list()` removed. Use listFolder(root) + filter
+    // to JsonSnippet. Full replacement of this legacy view is Phase 33 scope.
     try {
-      this.snippets = await this.plugin.snippetService.list();
+      const listing = await this.plugin.snippetService.listFolder(
+        this.plugin.settings.snippetFolderPath,
+      );
+      this.snippets = listing.snippets.filter(
+        (s): s is Extract<typeof s, { kind: 'json' }> => s.kind === 'json',
+      );
     } catch {
       this.snippets = [];
     }

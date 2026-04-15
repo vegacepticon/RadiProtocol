@@ -1,8 +1,8 @@
 // snippets/snippet-service.ts
 // Receives App and settings as constructor parameters — no direct Obsidian imports (NFR-01)
-import type { App, TFile } from 'obsidian';
+import type { App } from 'obsidian';
 import type { RadiProtocolSettings } from '../settings';
-import type { Snippet, JsonSnippet, MdSnippet, SnippetFile } from './snippet-model';
+import type { Snippet, JsonSnippet } from './snippet-model';
 import { WriteMutex } from '../utils/write-mutex';
 import { ensureFolderPath } from '../utils/vault-utils';
 
@@ -19,10 +19,6 @@ export class SnippetService {
   constructor(app: App, settings: RadiProtocolSettings) {
     this.app = app;
     this.settings = settings;
-  }
-
-  private filePath(id: string): string {
-    return `${this.settings.snippetFolderPath}/${id}.json`;
   }
 
   /**
@@ -57,30 +53,6 @@ export class SnippetService {
     const base = path.slice(path.lastIndexOf('/') + 1);
     const dot = base.lastIndexOf('.');
     return dot > 0 ? base.slice(0, dot) : base;
-  }
-
-  /** List all snippet files in the configured folder. Returns [] if folder is missing or empty. */
-  async list(): Promise<SnippetFile[]> {
-    const folderPath = this.settings.snippetFolderPath;
-    const folderExists = await this.app.vault.adapter.exists(folderPath);
-    if (!folderExists) return [];
-
-    // vault.adapter.list() returns { files, folders }
-    const listing = await this.app.vault.adapter.list(folderPath);
-    const snippets: SnippetFile[] = [];
-
-    for (const filePath of listing.files) {
-      if (!filePath.endsWith('.json')) continue;
-      try {
-        const raw = await this.app.vault.adapter.read(filePath);
-        const parsed = JSON.parse(raw) as SnippetFile;
-        snippets.push(parsed);
-      } catch {
-        // Corrupt file — skip silently; callers show Notice if needed
-      }
-    }
-
-    return snippets;
   }
 
   /**
@@ -157,66 +129,117 @@ export class SnippetService {
     return { folders, snippets };
   }
 
-  /** Load a single snippet by id. Returns null if file does not exist or JSON is corrupt. */
-  async load(id: string): Promise<SnippetFile | null> {
-    const path = this.filePath(id);
-    const exists = await this.app.vault.adapter.exists(path);
+  /**
+   * Phase 32 (D-03): Load a snippet by full vault-relative path.
+   * Routes by extension: `.json` → JsonSnippet, `.md` → MdSnippet.
+   * Returns null if path is unsafe, file missing, or JSON corrupt.
+   */
+  async load(path: string): Promise<Snippet | null> {
+    const normalized = this.assertInsideRoot(path);
+    if (normalized === null) return null;
+    const exists = await this.app.vault.adapter.exists(normalized);
     if (!exists) return null;
     try {
-      const raw = await this.app.vault.adapter.read(path);
-      return JSON.parse(raw) as SnippetFile;
+      const raw = await this.app.vault.adapter.read(normalized);
+      const basename = this.basenameNoExt(normalized);
+      if (normalized.endsWith('.json')) {
+        const parsed = JSON.parse(raw) as Partial<JsonSnippet>;
+        return {
+          kind: 'json',
+          path: normalized,
+          name: parsed.name ?? basename,
+          template: parsed.template ?? '',
+          placeholders: parsed.placeholders ?? [],
+        };
+      }
+      if (normalized.endsWith('.md')) {
+        return { kind: 'md', path: normalized, name: basename, content: raw };
+      }
+      return null;
     } catch {
       return null;
     }
   }
 
   /**
-   * Save (create or update) a snippet file.
-   * Sanitizes snippet content before JSON serialization (V5 Input Validation — T-5-01).
-   * Ensures folder exists; wraps write in WriteMutex (SNIP-07, SNIP-08).
+   * Phase 32 (D-03): Save a snippet. Branches on `kind`:
+   *   - `json` → sanitize + JSON.stringify
+   *   - `md`   → write raw content (free-text, no sanitisation)
+   * Wraps write in WriteMutex per-path (D-11). Ensures parent folder exists.
+   * Throws on unsafe path (D-10).
    */
-  async save(snippet: SnippetFile): Promise<void> {
-    // Sanitize: strip control characters from all string fields to prevent JSON injection (T-5-01)
-    const clean = this.sanitize(snippet);
-    const path = this.filePath(clean.id ?? clean.name);
-    const payload = JSON.stringify(clean, null, 2);
-
-    await this.mutex.runExclusive(path, async () => {
+  async save(snippet: Snippet): Promise<void> {
+    const normalized = this.assertInsideRoot(snippet.path);
+    if (normalized === null) {
+      throw new Error(`[RadiProtocol] save rejected unsafe path: ${snippet.path}`);
+    }
+    await this.mutex.runExclusive(normalized, async () => {
       await ensureFolderPath(this.app.vault, this.settings.snippetFolderPath);
-      const exists = await this.app.vault.adapter.exists(path);
-      if (exists) {
-        await this.app.vault.adapter.write(path, payload);
+      const lastSlash = normalized.lastIndexOf('/');
+      const parent = lastSlash > 0 ? normalized.slice(0, lastSlash) : '';
+      if (parent !== '' && parent !== this.settings.snippetFolderPath) {
+        await ensureFolderPath(this.app.vault, parent);
+      }
+      let payload: string;
+      if (snippet.kind === 'json') {
+        const clean = this.sanitizeJson(snippet);
+        payload = JSON.stringify(clean, null, 2);
       } else {
-        await this.app.vault.create(path, payload);
+        // md: raw free-text content, no sanitisation (D-01)
+        payload = snippet.content;
+      }
+      const exists = await this.app.vault.adapter.exists(normalized);
+      if (exists) {
+        await this.app.vault.adapter.write(normalized, payload);
+      } else {
+        await this.app.vault.create(normalized, payload);
       }
     });
   }
 
-  /** Delete a snippet file by id. No-op if file does not exist. */
-  async delete(id: string): Promise<void> {
-    const path = this.filePath(id);
-    const file = this.app.vault.getAbstractFileByPath(path) as TFile | null;
-    if (file !== null && file instanceof Object && 'stat' in file) {
-      await this.app.vault.delete(file as TFile);
-    }
-  }
-
-  /** Check if a snippet with the given id exists on disk. */
-  async exists(id: string): Promise<boolean> {
-    return this.app.vault.adapter.exists(this.filePath(id));
+  /**
+   * Phase 32 (D-03, D-08, D-11): Delete a snippet file by path.
+   * Uses `vault.trash(file, false)` — file goes to Obsidian's `.trash/`,
+   * never permanent-destroy. No-op on unsafe path or missing file.
+   * Wrapped in WriteMutex per-path.
+   */
+  async delete(path: string): Promise<void> {
+    const normalized = this.assertInsideRoot(path);
+    if (normalized === null) return;
+    await this.mutex.runExclusive(normalized, async () => {
+      const file = this.app.vault.getAbstractFileByPath(normalized);
+      if (file === null) return;
+      // D-08: Obsidian trash (.trash/), not system trash.
+      await this.app.vault.trash(file, false);
+    });
   }
 
   /**
-   * Strip control characters (U+0000–U+001F, U+007F) from all string values
-   * in a SnippetFile before JSON serialization (ASVS V5 input sanitization — T-5-01).
+   * Phase 32 (D-03): Check if a snippet file exists at the given path.
+   * Returns false on unsafe path.
    */
-  private sanitize(snippet: SnippetFile): SnippetFile {
+  async exists(path: string): Promise<boolean> {
+    const normalized = this.assertInsideRoot(path);
+    if (normalized === null) return false;
+    return this.app.vault.adapter.exists(normalized);
+  }
+
+  /**
+   * Phase 32: Strip control characters (U+0000–U+001F, U+007F) from all
+   * string values in a JsonSnippet and produce a plain disk payload object
+   * (without runtime-only `kind` / `path` / deprecated `id`). Preserves
+   * ASVS V5 input sanitization (T-5-01).
+   */
+  private sanitizeJson(snippet: JsonSnippet): {
+    name: string;
+    template: string;
+    placeholders: JsonSnippet['placeholders'];
+  } {
     const clean = (s: string): string => s.replace(/[\u0000-\u001F\u007F]/g, '');
     return {
-      ...snippet,
       name: clean(snippet.name),
       template: clean(snippet.template),
-      placeholders: snippet.placeholders.map(p => ({
+      placeholders: snippet.placeholders.map((p) => ({
         ...p,
         label: clean(p.label),
         options: p.options?.map(clean),
