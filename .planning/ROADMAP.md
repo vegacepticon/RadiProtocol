@@ -107,7 +107,12 @@ Full details: `.planning/milestones/v1.4-ROADMAP.md`
   3. Context menu on a folder offers "New subfolder" and "Delete folder" — delete prompts with a list of contents before confirming (FOLDER-01, FOLDER-02).
   4. Deleting a snippet prompts a confirm modal showing the name, then the file disappears from both the tree and the Protocol Runner snippet picker on next open (DEL-02, DEL-03).
   5. Creating, renaming, or deleting a file in `.radiprotocol/snippets/` from outside the view (e.g., from Obsidian file explorer) causes the tree to redraw; events from other vault paths are ignored; the watcher is torn down in `onClose()` (SYNC-01..03).
-**Plans**: TBD
+**Plans**: 5 plans
+  - [ ] 33-01-PLAN.md — SnippetService folder ops (createFolder/deleteFolder/listFolderDescendants) + settings.snippetTreeExpandedPaths + Wave 0 test stubs
+  - [ ] 33-02-PLAN.md — Extract chip editor into snippet-chip-editor.ts + generic ConfirmModal (2/3-button variants)
+  - [ ] 33-03-PLAN.md — SnippetEditorModal (unified create/edit, JSON↔MD toggle, «Папка» dropdown, D-09 move-on-save → rewriteCanvasRefs, unsaved-changes guard, collision pre-flight)
+  - [ ] 33-04-PLAN.md — Rewrite SnippetManagerView as folder-tree ItemView (context menus, hover + New, vault watcher 120ms debounced redraw, expand-state persistence, tree+modal CSS)
+  - [ ] 33-05-PLAN.md — Full suite + build gates + human verification checkpoint (44-step UAT in a real Obsidian vault)
 **UI hint**: yes
 
 ### Phase 34: Drag-and-Drop, Context Menu, Rename, Move with Canvas Reference Updates
@@ -152,6 +157,8 @@ Full details: `.planning/milestones/v1.4-ROADMAP.md`
 | 30. Snippet Node — Runner Integration | v1.4 | 3/3 | Complete | 2026-04-14 |
 | 31. Mixed Answer + Snippet Branching at Question Nodes | v1.4 | 4/4 | Complete | 2026-04-15 |
 | 32. SnippetService Refactor — MD Support, Trash Delete, Canvas Reference Sync | v1.5 | 5/5 | Complete   | 2026-04-15 |
-| 33. Tree UI, Modal Create/Edit, Folder Operations, Vault Watcher | v1.5 | 0/0 | Not started | — |
+| 33. Tree UI, Modal Create/Edit, Folder Operations, Vault Watcher | v1.5 | 0/5 | Planned | — |
 | 34. Drag-and-Drop, Context Menu, Rename, Move with Canvas Reference Updates | v1.5 | 0/0 | Not started | — |
 | 35. Markdown Snippets in Protocol Runner | v1.5 | 0/0 | Not started | — |
+</content>
+</invoke>
