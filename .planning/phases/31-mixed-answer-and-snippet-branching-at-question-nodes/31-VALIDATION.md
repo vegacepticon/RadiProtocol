@@ -59,3 +59,17 @@ Existing test files cover all affected modules; no new test scaffolding required
 - Validator: positive tests for question→snippet edges and snippet-only question branches
 - Parser: round-trip `radiprotocol_snippetLabel` and `radiprotocol_snippetSeparator`
 - Session resume: round-trip undoStack with `returnToBranchList` flag set
+
+---
+
+## Nyquist Exceptions (view-form tasks)
+
+Some tasks in this phase modify Node Editor form code (`src/views/editor-panel-view.ts`) — pure UI wiring of Setting controls into `pendingEdits` + `scheduleAutoSave`. These tasks have **no unit-test harness** for `editor-panel-view` in the current repo (grep: no `editor-panel-view.test.ts` exists), and the behavior is trivially observable via UAT (open Node Editor, change field, confirm autoSave fires and value round-trips through parser).
+
+**Accepted exceptions** (build-only automated verify, UAT-validated behavior):
+
+| Plan | Task | Rationale |
+|------|------|-----------|
+| 31-02 | Task 1 (Add `snippetLabel` + `snippetSeparator` controls to snippet form) | Pure view-form wiring. No existing test harness for `editor-panel-view.ts`. Automated verify is `npm run build` — TS strict mode catches interface mismatches against the `SnippetNode` fields added in Plan 01 (this is why Plan 02 was bumped to wave 2, depends_on `31-01`). Behavioral verification happens in Phase UAT: open snippet node → edit Branch label → reopen canvas → value persists via parser round-trip. |
+
+For all OTHER tasks in this phase (state machine, parser, validator, session), Nyquist compliance is enforced: each must include an `<automated>` test command referencing a file under `src/__tests__/`.

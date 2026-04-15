@@ -664,11 +664,11 @@ All major claims verified against source. No unverified assumptions carry throug
 
 ---
 
-## Open Questions
+## Open Questions (RESOLVED)
 
-1. **CSS styling detail for snippet-branch buttons** — differentiator is left to planner's discretion (D-02 says "prefix `📁` и/или CSS-классом"). Both are available; prefix is already in the button text per pseudo-code. Recommendation: keep prefix + add a subtle background-tint class to match the folder-row style used in the Phase 30 picker for visual consistency.
-2. **snippetLabel field naming in TypeScript interface** — CONTEXT.md uses `radiprotocol_snippetLabel` for the canvas property name. TypeScript field can be `snippetLabel` (mirroring `subfolderPath` which drops the prefix) for consistency. Canvas-parser maps one to the other. **Recommendation: use `snippetLabel` on the interface, keep `radiprotocol_snippetLabel` as the canvas key.**
-3. **Backwards compatibility** — existing canvases with snippet nodes already in use (if any) have neither new field. Parser normalises missing → `undefined`, so the runner falls back to global separator and the fallback label `📁 Snippet`. No migration needed.
+1. RESOLVED: **CSS styling detail for snippet-branch buttons** — differentiator is left to planner's discretion (D-02 says "prefix `📁` и/или CSS-классом"). Both are available; prefix is already in the button text per pseudo-code. Recommendation: keep prefix + add a subtle background-tint class to match the folder-row style used in the Phase 30 picker for visual consistency.
+2. RESOLVED: **snippetLabel field naming in TypeScript interface** — CONTEXT.md uses `radiprotocol_snippetLabel` for the canvas property name. TypeScript field can be `snippetLabel` (mirroring `subfolderPath` which drops the prefix) for consistency. Canvas-parser maps one to the other. **Recommendation: use `snippetLabel` on the interface, keep `radiprotocol_snippetLabel` as the canvas key.**
+3. RESOLVED: **Backwards compatibility** — existing canvases with snippet nodes already in use (if any) have neither new field. Parser normalises missing → `undefined`, so the runner falls back to global separator and the fallback label `📁 Snippet`. No migration needed.
 
 ---
 
