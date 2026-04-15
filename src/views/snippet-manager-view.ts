@@ -18,6 +18,12 @@ import { toCanvasKey } from '../snippets/snippet-service';
 
 export const SNIPPET_MANAGER_VIEW_TYPE = 'radiprotocol-snippet-manager';
 
+// Phase 34 Plan 02: HTML5 DnD custom MIME types (D-04).
+// Kept private to this module so foreign drops (OS files, Obsidian file
+// explorer, chip-editor) are never accidentally intercepted.
+const MIME_FILE = 'application/x-radi-snippet-file';
+const MIME_FOLDER = 'application/x-radi-snippet-folder';
+
 // ---------------------------------------------------------------------------
 // Internal tree model
 // ---------------------------------------------------------------------------
@@ -292,6 +298,24 @@ export class SnippetManagerView extends ItemView {
       ev.preventDefault();
       ev.stopPropagation();
       this.openContextMenu(ev as MouseEvent, node);
+    });
+
+    // Phase 34 Plan 02 — HTML5 drag-and-drop lifecycle.
+    row.setAttribute('draggable', 'true');
+    this.registerDomEvent(row, 'dragstart', (ev) => {
+      this.handleDragStart(row, node, ev as DragEvent);
+    });
+    this.registerDomEvent(row, 'dragover', (ev) => {
+      this.handleDragOver(row, node, ev as DragEvent);
+    });
+    this.registerDomEvent(row, 'dragleave', (ev) => {
+      this.handleDragLeave(row, ev as DragEvent);
+    });
+    this.registerDomEvent(row, 'drop', (ev) => {
+      void this.handleDrop(node, row, ev as DragEvent);
+    });
+    this.registerDomEvent(row, 'dragend', () => {
+      this.handleDragEnd(row);
     });
 
     // Children (folders only, when expanded)
@@ -580,45 +604,7 @@ export class SnippetManagerView extends ItemView {
 
     const onChoose = async (chosen: string): Promise<void> => {
       try {
-        if (node.kind === 'file') {
-          // D-03 следствие 2: file rename/move is canvas-invisible — no
-          // rewriteCanvasRefs, no «Обновлено канвасов» Notice.
-          await this.plugin.snippetService.moveSnippet(node.path, chosen);
-          new Notice('Сниппет перемещён.');
-        } else {
-          const oldPath = node.path;
-          const newPath = await this.plugin.snippetService.moveFolder(oldPath, chosen);
-          const snippetRoot = this.plugin.settings.snippetFolderPath;
-          const mapping = new Map<string, string>([
-            [toCanvasKey(oldPath, snippetRoot), toCanvasKey(newPath, snippetRoot)],
-          ]);
-          const result = await rewriteCanvasRefs(this.app, mapping);
-
-          // D-07: expand-state prefix rewrite. Walk the array, rewrite entries
-          // whose path equals oldPath or starts with oldPath + '/'.
-          const expanded = this.plugin.settings.snippetTreeExpandedPaths;
-          let mutated = false;
-          for (let i = 0; i < expanded.length; i++) {
-            const entry = expanded[i]!;
-            if (entry === oldPath) {
-              expanded[i] = newPath;
-              mutated = true;
-            } else if (entry.startsWith(oldPath + '/')) {
-              expanded[i] = newPath + entry.slice(oldPath.length);
-              mutated = true;
-            }
-          }
-          if (mutated) {
-            await this.plugin.saveSettings();
-          }
-
-          new Notice(
-            'Папка перемещена. Обновлено канвасов: ' + result.updated.length +
-              ', пропущено: ' + result.skipped.length + '.',
-          );
-        }
-        await this.rebuildTreeModel();
-        this.renderTree();
+        await this.performMove(node.path, node.kind, chosen);
       } catch (e) {
         new Notice('Не удалось переместить: ' + ((e as Error)?.message ?? 'неизвестная ошибка'));
         console.error('[RadiProtocol] openMovePicker move failed', e);
@@ -626,6 +612,168 @@ export class SnippetManagerView extends ItemView {
     };
 
     new FolderPickerModal(this.app, folders, onChoose).open();
+  }
+
+  // -------------------------------------------------------------------------
+  // Phase 34 Plan 02 — shared move orchestrator. Used by both context-menu
+  // «Переместить в…» (Plan 01) and DnD drop handler (Plan 02). Throws on
+  // failure; callers are responsible for Notice/console.error on rejection.
+  // -------------------------------------------------------------------------
+  private async performMove(
+    srcPath: string,
+    srcKind: 'file' | 'folder',
+    dstFolder: string,
+  ): Promise<void> {
+    if (srcKind === 'file') {
+      // No-op: already in the target folder.
+      if (dirname(srcPath) === dstFolder) return;
+      // D-03 следствие 2: file rename/move is canvas-invisible — no
+      // rewriteCanvasRefs, no «Обновлено канвасов» Notice.
+      await this.plugin.snippetService.moveSnippet(srcPath, dstFolder);
+      new Notice('Сниппет перемещён.');
+      await this.rebuildTreeModel();
+      this.renderTree();
+      return;
+    }
+
+    // Folder branch — self/descendant guard BEFORE any I/O.
+    if (srcPath === dstFolder || dstFolder.startsWith(srcPath + '/')) {
+      throw new Error('Нельзя переместить папку внутрь самой себя.');
+    }
+    const oldPath = srcPath;
+    const newPath = await this.plugin.snippetService.moveFolder(oldPath, dstFolder);
+    const snippetRoot = this.plugin.settings.snippetFolderPath;
+    const mapping = new Map<string, string>([
+      [toCanvasKey(oldPath, snippetRoot), toCanvasKey(newPath, snippetRoot)],
+    ]);
+    const result = await rewriteCanvasRefs(this.app, mapping);
+
+    // D-07: expand-state prefix rewrite.
+    const expanded = this.plugin.settings.snippetTreeExpandedPaths;
+    let mutated = false;
+    for (let i = 0; i < expanded.length; i++) {
+      const entry = expanded[i]!;
+      if (entry === oldPath) {
+        expanded[i] = newPath;
+        mutated = true;
+      } else if (entry.startsWith(oldPath + '/')) {
+        expanded[i] = newPath + entry.slice(oldPath.length);
+        mutated = true;
+      }
+    }
+    if (mutated) {
+      await this.plugin.saveSettings();
+    }
+
+    new Notice(
+      'Папка перемещена. Обновлено канвасов: ' + result.updated.length +
+        ', пропущено: ' + result.skipped.length + '.',
+    );
+    await this.rebuildTreeModel();
+    this.renderTree();
+  }
+
+  // -------------------------------------------------------------------------
+  // Phase 34 Plan 02 — HTML5 drag-and-drop handlers on tree rows.
+  // Wired from `renderNode` via `registerDomEvent` for auto-cleanup.
+  // D-04: `dragover.preventDefault()` is called ONLY when our custom MIME
+  // is present in `dataTransfer.types`, so drops from OS, chip-editor, etc.
+  // pass through unharmed.
+  // -------------------------------------------------------------------------
+  private computeDropTarget(node: TreeNode): string {
+    return node.kind === 'folder' ? node.path : dirname(node.path);
+  }
+
+  private isDropForbidden(
+    srcPath: string,
+    srcKind: 'file' | 'folder',
+    targetFolder: string,
+  ): boolean {
+    if (srcKind === 'file') {
+      // Already in target → no-op, render as forbidden so we don't
+      // preventDefault (cursor stays as "not-allowed").
+      return dirname(srcPath) === targetFolder;
+    }
+    // Folder into itself or a descendant.
+    return srcPath === targetFolder || targetFolder.startsWith(srcPath + '/');
+  }
+
+  private readDragSource(ev: DragEvent): { path: string; kind: 'file' | 'folder' } | null {
+    const types = ev.dataTransfer?.types;
+    if (!types) return null;
+    const hasFile = Array.from(types as unknown as Iterable<string>).includes(MIME_FILE);
+    const hasFolder = Array.from(types as unknown as Iterable<string>).includes(MIME_FOLDER);
+    if (hasFile) {
+      const p = ev.dataTransfer?.getData(MIME_FILE) ?? '';
+      return p === '' ? { path: '', kind: 'file' } : { path: p, kind: 'file' };
+    }
+    if (hasFolder) {
+      const p = ev.dataTransfer?.getData(MIME_FOLDER) ?? '';
+      return p === '' ? { path: '', kind: 'folder' } : { path: p, kind: 'folder' };
+    }
+    return null;
+  }
+
+  private handleDragStart(row: HTMLElement, node: TreeNode, ev: DragEvent): void {
+    if (ev.dataTransfer === null) return;
+    const mime = node.kind === 'file' ? MIME_FILE : MIME_FOLDER;
+    ev.dataTransfer.setData(mime, node.path);
+    ev.dataTransfer.effectAllowed = 'move';
+    row.addClass('is-dragging');
+  }
+
+  private handleDragOver(row: HTMLElement, node: TreeNode, ev: DragEvent): void {
+    const src = this.readDragSource(ev);
+    if (src === null) return; // D-04: do NOT preventDefault — foreign drag
+    const target = this.computeDropTarget(node);
+    const forbidden = this.isDropForbidden(src.path, src.kind, target);
+    if (forbidden) {
+      row.addClass('radi-snippet-tree-drop-forbidden');
+      return;
+    }
+    ev.preventDefault();
+    if (ev.dataTransfer !== null) ev.dataTransfer.dropEffect = 'move';
+    row.addClass('radi-snippet-tree-drop-target');
+  }
+
+  private handleDragLeave(row: HTMLElement, ev: DragEvent): void {
+    // Ignore child enter/leave noise when relatedTarget is inside the row.
+    const rel = (ev as unknown as { relatedTarget: Node | null }).relatedTarget;
+    if (rel !== null && typeof (row as unknown as { contains?: (n: Node) => boolean }).contains === 'function') {
+      try {
+        if ((row as unknown as { contains: (n: Node) => boolean }).contains(rel)) return;
+      } catch { /* noop */ }
+    }
+    row.removeClass('radi-snippet-tree-drop-target');
+    row.removeClass('radi-snippet-tree-drop-forbidden');
+  }
+
+  private async handleDrop(node: TreeNode, row: HTMLElement, ev: DragEvent): Promise<void> {
+    const src = this.readDragSource(ev);
+    if (src === null) return; // foreign drag — do not preventDefault
+    ev.preventDefault();
+    row.removeClass('radi-snippet-tree-drop-target');
+    row.removeClass('radi-snippet-tree-drop-forbidden');
+    const target = this.computeDropTarget(node);
+    try {
+      await this.performMove(src.path, src.kind, target);
+    } catch (e) {
+      new Notice('Не удалось переместить: ' + ((e as Error)?.message ?? 'неизвестная ошибка'));
+      console.error('[RadiProtocol] drop move failed', e);
+    }
+  }
+
+  private handleDragEnd(row: HTMLElement): void {
+    row.removeClass('is-dragging');
+    // Clean up any stray drop-target/drop-forbidden classes left on the tree
+    // (a late dragleave may have been skipped if the drop happened elsewhere).
+    const tree = this.treeRootEl;
+    if (tree !== undefined && tree !== null) {
+      const strayTargets = tree.querySelectorAll('.radi-snippet-tree-drop-target');
+      strayTargets.forEach((el: Element) => (el as HTMLElement).removeClass?.('radi-snippet-tree-drop-target'));
+      const strayForbidden = tree.querySelectorAll('.radi-snippet-tree-drop-forbidden');
+      strayForbidden.forEach((el: Element) => (el as HTMLElement).removeClass?.('radi-snippet-tree-drop-forbidden'));
+    }
   }
 }
 

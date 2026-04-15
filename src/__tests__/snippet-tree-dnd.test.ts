@@ -287,23 +287,235 @@ function makeView(plugin: any): SnippetManagerView {
   return view;
 }
 
+// --- DnD helpers ---------------------------------------------------------
+const MIME_FILE = 'application/x-radi-snippet-file';
+const MIME_FOLDER = 'application/x-radi-snippet-folder';
+
+interface MockDataTransfer {
+  _data: Record<string, string>;
+  types: string[];
+  effectAllowed: string;
+  dropEffect: string;
+  setData: (type: string, value: string) => void;
+  getData: (type: string) => string;
+}
+
+function makeDataTransfer(initial: Record<string, string> = {}): MockDataTransfer {
+  const data: Record<string, string> = { ...initial };
+  const dt: MockDataTransfer = {
+    _data: data,
+    types: Object.keys(data),
+    effectAllowed: 'none',
+    dropEffect: 'none',
+    setData(type: string, value: string): void {
+      data[type] = value;
+      if (!dt.types.includes(type)) dt.types.push(type);
+    },
+    getData(type: string): string {
+      return data[type] ?? '';
+    },
+  };
+  return dt;
+}
+
+function makeDragEvent(type: string, dataTransfer: MockDataTransfer): any {
+  let defaultPrevented = false;
+  return {
+    type,
+    dataTransfer,
+    relatedTarget: null,
+    preventDefault(): void { defaultPrevented = true; },
+    stopPropagation(): void {},
+    get defaultPrevented() { return defaultPrevented; },
+  };
+}
+
+// Find the row MockEl for a given node path inside treeRootEl.children.
+function findRow(view: any, path: string): MockEl | null {
+  const tree = (view as any).treeRootEl as MockEl;
+  for (const child of tree.children) {
+    if (child._attrs['data-path'] === path) return child;
+  }
+  return null;
+}
+
+// Fire a DOM event through the mock listener map.
+function fire(row: MockEl, event: { type: string }): void {
+  const arr = row._listeners.get(event.type) ?? [];
+  for (const h of arr) h(event as unknown);
+}
+
 describe('SnippetManagerView — drag-and-drop (Phase 34 Plan 02)', () => {
+  const root = '.radiprotocol/snippets';
+
+  beforeEach(() => {
+    rewriteCanvasRefsSpy.mockClear();
+    folderPickerCtorSpy.mockClear();
+    lastPickerCall = null;
+    lastMenuItems = [];
+  });
+
+  function makeTreeView(): { plugin: any; service: MockService; view: SnippetManagerView } {
+    const { plugin, service } = makePlugin({
+      listings: {
+        [root]: {
+          folders: ['a', 'b'],
+          snippets: [makeSnippet('json', `${root}/note.json`, 'note')],
+        },
+        [`${root}/a`]: { folders: ['sub'], snippets: [makeSnippet('json', `${root}/a/leaf.json`, 'leaf')] },
+        [`${root}/a/sub`]: { folders: [], snippets: [] },
+        [`${root}/b`]: { folders: [], snippets: [] },
+      },
+      expanded: [`${root}/a`, `${root}/a/sub`],
+      allFolders: [root, `${root}/a`, `${root}/a/sub`, `${root}/b`],
+    });
+    const view = makeView(plugin);
+    return { plugin, service, view };
+  }
+
   describe('dragstart', () => {
-    it.todo('sets application/x-radi-snippet-file MIME on file row');
-    it.todo('sets application/x-radi-snippet-folder MIME on folder row');
-    it.todo('adds is-dragging class to source row');
+    it('sets application/x-radi-snippet-file MIME on file row', async () => {
+      const { view } = makeTreeView();
+      await view.onOpen();
+      const row = findRow(view, `${root}/note.json`);
+      expect(row).not.toBeNull();
+      const dt = makeDataTransfer();
+      const ev = makeDragEvent('dragstart', dt);
+      fire(row!, ev);
+      expect(dt.getData(MIME_FILE)).toBe(`${root}/note.json`);
+      expect(dt.types).toContain(MIME_FILE);
+      expect(dt.effectAllowed).toBe('move');
+    });
+
+    it('sets application/x-radi-snippet-folder MIME on folder row', async () => {
+      const { view } = makeTreeView();
+      await view.onOpen();
+      const row = findRow(view, `${root}/a`);
+      expect(row).not.toBeNull();
+      const dt = makeDataTransfer();
+      const ev = makeDragEvent('dragstart', dt);
+      fire(row!, ev);
+      expect(dt.getData(MIME_FOLDER)).toBe(`${root}/a`);
+      expect(dt.types).toContain(MIME_FOLDER);
+    });
+
+    it('adds is-dragging class to source row', async () => {
+      const { view } = makeTreeView();
+      await view.onOpen();
+      const row = findRow(view, `${root}/note.json`);
+      fire(row!, makeDragEvent('dragstart', makeDataTransfer()));
+      expect(row!.classList.has('is-dragging')).toBe(true);
+    });
   });
+
   describe('dragover guard', () => {
-    it.todo('preventDefault ONLY when our MIME is present');
-    it.todo('rejects dragover from foreign MIME (e.g. text/plain only)');
-    it.todo('adds drop-target class on valid hover');
+    it('preventDefault ONLY when our MIME is present', async () => {
+      const { view } = makeTreeView();
+      await view.onOpen();
+      const targetRow = findRow(view, `${root}/b`);
+      const dt = makeDataTransfer({ [MIME_FILE]: `${root}/note.json` });
+      const ev = makeDragEvent('dragover', dt);
+      fire(targetRow!, ev);
+      expect(ev.defaultPrevented).toBe(true);
+      expect(dt.dropEffect).toBe('move');
+      expect(targetRow!.classList.has('radi-snippet-tree-drop-target')).toBe(true);
+    });
+
+    it('rejects dragover from foreign MIME (e.g. text/plain only)', async () => {
+      const { view } = makeTreeView();
+      await view.onOpen();
+      const targetRow = findRow(view, `${root}/b`);
+      const dt = makeDataTransfer({ 'text/plain': 'hello' });
+      const ev = makeDragEvent('dragover', dt);
+      fire(targetRow!, ev);
+      expect(ev.defaultPrevented).toBe(false);
+      expect(targetRow!.classList.has('radi-snippet-tree-drop-target')).toBe(false);
+    });
+
+    it('adds drop-forbidden class on folder-into-self hover', async () => {
+      const { view } = makeTreeView();
+      await view.onOpen();
+      const row = findRow(view, `${root}/a`);
+      const dt = makeDataTransfer({ [MIME_FOLDER]: `${root}/a` });
+      const ev = makeDragEvent('dragover', dt);
+      fire(row!, ev);
+      expect(ev.defaultPrevented).toBe(false);
+      expect(row!.classList.has('radi-snippet-tree-drop-forbidden')).toBe(true);
+      expect(row!.classList.has('radi-snippet-tree-drop-target')).toBe(false);
+    });
   });
+
   describe('drop', () => {
-    it.todo('file onto folder → calls snippetService.moveSnippet');
-    it.todo('folder onto folder → calls snippetService.moveFolder');
-    it.todo('folder dropped on itself → rejected, no service call');
-    it.todo('folder dropped on own descendant → rejected, no service call');
-    it.todo('drop on file-row redirects to parent folder');
+    it('file onto folder → calls snippetService.moveSnippet', async () => {
+      const { service, view } = makeTreeView();
+      await view.onOpen();
+      const targetRow = findRow(view, `${root}/b`);
+      const dt = makeDataTransfer({ [MIME_FILE]: `${root}/note.json` });
+      const ev = makeDragEvent('drop', dt);
+      fire(targetRow!, ev);
+      // drop handler is async — wait for microtasks
+      await Promise.resolve();
+      await Promise.resolve();
+      expect(service.moveSnippet).toHaveBeenCalledWith(`${root}/note.json`, `${root}/b`);
+      expect(service.moveFolder).not.toHaveBeenCalled();
+      expect(rewriteCanvasRefsSpy).not.toHaveBeenCalled();
+      expect(ev.defaultPrevented).toBe(true);
+    });
+
+    it('folder onto folder → calls snippetService.moveFolder', async () => {
+      const { service, view } = makeTreeView();
+      await view.onOpen();
+      const targetRow = findRow(view, `${root}/b`);
+      const dt = makeDataTransfer({ [MIME_FOLDER]: `${root}/a` });
+      const ev = makeDragEvent('drop', dt);
+      fire(targetRow!, ev);
+      await Promise.resolve();
+      await Promise.resolve();
+      await Promise.resolve();
+      expect(service.moveFolder).toHaveBeenCalledWith(`${root}/a`, `${root}/b`);
+      expect(rewriteCanvasRefsSpy).toHaveBeenCalledTimes(1);
+    });
+
+    it('folder dropped on itself → rejected, no service call', async () => {
+      const { service, view } = makeTreeView();
+      await view.onOpen();
+      const row = findRow(view, `${root}/a`);
+      const dt = makeDataTransfer({ [MIME_FOLDER]: `${root}/a` });
+      const ev = makeDragEvent('drop', dt);
+      fire(row!, ev);
+      await Promise.resolve();
+      await Promise.resolve();
+      expect(service.moveFolder).not.toHaveBeenCalled();
+      expect(rewriteCanvasRefsSpy).not.toHaveBeenCalled();
+    });
+
+    it('folder dropped on own descendant → rejected, no service call', async () => {
+      const { service, view } = makeTreeView();
+      await view.onOpen();
+      const descRow = findRow(view, `${root}/a/sub`);
+      expect(descRow).not.toBeNull();
+      const dt = makeDataTransfer({ [MIME_FOLDER]: `${root}/a` });
+      const ev = makeDragEvent('drop', dt);
+      fire(descRow!, ev);
+      await Promise.resolve();
+      await Promise.resolve();
+      expect(service.moveFolder).not.toHaveBeenCalled();
+      expect(rewriteCanvasRefsSpy).not.toHaveBeenCalled();
+    });
+
+    it('drop on file-row redirects to parent folder', async () => {
+      const { service, view } = makeTreeView();
+      await view.onOpen();
+      // Drag root/note.json onto root/a/leaf.json → target should be dirname(leaf) = root/a
+      const fileRow = findRow(view, `${root}/a/leaf.json`);
+      expect(fileRow).not.toBeNull();
+      const dt = makeDataTransfer({ [MIME_FILE]: `${root}/note.json` });
+      const ev = makeDragEvent('drop', dt);
+      fire(fileRow!, ev);
+      await Promise.resolve();
+      await Promise.resolve();
+      expect(service.moveSnippet).toHaveBeenCalledWith(`${root}/note.json`, `${root}/a`);
+    });
   });
 
   describe('context menu Move to…', () => {
