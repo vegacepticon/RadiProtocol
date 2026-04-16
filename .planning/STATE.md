@@ -16,47 +16,41 @@ progress:
 
 # RadiProtocol — Project State
 
-**Updated:** 2026-04-15
-**Milestone:** v1.5 — Snippet Editor Refactoring
-**Status:** v1.5 milestone complete
-**Last session:** 2026-04-16T04:14:19.019Z
-**Stopped at:** Completed 35-02-PLAN.md
+**Updated:** 2026-04-16
+**Milestone:** v1.5 — Snippet Editor Refactoring (SHIPPED)
+**Status:** Milestone archived
+**Last session:** 2026-04-16
+**Stopped at:** Milestone v1.5 complete
 
 ---
 
 ## Current Position
 
-Phase: 35
-Plan: Not started
-Next: Phase 35 — Markdown Snippets in Protocol Runner
+Phase: None — milestone complete
+Plan: None
+Next: `/gsd-new-milestone` — plan next milestone
 Last activity: 2026-04-16
 
 ---
 
 ## Project Reference
 
-See: `.planning/PROJECT.md` (updated 2026-04-15)
+See: `.planning/PROJECT.md` (updated 2026-04-16)
 
 **Core value:** A radiologist can generate a structured, accurate protocol in seconds by answering a guided algorithm — without writing a single line of code.
-**Current focus:** Phase 35 — markdown-snippets-in-protocol-runner
-
-### v1.5 Phases
-
-- Phase 32: SnippetService Refactor — MD Support, Trash Delete, Canvas Reference Sync ✅
-- Phase 33: Tree UI, Modal Create/Edit, Folder Operations, Vault Watcher ✅
-- Phase 34: Drag-and-Drop, Context Menu, Rename, Move with Canvas Reference Updates ✅
-- Phase 35: Markdown Snippets in Protocol Runner
+**Current focus:** Planning next milestone
 
 ---
 
 ## Accumulated Context
 
-### v1.0–v1.4 Shipped
+### v1.0–v1.5 Shipped
 
 - v1.0: 7 phases — foundation (parser, runner, UI, editor panel, snippets, loops, sessions)
 - v1.2: 8 phases — runner UX and bug fixes (layout, selectors, separators, read-back fixes)
 - v1.3: 1 phase — interactive placeholder chip editor
 - v1.4: 4 phases — auto node coloring, snippet node (8th kind), mixed answer+snippet branching
+- v1.5: 4 phases — snippet editor refactoring (tree UI, modal create/edit, DnD, rename, MD snippets in runner)
 
 ### Standing Pitfalls
 
@@ -81,4 +75,4 @@ See: `.planning/PROJECT.md` (updated 2026-04-15)
 
 - Branch: `gsd/phase-26-auto-switch-to-node-editor-tab`
 - Main: `main`
-- Last shipped: v1.4 (2026-04-15)
+- Last shipped: v1.5 (2026-04-16)
