@@ -86,7 +86,7 @@ Full details: `.planning/milestones/v1.5-ROADMAP.md`
 
 **Milestone Goal:** Clean up dead code, fix UI bugs, add snippet editor improvements, and accelerate canvas authoring with programmatic node creation from the node editor sidebar.
 
-- [ ] **Phase 36: Dead Code Audit and Cleanup** — Remove unused TypeScript exports, dead CSS, stale test stubs; fix spacing bug in snippet modal
+- [x] **Phase 36: Dead Code Audit and Cleanup** — Remove unused TypeScript exports, dead CSS, stale test stubs; fix spacing bug in snippet modal (completed 2026-04-16)
 - [ ] **Phase 37: Snippet Editor Improvements** — Create folder button in snippet editor header; canvas path sync on directory rename
 - [ ] **Phase 38: Canvas Node Creation Infrastructure** — CanvasNodeFactory service with runtime API probing, type extensions, auto-color on created nodes
 - [ ] **Phase 39: Quick-Create UI in Node Editor** — Toolbar buttons to create question and answer nodes from the sidebar
@@ -109,7 +109,7 @@ Full details: `.planning/milestones/v1.5-ROADMAP.md`
 **Plans**: 2 plans
 Plans:
 - [x] 36-01-PLAN.md — Dead code audit: Knip analysis, unused TS export removal, dead CSS removal, RED test stub removal
-- [ ] 36-02-PLAN.md — Fix spacing bug in snippet create/edit modal type row
+- [x] 36-02-PLAN.md — Fix spacing bug in snippet create/edit modal type row
 
 ### Phase 37: Snippet Editor Improvements
 **Goal**: Users can create folders directly from the snippet editor header, and renaming a directory in the snippet editor automatically updates all canvas SnippetNode references
@@ -173,7 +173,7 @@ Phases execute in numeric order: 36 -> 37 -> 38 -> 39 -> 40
 | 27 | v1.3 | 1/1 | Complete | 2026-04-12 |
 | 28-31 | v1.4 | 12/12 | Complete | 2026-04-15 |
 | 32-35 | v1.5 | 18/18 | Complete | 2026-04-16 |
-| 36. Dead Code Audit and Cleanup | v1.6 | 1/2 | In Progress|  |
+| 36. Dead Code Audit and Cleanup | v1.6 | 2/2 | Complete   | 2026-04-16 |
 | 37. Snippet Editor Improvements | v1.6 | 0/? | Not started | - |
 | 38. Canvas Node Creation Infrastructure | v1.6 | 0/? | Not started | - |
 | 39. Quick-Create UI in Node Editor | v1.6 | 0/? | Not started | - |
