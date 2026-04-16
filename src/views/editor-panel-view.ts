@@ -750,13 +750,13 @@ export class EditorPanelView extends ItemView {
     const qIcon = qBtn.createSpan();
     setIcon(qIcon, 'help-circle');
     qBtn.appendText('Create question node');
-    qBtn.addEventListener('click', () => { void this.onQuickCreate('question'); });
+    this.registerDomEvent(qBtn, 'click', () => { void this.onQuickCreate('question'); });
 
     const aBtn = toolbar.createEl('button', { cls: 'rp-create-answer-btn' });
     const aIcon = aBtn.createSpan();
     setIcon(aIcon, 'message-square');
     aBtn.appendText('Create answer node');
-    aBtn.addEventListener('click', () => { void this.onQuickCreate('answer'); });
+    this.registerDomEvent(aBtn, 'click', () => { void this.onQuickCreate('answer'); });
   }
 
   /**
