@@ -2,15 +2,6 @@
 // Pure module — zero Obsidian API imports (NFR-01)
 import type { LoopContext } from '../graph/graph-model';
 
-// Five runner statuses — used as the discriminant field in RunnerState
-type RunnerStatus =
-  | 'idle'
-  | 'at-node'
-  | 'awaiting-snippet-pick'
-  | 'awaiting-snippet-fill'
-  | 'complete'
-  | 'error';
-
 // --- Public state interfaces (returned by ProtocolRunner.getState()) ---
 
 /** Runner has not been started yet. */
