@@ -50,6 +50,8 @@ export class CanvasNodeFactory {
       const anchor = canvas.nodes.get(anchorNodeId);
       if (anchor) {
         pos = { x: anchor.x + anchor.width + NODE_GAP, y: anchor.y };
+      } else {
+        console.warn(`[RadiProtocol] Anchor node '${anchorNodeId}' not found — using default position.`);
       }
     }
 
