@@ -12,7 +12,7 @@
 - ✅ **v1.3 Interactive Placeholder Editor** — Phase 27 (shipped 2026-04-12)
 - ✅ **v1.4 Snippets and Colors, Colors and Snippets** — Phases 28-31 (shipped 2026-04-15)
 - ✅ **v1.5 Snippet Editor Refactoring** — Phases 32-35 (shipped 2026-04-16)
-- 🚧 **v1.6 Polish & Canvas Workflow** — Phases 36-41 (in progress)
+- 🚧 **v1.6 Polish & Canvas Workflow** — Phases 36-42 (in progress)
 
 ---
 
@@ -92,6 +92,7 @@ Full details: `.planning/milestones/v1.5-ROADMAP.md`
 - [x] **Phase 39: Quick-Create UI in Node Editor** — Toolbar buttons to create question and answer nodes from the sidebar (completed 2026-04-16)
 - [ ] **Phase 40: Node Duplication** — Duplicate selected node with all RadiProtocol properties preserved
 - [ ] **Phase 41: Live Canvas Update on Folder Rename** — Use canvasLiveEditor Pattern B to update snippet node text in real-time during folder rename
+- [ ] **Phase 42: Snippet Node Quick-Create Button & Double-Click Node Selection Fix** — Add "Create snippet node" button; fix double-click-created nodes not loading in editor panel
 
 ---
 
@@ -156,6 +157,19 @@ Plans:
 - [x] 39-01-PLAN.md — Quick-create toolbar buttons + unit tests + CSS
 **UI hint**: yes
 
+### Phase 42: Snippet Node Quick-Create Button & Double-Click Node Selection Fix
+**Goal**: Add a "Create snippet node" quick-create button alongside existing question/answer buttons; fix double-click-created nodes not loading in editor panel
+**Depends on**: Phase 39
+**Requirements**: TBD
+**Success Criteria** (what must be TRUE):
+  1. The node editor sidebar shows a "Create snippet node" button alongside existing "Create question node" and "Create answer node" buttons
+  2. When a node is created by double-clicking on the canvas and then selected, the editor panel loads the node correctly (no "Node not found in canvas" error)
+  3. Selecting a freshly double-click-created empty node opens the editor panel with node type selection
+**Plans**: 0 plans
+Plans:
+- [ ] TBD (run /gsd-plan-phase 42 to break down)
+**UI hint**: yes
+
 ### Phase 40: Node Duplication
 **Goal**: Users can duplicate any selected canvas node with all RadiProtocol properties preserved, positioned adjacent to the original
 **Depends on**: Phase 38
@@ -183,7 +197,7 @@ Plans:
 ## Progress
 
 **Execution Order:**
-Phases execute in numeric order: 36 -> 37 -> 38 -> 39 -> 40 -> 41
+Phases execute in numeric order: 36 -> 37 -> 38 -> 39 -> 40 -> 41 -> 42
 
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
@@ -198,18 +212,4 @@ Phases execute in numeric order: 36 -> 37 -> 38 -> 39 -> 40 -> 41
 | 39. Quick-Create UI in Node Editor | v1.6 | 2/2 | Complete   | 2026-04-16 |
 | 40. Node Duplication | v1.6 | 0/? | Not started | - |
 | 41. Live Canvas Update on Folder Rename | v1.6 | 0/? | Not started | - |
-
----
-
-## Backlog
-
-### Phase 999.1: Snippet Node Quick-Create Button & Double-Click Node Selection Fix (BACKLOG)
-
-**Goal:** [Captured for future planning]
-1. Add a "Create snippet node" quick-create button alongside existing "Create question node" and "Create answer node" buttons in the node editor sidebar
-2. Fix: when a node is created by double-clicking on the canvas and then selected, the editor panel shows "Node not found in canvas — it may have been deleted" instead of loading the node. Likely same root cause as Phase 39 fix (timing/flush delay for newly created nodes). After fix, selecting a freshly double-click-created node should open the editor panel with node type selection for empty nodes
-**Requirements:** TBD
-**Plans:** 0 plans
-
-Plans:
-- [ ] TBD (promote with /gsd-review-backlog when ready)
+| 42. Snippet Node Quick-Create & Double-Click Fix | v1.6 | 0/? | Not started | - |
