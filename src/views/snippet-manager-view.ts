@@ -115,6 +115,15 @@ export class SnippetManagerView extends ItemView {
       void this.openCreateModal(this.plugin.settings.snippetFolderPath);
     });
 
+    // Phase 37: Header "Create folder" button (CLEAN-03)
+    const folderBtn = header.createEl('button', { cls: 'radi-snippet-tree-new-btn' });
+    const folderIcon = folderBtn.createSpan({ cls: 'radi-snippet-tree-new-icon' });
+    setIcon(folderIcon, 'folder-plus');
+    folderBtn.createSpan({ text: 'Папка' });
+    this.registerDomEvent(folderBtn, 'click', () => {
+      void this.handleCreateSubfolder(this.plugin.settings.snippetFolderPath);
+    });
+
     // Tree container
     this.treeRootEl = contentEl.createDiv({ cls: 'radi-snippet-tree-body' });
 

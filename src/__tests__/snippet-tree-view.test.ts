@@ -411,6 +411,40 @@ describe('SnippetManagerView — tree rendering and interactions', () => {
     expect(service.createFolder).toHaveBeenCalledWith(`${root}/parent/sub`);
   });
 
+  it('HEADER-FOLDER: header contains a "Папка" button with folder-plus icon that wires to handleCreateSubfolder', async () => {
+    const root = '.radiprotocol/snippets';
+    const { plugin } = makePlugin({
+      listings: {
+        [root]: { folders: [], snippets: [] },
+      },
+    });
+    const view = makeView(plugin);
+    await view.onOpen();
+
+    // Find header element
+    const contentEl = (view as any).contentEl as MockEl;
+    const header = contentEl.children.find((c: MockEl) => c.classList.has('radi-snippet-tree-header'));
+    expect(header).toBeDefined();
+
+    // Find all buttons in header
+    const buttons = header!.children.filter((c: MockEl) => c.tagName === 'BUTTON');
+    expect(buttons.length).toBeGreaterThanOrEqual(2);
+
+    // Second button should be the folder button (no mod-cta)
+    const folderBtn = buttons.find((b: MockEl) => !b.classList.has('mod-cta'));
+    expect(folderBtn).toBeDefined();
+    expect(folderBtn!.classList.has('radi-snippet-tree-new-btn')).toBe(true);
+    expect(folderBtn!.classList.has('mod-cta')).toBe(false);
+
+    // Check icon span has radi-snippet-tree-new-icon class
+    const iconSpan = folderBtn!.children.find((c: MockEl) => c.classList.has('radi-snippet-tree-new-icon'));
+    expect(iconSpan).toBeDefined();
+
+    // Check label text
+    const labelSpan = folderBtn!.children.find((c: MockEl) => c._text === 'Папка');
+    expect(labelSpan).toBeDefined();
+  });
+
   it('FOLDER-02: folder delete confirm body lists first 10 descendants + «…и ещё N» tail', async () => {
     const root = '.radiprotocol/snippets';
     const files: string[] = [];
