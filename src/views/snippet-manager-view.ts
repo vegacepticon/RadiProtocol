@@ -700,21 +700,7 @@ export class SnippetManagerView extends ItemView {
     const result = await rewriteCanvasRefs(this.app, mapping);
 
     // D-07: expand-state prefix rewrite.
-    const expanded = this.plugin.settings.snippetTreeExpandedPaths;
-    let mutated = false;
-    for (let i = 0; i < expanded.length; i++) {
-      const entry = expanded[i]!;
-      if (entry === oldPath) {
-        expanded[i] = newPath;
-        mutated = true;
-      } else if (entry.startsWith(oldPath + '/')) {
-        expanded[i] = newPath + entry.slice(oldPath.length);
-        mutated = true;
-      }
-    }
-    if (mutated) {
-      await this.plugin.saveSettings();
-    }
+    await this.rewriteExpandState(oldPath, newPath);
 
     new Notice(
       'Папка перемещена. Обновлено канвасов: ' + result.updated.length +
@@ -733,6 +719,23 @@ export class SnippetManagerView extends ItemView {
   // -------------------------------------------------------------------------
   private computeDropTarget(node: TreeNode): string {
     return node.kind === 'folder' ? node.path : dirname(node.path);
+  }
+
+  /** Shared helper: rewrite expand-state paths after move/rename (D-07). */
+  private async rewriteExpandState(oldPath: string, newPath: string): Promise<void> {
+    const expanded = this.plugin.settings.snippetTreeExpandedPaths;
+    let mutated = false;
+    for (let i = 0; i < expanded.length; i++) {
+      const entry = expanded[i]!;
+      if (entry === oldPath) {
+        expanded[i] = newPath;
+        mutated = true;
+      } else if (entry.startsWith(oldPath + '/')) {
+        expanded[i] = newPath + entry.slice(oldPath.length);
+        mutated = true;
+      }
+    }
+    if (mutated) await this.plugin.saveSettings();
   }
 
   private isDropForbidden(
@@ -941,21 +944,7 @@ export class SnippetManagerView extends ItemView {
         const result = await rewriteCanvasRefs(this.app, mapping);
 
         // D-07: expand-state prefix rewrite.
-        const expanded = this.plugin.settings.snippetTreeExpandedPaths;
-        let mutated = false;
-        for (let i = 0; i < expanded.length; i++) {
-          const entry = expanded[i]!;
-          if (entry === oldPath) {
-            expanded[i] = newPath;
-            mutated = true;
-          } else if (entry.startsWith(oldPath + '/')) {
-            expanded[i] = newPath + entry.slice(oldPath.length);
-            mutated = true;
-          }
-        }
-        if (mutated) {
-          await this.plugin.saveSettings();
-        }
+        await this.rewriteExpandState(oldPath, newPath);
 
         new Notice(
           'Папка переименована. Обновлено канвасов: ' + result.updated.length +
