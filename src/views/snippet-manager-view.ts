@@ -743,6 +743,7 @@ export class SnippetManagerView extends ItemView {
     srcKind: 'file' | 'folder',
     targetFolder: string,
   ): boolean {
+    if (srcPath === '') return false; // dragover — path unknown, allow visual feedback
     if (srcKind === 'file') {
       // Already in target → no-op, render as forbidden so we don't
       // preventDefault (cursor stays as "not-allowed").
