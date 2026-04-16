@@ -171,6 +171,7 @@ A radiologist can generate a structured, accurate protocol in seconds by answeri
 
 **Shipped:** v1.5 Snippet Editor Refactoring (2026-04-16)
 **Current milestone:** v1.6 Polish & Canvas Workflow
+**Phase 38 complete (2026-04-16):** Canvas node creation infrastructure — CanvasNodeFactory service with createTextNode API, auto-color, position offset
 
 ## Context
 
