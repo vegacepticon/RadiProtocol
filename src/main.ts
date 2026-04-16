@@ -10,6 +10,7 @@ import { SnippetService } from './snippets/snippet-service';
 import { SessionService } from './sessions/session-service';
 import { WriteMutex } from './utils/write-mutex';
 import { CanvasLiveEditor } from './canvas/canvas-live-editor';
+import { CanvasNodeFactory } from './canvas/canvas-node-factory';
 
 export default class RadiProtocolPlugin extends Plugin {
   settings!: RadiProtocolSettings;
@@ -17,6 +18,7 @@ export default class RadiProtocolPlugin extends Plugin {
   snippetService!: SnippetService;
   sessionService!: SessionService;
   canvasLiveEditor!: CanvasLiveEditor;
+  canvasNodeFactory!: CanvasNodeFactory;
   private readonly insertMutex = new WriteMutex();
 
   async onload(): Promise<void> {
@@ -34,6 +36,9 @@ export default class RadiProtocolPlugin extends Plugin {
 
     // Instantiate live canvas editor (LIVE-01)
     this.canvasLiveEditor = new CanvasLiveEditor(this.app);
+
+    // Instantiate canvas node factory (CANVAS-01)
+    this.canvasNodeFactory = new CanvasNodeFactory(this.app);
 
     this.addRibbonIcon('activity', 'Radiprotocol', () => { void this.activateRunnerView(); });
 
@@ -118,6 +123,7 @@ export default class RadiProtocolPlugin extends Plugin {
 
   async onunload(): Promise<void> {
     this.canvasLiveEditor.destroy();
+    this.canvasNodeFactory.destroy();
     console.debug('[RadiProtocol] Plugin unloaded');
   }
 
