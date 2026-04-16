@@ -1,35 +1,34 @@
 ---
 gsd_state_version: 1.0
-milestone: v1.0
-milestone_name: milestone
-status: completed
-stopped_at: Completed 35-02-PLAN.md
-last_updated: "2026-04-16T04:58:54.193Z"
+milestone: v1.6
+milestone_name: "Polish & Canvas Workflow"
+status: Defining requirements
+stopped_at: null
+last_updated: "2026-04-16T12:00:00.000Z"
 last_activity: 2026-04-16
 progress:
-  total_phases: 4
-  completed_phases: 4
-  total_plans: 18
-  completed_plans: 18
-  percent: 100
+  total_phases: 0
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
 ---
 
 # RadiProtocol — Project State
 
 **Updated:** 2026-04-16
-**Milestone:** v1.5 — Snippet Editor Refactoring (SHIPPED)
-**Status:** Milestone archived
+**Milestone:** v1.6 — Polish & Canvas Workflow
+**Status:** Defining requirements
 **Last session:** 2026-04-16
-**Stopped at:** Milestone v1.5 complete
+**Stopped at:** —
 
 ---
 
 ## Current Position
 
-Phase: None — milestone complete
-Plan: None
-Next: `/gsd-new-milestone` — plan next milestone
-Last activity: 2026-04-16
+Phase: Not started (defining requirements)
+Plan: —
+Status: Defining requirements
+Last activity: 2026-04-16 — Milestone v1.6 started
 
 ---
 
@@ -38,7 +37,7 @@ Last activity: 2026-04-16
 See: `.planning/PROJECT.md` (updated 2026-04-16)
 
 **Core value:** A radiologist can generate a structured, accurate protocol in seconds by answering a guided algorithm — without writing a single line of code.
-**Current focus:** Planning next milestone
+**Current focus:** v1.6 — Polish & Canvas Workflow
 
 ---
 

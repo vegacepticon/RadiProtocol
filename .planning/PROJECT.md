@@ -133,7 +133,17 @@ A radiologist can generate a structured, accurate protocol in seconds by answeri
 
 ### Active
 
-(No active milestone — planning next)
+## Current Milestone: v1.6 Polish & Canvas Workflow
+
+**Goal:** Clean up dead code, fix UI bugs, add snippet editor improvements, and accelerate canvas authoring with programmatic node creation from the node editor sidebar.
+
+**Target features:**
+- Dead code audit and cleanup across the entire project
+- Fix "ТипJSON" → "Тип JSON" spacing in snippet create/edit modal
+- Create folder button in snippet editor (next to create snippet)
+- Sync canvas node path when directory is renamed in snippet editor
+- Canvas API research + quick node creation buttons in node editor sidebar
+- Duplicate node with preserved settings
 
 ### Deferred (Future Milestones)
 
@@ -160,7 +170,7 @@ A radiologist can generate a structured, accurate protocol in seconds by answeri
 ## Current State
 
 **Shipped:** v1.5 Snippet Editor Refactoring (2026-04-16)
-**Current milestone:** None — planning next
+**Current milestone:** v1.6 Polish & Canvas Workflow
 
 ## Context
 
@@ -228,4 +238,4 @@ A radiologist can generate a structured, accurate protocol in seconds by answeri
 4. Update Context with current state
 
 ---
-*Last updated: 2026-04-16 after v1.5 milestone*
+*Last updated: 2026-04-16 — v1.6 milestone started*
