@@ -210,6 +210,57 @@
 
 ---
 
+## Milestone: v1.5 — Snippet Editor Refactoring
+
+**Shipped:** 2026-04-16
+**Phases:** 4 (32–35) | **Plans:** 18 | **Timeline:** 2 days (2026-04-15 → 2026-04-16)
+**Git:** 73 commits, 90 files, +19518/-1034 LOC
+
+### What Was Built
+
+- Phase 32: SnippetService refactored with `Snippet = JsonSnippet | MdSnippet` discriminated union, extension-based routing in `listFolder`/`load`, `vault.trash()` delete, and `rewriteCanvasRefs` vault-wide canvas reference sync utility with WriteMutex and prefix-match semantics
+- Phase 33: SnippetManagerView rewritten as recursive folder tree (542 lines) — unified SnippetEditorModal (create/edit, JSON↔MD toggle, folder dropdown, D-09 move-on-save pipeline, unsaved-changes guard), folder CRUD with contents listing, 120ms debounced vault watcher with prefix filter; 20 requirements satisfied
+- Phase 34: Drag-and-drop + context menu "Move to…" + modal folder field for snippet/folder reorganization; F2/context-menu inline rename; canvas ref auto-rewrite on every move/rename — 8 requirements, UAT approved by Роман after 2 post-UAT fixes (77b62c1, fd0d50d)
+- Phase 35: MD snippets in runner picker with glyph prefix differentiation, verbatim click-to-insert without fill-in modal, subfolder drill-down and mixed branching support — surgical 2-method edit to runner-view.ts
+
+### What Worked
+
+- **`rewriteCanvasRefs` as standalone utility** — designed in Phase 32, consumed by Phase 33 (modal move-on-save) and Phase 34 (DnD, rename, move) without modification. Cross-phase reuse validated the decoupled architecture.
+- **Post-UAT fixes as part of verification** — Phase 34 UAT caught 2 real bugs (DOM parent lookup, modal rename path). Fixing them within the same phase cycle and re-verifying produced a clean audit trail without a separate bug-fix phase.
+- **Discriminated union pattern continued to pay off** — `Snippet = JsonSnippet | MdSnippet` with `kind` discriminant enabled type-safe branching in runner-view.ts (Phase 35) with zero runtime surprises. Same pattern as Phase 29's 8th node kind.
+- **Phase 35 minimal scope** — 2 plans, ~50 lines of production code change, 7 test cases. Proves that when the service layer (Phase 32) is well-designed, UI integration is trivial.
+- **Integration checker found no orphaned exports** — 20/20 cross-phase connections wired correctly on first pass. Clean API contracts between phases.
+
+### What Was Inefficient
+
+- **REQUIREMENTS.md traceability checkboxes for Phase 34 never updated** — 8 MOVE/RENAME requirements stayed `[ ] Pending` despite Phase 34 VERIFICATION confirming all as MET. Found during milestone audit, fixed manually. Same pattern as v1.0 and v1.2.
+- **Phase 32 VERIFICATION.md recorded `gaps_found` that was later resolved** — strict TS errors in test files caused build failure at Phase 32 close but were fixed by subsequent phases. The VERIFICATION.md was never updated, creating a stale document.
+- **SUMMARY.md frontmatter `requirements_completed` field absent in most phases** — only Phase 35 populated it. The 3-source cross-reference in the audit was weakened by missing SUMMARY frontmatter.
+- **Nyquist VALIDATION.md still in draft for all 4 phases** — the recurring tech debt pattern continues from v1.2 and v1.4. No phase gated on Nyquist completion.
+
+### Patterns Established
+
+- **`parentElement` over `.parent` for DOM queries** — mock `.parent` works in tests but fails in real Obsidian; always prefer `parentElement` with `.parent` as mock fallback (Phase 34 lesson, documented in Standing Pitfalls)
+- **File-level moves are canvas-invisible** — SnippetNode stores `subfolderPath` (folder), not filename. File move/rename correctly skips `rewriteCanvasRefs`; only folder operations trigger it.
+- **MD snippets bypass fill-in modal via direct `completeSnippet()`** — when content is static, skip the placeholder pipeline entirely rather than adding a "no placeholders" branch
+- **Unified modal pattern** — single SnippetEditorModal with `mode: 'create' | 'edit'` replaces separate modals; 3 entry points converge on one component
+
+### Key Lessons
+
+1. **Update REQUIREMENTS.md traceability checkboxes as phases complete** — this is the 4th milestone where stale checkboxes were caught at audit. Must become a phase-completion gate.
+2. **Update VERIFICATION.md if its gaps are resolved** — stale `gaps_found` status misleads audit tools; either re-verify or add a "resolved" note.
+3. **Populate `requirements_completed` in SUMMARY.md frontmatter** — the 3-source cross-reference audit depends on it; missing data weakens confidence.
+4. **Nyquist validation debt is compounding** — now spanning v1.2, v1.4, and v1.5 phases. Either gate phases on it or explicitly remove it from the workflow.
+5. **Small, well-scoped phases (Phase 35) are the fastest to ship** — service-layer groundwork in earlier phases (Phase 32) makes downstream UI integration trivial.
+
+### Cost Observations
+
+- Model mix: quality profile (Opus 4.6 primary)
+- Sessions: ~3 sessions over 2 days
+- Notable: Phase 35 was the fastest — 2 plans, surgical edit, 7 tests, UAT passed on first try. Phase 34 was the most complex (6 plans, 2 post-UAT fixes). Phase 33 was the largest (5 plans, 20 requirements, 44-step UAT checklist).
+
+---
+
 ## Cross-Milestone Trends
 
 ### Process Evolution
@@ -220,6 +271,7 @@
 | v1.2 | 8 | 11 | Retrofit verification pattern; inserted phases for gap closure; milestone audit pre-archival |
 | v1.3 | 1 | 1 | Smallest milestone — single feature; skipped `/gsd-new-milestone`; structural debt repaired at close |
 | v1.4 | 4 | 12 | Formal `/gsd-new-milestone` used; mid-milestone scope extension (Phase 31 added); re-audit recovery pattern proven |
+| v1.5 | 4 | 18 | Largest plan count; rewriteCanvasRefs cross-phase reuse validated; post-UAT fix pattern established; 34 requirements — most requirement-dense milestone |
 
 ### Cumulative Quality
 
@@ -229,6 +281,7 @@
 | v1.2 | 28+ passing + 8/8 UAT | same; no new engine modules added |
 | v1.3 | 53+ passing + 5/5 UAT | same; +25 DnD/splice/UUID tests |
 | v1.4 | 53+ passing + 12/12 UAT (7+5) | same; +snippet node fixtures + canvas-parser/validator/runner coverage for 8th kind |
+| v1.5 | 356 passing + 44+31+11 UAT | +snippet-service, canvas-ref-sync, snippet-tree, snippet-editor-modal, snippet-dnd, inline-rename, runner-extensions (MD) |
 
 ### Top Lessons (Verified Across Milestones)
 
@@ -236,5 +289,7 @@
 2. Pure engine modules (zero Obsidian imports) make the test loop fast and reliable — worth the upfront discipline
 3. Always write SUMMARY.md per phase — missing artifacts cost a full recovery phase
 4. Keep ROADMAP.md current as phases execute — gsd-tools depends on it at milestone close (repeat offense in v1.4)
-5. Nyquist VALIDATION.md must be gated at phase completion — retroactive backlog has grown across v1.2 and v1.4; pay the cost now or pay it compounded later
+5. Nyquist VALIDATION.md must be gated at phase completion — retroactive backlog has grown across v1.2, v1.4, and v1.5; pay the cost now or pay it compounded later
 6. Code review before UAT catches subtle defects that slip past both automated tests and human testers (stale closures, cycle guards, race conditions) — v1.3 and v1.4 both prove this
+7. Update REQUIREMENTS.md traceability checkboxes as phases complete — stale checkboxes found at audit in v1.0, v1.2, and v1.5; must become a phase-completion gate
+8. Cross-phase utility design (rewriteCanvasRefs) pays compound dividends — designed once in Phase 32, consumed unmodified by Phases 33 and 34
