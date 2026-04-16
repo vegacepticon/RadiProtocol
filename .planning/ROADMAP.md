@@ -120,7 +120,9 @@ Plans:
   2. Clicking the "Create folder" button prompts for a folder name, creates the folder under `.radiprotocol/snippets/`, and the folder appears in the tree without manual refresh
   3. Renaming a directory in the snippet editor tree updates every canvas file's SnippetNode `subfolderPath` that referenced the old directory name
   4. After a directory rename, opening a canvas that had SnippetNodes pointing to the old path correctly resolves snippets from the new path
-**Plans**: TBD
+**Plans**: 1 plan
+Plans:
+- [ ] 37-01-PLAN.md — Add "Create folder" header button, verify SYNC-01 existing coverage
 **UI hint**: yes
 
 ### Phase 38: Canvas Node Creation Infrastructure
@@ -174,7 +176,7 @@ Phases execute in numeric order: 36 -> 37 -> 38 -> 39 -> 40
 | 28-31 | v1.4 | 12/12 | Complete | 2026-04-15 |
 | 32-35 | v1.5 | 18/18 | Complete | 2026-04-16 |
 | 36. Dead Code Audit and Cleanup | v1.6 | 2/2 | Complete    | 2026-04-16 |
-| 37. Snippet Editor Improvements | v1.6 | 0/? | Not started | - |
+| 37. Snippet Editor Improvements | v1.6 | 0/1 | Not started | - |
 | 38. Canvas Node Creation Infrastructure | v1.6 | 0/? | Not started | - |
 | 39. Quick-Create UI in Node Editor | v1.6 | 0/? | Not started | - |
 | 40. Node Duplication | v1.6 | 0/? | Not started | - |
