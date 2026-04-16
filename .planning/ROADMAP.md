@@ -7,19 +7,19 @@
 
 ## Milestones
 
-- ✅ **v1.0 Community Plugin Release** — Phases 1–7 (shipped 2026-04-07)
-- ✅ **v1.2 Runner UX & Bug Fixes** — Phases 12–19 (shipped 2026-04-10)
+- ✅ **v1.0 Community Plugin Release** — Phases 1-7 (shipped 2026-04-07)
+- ✅ **v1.2 Runner UX & Bug Fixes** — Phases 12-19 (shipped 2026-04-10)
 - ✅ **v1.3 Interactive Placeholder Editor** — Phase 27 (shipped 2026-04-12)
-- ✅ **v1.4 Snippets and Colors, Colors and Snippets** — Phases 28–31 (shipped 2026-04-15)
-- ✅ **v1.5 Snippet Editor Refactoring** — Phases 32–35 (shipped 2026-04-16)
-- 🚧 **v1.6 Polish & Canvas Workflow** — Phases 36–40 (in progress)
+- ✅ **v1.4 Snippets and Colors, Colors and Snippets** — Phases 28-31 (shipped 2026-04-15)
+- ✅ **v1.5 Snippet Editor Refactoring** — Phases 32-35 (shipped 2026-04-16)
+- 🚧 **v1.6 Polish & Canvas Workflow** — Phases 36-40 (in progress)
 
 ---
 
 ## Phases
 
 <details>
-<summary>✅ v1.0 Community Plugin Release (Phases 1–7) — SHIPPED 2026-04-07</summary>
+<summary>✅ v1.0 Community Plugin Release (Phases 1-7) — SHIPPED 2026-04-07</summary>
 
 - [x] Phase 1: Project Scaffold and Canvas Parsing Foundation (6/6 plans) — completed 2026-04-06
 - [x] Phase 2: Core Protocol Runner Engine (3/3 plans) — completed 2026-04-06
@@ -34,7 +34,7 @@ Full details: `.planning/milestones/v1.0-ROADMAP.md`
 </details>
 
 <details>
-<summary>✅ v1.2 Runner UX & Bug Fixes (Phases 12–19) — SHIPPED 2026-04-10</summary>
+<summary>✅ v1.2 Runner UX & Bug Fixes (Phases 12-19) — SHIPPED 2026-04-10</summary>
 
 - [x] Phase 12: Runner Layout Overhaul — completed 2026-04-08
 - [x] Phase 13: Sidebar Canvas Selector and Run Again — completed 2026-04-08
@@ -43,7 +43,7 @@ Full details: `.planning/milestones/v1.0-ROADMAP.md`
 - [x] Phase 16: Runner Textarea Edit Preservation — completed 2026-04-09
 - [x] Phase 17: Node Type Read-Back and Snippet Placeholder Fixes — completed 2026-04-09
 - [x] Phase 18: CSS Gap Fixes (INSERTED) — completed 2026-04-10
-- [x] Phase 19: Phase 12–14 Formal Verification — completed 2026-04-10
+- [x] Phase 19: Phase 12-14 Formal Verification — completed 2026-04-10
 
 Full details: `.planning/milestones/v1.2-ROADMAP.md`
 
@@ -59,7 +59,7 @@ Full details: `.planning/milestones/v1.3-ROADMAP.md`
 </details>
 
 <details>
-<summary>✅ v1.4 Snippets and Colors, Colors and Snippets (Phases 28–31) — SHIPPED 2026-04-15</summary>
+<summary>✅ v1.4 Snippets and Colors, Colors and Snippets (Phases 28-31) — SHIPPED 2026-04-15</summary>
 
 - [x] Phase 28: Auto Node Coloring (2/2 plans) — completed 2026-04-13
 - [x] Phase 29: Snippet Node — Model, Editor, Validator (3/3 plans) — completed 2026-04-13
@@ -71,7 +71,7 @@ Full details: `.planning/milestones/v1.4-ROADMAP.md`
 </details>
 
 <details>
-<summary>✅ v1.5 Snippet Editor Refactoring (Phases 32–35) — SHIPPED 2026-04-16</summary>
+<summary>✅ v1.5 Snippet Editor Refactoring (Phases 32-35) — SHIPPED 2026-04-16</summary>
 
 - [x] Phase 32: SnippetService Refactor — MD Support, Trash Delete, Canvas Reference Sync (5/5 plans) — completed 2026-04-15
 - [x] Phase 33: Tree UI, Modal Create/Edit, Folder Operations, Vault Watcher (5/5 plans) — completed 2026-04-15
@@ -106,7 +106,10 @@ Full details: `.planning/milestones/v1.5-ROADMAP.md`
   3. The 3 RED test stubs in `runner-extensions.test.ts` (Phase 26 legacy) are either implemented or removed
   4. The snippet create/edit modal displays "Тип JSON" with a space between the Cyrillic word and "JSON" (not "ТипJSON")
   5. Full test suite (`npm test`) passes after all removals with zero regressions
-**Plans**: TBD
+**Plans**: 2 plans
+Plans:
+- [ ] 36-01-PLAN.md — Dead code audit: Knip analysis, unused TS export removal, dead CSS removal, RED test stub removal
+- [ ] 36-02-PLAN.md — Fix spacing bug in snippet create/edit modal type row
 
 ### Phase 37: Snippet Editor Improvements
 **Goal**: Users can create folders directly from the snippet editor header, and renaming a directory in the snippet editor automatically updates all canvas SnippetNode references
@@ -161,16 +164,16 @@ Full details: `.planning/milestones/v1.5-ROADMAP.md`
 ## Progress
 
 **Execution Order:**
-Phases execute in numeric order: 36 → 37 → 38 → 39 → 40
+Phases execute in numeric order: 36 -> 37 -> 38 -> 39 -> 40
 
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
-| 1–7 | v1.0 | 28/28 | Complete | 2026-04-07 |
-| 12–19 | v1.2 | 15/15 | Complete | 2026-04-10 |
+| 1-7 | v1.0 | 28/28 | Complete | 2026-04-07 |
+| 12-19 | v1.2 | 15/15 | Complete | 2026-04-10 |
 | 27 | v1.3 | 1/1 | Complete | 2026-04-12 |
-| 28–31 | v1.4 | 12/12 | Complete | 2026-04-15 |
-| 32–35 | v1.5 | 18/18 | Complete | 2026-04-16 |
-| 36. Dead Code Audit and Cleanup | v1.6 | 0/? | Not started | - |
+| 28-31 | v1.4 | 12/12 | Complete | 2026-04-15 |
+| 32-35 | v1.5 | 18/18 | Complete | 2026-04-16 |
+| 36. Dead Code Audit and Cleanup | v1.6 | 0/2 | Not started | - |
 | 37. Snippet Editor Improvements | v1.6 | 0/? | Not started | - |
 | 38. Canvas Node Creation Infrastructure | v1.6 | 0/? | Not started | - |
 | 39. Quick-Create UI in Node Editor | v1.6 | 0/? | Not started | - |
