@@ -88,7 +88,7 @@ Full details: `.planning/milestones/v1.5-ROADMAP.md`
 
 - [x] **Phase 36: Dead Code Audit and Cleanup** — Remove unused TypeScript exports, dead CSS, stale test stubs; fix spacing bug in snippet modal (completed 2026-04-16)
 - [x] **Phase 37: Snippet Editor Improvements** — Create folder button in snippet editor header; canvas path sync on directory rename (UAT gap closure in progress)
-- [ ] **Phase 38: Canvas Node Creation Infrastructure** — CanvasNodeFactory service with runtime API probing, type extensions, auto-color on created nodes
+- [x] **Phase 38: Canvas Node Creation Infrastructure** — CanvasNodeFactory service with runtime API probing, type extensions, auto-color on created nodes (completed 2026-04-16)
 - [ ] **Phase 39: Quick-Create UI in Node Editor** — Toolbar buttons to create question and answer nodes from the sidebar
 - [ ] **Phase 40: Node Duplication** — Duplicate selected node with all RadiProtocol properties preserved
 - [ ] **Phase 41: Live Canvas Update on Folder Rename** — Use canvasLiveEditor Pattern B to update snippet node text in real-time during folder rename
@@ -140,7 +140,7 @@ Plans:
 **Plans**: 2 plans
 Plans:
 - [x] 38-01-PLAN.md — TDD: Type extensions + CanvasNodeFactory service with unit tests
-- [ ] 38-02-PLAN.md — Wire CanvasNodeFactory into plugin lifecycle (main.ts)
+- [x] 38-02-PLAN.md — Wire CanvasNodeFactory into plugin lifecycle (main.ts)
 
 ### Phase 39: Quick-Create UI in Node Editor
 **Goal**: Users can create new question and answer nodes directly from the node editor sidebar with one click
@@ -171,7 +171,7 @@ Plans:
 **Goal:** Use `canvasLiveEditor.saveLive()` Pattern B path (same as Node Editor) to update snippet node `text` field in real-time when a folder is renamed, instead of requiring canvas to be closed
 **Requirements**: TBD
 **Depends on:** Phase 40
-**Plans:** 1/2 plans executed
+**Plans:** 2/2 plans complete
 
 Plans:
 - [ ] TBD (run /gsd-plan-phase 41 to break down)
@@ -192,7 +192,7 @@ Phases execute in numeric order: 36 -> 37 -> 38 -> 39 -> 40 -> 41
 | 32-35 | v1.5 | 18/18 | Complete | 2026-04-16 |
 | 36. Dead Code Audit and Cleanup | v1.6 | 2/2 | Complete    | 2026-04-16 |
 | 37. Snippet Editor Improvements | v1.6 | 2/2 | Complete   | 2026-04-16 |
-| 38. Canvas Node Creation Infrastructure | v1.6 | 1/2 | In Progress|  |
+| 38. Canvas Node Creation Infrastructure | v1.6 | 2/2 | Complete   | 2026-04-16 |
 | 39. Quick-Create UI in Node Editor | v1.6 | 0/? | Not started | - |
 | 40. Node Duplication | v1.6 | 0/? | Not started | - |
 | 41. Live Canvas Update on Folder Rename | v1.6 | 0/? | Not started | - |
