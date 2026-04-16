@@ -2,9 +2,9 @@
 gsd_state_version: 1.0
 milestone: v1.6
 milestone_name: Polish & Canvas Workflow
-status: verifying
+status: planning
 stopped_at: Completed 36-02-PLAN.md
-last_updated: "2026-04-16T07:11:21.342Z"
+last_updated: "2026-04-16T07:18:54.081Z"
 last_activity: 2026-04-16
 progress:
   total_phases: 5
@@ -18,7 +18,7 @@ progress:
 
 **Updated:** 2026-04-16
 **Milestone:** v1.6 — Polish & Canvas Workflow
-**Status:** Phase complete — ready for verification
+**Status:** Ready to plan
 **Last session:** 2026-04-16T07:11:21.336Z
 **Stopped at:** Completed 36-02-PLAN.md
 
@@ -26,8 +26,8 @@ progress:
 
 ## Current Position
 
-Phase: 36 (dead-code-audit-and-cleanup) — EXECUTING
-Plan: 2 of 2
+Phase: 37
+Plan: Not started
 Status: Phase complete — ready for verification
 Last activity: 2026-04-16
 
@@ -48,7 +48,7 @@ See: `.planning/PROJECT.md` (updated 2026-04-16)
 
 **Velocity:**
 
-- Total plans completed: 0 (v1.6)
+- Total plans completed: 2 (v1.6)
 - Average duration: —
 - Total execution time: —
 
@@ -56,7 +56,7 @@ See: `.planning/PROJECT.md` (updated 2026-04-16)
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
-| - | - | - | - |
+| 36 | 2 | - | - |
 
 ---
 
