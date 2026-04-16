@@ -19,11 +19,11 @@ Requirements for milestone v1.6 — Polish & Canvas Workflow.
 
 ### Canvas Node Creation
 
-- [ ] **CANVAS-01**: `CanvasNodeFactory` service provides programmatic node creation via Canvas internal API (Pattern B) with runtime API probing
+- [x] **CANVAS-01**: `CanvasNodeFactory` service provides programmatic node creation via Canvas internal API (Pattern B) with runtime API probing
 - [ ] **CANVAS-02**: User can create a new question node from the node editor sidebar — node appears on canvas adjacent to the selected node with auto-positioning
 - [ ] **CANVAS-03**: User can create a new answer node linked to the current question node from the node editor sidebar
-- [ ] **CANVAS-04**: Newly created nodes receive correct `radiprotocol_nodeType` and auto-color
-- [ ] **CANVAS-05**: UI shows clear Notice when canvas is not open (creation requires live canvas)
+- [x] **CANVAS-04**: Newly created nodes receive correct `radiprotocol_nodeType` and auto-color
+- [x] **CANVAS-05**: UI shows clear Notice when canvas is not open (creation requires live canvas)
 
 ### Node Duplication
 
@@ -54,11 +54,11 @@ Deferred to future milestones. Tracked but not in current roadmap.
 | CLEAN-02 | Phase 36 | Complete |
 | CLEAN-03 | Phase 37 | Complete |
 | SYNC-01 | Phase 37 | Complete |
-| CANVAS-01 | Phase 38 | Pending |
+| CANVAS-01 | Phase 38 | Complete |
 | CANVAS-02 | Phase 39 | Pending |
 | CANVAS-03 | Phase 39 | Pending |
-| CANVAS-04 | Phase 38 | Pending |
-| CANVAS-05 | Phase 38 | Pending |
+| CANVAS-04 | Phase 38 | Complete |
+| CANVAS-05 | Phase 38 | Complete |
 | DUP-01 | Phase 40 | Pending |
 | DUP-02 | Phase 40 | Pending |
 
