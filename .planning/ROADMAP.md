@@ -90,7 +90,7 @@ Full details: `.planning/milestones/v1.5-ROADMAP.md`
 - [x] **Phase 37: Snippet Editor Improvements** — Create folder button in snippet editor header; canvas path sync on directory rename (UAT gap closure in progress)
 - [x] **Phase 38: Canvas Node Creation Infrastructure** — CanvasNodeFactory service with runtime API probing, type extensions, auto-color on created nodes (completed 2026-04-16)
 - [x] **Phase 39: Quick-Create UI in Node Editor** — Toolbar buttons to create question and answer nodes from the sidebar (completed 2026-04-16)
-- [ ] **Phase 40: Node Duplication** — Duplicate selected node with all RadiProtocol properties preserved
+- [x] **Phase 40: Node Duplication** — Duplicate selected node with all RadiProtocol properties preserved (completed 2026-04-16)
 - [ ] **Phase 41: Live Canvas Update on Folder Rename** — Use canvasLiveEditor Pattern B to update snippet node text in real-time during folder rename
 - [ ] **Phase 42: Snippet Node Quick-Create Button & Double-Click Node Selection Fix** — Add "Create snippet node" button; fix double-click-created nodes not loading in editor panel
 
@@ -168,7 +168,7 @@ Plans:
   4. After duplication, the new node is loaded in the editor panel for immediate editing
 **Plans**: 1 plan
 Plans:
-- [ ] 40-01-PLAN.md — Duplicate button + onDuplicate method + property copy + unit tests
+- [x] 40-01-PLAN.md — Duplicate button + onDuplicate method + property copy + unit tests
 **UI hint**: yes
 
 ### Phase 41: Live Canvas Update on Folder Rename
@@ -176,7 +176,7 @@ Plans:
 **Goal:** Use `canvasLiveEditor.saveLive()` Pattern B path (same as Node Editor) to update snippet node `text` field in real-time when a folder is renamed, instead of requiring canvas to be closed
 **Requirements**: TBD
 **Depends on:** Phase 40
-**Plans:** 2/2 plans complete
+**Plans:** 1/1 plans complete
 
 Plans:
 - [ ] TBD (run /gsd-plan-phase 41 to break down)
@@ -212,6 +212,6 @@ Phases execute in numeric order: 36 -> 37 -> 38 -> 39 -> 40 -> 41 -> 42
 | 37. Snippet Editor Improvements | v1.6 | 2/2 | Complete   | 2026-04-16 |
 | 38. Canvas Node Creation Infrastructure | v1.6 | 2/2 | Complete    | 2026-04-16 |
 | 39. Quick-Create UI in Node Editor | v1.6 | 2/2 | Complete   | 2026-04-16 |
-| 40. Node Duplication | v1.6 | 0/1 | Not started | - |
+| 40. Node Duplication | v1.6 | 1/1 | Complete   | 2026-04-16 |
 | 41. Live Canvas Update on Folder Rename | v1.6 | 0/? | Not started | - |
 | 42. Snippet Node Quick-Create & Double-Click Fix | v1.6 | 0/? | Not started | - |

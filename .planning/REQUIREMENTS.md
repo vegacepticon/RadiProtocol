@@ -27,8 +27,8 @@ Requirements for milestone v1.6 — Polish & Canvas Workflow.
 
 ### Node Duplication
 
-- [ ] **DUP-01**: User can duplicate the selected canvas node — copy preserves all `radiprotocol_*` properties, generates new ID, offsets position
-- [ ] **DUP-02**: Duplicated node does NOT copy edges (user draws connections manually)
+- [x] **DUP-01**: User can duplicate the selected canvas node — copy preserves all `radiprotocol_*` properties, generates new ID, offsets position
+- [x] **DUP-02**: Duplicated node does NOT copy edges (user draws connections manually)
 
 ## Future Requirements
 
@@ -59,8 +59,8 @@ Deferred to future milestones. Tracked but not in current roadmap.
 | CANVAS-03 | Phase 39 | Complete |
 | CANVAS-04 | Phase 38 | Complete |
 | CANVAS-05 | Phase 38 | Complete |
-| DUP-01 | Phase 40 | Pending |
-| DUP-02 | Phase 40 | Pending |
+| DUP-01 | Phase 40 | Complete |
+| DUP-02 | Phase 40 | Complete |
 
 **Coverage:**
 - v1.6 requirements: 11 total
