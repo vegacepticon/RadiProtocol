@@ -1,4 +1,4 @@
-import { ItemView, WorkspaceLeaf, Setting, TFile, Notice } from 'obsidian';
+import { ItemView, WorkspaceLeaf, Setting, TFile, Notice, setIcon } from 'obsidian';
 import type { RPNodeKind } from '../graph/graph-model';
 import type RadiProtocolPlugin from '../main';
 import { NODE_COLOR_MAP } from '../canvas/node-color-map';
@@ -124,6 +124,7 @@ export class EditorPanelView extends ItemView {
 
   private renderIdle(): void {
     this.contentEl.empty();
+    this.renderToolbar(this.contentEl);  // Phase 39: quick-create toolbar
     const container = this.contentEl.createDiv({ cls: 'rp-editor-idle' });
     container.createEl('p', { text: 'No node selected' });
     container.createEl('p', {
@@ -294,6 +295,7 @@ export class EditorPanelView extends ItemView {
 
   private renderForm(nodeRecord: Record<string, unknown>, currentKind: RPNodeKind | null): void {
     this.contentEl.empty();
+    this.renderToolbar(this.contentEl);  // Phase 39: quick-create toolbar
     const panel = this.contentEl.createDiv({ cls: 'rp-editor-panel' });
     const formArea = panel.createDiv({ cls: 'rp-editor-form' });
 
@@ -697,6 +699,64 @@ export class EditorPanelView extends ItemView {
     this.contentEl.empty();
     const container = this.contentEl.createDiv({ cls: 'rp-editor-idle' });
     container.createEl('p', { text: message });
+  }
+
+  // Phase 39: Quick-create helpers ─────────────────────────────────────────
+
+  private getActiveCanvasPath(): string | undefined {
+    const canvasLeaves = this.plugin.app.workspace.getLeavesOfType('canvas');
+    const activeLeaf = this.plugin.app.workspace.getMostRecentLeaf();
+    const canvasLeaf = canvasLeaves.find(l => l === activeLeaf) ?? canvasLeaves[0];
+    if (!canvasLeaf) return undefined;
+    return (canvasLeaf.view as { file?: { path: string } })?.file?.path;
+  }
+
+  private async onQuickCreate(kind: 'question' | 'answer'): Promise<void> {
+    const canvasPath = this.getActiveCanvasPath();
+    if (!canvasPath) {
+      new Notice('Open a canvas first to create nodes.');
+      return;
+    }
+
+    // Flush pending auto-save before switching (Pitfall 3 from RESEARCH.md)
+    if (this._debounceTimer !== null) {
+      clearTimeout(this._debounceTimer);
+      this._debounceTimer = null;
+      if (this.currentFilePath && this.currentNodeId) {
+        const editsSnapshot = { ...this.pendingEdits };
+        try {
+          await this.saveNodeEdits(this.currentFilePath, this.currentNodeId, editsSnapshot);
+        } catch {
+          // flush save failure does not block creation — silent
+        }
+      }
+    }
+
+    const result = this.plugin.canvasNodeFactory.createNode(
+      canvasPath,
+      kind,
+      this.currentNodeId ?? undefined
+    );
+
+    if (result) {
+      this.loadNode(canvasPath, result.nodeId);
+    }
+  }
+
+  private renderToolbar(container: HTMLElement): void {
+    const toolbar = container.createDiv({ cls: 'rp-editor-create-toolbar' });
+
+    const qBtn = toolbar.createEl('button', { cls: 'rp-create-question-btn' });
+    const qIcon = qBtn.createSpan();
+    setIcon(qIcon, 'help-circle');
+    qBtn.appendText('Create question node');
+    qBtn.addEventListener('click', () => { void this.onQuickCreate('question'); });
+
+    const aBtn = toolbar.createEl('button', { cls: 'rp-create-answer-btn' });
+    const aIcon = aBtn.createSpan();
+    setIcon(aIcon, 'message-square');
+    aBtn.appendText('Create answer node');
+    aBtn.addEventListener('click', () => { void this.onQuickCreate('answer'); });
   }
 
   /**

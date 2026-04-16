@@ -43,3 +43,48 @@
   font-size: var(--font-text-size);
   padding: var(--size-4-1) 0; /* 8px 0 */
 }
+
+/* Phase 39: Quick-Create toolbar */
+.rp-editor-create-toolbar {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: var(--size-4-1);
+  padding: var(--size-4-1) 0;
+  margin-bottom: var(--size-4-1);
+  border-bottom: 1px solid var(--background-modifier-border);
+  flex: 0 0 auto;
+}
+
+.rp-create-question-btn,
+.rp-create-answer-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--size-2-1);
+  padding: 6px 12px;
+  border-radius: var(--radius-s);
+  font-size: var(--font-ui-small);
+  font-weight: var(--font-semibold);
+  cursor: pointer;
+  border: none;
+  background: var(--interactive-accent);
+  color: var(--text-on-accent);
+  transition: filter 0.1s ease;
+}
+
+.rp-create-question-btn:hover,
+.rp-create-answer-btn:hover {
+  filter: brightness(1.1);
+}
+
+.rp-create-question-btn:active,
+.rp-create-answer-btn:active {
+  filter: brightness(0.95);
+}
+
+.rp-create-question-btn:disabled,
+.rp-create-answer-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  filter: none;
+}
