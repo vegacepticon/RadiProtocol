@@ -225,6 +225,40 @@ describe('rewriteCanvasRefs', () => {
     expect(app.readSpy).toHaveBeenCalledTimes(0);
   });
 
+  it('exact-match rename also rewrites the node text field', async () => {
+    const canvasPath = 'protocols/a.canvas';
+    const app = makeApp({
+      [canvasPath]: loadFixture('snippet-node-multi-a.canvas'),
+    });
+    const mapping = new Map<string, string>([['a/b', 'a/c']]);
+
+    await rewriteCanvasRefs(app.app, mapping);
+
+    const parsed = JSON.parse(app.writes[canvasPath]!) as {
+      nodes: Array<Record<string, unknown>>;
+    };
+    const snippetNode = parsed.nodes.find(
+      (n) => n['radiprotocol_nodeType'] === 'snippet',
+    )!;
+    expect(snippetNode['text']).toBe('a/c');
+  });
+
+  it('prefix-match rename also rewrites the node text field', async () => {
+    const canvasPath = 'protocols/b.canvas';
+    const app = makeApp({
+      [canvasPath]: loadFixture('snippet-node-multi-b.canvas'),
+    });
+    const mapping = new Map<string, string>([['a/b', 'a/c']]);
+
+    await rewriteCanvasRefs(app.app, mapping);
+
+    const parsed = JSON.parse(app.writes[canvasPath]!) as {
+      nodes: Array<Record<string, unknown>>;
+    };
+    const prefixNode = parsed.nodes.find((n) => n['id'] === 's-prefix')!;
+    expect(prefixNode['text']).toBe('a/c/sub');
+  });
+
   it('ignores non-.canvas files', async () => {
     const app = makeApp({
       'notes/readme.md': '# not a canvas',
