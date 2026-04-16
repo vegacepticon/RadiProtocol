@@ -68,30 +68,7 @@
   flex: 1;
 }
 
-.rp-legend {
-  flex: 0 0 auto;
-  border-top: 1px solid var(--background-modifier-border);
-  margin-top: var(--size-4-1); /* 8px */
-  padding-top: var(--size-4-1);
-  font-size: var(--font-text-size);
-}
-
-.rp-legend-row {
-  display: flex;
-  align-items: center;
-  gap: var(--size-2-1); /* 4px */
-  padding: 2px 0;
-  font-size: var(--font-text-size);
-  line-height: 1.5;
-}
-
-.rp-legend-swatch {
-  display: inline-block;
-  width: 12px;
-  height: 12px;
-  border-radius: 2px;
-  flex-shrink: 0;
-}
+/* Phase 36: removed dead legend rules (LAYOUT-04) */
 
 .rp-question-text {
   font-size: var(--font-smaller); /* 13px */
