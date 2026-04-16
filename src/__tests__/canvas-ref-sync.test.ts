@@ -276,3 +276,227 @@ describe('rewriteCanvasRefs', () => {
     expect(readPaths).not.toContain('notes/readme.md');
   });
 });
+
+// ---------------------------------------------------------------------------
+// Phase 41: CanvasLiveEditor mock factory
+// ---------------------------------------------------------------------------
+
+function makeLiveEditor(opts: {
+  liveFiles?: Set<string>;
+  canvasData?: Record<string, string>;
+  saveLiveResult?: boolean | ((filePath: string, nodeId: string) => boolean);
+}) {
+  const saveLiveSpy = vi.fn(async (fp: string, nid: string, _edits: Record<string, unknown>) => {
+    if (typeof opts.saveLiveResult === 'function') return opts.saveLiveResult(fp, nid);
+    return opts.saveLiveResult ?? true;
+  });
+  return {
+    editor: {
+      isLiveAvailable: (fp: string) => opts.liveFiles?.has(fp) ?? false,
+      getCanvasJSON: (fp: string) => opts.canvasData?.[fp] ?? null,
+      saveLive: saveLiveSpy,
+    },
+    saveLiveSpy,
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Phase 41: Live canvas update tests
+// ---------------------------------------------------------------------------
+
+describe('rewriteCanvasRefs with CanvasLiveEditor', () => {
+  beforeEach(() => {
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+  });
+
+  it('live path: saveLive called, vault.modify skipped', async () => {
+    const canvasPath = 'protocols/live.canvas';
+    const canvasJSON = JSON.stringify({
+      nodes: [
+        {
+          id: 's1',
+          radiprotocol_nodeType: 'snippet',
+          radiprotocol_subfolderPath: 'a/b',
+          text: 'a/b',
+        },
+      ],
+      edges: [],
+    });
+    const app = makeApp({ [canvasPath]: canvasJSON });
+    const liveEditor = makeLiveEditor({
+      liveFiles: new Set([canvasPath]),
+      canvasData: { [canvasPath]: canvasJSON },
+    });
+    const mapping = new Map<string, string>([['a/b', 'a/c']]);
+
+    const result = await rewriteCanvasRefs(app.app, mapping, liveEditor.editor as any);
+
+    expect(liveEditor.saveLiveSpy).toHaveBeenCalledTimes(1);
+    expect(liveEditor.saveLiveSpy).toHaveBeenCalledWith(
+      canvasPath,
+      's1',
+      { radiprotocol_subfolderPath: 'a/c', text: 'a/c' },
+    );
+    expect(app.modifySpy).toHaveBeenCalledTimes(0);
+    expect(result.updated).toContain(canvasPath);
+  });
+
+  it('fallback: isLiveAvailable false uses vault.modify', async () => {
+    const canvasPath = 'protocols/closed.canvas';
+    const canvasJSON = JSON.stringify({
+      nodes: [
+        {
+          id: 's1',
+          radiprotocol_nodeType: 'snippet',
+          radiprotocol_subfolderPath: 'a/b',
+          text: 'a/b',
+        },
+      ],
+      edges: [],
+    });
+    const app = makeApp({ [canvasPath]: canvasJSON });
+    const liveEditor = makeLiveEditor({
+      liveFiles: new Set(), // canvas NOT open
+      canvasData: {},
+    });
+    const mapping = new Map<string, string>([['a/b', 'a/c']]);
+
+    const result = await rewriteCanvasRefs(app.app, mapping, liveEditor.editor as any);
+
+    expect(liveEditor.saveLiveSpy).not.toHaveBeenCalled();
+    expect(app.modifySpy).toHaveBeenCalledTimes(1);
+    expect(result.updated).toContain(canvasPath);
+  });
+
+  it('mid-iteration fallback: saveLive returns false triggers vault.modify', async () => {
+    const canvasPath = 'protocols/mid.canvas';
+    const canvasJSON = JSON.stringify({
+      nodes: [
+        {
+          id: 's1',
+          radiprotocol_nodeType: 'snippet',
+          radiprotocol_subfolderPath: 'a/b',
+          text: 'a/b',
+        },
+        {
+          id: 's2',
+          radiprotocol_nodeType: 'snippet',
+          radiprotocol_subfolderPath: 'a/b',
+          text: 'a/b',
+        },
+      ],
+      edges: [],
+    });
+    const app = makeApp({ [canvasPath]: canvasJSON });
+    const liveEditor = makeLiveEditor({
+      liveFiles: new Set([canvasPath]),
+      canvasData: { [canvasPath]: canvasJSON },
+      saveLiveResult: (_fp: string, nid: string) => nid !== 's2',
+    });
+    const mapping = new Map<string, string>([['a/b', 'a/c']]);
+
+    const result = await rewriteCanvasRefs(app.app, mapping, liveEditor.editor as any);
+
+    expect(liveEditor.saveLiveSpy).toHaveBeenCalled();
+    expect(app.modifySpy).toHaveBeenCalledTimes(1);
+    expect(result.updated).toContain(canvasPath);
+  });
+
+  it('multi-node live: all matching nodes get saveLive', async () => {
+    const canvasPath = 'protocols/multi.canvas';
+    const canvasJSON = JSON.stringify({
+      nodes: [
+        {
+          id: 's1',
+          radiprotocol_nodeType: 'snippet',
+          radiprotocol_subfolderPath: 'a/b',
+          text: 'a/b',
+        },
+        {
+          id: 's2',
+          radiprotocol_nodeType: 'snippet',
+          radiprotocol_subfolderPath: 'a/b',
+          text: 'a/b',
+        },
+        {
+          id: 'q1',
+          radiprotocol_nodeType: 'question',
+          text: 'Some question?',
+        },
+      ],
+      edges: [],
+    });
+    const app = makeApp({ [canvasPath]: canvasJSON });
+    const liveEditor = makeLiveEditor({
+      liveFiles: new Set([canvasPath]),
+      canvasData: { [canvasPath]: canvasJSON },
+    });
+    const mapping = new Map<string, string>([['a/b', 'a/c']]);
+
+    const result = await rewriteCanvasRefs(app.app, mapping, liveEditor.editor as any);
+
+    expect(liveEditor.saveLiveSpy).toHaveBeenCalledTimes(2);
+    expect(app.modifySpy).not.toHaveBeenCalled();
+    expect(result.updated).toContain(canvasPath);
+  });
+
+  it('mixed open/closed canvases', async () => {
+    const openPath = 'protocols/open.canvas';
+    const closedPath = 'protocols/closed.canvas';
+    const makeJSON = () =>
+      JSON.stringify({
+        nodes: [
+          {
+            id: 's1',
+            radiprotocol_nodeType: 'snippet',
+            radiprotocol_subfolderPath: 'a/b',
+            text: 'a/b',
+          },
+        ],
+        edges: [],
+      });
+    const openJSON = makeJSON();
+    const closedJSON = makeJSON();
+    const app = makeApp({
+      [openPath]: openJSON,
+      [closedPath]: closedJSON,
+    });
+    const liveEditor = makeLiveEditor({
+      liveFiles: new Set([openPath]), // only openPath is live
+      canvasData: { [openPath]: openJSON },
+    });
+    const mapping = new Map<string, string>([['a/b', 'a/c']]);
+
+    const result = await rewriteCanvasRefs(app.app, mapping, liveEditor.editor as any);
+
+    // saveLive called for open canvas
+    expect(liveEditor.saveLiveSpy).toHaveBeenCalledTimes(1);
+    expect(liveEditor.saveLiveSpy.mock.calls[0]![0]).toBe(openPath);
+    // vault.modify called once for closed canvas only
+    expect(app.modifySpy).toHaveBeenCalledTimes(1);
+    expect(result.updated).toContain(openPath);
+    expect(result.updated).toContain(closedPath);
+  });
+
+  it('backward compat: no liveEditor param', async () => {
+    const canvasPath = 'protocols/compat.canvas';
+    const canvasJSON = JSON.stringify({
+      nodes: [
+        {
+          id: 's1',
+          radiprotocol_nodeType: 'snippet',
+          radiprotocol_subfolderPath: 'a/b',
+          text: 'a/b',
+        },
+      ],
+      edges: [],
+    });
+    const app = makeApp({ [canvasPath]: canvasJSON });
+    const mapping = new Map<string, string>([['a/b', 'a/c']]);
+
+    const result = await rewriteCanvasRefs(app.app, mapping, undefined);
+
+    expect(app.modifySpy).toHaveBeenCalledTimes(1);
+    expect(result.updated).toContain(canvasPath);
+  });
+});
