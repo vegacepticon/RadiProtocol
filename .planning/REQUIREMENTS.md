@@ -32,9 +32,9 @@ Requirements for milestone v1.6 — Polish & Canvas Workflow.
 
 ### Live Canvas Update
 
-- [ ] **LIVE-01**: When a snippet folder is renamed and the affected canvas is open, snippet node text and subfolderPath update in real-time via Pattern B saveLive() without requiring canvas close/reopen
-- [ ] **LIVE-02**: When a snippet folder is renamed and the affected canvas is NOT open, the existing vault.modify() disk path still works correctly (backward compatibility)
-- [ ] **LIVE-03**: If saveLive() fails mid-iteration (e.g., canvas closed during rename), the function falls back to vault.modify() for the entire file — no partial updates
+- [x] **LIVE-01**: When a snippet folder is renamed and the affected canvas is open, snippet node text and subfolderPath update in real-time via Pattern B saveLive() without requiring canvas close/reopen
+- [x] **LIVE-02**: When a snippet folder is renamed and the affected canvas is NOT open, the existing vault.modify() disk path still works correctly (backward compatibility)
+- [x] **LIVE-03**: If saveLive() fails mid-iteration (e.g., canvas closed during rename), the function falls back to vault.modify() for the entire file — no partial updates
 
 ## Future Requirements
 
