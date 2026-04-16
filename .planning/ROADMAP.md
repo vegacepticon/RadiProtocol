@@ -157,6 +157,30 @@ Plans:
 - [x] 39-01-PLAN.md — Quick-create toolbar buttons + unit tests + CSS
 **UI hint**: yes
 
+### Phase 40: Node Duplication
+**Goal**: Users can duplicate any selected canvas node with all RadiProtocol properties preserved, positioned adjacent to the original
+**Depends on**: Phase 38
+**Requirements**: DUP-01, DUP-02
+**Success Criteria** (what must be TRUE):
+  1. User can duplicate the currently selected canvas node — the copy appears on the canvas with a new ID and offset position
+  2. The duplicated node preserves all `radiprotocol_*` properties (nodeType, separator, subfolderPath, snippetLabel, etc.) from the original
+  3. The duplicated node does NOT copy any edges — the user draws connections manually
+  4. After duplication, the new node is loaded in the editor panel for immediate editing
+**Plans**: 1 plan
+Plans:
+- [ ] 40-01-PLAN.md — Duplicate button + onDuplicate method + property copy + unit tests
+**UI hint**: yes
+
+### Phase 41: Live Canvas Update on Folder Rename
+
+**Goal:** Use `canvasLiveEditor.saveLive()` Pattern B path (same as Node Editor) to update snippet node `text` field in real-time when a folder is renamed, instead of requiring canvas to be closed
+**Requirements**: TBD
+**Depends on:** Phase 40
+**Plans:** 2/2 plans complete
+
+Plans:
+- [ ] TBD (run /gsd-plan-phase 41 to break down)
+
 ### Phase 42: Snippet Node Quick-Create Button & Double-Click Node Selection Fix
 **Goal**: Add a "Create snippet node" quick-create button alongside existing question/answer buttons; fix double-click-created nodes not loading in editor panel
 **Depends on**: Phase 39
@@ -169,28 +193,6 @@ Plans:
 Plans:
 - [ ] TBD (run /gsd-plan-phase 42 to break down)
 **UI hint**: yes
-
-### Phase 40: Node Duplication
-**Goal**: Users can duplicate any selected canvas node with all RadiProtocol properties preserved, positioned adjacent to the original
-**Depends on**: Phase 38
-**Requirements**: DUP-01, DUP-02
-**Success Criteria** (what must be TRUE):
-  1. User can duplicate the currently selected canvas node — the copy appears on the canvas with a new ID and offset position
-  2. The duplicated node preserves all `radiprotocol_*` properties (nodeType, separator, subfolderPath, snippetLabel, etc.) from the original
-  3. The duplicated node does NOT copy any edges — the user draws connections manually
-  4. After duplication, the new node is loaded in the editor panel for immediate editing
-**Plans**: TBD
-**UI hint**: yes
-
-### Phase 41: Live Canvas Update on Folder Rename
-
-**Goal:** Use `canvasLiveEditor.saveLive()` Pattern B path (same as Node Editor) to update snippet node `text` field in real-time when a folder is renamed, instead of requiring canvas to be closed
-**Requirements**: TBD
-**Depends on:** Phase 40
-**Plans:** 2/2 plans complete
-
-Plans:
-- [ ] TBD (run /gsd-plan-phase 41 to break down)
 
 ---
 
@@ -210,6 +212,6 @@ Phases execute in numeric order: 36 -> 37 -> 38 -> 39 -> 40 -> 41 -> 42
 | 37. Snippet Editor Improvements | v1.6 | 2/2 | Complete   | 2026-04-16 |
 | 38. Canvas Node Creation Infrastructure | v1.6 | 2/2 | Complete    | 2026-04-16 |
 | 39. Quick-Create UI in Node Editor | v1.6 | 2/2 | Complete   | 2026-04-16 |
-| 40. Node Duplication | v1.6 | 0/? | Not started | - |
+| 40. Node Duplication | v1.6 | 0/1 | Not started | - |
 | 41. Live Canvas Update on Folder Rename | v1.6 | 0/? | Not started | - |
 | 42. Snippet Node Quick-Create & Double-Click Fix | v1.6 | 0/? | Not started | - |
