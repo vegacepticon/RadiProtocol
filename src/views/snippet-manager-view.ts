@@ -530,8 +530,8 @@ export class SnippetManagerView extends ItemView {
       new Notice('Имя подпапки не может быть пустым.');
       return;
     }
-    if (/[\\/]/.test(trimmed)) {
-      new Notice('Имя подпапки не должно содержать «/» или «\\».');
+    if (/[\\/]/.test(trimmed) || trimmed === '..' || trimmed === '.') {
+      new Notice('Имя подпапки не должно содержать «/», «\\», «.» или «..».');
       return;
     }
     const newPath = parentPath + '/' + trimmed;
