@@ -12,7 +12,7 @@
 - ✅ **v1.3 Interactive Placeholder Editor** — Phase 27 (shipped 2026-04-12)
 - ✅ **v1.4 Snippets and Colors, Colors and Snippets** — Phases 28-31 (shipped 2026-04-15)
 - ✅ **v1.5 Snippet Editor Refactoring** — Phases 32-35 (shipped 2026-04-16)
-- 🚧 **v1.6 Polish & Canvas Workflow** — Phases 36-40 (in progress)
+- 🚧 **v1.6 Polish & Canvas Workflow** — Phases 36-41 (in progress)
 
 ---
 
@@ -91,6 +91,7 @@ Full details: `.planning/milestones/v1.5-ROADMAP.md`
 - [ ] **Phase 38: Canvas Node Creation Infrastructure** — CanvasNodeFactory service with runtime API probing, type extensions, auto-color on created nodes
 - [ ] **Phase 39: Quick-Create UI in Node Editor** — Toolbar buttons to create question and answer nodes from the sidebar
 - [ ] **Phase 40: Node Duplication** — Duplicate selected node with all RadiProtocol properties preserved
+- [ ] **Phase 41: Live Canvas Update on Folder Rename** — Use canvasLiveEditor Pattern B to update snippet node text in real-time during folder rename
 
 ---
 
@@ -162,12 +163,22 @@ Plans:
 **Plans**: TBD
 **UI hint**: yes
 
+### Phase 41: Live Canvas Update on Folder Rename
+
+**Goal:** Use `canvasLiveEditor.saveLive()` Pattern B path (same as Node Editor) to update snippet node `text` field in real-time when a folder is renamed, instead of requiring canvas to be closed
+**Requirements**: TBD
+**Depends on:** Phase 40
+**Plans:** 0 plans
+
+Plans:
+- [ ] TBD (run /gsd-plan-phase 41 to break down)
+
 ---
 
 ## Progress
 
 **Execution Order:**
-Phases execute in numeric order: 36 -> 37 -> 38 -> 39 -> 40
+Phases execute in numeric order: 36 -> 37 -> 38 -> 39 -> 40 -> 41
 
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
@@ -181,14 +192,4 @@ Phases execute in numeric order: 36 -> 37 -> 38 -> 39 -> 40
 | 38. Canvas Node Creation Infrastructure | v1.6 | 0/? | Not started | - |
 | 39. Quick-Create UI in Node Editor | v1.6 | 0/? | Not started | - |
 | 40. Node Duplication | v1.6 | 0/? | Not started | - |
-
-## Backlog
-
-### Phase 999.1: Live canvas update on folder rename (BACKLOG)
-
-**Goal:** Use `canvasLiveEditor.saveLive()` Pattern B path (same as Node Editor) to update snippet node `text` field in real-time when a folder is renamed, instead of requiring canvas to be closed. Currently `rewriteCanvasRefs` only uses `vault.modify()` (Strategy A).
-**Requirements:** TBD
-**Plans:** 0 plans
-
-Plans:
-- [ ] TBD (promote with /gsd-review-backlog when ready)
+| 41. Live Canvas Update on Folder Rename | v1.6 | 0/? | Not started | - |
