@@ -87,7 +87,7 @@ Full details: `.planning/milestones/v1.5-ROADMAP.md`
 **Milestone Goal:** Clean up dead code, fix UI bugs, add snippet editor improvements, and accelerate canvas authoring with programmatic node creation from the node editor sidebar.
 
 - [x] **Phase 36: Dead Code Audit and Cleanup** — Remove unused TypeScript exports, dead CSS, stale test stubs; fix spacing bug in snippet modal (completed 2026-04-16)
-- [ ] **Phase 37: Snippet Editor Improvements** — Create folder button in snippet editor header; canvas path sync on directory rename
+- [x] **Phase 37: Snippet Editor Improvements** — Create folder button in snippet editor header; canvas path sync on directory rename (completed 2026-04-16)
 - [ ] **Phase 38: Canvas Node Creation Infrastructure** — CanvasNodeFactory service with runtime API probing, type extensions, auto-color on created nodes
 - [ ] **Phase 39: Quick-Create UI in Node Editor** — Toolbar buttons to create question and answer nodes from the sidebar
 - [ ] **Phase 40: Node Duplication** — Duplicate selected node with all RadiProtocol properties preserved
@@ -122,7 +122,7 @@ Plans:
   4. After a directory rename, opening a canvas that had SnippetNodes pointing to the old path correctly resolves snippets from the new path
 **Plans**: 1 plan
 Plans:
-- [ ] 37-01-PLAN.md — Add "Create folder" header button, verify SYNC-01 existing coverage
+- [x] 37-01-PLAN.md — Add "Create folder" header button, verify SYNC-01 existing coverage
 **UI hint**: yes
 
 ### Phase 38: Canvas Node Creation Infrastructure
@@ -176,7 +176,7 @@ Phases execute in numeric order: 36 -> 37 -> 38 -> 39 -> 40
 | 28-31 | v1.4 | 12/12 | Complete | 2026-04-15 |
 | 32-35 | v1.5 | 18/18 | Complete | 2026-04-16 |
 | 36. Dead Code Audit and Cleanup | v1.6 | 2/2 | Complete    | 2026-04-16 |
-| 37. Snippet Editor Improvements | v1.6 | 0/1 | Not started | - |
+| 37. Snippet Editor Improvements | v1.6 | 1/1 | Complete   | 2026-04-16 |
 | 38. Canvas Node Creation Infrastructure | v1.6 | 0/? | Not started | - |
 | 39. Quick-Create UI in Node Editor | v1.6 | 0/? | Not started | - |
 | 40. Node Duplication | v1.6 | 0/? | Not started | - |
