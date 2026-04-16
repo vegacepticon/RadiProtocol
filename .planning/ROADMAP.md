@@ -172,14 +172,17 @@ Plans:
 **UI hint**: yes
 
 ### Phase 41: Live Canvas Update on Folder Rename
-
 **Goal:** Use `canvasLiveEditor.saveLive()` Pattern B path (same as Node Editor) to update snippet node `text` field in real-time when a folder is renamed, instead of requiring canvas to be closed
-**Requirements**: TBD
+**Requirements**: LIVE-01, LIVE-02, LIVE-03
 **Depends on:** Phase 40
-**Plans:** 1/1 plans complete
-
+**Success Criteria** (what must be TRUE):
+  1. When a snippet folder is renamed and the affected canvas is open, snippet node text and subfolderPath update immediately via saveLive() without closing the canvas
+  2. When a snippet folder is renamed and the affected canvas is NOT open, vault.modify() disk path works as before
+  3. If saveLive() fails mid-iteration, the function falls back to vault.modify() for the entire file
+  4. Both call sites (commitInlineRename, performMove) pass canvasLiveEditor to rewriteCanvasRefs
+**Plans**: 1 plans
 Plans:
-- [ ] TBD (run /gsd-plan-phase 41 to break down)
+- [ ] 41-01-PLAN.md — Hybrid live+disk path in rewriteCanvasRefs + tests
 
 ### Phase 42: Snippet Node Quick-Create Button & Double-Click Node Selection Fix
 **Goal**: Add a "Create snippet node" quick-create button alongside existing question/answer buttons; fix double-click-created nodes not loading in editor panel
@@ -213,5 +216,5 @@ Phases execute in numeric order: 36 -> 37 -> 38 -> 39 -> 40 -> 41 -> 42
 | 38. Canvas Node Creation Infrastructure | v1.6 | 2/2 | Complete    | 2026-04-16 |
 | 39. Quick-Create UI in Node Editor | v1.6 | 2/2 | Complete   | 2026-04-16 |
 | 40. Node Duplication | v1.6 | 1/1 | Complete    | 2026-04-16 |
-| 41. Live Canvas Update on Folder Rename | v1.6 | 0/? | Not started | - |
+| 41. Live Canvas Update on Folder Rename | v1.6 | 0/1 | Planning complete | - |
 | 42. Snippet Node Quick-Create & Double-Click Fix | v1.6 | 0/? | Not started | - |

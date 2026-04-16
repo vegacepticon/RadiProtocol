@@ -30,6 +30,12 @@ Requirements for milestone v1.6 — Polish & Canvas Workflow.
 - [x] **DUP-01**: User can duplicate the selected canvas node — copy preserves all `radiprotocol_*` properties, generates new ID, offsets position
 - [x] **DUP-02**: Duplicated node does NOT copy edges (user draws connections manually)
 
+### Live Canvas Update
+
+- [ ] **LIVE-01**: When a snippet folder is renamed and the affected canvas is open, snippet node text and subfolderPath update in real-time via Pattern B saveLive() without requiring canvas close/reopen
+- [ ] **LIVE-02**: When a snippet folder is renamed and the affected canvas is NOT open, the existing vault.modify() disk path still works correctly (backward compatibility)
+- [ ] **LIVE-03**: If saveLive() fails mid-iteration (e.g., canvas closed during rename), the function falls back to vault.modify() for the entire file — no partial updates
+
 ## Future Requirements
 
 Deferred to future milestones. Tracked but not in current roadmap.
@@ -61,12 +67,15 @@ Deferred to future milestones. Tracked but not in current roadmap.
 | CANVAS-05 | Phase 38 | Complete |
 | DUP-01 | Phase 40 | Complete |
 | DUP-02 | Phase 40 | Complete |
+| LIVE-01 | Phase 41 | Planned |
+| LIVE-02 | Phase 41 | Planned |
+| LIVE-03 | Phase 41 | Planned |
 
 **Coverage:**
-- v1.6 requirements: 11 total
-- Mapped to phases: 11
+- v1.6 requirements: 14 total
+- Mapped to phases: 14
 - Unmapped: 0
 
 ---
 *Requirements defined: 2026-04-16*
-*Last updated: 2026-04-16 after roadmap creation*
+*Last updated: 2026-04-16 after Phase 41 planning*
