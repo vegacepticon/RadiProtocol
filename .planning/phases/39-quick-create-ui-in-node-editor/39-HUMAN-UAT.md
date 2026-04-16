@@ -50,5 +50,11 @@ blocked: 0
   reason: "User reported: Node appears on canvas but Node Editor doesn't pick it up — shows 'Node not found in canvas - it may have been deleted'. After selecting another node then re-selecting the new one, fields appear correctly."
   severity: major
   test: 3
-  artifacts: []
-  missing: []
+  root_cause: "Race condition: canvas.requestSave() is async fire-and-forget, but loadNode() → renderNodeForm() reads the canvas file from disk via vault.read(). The disk write hasn't flushed yet, so vault.read() returns stale JSON without the new node."
+  artifacts:
+    - path: "src/views/editor-panel-view.ts"
+      issue: "onQuickCreate() calls loadNode() immediately after createNode() — no wait for requestSave() to flush"
+    - path: "src/canvas/canvas-node-factory.ts"
+      issue: "requestSave() at line 75 is async but not awaited"
+  missing:
+    - "Add await delay between createNode() and loadNode() in onQuickCreate(), or pass node data directly to renderNodeForm() bypassing the disk read"
