@@ -78,6 +78,16 @@ export async function rewriteCanvasRefs(
         const rewritten = applyMapping(current, mapping);
         if (rewritten !== null && rewritten !== current) {
           node['radiprotocol_subfolderPath'] = rewritten;
+          // Phase 37 gap fix: also update text field so canvas displays new name.
+          // Canvas nodes store subfolderPath in both `text` (visual) and
+          // `radiprotocol_subfolderPath` (logical). Apply the same mapping to text.
+          const currentText = node['text'];
+          if (typeof currentText === 'string' && currentText !== '') {
+            const rewrittenText = applyMapping(currentText, mapping);
+            if (rewrittenText !== null && rewrittenText !== currentText) {
+              node['text'] = rewrittenText;
+            }
+          }
           mutated = true;
         }
       }
