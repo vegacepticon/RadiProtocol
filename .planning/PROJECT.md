@@ -173,6 +173,7 @@ A radiologist can generate a structured, accurate protocol in seconds by answeri
 **Current milestone:** v1.6 Polish & Canvas Workflow
 **Phase 38 complete (2026-04-16):** Canvas node creation infrastructure — CanvasNodeFactory service with createTextNode API, auto-color, position offset
 **Phase 40 complete (2026-04-16):** Node duplication — Duplicate button in Node Editor toolbar copies selected node with all RadiProtocol properties preserved
+**Phase 41 complete (2026-04-17):** Live canvas update on folder rename — rewriteCanvasRefs uses saveLive() Pattern B for open canvases, eliminating need to close/reopen
 
 ## Context
 
@@ -182,7 +183,7 @@ A radiologist can generate a structured, accurate protocol in seconds by answeri
 - Primary author: radiologist (CT focus), designed for all imaging modalities
 - All phases human-UAT approved; v1.5 milestone audit passed 34/34 requirements, 4/4 phases, 20/20 integration, 5/5 flows
 - All engine code (parser, runner, snippets, sessions) has zero Obsidian imports and is fully unit-testable
-- 357 tests passing (26 test files), build green
+- 385 tests passing (28 test files), build green
 - Known tech debt: Nyquist VALIDATION.md draft for phases 12–19, 28–31, and 32–35; dead CSS (.rp-legend*); 3 RED test stubs in runner-extensions.test.ts (Phase 26); Node Editor stale subfolderPath display after folder move/rename (cosmetic); chip editor labels in English (Phase 27 legacy)
 - Phase 37 added header "Create folder" button to snippet editor; SYNC-01 (folder rename → canvas ref sync) confirmed via existing Phase 34 tests
 
