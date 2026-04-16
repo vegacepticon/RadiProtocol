@@ -1,6 +1,7 @@
 import { ItemView, WorkspaceLeaf, Setting, TFile, Notice, setIcon } from 'obsidian';
 import type { RPNodeKind } from '../graph/graph-model';
 import type RadiProtocolPlugin from '../main';
+import type { CanvasInternal } from '../types/canvas-internal';
 import { NODE_COLOR_MAP } from '../canvas/node-color-map';
 
 export const EDITOR_PANEL_VIEW_TYPE = 'radiprotocol-editor-panel';
@@ -711,6 +712,17 @@ export class EditorPanelView extends ItemView {
     return (canvasLeaf.view as { file?: { path: string } })?.file?.path;
   }
 
+  private getCanvasForPath(canvasPath: string): CanvasInternal | undefined {
+    const leaf = this.plugin.app.workspace
+      .getLeavesOfType('canvas')
+      .find((l) => {
+        const v = l.view as { file?: { path: string } };
+        return v.file?.path === canvasPath;
+      });
+    if (!leaf) return undefined;
+    return (leaf.view as unknown as { canvas?: CanvasInternal })?.canvas;
+  }
+
   private async onQuickCreate(kind: 'question' | 'answer'): Promise<void> {
     const canvasPath = this.getActiveCanvasPath();
     if (!canvasPath) {
@@ -752,6 +764,72 @@ export class EditorPanelView extends ItemView {
     }
   }
 
+  // Phase 40: Duplicate node ─────────────────────────────────────────────
+
+  private async onDuplicate(): Promise<void> {
+    if (!this.currentNodeId || !this.currentFilePath) {
+      return;
+    }
+
+    const canvasPath = this.getActiveCanvasPath();
+    if (!canvasPath) {
+      new Notice('Open a canvas first to create nodes.');
+      return;
+    }
+
+    // Flush pending auto-save before switching (same pattern as onQuickCreate)
+    if (this._debounceTimer !== null) {
+      clearTimeout(this._debounceTimer);
+      this._debounceTimer = null;
+      if (this.currentFilePath && this.currentNodeId) {
+        const editsSnapshot = { ...this.pendingEdits };
+        try {
+          await this.saveNodeEdits(this.currentFilePath, this.currentNodeId, editsSnapshot);
+        } catch {
+          // flush save failure does not block duplication — silent
+        }
+      }
+    }
+
+    // Read source node data from live canvas (NOT disk — avoids race condition)
+    const canvas = this.getCanvasForPath(canvasPath);
+    if (!canvas) return;
+    const sourceNode = canvas.nodes.get(this.currentNodeId);
+    if (!sourceNode) return;
+    const sourceData = sourceNode.getData();
+
+    const sourceKind = sourceData['radiprotocol_nodeType'] as RPNodeKind | undefined;
+    if (!sourceKind) {
+      new Notice('Select a RadiProtocol node to duplicate.');
+      return;
+    }
+
+    // Create new node via factory (handles position offset, type, color, ID)
+    const result = this.plugin.canvasNodeFactory.createNode(
+      canvasPath, sourceKind, this.currentNodeId
+    );
+    if (!result) return;
+
+    // Copy radiprotocol_* properties + text from source to new node
+    const rpProps: Record<string, unknown> = {};
+    for (const [key, value] of Object.entries(sourceData)) {
+      if (key.startsWith('radiprotocol_') || key === 'text') {
+        rpProps[key] = value;
+      }
+    }
+    const newData = result.canvasNode.getData();
+    result.canvasNode.setData({ ...newData, ...rpProps });
+    canvas.requestSave();
+
+    // Load new node in editor (in-memory, no disk read)
+    this.currentFilePath = canvasPath;
+    this.currentNodeId = result.nodeId;
+    this.pendingEdits = {};
+    const finalData = result.canvasNode.getData();
+    const finalKind = (finalData['radiprotocol_nodeType'] as RPNodeKind | undefined) ?? null;
+    this.renderForm(finalData, finalKind);
+  }
+
   private renderToolbar(container: HTMLElement): void {
     const toolbar = container.createDiv({ cls: 'rp-editor-create-toolbar' });
 
@@ -766,6 +844,14 @@ export class EditorPanelView extends ItemView {
     setIcon(aIcon, 'message-square');
     aBtn.appendText('Create answer node');
     this.registerDomEvent(aBtn, 'click', () => { void this.onQuickCreate('answer'); });
+
+    // Phase 40: Duplicate node button
+    const dupBtn = toolbar.createEl('button', { cls: 'rp-duplicate-btn' });
+    const dupIcon = dupBtn.createSpan();
+    setIcon(dupIcon, 'copy');
+    dupBtn.appendText('Duplicate node');
+    if (!this.currentNodeId) dupBtn.disabled = true;
+    this.registerDomEvent(dupBtn, 'click', () => { void this.onDuplicate(); });
   }
 
   /**
