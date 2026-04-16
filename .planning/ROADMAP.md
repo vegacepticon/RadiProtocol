@@ -123,7 +123,7 @@ Plans:
 **Plans**: 2 plans
 Plans:
 - [x] 37-01-PLAN.md — Add "Create folder" header button, verify SYNC-01 existing coverage
-- [ ] 37-02-PLAN.md — Gap fix: sync canvas node text field on folder rename (SYNC-01)
+- [x] 37-02-PLAN.md — Gap fix: sync canvas node text field on folder rename (SYNC-01)
 **UI hint**: yes
 
 ### Phase 38: Canvas Node Creation Infrastructure
@@ -177,7 +177,7 @@ Phases execute in numeric order: 36 -> 37 -> 38 -> 39 -> 40
 | 28-31 | v1.4 | 12/12 | Complete | 2026-04-15 |
 | 32-35 | v1.5 | 18/18 | Complete | 2026-04-16 |
 | 36. Dead Code Audit and Cleanup | v1.6 | 2/2 | Complete    | 2026-04-16 |
-| 37. Snippet Editor Improvements | v1.6 | 1/2 | Gap closure | 2026-04-16 |
+| 37. Snippet Editor Improvements | v1.6 | 2/2 | Complete   | 2026-04-16 |
 | 38. Canvas Node Creation Infrastructure | v1.6 | 0/? | Not started | - |
 | 39. Quick-Create UI in Node Editor | v1.6 | 0/? | Not started | - |
 | 40. Node Duplication | v1.6 | 0/? | Not started | - |
