@@ -72,34 +72,38 @@ describe('EditorPanelView quick-create', () => {
       .toHaveBeenCalledWith('test.canvas', 'question', 'existing-node-42');
   });
 
-  it('calls loadNode on successful creation', async () => {
-    vi.useFakeTimers();
+  it('renders form directly from in-memory node data on successful creation', async () => {
+    const mockNodeData = { id: 'new-node-1', radiprotocol_nodeType: 'question' };
+    const mockCanvasNode = { getData: vi.fn().mockReturnValue(mockNodeData) };
 
     (mockPlugin.canvasNodeFactory as { createNode: ReturnType<typeof vi.fn> }).createNode
-      .mockReturnValue({ nodeId: 'new-node-1', canvasNode: {} });
+      .mockReturnValue({ nodeId: 'new-node-1', canvasNode: mockCanvasNode });
 
-    const loadNodeSpy = vi.spyOn(view, 'loadNode').mockImplementation(() => {});
-
-    const promise = (view as unknown as { onQuickCreate(kind: string): Promise<void> }).onQuickCreate('question');
-
-    // Advance past the 150ms requestSave flush delay
-    await vi.advanceTimersByTimeAsync(150);
-    await promise;
-
-    expect(loadNodeSpy).toHaveBeenCalledWith('test.canvas', 'new-node-1');
-
-    vi.useRealTimers();
-  });
-
-  it('does not call loadNode when factory returns null', async () => {
-    (mockPlugin.canvasNodeFactory as { createNode: ReturnType<typeof vi.fn> }).createNode
-      .mockReturnValue(null);
-
-    const loadNodeSpy = vi.spyOn(view, 'loadNode').mockImplementation(() => {});
+    const renderFormSpy = vi.spyOn(
+      view as unknown as { renderForm: (nodeRecord: Record<string, unknown>, kind: string | null) => void },
+      'renderForm'
+    ).mockImplementation(() => {});
 
     await (view as unknown as { onQuickCreate(kind: string): Promise<void> }).onQuickCreate('question');
 
-    expect(loadNodeSpy).not.toHaveBeenCalled();
+    expect(mockCanvasNode.getData).toHaveBeenCalled();
+    expect(renderFormSpy).toHaveBeenCalledWith(mockNodeData, 'question');
+    expect((view as unknown as { currentNodeId: string }).currentNodeId).toBe('new-node-1');
+    expect((view as unknown as { currentFilePath: string }).currentFilePath).toBe('test.canvas');
+  });
+
+  it('does not render form when factory returns null', async () => {
+    (mockPlugin.canvasNodeFactory as { createNode: ReturnType<typeof vi.fn> }).createNode
+      .mockReturnValue(null);
+
+    const renderFormSpy = vi.spyOn(
+      view as unknown as { renderForm: (nodeRecord: Record<string, unknown>, kind: string | null) => void },
+      'renderForm'
+    ).mockImplementation(() => {});
+
+    await (view as unknown as { onQuickCreate(kind: string): Promise<void> }).onQuickCreate('question');
+
+    expect(renderFormSpy).not.toHaveBeenCalled();
   });
 
   it('shows Notice when no canvas leaf found', async () => {
@@ -112,7 +116,6 @@ describe('EditorPanelView quick-create', () => {
   });
 
   it('flushes debounce timer before creation', async () => {
-    vi.useFakeTimers();
     const clearTimeoutSpy = vi.spyOn(globalThis, 'clearTimeout');
 
     (view as unknown as { _debounceTimer: ReturnType<typeof setTimeout> })._debounceTimer =
@@ -120,13 +123,10 @@ describe('EditorPanelView quick-create', () => {
     (view as unknown as { currentFilePath: string }).currentFilePath = 'test.canvas';
     (view as unknown as { currentNodeId: string }).currentNodeId = 'node-1';
 
-    const promise = (view as unknown as { onQuickCreate(kind: string): Promise<void> }).onQuickCreate('question');
-    await vi.advanceTimersByTimeAsync(150);
-    await promise;
+    await (view as unknown as { onQuickCreate(kind: string): Promise<void> }).onQuickCreate('question');
 
     expect(clearTimeoutSpy).toHaveBeenCalled();
 
     clearTimeoutSpy.mockRestore();
-    vi.useRealTimers();
   });
 });

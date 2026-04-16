@@ -739,12 +739,16 @@ export class EditorPanelView extends ItemView {
     );
 
     if (result) {
-      // Wait for canvas.requestSave() to flush the new node to disk.
-      // requestSave() is async fire-and-forget inside createNode(), so
-      // loadNode() → renderNodeForm() → vault.read() would get stale JSON
-      // without this delay. 150ms is sufficient for Obsidian's save cycle.
-      await new Promise(resolve => setTimeout(resolve, 150));
-      this.loadNode(canvasPath, result.nodeId);
+      // Bypass disk read: use in-memory node data directly from createNode().
+      // renderNodeForm() reads canvas JSON from disk via vault.read(), but
+      // canvas.requestSave() is async fire-and-forget — the file may not be
+      // flushed yet. Instead, getData() returns the live node record.
+      this.currentFilePath = canvasPath;
+      this.currentNodeId = result.nodeId;
+      this.pendingEdits = {};
+      const nodeRecord = result.canvasNode.getData();
+      const currentKind = (nodeRecord['radiprotocol_nodeType'] as RPNodeKind | undefined) ?? null;
+      this.renderForm(nodeRecord, currentKind);
     }
   }
 
