@@ -24,11 +24,11 @@ import { mountChipEditor, type ChipEditorHandle } from './snippet-chip-editor';
 import { ConfirmModal } from './confirm-modal';
 import type RadiProtocolPlugin from '../main';
 
-export type SnippetEditorResult =
+type SnippetEditorResult =
   | { saved: true; snippet: Snippet; movedFrom: string | null }
   | { saved: false };
 
-export interface SnippetEditorOptions {
+interface SnippetEditorOptions {
   mode: 'create' | 'edit';
   /** Pre-fill «Папка» (create mode); edit mode derives from snippet.path */
   initialFolder: string;

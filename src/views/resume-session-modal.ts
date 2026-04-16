@@ -3,7 +3,7 @@
 import { Modal, App } from 'obsidian';
 
 /** The user's choice in the resume prompt. */
-export type ResumeChoice = 'resume' | 'start-over';
+type ResumeChoice = 'resume' | 'start-over';
 
 /**
  * ResumeSessionModal — presented by RunnerView.openCanvas() when an incomplete session

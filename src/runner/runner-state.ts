@@ -3,7 +3,7 @@
 import type { LoopContext } from '../graph/graph-model';
 
 // Five runner statuses — used as the discriminant field in RunnerState
-export type RunnerStatus =
+type RunnerStatus =
   | 'idle'
   | 'at-node'
   | 'awaiting-snippet-pick'

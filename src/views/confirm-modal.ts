@@ -6,9 +6,9 @@
 // Promise<ConfirmResult> result + safeResolve double-guard.
 import { App, Modal } from 'obsidian';
 
-export type ConfirmResult = 'confirm' | 'cancel' | 'discard';
+type ConfirmResult = 'confirm' | 'cancel' | 'discard';
 
-export interface ConfirmModalOptions {
+interface ConfirmModalOptions {
   title: string;
   body: string | HTMLElement;
   confirmLabel: string;

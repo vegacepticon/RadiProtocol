@@ -976,9 +976,7 @@ export class SnippetManagerView extends ItemView {
   }
 }
 
-// Unused export kept intentionally so that tooling that scans for the helper
-// does not tree-shake it away before tests can reference node shapes:
-export type { TreeNode, TreeNodeFolder, TreeNodeFile };
+// Phase 36: TreeNode types are used only within this file — no external consumers.
 // Silence "declared but not used" noise for the basename helper when the
 // linter considers it dead in some builds.
 void basename;

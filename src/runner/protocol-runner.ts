@@ -4,7 +4,7 @@ import type { ProtocolGraph, LoopContext } from '../graph/graph-model';
 import type { RunnerState, UndoEntry } from './runner-state';
 import { TextAccumulator } from './text-accumulator';
 
-export interface ProtocolRunnerOptions {
+interface ProtocolRunnerOptions {
   /** Hard maximum loop iteration count before transitioning to error state. Default: 50. (D-08, RUN-09) */
   maxIterations?: number;
   /** Separator inserted between text chunks when no per-node override is set. Default: 'newline'. (D-08, SEP-01) */

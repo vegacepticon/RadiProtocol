@@ -40,7 +40,7 @@ export interface ChipEditorHandle {
   destroy(): void;
 }
 
-export interface MountChipEditorOptions {
+interface MountChipEditorOptions {
   /**
    * Phase 33 gap-fix: when mounted inside SnippetEditorModal the modal owns
    * the name field («Имя»). Set true to skip the chip editor's own Name

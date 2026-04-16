@@ -4,7 +4,7 @@
 import type { App, TFile } from 'obsidian';
 import { WriteMutex } from '../utils/write-mutex';
 
-export interface CanvasSyncResult {
+interface CanvasSyncResult {
   updated: string[];
   skipped: Array<{ path: string; reason: string }>;
 }
