@@ -130,3 +130,144 @@ describe('EditorPanelView quick-create', () => {
     clearTimeoutSpy.mockRestore();
   });
 });
+
+describe('EditorPanelView duplicate', () => {
+  let mockPlugin: Record<string, unknown>;
+  let mockLeaf: { containerEl: Record<string, unknown> };
+  let view: EditorPanelView;
+  let mockCanvas: { nodes: Map<string, unknown>; requestSave: ReturnType<typeof vi.fn> };
+  let mockNewNode: { getData: ReturnType<typeof vi.fn>; setData: ReturnType<typeof vi.fn> };
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+
+    const mockSourceNode = {
+      getData: vi.fn().mockReturnValue({
+        id: 'src-node-1',
+        radiprotocol_nodeType: 'question',
+        radiprotocol_questionText: 'What?',
+        text: 'Q: What?',
+      }),
+    };
+
+    mockCanvas = {
+      nodes: new Map([['src-node-1', mockSourceNode]]),
+      requestSave: vi.fn(),
+    };
+
+    const canvasLeaf = {
+      view: {
+        file: { path: 'test.canvas' },
+        canvas: mockCanvas,
+      },
+    };
+
+    mockNewNode = {
+      getData: vi.fn().mockReturnValue({ id: 'new-1' }),
+      setData: vi.fn(),
+    };
+
+    mockPlugin = {
+      app: {
+        vault: {},
+        workspace: {
+          getLeavesOfType: vi.fn().mockReturnValue([canvasLeaf]),
+          getMostRecentLeaf: vi.fn().mockReturnValue(canvasLeaf),
+        },
+      },
+      settings: {},
+      canvasNodeFactory: {
+        createNode: vi.fn().mockReturnValue({ nodeId: 'new-1', canvasNode: mockNewNode }),
+      },
+      canvasLiveEditor: {
+        saveLive: vi.fn().mockResolvedValue(false),
+      },
+    };
+
+    mockLeaf = { containerEl: {} };
+
+    view = new EditorPanelView(
+      mockLeaf as unknown as import('obsidian').WorkspaceLeaf,
+      mockPlugin as unknown as import('../main').default
+    );
+
+    // Set up loaded node state (onDuplicate guards on these)
+    (view as unknown as { currentNodeId: string }).currentNodeId = 'src-node-1';
+    (view as unknown as { currentFilePath: string }).currentFilePath = 'test.canvas';
+  });
+
+  it('onDuplicate calls factory with source node kind and anchor', async () => {
+    const renderFormSpy = vi.spyOn(
+      view as unknown as { renderForm: (r: Record<string, unknown>, k: string | null) => void },
+      'renderForm'
+    ).mockImplementation(() => {});
+
+    await (view as unknown as { onDuplicate(): Promise<void> }).onDuplicate();
+
+    expect((mockPlugin.canvasNodeFactory as { createNode: ReturnType<typeof vi.fn> }).createNode)
+      .toHaveBeenCalledWith('test.canvas', 'question', 'src-node-1');
+
+    renderFormSpy.mockRestore();
+  });
+
+  it('onDuplicate copies radiprotocol_* properties and text to new node', async () => {
+    const renderFormSpy = vi.spyOn(
+      view as unknown as { renderForm: (r: Record<string, unknown>, k: string | null) => void },
+      'renderForm'
+    ).mockImplementation(() => {});
+
+    await (view as unknown as { onDuplicate(): Promise<void> }).onDuplicate();
+
+    expect(mockNewNode.setData).toHaveBeenCalledWith(
+      expect.objectContaining({
+        radiprotocol_nodeType: 'question',
+        radiprotocol_questionText: 'What?',
+        text: 'Q: What?',
+      })
+    );
+    // Structural field 'id' from source should NOT be in the copied data directly
+    // (it comes from newData spread, which has id: 'new-1', not 'src-node-1')
+    const callArgs = mockNewNode.setData.mock.calls[0][0] as Record<string, unknown>;
+    expect(callArgs['id']).not.toBe('src-node-1');
+
+    renderFormSpy.mockRestore();
+  });
+
+  it('onDuplicate loads new node in editor panel', async () => {
+    const renderFormSpy = vi.spyOn(
+      view as unknown as { renderForm: (r: Record<string, unknown>, k: string | null) => void },
+      'renderForm'
+    ).mockImplementation(() => {});
+
+    await (view as unknown as { onDuplicate(): Promise<void> }).onDuplicate();
+
+    expect(renderFormSpy).toHaveBeenCalled();
+    expect((view as unknown as { currentNodeId: string }).currentNodeId).toBe('new-1');
+    expect((view as unknown as { currentFilePath: string }).currentFilePath).toBe('test.canvas');
+
+    renderFormSpy.mockRestore();
+  });
+
+  it('onDuplicate shows Notice for untyped node', async () => {
+    // Override source node to return data without radiprotocol_nodeType
+    const untypedNode = {
+      getData: vi.fn().mockReturnValue({ id: 'src-node-1' }),
+    };
+    mockCanvas.nodes.set('src-node-1', untypedNode);
+
+    await (view as unknown as { onDuplicate(): Promise<void> }).onDuplicate();
+
+    expect(Notice).toHaveBeenCalledWith('Select a RadiProtocol node to duplicate.');
+    expect((mockPlugin.canvasNodeFactory as { createNode: ReturnType<typeof vi.fn> }).createNode)
+      .not.toHaveBeenCalled();
+  });
+
+  it('onDuplicate returns early when no node loaded', async () => {
+    (view as unknown as { currentNodeId: string | null }).currentNodeId = null;
+
+    await (view as unknown as { onDuplicate(): Promise<void> }).onDuplicate();
+
+    expect((mockPlugin.canvasNodeFactory as { createNode: ReturnType<typeof vi.fn> }).createNode)
+      .not.toHaveBeenCalled();
+  });
+});
