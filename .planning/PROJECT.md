@@ -105,6 +105,14 @@ A radiologist can generate a structured, accurate protocol in seconds by answeri
 - ✓ Per-node `snippetLabel` and separator override in Node Editor — v1.4
 - ✓ Step-back from open snippet picker returns to branch list — v1.4
 
+### Validated (v1.5)
+
+**Markdown Snippets in Protocol Runner (Phase 35):**
+- ✓ Runner snippet picker lists both `.md` and `.json` files with type-indicator glyphs (MD-01) — v1.5
+- ✓ Selecting `.md` snippet inserts raw content verbatim without fill-in modal (MD-02) — v1.5
+- ✓ `.md` snippets work in full drill-down and step-back flow (MD-03) — v1.5
+- ✓ Mixed answer+snippet branching routes to `.md` snippet branches (MD-04) — v1.5
+
 ### Active (v1.5)
 
 ## Current Milestone: v1.5 Snippet Editor Refactoring
@@ -147,7 +155,7 @@ A radiologist can generate a structured, accurate protocol in seconds by answeri
 ## Current State
 
 **Shipped:** v1.4 Snippets and Colors, Colors and Snippets (2026-04-15)
-**Current milestone:** v1.5 Snippet Editor Refactoring (planning)
+**Current milestone:** v1.5 Snippet Editor Refactoring (Phase 35 complete — MD snippets in Runner)
 
 ## Context
 
@@ -206,4 +214,4 @@ A radiologist can generate a structured, accurate protocol in seconds by answeri
 4. Update Context with current state
 
 ---
-*Last updated: 2026-04-15 — v1.5 Snippet Editor Refactoring milestone started*
+*Last updated: 2026-04-16 — Phase 35 complete (MD snippets in Protocol Runner)*
