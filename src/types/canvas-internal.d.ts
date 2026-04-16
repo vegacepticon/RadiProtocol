@@ -20,6 +20,19 @@ export interface CanvasData {
   edges: unknown[];
 }
 
+/** A live canvas node instance (returned by createTextNode). */
+export interface CanvasNodeInternal {
+  id: string;
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  color: string;
+  getData(): Record<string, unknown>;
+  setData(data: Record<string, unknown>, addHistory?: boolean): void;
+  setColor(color: string): void;
+}
+
 /** The Canvas sub-object exposed on CanvasViewInternal as `view.canvas`. */
 export interface CanvasInternal {
   /**
@@ -44,6 +57,19 @@ export interface CanvasInternal {
    * Obsidian updates this Set after the pointer event, not synchronously.
    */
   selection?: Set<{ id: string; [key: string]: unknown }>;
+  /** Map of all canvas node IDs to their live node objects. */
+  nodes: Map<string, CanvasNodeInternal>;
+  /**
+   * Creates a text node on the canvas, adds it to the DOM and the nodes Map.
+   * Uses object-form signature (post Obsidian 1.1.10).
+   */
+  createTextNode(options: {
+    pos: { x: number; y: number };
+    text: string;
+    size: { width: number; height: number };
+    save?: boolean;
+    focus?: boolean;
+  }): CanvasNodeInternal;
 }
 
 export interface CanvasViewInternal {
