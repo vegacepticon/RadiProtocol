@@ -151,7 +151,9 @@ Plans:
   2. The node editor sidebar shows a "Create answer node" button that creates a new answer node linked to the current question node on the canvas
   3. After creating a node, the new node is automatically loaded in the editor panel for immediate editing
   4. Quick-create buttons are disabled (or hidden) with a tooltip/notice when no canvas is open
-**Plans**: TBD
+**Plans**: 1 plan
+Plans:
+- [ ] 39-01-PLAN.md — Quick-create toolbar buttons + unit tests + CSS
 **UI hint**: yes
 
 ### Phase 40: Node Duplication
@@ -193,6 +195,6 @@ Phases execute in numeric order: 36 -> 37 -> 38 -> 39 -> 40 -> 41
 | 36. Dead Code Audit and Cleanup | v1.6 | 2/2 | Complete    | 2026-04-16 |
 | 37. Snippet Editor Improvements | v1.6 | 2/2 | Complete   | 2026-04-16 |
 | 38. Canvas Node Creation Infrastructure | v1.6 | 2/2 | Complete    | 2026-04-16 |
-| 39. Quick-Create UI in Node Editor | v1.6 | 0/? | Not started | - |
+| 39. Quick-Create UI in Node Editor | v1.6 | 0/1 | Not started | - |
 | 40. Node Duplication | v1.6 | 0/? | Not started | - |
 | 41. Live Canvas Update on Folder Rename | v1.6 | 0/? | Not started | - |
