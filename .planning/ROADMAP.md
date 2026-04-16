@@ -108,7 +108,7 @@ Full details: `.planning/milestones/v1.5-ROADMAP.md`
   5. Full test suite (`npm test`) passes after all removals with zero regressions
 **Plans**: 2 plans
 Plans:
-- [ ] 36-01-PLAN.md — Dead code audit: Knip analysis, unused TS export removal, dead CSS removal, RED test stub removal
+- [x] 36-01-PLAN.md — Dead code audit: Knip analysis, unused TS export removal, dead CSS removal, RED test stub removal
 - [ ] 36-02-PLAN.md — Fix spacing bug in snippet create/edit modal type row
 
 ### Phase 37: Snippet Editor Improvements
@@ -173,7 +173,7 @@ Phases execute in numeric order: 36 -> 37 -> 38 -> 39 -> 40
 | 27 | v1.3 | 1/1 | Complete | 2026-04-12 |
 | 28-31 | v1.4 | 12/12 | Complete | 2026-04-15 |
 | 32-35 | v1.5 | 18/18 | Complete | 2026-04-16 |
-| 36. Dead Code Audit and Cleanup | v1.6 | 0/2 | Not started | - |
+| 36. Dead Code Audit and Cleanup | v1.6 | 1/2 | In Progress|  |
 | 37. Snippet Editor Improvements | v1.6 | 0/? | Not started | - |
 | 38. Canvas Node Creation Infrastructure | v1.6 | 0/? | Not started | - |
 | 39. Quick-Create UI in Node Editor | v1.6 | 0/? | Not started | - |

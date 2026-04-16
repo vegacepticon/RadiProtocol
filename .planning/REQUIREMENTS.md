@@ -9,7 +9,7 @@ Requirements for milestone v1.6 — Polish & Canvas Workflow.
 
 ### Cleanup & Polish
 
-- [ ] **CLEAN-01**: Dead code audit identifies and removes all unused TypeScript exports, functions, and CSS rules across the project
+- [x] **CLEAN-01**: Dead code audit identifies and removes all unused TypeScript exports, functions, and CSS rules across the project
 - [ ] **CLEAN-02**: The snippet create/edit modal displays "Тип JSON" with a space (not "ТипJSON")
 - [ ] **CLEAN-03**: User can create a new folder via a button next to the "Create snippet" button in snippet editor
 
@@ -50,7 +50,7 @@ Deferred to future milestones. Tracked but not in current roadmap.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| CLEAN-01 | Phase 36 | Pending |
+| CLEAN-01 | Phase 36 | Complete |
 | CLEAN-02 | Phase 36 | Pending |
 | CLEAN-03 | Phase 37 | Pending |
 | SYNC-01 | Phase 37 | Pending |
