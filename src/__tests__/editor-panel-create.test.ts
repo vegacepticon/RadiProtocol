@@ -73,14 +73,22 @@ describe('EditorPanelView quick-create', () => {
   });
 
   it('calls loadNode on successful creation', async () => {
+    vi.useFakeTimers();
+
     (mockPlugin.canvasNodeFactory as { createNode: ReturnType<typeof vi.fn> }).createNode
       .mockReturnValue({ nodeId: 'new-node-1', canvasNode: {} });
 
     const loadNodeSpy = vi.spyOn(view, 'loadNode').mockImplementation(() => {});
 
-    await (view as unknown as { onQuickCreate(kind: string): Promise<void> }).onQuickCreate('question');
+    const promise = (view as unknown as { onQuickCreate(kind: string): Promise<void> }).onQuickCreate('question');
+
+    // Advance past the 150ms requestSave flush delay
+    await vi.advanceTimersByTimeAsync(150);
+    await promise;
 
     expect(loadNodeSpy).toHaveBeenCalledWith('test.canvas', 'new-node-1');
+
+    vi.useRealTimers();
   });
 
   it('does not call loadNode when factory returns null', async () => {
@@ -104,6 +112,7 @@ describe('EditorPanelView quick-create', () => {
   });
 
   it('flushes debounce timer before creation', async () => {
+    vi.useFakeTimers();
     const clearTimeoutSpy = vi.spyOn(globalThis, 'clearTimeout');
 
     (view as unknown as { _debounceTimer: ReturnType<typeof setTimeout> })._debounceTimer =
@@ -111,10 +120,13 @@ describe('EditorPanelView quick-create', () => {
     (view as unknown as { currentFilePath: string }).currentFilePath = 'test.canvas';
     (view as unknown as { currentNodeId: string }).currentNodeId = 'node-1';
 
-    await (view as unknown as { onQuickCreate(kind: string): Promise<void> }).onQuickCreate('question');
+    const promise = (view as unknown as { onQuickCreate(kind: string): Promise<void> }).onQuickCreate('question');
+    await vi.advanceTimersByTimeAsync(150);
+    await promise;
 
     expect(clearTimeoutSpy).toHaveBeenCalled();
 
     clearTimeoutSpy.mockRestore();
+    vi.useRealTimers();
   });
 });
