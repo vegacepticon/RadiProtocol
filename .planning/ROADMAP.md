@@ -198,3 +198,18 @@ Phases execute in numeric order: 36 -> 37 -> 38 -> 39 -> 40 -> 41
 | 39. Quick-Create UI in Node Editor | v1.6 | 2/2 | Complete   | 2026-04-16 |
 | 40. Node Duplication | v1.6 | 0/? | Not started | - |
 | 41. Live Canvas Update on Folder Rename | v1.6 | 0/? | Not started | - |
+
+---
+
+## Backlog
+
+### Phase 999.1: Snippet Node Quick-Create Button & Double-Click Node Selection Fix (BACKLOG)
+
+**Goal:** [Captured for future planning]
+1. Add a "Create snippet node" quick-create button alongside existing "Create question node" and "Create answer node" buttons in the node editor sidebar
+2. Fix: when a node is created by double-clicking on the canvas and then selected, the editor panel shows "Node not found in canvas — it may have been deleted" instead of loading the node. Likely same root cause as Phase 39 fix (timing/flush delay for newly created nodes). After fix, selecting a freshly double-click-created node should open the editor panel with node type selection for empty nodes
+**Requirements:** TBD
+**Plans:** 0 plans
+
+Plans:
+- [ ] TBD (promote with /gsd-review-backlog when ready)
