@@ -227,7 +227,7 @@ describe('EditorPanelView duplicate', () => {
     );
     // Structural field 'id' from source should NOT be in the copied data directly
     // (it comes from newData spread, which has id: 'new-1', not 'src-node-1')
-    const callArgs = mockNewNode.setData.mock.calls[0][0] as Record<string, unknown>;
+    const callArgs = mockNewNode.setData.mock.calls[0]![0] as Record<string, unknown>;
     expect(callArgs['id']).not.toBe('src-node-1');
 
     renderFormSpy.mockRestore();
