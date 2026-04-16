@@ -1,450 +1,278 @@
-# Pitfalls Research: RadiProtocol
+# Pitfalls Research
 
-**Domain:** Obsidian community plugin -- Canvas-based medical protocol generator
-**Researched:** 2026-04-05
-**Overall confidence:** MEDIUM-HIGH (Canvas API area is LOW due to undocumented internals; Plugin API and graph traversal areas are HIGH)
+**Domain:** Obsidian plugin -- v1.6 features: programmatic canvas node creation, dead code cleanup, path sync, UI fixes
+**Researched:** 2026-04-16
+**Confidence:** HIGH (based on codebase analysis of existing Pattern B/Strategy A implementation + community knowledge)
 
----
+## Critical Pitfalls
 
-## Canvas API Pitfalls
-
-### CRITICAL: No Official Canvas Runtime API
-
-**What goes wrong:** The Obsidian Plugin API exposes TypeScript type definitions for the `.canvas` JSON format (`CanvasData`, node types, edge types), but provides **no runtime API** for programmatically interacting with an open Canvas view. You cannot officially create nodes, modify edges, listen to canvas events, or register custom node types through a supported API.
-
-**Why it happens:** Canvas was released as a core plugin with a file format (JSON Canvas / `.canvas`), not as an extensible platform. The Obsidian team has not published a Canvas plugin API.
-
-**Consequences:**
-- Plugins that need to modify canvas content while it is open must use undocumented internal APIs discovered via `app.workspace.getLeavesOfType('canvas')[0].view.canvas` -- these can break on any Obsidian update without warning.
-- The Advanced Canvas plugin (the most prominent Canvas-extending plugin) uses monkey-patching and internal object introspection, which is inherently fragile.
-
-**Prevention for RadiProtocol:**
-- **Do NOT modify canvas files while they are open in the Canvas view.** The Canvas view holds its own in-memory state and will overwrite external changes on save. If you `vault.modify()` a `.canvas` file that is currently open, your changes will be lost or cause corruption.
-- **Read-only approach:** Parse `.canvas` JSON via `vault.read()` to build the protocol runner's graph model. Never write back to the canvas file during a protocol session.
-- If the side panel editor needs to modify canvas content, either: (a) require the canvas to be closed first, or (b) access the undocumented canvas internals with explicit version guards and try/catch, accepting the maintenance burden.
-- Pin your `minAppVersion` carefully and test against Obsidian Insider builds before each release.
-
-**Confidence:** HIGH -- multiple forum threads, DeepWiki documentation, and the Advanced Canvas plugin's architecture all confirm this limitation.
-
-**Sources:**
-- [Forum: Any details on the Canvas API?](https://forum.obsidian.md/t/any-details-on-the-canvas-api/57120)
-- [DeepWiki: Canvas System](https://deepwiki.com/obsidianmd/obsidian-api/4.1-canvas-system)
-- [Advanced Canvas plugin](https://github.com/Developer-Mike/obsidian-advanced-canvas)
-
-### Canvas File Overwrites Plugin Changes
-
-**What goes wrong:** If a `.canvas` file is open in Obsidian's Canvas view and a plugin modifies the file on disk via `vault.modify()`, the Canvas view does not detect or merge the changes. When the user next interacts with the canvas (or it auto-saves), the Canvas view writes its stale in-memory state back to disk, silently overwriting the plugin's changes.
-
-**Why it happens:** The Canvas view does not watch for external file modifications the way the Markdown editor does. There is no reload/refresh mechanism for canvas files.
-
-**Prevention:**
-- Never programmatically modify a `.canvas` file that might be open. Check if a leaf of type `'canvas'` has the file open before writing.
-- If you must write, close the canvas leaf first or prompt the user to close it.
-
-**Confidence:** MEDIUM -- inferred from forum reports about external file modification behavior and the Templater race condition issue.
-
-### Canvas Events Are Incomplete
-
-**What goes wrong:** Canvas does not fire events for many user interactions. Specifically:
-- No event when user right-clicks a non-file node or an edge.
-- No `MetadataCache` events for `.canvas` file changes (the Advanced Canvas plugin had to add this themselves).
-- No event for node selection, creation, or deletion.
-
-**Prevention:** Do not design features that depend on reacting to real-time canvas editing events. Instead, parse the `.canvas` file on-demand (when the user triggers a command) rather than trying to keep a live-synced model.
-
-**Confidence:** HIGH -- confirmed by Advanced Canvas issue tracker and forum discussions.
-
-**Sources:**
-- [Forum: Creating an Event for Menus on Canvas Items](https://forum.obsidian.md/t/creating-an-event-for-menus-on-canvas-items/85646)
-- [Advanced Canvas: Fire MetadataCache events](https://github.com/Developer-Mike/obsidian-advanced-canvas/issues/156)
-
-### JSON Canvas Format Extensibility -- A Double-Edged Sword
-
-**What goes wrong:** The JSON Canvas spec explicitly supports arbitrary additional keys on nodes and edges for forward compatibility. This means RadiProtocol can store custom data (node type, snippet references, loop markers) directly in the `.canvas` file. However, other plugins or future Obsidian updates could also add keys that collide with yours, or strip unknown keys during format migrations.
-
-**Prevention:**
-- Namespace all custom properties with a prefix: e.g., `radiprotocol_nodeType`, `radiprotocol_snippetId`.
-- Validate that your custom properties survived a round-trip after Obsidian processes the file.
-- Never depend on custom properties being preserved across Obsidian major version upgrades without verification.
-
-**Confidence:** MEDIUM -- the spec explicitly allows extra keys, but no guarantee they are preserved by Obsidian's internal canvas editor across versions.
-
-**Sources:**
-- [JSON Canvas specification](https://jsoncanvas.org/)
-
----
-
-## Obsidian Plugin API Pitfalls
-
-### ItemView State Management Is Poorly Documented
-
-**What goes wrong:** The `setState()` and `getState()` methods on `ItemView` have confusing type signatures and minimal documentation. Developers frequently misunderstand how state serialization works for custom views, leading to views that lose their state on workspace layout restore (when Obsidian restarts or the user switches workspaces).
-
-**Prevention:**
-- `getState()` must return a JSON-serializable object. Obsidian stores this in `.obsidian/workspace.json`.
-- `setState()` receives this object when the view is restored. Implement both methods and test workspace save/restore explicitly.
-- Do not store large data in view state -- only store identifiers (e.g., which canvas file is being run, current node ID, session ID) and load full data from vault files.
-
-**Confidence:** HIGH -- confirmed by forum threads and DeepWiki documentation.
-
-**Sources:**
-- [Forum: Confused about setViewState and state management](https://forum.obsidian.md/t/confused-about-the-setviewstate-and-state-management-of-the-itemview-class/66798)
-- [Forum: How to correctly open an ItemView](https://forum.obsidian.md/t/how-to-correctly-open-an-itemview/60871)
-
-### Memory Leaks from Event Listeners
-
-**What goes wrong:** Plugins that register event listeners manually (via `app.workspace.on()` or DOM `addEventListener`) without using the framework's `registerEvent()` / `registerDomEvent()` methods will leak listeners when the plugin is disabled or hot-reloaded. Over time this causes degraded performance and zombie behavior.
-
-**Prevention:**
-- **Always** use `this.registerEvent()` for Obsidian events, `this.registerDomEvent()` for DOM events, and `this.registerInterval()` for intervals. These auto-cleanup on `onunload()`.
-- Use `this.addChild(component)` for child components -- they auto-unload recursively.
-- Only implement `onunload()` for cleanup that cannot be handled by the register methods (e.g., removing injected DOM nodes that persist outside your view).
-- Never store references to DOM elements that outlive your view's lifecycle.
-
-**Confidence:** HIGH -- this is well-documented in the official API and DeepWiki.
-
-**Sources:**
-- [DeepWiki: Plugin Development](https://deepwiki.com/obsidianmd/obsidian-api/3-plugin-development)
-- [DeepWiki: Event System](https://deepwiki.com/obsidianmd/obsidian-api/5.1-event-system)
-
-### Settings Persistence: data.json Gotchas
+### Pitfall 1: Node ID Collision on Programmatic Canvas Node Creation
 
 **What goes wrong:**
-1. `loadData()` returns `null` (not `{}`) on first install when no `data.json` exists yet. If you destructure without defaults, you get `TypeError`.
-2. Users manually edit `data.json` with invalid values. If you do not validate, the plugin crashes on load.
-3. When Obsidian Sync or external sync tools update `data.json`, the plugin does not automatically detect the change. You must implement `onExternalSettingsChange()` (available since v1.5.7).
-4. `saveData()` is async but developers often forget to `await` it, leading to data loss if Obsidian quits immediately after.
+Creating new canvas nodes with non-unique IDs causes silent data corruption. Obsidian canvas uses node IDs as edge endpoints (`fromNode`/`toNode`). A duplicate ID means edges connect to the wrong node, `getData()` returns unpredictable results, and canvas rendering breaks silently -- no error, just wrong behavior.
 
-**Prevention:**
-- Always merge loaded data with defaults: `this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());`
-- Validate types and ranges on every value loaded from `data.json`.
-- Implement `onExternalSettingsChange()` to reload settings when the file changes externally.
-- Always `await this.saveData()`.
+**Why it happens:**
+There is no official Canvas API for node creation. The plugin must generate IDs when injecting nodes into the JSON. Developers use incrementing counters, timestamps, or short random strings that collide.
 
-**Confidence:** HIGH.
+**How to avoid:**
+Use `crypto.randomUUID()` (available in all Obsidian-supported Electron versions) or replicate Obsidian's 16-char lowercase hex ID format. Verify uniqueness against existing `canvasData.nodes` IDs before insertion. Never use sequential counters.
 
-### Deprecated API: `workspace.activeLeaf`
+**Warning signs:**
+Edges pointing to wrong nodes after creation; duplicate node IDs in `.canvas` JSON; nodes "stacking" visually.
 
-**What goes wrong:** `workspace.activeLeaf` is deprecated but still appears in many tutorials and sample plugins. Using it may trigger warnings in plugin review and will eventually break.
-
-**Prevention:** Use `workspace.getActiveViewOfType()` or `workspace.getMostRecentLeaf()` instead.
-
-**Confidence:** HIGH -- confirmed in forum and official docs.
-
-**Sources:**
-- [Forum: Broken in Obsidian docs: activeLeaf](https://forum.obsidian.md/t/broken-in-obsidian-docs-workspace-activeleaf-property/111539)
+**Phase to address:**
+Canvas node creation phase (programmatic node buttons in node editor sidebar).
 
 ---
 
-## Graph Traversal Pitfalls
+### Pitfall 2: Race Condition Between vault.modify() and Canvas Auto-Save (Strategy A Violation on Node Creation)
 
-### Infinite Loops in Cyclic Protocol Graphs
+**What goes wrong:**
+Strategy A requires the canvas to be closed before writing via `vault.modify()`. For node creation, if the canvas is open, `vault.modify()` writes to disk but the in-memory canvas state overwrites the file on its next auto-save cycle (within ~2 seconds). The newly created node silently disappears.
 
-**What goes wrong:** RadiProtocol explicitly supports loop nodes (repeat a section until user exits). A user could accidentally create a cycle without a proper exit condition, or wire edges that create an unintended cycle. Naive traversal will spin forever.
+**Why it happens:**
+Obsidian's Canvas View holds an in-memory copy and auto-saves periodically. `vault.modify()` updates the file but NOT the in-memory state. The in-memory state (without the new node) wins on the next save. This is the same race documented in the existing pitfalls but now applies to a NEW use case: adding nodes, not just editing existing node properties.
 
-**Prevention:**
-- **Distinguish intentional loops from accidental cycles.** Intentional loops should be marked with explicit loop-start/loop-end nodes. Any cycle that does not pass through a loop-end node is an error.
-- Implement a visited-set with path tracking during traversal. Use a three-state color system (white = unvisited, gray = in current path, black = fully processed) to detect back-edges that indicate cycles.
-- Set a hard maximum iteration count for loops (configurable in settings, default maybe 50). Prompt the user when the limit is hit rather than silently stopping.
-- Run a validation pass before starting a protocol session: detect unreachable nodes, dead-end paths (questions with no outgoing edges), and unintentional cycles.
+**How to avoid:**
+For node creation with canvas OPEN, use Pattern B exclusively: `getData()` to get current data, add new node to the `nodes` array, `setData()` to push back, then `requestSave()`. For canvas CLOSED, Strategy A is safe. The existing `CanvasLiveEditor.isLiveAvailable()` check determines which path -- reuse this same fork logic. The `saveNodeEdits` method in `EditorPanelView` already implements this fork correctly for edits; the node creation code must follow the same pattern.
 
-**Confidence:** HIGH -- standard graph algorithm knowledge.
+**Warning signs:**
+Nodes appear momentarily then vanish on canvas reload; nodes exist in JSON but not in canvas view.
 
-### Disconnected Subgraphs / Unreachable Nodes
-
-**What goes wrong:** Users may have nodes on the canvas that are not connected to the main algorithm flow. If not detected, these are silently ignored, confusing the user who expected those questions to appear.
-
-**Prevention:**
-- During validation, compute reachability from the start node. Warn the user about unreachable nodes before running.
-- Visually highlight unreachable nodes if possible (via the side panel).
-
-**Confidence:** HIGH.
-
-### Ambiguous Start Node
-
-**What goes wrong:** The `.canvas` format has no concept of a "start" node. The user must designate one, but if they forget (or designate multiple), the protocol runner does not know where to begin.
-
-**Prevention:**
-- Require exactly one start node. Use a custom property (e.g., `radiprotocol_nodeType: "start"`) or a naming convention.
-- If no start node is found, show a clear error with instructions.
-- If multiple start nodes exist, prompt the user to choose or flag it as an error.
-
-**Confidence:** HIGH.
-
-### Mid-Session Save/Resume Serialization
-
-**What goes wrong:** Saving a protocol session mid-run requires serializing: current node, accumulated protocol text, the user's answer history (for step-back), and any loop iteration state. Edge cases include:
-1. The canvas file is modified between save and resume (nodes deleted, edges rewired). The saved session references node IDs that no longer exist.
-2. Snippets referenced by the session are edited or deleted between save and resume.
-3. Loop state is complex -- you need to track which iteration the user was on and which nodes within the loop were already visited in the current iteration.
-
-**Prevention:**
-- On resume, validate that all referenced node IDs still exist in the current canvas file. If not, show a clear error: "This protocol has been modified since your session was saved. [Start over] or [Try to continue from nearest valid node]."
-- Store snippet content at save time (snapshot), not just snippet IDs. This way, even if the snippet changes, the in-progress session remains consistent.
-- For loop state, serialize a stack of loop contexts: `{ loopNodeId, iteration, visitedInIteration: Set<nodeId> }`.
-- Store sessions as JSON files in the vault (e.g., `.radiprotocol/sessions/`) so they survive plugin reinstalls.
-
-**Confidence:** MEDIUM -- the general patterns are well-known, but the specific interaction with canvas file modification is RadiProtocol-specific.
+**Phase to address:**
+Canvas node creation phase. Must implement the same Pattern B / Strategy A fork that `saveNodeEdits` already uses.
 
 ---
 
-## UX Pitfalls (Non-Technical Users)
+### Pitfall 3: Dead Code False Positive -- Removing Obsidian API Callbacks and Event Handlers
 
-### Visual Clutter Overwhelming Users
+**What goes wrong:**
+During dead code cleanup, static analysis and manual grep flag Obsidian API callbacks as "unused" because they are only referenced via registration patterns: `this.registerEvent(app.workspace.on('active-leaf-change', ...))`, `this.addCommand({ callback: ... })`, `this.registerDomEvent(el, 'click', ...)`. Removing these causes silent feature breakage -- no compile error, no runtime error, just missing functionality.
 
-**What goes wrong:** Complex protocols with many branches create a dense, hard-to-navigate canvas. Users lose track of the flow, create spaghetti connections, and cannot visually verify their algorithm is correct.
+**Why it happens:**
+Obsidian's plugin lifecycle uses registration-based patterns where callbacks are passed as arguments to framework methods. The callback has zero call sites in plugin code -- it is only called by Obsidian internals. Standard "find all references" misses them. The codebase has ~18.7K LOC with numerous such registrations across `main.ts`, `editor-panel-view.ts`, `runner-view.ts`, `snippet-manager-view.ts`.
 
-**Prevention:**
-- Encourage use of Canvas groups to organize protocol sections.
-- Provide a "validate protocol" command that reports issues in a readable list rather than requiring visual inspection.
-- Consider a "simplified view" in the side panel that shows the algorithm as a linear outline/tree rather than a 2D graph.
+**How to avoid:**
+Before removing ANY function or method, verify it is not:
+1. Passed to `this.registerEvent()`, `this.registerDomEvent()`, `this.addCommand()`, `this.registerView()`
+2. An override of an Obsidian base class method (`onOpen`, `onClose`, `getState`, `setState`, `onload`, `onunload`)
+3. Called from within a callback registered in any of the above
+4. Referenced in test files (removing source code without updating tests breaks CI)
 
-**Confidence:** MEDIUM -- based on general UX research for node-based editors.
+Use a two-pass approach: first flag candidates, then manually verify each one is not transitively reachable from any registration site.
 
-**Sources:**
-- [DEV: Designing node-based visual programming](https://dev.to/cosmomyzrailgorynych/designing-your-own-node-based-visual-programming-language-2mpg)
+**Warning signs:**
+Features that "stop working" after cleanup with no compile errors; event handlers that no longer fire; views that fail to restore state on restart.
 
-### Users Do Not Understand Directed Edges
-
-**What goes wrong:** Non-technical users (radiologists) may not grasp that edge direction matters. They may wire an edge backward (from answer to question instead of question to answer) and not understand why the protocol skips a step or behaves unexpectedly.
-
-**Prevention:**
-- During validation, check that edges flow in sensible directions (question nodes should have outgoing edges to answer/next-question nodes, not incoming).
-- Use clear arrow heads in the canvas (Obsidian supports directional edges).
-- Provide error messages in plain language: "The connection from 'CT Chest' to 'IV Contrast?' goes the wrong way. Connections should flow from questions to their answers."
-
-**Confidence:** MEDIUM -- inferred from general UX research on visual editors for non-programmers.
-
-### Missing or Ambiguous Edge Labels
-
-**What goes wrong:** Edges in the JSON Canvas format support labels, but users may forget to label them. In a protocol, an unlabeled edge from a question to the next step is ambiguous -- which answer does it represent?
-
-**Prevention:**
-- Validation should require that all edges from question nodes have labels (the answer text).
-- Or, design the node schema so that answer text is in "answer nodes" connected to the question, rather than relying on edge labels. This is more robust and easier for users to understand.
-
-**Confidence:** MEDIUM.
-
-### No Undo for Destructive Protocol Edits
-
-**What goes wrong:** A user accidentally deletes a node or edge in the Canvas editor. Obsidian Canvas has limited undo support. If the user saves and closes, the deleted structure is gone.
-
-**Prevention:**
-- This is largely outside plugin control (Canvas undo is an Obsidian core feature).
-- Recommend users keep versioned backups (File Recovery core plugin, or git).
-- Consider a "protocol export" feature that saves a snapshot of the algorithm before running, as a backup.
-
-**Confidence:** HIGH -- this is a known Canvas limitation.
+**Phase to address:**
+Dead code audit phase -- must be the FIRST phase in v1.6 so subsequent phases build on a clean codebase.
 
 ---
 
-## Dev Workflow Pitfalls
+### Pitfall 4: Dead Code Removal Breaks Append-Only CSS Rule
 
-### Hot-Reload Leaves Stale State
+**What goes wrong:**
+The project has a strict "append-only per phase" CSS rule (CLAUDE.md). Dead CSS cleanup (e.g., removing `.rp-legend*` rules listed as known dead in PROJECT.md) can accidentally remove CSS still in use if the developer greps for class usage in TypeScript but misses classes applied via Obsidian's DOM, `Setting` API, or third-party themes.
 
-**What goes wrong:** The `pjeby/hot-reload` plugin (or similar) disables and re-enables your plugin when files change. If `onunload()` does not fully clean up (DOM nodes, CSS, global state, patched prototypes), the re-enabled plugin runs in a polluted environment. Symptoms: duplicate UI elements, doubled event handlers, broken views.
+**Why it happens:**
+CSS class names may be referenced in: (a) TypeScript `createEl`/`createDiv` calls, (b) Obsidian's internal DOM for `Setting` components, (c) third-party themes targeting plugin classes, (d) canvas node `color` styling. Grepping `.ts` files alone misses (b), (c), and (d). The `styles.css` is generated from `src/styles/` -- removing rules from source files is permanent.
 
-**Prevention:**
-- Use `register*()` methods for everything possible -- they auto-cleanup.
-- In `onunload()`, explicitly remove any injected DOM elements (e.g., side panel containers, status bar items created outside the framework).
-- Test the disable/enable cycle manually early in development. Open the plugin settings, toggle the plugin off and on, and verify no artifacts remain.
-- Place a `.hotreload` file in your plugin's dev directory to enable hot-reload.
+**How to avoid:**
+For each CSS class targeted for removal:
+1. Grep all `.ts` files for the class name
+2. Check if any Obsidian API (`Setting`, `Modal`, `ItemView`) generates elements with that class
+3. The `.rp-legend*` classes are confirmed dead (LAYOUT-04 in Phase 22 removed the legend; PROJECT.md lists them as known dead CSS) -- safe to remove
+4. When uncertain, comment out, build, and test visually in the dev vault before deleting
+5. Run the build after any CSS change to regenerate `styles.css`
 
-**Confidence:** HIGH.
+**Warning signs:**
+UI elements losing styling after cleanup; layout shifts; elements appearing unstyled.
 
-**Sources:**
-- [pjeby/hot-reload](https://github.com/pjeby/hot-reload)
-- [Obsidian dev workflow docs](https://docs.obsidian.md/Plugins/Getting+started/Development+workflow)
-
-### esbuild Watch Mode + Hot Reload Timing
-
-**What goes wrong:** esbuild's watch mode may trigger a rebuild mid-save, producing a partially-written `main.js`. The hot-reload plugin detects the file change and tries to load the incomplete file, causing a crash or silent failure.
-
-**Prevention:**
-- Hot-reload waits ~750ms after the last file change before reloading. This is usually sufficient, but very large builds may exceed this window.
-- If you experience intermittent load failures during development, increase the debounce or switch to a manual reload workflow.
-- Use esbuild's `onEnd` callback to write a trigger file only after the build completes, rather than relying on `main.js` modification time.
-
-**Confidence:** MEDIUM -- inferred from the hot-reload plugin's design.
-
-### Obsidian Installer vs App Version Mismatch
-
-**What goes wrong:** Obsidian updates the app independently of the installer. Developers may test against one version but users run another. The `minAppVersion` in `manifest.json` is your only guard.
-
-**Prevention:**
-- Set `minAppVersion` to the version that introduced the newest API you use.
-- Use `requireApiVersion()` for conditional feature support.
-- Test against the Obsidian Insider build channel before releases if possible.
-
-**Confidence:** HIGH.
+**Phase to address:**
+Dead code audit phase.
 
 ---
 
-## File Storage Pitfalls
+### Pitfall 5: Node Position Overlap on Programmatic Creation
 
-### Race Conditions with vault.modify()
+**What goes wrong:**
+Creating nodes at fixed coordinates (e.g., 0,0) or at the same offset causes nodes to stack on top of existing nodes. Overlapping nodes cannot be individually selected in the canvas UI. Users report "nodes disappeared" when they actually stacked.
 
-**What goes wrong:** If two async operations call `vault.modify()` on the same file concurrently, one write will silently overwrite the other. This is a known issue (documented in the Templater plugin's issue tracker). For RadiProtocol, this could happen if:
-- Auto-save fires while the user is also triggering a manual save.
-- Multiple snippet files are being written simultaneously.
+**Why it happens:**
+Unlike Obsidian's native "Add card" which uses viewport-aware placement, programmatic creation via `setData()` or `vault.modify()` has no access to the layout engine. The developer picks arbitrary coordinates without checking for overlaps.
 
-**Prevention:**
-- Implement a write queue/mutex for each file. Never have two concurrent `vault.modify()` calls on the same file.
-- Use a simple async lock: `if (this.writing) { this.pendingWrite = data; return; }`.
-- For snippet storage, consider one-file-per-snippet rather than a single JSON file containing all snippets. This reduces contention.
+**How to avoid:**
+When creating a node relative to a selected node, offset by at least `selectedNode.width + 40` horizontally or `selectedNode.height + 40` vertically. For duplicate operations, offset by (+30, +30) from the source. If Pattern B is available, read existing node positions from `getData()` and check for overlaps. Document offset constants for future tuning.
 
-**Confidence:** HIGH.
+**Warning signs:**
+Canvas JSON showing nodes at identical coordinates; users unable to select new nodes.
 
-**Sources:**
-- [Templater: vault.modify() race condition](https://github.com/SilentVoid13/Templater/issues/1629)
-
-### Encoding and Special Characters in Snippet Content
-
-**What goes wrong:** Medical report text may contain special characters, Unicode (measurement symbols like micro sign, degree symbols), or copy-pasted text from Word/PDFs with smart quotes and em-dashes. If the file I/O does not handle UTF-8 properly, content gets corrupted.
-
-**Prevention:**
-- Obsidian's `vault.create()` and `vault.modify()` handle UTF-8 natively. Use them rather than Node.js `fs` directly (which also works but bypasses Obsidian's file tracking).
-- Always use Obsidian's Vault API for file operations -- never `require('fs')`. The Vault API ensures the file is tracked by Obsidian's cache and avoids "file modified externally" warnings.
-- Test with representative medical text including Unicode characters.
-
-**Confidence:** HIGH.
-
-### Sync Service Conflicts
-
-**What goes wrong:** Users who sync their vault via Obsidian Sync, iCloud, Dropbox, or Git may encounter conflicts when snippet files or session files are modified on multiple devices. Obsidian Sync uses diff-match-patch for Markdown but may not merge JSON files intelligently -- it could produce invalid JSON.
-
-**Prevention:**
-- Design snippet files so that each snippet is a separate file (not one giant JSON array). This minimizes merge conflicts.
-- If using JSON for session state, accept that sync conflicts may corrupt sessions. Implement validation on load and graceful degradation ("Session file is corrupted. Starting fresh.").
-- Document that mid-session saves are local-device-only and should not be relied upon across synced devices.
-
-**Confidence:** MEDIUM -- the sync conflict behavior for arbitrary JSON files is not fully documented.
-
-### Snippet Folder May Not Exist
-
-**What goes wrong:** On first run, or after a user deletes the snippet folder, the plugin crashes trying to read/write snippets to a nonexistent directory.
-
-**Prevention:**
-- Check for and create the snippet folder during `onload()` and before every write operation.
-- Use `vault.createFolder()` with a try/catch (it throws if the folder already exists in some versions).
-- Handle the case where the user has renamed or moved the configured snippet folder.
-
-**Confidence:** HIGH.
+**Phase to address:**
+Canvas node creation phase and duplicate node phase.
 
 ---
 
-## Community Plugin Submission Gotchas
+### Pitfall 6: rewriteCanvasRefs Race with Open Canvas (Directory Rename Path Sync)
 
-### innerHTML Is Forbidden
+**What goes wrong:**
+`rewriteCanvasRefs` uses `vault.read()` + `vault.modify()` to rewrite snippet node `subfolderPath` across all `.canvas` files. If a canvas is currently open, the in-memory state does NOT reflect the `vault.modify()` write. The open canvas auto-saves its stale state, overwriting the path fix. Broken `subfolderPath` values persist.
 
-**What goes wrong:** Using `innerHTML`, `outerHTML`, or `insertAdjacentHTML` in your plugin code will be flagged during review as a security risk. This is a common rejection reason.
+**Why it happens:**
+The current `rewriteCanvasRefs` does not check whether each canvas is open before modifying it. This was acceptable in v1.5 because rename/move operations from the snippet manager typically happened while the user was focused on the snippet tree, not actively editing canvas in a split view. But v1.6 adds a new trigger: directory rename from the snippet editor, which is more likely to happen alongside an open canvas.
 
-**Prevention:**
-- Use the DOM API: `document.createElement()`, `element.textContent`, `element.appendChild()`.
-- Use Obsidian helpers: `createEl()`, `createDiv()`, `createSpan()`, `setIcon()`.
-- If you absolutely must inject HTML (e.g., rendering snippet previews), use `sanitizeHTMLToDom()` from the Obsidian API (backed by DOMPurify).
+**How to avoid:**
+Two options (choose one):
+1. **Hybrid approach:** For each canvas being rewritten, check `CanvasLiveEditor.isLiveAvailable(canvasPath)`. If live, use Pattern B (`getData()` -> mutate -> `setData()` -> `requestSave()`). If closed, use existing `vault.read()`/`vault.modify()`.
+2. **Accept limitation:** Document that "Close canvas files before renaming snippet folders" and show a Notice if open canvases are detected. This is simpler and matches the existing Strategy A contract.
 
-**Confidence:** HIGH.
+Option 2 is recommended for v1.6 -- it is simpler, matches existing behavior, and the edge case (renaming folder while canvas is open) is rare.
 
-### console.log Is Forbidden in Production
+**Warning signs:**
+Canvas shows old snippet folder paths after a folder rename; snippet nodes point to nonexistent folders after rename.
 
-**What goes wrong:** Only `console.warn()`, `console.error()`, and `console.debug()` are allowed. `console.log()` statements will be flagged during review.
-
-**Prevention:**
-- Remove all `console.log()` before submission.
-- Use `console.debug()` for development logging (it can be filtered in DevTools).
-- Consider a lightweight logger utility that compiles out in production builds.
-
-**Confidence:** HIGH.
-
-### Command Names Must Not Include Plugin Name
-
-**What goes wrong:** Commands like "RadiProtocol: Run Protocol" will be flagged. Obsidian already shows the plugin name next to the command in the command palette.
-
-**Prevention:**
-- Name commands as just "Run protocol", "Validate protocol", etc.
-
-**Confidence:** HIGH.
-
-### UI Text Must Use Sentence Case
-
-**What goes wrong:** "Run Protocol" should be "Run protocol". Title Case in UI text is flagged during review.
-
-**Prevention:**
-- Use sentence case everywhere: buttons, settings labels, command names, notices.
-
-**Confidence:** HIGH.
-
-### Must Not Use `require('fs')` or Node.js APIs Directly
-
-**What goes wrong:** Plugins that use Node.js filesystem APIs directly will fail on mobile (even though RadiProtocol is desktop-first for v1). Reviewers flag this because it limits future portability and bypasses Obsidian's file tracking.
-
-**Prevention:**
-- Use `app.vault.read()`, `app.vault.modify()`, `app.vault.create()`, `app.vault.adapter.exists()` etc.
-- Never import from `'fs'`, `'path'`, `'os'`, or other Node.js built-in modules.
-
-**Confidence:** HIGH.
-
-### License and Repository Requirements
-
-**What goes wrong:** Missing LICENSE file or disabled GitHub Issues will block submission.
-
-**Prevention:**
-- Add a LICENSE file (MIT is standard for Obsidian plugins).
-- Ensure GitHub Issues are enabled on the repository.
-
-**Confidence:** HIGH.
-
-### Promises Must Be Handled
-
-**What goes wrong:** Unhandled promises (missing `await`, `.catch()`, or `void` operator) are flagged by automated review tooling.
-
-**Prevention:**
-- `await` all async calls, or explicitly mark fire-and-forget promises with `void`.
-- Enable TypeScript strict mode and the `@typescript-eslint/no-floating-promises` rule.
-
-**Confidence:** HIGH.
-
-### Avoid `any` Types
-
-**What goes wrong:** `any` types are flagged. The review expects proper typing.
-
-**Prevention:**
-- Use specific types. Where the Obsidian API returns `any` (e.g., `loadData()`), cast to your expected type immediately.
-
-**Confidence:** HIGH.
+**Phase to address:**
+Path sync on directory rename phase.
 
 ---
 
-## Risk Register
+### Pitfall 7: Duplicate Node Missing radiprotocol_* Fields or Creating Invalid Edge State
 
-| # | Pitfall | Severity | Likelihood | Impact | Mitigation |
-|---|---------|----------|------------|--------|------------|
-| 1 | No official Canvas runtime API -- forced to use undocumented internals or read-only approach | **CRITICAL** | Certain | Architecture-defining | Design around read-only canvas parsing; do not depend on runtime canvas manipulation |
-| 2 | Canvas view overwrites programmatic file changes | **CRITICAL** | High | Silent data loss | Never modify `.canvas` files while open in Canvas view |
-| 3 | Infinite loops in user-built cyclic protocols | **HIGH** | High | Hung UI, bad UX | Validation pass before run + max iteration limits |
-| 4 | `vault.modify()` race conditions on snippet/session files | **HIGH** | Medium | Data corruption | Write queue/mutex per file; one-file-per-snippet |
-| 5 | ItemView state lost on workspace restore | **HIGH** | Medium | Session lost on restart | Implement `getState()`/`setState()` with minimal serializable state |
-| 6 | `innerHTML` usage rejected in plugin review | **HIGH** | Medium (easy to slip in) | Submission blocked | Use DOM API and Obsidian helpers exclusively |
-| 7 | Memory leaks from unregistered event listeners | **MEDIUM** | Medium | Degraded performance over time | Use `registerEvent()` / `registerDomEvent()` for everything |
-| 8 | Users create disconnected/unreachable nodes | **MEDIUM** | High | Confusing protocol behavior | Pre-run validation with clear error messages |
-| 9 | Edge direction confusion for non-technical users | **MEDIUM** | High | Broken protocols | Validation + plain-language error messages |
-| 10 | Sync conflicts corrupt JSON snippet/session files | **MEDIUM** | Medium | Lost data on synced vaults | One-file-per-snippet; validate JSON on load; graceful degradation |
-| 11 | Canvas custom properties stripped by future Obsidian updates | **MEDIUM** | Low-Medium | Algorithm metadata lost | Namespace properties; validate after round-trip; keep backup in separate file |
-| 12 | Hot-reload leaves stale DOM/state during development | **LOW** | High during dev | Confusing dev experience | Rigorous `onunload()` cleanup; test toggle cycle early |
-| 13 | Snippet folder missing on first run or after deletion | **LOW** | Medium | Plugin crash | Check/create folder before every file operation |
-| 14 | `console.log` left in production code | **LOW** | Medium | Review rejection | Lint rule to catch it; use `console.debug()` during dev |
+**What goes wrong:**
+When duplicating a node, copying only visible properties (text, color) but missing `radiprotocol_*` custom fields results in a plain canvas node, not a RadiProtocol node. Separately, naively duplicating edges creates edges pointing to/from the original node ID, not the duplicate.
+
+**Why it happens:**
+Canvas nodes have two layers of data: standard fields (`id`, `x`, `y`, `width`, `height`, `type`, `text`, `color`) and custom `radiprotocol_*` fields. A developer who reads the standard canvas spec but not the RadiProtocol property namespace will miss the custom fields. Edge duplication is architecturally ambiguous -- there is no "right" answer for what edges a duplicate should have.
+
+**How to avoid:**
+For duplication, iterate ALL keys on the source node and copy them to the new node, excluding only `id` (generate new), `x`, `y` (offset from source). This automatically captures current and future `radiprotocol_*` fields without maintaining a whitelist. For edges: do NOT duplicate edges in v1.6. The mental model is "copy this node's settings" not "clone its graph position." Add tooltip: "Duplicates node settings. Connections are not copied."
+
+**Warning signs:**
+Duplicated nodes appearing as plain canvas nodes (no color, no type); edges connecting to wrong nodes after duplication.
+
+**Phase to address:**
+Duplicate node phase.
 
 ---
 
-## Phase-Specific Warnings
+### Pitfall 8: "Tип JSON" Spacing Fix Applied Inconsistently
 
-| Phase Topic | Likely Pitfall | Mitigation |
-|-------------|---------------|------------|
-| Canvas parsing & graph model | No runtime API; must parse JSON file directly | Build a standalone graph model from parsed JSON; never depend on Canvas view internals |
-| Protocol runner UI (ItemView) | State management confusion; memory leaks | Implement getState/setState early; use register methods exclusively |
-| Side panel node editor | Temptation to modify canvas while open | Either require canvas closed, or use undocumented APIs with explicit version guards |
-| Snippet manager | Race conditions on file writes; folder existence | Write mutex; ensure folder on every operation; one-file-per-snippet |
-| Loop support | Infinite loop from user error | Validate before run; hard iteration cap; three-state visited tracking |
-| Mid-session save/resume | Stale references after canvas edits | Validate all node IDs on resume; snapshot snippet content at save time |
-| Community submission | innerHTML, console.log, any types, command naming | Follow checklist from day one; lint rules to enforce |
+**What goes wrong:**
+The "ТипJSON" -> "Тип JSON" spacing fix is applied in one code path (e.g., create modal) but the same string appears in other paths (edit modal, type badge). The bug appears fixed in testing but users encounter it in a different UI flow.
+
+**Why it happens:**
+The string may be constructed in multiple places: the `SnippetEditorModal` create path, the edit path, and any type badge/label renderer. A developer fixes the most visible instance and misses others.
+
+**How to avoid:**
+Grep the entire codebase for the Cyrillic string "Тип" and all variations ("ТипJSON", "ТипMD", "Тип JSON"). Fix all occurrences. Better: extract the label into a constant or helper function so it is defined once.
+
+**Warning signs:**
+Fix works in create modal but not in edit modal, or vice versa.
+
+**Phase to address:**
+UI fixes phase (small task, any phase).
+
+---
+
+### Pitfall 9: Folder Create Button Without Vault Watcher Integration
+
+**What goes wrong:**
+Adding a "create folder" button in the snippet editor that calls `vault.adapter.mkdir()` but the tree UI does not update because the vault watcher does not fire for `mkdir()` calls, or fires but the debounce window causes a visible lag.
+
+**Why it happens:**
+The existing vault watcher (Phase 33) listens for `vault.on('create'/'delete'/'rename')` events with a 120ms debounce. `vault.adapter.mkdir()` may or may not trigger a `create` event (it depends on Obsidian's internal event routing for folders vs files). If it does not fire, the tree shows stale state.
+
+**How to avoid:**
+After `vault.adapter.mkdir()`, explicitly trigger a tree refresh rather than relying on the vault watcher. Use the same `refreshTree()` method the watcher calls, but invoke it directly after the mkdir succeeds. The watcher remains as a safety net for external changes.
+
+**Warning signs:**
+Folder created on disk but not visible in tree until user navigates away and back; empty-state message remains after creating the first folder.
+
+**Phase to address:**
+Snippet editor folder button phase.
+
+## Technical Debt Patterns
+
+| Shortcut | Immediate Benefit | Long-term Cost | When Acceptable |
+|----------|-------------------|----------------|-----------------|
+| Hard-coded node position offsets for creation/duplication | Quick implementation | Nodes overlap in cramped canvases | v1.6 -- revisit if users report overlap issues |
+| Node creation via Strategy A only (require canvas closed) | Avoids Pattern B complexity for creation | Users must close canvas to use sidebar creation buttons | Never -- Pattern B is proven and already implemented; Strategy A-only for creation is too restrictive for the UX goal |
+| Skipping WriteMutex for canvas writes during node creation | Slightly faster | Race condition if two rapid creations fire | Never -- WriteMutex is already in the codebase and trivial to use |
+| Dead code audit without running test suite after each removal | Faster cleanup | Removing code that tests depend on breaks CI silently | Never -- run `npm test` after each batch of removals |
+
+## Integration Gotchas
+
+| Integration | Common Mistake | Correct Approach |
+|-------------|----------------|------------------|
+| Pattern B `setData()` for node creation | Adding node to old `getData()` snapshot after another edit occurred -- loses the other edit | Call `getData()` immediately before `setData()`; minimize window between read and write |
+| `rewriteCanvasRefs` + open canvas | Modifying canvas via `vault.modify()` while open -- auto-save overwrites | Accept limitation and warn user, or use Pattern B for open canvases |
+| Snippet editor folder button + vault watcher | Relying on vault watcher to detect `mkdir()` | Explicitly refresh tree after `mkdir()`; watcher is backup |
+| Node editor creation buttons + no canvas context | Buttons enabled when `currentFilePath` is null | Check `currentFilePath` and `currentNodeId`; disable buttons with tooltip when no canvas context |
+| `CanvasLiveEditor.saveLive()` for new node creation | Using `saveLive()` which finds node by ID -- new node has no ID in canvas yet | Cannot use `saveLive()` for creation; must build new `getData()`/`setData()` flow or extend `CanvasLiveEditor` with a `createNode()` method |
+
+## Performance Traps
+
+| Trap | Symptoms | Prevention | When It Breaks |
+|------|----------|------------|----------------|
+| Calling `getData()` repeatedly for bulk creation | Canvas re-serializes entire JSON on each call | Batch: call once, add all nodes, call `setData()` once | Canvases with 500+ nodes |
+| `rewriteCanvasRefs` scanning all canvas files on every rename | Noticeable lag in large vaults | Already has early-exit on no-match; acceptable at current scale | Vaults with 500+ canvas files |
+| Dead code grep scanning entire `node_modules` | Audit takes minutes instead of seconds | Scope grep to `src/` only | Always -- never scan node_modules |
+
+## UX Pitfalls
+
+| Pitfall | User Impact | Better Approach |
+|---------|-------------|-----------------|
+| Node creation buttons visible but disabled without explanation when no canvas is open | User clicks repeatedly, nothing happens | Disabled state with tooltip: "Open a canvas to create nodes" |
+| "Duplicate" copies node but user expects it to appear adjacent | Duplicate at arbitrary position, user cannot find it | Offset +30/+30 from source; consider brief visual feedback |
+| Folder create in snippet editor creates folder but user does not see it | "Did it work?" confusion | Explicit tree refresh + auto-expand parent + scroll to new folder |
+| Dead code cleanup changes behavior silently | "Feature X stopped working" after update | Full UAT after dead code phase before proceeding |
+
+## "Looks Done But Isn't" Checklist
+
+- [ ] **Node creation via Pattern B:** Often missing `requestSave()` after `setData()` -- node appears in UI but lost on canvas close/reopen
+- [ ] **Node creation Strategy A fallback:** Often missing the Pattern B attempt first -- creates nodes only when canvas is closed, breaking the UX when canvas is open
+- [ ] **Node duplication:** Often missing `radiprotocol_*` field copy -- duplicate appears as plain node without type/color
+- [ ] **Dead code removal:** Often missing test file updates -- tests import removed functions, CI breaks
+- [ ] **Dead code removal:** Often missing the "transitively used via callback" check -- function looks unused but is passed to `registerEvent()`
+- [ ] **Path sync on rename:** Often missing prefix-match case -- direct subfolder paths update but nested paths do not (already handled by `applyMapping` but verify for new triggers)
+- [ ] **Folder create button:** Often missing empty-state dismissal -- creating first folder does not update "no folders" message
+- [ ] **"Tип JSON" fix:** Often fixed in one modal path but not the other (create vs edit)
+
+## Recovery Strategies
+
+| Pitfall | Recovery Cost | Recovery Steps |
+|---------|---------------|----------------|
+| Node ID collision | MEDIUM | Parse canvas JSON, find duplicates, regenerate one ID, fix edge references |
+| Auto-save overwrites vault.modify() | LOW | Close and reopen canvas -- file on disk is correct |
+| Dead code false positive (removed callback) | LOW | Git revert the specific deletion, re-add the callback |
+| Overlapping nodes | LOW | Manually drag apart in canvas, or edit JSON coordinates |
+| Broken snippet folder paths | MEDIUM | Re-run `rewriteCanvasRefs` with all canvases closed |
+| Duplicate missing radiprotocol fields | LOW | Open duplicate in Node Editor, re-set the node type -- auto-color will apply |
+
+## Pitfall-to-Phase Mapping
+
+| Pitfall | Prevention Phase | Verification |
+|---------|------------------|--------------|
+| Dead code false positives (P3) | Dead code audit (Phase 1 of v1.6) | `npm test` passes; full manual UAT of all features |
+| Dead CSS regression (P4) | Dead code audit (Phase 1 of v1.6) | Build succeeds; visual check of all UI panels |
+| Node ID collision (P1) | Canvas node creation phase | Unit test: create 100 nodes, assert all IDs unique |
+| Strategy A race on creation (P2) | Canvas node creation phase | Create node with canvas open (Pattern B) and closed (Strategy A); verify persistence across reload |
+| Node overlap (P5) | Canvas node creation + duplication phase | Create/duplicate next to existing node; verify no overlap |
+| rewriteCanvasRefs race (P6) | Path sync on rename phase | Rename folder while canvas open; verify paths update (or warning shown) |
+| Duplicate missing fields (P7) | Duplicate node phase | Duplicate a typed node; verify duplicate has correct radiprotocol_* fields and color |
+| "Тип JSON" inconsistency (P8) | UI fixes phase | Check both create and edit modals |
+| Folder button no refresh (P9) | Snippet editor folder button phase | Create folder; verify tree updates without manual refresh |
+
+## Sources
+
+- Codebase analysis: `src/canvas/canvas-live-editor.ts` (Pattern B implementation), `src/views/editor-panel-view.ts` (Strategy A/Pattern B fork in `saveNodeEdits`), `src/snippets/canvas-ref-sync.ts` (`rewriteCanvasRefs` implementation), `src/types/canvas-internal.d.ts` (internal API type declarations)
+- [Obsidian Canvas API type definitions](https://github.com/obsidianmd/obsidian-api/blob/master/canvas.d.ts) -- official; no runtime API for node creation
+- [Obsidian Forum: Canvas API discussion](https://forum.obsidian.md/t/any-details-on-the-canvas-api/57120) -- confirms no public Canvas manipulation API
+- [Obsidian Forum: Creating canvas programmatically](https://forum.obsidian.md/t/creating-a-canvas-programmatically/101850)
+- [obsidian-advanced-canvas](https://github.com/Developer-Mike/obsidian-advanced-canvas) -- community reference for Pattern B usage
+- [Canvas System DeepWiki](https://deepwiki.com/obsidianmd/obsidian-api/4.1-canvas-system) -- data schema documentation
+- PROJECT.md -- known dead code (`.rp-legend*`, RED test stubs), Strategy A decision rationale, Pattern B history
+- CLAUDE.md -- append-only CSS rule, build constraints
+
+---
+*Pitfalls research for: RadiProtocol v1.6 -- Canvas node creation, dead code cleanup, path sync, UI fixes*
+*Researched: 2026-04-16*

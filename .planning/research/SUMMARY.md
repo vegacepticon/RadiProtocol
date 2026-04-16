@@ -1,267 +1,152 @@
 # Project Research Summary
 
-**Project:** RadiProtocol
-**Domain:** Obsidian community plugin — Canvas-based interactive medical protocol/report generator
-**Researched:** 2026-04-05
-**Confidence:** MEDIUM-HIGH overall (HIGH for toolchain, plugin API patterns, and graph algorithms; MEDIUM for Canvas runtime behavior and RadiProtocol-specific design decisions that have no direct precedent)
-
----
+**Project:** RadiProtocol v1.6 -- Canvas Workflow and Polish
+**Domain:** Obsidian plugin -- programmatic canvas manipulation, dead code cleanup, UI polish
+**Researched:** 2026-04-16
+**Confidence:** MEDIUM-HIGH
 
 ## Executive Summary
 
-RadiProtocol is a genuinely novel product in the Obsidian ecosystem. The closest analogs — ZettelFlow (canvas-as-workflow) and Cannoli (canvas-as-LLM-pipeline) — prove the canvas-as-directed-graph pattern is viable, but neither addresses the core problem: a non-technical domain expert building an interactive Q&A decision tree that assembles structured text. On the commercial side, RadioReport and rScriptor validate the market need for structured radiology reporting (RadioReport cuts breast MRI reporting time from 35 to 10 minutes), but they are proprietary, expensive, and closed. RadiProtocol's value proposition is the combination: visual canvas authoring accessible to individual radiologists, plus an interactive runner that produces clipboard-ready report text — open-source, local, and free.
+RadiProtocol v1.6 is a polish-and-workflow milestone that adds programmatic canvas node creation/duplication to the sidebar editor, cleans up accumulated dead code from 5 prior milestones, and fixes several UI friction points. The headline features -- quick-create buttons and node duplication -- depend on Obsidian undocumented internal Canvas API (`createTextNode`), which is well-validated across 3+ community plugins (enchanted-canvas, canvas-llm-extender, advanced-canvas) but carries inherent MEDIUM confidence due to its undocumented status. The existing codebase already uses this same internal API (Pattern B) for live node editing, so the integration path is proven.
 
-The recommended implementation approach is a strict layered architecture that separates pure engine logic (canvas parsing, graph traversal, state machine, snippet processing) from all Obsidian API contact. The engine layer is fully unit-testable with Vitest and has no Obsidian runtime dependency. The Obsidian layer is thin: ItemViews that render engine state and call engine methods in response to user interaction, plus vault adapter wrappers for file I/O. This separation is not just a testing convenience — it is the primary defense against Obsidian's undocumented Canvas API and against the pattern of tight coupling that makes Obsidian plugins brittle across updates.
+The recommended approach is to start with dead code cleanup (zero dependencies, reduces noise for subsequent work), then handle independent polish items (UI fixes, path sync), and finally build the canvas node creation infrastructure as the culminating feature. Node creation requires a new `CanvasNodeFactory` service layered on top of the existing `CanvasLiveEditor`, with runtime API probing as a mandatory safety pattern. The architecture is clean: one new file (~150 lines), minor extensions to two existing files, and toolbar additions to `EditorPanelView`.
 
-The single biggest risk is the absence of an official Canvas runtime API. Obsidian exposes the `.canvas` JSON format (the published JSON Canvas spec) but provides no programmatic way to interact with an open Canvas view. The correct mitigation is absolute: RadiProtocol must be read-only with respect to canvas files during a protocol session. Parse the file once at session start, build an in-memory graph model, run the session entirely against that model, and never write back to the canvas file. All plugin-specific metadata (node types, snippet references, loop markers) is stored as `radiprotocol_`-namespaced custom properties directly in the canvas JSON, which the spec explicitly supports. This read-only contract, combined with strict input validation before every run, eliminates the two highest-severity pitfalls identified in research.
-
----
+The primary risks are: (1) the undocumented `createTextNode` API changing in a future Obsidian release -- mitigated by runtime probing with graceful fallback to getData/setData; (2) dead code false positives removing Obsidian event callbacks that appear unused to static analysis -- mitigated by a two-pass audit with mandatory test suite verification; (3) the Strategy A vs Pattern B race condition on node creation -- mitigated by requiring Pattern B (canvas must be open) for all creation operations, which aligns with the UX requirement that users need to see nodes appear.
 
 ## Key Findings
 
 ### Recommended Stack
 
-The toolchain is non-negotiable and well-established: TypeScript + esbuild using the official `obsidian-sample-plugin` scaffold, with `eslint-plugin-obsidianmd` (already included in the 2026 template) enforcing community review requirements from day one. The tsconfig deliberately omits `"strict": true` as an umbrella flag — the Obsidian plugin class pattern (fields initialized in `onload()`, not the constructor) conflicts with `strictPropertyInitialization`. Individual strict checks are enabled manually.
+No new runtime dependencies are needed. The existing stack (TypeScript 6.0.2, Obsidian 1.12.3, esbuild 0.28.0, Vitest 4.1.2) is unchanged.
 
-For the UI layer, plain DOM manipulation using Obsidian's `createEl`/`createDiv`/`createSpan` helpers is recommended for v1. The plugin's UI surface — a runner panel, an editor side panel, and a settings tab — is entirely manageable with DOM helpers. Adding React costs ~44 KB gzipped with no benefit at this scale. Svelte (~2-5 KB) is the documented upgrade path if reactive component complexity grows in v2, particularly for the snippet manager's live-preview UI. For testing, Vitest targeting only the `src/engine/` directory (zero Obsidian imports) is the practical choice; `jest-environment-obsidian` was last updated in May 2023 and is effectively abandoned.
-
-**Core technologies:**
-- **TypeScript 5.8 + esbuild 0.28**: official scaffold, compiles to single `main.js` — no alternative exists for community plugins
-- **Plain DOM + Obsidian helpers (`createEl`)**: zero bundle cost, security-compliant (no `innerHTML`), idiomatic — upgrade to Svelte if v2 complexity warrants
-- **Vitest 4.1**: unit tests for pure engine modules only; Obsidian-touching code verified manually against a test vault
-- **eslint-plugin-obsidianmd**: enforces 27 rules covering review rejections, memory leaks, and idiom violations — run from day one
-- **async-mutex**: per-file write queue to prevent `vault.modify()` race conditions on snippet/session files
-- **pjeby/hot-reload** (v0.3.0, actively maintained): standard hot-reload dev workflow
-- **minAppVersion 1.5.7**: required for `onExternalSettingsChange()` support
+**Additions:**
+- **Knip v6.4+**: Dead code detection -- the only actively maintained TS dead code tool (ts-prune and tsr are both EOL and recommend Knip as successor). Use as `npx knip` one-shot or devDependency.
+- **Canvas internal API type extensions**: Extend existing `canvas-internal.d.ts` with `createTextNode`, `CanvasNodeInternal`, and `nodes` map declarations. No npm package needed.
+- **`crypto.getRandomValues`**: Built-in Electron API for generating 16-char hex canvas node IDs. No `uuid` package needed.
 
 ### Expected Features
 
-**Must have — table stakes (v1 must-ship):**
-- One-question-at-a-time runner with preset answer buttons — the core promise; every clinical decision-tree tool does this
-- Live protocol preview showing accumulating report text — radiologists need to see output forming; non-negotiable
-- Free-text input fields alongside preset buttons — escape hatch for findings that cannot be enumerated
-- Step back / undo last answer — must revert both navigation state AND accumulated text (the tricky part)
-- Output to clipboard (primary) + output to new note (Obsidian-native) — one click each
-- Canvas node types: start, question, answer, free-text-input, text-block — minimum semantic vocabulary
-- Node color coding using `radiprotocol_`-namespaced canvas properties — visual differentiation without breaking native canvas
-- Configurable output destination in settings
+**Must have (table stakes):**
+- Dead code cleanup -- tech debt from 5 milestones; `.rp-legend*` CSS, stale imports, RED test stubs
+- Fix TipJSON spacing bug -- visual defect in snippet modals (Cyrillic label concatenated with type badge)
+- Create folder button in snippet editor header -- missing discoverability
+- Canvas node path sync on directory rename via native file explorer -- data integrity gap
 
-**Should have — differentiators (v1 if time allows):**
-- Dynamic snippets with placeholder fill-in (choice + free-text types) — the "killer feature"; bridges VS Code snippet power with radiologist-friendly UX; no Obsidian plugin does this
-- Side panel for node configuration (no raw JSON editing) — discoverability and speed; Modal Form plugin shows users expect this
-- Start from any node — useful for re-running protocol sections
+**Should have (differentiators):**
+- Quick node creation buttons in EditorPanelView -- one-click typed node creation from sidebar; no competing plugin offers this
+- Duplicate node with preserved RadiProtocol settings -- massive time savings for repetitive protocol structures
 
-**Defer to v2:**
-- Visual loop nodes (repeat sections for multi-lesion protocols) — highest complexity; needs loop context stack and iteration UX
-- Mid-session save/resume — valuable for clinical interruptions but needs full session serialization model
-- Snippet manager UI — snippets can be JSON files edited manually in v1
-- Node templates (reusable structures)
-- Linked placeholders across report sections
-- Optional sections in snippets
-
-**Explicit anti-features (do not build):**
-- AI/LLM text generation — Cannoli fills that niche; radiologists need traceable output
-- PACS/RIS integration — out of scope for v1 and v2; clipboard output is the established workaround
-- Code/expression syntax in nodes — radiologists are not programmers; visual configuration only
-- Mobile support — canvas authoring on mobile is unsupported; desktop-first
+**Defer (v2+):**
+- Edge creation from sidebar -- spatial routing problem, canvas-native UX is better
+- Batch node creation -- layout algorithm problem, out of scope
+- Auto-layout / auto-arrange -- destroys user intentional spatial arrangement
+- Live canvas node preview in sidebar -- fragile, version-dependent
 
 ### Architecture Approach
 
-The architecture follows a strict two-layer separation: a pure engine layer (`src/graph/`, `src/runner/`, `src/snippets/`, `src/sessions/`) with no Obsidian API imports, testable in isolation with Vitest; and a thin Obsidian adapter layer (`src/views/`, `src/main.ts`) that handles lifecycle, vault I/O, and DOM rendering. The `RadiProtocolPlugin` class in `main.ts` acts as a service locator — instantiating services (`CanvasParser`, `SnippetService`, `SessionService`) in `onload()` and passing `this` to views which access services through the plugin reference. This avoids circular dependencies while keeping wiring simple for a single-developer plugin. State flows unidirectionally: user action in View → runner method → state update → view re-render; vault events are not used to sync runner state.
+Node creation integrates as a new capability layer on top of the existing `EditorPanelView` + `CanvasLiveEditor` architecture. A new `CanvasNodeFactory` service encapsulates creation logic, default property stamping, and position calculation. It communicates with the canvas via `CanvasLiveEditor.getCanvasObject()` (new accessor) and uses Pattern B (`createTextNode` then `getData`/`setData` then `requestSave`) for all operations.
 
 **Major components:**
-1. **CanvasParser** (`graph/canvas-parser.ts`) — pure module, no Obsidian dep; reads canvas JSON string → typed `ProtocolGraph` (Map-based adjacency list for O(1) node lookup)
-2. **GraphValidator** (`graph/graph-validator.ts`) — pure; validates start node, reachability, cycles, loop pairing, dead ends; runs before every session start
-3. **ProtocolRunner** (`runner/protocol-runner.ts`) — stateful traversal engine; discriminated union state machine (`idle` | `at-node` | `awaiting-snippet-fill` | `complete` | `error`); includes `TextAccumulator` (append-only with full snapshots for undo) and undo stack
-4. **SnippetService** (`snippets/snippet-service.ts`) — CRUD for per-snippet JSON files in vault; uses write mutex; supports placeholder types: free-text, choice, multi-choice, number
-5. **SessionService** (`sessions/session-service.ts`) — auto-saves `PersistedSession` after each step; validates node IDs and canvas mtime on resume; snapshots snippet content at save time
-6. **RunnerView** (`views/runner-view.ts`) — ItemView in right sidebar; renders current node UI; implements `getState()`/`setState()` with session ID only (not full state)
-7. **EditorPanelView** (`views/editor-panel-view.ts`) — ItemView side panel for node configuration; writes to canvas JSON (requires canvas to be closed or undocumented API with version guards)
-8. **WriteMutex** (`utils/write-mutex.ts`) — per-file async lock using `async-mutex`; prevents concurrent `vault.modify()` calls on the same snippet/session file
+1. **CanvasNodeFactory** (NEW) -- encapsulates `createNode()` and `duplicateNode()` with runtime API probing, position calculation, and `radiprotocol_*` property stamping
+2. **CanvasLiveEditor** (MODIFY) -- gains `getCanvasObject()` method exposing raw canvas for `createTextNode()` calls
+3. **EditorPanelView** (MODIFY) -- gains quick-create toolbar (7 node-kind buttons) and conditional duplicate button
+4. **canvas-internal.d.ts** (MODIFY) -- extended with `createTextNode`, `CanvasNodeInternal`, `CreateTextNodeOptions` types
 
 ### Critical Pitfalls
 
-1. **No official Canvas runtime API — forced read-only approach**: Obsidian exposes the canvas file format but provides no API for interacting with an open Canvas view. Any attempt to modify a canvas file while it is open in the Canvas view will be silently overwritten when the Canvas view auto-saves its in-memory state. Mitigation: parse the canvas file once at session start via `vault.read()`, build a graph model in memory, run the session against the model, never call `vault.modify()` on a canvas file that is currently open. The side panel editor must either require the canvas to be closed first, or accept the maintenance burden of undocumented API access with explicit version guards and try/catch.
-
-2. **Canvas file overwrites plugin changes**: If `vault.modify()` is called on an open canvas file, the Canvas view will overwrite the changes without warning. Mitigation: always check whether a canvas leaf of that file is open before writing; if so, prompt the user to close it first.
-
-3. **Infinite loops from user-built cyclic protocols**: Users can accidentally (or intentionally) create cycles that do not have a proper exit condition. Naive traversal will hang the UI. Mitigation: three-color DFS cycle detection during validation before every run; hard iteration cap (default 50, configurable) on loop nodes; clear error messages in plain language for non-technical users.
-
-4. **`vault.modify()` race conditions**: Auto-save and manual save could fire concurrently on the same session or snippet file, causing silent data corruption. Mitigation: `WriteMutex` with `async-mutex` wrapping every file write; one-file-per-snippet to reduce contention scope.
-
-5. **Community review rejections**: `innerHTML`, `console.log`, `any` types, `require('fs')`, improper command naming, and unhandled promises are all automated rejection causes. Mitigation: configure `eslint-plugin-obsidianmd` plus additional ESLint rules (`no-console`, `@typescript-eslint/no-explicit-any`, `@typescript-eslint/no-floating-promises`, `no-restricted-syntax` for innerHTML) from the first commit. These rules pay for themselves many times over.
-
----
+1. **Strategy A race on node creation** -- `vault.modify()` on an open canvas causes nodes to silently vanish when canvas auto-saves its stale in-memory state. Prevention: use Pattern B exclusively for creation; require canvas to be open.
+2. **Dead code false positives** -- Obsidian callbacks registered via `registerEvent()` / `addCommand()` appear unused to static analysis. Prevention: two-pass audit; verify each candidate is not transitively reachable from any registration site; run `npm test` after every batch removal.
+3. **Node position overlap** -- Creating nodes at fixed coordinates stacks them on existing nodes. Prevention: offset from selected node (width+40 or height+40); overlap detection via AABB check against `canvas.nodes`.
+4. **Duplicate node missing `radiprotocol_*` fields** -- Copying only standard fields produces a plain canvas node. Prevention: iterate ALL keys on source, exclude only `id`/`x`/`y`; do NOT maintain a whitelist.
+5. **`rewriteCanvasRefs` race with open canvas on directory rename** -- `vault.modify()` overwrites are clobbered by open canvas auto-save. Prevention: for v1.6, accept the limitation and warn users to close canvas before folder rename.
 
 ## Implications for Roadmap
 
-Based on the combined research, the natural phase structure follows hard dependencies: you cannot run a protocol before you can parse a canvas; you cannot validate before you have a graph model; you cannot render the runner before you have traversal; and the differentiating features (snippets, loops, sessions) layer on top of a working core.
+Based on research, suggested phase structure:
 
-### Phase 1: Project Scaffold and Canvas Parsing Foundation
+### Phase 1: Dead Code Audit and Cleanup
+**Rationale:** Zero dependencies, reduces noise for all subsequent phases, addresses known tech debt documented in PROJECT.md. Must come first so subsequent phases build on a clean codebase.
+**Delivers:** Removal of unused exports, dead CSS (`.rp-legend*`), stale test stubs, unused imports. Knip configuration for ongoing use.
+**Addresses:** Dead code cleanup (table stakes)
+**Avoids:** Pitfall 3 (false positives on callbacks) and Pitfall 4 (CSS append-only rule). Requires full test suite run after each batch removal and visual UAT.
 
-**Rationale:** Everything else depends on being able to read a `.canvas` file and produce a typed, validated graph model. This phase has no Obsidian runtime dependencies in the pure engine modules, so it can be built and fully tested before touching ItemViews or the Obsidian lifecycle. Establishing the ESLint configuration and test infrastructure here prevents accumulating technical debt that is expensive to fix later.
+### Phase 2: UI Fixes and Polish
+**Rationale:** Independent from canvas creation work; low complexity; quick wins that improve UX immediately. Can be grouped as a single phase with multiple small tasks.
+**Delivers:** TipJSON spacing fix (both create and edit modals), Create folder button in snippet editor header with explicit tree refresh.
+**Addresses:** Fix spacing bug (table stakes), Create folder button (table stakes)
+**Avoids:** Pitfall 8 (inconsistent fix across modals) and Pitfall 9 (folder button without tree refresh)
 
-**Delivers:** Working plugin scaffold (commands registered, settings tab, ribbon icon); `CanvasParser` producing `ProtocolGraph` from canvas JSON; `GraphValidator` with all six validation checks; Vitest suite for graph and validation modules; `WriteMutex` utility.
+### Phase 3: Canvas Path Sync on Directory Rename
+**Rationale:** Extends existing proven infrastructure (`rewriteCanvasRefs`). Independent from node creation work. Addresses a data integrity gap.
+**Delivers:** Vault rename listener for directories under snippet folder path; automatic `radiprotocol_subfolderPath` rewrite across all canvas files.
+**Addresses:** Canvas node path sync on directory rename (table stakes)
+**Avoids:** Pitfall 6 (`rewriteCanvasRefs` race with open canvas). Accept-and-warn approach recommended for v1.6.
 
-**Addresses:** Canvas node type differentiation, namespaced `radiprotocol_*` properties, start node requirement.
+### Phase 4: Canvas Node Creation Infrastructure
+**Rationale:** Core infrastructure that both quick-create and duplicate depend on. Must precede UI integration. This is the highest-risk phase due to undocumented API dependency.
+**Delivers:** `CanvasNodeFactory` service, extended `canvas-internal.d.ts` types, `getCanvasObject()` accessor on `CanvasLiveEditor`, position calculation utility, default property templates for all 8 node kinds.
+**Addresses:** Quick node creation (differentiator) -- backend only
+**Avoids:** Pitfall 1 (ID collision -- use `createTextNode` own ID), Pitfall 2 (Strategy A race -- Pattern B only), Pitfall 5 (overlap -- offset + AABB detection)
 
-**Avoids:** Canvas file corruption (read-only from the start), community review rejections (ESLint from day one), `workspace.activeLeaf` deprecation.
-
-**Research flag:** Standard patterns — skip phase research.
-
-### Phase 2: Core Protocol Runner
-
-**Rationale:** The runner state machine is the product's core value. It must be built and tested in isolation before any UI is added, because the UI depends on the runner's discriminated union states being correct. Step-back is more complex than it appears (must revert both navigation and accumulated text), and building it in isolation with unit tests is far safer than discovering the edge cases after the UI is wired.
-
-**Delivers:** `ProtocolRunner` state machine covering all five states; `TextAccumulator` with snapshot-based undo; step-forward and step-back working correctly for question/answer and free-text-input nodes; full Vitest coverage of runner transitions including loop enter/exit.
-
-**Addresses:** One-question-at-a-time runner, preset answer buttons, free-text input, step back/undo, live text accumulation.
-
-**Avoids:** Infinite loop hang (max iteration cap built in from the start), snapshot vs. diff undo confusion (snapshots are correct for this use case).
-
-**Research flag:** Standard patterns — skip phase research.
-
-### Phase 3: Runner UI (ItemView)
-
-**Rationale:** With the runner engine unit-tested, the UI layer is a rendering concern: map runner states to DOM updates. Plain DOM with Obsidian helpers is the right tool here. The most important invariant is that the View never owns state — it reads from the runner and calls runner methods.
-
-**Delivers:** `RunnerView` ItemView in right sidebar rendering all node types; `getState()`/`setState()` with session ID; output to clipboard; output to new note; validation error display before run; settings tab with output destination configuration.
-
-**Addresses:** Live protocol preview, output to clipboard and new note, configurable output destination, validation feedback, node color coding legend.
-
-**Avoids:** ItemView state loss on workspace restore (implement `getState`/`setState` immediately), memory leaks (use `registerDomEvent` exclusively), `innerHTML` usage (use `createEl` throughout).
-
-**Research flag:** Standard patterns for ItemView and settings tab — skip phase research. DOM rendering of the runner-specific UI (step-back button behavior, answer button layout) may benefit from lightweight phase research.
-
-### Phase 4: Canvas Node Editor Side Panel
-
-**Rationale:** Without this, users must edit raw canvas JSON to set `radiprotocol_*` properties, which violates the core design principle ("authoring must feel like visual design, not programming"). This phase enables protocol authoring. It comes after the runner because the side panel's field schema is derived directly from the runner's node type definitions — and those must be stable before building the editing UI.
-
-**Delivers:** `EditorPanelView` with per-node-kind forms; write-back to canvas JSON (with canvas-closed guard or undocumented API approach — this decision needs user confirmation); node type selection; context menu integration for canvas nodes.
-
-**Addresses:** Canvas-based algorithm authoring UX, node type differentiation without raw JSON editing.
-
-**Avoids:** Canvas file corruption from writing while the Canvas view is open (requires explicit guard); temptation to use undocumented Canvas runtime APIs without version guards.
-
-**Research flag:** Needs phase research. The side panel's write-back to canvas files is the most architecturally uncertain area. Whether to (a) require the canvas be closed before editing, (b) detect and use undocumented Canvas view internals, or (c) use a separate metadata file is an open design question that needs a decision before implementation.
-
-### Phase 5: Dynamic Snippets
-
-**Rationale:** Snippets are the differentiating feature that makes RadiProtocol compelling beyond a simple decision tree. They depend on the runner (snippets are triggered by `TextBlockNode` with a `snippetId`), on the vault file I/O infrastructure (one-file-per-snippet with write mutex), and on a fill-in UI that must integrate into the runner flow. This phase delivers the VS Code-style placeholder experience within the context of a running protocol.
-
-**Delivers:** `SnippetService` with full CRUD; per-snippet JSON files in `.radiprotocol/snippets/`; all four placeholder types (free-text, choice, multi-choice, number); `SnippetFillInModal` with tab-navigation and live preview; runner integration (`awaiting-snippet-fill` state); basic snippet creation via settings or command palette.
-
-**Addresses:** Dynamic snippets with placeholders (the v1 differentiator), `TextBlockNode` with snippet references, radiology variable types (laterality, measurements, classifications).
-
-**Avoids:** Raw placeholder syntax visible to users (always render as labeled input fields), no free-text escape hatch (always allow override on choice fields), write mutex on snippet files (race condition prevention).
-
-**Research flag:** The snippet fill-in UI pattern within an ItemView context (modal vs. inline panel) would benefit from a focused implementation spike before the full phase. Standard placeholder data model — skip research on that part.
-
-### Phase 6: Loop Support
-
-**Rationale:** Loop nodes are the most complex feature in the codebase. They require loop context stack management in the runner, a paired loop-start/loop-end node model, iteration tracking in the undo stack, and a specific UX for "loop again / done" prompts. Deferring this to its own phase, after snippets are stable, isolates the complexity.
-
-**Delivers:** `LoopStartNode` and `LoopEndNode` support in parser, validator, and runner; loop context stack with correct undo behavior; iteration counter display ("Lesion #2"); exit-condition button; max-iteration safeguard; validation for orphaned loop-end nodes and loops without exit edges.
-
-**Addresses:** Visual loop nodes, multi-lesion protocols, repeat-section pattern in radiology reporting.
-
-**Avoids:** Infinite loop hang (max iterations + exit condition required), incorrect undo across loop boundaries (loop context must be snapshot in undo entries), accidental cycles vs. intentional loops (three-color DFS distinguishes them).
-
-**Research flag:** Loop UX — specifically the "loop again?" decision point and how accumulated text from multiple iterations is formatted — has no direct Obsidian precedent. Needs phase research or a focused design spike before implementation.
-
-### Phase 7: Mid-Session Save and Resume
-
-**Rationale:** Auto-save adds significant value in clinical settings where interruptions are common. It depends on a stable runner state model (phases 2-3), stable snippet data model (phase 5), and mature session serialization. Building this after the core is stable ensures the serialization model reflects the final state structure, not a moving target.
-
-**Delivers:** `SessionService` with auto-save after each step; `PersistedSession` JSON serialization; resume-session prompt on protocol launch; validation on resume (canvas mtime check, node ID existence check, snippet version check); graceful degradation when the canvas has changed between save and resume.
-
-**Addresses:** Mid-session save/resume (v2 differentiator), `ItemView.getState()`/`setState()` wired to session IDs.
-
-**Avoids:** Stale node ID references on resume (validate all IDs before resuming), snippet content drift (snapshot snippet content at save time, not just ID), `Set` serialization errors (convert to Array for JSON).
-
-**Research flag:** Standard persistence patterns — skip phase research. The canvas-mtime change detection and graceful degradation logic are RadiProtocol-specific but well-reasoned from research.
+### Phase 5: Quick-Create and Duplicate UI
+**Rationale:** Depends on Phase 4 infrastructure. UI layer on top of factory service. Can include both quick-create toolbar and duplicate button since they share the same factory.
+**Delivers:** Quick-create toolbar in EditorPanelView (7 buttons for each RPNodeKind), duplicate button (conditional on node loaded), auto-load of created/duplicated node in editor form, CSS styling.
+**Addresses:** Quick node creation buttons (differentiator), Duplicate node (differentiator)
+**Avoids:** Pitfall 7 (duplicate missing fields -- copy ALL keys), UX pitfalls (disabled state with tooltip when no canvas open)
 
 ### Phase Ordering Rationale
 
-- Phases 1-2 establish the pure engine (parseable, traversable graph) before any Obsidian UI work. This means the most testable, most correctness-critical code is written and verified in isolation.
-- Phase 3 adds the minimum viable UI on top of a verified engine. At this point the plugin is demonstrable end-to-end.
-- Phase 4 (node editor) enables protocol authoring, which is the prerequisite for real-world use. It comes before snippets because users need to be able to build basic protocols before they need snippet references.
-- Phase 5 (snippets) is the primary differentiator and is gated on both a working runner (to trigger snippets) and a working editor (to attach snippet IDs to nodes).
-- Phases 6-7 (loops, sessions) are genuine v2 features that require a stable foundation. Their architectures are fully designed in research but the implementation complexity justifies isolation.
+- Dead code cleanup first: reduces codebase noise, prevents cascading issues into new features
+- UI fixes before canvas work: quick wins ship early, independent from the complex canvas API integration
+- Path sync before node creation: uses only proven existing infrastructure, validates the vault watcher pattern that creation may also leverage
+- Node creation infrastructure before UI: ensures the factory is tested in isolation before wiring into the 740-line EditorPanelView
+- Quick-create and duplicate together in final phase: they share the same `CanvasNodeFactory` and toolbar UI area
 
 ### Research Flags
 
-Phases needing deeper research during planning:
-- **Phase 4 (Canvas Node Editor):** The write-back strategy to canvas files is the most undocumented area in the Obsidian ecosystem. The three options (require closed, use undocumented internals, separate metadata file) have meaningfully different tradeoffs that require a targeted investigation or implementation spike before committing.
-- **Phase 6 (Loop Support):** The "loop again / done" UX and the text formatting of multi-iteration output have no established precedent in Obsidian plugins. A design spike showing the flow for a 3-lesion protocol would surface edge cases before implementation.
+Phases likely needing deeper research during planning:
+- **Phase 4 (Canvas Node Creation Infrastructure):** The `createTextNode` API shape and behavior should be verified against the current Obsidian version (1.12.3) during phase planning. Runtime probing is mandatory. The options-object signature (vs. older positional args) needs confirmation.
 
-Phases with standard patterns (skip research):
-- **Phase 1:** Scaffold, esbuild config, ESLint setup, and JSON Canvas parsing are fully documented.
-- **Phase 2:** Graph traversal, state machines, and undo stacks are standard computer science patterns with abundant reference material.
-- **Phase 3:** ItemView lifecycle, `getState`/`setState`, settings tabs, and DOM-based UI are well-documented in the Obsidian API and community resources.
-- **Phase 5 (snippet data model):** Placeholder types and snippet file structure are directly adapted from VS Code snippets and TextExpander patterns (both HIGH confidence).
-- **Phase 7:** Session persistence serialization is standard; the Obsidian-specific parts are covered by research.
-
----
+Phases with standard patterns (skip research-phase):
+- **Phase 1 (Dead Code Audit):** Knip tooling is well-documented; the audit process is mechanical
+- **Phase 2 (UI Fixes):** Pure DOM changes using established patterns
+- **Phase 3 (Path Sync):** Extends existing `rewriteCanvasRefs` with a new event trigger; no new patterns
+- **Phase 5 (Quick-Create UI):** Standard EditorPanelView toolbar addition once factory is built
 
 ## Confidence Assessment
 
 | Area | Confidence | Notes |
 |------|------------|-------|
-| Stack | HIGH | Official sample plugin scaffold verified against npm registry 2026-04-05; all package versions confirmed; ESLint plugin rule set verified against GitHub source |
-| Features | MEDIUM-HIGH | Table stakes features backed by multiple commercial analogs (RadioReport, rScriptor, CLICKVIEW) and Obsidian ecosystem precedents (ZettelFlow, Cannoli, Modal Form); differentiators are reasoned from gap analysis with no direct precedent |
-| Architecture | HIGH | Plugin class patterns verified against DeepWiki and mature plugin source code (Obsidian Gemini, ZettelFlow, Cannoli); Canvas JSON format verified against jsoncanvas.org spec; graph/state machine patterns are standard |
-| Pitfalls | MEDIUM-HIGH | Canvas API pitfalls confirmed by forum threads, Advanced Canvas plugin architecture, and DeepWiki; community review requirements verified against eslint-plugin-obsidianmd rule set; some Canvas behavior (custom property preservation across major upgrades) is MEDIUM confidence due to limited precedent |
+| Stack | HIGH | Zero new runtime deps; Knip is well-documented with active maintenance |
+| Features | HIGH | Clear user value; feature scope is well-bounded; anti-features explicitly excluded |
+| Architecture | MEDIUM-HIGH | Clean layering on existing patterns; CanvasNodeFactory is straightforward. Slight uncertainty on `createTextNode` options shape across Obsidian versions |
+| Pitfalls | HIGH | Based on direct codebase analysis of existing Pattern B implementation; all pitfalls have proven prevention strategies |
 
 **Overall confidence:** MEDIUM-HIGH
 
 ### Gaps to Address
 
-- **Canvas side panel write-back strategy**: The three options (require canvas closed, undocumented internals, separate metadata file) are identified but not decided. This is the highest-priority open question before Phase 4 planning. Recommendation: prototype all three in a spike and choose based on user feedback on friction vs. simplicity.
-
-- **`minAppVersion` selection**: Research recommends `"1.5.7"` for `onExternalSettingsChange()`. Confirm no other required API (e.g., specific vault or workspace methods) requires a higher minimum before writing `manifest.json`.
-
-- **Svelte 5 compatibility with Obsidian lifecycle**: If Svelte is chosen for v2 UI work, the rune-based reactivity system (`$state`, `$derived`) has not been validated against Obsidian's `onOpen`/`onClose` component lifecycle pattern. The official docs were written for Svelte 4. Verify with an Obsidian + Svelte 5 example before committing.
-
-- **Loop node UX confirmation**: The `loop-start`/`loop-end` paired-node design and the two-outgoing-edges convention (`continue` / `exit`) is a RadiProtocol-specific design decision flagged as an assumption in ARCHITECTURE.md. Validate this with the intended user before Phase 6 begins.
-
-- **Custom property round-trip preservation**: The JSON Canvas spec allows extra keys, but there is no guarantee Obsidian's canvas editor preserves them across major version upgrades. This is a MEDIUM-confidence risk. Mitigation (namespace all properties, validate after round-trip) is defined, but should be explicitly tested against Obsidian Insider builds early in development.
-
----
+- **`createTextNode` API stability:** The options-object signature is verified against 3 community plugins but is undocumented. Must verify against Obsidian 1.12.3 specifically during Phase 4 planning. Fallback to getData/setData is available if needed.
+- **Viewport center calculation:** The research references `canvas.tx`/`canvas.ty` for viewport position but these internals are not fully documented. Phase 4 should include a dev-console exploration step.
+- **`vault.adapter.mkdir()` event behavior:** Whether Obsidian fires a `vault.on("create")` event for folder creation is uncertain. Phase 2 should test this and use explicit `refreshTree()` regardless.
 
 ## Sources
 
 ### Primary (HIGH confidence)
-- `github.com/obsidianmd/obsidian-sample-plugin` — official scaffold, verified package.json, tsconfig.json, esbuild.config.mjs
-- `npm registry` — all package versions verified 2026-04-05
-- `jsoncanvas.org/spec/1.0/` — complete canvas data model and extensibility contract verified
-- `github.com/pjeby/hot-reload` — maintenance status verified (v0.3.0, August 2025)
-- `github.com/mProjectsCode/eslint-plugin-obsidianmd` — all 27 rules verified
-- `deepwiki.com/obsidianmd/obsidian-api` — plugin development patterns, Canvas system, event system
-- `deepwiki.com/allenhutchison/obsidian-gemini` — plugin-as-service-locator pattern
-- `forum.obsidian.md/t/any-details-on-the-canvas-api/57120` — confirmed no official Canvas runtime API
-- `forum.obsidian.md/t/how-to-correctly-open-an-itemview/60871` — ItemView activation pattern
-- `radioreport.com` — commercial structured reporting analog (10 min vs 35 min for breast MRI)
+- Existing codebase: `canvas-live-editor.ts`, `editor-panel-view.ts`, `canvas-ref-sync.ts`, `canvas-internal.d.ts`, `snippet-editor-modal.ts`
+- [Knip official site](https://knip.dev) and [npm registry](https://www.npmjs.com/package/knip)
+- [Official canvas.d.ts](https://github.com/obsidianmd/obsidian-api/blob/master/canvas.d.ts)
 
 ### Secondary (MEDIUM confidence)
-- `github.com/RafaelGB/Obsidian-ZettelFlow` — canvas-as-workflow pattern; root node convention
-- `github.com/DeabLabs/cannoli` — canvas-as-directed-graph; color prefix conventions; core/plugin separation
-- `github.com/Developer-Mike/obsidian-advanced-canvas` — canvas event limitations; monkey-patch pattern for canvas extension
-- `pmc.ncbi.nlm.nih.gov/articles/PMC8921035/` — European Radiology systematic review: structured reporting adoption barriers (inflexibility is #1 reason)
-- `radelement.org/about/` — RSNA/ACR Common Data Elements; structured reporting tiers
-- `nngroup.com/articles/wizards/` — wizard UX guidelines (step-back, progress, validation)
-- `code.visualstudio.com/docs/editing/userdefinedsnippets` — snippet placeholder syntax and tab-stop patterns
-- `textexpander.com/learn/using/snippets/snippet-fill-ins` — fill-in types including optional sections
-- `forum.obsidian.md/t/confused-about-the-setviewstate-and-state-management-of-the-itemview-class/66798` — ItemView state management
-- `github.com/SilentVoid13/Templater/issues/1629` — vault.modify() race condition documentation
+- [obsidian-advanced-canvas Canvas.d.ts](https://github.com/Developer-Mike/obsidian-advanced-canvas/blob/main/src/@types/Canvas.d.ts) -- internal API types
+- [enchanted-canvas source](https://github.com/borolgs/enchanted-canvas) -- createTextNode usage, workspace events
+- [obsidian-canvas-llm-extender source](https://github.com/Phasip/obsidian-canvas-llm-extender) -- createTextNode with save/focus flags, position calculation
+- [Obsidian-Canvas-Presentation source](https://github.com/Quorafind/Obsidian-Canvas-Presentation) -- createTextNode usage
 
-### Tertiary (LOW confidence — not independently verified)
-- `obsimian` (github.com/motif-software/obsimian) — integration testing framework for Obsidian; limited coverage
-- `obsidian-plugin-cli` npm package — alternative dev workflow tool; maintenance status unverified for 2026
-- `scriptorsoftware.com` (rScriptor) — adaptive structured reporting; adaptive impression generation
-- `clickview.com` (CLICKVIEW 9i) — voice-activated structured reporting tiles
+### Tertiary (LOW confidence)
+- [Obsidian Forum: Canvas API](https://forum.obsidian.md/t/any-details-on-the-canvas-api/57120) -- confirms undocumented status
+- [Canvas System DeepWiki](https://deepwiki.com/obsidianmd/obsidian-api/4.1-canvas-system) -- data schema overview
 
 ---
-
-*Research completed: 2026-04-05*
+*Research completed: 2026-04-16*
 *Ready for roadmap: yes*
