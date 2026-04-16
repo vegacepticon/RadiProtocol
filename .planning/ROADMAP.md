@@ -75,7 +75,7 @@ Full details: `.planning/milestones/v1.4-ROADMAP.md`
 - [x] **Phase 32: SnippetService Refactor — MD Support, Trash Delete, Canvas Reference Sync** — completed 2026-04-15
 - [x] **Phase 33: Tree UI, Modal Create/Edit, Folder Operations, Vault Watcher** — completed 2026-04-15
 - [x] **Phase 34: Drag-and-Drop, Context Menu, Rename, Move with Canvas Reference Updates** — completed 2026-04-15 (UAT approved by Роман)
-- [ ] **Phase 35: Markdown Snippets in Protocol Runner** — `.md` files in picker, as-is insertion, mixed branching compatible
+- [x] **Phase 35: Markdown Snippets in Protocol Runner** — `.md` files in picker, as-is insertion, mixed branching compatible (completed 2026-04-16)
 
 ### Phase Details
 
@@ -169,4 +169,4 @@ Full details: `.planning/milestones/v1.4-ROADMAP.md`
 | 32. SnippetService Refactor — MD Support, Trash Delete, Canvas Reference Sync | v1.5 | 5/5 | Complete | 2026-04-15 |
 | 33. Tree UI, Modal Create/Edit, Folder Operations, Vault Watcher | v1.5 | 5/5 | Complete | 2026-04-15 |
 | 34. Drag-and-Drop, Context Menu, Rename, Move with Canvas Reference Updates | v1.5 | 6/6 | Complete | 2026-04-15 |
-| 35. Markdown Snippets in Protocol Runner | v1.5 | 2/2 | Complete   | 2026-04-16 |
+| 35. Markdown Snippets in Protocol Runner | v1.5 | 2/2 | Complete    | 2026-04-16 |
