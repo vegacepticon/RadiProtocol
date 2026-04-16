@@ -50,23 +50,23 @@ Deferred to future milestones. Tracked but not in current roadmap.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| CLEAN-01 | — | Pending |
-| CLEAN-02 | — | Pending |
-| CLEAN-03 | — | Pending |
-| SYNC-01 | — | Pending |
-| CANVAS-01 | — | Pending |
-| CANVAS-02 | — | Pending |
-| CANVAS-03 | — | Pending |
-| CANVAS-04 | — | Pending |
-| CANVAS-05 | — | Pending |
-| DUP-01 | — | Pending |
-| DUP-02 | — | Pending |
+| CLEAN-01 | Phase 36 | Pending |
+| CLEAN-02 | Phase 36 | Pending |
+| CLEAN-03 | Phase 37 | Pending |
+| SYNC-01 | Phase 37 | Pending |
+| CANVAS-01 | Phase 38 | Pending |
+| CANVAS-02 | Phase 39 | Pending |
+| CANVAS-03 | Phase 39 | Pending |
+| CANVAS-04 | Phase 38 | Pending |
+| CANVAS-05 | Phase 38 | Pending |
+| DUP-01 | Phase 40 | Pending |
+| DUP-02 | Phase 40 | Pending |
 
 **Coverage:**
 - v1.6 requirements: 11 total
-- Mapped to phases: 0
-- Unmapped: 11 (pending roadmap)
+- Mapped to phases: 11
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-04-16*
-*Last updated: 2026-04-16 after initial definition*
+*Last updated: 2026-04-16 after roadmap creation*
