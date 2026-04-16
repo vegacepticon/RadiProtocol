@@ -192,7 +192,7 @@ Phases execute in numeric order: 36 -> 37 -> 38 -> 39 -> 40 -> 41
 | 32-35 | v1.5 | 18/18 | Complete | 2026-04-16 |
 | 36. Dead Code Audit and Cleanup | v1.6 | 2/2 | Complete    | 2026-04-16 |
 | 37. Snippet Editor Improvements | v1.6 | 2/2 | Complete   | 2026-04-16 |
-| 38. Canvas Node Creation Infrastructure | v1.6 | 2/2 | Complete   | 2026-04-16 |
+| 38. Canvas Node Creation Infrastructure | v1.6 | 2/2 | Complete    | 2026-04-16 |
 | 39. Quick-Create UI in Node Editor | v1.6 | 0/? | Not started | - |
 | 40. Node Duplication | v1.6 | 0/? | Not started | - |
 | 41. Live Canvas Update on Folder Rename | v1.6 | 0/? | Not started | - |
