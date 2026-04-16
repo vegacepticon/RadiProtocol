@@ -107,28 +107,33 @@ A radiologist can generate a structured, accurate protocol in seconds by answeri
 
 ### Validated (v1.5)
 
+**SnippetService Refactor (Phase 32):**
+- ✓ `Snippet = JsonSnippet | MdSnippet` discriminated union with extension-based routing (MD-05) — v1.5
+- ✓ Snippet delete via `vault.trash()` — Obsidian trash, not permanent delete (DEL-01) — v1.5
+- ✓ `rewriteCanvasRefs` vault-wide canvas reference sync utility with WriteMutex — v1.5
+
+**Snippet Tree UI (Phase 33):**
+- ✓ Folder tree view in SnippetManagerView replaces master-detail layout (TREE-01..04) — v1.5
+- ✓ Unified create/edit modal with JSON↔MD toggle, folder dropdown, unsaved-changes guard (MODAL-01..08) — v1.5
+- ✓ Folder create/delete via context menu with contents listing confirm (FOLDER-01..03) — v1.5
+- ✓ Vault watcher with 120ms debounce + prefix filter, teardown on close (SYNC-01..03) — v1.5
+- ✓ Snippet delete confirm modal, removed from tree and runner picker (DEL-02..03) — v1.5
+
+**Drag-and-Drop, Rename, Move (Phase 34):**
+- ✓ DnD moves files and folders in tree (MOVE-01..02) — v1.5
+- ✓ Context menu "Move to…" with folder picker; modal folder field moves on save (MOVE-03..04) — v1.5
+- ✓ Move/rename auto-rewrites Canvas SnippetNode references (MOVE-05, RENAME-03) — v1.5
+- ✓ F2/context-menu inline rename for files and folders (RENAME-01..02) — v1.5
+
 **Markdown Snippets in Protocol Runner (Phase 35):**
 - ✓ Runner snippet picker lists both `.md` and `.json` files with type-indicator glyphs (MD-01) — v1.5
 - ✓ Selecting `.md` snippet inserts raw content verbatim without fill-in modal (MD-02) — v1.5
 - ✓ `.md` snippets work in full drill-down and step-back flow (MD-03) — v1.5
 - ✓ Mixed answer+snippet branching routes to `.md` snippet branches (MD-04) — v1.5
 
-### Active (v1.5)
+### Active
 
-## Current Milestone: v1.5 Snippet Editor Refactoring
-
-**Goal:** Переработать Snippet Editor в file-system-подобное дерево с модальным редактированием, синхронизацией с vault, и добавить поддержку `.md` сниппетов в Protocol Runner.
-
-**Target features:**
-- Folder-tree UI в `SnippetManagerView` (раскрывающееся дерево, заменяет старый master-detail)
-- Modal create/edit (создание/редактирование сниппета через модалку, не inline)
-- Выбор типа (.json vs .md) в модалке создания
-- Drag-and-drop + context menu + "Move to" — перемещение между папками
-- Inline rename (F2 / context menu) с автообновлением Canvas-ссылок
-- Live vault watcher — дерево реагирует на внешние create/delete/rename
-- Удаление через `vault.trash()` с confirm (фиксит рассинхрон)
-- Поддержка `.md` сниппетов в Protocol Runner — вставка содержимого as-is
-- Inline textarea в модалке для редактирования `.md`
+(No active milestone — planning next)
 
 ### Deferred (Future Milestones)
 
@@ -154,18 +159,19 @@ A radiologist can generate a structured, accurate protocol in seconds by answeri
 
 ## Current State
 
-**Shipped:** v1.4 Snippets and Colors, Colors and Snippets (2026-04-15)
-**Current milestone:** v1.5 Snippet Editor Refactoring (Phase 35 complete — MD snippets in Runner)
+**Shipped:** v1.5 Snippet Editor Refactoring (2026-04-16)
+**Current milestone:** None — planning next
 
 ## Context
 
-- Shipped v1.0 (7 phases, 28 plans) + v1.2 (8 phases, 11 plans) + v1.3 (1 phase, 1 plan) + v1.4 (4 phases, 12 plans); TypeScript in src/
+- Shipped v1.0 (7 phases, 28 plans) + v1.2 (8 phases, 11 plans) + v1.3 (1 phase, 1 plan) + v1.4 (4 phases, 12 plans) + v1.5 (4 phases, 18 plans); ~18.7K LOC TypeScript in src/
 - Tech stack: TypeScript + Obsidian Plugin API + esbuild + Vitest
 - Target: public release on Obsidian Community Plugins
 - Primary author: radiologist (CT focus), designed for all imaging modalities
-- All phases human-UAT approved; v1.4 milestone audit passed 11/11 requirements, 4/4 phases, 10/10 integration, 3/3 flows
+- All phases human-UAT approved; v1.5 milestone audit passed 34/34 requirements, 4/4 phases, 20/20 integration, 5/5 flows
 - All engine code (parser, runner, snippets, sessions) has zero Obsidian imports and is fully unit-testable
-- Known tech debt: Nyquist VALIDATION.md draft for phases 12–19 and 28–31; pre-existing TS errors in editor-panel-view.ts; dead CSS (.rp-legend*); 3 RED test stubs in runner-extensions.test.ts; Phase 29 BFS cycle guard + null subfolderPath normalization resolved via WR-01/WR-02 fixes
+- 356 tests passing (26 test files), build green
+- Known tech debt: Nyquist VALIDATION.md draft for phases 12–19, 28–31, and 32–35; dead CSS (.rp-legend*); 3 RED test stubs in runner-extensions.test.ts (Phase 26); Node Editor stale subfolderPath display after folder move/rename (cosmetic); chip editor labels in English (Phase 27 legacy)
 
 ## Constraints
 
@@ -204,6 +210,14 @@ A radiologist can generate a structured, accurate protocol in seconds by answeri
 | `awaiting-snippet-pick` as new runner state (Phase 30) | Routes through existing `awaiting-snippet-fill`/`completeSnippet` flow — no duplication; session serialize/restore support | ✓ Good |
 | `returnToBranchList` flag on UndoEntry (Phase 31) | Step-back from open snippet picker returns to branch selection, not previous node — preserves user mental model | ✓ Good |
 | Per-node `snippetLabel` + separator override on SnippetNode (Phase 31) | `v \|\| undefined` normalization; author can customize mixed-branch presentation per question | ✓ Good |
+| `Snippet = JsonSnippet \| MdSnippet` discriminated union (Phase 32) | Extension-based routing in `listFolder`/`load`; single `kind` discriminant; no enum overhead | ✓ Good — clean type narrowing everywhere |
+| `rewriteCanvasRefs` as standalone utility with WriteMutex (Phase 32) | Vault-wide canvas rewrite decoupled from SnippetService; prefix-match + exact-match + best-effort error handling | ✓ Good — reused by Phases 33 and 34 |
+| `vault.trash()` instead of `vault.delete()` for snippet removal (Phase 32) | Obsidian trash is recoverable; permanent delete too destructive for user-authored content | ✓ Good — matches user expectation |
+| Unified SnippetEditorModal for create + edit (Phase 33) | Single modal with mode flag; avoids duplicating JSON/MD toggle, folder dropdown, unsaved guard logic | ✓ Good — 548 lines, 3 entry points converge |
+| 120ms debounced vault watcher with prefix filter (Phase 33) | Coalesces rapid vault events; ignores non-snippet paths; `registerEvent` auto-detach in `onClose` | ✓ Good — no leaks, no flicker |
+| `parentElement` first, `.parent` mock fallback for DOM lookup (Phase 34) | Mock-only `.parent` silently breaks in real Obsidian; `parentElement` is the DOM standard | ✓ Good — caught in post-UAT fix 77b62c1 |
+| File-level move/rename does NOT call `rewriteCanvasRefs` (Phase 34) | SnippetNode stores `subfolderPath` (folder), not filename — file moves are canvas-invisible by design (D-03) | ✓ Good — avoids unnecessary rewrites |
+| MD snippet bypasses `handleSnippetFill` via direct `completeSnippet()` (Phase 35) | No placeholders to fill; content inserted verbatim; avoids `.json` suffix assumption in legacy path | ✓ Good — minimal change, 2-method edit |
 
 ## Evolution
 
@@ -214,4 +228,4 @@ A radiologist can generate a structured, accurate protocol in seconds by answeri
 4. Update Context with current state
 
 ---
-*Last updated: 2026-04-16 — Phase 35 complete (MD snippets in Protocol Runner)*
+*Last updated: 2026-04-16 after v1.5 milestone*

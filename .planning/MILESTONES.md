@@ -1,5 +1,24 @@
 # Milestones
 
+## v1.5 Snippet Editor Refactoring (Shipped: 2026-04-16)
+
+**Phases completed:** 4 phases (32–35), 18 plans
+**Timeline:** 2026-04-15 → 2026-04-16 (2 days)
+**Git:** 73 commits, 90 files changed, +19518/-1034 LOC
+
+**Key accomplishments:**
+
+- Phase 32: SnippetService refactored — `Snippet = JsonSnippet | MdSnippet` discriminated union, `listFolder`/`load`/`save`/`delete` extension routing, `vault.trash()` delete, `rewriteCanvasRefs` vault-wide canvas reference sync utility with WriteMutex (MD-05, DEL-01)
+- Phase 33: SnippetManagerView rewritten as recursive folder tree — SnippetEditorModal (unified create/edit, JSON↔MD toggle, folder dropdown, D-09 move-on-save pipeline, unsaved-changes guard), folder CRUD (create/delete with contents listing), vault watcher (create/delete/rename events with 120ms debounce + prefix filter) — 20 requirements satisfied (TREE-01..04, MODAL-01..08, FOLDER-01..03, SYNC-01..03, DEL-02..03)
+- Phase 34: Drag-and-drop + context menu "Move to…" + modal folder field for snippet/folder reorganization; F2/context-menu inline rename for files and folders; all move/rename operations auto-rewrite SnippetNode `subfolderPath` in every Canvas via `rewriteCanvasRefs` — UAT approved by Роман (MOVE-01..05, RENAME-01..03)
+- Phase 35: `.md` snippets in Protocol Runner picker with glyph prefix differentiation; click-to-insert inserts content verbatim without fill-in modal; works in subfolder drill-down and mixed answer+snippet branching — 7/7 verification truths passed (MD-01..04)
+- All 34 v1.5 requirements satisfied; milestone audit passed with tech_debt status (no blockers); 5/5 cross-phase E2E flows verified; 20/20 integration points connected
+- Known deferred items: Node Editor stale subfolderPath display (cosmetic), chip editor English labels (Phase 27 legacy), 3 Phase 26 RED test stubs, Nyquist validation draft for all 4 phases
+
+**Archive:** `.planning/milestones/v1.5-ROADMAP.md`, `.planning/milestones/v1.5-REQUIREMENTS.md`, `.planning/milestones/v1.5-MILESTONE-AUDIT.md`
+
+---
+
 ## v1.4 Snippets and Colors, Colors and Snippets (Shipped: 2026-04-15)
 
 **Phases completed:** 4 phases (28–31), 12 plans
