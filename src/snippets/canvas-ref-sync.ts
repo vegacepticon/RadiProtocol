@@ -2,6 +2,7 @@
 // Vault-wide utility: rewrite SnippetNode.subfolderPath references in every .canvas
 // when a snippet folder is renamed or moved (D-04, D-05, D-06, D-11).
 import type { App, TFile } from 'obsidian';
+import type { CanvasLiveEditor } from '../canvas/canvas-live-editor';
 import { WriteMutex } from '../utils/write-mutex';
 
 interface CanvasSyncResult {
@@ -39,6 +40,7 @@ const canvasMutex = new WriteMutex();
 export async function rewriteCanvasRefs(
   app: App,
   mapping: Map<string, string>,
+  canvasLiveEditor?: CanvasLiveEditor,
 ): Promise<CanvasSyncResult> {
   const updated: string[] = [];
   const skipped: Array<{ path: string; reason: string }> = [];
@@ -51,6 +53,61 @@ export async function rewriteCanvasRefs(
 
   for (const file of canvasFiles) {
     try {
+      // Phase 41: Try live canvas update first (Pattern B)
+      if (canvasLiveEditor && canvasLiveEditor.isLiveAvailable(file.path)) {
+        try {
+          const liveJson = canvasLiveEditor.getCanvasJSON(file.path);
+          if (liveJson) {
+            const liveParsed = JSON.parse(liveJson) as { nodes?: unknown[] };
+            if (liveParsed && Array.isArray(liveParsed.nodes)) {
+              // Collect matching nodes and their edits
+              const editsToApply: Array<{ nodeId: string; edits: Record<string, unknown> }> = [];
+              for (const node of liveParsed.nodes as Array<Record<string, unknown>>) {
+                if (!node || typeof node !== 'object') continue;
+                if (node['radiprotocol_nodeType'] !== 'snippet') continue;
+                const current = node['radiprotocol_subfolderPath'];
+                if (typeof current !== 'string' || current === '') continue;
+                const rewritten = applyMapping(current, mapping);
+                if (rewritten !== null && rewritten !== current) {
+                  const nodeEdits: Record<string, unknown> = {
+                    radiprotocol_subfolderPath: rewritten,
+                  };
+                  const currentText = node['text'];
+                  if (typeof currentText === 'string' && currentText !== '') {
+                    const rewrittenText = applyMapping(currentText, mapping);
+                    if (rewrittenText !== null && rewrittenText !== currentText) {
+                      nodeEdits['text'] = rewrittenText;
+                    }
+                  }
+                  editsToApply.push({ nodeId: node['id'] as string, edits: nodeEdits });
+                }
+              }
+
+              if (editsToApply.length === 0) continue; // No matching nodes
+
+              // Apply edits via saveLive; if any fails, fall back to vault.modify
+              let liveFailed = false;
+              for (const { nodeId, edits } of editsToApply) {
+                const ok = await canvasLiveEditor.saveLive(file.path, nodeId, edits);
+                if (!ok) {
+                  liveFailed = true;
+                  break;
+                }
+              }
+
+              if (!liveFailed) {
+                updated.push(file.path);
+                continue; // Skip vault.modify -- saveLive handles persistence
+              }
+              // liveFailed: fall through to vault.modify path below
+            }
+          }
+        } catch (e) {
+          // Live path error -- fall through to vault.modify path
+          console.error('[RadiProtocol] canvas-ref-sync live path:', file.path, (e as Error).message);
+        }
+      }
+
       const raw = await app.vault.read(file);
       let parsed: { nodes?: unknown[]; edges?: unknown[] };
       try {

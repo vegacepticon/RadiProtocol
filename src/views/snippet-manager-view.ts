@@ -697,7 +697,7 @@ export class SnippetManagerView extends ItemView {
     const mapping = new Map<string, string>([
       [toCanvasKey(oldPath, snippetRoot), toCanvasKey(newPath, snippetRoot)],
     ]);
-    const result = await rewriteCanvasRefs(this.app, mapping);
+    const result = await rewriteCanvasRefs(this.app, mapping, this.plugin.canvasLiveEditor);
 
     // D-07: expand-state prefix rewrite.
     await this.rewriteExpandState(oldPath, newPath);
@@ -942,7 +942,7 @@ export class SnippetManagerView extends ItemView {
         const mapping = new Map<string, string>([
           [toCanvasKey(oldPath, snippetRoot), toCanvasKey(newPath, snippetRoot)],
         ]);
-        const result = await rewriteCanvasRefs(this.app, mapping);
+        const result = await rewriteCanvasRefs(this.app, mapping, this.plugin.canvasLiveEditor);
 
         // D-07: expand-state prefix rewrite.
         await this.rewriteExpandState(oldPath, newPath);
