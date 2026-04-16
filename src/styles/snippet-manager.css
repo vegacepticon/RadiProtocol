@@ -439,6 +439,26 @@
   gap: var(--size-4-1);
 }
 
+/* Phase 36: fix spacing between type label and value (CLEAN-02) */
+.radi-snippet-editor-row {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: var(--size-4-2);
+  margin-bottom: var(--size-4-2);
+}
+
+.radi-snippet-editor-type-static {
+  font-size: var(--font-ui-small);
+  color: var(--text-muted);
+}
+
+.radi-snippet-editor-type-toggle {
+  display: flex;
+  flex-direction: row;
+  gap: var(--size-4-1);
+}
+
 /* Phase 34: drag-and-drop, inline rename */
 
 .radi-snippet-tree-row.is-dragging {
