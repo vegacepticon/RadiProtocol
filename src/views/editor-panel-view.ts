@@ -284,7 +284,21 @@ export class EditorPanelView extends ItemView {
       return;
     }
 
-    const nodeRecord = canvasData.nodes.find(n => n['id'] === nodeId);
+    let nodeRecord: Record<string, unknown> | undefined = canvasData.nodes.find(n => n['id'] === nodeId);
+
+    // Phase 42: double-click-created nodes may not yet be flushed to disk by Obsidian's
+    // async save cycle. When the disk read misses the node, fall back to the live in-memory
+    // canvas state (same pattern Phase 39 Plan 02 uses inside onQuickCreate).
+    if (!nodeRecord) {
+      const canvas = this.getCanvasForPath(filePath);
+      if (canvas) {
+        const liveNode = canvas.nodes.get(nodeId);
+        if (liveNode) {
+          nodeRecord = liveNode.getData();
+        }
+      }
+    }
+
     if (!nodeRecord) {
       this.renderError('Node not found in canvas — it may have been deleted.');
       return;
@@ -328,8 +342,19 @@ export class EditorPanelView extends ItemView {
             }
             // Immediate save with color + cancel debounce (D-04)
             this.onTypeDropdownChange(value);
+            // Phase 42: re-render the whole form so the empty-type hint is re-evaluated
+            // (it lives outside kindFormSection). renderForm is idempotent.
+            this.renderForm(nodeRecord, value ? (value as RPNodeKind) : null);
           });
       });
+
+    // Phase 42: empty-type helper hint — copy locked by UI-SPEC
+    if (currentKind === null) {
+      formArea.createEl('p', {
+        cls: 'rp-editor-type-hint',
+        text: 'Select a node type to configure this node',
+      });
+    }
 
     // Kind-specific fields section
     this.kindFormSection = formArea.createDiv();
