@@ -63,6 +63,21 @@ describe('CanvasParser', () => {
       expect(typeof CanvasParser).toBe('function');
     });
   });
+
+  describe('RUN-07: legacy loop-start no longer carries maxIterations', () => {
+    it('parsed legacy loop-start node has no maxIterations property', () => {
+      const parser = new CanvasParser();
+      const result = parser.parse(loadFixture('loop-start.canvas'), 'loop-start.canvas');
+      expect(result.success).toBe(true);
+      if (!result.success) return;
+      const node = result.graph.nodes.get('n-ls1');
+      expect(node).toBeDefined();
+      expect(node?.kind).toBe('loop-start');
+      // RUN-07 — Phase 44 Plan 04: parser must NOT set the deleted field.
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      expect('maxIterations' in (node as any)).toBe(false);
+    });
+  });
 });
 
 describe('CanvasParser — snippet node (Phase 29)', () => {
