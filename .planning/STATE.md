@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.7
 milestone_name: Loop Rework & Regression Cleanup
 status: executing
-stopped_at: Completed 43-07-PLAN.md (test corpus alignment — LOOP-04/MIGRATE-01/D-09 tests + loopNodeId rename + .skip loop-runtime tests; Phase 43 complete — all checks green)
-last_updated: "2026-04-17T13:06:22.017Z"
-last_activity: 2026-04-17 -- Phase 44 planning complete
+stopped_at: Completed 44-01-PLAN.md (Wave 0 scaffolding — nested-loop fixture + picker test skeleton; production code untouched; full suite green)
+last_updated: "2026-04-17T13:12:55.741Z"
+last_activity: 2026-04-17
 progress:
   total_phases: 4
   completed_phases: 1
   total_plans: 12
-  completed_plans: 7
-  percent: 58
+  completed_plans: 8
+  percent: 67
 ---
 
 # RadiProtocol — Project State
@@ -19,17 +19,17 @@ progress:
 **Updated:** 2026-04-17
 **Milestone:** v1.7 — Loop Rework & Regression Cleanup
 **Status:** Ready to execute
-**Last session:** 2026-04-17T10:14:52.802Z
-**Stopped at:** Completed 43-07-PLAN.md (test corpus alignment — LOOP-04/MIGRATE-01/D-09 tests + loopNodeId rename + .skip loop-runtime tests; Phase 43 complete — all checks green)
+**Last session:** 2026-04-17T13:12:51.201Z
+**Stopped at:** Completed 44-01-PLAN.md (Wave 0 scaffolding — nested-loop fixture + picker test skeleton; production code untouched; full suite green)
 
 ---
 
 ## Current Position
 
-Phase: 44
-Plan: Not started
+Phase: 44 (unified-loop-runtime) — EXECUTING
+Plan: 2 of 5
 Status: Ready to execute
-Last activity: 2026-04-17 -- Phase 44 planning complete
+Last activity: 2026-04-17
 
 Progress: [██████████] 100% (0/4 phases, 7/7 plans — Phase 43 ready for verification)
 
@@ -40,7 +40,7 @@ Progress: [██████████] 100% (0/4 phases, 7/7 plans — Phase
 See: `.planning/PROJECT.md` (updated 2026-04-17)
 
 **Core value:** A radiologist can generate a structured, accurate protocol in seconds by answering a guided algorithm — without writing a single line of code.
-**Current focus:** Phase 43 — unified-loop-graph-model-parser-validator-migration-errors
+**Current focus:** Phase 44 — unified-loop-runtime
 
 ---
 
@@ -76,6 +76,7 @@ See: `.planning/PROJECT.md` (updated 2026-04-17)
 | Phase 43 P06 | 2min | 1 tasks | 4 files |
 | Phase 43 P05 | 4min | 1 tasks | 1 files |
 | Phase 43 P07 | 4min | 3 tasks | 4 files |
+| Phase 44 P01 | 2min | 2 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -127,6 +128,10 @@ See: `.planning/PROJECT.md` (updated 2026-04-17)
 - Plan 43-06: 4 новых fixture canvases под `src/__tests__/fixtures/` — `unified-loop-valid.canvas` (happy-path для LOOP-03 + LOOP-04), `unified-loop-missing-exit.canvas` (D-08.1), `unified-loop-duplicate-exit.canvas` (D-08.2), `unified-loop-no-body.canvas` (D-08.3). Все используют Cyrillic «выход» (5 chars, case-sensitive); каждый содержит один start + один loop-узел с `radiprotocol_headerText: "Lesion loop"`. Happy-path замыкает цикл через back-edge `n-a1 → n-loop` (опирается на D-09 cycle-through-loop marker из Plan 43-03). Legacy `loop-start.canvas` / `loop-body.canvas` нетронуты (D-16) — Plan 43-07 укажет на них migration-error тесты. Additive-only: 59 insertions, 0 deletions; нулевые изменения существующих файлов.
 - Plan 43-07: финальный test-corpus для Phase 43. Добавлен describe `'GraphValidator — Phase 43: unified loop + migration (LOOP-04, MIGRATE-01)'` с 9 тестами (LOOP-04 happy path + 3 sub-checks D-08.1/2/3 с edge-ID assertions для duplicate, 2 MIGRATE-01 с обязательными лексемами «loop-start»/«loop-end»/«loop»/«выход»/устаревш, D-CL-02 migration-before-LOOP-04 order, D-09 cycle-through-loop positive + negative control). Удалены устаревший orphan-loop-end тест (D-10 — Check 6 исчез из validator'а) и старый describe 'loop validation (LOOP-01, LOOP-06)' (единственный тест переформулирован в MIGRATE-01 внутри Phase 43 describe). В session-service.test.ts — 4 inline `loopStartId → loopNodeId` переименования + новый D-20 graceful-reject тест. Runner тесты: `describe.skip` на 3 loop-runtime-dependent блоках (RUN-08, LOOP-01..05/RUN-09, SESSION-05) с TODO Phase 44 markers — bodies preserved для Phase 44 rewrite. Rule 3 auto-fix: `it.skip` на 3 SESSION-01 тестах в protocol-runner-session.test.ts которые использовали `loop-body.canvas` и падали после Plan 04 stub'а (pre-existing Plan 04 fallout surfaced при full-suite run). Rule 1 polish: reworded D-10 removal comment во избежание literal grep match. Финальное состояние Phase 43: `npm run build` exit 0, `npx tsc --noEmit --skipLibCheck` exit 0, `npm test` → 391 passed + 11 skipped / 0 failed / 28 test files. LOOP-04 и MIGRATE-01 requirements закрыты; Phase 43 ready for verification.
 - Plan 43-05: `graph-validator.ts` переписан для unified loop. Добавлен Migration Check (D-07, MIGRATE-01) с early-return — одна сводная русская ошибка с дословными литералами «loop-start», «loop-end», «loop», «выход» и перечислением legacy-узлов через `nodeLabel()`. Добавлен Check LOOP-04 — три substeps (D-08.1 missing «выход», D-08.2 duplicate «выход» с перечислением edge IDs, D-08.3 no body-branch). `detectUnintentionalCycles` (D-09) перешёл с `kind === 'loop-end'` на `kind === 'loop'` (переменная `passesViaLoopNode` + английский текст `'Cycles must pass through a loop node. Remove the back-edge or route the cycle through a loop node.'`). Старый Check 6 (orphaned loop-end, D-10) удалён целиком; заменяющий комментарий указывает на Migration Check как canonical rejection path. `nodeLabel()` (D-11) получил `case 'loop': return node.headerText || node.id`; legacy `case 'loop-start'` / `case 'loop-end'` сохранены byte-identically с `@deprecated Phase 43 D-CL-05` — Migration Check вызывает `this.nodeLabel(node)` на legacy-узлах, они остаются live code. Tech-debt: три ambient comments в cycle-detection блоке ('loop-end node' → 'unified loop node') рефрешены ради acceptance-check `! grep 'loop-end node'`. `npm run build` остаётся red только из-за 3 errors в `src/__tests__/session-service.test.ts` (Plan 43-07 D-18/D-20 scope); `graph-validator.ts` сам по себе компилируется clean.
+
+### Decisions (Phase 44)
+
+- Plan 44-01: Wave 0 scaffolding-before-runtime per Nyquist validation strategy. Created `src/__tests__/fixtures/unified-loop-nested.canvas` (6 nodes, 7 edges — outer 'Organ' + inner 'Lesion' loops) with frame-pop semantics — inner loop's «выход» edge (e5) points back UP to outer loop node `n-outer`, NOT to terminal `n-end`. This is what makes RUN-04 testable: exiting inner returns control to outer's picker rather than completing the protocol. Outer loop's «выход» (e3) points to terminal — symmetric with `unified-loop-valid.canvas` shape. Both loops pass GraphValidator LOOP-04 (verified by inline node script). Created `src/__tests__/runner/protocol-runner-loop-picker.test.ts` (24 lines, 3 `it.todo` entries) — `ProtocolRunner` import intentionally OMITTED at Wave 0; eslint-disable on unused `loadGraph` helper (Plan 44-02 will remove both when adding real assertions). Zero production code touched (every `src/runner/*`, `src/views/*`, `src/graph/*`, `src/sessions/*`, `src/settings.ts` file remains exactly as Phase 43 left it). Full suite: 388 passed + 14 skipped + 3 todo / 0 failed; build green.
 
 ---
 
