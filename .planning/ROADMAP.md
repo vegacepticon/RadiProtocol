@@ -192,9 +192,10 @@ Plans:
   1. The node editor sidebar shows a "Create snippet node" button alongside existing "Create question node" and "Create answer node" buttons
   2. When a node is created by double-clicking on the canvas and then selected, the editor panel loads the node correctly (no "Node not found in canvas" error)
   3. Selecting a freshly double-click-created empty node opens the editor panel with node type selection
-**Plans**: 0 plans
+**Plans**: 2 plans
 Plans:
-- [ ] TBD (run /gsd-plan-phase 42 to break down)
+- [x] 42-01-PLAN.md — Fix double-click node selection bug (in-memory canvas fallback) + empty-type helper hint + CSS + tests
+- [ ] 42-02-PLAN.md — Add Create snippet node button to editor toolbar + widen onQuickCreate + CSS + test
 **UI hint**: yes
 
 ---
@@ -217,4 +218,4 @@ Phases execute in numeric order: 36 -> 37 -> 38 -> 39 -> 40 -> 41 -> 42
 | 39. Quick-Create UI in Node Editor | v1.6 | 2/2 | Complete   | 2026-04-16 |
 | 40. Node Duplication | v1.6 | 1/1 | Complete    | 2026-04-16 |
 | 41. Live Canvas Update on Folder Rename | v1.6 | 1/1 | Complete    | 2026-04-16 |
-| 42. Snippet Node Quick-Create & Double-Click Fix | v1.6 | 0/? | Not started | - |
+| 42. Snippet Node Quick-Create & Double-Click Fix | v1.6 | 1/2 | In Progress|  |
