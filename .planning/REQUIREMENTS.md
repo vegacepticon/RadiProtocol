@@ -25,7 +25,7 @@
 - [x] **RUN-04**: Nested loops continue to work — the existing `LoopContext` stack behaviour is preserved
 - [x] **RUN-05**: Step-back from the loop picker unwinds to the last node before the loop entry and restores the accumulated text captured before the loop
 - [ ] **RUN-06**: Session save/resume preserves loop-node state across Obsidian restarts (loop frames, pending picker, accumulated text)
-- [ ] **RUN-07**: `LoopStartNode.maxIterations` field and the global "max loop iterations" setting are removed; there is no runtime iteration cap on the new loop
+- [x] **RUN-07**: `LoopStartNode.maxIterations` field and the global "max loop iterations" setting are removed; there is no runtime iteration cap on the new loop
 
 ### Migration (MIGRATE)
 
@@ -79,7 +79,7 @@ Which phases cover which requirements. Populated during roadmap creation.
 | RUN-04 | Phase 44 | Complete |
 | RUN-05 | Phase 44 | Complete |
 | RUN-06 | Phase 44 | Pending |
-| RUN-07 | Phase 44 | Pending |
+| RUN-07 | Phase 44 | Complete |
 | MIGRATE-01 | Phase 43 | Complete |
 | MIGRATE-02 | Phase 43 | Complete |
 | CLEAN-01 | Phase 46 | Pending |

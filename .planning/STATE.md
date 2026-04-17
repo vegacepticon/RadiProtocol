@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.7
 milestone_name: Loop Rework & Regression Cleanup
 status: executing
-stopped_at: Completed 44-02a-PLAN.md (Wave 2 runtime — B1 re-entry guard + B2 previousCursor threading + chooseLoopBranch + advanceOrReturnToLoop helper; runtime live, TS green, build green, full suite 388 passed/14 skipped/3 todo. Plan 02b will replace describe.skip blocks against unified-loop-valid.canvas; Plan 03 will replace runner-view exhaustiveness stub with real picker UI)
-last_updated: "2026-04-17T13:25:24.983Z"
+stopped_at: "Completed 44-04-PLAN.md (RUN-07 legacy iteration-cap excision: settings + graph-model + parser + editor-panel; RUN-09 cycle guard untouched; full suite 389 passed; build green)"
+last_updated: "2026-04-17T13:34:58.162Z"
 last_activity: 2026-04-17
 progress:
   total_phases: 4
   completed_phases: 1
   total_plans: 12
-  completed_plans: 9
-  percent: 75
+  completed_plans: 10
+  percent: 83
 ---
 
 # RadiProtocol — Project State
@@ -19,15 +19,15 @@ progress:
 **Updated:** 2026-04-17
 **Milestone:** v1.7 — Loop Rework & Regression Cleanup
 **Status:** Ready to execute
-**Last session:** 2026-04-17T13:25:24.979Z
-**Stopped at:** Completed 44-02a-PLAN.md (Wave 2 runtime — B1 re-entry guard + B2 previousCursor threading + chooseLoopBranch + advanceOrReturnToLoop helper; runtime live, TS green, build green, full suite 388 passed/14 skipped/3 todo. Plan 02b will replace describe.skip blocks against unified-loop-valid.canvas; Plan 03 will replace runner-view exhaustiveness stub with real picker UI)
+**Last session:** 2026-04-17T13:34:58.158Z
+**Stopped at:** Completed 44-04-PLAN.md (RUN-07 legacy iteration-cap excision: settings + graph-model + parser + editor-panel; RUN-09 cycle guard untouched; full suite 389 passed; build green)
 
 ---
 
 ## Current Position
 
 Phase: 44 (unified-loop-runtime) — EXECUTING
-Plan: 3 of 5
+Plan: 4 of 5
 Status: Ready to execute
 Last activity: 2026-04-17
 
@@ -78,6 +78,7 @@ See: `.planning/PROJECT.md` (updated 2026-04-17)
 | Phase 43 P07 | 4min | 3 tasks | 4 files |
 | Phase 44 P01 | 2min | 2 tasks | 2 files |
 | Phase 44 P02a | 7min | 2 tasks | 6 files |
+| Phase 44 P04 | 5min | 2 tasks | 8 files |
 
 ## Accumulated Context
 
@@ -134,6 +135,7 @@ See: `.planning/PROJECT.md` (updated 2026-04-17)
 
 - Plan 44-01: Wave 0 scaffolding-before-runtime per Nyquist validation strategy. Created `src/__tests__/fixtures/unified-loop-nested.canvas` (6 nodes, 7 edges — outer 'Organ' + inner 'Lesion' loops) with frame-pop semantics — inner loop's «выход» edge (e5) points back UP to outer loop node `n-outer`, NOT to terminal `n-end`. This is what makes RUN-04 testable: exiting inner returns control to outer's picker rather than completing the protocol. Outer loop's «выход» (e3) points to terminal — symmetric with `unified-loop-valid.canvas` shape. Both loops pass GraphValidator LOOP-04 (verified by inline node script). Created `src/__tests__/runner/protocol-runner-loop-picker.test.ts` (24 lines, 3 `it.todo` entries) — `ProtocolRunner` import intentionally OMITTED at Wave 0; eslint-disable on unused `loadGraph` helper (Plan 44-02 will remove both when adding real assertions). Zero production code touched (every `src/runner/*`, `src/views/*`, `src/graph/*`, `src/sessions/*`, `src/settings.ts` file remains exactly as Phase 43 left it). Full suite: 388 passed + 14 skipped + 3 todo / 0 failed; build green.
 - Plan 44-02a: Replaced Phase 43 `case 'loop'` `transitionToError` stub with real runtime — **B1 re-entry guard** (top-of-`loopContextStack` check before frame push) handles back-edge re-entry (e.g. `e5: n-a1 → n-loop`) AND inner-«выход» landing on outer loop without pushing a second frame; **B2 `previousCursor` threading** at top of `advanceThrough` + 3 auto-advance cases threads predecessor through to the loop-entry undo push so step-back from picker restores the predecessor (or the loop node itself when `previousCursor=null`, preserving symmetric `canStepBack` across all picker states). New private helper `advanceOrReturnToLoop(next): 'continue' | 'halted'` replaces three identical `firstNeighbour-undefined → transitionToComplete` sites in `case 'start'` / `case 'text-block'` (non-snippet) / `case 'answer'`; inside a loop frame increments iteration + halts at picker, outside completes. Public `chooseLoopBranch(edgeId)` dispatches by literal Cyrillic `edge.label === 'выход'` (no trim, no lowercase) — body branch does NOT increment iteration (B1 owns increment) so iteration count = number of times user has seen the picker (Plan 02b RUN-02 expects iteration === 2 after one pick + dead-end return). Deleted Phase 43 D-14/D-18 deprecated relics: `chooseLoopAction` stub method + `AtNodeState.loopIterationLabel` + `AtNodeState.isAtLoopEnd`. Widened `PersistedSession.runnerStatus` + `getSerializableState` return type + `restoreFrom` param type to include `'awaiting-loop-pick'` (RUN-06 type half — round-trip integration test belongs to Plan 03). **Rule 3 deferred-compile-fix idiom:** cast deletions inside `describe.skip` blocks at `protocol-runner.test.ts:458` and `protocol-runner-session.test.ts:336` to `(runner as unknown as { chooseLoopAction(...): void }).chooseLoopAction(...)` so TS compile stays green; Plan 02b will rewrite these blocks against `unified-loop-valid.canvas`. **Rule 3 stub in runner-view.ts:** added minimal `awaiting-loop-pick` exhaustiveness arm with placeholder text + accumulated text + output toolbar; Plan 03 will replace with real picker render (headerText + edge buttons + step-back). `ProtocolRunner.maxIterations` RUN-09 cycle guard remains intact and untouched; iteration cap test stays green. Full suite: 388 passed + 14 skipped + 3 todo / 0 failed; `npx tsc --noEmit --skipLibCheck` exit 0; build green.
+- Plan 44-04: Excised the legacy per-loop iteration cap (RUN-07) per STATE.md Standing Pitfall #10. **Settings layer:** dropped `Notice` import + `RadiProtocolSettings.maxLoopIterations` + `DEFAULT_SETTINGS.maxLoopIterations` + the entire 'Group 4 — Protocol engine' Settings block (heading + Setting + onChange parseInt validation). **Type layer:** deleted `maxIterations: number` from `@deprecated LoopStartNode` (only that line; surrounding 3 fields + JSDoc preserved byte-identically). **Parser layer:** deleted `maxIterations: getNumber(props, 'radiprotocol_maxIterations', 50)` line in `case 'loop-start'` body (4-line case body remains). **Editor layer:** replaced 53-line legacy `case 'loop-start': { ... }` + `case 'loop-end': { ... }` form arms with a 9-line merged `case 'loop-start': case 'loop-end':` informational stub that names 'Legacy loop node' + the user-facing rebuild guidance. **TDD per task:** 4 commits in RED/GREEN order — `test(44-04): add failing RUN-07 absence test` for settings (`7893d02`) + `feat(44-04): excise maxLoopIterations from settings and dead test mocks` (`71859f5`) + `test(44-04): add failing RUN-07 absence test for parser` (`99bb5cf`) + `feat(44-04): excise legacy maxIterations from graph-model, parser, editor-panel` (`b40a07f`). **Rule 3 dead-mock cleanup:** `snippet-service.test.ts:79` and `snippet-service-move.test.ts:111` had orphan `maxLoopIterations: 50` entries in untyped settings-mock object literals (`as never`-cast — TS allowed them silently) — removed in the same commit as the field deletion so the plan-level grep gate (`grep -rn 'maxLoopIterations\|radiprotocol_maxIterations' src/ --include='*.ts' returns 0`) is enforceable. **Documentation-criterion mismatch:** done-criterion `grep -c 'D-10' src/__tests__/settings-tab.test.ts returns 0` conflicted with the explicit instruction to preserve the `UI-10/D-10: ...display method (stub check)` test verbatim — honoured the explicit instruction; final grep returns 1 (the stub-check name). **Critical retention:** `ProtocolRunner.maxIterations` (RUN-09 auto-advance cycle guard, default 50) intact and untouched — verified by 3 grep hits in protocol-runner.ts + 2 green tests in `describe('iteration cap (RUN-09, D-08)')`. Full suite: 389 passed + 14 skipped + 3 todo / 0 failed (+1 from new RUN-07 parser test); tsc green; build green. STATE.md Standing Pitfall #10 enforced; all 7 RUN requirements now satisfied across Phase 44 (Plan 03 outstanding for picker UI only).
 
 ---
 
