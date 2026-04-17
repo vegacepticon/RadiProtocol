@@ -331,20 +331,20 @@ export class EditorPanelView extends ItemView {
           .addOption('snippet', 'Snippet')         // Phase 29: D-06
           .setValue(currentKind ?? '')
           .onChange(value => {
-            // Rebuild kind form section (existing logic — preserved)
-            if (this.kindFormSection) {
-              this.kindFormSection.empty();
-              this.buildKindForm(
-                this.kindFormSection,
-                nodeRecord,
-                value ? (value as RPNodeKind) : null
-              );
-            }
-            // Immediate save with color + cancel debounce (D-04)
+            // Immediate save with color + cancel debounce (D-04) — must run first so
+            // the new type is in-flight before the re-render.
             this.onTypeDropdownChange(value);
-            // Phase 42: re-render the whole form so the empty-type hint is re-evaluated
-            // (it lives outside kindFormSection). renderForm is idempotent.
-            this.renderForm(nodeRecord, value ? (value as RPNodeKind) : null);
+            // Phase 42 (post-review WR-01/WR-02): re-render the whole form so the
+            // empty-type hint (which lives outside kindFormSection) is re-evaluated.
+            // Defer via queueMicrotask so the dropdown handler fully unwinds before
+            // contentEl is torn down (avoids re-entrancy on the live <select> element).
+            // Merge pendingEdits into the record copy so buildKindForm sees the newly
+            // picked type in field defaults instead of stale data from nodeRecord.
+            const mergedRecord = { ...nodeRecord, ...this.pendingEdits };
+            const nextKind = value ? (value as RPNodeKind) : null;
+            queueMicrotask(() => {
+              this.renderForm(mergedRecord, nextKind);
+            });
           });
       });
 
