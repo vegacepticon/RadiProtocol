@@ -100,7 +100,7 @@ Full details: `.planning/milestones/v1.6-ROADMAP.md`
 
 ### v1.7 Loop Rework & Regression Cleanup (Phases 43-46) — ACTIVE
 
-- [ ] **Phase 43: Unified Loop — Graph Model, Parser, Validator & Migration Errors** — Collapse `loop-start`/`loop-end` into a single `loop` node in the graph model and parser; add validator rules for the «выход» edge and reject legacy canvases with plain-language rebuild guidance
+- [x] **Phase 43: Unified Loop — Graph Model, Parser, Validator & Migration Errors** — Collapse `loop-start`/`loop-end` into a single `loop` node in the graph model and parser; add validator rules for the «выход» edge and reject legacy canvases with plain-language rebuild guidance (completed 2026-04-17)
 - [ ] **Phase 44: Unified Loop Runtime** — Replace loop-start/loop-end runtime with single-step picker (body branches + «выход»), dead-end-return behaviour, nested loop stack preservation, step-back, session save/resume, removal of `maxIterations`
 - [ ] **Phase 45: Loop Editor Form, Picker & Color Map** — Node Editor form for the unified `loop` node with editable `headerText` (no `maxIterations`), plus `NodePickerModal` and `NODE_COLOR_MAP` integration
 - [ ] **Phase 46: Free-Text-Input Removal** — Excise `free-text-input` from graph model, parser, validator, runner, editor, picker, color map, and test fixtures
@@ -165,7 +165,7 @@ Full details: `.planning/milestones/v1.6-ROADMAP.md`
 | 28-31 | v1.4 | 12/12 | Complete | 2026-04-15 |
 | 32-35 | v1.5 | 18/18 | Complete | 2026-04-16 |
 | 36-42 | v1.6 | 14/14 | Complete | 2026-04-17 |
-| 43 | v1.7 | 6/7 | In Progress|  |
+| 43 | v1.7 | 7/7 | Complete   | 2026-04-17 |
 | 44 | v1.7 | 0/? | Not started | — |
 | 45 | v1.7 | 0/? | Not started | — |
 | 46 | v1.7 | 0/? | Not started | — |
