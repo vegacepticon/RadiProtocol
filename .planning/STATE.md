@@ -1,35 +1,35 @@
 ---
 gsd_state_version: 1.0
-milestone: v1.6
-milestone_name: Polish & Canvas Workflow
-status: completed
-stopped_at: Completed 42-04-PLAN.md
-last_updated: "2026-04-17T07:04:09.375Z"
+milestone: v1.7
+milestone_name: Loop Rework & Regression Cleanup
+status: defining_requirements
+stopped_at: Milestone initialized — awaiting REQUIREMENTS.md + ROADMAP.md
+last_updated: "2026-04-17T00:00:00.000Z"
 last_activity: 2026-04-17
 progress:
-  total_phases: 7
-  completed_phases: 7
-  total_plans: 14
-  completed_plans: 14
-  percent: 100
+  total_phases: 0
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
+  percent: 0
 ---
 
 # RadiProtocol — Project State
 
-**Updated:** 2026-04-16
-**Milestone:** v1.6 — Polish & Canvas Workflow
-**Status:** v1.6 milestone complete
-**Last session:** 2026-04-17T06:32:01.371Z
-**Stopped at:** Completed 42-04-PLAN.md
+**Updated:** 2026-04-17
+**Milestone:** v1.7 — Loop Rework & Regression Cleanup
+**Status:** Defining requirements
+**Last session:** 2026-04-17
+**Stopped at:** Milestone initialized — requirements and roadmap pending
 
 ---
 
 ## Current Position
 
-Phase: 42
-Plan: Not started
-Status: Ready to execute
-Last activity: 2026-04-17
+Phase: Not started (defining requirements)
+Plan: —
+Status: Defining requirements
+Last activity: 2026-04-17 — Milestone v1.7 started
 
 Progress: [░░░░░░░░░░] 0%
 
@@ -37,10 +37,10 @@ Progress: [░░░░░░░░░░] 0%
 
 ## Project Reference
 
-See: `.planning/PROJECT.md` (updated 2026-04-16)
+See: `.planning/PROJECT.md` (updated 2026-04-17)
 
 **Core value:** A radiologist can generate a structured, accurate protocol in seconds by answering a guided algorithm — without writing a single line of code.
-**Current focus:** Phase 42 — snippet-node-creation-button-and-double-click-node-selection-fix
+**Current focus:** v1.7 — unify loop node; remove free-text-input regression
 
 ---
 

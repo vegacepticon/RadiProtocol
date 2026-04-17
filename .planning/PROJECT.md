@@ -8,6 +8,18 @@ An Obsidian community plugin that turns Canvas files into interactive protocol g
 
 A radiologist can generate a structured, accurate protocol in seconds by answering a guided algorithm — without writing a single line of code to build that algorithm.
 
+## Current Milestone: v1.7 Loop Rework & Regression Cleanup
+
+**Goal:** Simplify the loop-node model to a single unified node (replacing the loop-start/loop-end pair) and remove the regressed `free-text-input` node type.
+
+**Target features:**
+- Unified `loop` node that absorbs what `loop-start` + `loop-end` used to express
+- Outgoing edge labelled «выход» designates the exit branch; remaining outgoing edges are iteration bodies
+- Single-step iteration prompt: all body branches plus «выход» rendered together above an author-editable header text
+- Dead-end nodes inside any body branch return control to the loop node; nested loops preserved via existing `LoopContext` stack; `maxIterations` retired as redundant
+- Break-compatibility migration path: existing `loop-start` / `loop-end` pairs surface a clear validation error prompting the author to rebuild
+- Full removal of the `free-text-input` node kind — model, parser, validator, runner, editor, node picker, and color map — restoring the earlier v1.0 decision after the regression
+
 ## Requirements
 
 ### Validated (v1.0)
@@ -191,7 +203,7 @@ A radiologist can generate a structured, accurate protocol in seconds by answeri
 ## Current State
 
 **Shipped:** v1.6 Polish & Canvas Workflow (2026-04-17)
-**Current milestone:** — (planning next milestone)
+**Current milestone:** v1.7 Loop Rework & Regression Cleanup (started 2026-04-17)
 **Latest phases in v1.6:**
 - Phase 36 (2026-04-16): Dead code audit and cleanup — 8 exports internalized, 2 dead files deleted, 3 CSS rules + 3 RED stubs removed; "Тип JSON" spacing fix
 - Phase 37 (2026-04-16): Create folder button in snippet editor header; canvas-ref sync on folder rename
@@ -281,4 +293,4 @@ A radiologist can generate a structured, accurate protocol in seconds by answeri
 4. Update Context with current state
 
 ---
-*Last updated: 2026-04-17 after v1.6 milestone*
+*Last updated: 2026-04-17 — starting v1.7 milestone*
