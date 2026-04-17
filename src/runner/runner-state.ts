@@ -20,9 +20,15 @@ export interface AtNodeState {
   accumulatedText: string;
   /** true when undoStack is non-empty — avoids exposing the stack itself (D-02) */
   canStepBack: boolean;
-  /** Iteration label for display when inside a loop body (e.g., "Lesion 2") (LOOP-04) */
+  /**
+   * @deprecated Phase 43 D-14 — семантика меняется в Phase 44 (unified loop picker, RUN-01).
+   * В Phase 43 поле всегда undefined (runner-stub бросает error до достижения loop).
+   */
   loopIterationLabel?: string;
-  /** true when currentNodeId refers to a loop-end node — drives UI branch (LOOP-02) */
+  /**
+   * @deprecated Phase 43 D-14 — поле теряет смысл: loop-end kind больше не существует.
+   * Оставлено как undefined-only до Phase 44, которая заменит на полноценный picker-state.
+   */
   isAtLoopEnd?: boolean;
 }
 
