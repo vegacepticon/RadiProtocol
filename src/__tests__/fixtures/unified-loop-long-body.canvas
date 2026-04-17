@@ -1,0 +1,32 @@
+{
+  "nodes": [
+    { "id": "n-start", "type": "text", "text": "Start",     "x": 0,   "y": 0,    "width": 200, "height": 60, "radiprotocol_nodeType": "start" },
+    { "id": "n-loop",  "type": "text", "text": "Long body", "x": 0,   "y": 80,   "width": 200, "height": 60, "radiprotocol_nodeType": "loop",       "radiprotocol_headerText": "Long body" },
+    { "id": "n-t01",   "type": "text", "text": "T01",       "x": 260, "y": 160,  "width": 200, "height": 60, "radiprotocol_nodeType": "text-block", "radiprotocol_content": "T01" },
+    { "id": "n-t02",   "type": "text", "text": "T02",       "x": 260, "y": 240,  "width": 200, "height": 60, "radiprotocol_nodeType": "text-block", "radiprotocol_content": "T02" },
+    { "id": "n-t03",   "type": "text", "text": "T03",       "x": 260, "y": 320,  "width": 200, "height": 60, "radiprotocol_nodeType": "text-block", "radiprotocol_content": "T03" },
+    { "id": "n-t04",   "type": "text", "text": "T04",       "x": 260, "y": 400,  "width": 200, "height": 60, "radiprotocol_nodeType": "text-block", "radiprotocol_content": "T04" },
+    { "id": "n-t05",   "type": "text", "text": "T05",       "x": 260, "y": 480,  "width": 200, "height": 60, "radiprotocol_nodeType": "text-block", "radiprotocol_content": "T05" },
+    { "id": "n-t06",   "type": "text", "text": "T06",       "x": 260, "y": 560,  "width": 200, "height": 60, "radiprotocol_nodeType": "text-block", "radiprotocol_content": "T06" },
+    { "id": "n-t07",   "type": "text", "text": "T07",       "x": 260, "y": 640,  "width": 200, "height": 60, "radiprotocol_nodeType": "text-block", "radiprotocol_content": "T07" },
+    { "id": "n-t08",   "type": "text", "text": "T08",       "x": 260, "y": 720,  "width": 200, "height": 60, "radiprotocol_nodeType": "text-block", "radiprotocol_content": "T08" },
+    { "id": "n-t09",   "type": "text", "text": "T09",       "x": 260, "y": 800,  "width": 200, "height": 60, "radiprotocol_nodeType": "text-block", "radiprotocol_content": "T09" },
+    { "id": "n-t10",   "type": "text", "text": "T10",       "x": 260, "y": 880,  "width": 200, "height": 60, "radiprotocol_nodeType": "text-block", "radiprotocol_content": "T10" },
+    { "id": "n-end",   "type": "text", "text": "Done",      "x": 0,   "y": 960,  "width": 200, "height": 60, "radiprotocol_nodeType": "text-block", "radiprotocol_content": "Done" }
+  ],
+  "edges": [
+    { "id": "e1",  "fromNode": "n-start", "toNode": "n-loop" },
+    { "id": "e2",  "fromNode": "n-loop",  "toNode": "n-t01",  "label": "проверка" },
+    { "id": "e3",  "fromNode": "n-loop",  "toNode": "n-end",  "label": "выход" },
+    { "id": "e4",  "fromNode": "n-t01",   "toNode": "n-t02" },
+    { "id": "e5",  "fromNode": "n-t02",   "toNode": "n-t03" },
+    { "id": "e6",  "fromNode": "n-t03",   "toNode": "n-t04" },
+    { "id": "e7",  "fromNode": "n-t04",   "toNode": "n-t05" },
+    { "id": "e8",  "fromNode": "n-t05",   "toNode": "n-t06" },
+    { "id": "e9",  "fromNode": "n-t06",   "toNode": "n-t07" },
+    { "id": "e10", "fromNode": "n-t07",   "toNode": "n-t08" },
+    { "id": "e11", "fromNode": "n-t08",   "toNode": "n-t09" },
+    { "id": "e12", "fromNode": "n-t09",   "toNode": "n-t10" },
+    { "id": "e13", "fromNode": "n-t10",   "toNode": "n-loop" }
+  ]
+}
