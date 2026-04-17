@@ -261,6 +261,61 @@
 
 ---
 
+## Milestone: v1.6 — Polish & Canvas Workflow
+
+**Shipped:** 2026-04-17
+**Phases:** 7 | **Plans:** 14 | **Timeline:** 2 days (2026-04-16 → 2026-04-17)
+
+### What Was Built
+
+- Dead code audit: Knip-driven removal of 8 unused TS exports, 2 dead files, 3 legend CSS rules, 3 RED test stubs; async-mutex dependency restored (Phase 36)
+- Snippet editor polish: "Тип JSON" CSS flex-gap fix + "Создать папку" header button + live canvas-ref sync on folder rename (Phases 36, 37)
+- `CanvasNodeFactory` — first programmatic Canvas node creation service using Pattern B `createTextNode` internal API with runtime probing, auto-color, adjacent positioning (Phase 38)
+- Quick-create toolbar in Node Editor sidebar: Question, Answer, Snippet buttons (Phases 39, 42)
+- Node duplication preserving all `radiprotocol_*` properties + `text` field, no edge copy (Phase 40)
+- Hybrid live+disk `rewriteCanvasRefs` via `canvasLiveEditor.saveLive()` Pattern B with vault.modify() fallback (Phase 41)
+- Double-click-created node selection fix: in-memory `canvas.nodes.get()` fallback in `renderNodeForm`, `setTimeout(0)` deferred selection read, `dblclick` listener wiring (Phase 42)
+- Responsive toolbar at narrow sidebar widths via `flex-wrap: wrap` (Phase 42)
+
+### What Worked
+
+- **Pattern B runtime probing** in `CanvasNodeFactory` — graceful degradation with Notice when internal API unavailable; no hard coupling to undocumented Obsidian internals
+- **Reusing the factory across quick-create and duplicate** paid off — Phase 40 `onDuplicate` is 60 lines because factory owns ID generation, offset math, and color assignment
+- **In-memory `getData()` workaround** instead of arbitrary setTimeout for post-create editor load — Phase 39 moved away from the 150ms timer after discovering `result.canvasNode.getData()` bypasses the async-flush race cleanly
+- **UAT gap-closure plans (42-03, 42-04)** replanned within the same phase instead of creating new phases — tight feedback loop, no milestone drift
+- **`queueMicrotask` + `pendingEdits` merge** (Phase 42 WR-01/WR-02 post-review fix) — defers re-render off the event stack and preserves user input across type-change re-renders
+
+### What Was Inefficient
+
+- **6 plans missed `requirements_completed` frontmatter** in SUMMARY.md (37-01, 37-02, 38-01, 38-02, 39-01, 41-01) — milestone audit had to cross-reference VERIFICATION.md evidence manually; should be a TaskCreate/executor post-condition check
+- **All 7 VALIDATION.md files stayed `draft` / `nyquist_compliant: false`** — Nyquist formalism was never completed despite 394/394 tests passing; deferred as documented tech debt
+- **Branch accumulated 319 commits ahead of main without interim merges** — not a regression risk (clean fast-forward) but left `main` very stale; should merge after each milestone close, not batch
+- **Housekeeping commit captured 160 deleted + 24 new artifacts** left over from prior milestone close reorganizations — should have been cleaned up at the close of each milestone in which they were produced
+
+### Patterns Established
+
+- **Runtime internal-API probing** as a first-class design pattern for any Obsidian internal call path: `typeof canvas.X !== 'function'` + Notice fallback
+- **Factory-first node creation** — all new-node code paths (quick-create, duplicate, future templates) route through one `CanvasNodeFactory.createNode()` to share ID / offset / color logic
+- **Hybrid live+disk paths with `isLiveAvailable` guard + per-iteration fallback flag** — generalized from Phase 41 `rewriteCanvasRefs`, applicable to any future bulk-canvas-rewrite feature
+- **Append-only CSS banner convention** (`/* Phase N: ... */`) caught by both verifier and reviewer — prevented multiple near-regressions in `editor-panel.css` and `snippet-manager.css`
+- **Plan-local `PHASE42-*` requirement IDs for gap-closure plans** — UAT-discovered gap plans use phase-local IDs, not pre-registered REQUIREMENTS.md entries; documented as acceptable in milestone audit
+
+### Key Lessons
+
+1. **Runtime probing beats hard coupling** — `CanvasNodeFactory` doesn't crash on Obsidian version change; it shows a Notice. This pattern should extend to every other undocumented internal (`saveLive`, `canvas.nodes`, `createTextNode`).
+2. **UAT gap-closure as same-phase plans, not new phases** — Phase 42 Plans 03 and 04 stayed under Phase 42's requirement umbrella; cleaner than spawning Phase 43 for "fix the Phase 42 gaps."
+3. **Post-review fixes can pile up** — WR-01/WR-02 in both Phase 41 (saveLive mutex) and Phase 42 (queueMicrotask) landed *after* initial verification. Code review should run before verification status = passed, not after.
+4. **`queueMicrotask` is the answer for re-entrant renderers** — synchronous re-render of the view you're currently inside triggers stale closures; deferring with microtask breaks the cycle without introducing visual lag.
+5. **Merge early, merge often** — 319-commit ahead-of-main is a code smell even when it's a clean fast-forward. Do the `main` merge at every milestone close, not "eventually."
+
+### Cost Observations
+
+- Model mix: quality profile (Opus 4.6/4.7 primary for planning and verification; Sonnet for executors)
+- Sessions: ~4 sessions over 2 days
+- Notable: Phase 42 was the largest v1.6 phase (4 plans — 2 original + 2 UAT gap-closure). Phases 40 (duplicate) and 41 (live canvas update) were surgical — 1 plan each, clean verification. Phase 36 dead-code audit completed in 2 plans on day 1 and set up Phase 37-42 with a clean baseline.
+
+---
+
 ## Cross-Milestone Trends
 
 ### Process Evolution
@@ -272,6 +327,7 @@
 | v1.3 | 1 | 1 | Smallest milestone — single feature; skipped `/gsd-new-milestone`; structural debt repaired at close |
 | v1.4 | 4 | 12 | Formal `/gsd-new-milestone` used; mid-milestone scope extension (Phase 31 added); re-audit recovery pattern proven |
 | v1.5 | 4 | 18 | Largest plan count; rewriteCanvasRefs cross-phase reuse validated; post-UAT fix pattern established; 34 requirements — most requirement-dense milestone |
+| v1.6 | 7 | 14 | Most phases in a single milestone; first Pattern B internal-API probing (CanvasNodeFactory); UAT gap-closure as same-phase plans (42-03, 42-04); live+disk hybrid pattern for canvas rewrites (Phase 41) |
 
 ### Cumulative Quality
 
