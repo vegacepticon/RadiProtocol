@@ -133,6 +133,78 @@ export class CanvasLiveEditor {
   }
 
   /**
+   * Phase 41 WR-01: Batched live save — applies all edits in a single
+   * `getData → mutate all → setData → requestSave` cycle so callers observe
+   * atomic all-or-nothing semantics from the live view's perspective.
+   *
+   * Returns true if all edits applied successfully; returns false without
+   * touching the view if:
+   *   - The canvas view is not available (closed, or Pattern B API missing)
+   *   - Any target nodeId is not present in the current canvas data
+   *
+   * This avoids the write-order race where per-node `saveLive` mutates the
+   * live view partially and then falls through to `vault.modify`, leaving a
+   * pending debounced `requestSave` to overwrite the disk write (WR-01).
+   */
+  async saveLiveBatch(
+    filePath: string,
+    nodeEdits: Array<{ nodeId: string; edits: Record<string, unknown> }>
+  ): Promise<boolean> {
+    const view = this.getCanvasView(filePath);
+    if (!view) return false;
+    if (nodeEdits.length === 0) return true;
+
+    const originalData: CanvasData = view.canvas.getData();
+    const updatedData: CanvasData = view.canvas.getData();
+
+    // First pass: locate every target node; bail without mutating if any missing
+    const targets: Array<{ node: CanvasNodeData; edits: Record<string, unknown> }> = [];
+    for (const { nodeId, edits } of nodeEdits) {
+      const node = updatedData.nodes.find((n: CanvasNodeData) => n.id === nodeId);
+      if (!node) return false;
+      targets.push({ node, edits });
+    }
+
+    // Second pass: apply edits to each target's copy
+    for (const { node, edits } of targets) {
+      const isUnmarking =
+        'radiprotocol_nodeType' in edits &&
+        (edits['radiprotocol_nodeType'] === '' || edits['radiprotocol_nodeType'] === undefined);
+
+      if (isUnmarking) {
+        for (const key of Object.keys(node)) {
+          if (key.startsWith('radiprotocol_')) {
+            delete node[key as keyof CanvasNodeData];
+          }
+        }
+        delete node['color' as keyof CanvasNodeData];
+      } else {
+        for (const [key, value] of Object.entries(edits)) {
+          if (PROTECTED_FIELDS.has(key)) continue;
+          if (value === undefined) {
+            delete node[key as keyof CanvasNodeData];
+          } else {
+            (node as Record<string, unknown>)[key] = value;
+          }
+        }
+      }
+    }
+
+    try {
+      view.canvas.setData(updatedData);
+      this.debouncedRequestSave(filePath, view);
+      return true;
+    } catch (err) {
+      try {
+        view.canvas.setData(originalData);
+      } catch (rollbackErr) {
+        console.error('[RadiProtocol] Canvas rollback failed — canvas may be in inconsistent state:', rollbackErr);
+      }
+      throw err;
+    }
+  }
+
+  /**
    * Debounced requestSave — at most one requestSave() per 500ms per canvas file (D-06, T-11-03).
    */
   private debouncedRequestSave(filePath: string, view: CanvasViewInternal): void {

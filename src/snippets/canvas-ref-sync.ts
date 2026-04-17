@@ -52,111 +52,109 @@ export async function rewriteCanvasRefs(
     .filter((f) => f.extension === 'canvas');
 
   for (const file of canvasFiles) {
-    try {
-      // Phase 41: Try live canvas update first (Pattern B)
-      if (canvasLiveEditor && canvasLiveEditor.isLiveAvailable(file.path)) {
-        try {
-          const liveJson = canvasLiveEditor.getCanvasJSON(file.path);
-          if (liveJson) {
-            const liveParsed = JSON.parse(liveJson) as { nodes?: unknown[] };
-            if (liveParsed && Array.isArray(liveParsed.nodes)) {
-              // Collect matching nodes and their edits
-              const editsToApply: Array<{ nodeId: string; edits: Record<string, unknown> }> = [];
-              for (const node of liveParsed.nodes as Array<Record<string, unknown>>) {
-                if (!node || typeof node !== 'object') continue;
-                if (node['radiprotocol_nodeType'] !== 'snippet') continue;
-                const current = node['radiprotocol_subfolderPath'];
-                if (typeof current !== 'string' || current === '') continue;
-                const rewritten = applyMapping(current, mapping);
-                if (rewritten !== null && rewritten !== current) {
-                  // WR-02: guard node.id — malformed canvases may have missing or
-                  // non-string ids. Without this guard, saveLive would receive
-                  // `undefined` and either mutate the wrong node or return false.
-                  const id = node['id'];
-                  if (typeof id !== 'string' || id === '') continue;
-                  const nodeEdits: Record<string, unknown> = {
-                    radiprotocol_subfolderPath: rewritten,
-                  };
-                  const currentText = node['text'];
-                  if (typeof currentText === 'string' && currentText !== '') {
-                    const rewrittenText = applyMapping(currentText, mapping);
-                    if (rewrittenText !== null && rewrittenText !== currentText) {
-                      nodeEdits['text'] = rewrittenText;
-                    }
-                  }
-                  editsToApply.push({ nodeId: id, edits: nodeEdits });
-                }
-              }
-
-              if (editsToApply.length === 0) continue; // No matching nodes
-
-              // Apply edits via saveLive; if any fails, fall back to vault.modify
-              let liveFailed = false;
-              for (const { nodeId, edits } of editsToApply) {
-                const ok = await canvasLiveEditor.saveLive(file.path, nodeId, edits);
-                if (!ok) {
-                  liveFailed = true;
-                  break;
-                }
-              }
-
-              if (!liveFailed) {
-                updated.push(file.path);
-                continue; // Skip vault.modify -- saveLive handles persistence
-              }
-              // liveFailed: fall through to vault.modify path below
-            }
-          }
-        } catch (e) {
-          // Live path error -- fall through to vault.modify path
-          console.error('[RadiProtocol] canvas-ref-sync live path:', file.path, (e as Error).message);
-        }
-      }
-
-      const raw = await app.vault.read(file);
-      let parsed: { nodes?: unknown[]; edges?: unknown[] };
+    // Phase 41 WR-03: wrap BOTH the live path and the vault.modify fallback in
+    // the per-file mutex so concurrent rewriteCanvasRefs invocations for the
+    // same canvas cannot interleave saveLiveBatch with vault.modify.
+    await canvasMutex.runExclusive(file.path, async () => {
       try {
-        parsed = JSON.parse(raw);
-      } catch (e) {
-        const reason = `invalid JSON: ${(e as Error).message}`;
-        console.error('[RadiProtocol] canvas-ref-sync:', file.path, reason);
-        skipped.push({ path: file.path, reason });
-        continue;
-      }
+        // Phase 41: Try live canvas update first (Pattern B)
+        if (canvasLiveEditor && canvasLiveEditor.isLiveAvailable(file.path)) {
+          try {
+            const liveJson = canvasLiveEditor.getCanvasJSON(file.path);
+            if (liveJson) {
+              const liveParsed = JSON.parse(liveJson) as { nodes?: unknown[] };
+              if (liveParsed && Array.isArray(liveParsed.nodes)) {
+                // Collect matching nodes and their edits
+                const editsToApply: Array<{ nodeId: string; edits: Record<string, unknown> }> = [];
+                for (const node of liveParsed.nodes as Array<Record<string, unknown>>) {
+                  if (!node || typeof node !== 'object') continue;
+                  if (node['radiprotocol_nodeType'] !== 'snippet') continue;
+                  const current = node['radiprotocol_subfolderPath'];
+                  if (typeof current !== 'string' || current === '') continue;
+                  const rewritten = applyMapping(current, mapping);
+                  if (rewritten !== null && rewritten !== current) {
+                    // WR-02: guard node.id — malformed canvases may have missing or
+                    // non-string ids. Without this guard, saveLive would receive
+                    // `undefined` and either mutate the wrong node or return false.
+                    const id = node['id'];
+                    if (typeof id !== 'string' || id === '') continue;
+                    const nodeEdits: Record<string, unknown> = {
+                      radiprotocol_subfolderPath: rewritten,
+                    };
+                    const currentText = node['text'];
+                    if (typeof currentText === 'string' && currentText !== '') {
+                      const rewrittenText = applyMapping(currentText, mapping);
+                      if (rewrittenText !== null && rewrittenText !== currentText) {
+                        nodeEdits['text'] = rewrittenText;
+                      }
+                    }
+                    editsToApply.push({ nodeId: id, edits: nodeEdits });
+                  }
+                }
 
-      if (!parsed || !Array.isArray(parsed.nodes)) {
-        // Not a canvas document we recognise — skip silently.
-        continue;
-      }
+                if (editsToApply.length === 0) return; // No matching nodes
 
-      let mutated = false;
-      for (const node of parsed.nodes as Array<Record<string, unknown>>) {
-        if (!node || typeof node !== 'object') continue;
-        if (node['radiprotocol_nodeType'] !== 'snippet') continue;
-        const current = node['radiprotocol_subfolderPath'];
-        // WR-02: treat null/empty/missing as "root" — no rewrite possible
-        if (typeof current !== 'string' || current === '') continue;
-
-        const rewritten = applyMapping(current, mapping);
-        if (rewritten !== null && rewritten !== current) {
-          node['radiprotocol_subfolderPath'] = rewritten;
-          // Phase 37 gap fix: also update text field so canvas displays new name.
-          // Canvas nodes store subfolderPath in both `text` (visual) and
-          // `radiprotocol_subfolderPath` (logical). Apply the same mapping to text.
-          const currentText = node['text'];
-          if (typeof currentText === 'string' && currentText !== '') {
-            const rewrittenText = applyMapping(currentText, mapping);
-            if (rewrittenText !== null && rewrittenText !== currentText) {
-              node['text'] = rewrittenText;
+                // Phase 41 WR-01: batched live save — applies every edit in a
+                // single setData + single debounced requestSave. If it fails,
+                // the view is left untouched (no partial mutation, no stale
+                // pending debounce timer to race vault.modify).
+                const ok = await canvasLiveEditor.saveLiveBatch(file.path, editsToApply);
+                if (ok) {
+                  updated.push(file.path);
+                  return; // Skip vault.modify -- saveLiveBatch handles persistence
+                }
+                // live save failed: fall through to vault.modify path below
+              }
             }
+          } catch (e) {
+            // Live path error -- fall through to vault.modify path
+            console.error('[RadiProtocol] canvas-ref-sync live path:', file.path, (e as Error).message);
           }
-          mutated = true;
         }
-      }
 
-      if (!mutated) continue;
+        const raw = await app.vault.read(file);
+        let parsed: { nodes?: unknown[]; edges?: unknown[] };
+        try {
+          parsed = JSON.parse(raw);
+        } catch (e) {
+          const reason = `invalid JSON: ${(e as Error).message}`;
+          console.error('[RadiProtocol] canvas-ref-sync:', file.path, reason);
+          skipped.push({ path: file.path, reason });
+          return;
+        }
 
-      await canvasMutex.runExclusive(file.path, async () => {
+        if (!parsed || !Array.isArray(parsed.nodes)) {
+          // Not a canvas document we recognise — skip silently.
+          return;
+        }
+
+        let mutated = false;
+        for (const node of parsed.nodes as Array<Record<string, unknown>>) {
+          if (!node || typeof node !== 'object') continue;
+          if (node['radiprotocol_nodeType'] !== 'snippet') continue;
+          const current = node['radiprotocol_subfolderPath'];
+          // WR-02: treat null/empty/missing as "root" — no rewrite possible
+          if (typeof current !== 'string' || current === '') continue;
+
+          const rewritten = applyMapping(current, mapping);
+          if (rewritten !== null && rewritten !== current) {
+            node['radiprotocol_subfolderPath'] = rewritten;
+            // Phase 37 gap fix: also update text field so canvas displays new name.
+            // Canvas nodes store subfolderPath in both `text` (visual) and
+            // `radiprotocol_subfolderPath` (logical). Apply the same mapping to text.
+            const currentText = node['text'];
+            if (typeof currentText === 'string' && currentText !== '') {
+              const rewrittenText = applyMapping(currentText, mapping);
+              if (rewrittenText !== null && rewrittenText !== currentText) {
+                node['text'] = rewrittenText;
+              }
+            }
+            mutated = true;
+          }
+        }
+
+        if (!mutated) return;
+
         try {
           const next = JSON.stringify(parsed, null, 2);
           await app.vault.modify(file, next);
@@ -166,13 +164,12 @@ export async function rewriteCanvasRefs(
           console.error('[RadiProtocol] canvas-ref-sync:', file.path, reason);
           skipped.push({ path: file.path, reason });
         }
-      });
-    } catch (e) {
-      const reason = `read failed: ${(e as Error).message}`;
-      console.error('[RadiProtocol] canvas-ref-sync:', file.path, reason);
-      skipped.push({ path: file.path, reason });
-      continue;
-    }
+      } catch (e) {
+        const reason = `read failed: ${(e as Error).message}`;
+        console.error('[RadiProtocol] canvas-ref-sync:', file.path, reason);
+        skipped.push({ path: file.path, reason });
+      }
+    });
   }
 
   return { updated, skipped };

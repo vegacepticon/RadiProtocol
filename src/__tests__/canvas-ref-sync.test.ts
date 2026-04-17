@@ -284,19 +284,25 @@ describe('rewriteCanvasRefs', () => {
 function makeLiveEditor(opts: {
   liveFiles?: Set<string>;
   canvasData?: Record<string, string>;
-  saveLiveResult?: boolean | ((filePath: string, nodeId: string) => boolean);
+  // Phase 41 WR-01: switched to batched save API. `saveLiveResult` now applies
+  // to the single saveLiveBatch call per canvas.
+  saveLiveResult?:
+    | boolean
+    | ((filePath: string, nodeEdits: Array<{ nodeId: string; edits: Record<string, unknown> }>) => boolean);
 }) {
-  const saveLiveSpy = vi.fn(async (fp: string, nid: string, _edits: Record<string, unknown>) => {
-    if (typeof opts.saveLiveResult === 'function') return opts.saveLiveResult(fp, nid);
-    return opts.saveLiveResult ?? true;
-  });
+  const saveLiveBatchSpy = vi.fn(
+    async (fp: string, nodeEdits: Array<{ nodeId: string; edits: Record<string, unknown> }>) => {
+      if (typeof opts.saveLiveResult === 'function') return opts.saveLiveResult(fp, nodeEdits);
+      return opts.saveLiveResult ?? true;
+    },
+  );
   return {
     editor: {
       isLiveAvailable: (fp: string) => opts.liveFiles?.has(fp) ?? false,
       getCanvasJSON: (fp: string) => opts.canvasData?.[fp] ?? null,
-      saveLive: saveLiveSpy,
+      saveLiveBatch: saveLiveBatchSpy,
     },
-    saveLiveSpy,
+    saveLiveBatchSpy,
   };
 }
 
@@ -309,7 +315,7 @@ describe('rewriteCanvasRefs with CanvasLiveEditor', () => {
     vi.spyOn(console, 'error').mockImplementation(() => {});
   });
 
-  it('live path: saveLive called, vault.modify skipped', async () => {
+  it('live path: saveLiveBatch called once with all node edits, vault.modify skipped', async () => {
     const canvasPath = 'protocols/live.canvas';
     const canvasJSON = JSON.stringify({
       nodes: [
@@ -331,11 +337,12 @@ describe('rewriteCanvasRefs with CanvasLiveEditor', () => {
 
     const result = await rewriteCanvasRefs(app.app, mapping, liveEditor.editor as any);
 
-    expect(liveEditor.saveLiveSpy).toHaveBeenCalledTimes(1);
-    expect(liveEditor.saveLiveSpy).toHaveBeenCalledWith(
+    expect(liveEditor.saveLiveBatchSpy).toHaveBeenCalledTimes(1);
+    expect(liveEditor.saveLiveBatchSpy).toHaveBeenCalledWith(
       canvasPath,
-      's1',
-      { radiprotocol_subfolderPath: 'a/c', text: 'a/c' },
+      [
+        { nodeId: 's1', edits: { radiprotocol_subfolderPath: 'a/c', text: 'a/c' } },
+      ],
     );
     expect(app.modifySpy).toHaveBeenCalledTimes(0);
     expect(result.updated).toContain(canvasPath);
@@ -363,12 +370,12 @@ describe('rewriteCanvasRefs with CanvasLiveEditor', () => {
 
     const result = await rewriteCanvasRefs(app.app, mapping, liveEditor.editor as any);
 
-    expect(liveEditor.saveLiveSpy).not.toHaveBeenCalled();
+    expect(liveEditor.saveLiveBatchSpy).not.toHaveBeenCalled();
     expect(app.modifySpy).toHaveBeenCalledTimes(1);
     expect(result.updated).toContain(canvasPath);
   });
 
-  it('mid-iteration fallback: saveLive returns false triggers vault.modify', async () => {
+  it('fallback: saveLiveBatch returns false triggers vault.modify (WR-01)', async () => {
     const canvasPath = 'protocols/mid.canvas';
     const canvasJSON = JSON.stringify({
       nodes: [
@@ -391,18 +398,25 @@ describe('rewriteCanvasRefs with CanvasLiveEditor', () => {
     const liveEditor = makeLiveEditor({
       liveFiles: new Set([canvasPath]),
       canvasData: { [canvasPath]: canvasJSON },
-      saveLiveResult: (_fp: string, nid: string) => nid !== 's2',
+      // Batched API: a single call, returning false, triggers the fallback
+      saveLiveResult: false,
     });
     const mapping = new Map<string, string>([['a/b', 'a/c']]);
 
     const result = await rewriteCanvasRefs(app.app, mapping, liveEditor.editor as any);
 
-    expect(liveEditor.saveLiveSpy).toHaveBeenCalled();
+    // WR-01: saveLiveBatch is called exactly once per canvas; on failure the
+    // view is left untouched and vault.modify is the single recorded writer.
+    expect(liveEditor.saveLiveBatchSpy).toHaveBeenCalledTimes(1);
+    expect(liveEditor.saveLiveBatchSpy.mock.calls[0]![1]).toEqual([
+      { nodeId: 's1', edits: { radiprotocol_subfolderPath: 'a/c', text: 'a/c' } },
+      { nodeId: 's2', edits: { radiprotocol_subfolderPath: 'a/c', text: 'a/c' } },
+    ]);
     expect(app.modifySpy).toHaveBeenCalledTimes(1);
     expect(result.updated).toContain(canvasPath);
   });
 
-  it('multi-node live: all matching nodes get saveLive', async () => {
+  it('multi-node live: all matching nodes delivered in a single batch', async () => {
     const canvasPath = 'protocols/multi.canvas';
     const canvasJSON = JSON.stringify({
       nodes: [
@@ -435,7 +449,11 @@ describe('rewriteCanvasRefs with CanvasLiveEditor', () => {
 
     const result = await rewriteCanvasRefs(app.app, mapping, liveEditor.editor as any);
 
-    expect(liveEditor.saveLiveSpy).toHaveBeenCalledTimes(2);
+    expect(liveEditor.saveLiveBatchSpy).toHaveBeenCalledTimes(1);
+    // Batch contains both snippet nodes; non-snippet nodes are excluded.
+    const batchArg = liveEditor.saveLiveBatchSpy.mock.calls[0]![1];
+    expect(batchArg).toHaveLength(2);
+    expect(batchArg.map((e: { nodeId: string }) => e.nodeId).sort()).toEqual(['s1', 's2']);
     expect(app.modifySpy).not.toHaveBeenCalled();
     expect(result.updated).toContain(canvasPath);
   });
@@ -469,9 +487,9 @@ describe('rewriteCanvasRefs with CanvasLiveEditor', () => {
 
     const result = await rewriteCanvasRefs(app.app, mapping, liveEditor.editor as any);
 
-    // saveLive called for open canvas
-    expect(liveEditor.saveLiveSpy).toHaveBeenCalledTimes(1);
-    expect(liveEditor.saveLiveSpy.mock.calls[0]![0]).toBe(openPath);
+    // saveLiveBatch called once for open canvas
+    expect(liveEditor.saveLiveBatchSpy).toHaveBeenCalledTimes(1);
+    expect(liveEditor.saveLiveBatchSpy.mock.calls[0]![0]).toBe(openPath);
     // vault.modify called once for closed canvas only
     expect(app.modifySpy).toHaveBeenCalledTimes(1);
     expect(result.updated).toContain(openPath);
