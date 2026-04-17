@@ -303,7 +303,10 @@ describe('EditorPanelView double-click fallback + empty-type hint', () => {
 
     // TFile mock — must be a real TFile instance so the `instanceof TFile` check
     // inside renderNodeForm passes. Default: disk JSON has no matching node.
-    const tfile = new TFile('test.canvas');
+    // The real Obsidian TFile constructor takes no args; our mock accepts an
+    // optional path, so use `Object.assign` to attach the path without violating
+    // the public type signature.
+    const tfile = Object.assign(new TFile(), { path: 'test.canvas' });
     mockVault = {
       getAbstractFileByPath: vi.fn().mockReturnValue(tfile),
       read: vi.fn().mockResolvedValue(JSON.stringify({ nodes: [], edges: [] })),
