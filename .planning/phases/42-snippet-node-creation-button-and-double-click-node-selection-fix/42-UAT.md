@@ -53,21 +53,30 @@ result: pass
 
 total: 6
 passed: 6
-issues: 1
+issues: 2
 pending: 0
 skipped: 0
 
 ## Gaps
 
 - truth: "After double-click creates a new canvas node, the Node Editor panel should automatically switch to that newly-created (selected) node so the user can immediately pick its type without extra clicks."
-  status: out_of_scope
+  status: failed
   reason: "User reported: после создания ноды двойным кликом — нода выделена, но Node Editor не переключается на неё. Нужно снять выделение и снова кликнуть по ноде. Много лишних кликов."
   severity: minor
   test: 1
-  artifacts: []
+  artifacts:
+    - src/views/editor-panel-view.ts (renderNodeForm — in-memory fallback from Phase 42 Plan 01 uses canvas.nodes.get(nodeId).getData() when disk read misses)
+    - src/views/editor-panel-view.ts (renderToolbar + onQuickCreate — already implement the desired auto-load pipeline for button-created nodes)
   missing:
-    - "auto-select-on-double-click behavior in EditorPanelView canvas selection sync"
-  note: "Out-of-scope for Phase 42 (Phase 42 only fixes the disk-miss fallback). Candidate for new follow-up phase."
+    - "Wire the Phase 42 Plan 01 in-memory fallback into the canvas selection-change handler so double-click-created nodes auto-load the editor form, reusing the same pipeline the Create question/answer/snippet buttons already use."
+  note: |
+    Reclassified to in_scope after discussion with user. User's insight: the quick-create button
+    pipeline (flush → createNode → renderForm via in-memory bypass) is exactly the same behavior
+    needed for double-click creation. The Phase 42 Plan 01 in-memory fallback (canvas.nodes.get(id)
+    .getData() on disk miss) is already in place inside renderNodeForm; the missing piece is
+    triggering that flow from the canvas selection-change event rather than requiring a manual
+    single-click after the double-click. Fix reuses existing infrastructure — no new events, no
+    new factory calls. Batch this fix alongside the toolbar responsive fix in /gsd-plan-phase 42 --gaps.
 
 - truth: "Editor toolbar must remain usable at narrow sidebar widths — all 4 buttons (Create question / Create answer / Create snippet / Duplicate) should stay reachable (via wrap, horizontal scroll, or icon-only mode)."
   status: failed
