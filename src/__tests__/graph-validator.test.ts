@@ -110,26 +110,9 @@ describe('GraphValidator', () => {
       expect(errors.some(e => e.toLowerCase().includes('unreachable') || e.toLowerCase().includes('reach'))).toBe(true);
     });
 
-    it('detects orphaned loop-end node', () => {
-      const orphanLoopEndJson = JSON.stringify({
-        nodes: [
-          { id: 'n-start', type: 'text', text: 'Start', x: 0, y: 0, width: 100, height: 60,
-            radiprotocol_nodeType: 'start' },
-          { id: 'n-le', type: 'text', text: 'LoopEnd', x: 0, y: 120, width: 100, height: 60,
-            radiprotocol_nodeType: 'loop-end', radiprotocol_loopStartId: 'nonexistent-id' }
-        ],
-        edges: [
-          { id: 'e1', fromNode: 'n-start', toNode: 'n-le' }
-        ]
-      });
-      const parser = new CanvasParser();
-      const result = parser.parse(orphanLoopEndJson, 'orphan-loop-end.canvas');
-      expect(result.success).toBe(true);
-      if (!result.success) return;
-      const validator = new GraphValidator();
-      const errors = validator.validate(result.graph);
-      expect(errors.some(e => e.toLowerCase().includes('loop') || e.toLowerCase().includes('orphan'))).toBe(true);
-    });
+    // Phase 43 D-10: test 'detects orphaned loop-end node' удалён — Check 6 исчез из validator'а
+    // вместе с LoopEndNode kind. Legacy loop-end узлы теперь ловятся Migration Check'ом (MIGRATE-01),
+    // см. тесты в describe 'GraphValidator — Phase 43: unified loop + migration' ниже.
 
     it('returns all errors as plain English strings, not code exceptions (PARSE-08)', () => {
       const graph = parseFixture('dead-end.canvas');
@@ -143,14 +126,11 @@ describe('GraphValidator', () => {
     });
   });
 
-  describe('loop validation (LOOP-01, LOOP-06)', () => {
-    it('valid loop-body graph passes validation with zero errors (LOOP-01)', () => {
-      const graph = parseFixture('loop-body.canvas');
-      const validator = new GraphValidator();
-      const errors = validator.validate(graph);
-      expect(errors).toHaveLength(0);
-    });
-  });
+  // Phase 43 D-16 + D-19: loop-body.canvas и loop-start.canvas теперь legacy канвасы.
+  // Проверка happy-path для unified loop — см. тест 'unified-loop-valid.canvas passes ...'
+  // в describe 'GraphValidator — Phase 43' ниже.
+  // Сам describe-блок loop validation удалён: единственный его тест переформулирован в
+  // MIGRATE-01 (legacy → migration-error) в Phase 43-тестах ниже.
 });
 
 describe('GraphValidator — Phase 31: mixed and snippet-only question branches', () => {
@@ -210,5 +190,132 @@ describe('GraphValidator — snippet node (Phase 29, D-12)', () => {
     const validator = new GraphValidator();
     const errors = validator.validate(graph);
     expect(errors).toHaveLength(0);
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Phase 43 D-19 — LOOP-04 + MIGRATE-01 + cycle-through-loop tests
+// ─────────────────────────────────────────────────────────────────────────────
+describe('GraphValidator — Phase 43: unified loop + migration (LOOP-04, MIGRATE-01)', () => {
+
+  // ── LOOP-04 happy path ──────────────────────────────────────────────────────
+  it('unified-loop-valid.canvas passes LOOP-04 checks (no «выход» / body errors)', () => {
+    // Fixture: один loop узел с ровно одним ребром «выход» + body-веткой (back-edge).
+    const graph = parseFixture('unified-loop-valid.canvas');
+    const validator = new GraphValidator();
+    const errors = validator.validate(graph);
+    // Не должно быть LOOP-04-специфичных ошибок. (Другие checks могут что-то вернуть —
+    // тест-контракт: отсутствие именно LOOP-04 сообщений.)
+    expect(errors.some(e => e.includes('не имеет ребра «выход»'))).toBe(false);
+    expect(errors.some(e => e.includes('имеет несколько рёбер «выход»'))).toBe(false);
+    expect(errors.some(e => e.includes('не имеет ни одной body-ветви'))).toBe(false);
+    // И никаких migration-ошибок (в этом канвасе нет legacy узлов):
+    expect(errors.some(e => e.includes('устаревшие узлы loop-start/loop-end'))).toBe(false);
+  });
+
+  // ── LOOP-04 D-08.1 missing «выход» ──────────────────────────────────────────
+  it('unified-loop-missing-exit.canvas flags missing «выход» edge (D-08.1)', () => {
+    const graph = parseFixture('unified-loop-missing-exit.canvas');
+    const validator = new GraphValidator();
+    const errors = validator.validate(graph);
+    expect(
+      errors.some(e => e.includes('«выход»') && e.includes('не имеет ребра')),
+    ).toBe(true);
+  });
+
+  // ── LOOP-04 D-08.2 duplicate «выход» (with edge IDs) ────────────────────────
+  it('unified-loop-duplicate-exit.canvas flags duplicate «выход» edges with edge IDs (D-08.2)', () => {
+    const graph = parseFixture('unified-loop-duplicate-exit.canvas');
+    const validator = new GraphValidator();
+    const errors = validator.validate(graph);
+    expect(
+      errors.some(e => e.includes('несколько рёбер «выход»')),
+    ).toBe(true);
+    // Обе edge-ID (e3, e4 в fixture) должны упоминаться в error-строке.
+    const duplicateErr = errors.find(e => e.includes('несколько рёбер «выход»'));
+    expect(duplicateErr).toBeDefined();
+    if (duplicateErr === undefined) return;
+    expect(duplicateErr).toContain('e3');
+    expect(duplicateErr).toContain('e4');
+  });
+
+  // ── LOOP-04 D-08.3 no body ──────────────────────────────────────────────────
+  it('unified-loop-no-body.canvas flags no-body-branch (D-08.3)', () => {
+    const graph = parseFixture('unified-loop-no-body.canvas');
+    const validator = new GraphValidator();
+    const errors = validator.validate(graph);
+    expect(
+      errors.some(e => e.includes('не имеет ни одной body-ветви')),
+    ).toBe(true);
+  });
+
+  // ── MIGRATE-01 (D-07) — legacy loop-body.canvas ─────────────────────────────
+  it('legacy loop-body.canvas returns migration-error with required literals (MIGRATE-01, D-07)', () => {
+    const graph = parseFixture('loop-body.canvas');
+    const validator = new GraphValidator();
+    const errors = validator.validate(graph);
+    // Должна быть ровно одна сводная migration-строка, содержащая все обязательные лексемы.
+    const migrationErr = errors.find(e =>
+      e.includes('loop-start') &&
+      e.includes('loop-end') &&
+      e.includes('loop') &&
+      e.includes('«выход»'),
+    );
+    expect(migrationErr).toBeDefined();
+    if (migrationErr === undefined) return;
+    // Русская формулировка: «устаревшие узлы» или эквивалент из Plan 05.
+    expect(migrationErr).toMatch(/устаревш/);
+  });
+
+  // ── MIGRATE-01 (D-07) — legacy loop-start.canvas ────────────────────────────
+  it('legacy loop-start.canvas returns migration-error with required literals (MIGRATE-01, D-07)', () => {
+    const graph = parseFixture('loop-start.canvas');
+    const validator = new GraphValidator();
+    const errors = validator.validate(graph);
+    const migrationErr = errors.find(e =>
+      e.includes('loop-start') &&
+      e.includes('loop-end') &&
+      e.includes('loop') &&
+      e.includes('«выход»'),
+    );
+    expect(migrationErr).toBeDefined();
+  });
+
+  // ── D-CL-02 order: migration check runs BEFORE LOOP-04 (early-return) ───────
+  it('legacy canvas with 0 outgoing edges gives migration-error, NOT LOOP-04 «выход» error (D-CL-02 order)', () => {
+    // loop-start.canvas содержит loop-start без continue-edge. Без early-return
+    // в Migration Check, LOOP-04 бы сгенерировал «не имеет ребра «выход»» поверх.
+    // Правильный порядок (D-CL-02): migration check срабатывает первым и делает return.
+    const graph = parseFixture('loop-start.canvas');
+    const validator = new GraphValidator();
+    const errors = validator.validate(graph);
+    // Migration-error присутствует:
+    expect(errors.some(e => e.includes('устаревш'))).toBe(true);
+    // НЕТ LOOP-04 «не имеет ребра «выход»» ошибки, хотя loop-start формально такое ребро не имеет:
+    expect(errors.some(e => e.includes('не имеет ребра «выход»'))).toBe(false);
+  });
+
+  // ── D-09: cycle through unified loop node is NOT flagged as unintentional ───
+  it('cycle through unified loop node is NOT flagged as unintentional (D-09)', () => {
+    // unified-loop-valid.canvas содержит cycle n-loop → n-q1 → n-a1 → n-loop,
+    // проходящий через loop-узел — detectUnintentionalCycles теперь маркирует
+    // это как намеренный цикл (kind === 'loop').
+    const graph = parseFixture('unified-loop-valid.canvas');
+    const validator = new GraphValidator();
+    const errors = validator.validate(graph);
+    // Не должно быть cycle-error'а:
+    expect(errors.some(e => e.toLowerCase().includes('unintentional cycle'))).toBe(false);
+  });
+
+  // ── D-09 negative control: cycle WITHOUT loop node IS flagged ───────────────
+  it('cycle WITHOUT loop node is still flagged as unintentional (D-09 negative control)', () => {
+    // Существующий cycle.canvas fixture — cycle из не-loop узлов → должен flag'аться.
+    const graph = parseFixture('cycle.canvas');
+    const validator = new GraphValidator();
+    const errors = validator.validate(graph);
+    expect(errors.some(e => e.toLowerCase().includes('unintentional cycle'))).toBe(true);
+    // Сообщение обновлено на «loop node» (не «loop-end node»):
+    expect(errors.some(e => e.includes('loop node'))).toBe(true);
+    expect(errors.some(e => e.includes('loop-end node'))).toBe(false);
   });
 });
