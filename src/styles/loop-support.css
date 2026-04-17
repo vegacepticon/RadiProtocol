@@ -43,3 +43,48 @@
   background: var(--background-modifier-border-hover, var(--background-modifier-border));
   opacity: 0.8;
 }
+
+/* Phase 44: Unified loop picker (RUN-01) ────────────────────────────────── */
+
+.rp-loop-header-text {
+  font-size: var(--font-ui-medium);
+  font-weight: var(--font-semibold);
+  color: var(--text-normal);
+  margin-bottom: var(--size-2-3);
+}
+
+.rp-loop-picker-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--size-2-2);
+  margin-top: var(--size-2-3);
+}
+
+.rp-loop-body-btn,
+.rp-loop-exit-btn {
+  text-align: left;
+  padding: var(--size-2-3) var(--size-4-2);
+  border-radius: var(--radius-s);
+  border: none;
+  cursor: pointer;
+  font-size: var(--font-ui-small);
+}
+
+.rp-loop-body-btn {
+  background: var(--interactive-accent);
+  color: var(--text-on-accent);
+}
+
+.rp-loop-body-btn:hover {
+  background: var(--interactive-accent-hover);
+}
+
+.rp-loop-exit-btn {
+  background: var(--background-modifier-border);
+  color: var(--text-normal);
+}
+
+.rp-loop-exit-btn:hover {
+  background: var(--background-modifier-border-hover, var(--background-modifier-border));
+  opacity: 0.9;
+}

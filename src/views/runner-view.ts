@@ -251,7 +251,8 @@ export class RunnerView extends ItemView {
     const needsConfirmation =
       state.status === 'at-node' ||
       state.status === 'awaiting-snippet-pick' ||
-      state.status === 'awaiting-snippet-fill';
+      state.status === 'awaiting-snippet-fill' ||
+      state.status === 'awaiting-loop-pick';
 
     if (needsConfirmation) {
       // D-12: show confirmation modal; runner state is in-progress
@@ -449,6 +450,61 @@ export class RunnerView extends ItemView {
         break;
       }
 
+      case 'awaiting-loop-pick': {
+        if (this.graph === null) {
+          this.renderError(['Internal error: graph not loaded.']);
+          return;
+        }
+        const node = this.graph.nodes.get(state.nodeId);
+        if (node === undefined || node.kind !== 'loop') {
+          this.renderError([`Loop node "${state.nodeId}" not found in graph.`]);
+          return;
+        }
+
+        // RUN-01: render headerText above picker when present.
+        if (node.headerText !== '') {
+          questionZone.createEl('p', {
+            text: node.headerText,
+            cls: 'rp-loop-header-text',
+          });
+        }
+
+        // RUN-01: one button per outgoing edge (Pitfall 4 — filter edges, not adjacency).
+        const outgoing = this.graph.edges.filter(e => e.fromNodeId === state.nodeId);
+        const list = questionZone.createDiv({ cls: 'rp-loop-picker-list' });
+        for (const edge of outgoing) {
+          const label = edge.label ?? '(no label)';
+          const isExit = edge.label === 'выход'; // exact-match contract — Phase 43 D-08
+          const btn = list.createEl('button', {
+            cls: isExit ? 'rp-loop-exit-btn' : 'rp-loop-body-btn',
+            text: label,
+          });
+          this.registerDomEvent(btn, 'click', () => {
+            this.runner.syncManualEdit(this.previewTextarea?.value ?? '');  // Pitfall 7
+            this.runner.chooseLoopBranch(edge.id);                          // per locked decision: edge.id
+            void this.autoSaveSession();
+            void this.renderAsync();
+          });
+        }
+
+        // RUN-05: step-back button (same pattern as at-node arm).
+        if (state.canStepBack) {
+          const stepBackBtn = questionZone.createEl('button', {
+            cls: 'rp-step-back-btn',
+            text: 'Step back',
+          });
+          this.registerDomEvent(stepBackBtn, 'click', () => {
+            this.runner.stepBack();
+            void this.autoSaveSession();
+            this.render();
+          });
+        }
+
+        this.renderPreviewZone(previewZone, state.accumulatedText);
+        this.renderOutputToolbar(outputToolbar, state.accumulatedText, false);
+        break;
+      }
+
       case 'awaiting-snippet-fill': {
         questionZone.createEl('p', {
           text: 'Loading snippet...',
@@ -484,19 +540,6 @@ export class RunnerView extends ItemView {
       case 'error': {
         this.renderError([state.message]);
         return;
-      }
-
-      case 'awaiting-loop-pick': {
-        // Phase 44 Plan 02a: runtime live but picker UI lives in Plan 03 (RUN-01 view layer).
-        // Minimal placeholder — exhaustiveness arm to keep TS compile green until Plan 03
-        // replaces this with the real picker render arm (headerText + edge buttons + step-back).
-        questionZone.createEl('p', {
-          text: 'Loop picker (Phase 44 Plan 03 will render this).',
-          cls: 'rp-empty-state-body',
-        });
-        this.renderPreviewZone(previewZone, state.accumulatedText);
-        this.renderOutputToolbar(outputToolbar, state.accumulatedText, false);
-        break;
       }
 
       default: {
