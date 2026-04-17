@@ -399,49 +399,9 @@ export class RunnerView extends ItemView {
             break;
           }
 
-          case 'loop-end': {
-            // Display iteration label if inside a loop body (LOOP-04)
-            if (state.loopIterationLabel !== undefined) {
-              questionZone.createEl('p', {
-                text: state.loopIterationLabel,
-                cls: 'rp-loop-iteration-label',
-              });
-            }
-
-            // Resolve button labels from the matching loop-start node
-            const matchingStart = this.graph.nodes.get(node.loopStartId);
-            const againLabel = matchingStart?.kind === 'loop-start'
-              ? matchingStart.loopLabel
-              : 'Loop again';
-            const doneLabel = matchingStart?.kind === 'loop-start'
-              ? matchingStart.exitLabel
-              : 'Done';
-
-            const loopBtnRow = questionZone.createDiv({ cls: 'rp-loop-btn-row' });
-
-            const againBtn = loopBtnRow.createEl('button', {
-              cls: 'rp-loop-again-btn',
-              text: againLabel,
-            });
-            const doneBtn = loopBtnRow.createEl('button', {
-              cls: 'rp-loop-done-btn',
-              text: doneLabel,
-            });
-
-            this.registerDomEvent(againBtn, 'click', () => {
-              this.runner.syncManualEdit(this.previewTextarea?.value ?? '');  // BUG-01: capture manual edit (D-01)
-              this.runner.chooseLoopAction('again');
-              void this.autoSaveSession();
-              void this.renderAsync();
-            });
-            this.registerDomEvent(doneBtn, 'click', () => {
-              this.runner.syncManualEdit(this.previewTextarea?.value ?? '');  // BUG-01: capture manual edit (D-01)
-              this.runner.chooseLoopAction('done');
-              void this.autoSaveSession();
-              void this.renderAsync();
-            });
-            break;
-          }
+          // Phase 43 D-14 — case 'loop-end' удалён вместе с LoopEndNode kind.
+          // Unified 'loop' picker UI реализуется в Phase 44 (RUN-01). До тех пор
+          // runtime просто transitionToError'ит на loop-узле (см. ProtocolRunner.advanceThrough).
 
           default: {
             // text-block, answer, start — auto-advance nodes should not halt here,
