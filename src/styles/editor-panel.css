@@ -160,3 +160,9 @@
   cursor: not-allowed;
   filter: none;
 }
+
+/* Phase 42 Plan 04: responsive toolbar — wrap buttons onto a new row at narrow sidebar widths */
+.rp-editor-create-toolbar {
+  flex-wrap: wrap;
+  row-gap: var(--size-4-1);
+}

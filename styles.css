@@ -509,6 +509,12 @@
   filter: none;
 }
 
+/* Phase 42 Plan 04: responsive toolbar — wrap buttons onto a new row at narrow sidebar widths */
+.rp-editor-create-toolbar {
+  flex-wrap: wrap;
+  row-gap: var(--size-4-1);
+}
+
 /* Phase 5: SnippetManagerView (chip editor / form sections — now hosted by
    snippet-editor-modal.ts via mountChipEditor; master-detail container rules
    removed in Phase 33 Plan 04 when the legacy layout was deleted). */
