@@ -69,6 +69,11 @@ export async function rewriteCanvasRefs(
                 if (typeof current !== 'string' || current === '') continue;
                 const rewritten = applyMapping(current, mapping);
                 if (rewritten !== null && rewritten !== current) {
+                  // WR-02: guard node.id — malformed canvases may have missing or
+                  // non-string ids. Without this guard, saveLive would receive
+                  // `undefined` and either mutate the wrong node or return false.
+                  const id = node['id'];
+                  if (typeof id !== 'string' || id === '') continue;
                   const nodeEdits: Record<string, unknown> = {
                     radiprotocol_subfolderPath: rewritten,
                   };
@@ -79,7 +84,7 @@ export async function rewriteCanvasRefs(
                       nodeEdits['text'] = rewrittenText;
                     }
                   }
-                  editsToApply.push({ nodeId: node['id'] as string, edits: nodeEdits });
+                  editsToApply.push({ nodeId: id, edits: nodeEdits });
                 }
               }
 
