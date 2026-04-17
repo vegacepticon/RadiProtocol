@@ -1,5 +1,23 @@
 # Milestones
 
+## v1.6 Polish & Canvas Workflow (Shipped: 2026-04-17)
+
+**Phases completed:** 7 phases, 14 plans, 21 tasks
+
+**Key accomplishments:**
+
+- Knip-driven dead code removal: 8 unused type exports internalized, 2 dead files deleted, 3 legend CSS rules removed, 3 RED test stubs removed, async-mutex dependency restored
+- CSS flex gap fix for snippet create/edit modal type row -- "ТипJSON" now renders as "Тип JSON"
+- One-liner:
+- 150ms async delay between createNode and loadNode to prevent stale canvas JSON reads after requestSave
+- Duplicate node button in editor panel toolbar with radiprotocol property preservation and live canvas data read
+- renderNodeForm now falls back to live canvas state when Obsidian's debounced save hasn't flushed yet, and empty-type nodes show the "Select a node type to configure this node" hint locked by the UI-SPEC.
+- Third quick-create button 'Create snippet node' added to the node editor toolbar (Lucide file-text icon, accent styling matching Phase 39 buttons) — reuses onQuickCreate by widening its kind union to include 'snippet', zero new pipeline code.
+- UAT gap 1 closed — attachCanvasListener now defers the canvas.selection read via setTimeout(0) and wires both 'click' and 'dblclick' on the canvas container, so double-clicking empty canvas space auto-loads the freshly-created node into the Node Editor without the prior click-off-then-click-on detour.
+- UAT gap 2 closed — `.rp-editor-create-toolbar` now wraps its four quick-create buttons onto a second row when the Node Editor sidebar is narrowed below the four-button row width, keeping the right-most "Duplicate node" button reachable at every sidebar width.
+
+---
+
 ## v1.5 Snippet Editor Refactoring (Shipped: 2026-04-16)
 
 **Phases completed:** 4 phases (32–35), 18 plans

@@ -131,19 +131,40 @@ A radiologist can generate a structured, accurate protocol in seconds by answeri
 - ✓ `.md` snippets work in full drill-down and step-back flow (MD-03) — v1.5
 - ✓ Mixed answer+snippet branching routes to `.md` snippet branches (MD-04) — v1.5
 
+### Validated (v1.6)
+
+**Cleanup & Polish:**
+- ✓ Dead code audit: 8 unused TS exports internalized, 2 dead files deleted, 3 legend CSS rules + 3 RED test stubs removed (CLEAN-01) — v1.6
+- ✓ "Тип JSON" spacing fix in snippet create/edit modal via CSS flex gap (CLEAN-02) — v1.6
+- ✓ "Создать папку" button in snippet editor header (CLEAN-03) — v1.6
+
+**Data Sync:**
+- ✓ Folder rename updates canvas SnippetNode `subfolderPath` + `text` fields across vault (SYNC-01) — v1.6
+
+**Canvas Node Creation:**
+- ✓ `CanvasNodeFactory` service with Pattern B `createTextNode` internal API + runtime probing + auto-color (CANVAS-01, CANVAS-04) — v1.6
+- ✓ Quick-create "Create question node" button from Node Editor sidebar with auto-positioning (CANVAS-02) — v1.6
+- ✓ Quick-create "Create answer node" button linked to current question (CANVAS-03) — v1.6
+- ✓ Quick-create "Create snippet node" button (fourth button, Phase 42) — v1.6
+- ✓ Clear Obsidian Notice when canvas is not open (CANVAS-05) — v1.6
+
+**Node Duplication:**
+- ✓ Duplicate selected canvas node — preserves all `radiprotocol_*` properties, new ID, offset position (DUP-01) — v1.6
+- ✓ Duplicated node does NOT copy edges (DUP-02) — v1.6
+
+**Live Canvas Update on Folder Rename:**
+- ✓ `canvasLiveEditor.saveLive()` Pattern B updates snippet node `text` + `subfolderPath` in real-time when canvas open (LIVE-01) — v1.6
+- ✓ `vault.modify()` fallback preserved when canvas not open (LIVE-02) — v1.6
+- ✓ Mid-iteration `saveLive()` failure falls back to vault.modify() per-file (LIVE-03) — v1.6
+
+**Bug Fixes:**
+- ✓ Double-click-created node now loads in Node Editor via in-memory canvas fallback (`renderNodeForm`) + `setTimeout(0)` deferred selection read + `dblclick` listener wiring — v1.6
+- ✓ Empty-type node shows "Select a node type to configure this node" hint and `— unset —` dropdown — v1.6
+- ✓ Quick-create toolbar wraps at narrow sidebar widths via `flex-wrap: wrap` — v1.6
+
 ### Active
 
-## Current Milestone: v1.6 Polish & Canvas Workflow
-
-**Goal:** Clean up dead code, fix UI bugs, add snippet editor improvements, and accelerate canvas authoring with programmatic node creation from the node editor sidebar.
-
-**Target features:**
-- Dead code audit and cleanup across the entire project
-- Fix "ТипJSON" → "Тип JSON" spacing in snippet create/edit modal
-- Create folder button in snippet editor (next to create snippet)
-- Sync canvas node path when directory is renamed in snippet editor
-- Canvas API research + quick node creation buttons in node editor sidebar
-- Duplicate node with preserved settings
+**(Next milestone to be defined via /gsd-new-milestone.)**
 
 ### Deferred (Future Milestones)
 
@@ -169,24 +190,27 @@ A radiologist can generate a structured, accurate protocol in seconds by answeri
 
 ## Current State
 
-**Shipped:** v1.5 Snippet Editor Refactoring (2026-04-16)
-**Current milestone:** v1.6 Polish & Canvas Workflow
-**Phase 38 complete (2026-04-16):** Canvas node creation infrastructure — CanvasNodeFactory service with createTextNode API, auto-color, position offset
-**Phase 40 complete (2026-04-16):** Node duplication — Duplicate button in Node Editor toolbar copies selected node with all RadiProtocol properties preserved
-**Phase 41 complete (2026-04-17):** Live canvas update on folder rename — rewriteCanvasRefs uses saveLive() Pattern B for open canvases, eliminating need to close/reopen
-**Phase 42 complete (2026-04-17):** Snippet quick-create button + double-click node selection fix — 4 plans (adds "Create snippet node" button, fixes "Node not found in canvas" error for freshly double-click-created nodes, auto-loads new node in editor, wraps toolbar at narrow sidebar widths)
+**Shipped:** v1.6 Polish & Canvas Workflow (2026-04-17)
+**Current milestone:** — (planning next milestone)
+**Latest phases in v1.6:**
+- Phase 36 (2026-04-16): Dead code audit and cleanup — 8 exports internalized, 2 dead files deleted, 3 CSS rules + 3 RED stubs removed; "Тип JSON" spacing fix
+- Phase 37 (2026-04-16): Create folder button in snippet editor header; canvas-ref sync on folder rename
+- Phase 38 (2026-04-16): Canvas node creation infrastructure — CanvasNodeFactory service with createTextNode API, auto-color, position offset
+- Phase 39 (2026-04-16): Quick-Create UI — question/answer node buttons in Node Editor sidebar
+- Phase 40 (2026-04-16): Node duplication — Duplicate button copies selected node with all RadiProtocol properties preserved
+- Phase 41 (2026-04-17): Live canvas update on folder rename — rewriteCanvasRefs uses saveLive() Pattern B for open canvases
+- Phase 42 (2026-04-17): Snippet quick-create button + double-click node selection fix — 4 plans (adds "Create snippet node" button, fixes "Node not found in canvas" error, auto-loads new node, responsive toolbar wrapping)
 
 ## Context
 
-- Shipped v1.0 (7 phases, 28 plans) + v1.2 (8 phases, 11 plans) + v1.3 (1 phase, 1 plan) + v1.4 (4 phases, 12 plans) + v1.5 (4 phases, 18 plans); ~18.7K LOC TypeScript in src/
+- Shipped v1.0 (7 phases, 28 plans) + v1.2 (8 phases, 11 plans) + v1.3 (1 phase, 1 plan) + v1.4 (4 phases, 12 plans) + v1.5 (4 phases, 18 plans) + v1.6 (7 phases, 14 plans); ~16.7K LOC TypeScript in src/
 - Tech stack: TypeScript + Obsidian Plugin API + esbuild + Vitest
 - Target: public release on Obsidian Community Plugins
 - Primary author: radiologist (CT focus), designed for all imaging modalities
-- All phases human-UAT approved; v1.5 milestone audit passed 34/34 requirements, 4/4 phases, 20/20 integration, 5/5 flows
+- All phases human-UAT approved; v1.6 milestone audit passed 14/14 requirements, 7/7 phases, 7/7 integration contracts, 4/4 E2E flows
 - All engine code (parser, runner, snippets, sessions) has zero Obsidian imports and is fully unit-testable
-- 385 tests passing (28 test files), build green
-- Known tech debt: Nyquist VALIDATION.md draft for phases 12–19, 28–31, and 32–35; dead CSS (.rp-legend*); 3 RED test stubs in runner-extensions.test.ts (Phase 26); Node Editor stale subfolderPath display after folder move/rename (cosmetic); chip editor labels in English (Phase 27 legacy)
-- Phase 37 added header "Create folder" button to snippet editor; SYNC-01 (folder rename → canvas ref sync) confirmed via existing Phase 34 tests
+- 394 tests passing (28 test files), build green
+- Known tech debt: Nyquist VALIDATION.md draft for phases 12–19, 28–31, 32–35, 36–42 (all milestones); Node Editor stale subfolderPath display after folder move/rename (cosmetic pre-fix in v1.6); chip editor labels in English (Phase 27 legacy)
 
 ## Constraints
 
@@ -233,6 +257,20 @@ A radiologist can generate a structured, accurate protocol in seconds by answeri
 | `parentElement` first, `.parent` mock fallback for DOM lookup (Phase 34) | Mock-only `.parent` silently breaks in real Obsidian; `parentElement` is the DOM standard | ✓ Good — caught in post-UAT fix 77b62c1 |
 | File-level move/rename does NOT call `rewriteCanvasRefs` (Phase 34) | SnippetNode stores `subfolderPath` (folder), not filename — file moves are canvas-invisible by design (D-03) | ✓ Good — avoids unnecessary rewrites |
 | MD snippet bypasses `handleSnippetFill` via direct `completeSnippet()` (Phase 35) | No placeholders to fill; content inserted verbatim; avoids `.json` suffix assumption in legacy path | ✓ Good — minimal change, 2-method edit |
+| Knip for dead-code analysis (Phase 36) | Standard tool; clear unused-export reports; integrates with npm scripts | ✓ Good — 8 exports + 2 files safely removed |
+| CSS flex `gap: var(--size-4-2)` for label-control row (Phase 36) | Replaces brittle margin hacks; uses Obsidian CSS variables for theme consistency | ✓ Good — fixed "ТипJSON" without breaking other modals |
+| `rewriteCanvasRefs` updates both `radiprotocol_subfolderPath` AND `text` field (Phase 37) | UAT discovered canvas nodes kept showing old folder name after rename — text field is what the user sees | ✓ Good — same applyMapping, two targets |
+| `CanvasNodeFactory` via Pattern B `createTextNode` internal API + runtime probing (Phase 38) | Pattern B is the only way to create nodes on live canvas; runtime probe guards against API removal in future Obsidian versions | ✓ Good — degrades gracefully with Notice |
+| Factory sets `radiprotocol_nodeType` + `NODE_COLOR_MAP[kind]` at creation time (Phase 38) | Eliminates a post-creation color fixup; reuses Phase 28 color map | ✓ Good — no drift between creation and save |
+| `onQuickCreate(kind)` in-memory `getData()` workaround instead of 150ms setTimeout (Phase 39) | `canvas.requestSave()` is async fire-and-forget; reading `result.canvasNode.getData()` directly bypasses stale-disk-read race | ✓ Good — no arbitrary timer, documented pattern |
+| `registerDomEvent` instead of raw `addEventListener` for quick-create buttons (Phase 39 WR-01) | Obsidian lifecycle cleanup; caught in code review, not verification | ✓ Good — standard plugin pattern |
+| `onDuplicate` copies only `radiprotocol_*` + `text`, factory handles ID/offset (Phase 40) | Single source of truth for node creation; duplicate is just create + property overlay | ✓ Good — 60 lines, zero edge logic |
+| `rewriteCanvasRefs` hybrid live+disk with optional `CanvasLiveEditor` param + liveFailed fallback (Phase 41) | Live path for open canvases (no reopen needed); mid-iteration failure degrades to vault.modify() for entire file to avoid partial updates | ✓ Good — both paths covered by tests |
+| Per-file WriteMutex around live canvas writes (Phase 41 WR-01/WR-03) | Prevents interleaved live writes on the same canvas; batch `saveLiveBatch` to minimize round-trips | ✓ Good — post-review fix |
+| `queueMicrotask` + `pendingEdits` merge for re-entrant renderForm (Phase 42 WR-01/WR-02) | Stale closure + re-entrancy hazard when synchronous re-render fires from dropdown onChange | ✓ Good — defers re-render off the event stack |
+| In-memory canvas fallback `canvas.nodes.get(id).getData()` in renderNodeForm (Phase 42) | Obsidian debounced save may not have flushed disk when freshly double-click-created node is selected; fallback reads live state | ✓ Good — fixed "Node not found in canvas" UAT gap |
+| `setTimeout(0)` deferred `canvas.selection` read + `dblclick` listener (Phase 42 Plan 03) | Canvas-internal contract: selection updates AFTER pointer event; reading inside handler returns stale set | ✓ Good — auto-select on double-click works |
+| `flex-wrap: wrap` + `row-gap` appended rule for responsive toolbar (Phase 42 Plan 04) | Narrow sidebar pushes Duplicate button off-screen; equal-specificity source-order cascade preserves Phase 39 defaults | ✓ Good — no regression at wide width |
 
 ## Evolution
 
@@ -243,4 +281,4 @@ A radiologist can generate a structured, accurate protocol in seconds by answeri
 4. Update Context with current state
 
 ---
-*Last updated: 2026-04-17 — Phase 42 complete*
+*Last updated: 2026-04-17 after v1.6 milestone*
