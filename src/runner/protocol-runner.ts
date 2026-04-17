@@ -288,62 +288,17 @@ export class ProtocolRunner {
   }
 
   /**
-   * User chooses to loop again or exit the loop at a loop-end node (LOOP-02).
-   * Only valid in at-node state when current node is a loop-end node.
-   * Pushes UndoEntry BEFORE mutation (same invariant as chooseAnswer).
+   * @deprecated Phase 43 D-14, D-18 — loop-end runtime удалён вместе с LoopEndNode;
+   * unified loop runtime реализуется в Phase 44 (RUN-01..RUN-07).
+   * Метод сохранён как stub, чтобы `.skip`-тесты (src/__tests__/runner/protocol-runner.test.ts,
+   * protocol-runner-session.test.ts) продолжали TypeScript-компилироваться.
+   * Не должен вызываться в runtime — если вызвали, переводим runner в error-state.
    */
   chooseLoopAction(action: 'again' | 'done'): void {
-    if (this.runnerStatus !== 'at-node') return;
-    if (this.graph === null || this.currentNodeId === null) return;
-
-    const node = this.graph.nodes.get(this.currentNodeId);
-    if (node === undefined || node.kind !== 'loop-end') return;
-
-    // Push undo entry BEFORE any mutation (LOOP-05)
-    this.undoStack.push({
-      nodeId: this.currentNodeId,
-      textSnapshot: this.accumulator.snapshot(),
-      loopContextStack: [...this.loopContextStack],
-    });
-
-    const frame = this.loopContextStack[this.loopContextStack.length - 1];
-
-    if (action === 'again') {
-      if (frame === undefined) {
-        this.transitionToError('Loop context stack is empty at loop-end node.');
-        return;
-      }
-      // Enforce per-loop iteration cap (RUN-09)
-      const loopStartNode = this.graph.nodes.get(frame.loopStartId);
-      if (loopStartNode?.kind === 'loop-start' && frame.iteration >= loopStartNode.maxIterations) {
-        this.transitionToError(
-          `Maximum iterations (${loopStartNode.maxIterations}) reached for loop "${loopStartNode.loopLabel}".`,
-        );
-        return;
-      }
-      // Increment iteration on the top stack frame (replace — do not mutate)
-      this.loopContextStack[this.loopContextStack.length - 1] = {
-        ...frame,
-        iteration: frame.iteration + 1,
-      };
-      // Re-enter the loop body via loop-start's 'continue' edge (Pitfall 3)
-      const continueNeighbor = this.edgeByLabel(frame.loopStartId, 'continue');
-      if (continueNeighbor === undefined) {
-        this.transitionToError(`Loop-start '${frame.loopStartId}' has no 'continue' edge for re-entry.`);
-        return;
-      }
-      this.advanceThrough(continueNeighbor);
-    } else {
-      // 'done' — pop the loop frame and follow loop-start's 'exit' edge
-      this.loopContextStack.pop();
-      const loopStartId = node.loopStartId;
-      const exitNeighbor = this.edgeByLabel(loopStartId, 'exit');
-      if (exitNeighbor === undefined) {
-        this.transitionToError(`Loop-start '${loopStartId}' has no 'exit' edge.`);
-        return;
-      }
-      this.advanceThrough(exitNeighbor);
-    }
+    void action;
+    this.transitionToError(
+      'chooseLoopAction устарел (Phase 43 D-18). Loop runtime реализуется в Phase 44.',
+    );
   }
 
   /**
@@ -355,24 +310,16 @@ export class ProtocolRunner {
       case 'idle':
         return { status: 'idle' };
       case 'at-node': {
-        const topFrame = this.loopContextStack[this.loopContextStack.length - 1];
-        const loopStartNode = topFrame !== undefined
-          ? this.graph?.nodes.get(topFrame.loopStartId)
-          : undefined;
-        const loopLabel = loopStartNode?.kind === 'loop-start'
-          ? loopStartNode.loopLabel
-          : undefined;
-        const loopIterationLabel =
-          topFrame !== undefined && loopLabel !== undefined
-            ? `${loopLabel} ${topFrame.iteration}`
-            : undefined;
+        // Phase 43 D-14 — label assembly упрощён до undefined.
+        // Phase 44 (RUN-01..RUN-07) реализует полный header + iteration counter поверх LoopNode.headerText.
+        const loopIterationLabel: string | undefined = undefined;
         return {
           status: 'at-node',
           currentNodeId: this.currentNodeId ?? '',
           accumulatedText: this.accumulator.current,
           canStepBack: this.undoStack.length > 0,
           loopIterationLabel,
-          isAtLoopEnd: this.graph?.nodes.get(this.currentNodeId ?? '')?.kind === 'loop-end',
+          isAtLoopEnd: undefined,
         };
       }
       case 'awaiting-snippet-pick': {
@@ -426,8 +373,8 @@ export class ProtocolRunner {
     runnerStatus: 'at-node' | 'awaiting-snippet-pick' | 'awaiting-snippet-fill';
     currentNodeId: string;
     accumulatedText: string;
-    undoStack: Array<{ nodeId: string; textSnapshot: string; loopContextStack: Array<{ loopStartId: string; iteration: number; textBeforeLoop: string }>; returnToBranchList?: boolean }>;
-    loopContextStack: Array<{ loopStartId: string; iteration: number; textBeforeLoop: string }>;
+    undoStack: Array<{ nodeId: string; textSnapshot: string; loopContextStack: Array<{ loopNodeId: string; iteration: number; textBeforeLoop: string }>; returnToBranchList?: boolean }>;
+    loopContextStack: Array<{ loopNodeId: string; iteration: number; textBeforeLoop: string }>;
     snippetId: string | null;
     snippetNodeId: string | null;
   } | null {
@@ -483,8 +430,8 @@ export class ProtocolRunner {
     runnerStatus: 'at-node' | 'awaiting-snippet-pick' | 'awaiting-snippet-fill';
     currentNodeId: string;
     accumulatedText: string;
-    undoStack: Array<{ nodeId: string; textSnapshot: string; loopContextStack: Array<{ loopStartId: string; iteration: number; textBeforeLoop: string }>; returnToBranchList?: boolean }>;
-    loopContextStack: Array<{ loopStartId: string; iteration: number; textBeforeLoop: string }>;
+    undoStack: Array<{ nodeId: string; textSnapshot: string; loopContextStack: Array<{ loopNodeId: string; iteration: number; textBeforeLoop: string }>; returnToBranchList?: boolean }>;
+    loopContextStack: Array<{ loopNodeId: string; iteration: number; textBeforeLoop: string }>;
     snippetId: string | null;
     snippetNodeId: string | null;
   }): void {
@@ -604,26 +551,24 @@ export class ProtocolRunner {
           cursor = next;
           break;
         }
-        case 'loop-start': {
-          // Push a new loop frame — iteration starts at 1 (LOOP-03)
-          this.loopContextStack.push({
-            loopStartId: cursor,
-            iteration: 1,
-            textBeforeLoop: this.accumulator.snapshot(),
-          });
-          // Follow the 'continue' edge into the loop body (LOOP-02)
-          const continueNeighbor = this.edgeByLabel(cursor, 'continue');
-          if (continueNeighbor === undefined) {
-            this.transitionToError(`Loop-start node '${cursor}' has no 'continue' edge.`);
-            return;
-          }
-          cursor = continueNeighbor;
-          break;
+        // Phase 43 D-14, D-CL-04 — unified loop runtime реализуется в Phase 44 (RUN-01..RUN-07).
+        // Канвасы с loop-start/loop-end отвергаются GraphValidator'ом через migration-error (MIGRATE-01),
+        // поэтому сюда legacy kinds не доходят. Unified 'loop' kind встречается только если канвас
+        // прошёл validator — в Phase 43 это soft-error до имплементации runtime picker'а.
+        case 'loop': {
+          this.transitionToError(
+            'Loop runtime ещё не реализован (запланировано в Phase 44 — см. ROADMAP v1.7).',
+          );
+          return;
         }
+        case 'loop-start':
         case 'loop-end': {
-          // Halt here — RunnerView will render "loop again / done" prompt (LOOP-02)
-          this.currentNodeId = cursor;
-          this.runnerStatus = 'at-node';
+          // Phase 43 D-14 — legacy kinds парсируются (D-06) для migration-error через GraphValidator.
+          // В runtime не доходят: validator отвергает канвас до старта runner'а.
+          this.transitionToError(
+            'Обнаружен устаревший узел loop-start/loop-end. Канвас должен быть отклонён validator-ом; ' +
+            'если вы видите это сообщение — это программная ошибка, сообщите автору плагина.',
+          );
           return;
         }
         case 'snippet': {
