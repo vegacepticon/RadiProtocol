@@ -174,6 +174,7 @@ A radiologist can generate a structured, accurate protocol in seconds by answeri
 **Phase 38 complete (2026-04-16):** Canvas node creation infrastructure — CanvasNodeFactory service with createTextNode API, auto-color, position offset
 **Phase 40 complete (2026-04-16):** Node duplication — Duplicate button in Node Editor toolbar copies selected node with all RadiProtocol properties preserved
 **Phase 41 complete (2026-04-17):** Live canvas update on folder rename — rewriteCanvasRefs uses saveLive() Pattern B for open canvases, eliminating need to close/reopen
+**Phase 42 complete (2026-04-17):** Snippet quick-create button + double-click node selection fix — 4 plans (adds "Create snippet node" button, fixes "Node not found in canvas" error for freshly double-click-created nodes, auto-loads new node in editor, wraps toolbar at narrow sidebar widths)
 
 ## Context
 
@@ -242,4 +243,4 @@ A radiologist can generate a structured, accurate protocol in seconds by answeri
 4. Update Context with current state
 
 ---
-*Last updated: 2026-04-16 — Phase 39 complete*
+*Last updated: 2026-04-17 — Phase 42 complete*
