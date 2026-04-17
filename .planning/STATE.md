@@ -3,33 +3,33 @@ gsd_state_version: 1.0
 milestone: v1.7
 milestone_name: Loop Rework & Regression Cleanup
 status: executing
-stopped_at: Completed 43-01-PLAN.md (graph-model unified loop types)
-last_updated: "2026-04-17T09:26:29.548Z"
+stopped_at: Completed 43-02-PLAN.md (canvas-parser unified loop case)
+last_updated: "2026-04-17T09:31:13.265Z"
 last_activity: 2026-04-17
 progress:
   total_phases: 4
   completed_phases: 0
   total_plans: 7
-  completed_plans: 1
-  percent: 14
+  completed_plans: 2
+  percent: 29
 ---
 
 # RadiProtocol — Project State
 
 **Updated:** 2026-04-17
 **Milestone:** v1.7 — Loop Rework & Regression Cleanup
-**Status:** Executing Phase 43 (plan 2/7)
-**Last session:** 2026-04-17T09:26:29.540Z
-**Stopped at:** Completed 43-01-PLAN.md (graph-model unified loop types)
+**Status:** Ready to execute
+**Last session:** 2026-04-17T09:31:13.259Z
+**Stopped at:** Completed 43-02-PLAN.md (canvas-parser unified loop case)
 
 ---
 
 ## Current Position
 
 Phase: 43 (unified-loop-graph-model-parser-validator-migration-errors) — EXECUTING
-Plan: 2 of 7
-Status: Executing Phase 43
-Last activity: 2026-04-17 — Completed plan 43-01 (unified LoopNode in graph-model)
+Plan: 3 of 7
+Status: Ready to execute
+Last activity: 2026-04-17
 
 Progress: [█░░░░░░░░░] 14% (0/4 phases, 1/7 plans)
 
@@ -70,6 +70,7 @@ See: `.planning/PROJECT.md` (updated 2026-04-17)
 | 43    | 01   | 2min     | 1     | 1     |
 
 ---
+| Phase 43 P02 | 2min | 1 tasks | 1 files |
 
 ## Accumulated Context
 
@@ -114,6 +115,7 @@ See: `.planning/PROJECT.md` (updated 2026-04-17)
 ### Decisions (Phase 43)
 
 - Plan 43-01: kept `LoopStartNode` / `LoopEndNode` names with `@deprecated` JSDoc (D-CL-05 variant b) instead of renaming to `LegacyLoop*` — simpler downstream wiring; `LoopNode` shape mirrors `QuestionNode` (`headerText: string`, parser normalizes missing to `''`).
+- Plan 43-02: parser `case 'loop'` uses `getString(props, 'radiprotocol_headerText', '')` with empty-string fallback (NOT `raw.text ?? ''`) — empty header is a legitimate authored state; no silent fallback to native canvas text. Legacy parser cases `'loop-start'` / `'loop-end'` preserved unchanged (D-06) so Plan 43-03 validator can aggregate MIGRATE-01 error over `LoopStartNode`/`LoopEndNode` instances. `+13` lines additive only — zero deletions.
 
 ---
 
