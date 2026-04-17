@@ -253,10 +253,10 @@ describe('ProtocolRunner', () => {
     });
   });
 
-  // TODO Phase 44: rewrite for unified loop — RUN-08 (loop-start missing continue edge) теряет
-  // смысл: loop-start/loop-end kind удалены, canvas-ы с ними отвергаются GraphValidator'ом через
-  // migration-error до runtime. Контур теста сохранён для истории; Phase 44 перепишет под
-  // unified-loop «missing «выход» edge» если нужно runtime-level проверять (валидатор уже проверяет).
+  // TODO Phase 45: rewrite for unified loop if a runtime-level missing-«выход» check is desired.
+  // GraphValidator already covers this via LOOP-04 (see graph-validator.test.ts). RUN-08 is not
+  // in Phase 44's requirement list; scheduled for a future phase only if validator-level coverage
+  // proves insufficient. Phase 43 D-CL-05 variant b keeps legacy kinds parseable so this skip compiles.
   describe.skip('loop-start missing continue edge (RUN-08)', () => {
     it('transitions to error state when loop-start has no continue edge', () => {
       // loop-start.canvas: start → n-ls1 (loop-start, no outgoing edges with label 'continue')
@@ -448,94 +448,6 @@ describe('ProtocolRunner', () => {
       if (state.status !== 'complete') return;
       // 'Size: normal' (from n-a1) + '\n' + 'snippet result'
       expect(state.finalText).toBe('Size: normal\nsnippet result');
-    });
-  });
-
-  // TODO Phase 44: rewrite for unified loop (RUN-01..RUN-07). LoopEndNode удалён, chooseLoopAction
-  // превращён в @deprecated stub (Phase 43 D-14). Тела тестов сохранены как исторический контур
-  // поведения (iteration counter, chooseLoopAction('again'/'done'), stepBack из loop body, per-loop
-  // maxIterations cap) — Phase 44 реализует unified picker и перепишет эти проверки поверх LoopNode.
-  describe.skip('loop support (LOOP-01 through LOOP-05, RUN-09)', () => {
-    function reachLoopEnd(runner: ProtocolRunner, graph: ProtocolGraph): void {
-      runner.start(graph);
-      // Runner halts at n-q1 (first question inside loop body)
-      runner.chooseAnswer('n-a1'); // answer → n-le1 (loop-end) — runner should halt here
-    }
-
-    it('runner halts at loop-end node after traversing loop body once (LOOP-02)', () => {
-      const runner = new ProtocolRunner();
-      const graph = loadGraph('loop-body.canvas');
-      reachLoopEnd(runner, graph);
-      const state = runner.getState();
-      expect(state.status).toBe('at-node');
-      if (state.status !== 'at-node') return;
-      expect(state.currentNodeId).toBe('n-le1');
-    });
-
-    it("chooseLoopAction('again') re-enters loop body and increments iteration to 2 (LOOP-02, LOOP-03)", () => {
-      const runner = new ProtocolRunner();
-      const graph = loadGraph('loop-body.canvas');
-      reachLoopEnd(runner, graph);
-      // Phase 44 02a: chooseLoopAction stub deleted; Plan 02b rewrites this test against unified loop runtime.
-      (runner as unknown as { chooseLoopAction(a: 'again' | 'done'): void }).chooseLoopAction('again');
-      const state = runner.getState();
-      expect(state.status).toBe('at-node');
-      if (state.status !== 'at-node') return;
-      expect(state.currentNodeId).toBe('n-q1');
-      expect((state as unknown as { loopIterationLabel?: string }).loopIterationLabel).toBe('Lesion 2');
-    });
-
-    it("chooseLoopAction('done') exits loop and completes protocol (LOOP-02)", () => {
-      const runner = new ProtocolRunner();
-      const graph = loadGraph('loop-body.canvas');
-      reachLoopEnd(runner, graph);
-      (runner as unknown as { chooseLoopAction(a: 'again' | 'done'): void }).chooseLoopAction('done');
-      const state = runner.getState();
-      expect(state.status).toBe('complete');
-      if (state.status !== 'complete') return;
-      expect(state.finalText).toBe('Liver\nEnd of protocol.');
-    });
-
-    it("getState() returns loopIterationLabel='Lesion 1' when halted at loop-end on iteration 1 (LOOP-04)", () => {
-      const runner = new ProtocolRunner();
-      const graph = loadGraph('loop-body.canvas');
-      reachLoopEnd(runner, graph);
-      const state = runner.getState();
-      expect(state.status).toBe('at-node');
-      if (state.status !== 'at-node') return;
-      expect((state as unknown as { loopIterationLabel?: string }).loopIterationLabel).toBe('Lesion 1');
-      expect((state as unknown as { isAtLoopEnd?: boolean }).isAtLoopEnd).toBe(true);
-    });
-
-    it('stepBack() from iteration 2 first question restores iteration 1 loop-end state (LOOP-05)', () => {
-      const runner = new ProtocolRunner();
-      const graph = loadGraph('loop-body.canvas');
-      reachLoopEnd(runner, graph);
-      (runner as unknown as { chooseLoopAction(a: 'again' | 'done'): void }).chooseLoopAction('again');
-      // Now at n-q1 iteration 2
-      runner.stepBack();
-      const state = runner.getState();
-      expect(state.status).toBe('at-node');
-      if (state.status !== 'at-node') return;
-      expect(state.currentNodeId).toBe('n-le1');
-      expect((state as unknown as { loopIterationLabel?: string }).loopIterationLabel).toBe('Lesion 1');
-    });
-
-    it('per-loop maxIterations cap transitions to error after exceeding limit (RUN-09)', () => {
-      const runner = new ProtocolRunner();
-      const graph = loadGraph('loop-body.canvas');
-      reachLoopEnd(runner, graph);
-      // Iterate 4 more times to reach the 5th iteration (maxIterations=5)
-      for (let i = 0; i < 4; i++) {
-        (runner as unknown as { chooseLoopAction(a: 'again' | 'done'): void }).chooseLoopAction('again');
-        runner.chooseAnswer('n-a1'); // advance back to loop-end
-      }
-      // 5th 'again' should hit the cap
-      (runner as unknown as { chooseLoopAction(a: 'again' | 'done'): void }).chooseLoopAction('again');
-      const state = runner.getState();
-      expect(state.status).toBe('error');
-      if (state.status !== 'error') return;
-      expect(state.message).toMatch(/Maximum iterations/);
     });
   });
 
