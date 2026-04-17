@@ -110,8 +110,8 @@ describe('GraphValidator', () => {
       expect(errors.some(e => e.toLowerCase().includes('unreachable') || e.toLowerCase().includes('reach'))).toBe(true);
     });
 
-    // Phase 43 D-10: test 'detects orphaned loop-end node' удалён — Check 6 исчез из validator'а
-    // вместе с LoopEndNode kind. Legacy loop-end узлы теперь ловятся Migration Check'ом (MIGRATE-01),
+    // Phase 43 D-10: устаревший orphan-loop-end тест удалён — Check 6 исчез из validator'а
+    // вместе с LoopEndNode kind. Legacy узлы теперь ловятся Migration Check'ом (MIGRATE-01),
     // см. тесты в describe 'GraphValidator — Phase 43: unified loop + migration' ниже.
 
     it('returns all errors as plain English strings, not code exceptions (PARSE-08)', () => {
