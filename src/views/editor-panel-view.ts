@@ -340,11 +340,12 @@ export class EditorPanelView extends ItemView {
           .addOption('start', 'Start')
           .addOption('question', 'Question')
           .addOption('answer', 'Answer')
-          .addOption('free-text-input', 'Free-text input')
           .addOption('text-block', 'Text block')
-          .addOption('loop-start', 'Loop start')
-          .addOption('loop-end', 'Loop end')
           .addOption('snippet', 'Snippet')         // Phase 29: D-06
+          .addOption('loop', 'Loop')               // Phase 44 UAT-fix: expose unified loop
+          // Phase 44 UAT-fix: legacy kinds (free-text-input, loop-start, loop-end) are NOT
+          // offered here — they remain in RPNodeKind only so the parser can emit MIGRATE-01
+          // on legacy canvases (Phase 43 D-03). New nodes should use `loop` instead.
           .setValue(currentKind ?? '')
           .onChange(value => {
             // Immediate save with color + cancel debounce (D-04) — must run first so
@@ -561,6 +562,26 @@ export class EditorPanelView extends ItemView {
         new Setting(container).setDesc(
           'This node type is obsolete. Rebuild the loop using a unified "loop" node. The canvas will fail validation until the legacy nodes are removed.',
         );
+        break;
+      }
+
+      case 'loop': {
+        // Phase 44 UAT-fix: unified loop node form (RUN-01 header text + picker).
+        // Sync both `radiprotocol_headerText` (runtime source) and `text` (canvas visual label)
+        // so the header is visible on the canvas node AND picked up by the runner — same pattern
+        // as question/answer.
+        new Setting(container).setHeading().setName('Loop node');
+        new Setting(container)
+          .setName('Header text')
+          .setDesc('Displayed above the branch picker when the runner halts at this loop, and also shown as the canvas node label. Leave blank for no header.')
+          .addTextArea(ta => {
+            ta.setValue((nodeRecord['radiprotocol_headerText'] as string | undefined) ?? (nodeRecord['text'] as string | undefined) ?? '')
+              .onChange(v => {
+                this.pendingEdits['radiprotocol_headerText'] = v;
+                this.pendingEdits['text'] = v;
+                this.scheduleAutoSave();
+              });
+          });
         break;
       }
 
