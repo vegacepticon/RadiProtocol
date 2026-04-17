@@ -109,8 +109,8 @@ export class SessionService {
  * Exported as a pure function (not a SessionService method) so RunnerView can call it
  * without going through the service. No vault I/O — purely structural.
  *
- * Checks: currentNodeId, all nodeIds in undoStack, all loopStartIds in undoStack
- * loopContextStacks, and all loopStartIds in the top-level loopContextStack.
+ * Checks: currentNodeId, all nodeIds in undoStack, all loopNodeIds in undoStack
+ * loopContextStacks, and all loopNodeIds in the top-level loopContextStack.
  * Does NOT check snippetNodeId because it always equals currentNodeId when set.
  */
 export function validateSessionNodeIds(
