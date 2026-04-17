@@ -108,7 +108,6 @@ const settings = {
   sessionFolderPath: '.radiprotocol/sessions',
   outputDestination: 'clipboard' as const,
   outputFolderPath: '',
-  maxLoopIterations: 50,
   runnerViewMode: 'sidebar' as const,
   protocolFolderPath: '',
   textSeparator: 'newline' as const,

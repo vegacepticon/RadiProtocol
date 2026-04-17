@@ -1,12 +1,11 @@
 // settings.ts
 import type { App } from 'obsidian';
-import { Notice, PluginSettingTab, Setting } from 'obsidian';
+import { PluginSettingTab, Setting } from 'obsidian';
 import type RadiProtocolPlugin from './main';
 
 export interface RadiProtocolSettings {
   outputDestination: 'clipboard' | 'new-note' | 'both';
   outputFolderPath: string;
-  maxLoopIterations: number;
   /** Vault-relative path for snippet JSON files (D-15, SNIP-08). Default: .radiprotocol/snippets */
   snippetFolderPath: string;
   /** Phase 33 (D-17): Tree-view expanded-folder paths, persisted across sessions. */
@@ -24,7 +23,6 @@ export interface RadiProtocolSettings {
 export const DEFAULT_SETTINGS: RadiProtocolSettings = {
   outputDestination: 'clipboard',
   outputFolderPath: 'RadiProtocol Output',
-  maxLoopIterations: 50,
   snippetFolderPath: '.radiprotocol/snippets',
   snippetTreeExpandedPaths: [],
   sessionFolderPath: '.radiprotocol/sessions',
@@ -120,25 +118,6 @@ export class RadiProtocolSettingsTab extends PluginSettingTab {
         .onChange(async (value) => {
           this.plugin.settings.outputFolderPath = value.trim() || 'RadiProtocol Output';
           await this.plugin.saveSettings();
-        })
-      );
-
-    // Group 4 — Protocol engine
-    new Setting(containerEl).setName('Protocol engine').setHeading();
-
-    new Setting(containerEl)
-      .setName('Max loop iterations')
-      .setDesc('Maximum times a loop can repeat before stopping. Prevents infinite loops in misconfigured canvases. Default: 50.')
-      .addText(text => text
-        .setValue(String(this.plugin.settings.maxLoopIterations))
-        .onChange(async (value) => {
-          const num = parseInt(value, 10);
-          if (!isNaN(num) && num > 0) {
-            this.plugin.settings.maxLoopIterations = num;
-            await this.plugin.saveSettings();
-          } else if (value.trim() !== '') {
-            new Notice('Max loop iterations must be a positive integer.');
-          }
         })
       );
 
