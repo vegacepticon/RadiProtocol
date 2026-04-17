@@ -63,6 +63,13 @@ describe('EditorPanelView quick-create', () => {
       .toHaveBeenCalledWith('test.canvas', 'answer', undefined);
   });
 
+  it('snippet button calls factory with snippet kind', async () => {
+    await (view as unknown as { onQuickCreate(kind: string): Promise<void> }).onQuickCreate('snippet');
+
+    expect((mockPlugin.canvasNodeFactory as { createNode: ReturnType<typeof vi.fn> }).createNode)
+      .toHaveBeenCalledWith('test.canvas', 'snippet', undefined);
+  });
+
   it('passes currentNodeId as anchor when a node is loaded', async () => {
     (view as unknown as { currentNodeId: string }).currentNodeId = 'existing-node-42';
     (view as unknown as { currentFilePath: string }).currentFilePath = 'test.canvas';

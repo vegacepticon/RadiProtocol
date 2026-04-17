@@ -128,3 +128,35 @@
   padding: 0;
   line-height: 1.4;
 }
+
+/* Phase 42: Create snippet node button */
+.rp-create-snippet-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--size-2-1);
+  padding: 6px 12px;
+  border-radius: var(--radius-s);
+  font-size: var(--font-ui-small);
+  font-weight: var(--font-semibold);
+  cursor: pointer;
+  border: none;
+  background: var(--interactive-accent);
+  color: var(--text-on-accent);
+  transition: filter 0.1s ease;
+}
+
+.rp-create-snippet-btn:hover {
+  filter: brightness(1.1);
+}
+
+.rp-create-snippet-btn:active {
+  filter: brightness(0.95);
+}
+
+/* Reserved for future disabled-state adoption — UI-SPEC locks this rule block even though
+   sBtn.disabled is not currently set at runtime. Keep until a future phase wires disabling. */
+.rp-create-snippet-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  filter: none;
+}
