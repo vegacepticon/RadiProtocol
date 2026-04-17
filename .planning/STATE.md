@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.7
 milestone_name: Loop Rework & Regression Cleanup
 status: executing
-stopped_at: Completed 43-02-PLAN.md (canvas-parser unified loop case)
-last_updated: "2026-04-17T09:31:13.265Z"
+stopped_at: Completed 43-03-PLAN.md (node-color-map + session-model + session-service exhaustiveness closure)
+last_updated: "2026-04-17T09:37:50.283Z"
 last_activity: 2026-04-17
 progress:
   total_phases: 4
   completed_phases: 0
   total_plans: 7
-  completed_plans: 2
-  percent: 29
+  completed_plans: 3
+  percent: 43
 ---
 
 # RadiProtocol — Project State
@@ -19,19 +19,19 @@ progress:
 **Updated:** 2026-04-17
 **Milestone:** v1.7 — Loop Rework & Regression Cleanup
 **Status:** Ready to execute
-**Last session:** 2026-04-17T09:31:13.259Z
-**Stopped at:** Completed 43-02-PLAN.md (canvas-parser unified loop case)
+**Last session:** 2026-04-17T09:37:38.362Z
+**Stopped at:** Completed 43-03-PLAN.md (node-color-map + session-model + session-service exhaustiveness closure)
 
 ---
 
 ## Current Position
 
 Phase: 43 (unified-loop-graph-model-parser-validator-migration-errors) — EXECUTING
-Plan: 3 of 7
+Plan: 4 of 7
 Status: Ready to execute
 Last activity: 2026-04-17
 
-Progress: [█░░░░░░░░░] 14% (0/4 phases, 1/7 plans)
+Progress: [████░░░░░░] 43% (0/4 phases, 3/7 plans)
 
 ---
 
@@ -71,6 +71,7 @@ See: `.planning/PROJECT.md` (updated 2026-04-17)
 
 ---
 | Phase 43 P02 | 2min | 1 tasks | 1 files |
+| Phase 43 P03 | 3min | 3 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -116,6 +117,8 @@ See: `.planning/PROJECT.md` (updated 2026-04-17)
 
 - Plan 43-01: kept `LoopStartNode` / `LoopEndNode` names with `@deprecated` JSDoc (D-CL-05 variant b) instead of renaming to `LegacyLoop*` — simpler downstream wiring; `LoopNode` shape mirrors `QuestionNode` (`headerText: string`, parser normalizes missing to `''`).
 - Plan 43-02: parser `case 'loop'` uses `getString(props, 'radiprotocol_headerText', '')` with empty-string fallback (NOT `raw.text ?? ''`) — empty header is a legitimate authored state; no silent fallback to native canvas text. Legacy parser cases `'loop-start'` / `'loop-end'` preserved unchanged (D-06) so Plan 43-03 validator can aggregate MIGRATE-01 error over `LoopStartNode`/`LoopEndNode` instances. `+13` lines additive only — zero deletions.
+- Plan 43-03: `NODE_COLOR_MAP` kept legacy `'loop-start'` / `'loop-end'` keys with `@deprecated Phase 43 D-CL-05` markers — `Record<RPNodeKind, string>` exhaustiveness forces them while Plan 01 (D-CL-05 variant b) keeps legacy kinds in `RPNodeKind` union; `'loop': '1'` (red) added per D-12 at end. Correction by reality-of-types, not deviation from D-12 intent.
+- Plan 43-03: `PersistedLoopContext.loopStartId` → `loopNodeId` (D-04 / D-13 break-compat); `validateSessionNodeIds` reader updated to `frame.loopNodeId` (4 reads across two loops). D-13 Option B chosen — no new load-path schema guard: legacy sessions flow through existing missing-id path (`graph.nodes.has(undefined)` → false), RunnerView clears via `sessionService.clear()`. Zero new code paths.
 
 ---
 
