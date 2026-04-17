@@ -130,15 +130,34 @@ describe('validateSessionNodeIds() (SESSION-03)', () => {
     expect(missing).toContain('n-deleted');
   });
 
-  it('returns missing loopStartId from loopContextStack when node removed', () => {
+  it('returns missing loopNodeId from loopContextStack when node removed', () => {
     const session = makeSession({
       currentNodeId: 'n-q1',
       undoStack: [],
-      loopContextStack: [{ loopStartId: 'n-ls-deleted', iteration: 1, textBeforeLoop: '' }],
+      loopContextStack: [{ loopNodeId: 'n-ls-deleted', iteration: 1, textBeforeLoop: '' }],
     });
     const graph = makeGraph(['n-q1']);
     const missing = validateSessionNodeIds(session, graph as never);
     expect(missing).toContain('n-ls-deleted');
+  });
+
+  // Phase 43 D-20 — graceful reject сессии со ссылкой на legacy loop ID.
+  // Старый канвас с loop-start/loop-end теперь отклоняется GraphValidator'ом ДО runner'а,
+  // но backstop-path через validateSessionNodeIds → missing IDs → RunnerView.sessionService.clear()
+  // должен работать без throw (D-13 graceful reject).
+  it('gracefully returns missing legacy loop node ID without throwing (D-20, D-13)', () => {
+    const session = makeSession({
+      currentNodeId: 'n-q1',
+      undoStack: [
+        { nodeId: 'n-start', textSnapshot: '', loopContextStack: [] },
+      ],
+      // Legacy ID ссылается на узел, которого нет в новом графе (бывший loop-start ID):
+      loopContextStack: [{ loopNodeId: 'n-legacy-ls1', iteration: 1, textBeforeLoop: '' }],
+    });
+    const graph = makeGraph(['n-q1', 'n-start']);
+    let missing: string[] = [];
+    expect(() => { missing = validateSessionNodeIds(session, graph as never); }).not.toThrow();
+    expect(missing).toContain('n-legacy-ls1');
   });
 });
 
@@ -192,9 +211,9 @@ describe('PersistedSession JSON serialization audit (SESSION-07)', () => {
     const session = makeSession({
       undoStack: [
         { nodeId: 'n-start', textSnapshot: '', loopContextStack: [] },
-        { nodeId: 'n-q1',    textSnapshot: 'Liver', loopContextStack: [{ loopStartId: 'n-ls1', iteration: 1, textBeforeLoop: '' }] },
+        { nodeId: 'n-q1',    textSnapshot: 'Liver', loopContextStack: [{ loopNodeId: 'n-ls1', iteration: 1, textBeforeLoop: '' }] },
       ],
-      loopContextStack: [{ loopStartId: 'n-ls1', iteration: 2, textBeforeLoop: 'Liver' }],
+      loopContextStack: [{ loopNodeId: 'n-ls1', iteration: 2, textBeforeLoop: 'Liver' }],
     });
     const json = JSON.stringify(session);
     const parsed = JSON.parse(json) as Record<string, unknown>;
