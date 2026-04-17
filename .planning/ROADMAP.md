@@ -130,7 +130,14 @@ Full details: `.planning/milestones/v1.6-ROADMAP.md`
   3. Choosing «выход» advances along the «выход» edge and the loop frame is removed from the internal context stack; a nested-loop protocol ends with each outer loop's «выход» still reachable in order (RUN-03, RUN-04)
   4. Step-back from the loop picker restores the node and accumulated text that existed immediately before the loop was entered (RUN-05); closing and reopening Obsidian mid-loop resumes the session at the same picker with the same accumulated text (RUN-06)
   5. No loop run in any canvas is capped by `maxIterations`; the settings tab no longer exposes a "max loop iterations" control and the `LoopStartNode.maxIterations` field no longer exists in the model (RUN-07)
-**Plans**: TBD
+**Plans:** 5 plans
+
+Plans:
+- [ ] 44-01-PLAN.md — Wave 0 test scaffolding: nested-loop fixture + protocol-runner-loop-picker.test.ts skeleton
+- [ ] 44-02a-PLAN.md — Runtime state machine: AwaitingLoopPickState, chooseLoopBranch, dead-end return, B1 re-entry guard, B2 previousCursor threading, session union widening, remove chooseLoopAction stub
+- [ ] 44-02b-PLAN.md — Test rewrites for the runtime: rewrite 7 skipped loop-support tests, fill protocol-runner-loop-picker.test.ts with RUN-01..05 + W4 long-body integration test
+- [ ] 44-03-PLAN.md — RunnerView picker UI + Phase 44 CSS + regenerate styles.css + rewrite 7 skipped session round-trip tests
+- [ ] 44-04-PLAN.md — RUN-07 excision: delete settings.maxLoopIterations, LoopStartNode.maxIterations, parser site, legacy editor-panel forms; keep ProtocolRunner.maxIterations (RUN-09) intact
 
 ### Phase 45: Loop Editor Form, Picker & Color Map
 **Goal**: Authors can create and edit unified `loop` nodes with the Node Editor and the Start-From-Node picker, and those nodes are coloured consistently on the canvas.
@@ -166,6 +173,6 @@ Full details: `.planning/milestones/v1.6-ROADMAP.md`
 | 32-35 | v1.5 | 18/18 | Complete | 2026-04-16 |
 | 36-42 | v1.6 | 14/14 | Complete | 2026-04-17 |
 | 43 | v1.7 | 7/7 | Complete    | 2026-04-17 |
-| 44 | v1.7 | 0/? | Not started | — |
+| 44 | v1.7 | 0/4 | Not started | — |
 | 45 | v1.7 | 0/? | Not started | — |
 | 46 | v1.7 | 0/? | Not started | — |

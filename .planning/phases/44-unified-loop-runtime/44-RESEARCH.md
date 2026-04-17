@@ -704,32 +704,32 @@ new Setting(containerEl).setName('Max loop iterations')...          // DELETE
 
 **Resolution of A1 (critical):** The `ProtocolRunner.maxIterations` constructor option (src/runner/protocol-runner.ts:8, 28, 44) is explicitly tied to the "iteration cap (RUN-09, D-08)" — a defence against cycles in auto-advance between user halts. It protects ALL auto-advance cases: `start → text-block → text-block → ...` chains; `answer → text-block → answer → ...` chains. Removing it would make any cycle non-terminating. The Phase 43 CONTEXT.md PATTERNS.md explicitly calls this out: "oставить: это общий cap auto-advance, не loop-specific (см. тест `iteration cap (RUN-09)`). НЕ путать с `settings.maxLoopIterations` (которое уходит в Phase 44 RUN-07)." This reduces A1's risk to LOW, but surface this to the user in discuss-phase anyway: "Confirm: RUN-07 removes the user-configurable loop cap but keeps the auto-advance cycle guard (RUN-09 default 50)."
 
-## Open Questions
+## Open Questions (RESOLVED)
 
 1. **`chooseLoopBranch(edgeId)` vs. `chooseLoopBranch(targetNodeId)` vs. `chooseLoopBranch(label)`?**
    - What we know: The picker enumerates edges; each button knows its `edge.id`. `edge.id` is globally unique, stable across canvas edits (unless author deletes the edge), and unambiguous.
    - What's unclear: `targetNodeId` would let the picker dispatch go through `adjacency.get()` (consistent with other parts of runner). But two body edges may target the same node — `targetNodeId` alone wouldn't identify the button. `label` has the same collision problem. `edgeId` is the robust choice.
-   - Recommendation: use `edgeId`. Cite the body/exit classification as `this.graph.edges.find(e => e.id === edgeId).label === 'выход'`.
+   - **RESOLVED:** use `edgeId`. Cite the body/exit classification as `this.graph.edges.find(e => e.id === edgeId).label === 'выход'`.
 
 2. **Delete `chooseLoopAction` stub in Phase 44, or leave it for Phase 45/46?**
    - What we know: The stub exists because the 7 `describe.skip('loop support')` tests in `protocol-runner.test.ts` call `chooseLoopAction` inside their bodies. Phase 44 rewrites those tests against `chooseLoopBranch`, so the references go away.
    - What's unclear: Phase 44 could do a clean delete. But there's a risk a test was missed; leaving the stub `@deprecated` through Phase 45 is safer.
-   - Recommendation: delete in Phase 44 AFTER rewriting/unskipping all 7 tests in the same task. Run `tsc --noEmit` to verify zero usages before delete.
+   - **RESOLVED:** delete in Phase 44 AFTER rewriting/unskipping all 7 tests in the same task. Run `tsc --noEmit` to verify zero usages before delete.
 
 3. **Do we display the iteration counter anywhere?**
    - What we know: `LoopContext.iteration` is tracked and incremented on each body-branch pick. RUN-01 does not require a counter.
    - What's unclear: Authors may want it. Phase 6 had `"Lesion 2"`. Phase 44 dropping it is a UX regression relative to Phase 6 — but is consistent with the Phase 43 D-02 decision to have `headerText` as the single UI element.
-   - Recommendation: do NOT display a counter. Keep `LoopContext.iteration` as internal state (needed for later per-iteration logic) but don't render it. Authors who want iteration visibility can include `"(iteration #)"` in their `headerText` — or Phase 45 LOOP-05 can add an optional toggle.
+   - **RESOLVED:** do NOT display a counter. Keep `LoopContext.iteration` as internal state (needed for later per-iteration logic) but don't render it. Authors who want iteration visibility can include `"(iteration #)"` in their `headerText` — or Phase 45 LOOP-05 can add an optional toggle.
 
 4. **Should the picker render differently when `loopContextStack.length > 1` (nested)?**
    - What we know: Nested loops keep both pickers live — inner loop is the "top" one rendering now; outer only renders when its body branch auto-returns to it.
    - What's unclear: Should there be a visual indicator like "Iteration N of parent loop '...'" breadcrumb? RUN-04 says nested loops "continue to work" — no explicit breadcrumb requirement.
-   - Recommendation: no breadcrumb in Phase 44. `headerText` alone. Easy addition later.
+   - **RESOLVED:** no breadcrumb in Phase 44. `headerText` alone. Easy addition later.
 
 5. **`edge.label === undefined` case — is this even reachable?**
    - What we know: LOOP-04 validator rejects a canvas with a `loop` node that has 0 body edges or a missing «выход». It does NOT require non-«выход» edges to have labels.
    - What's unclear: An unlabeled body edge is valid per the validator. The picker button for it reads `undefined` — bad UX.
-   - Recommendation: fallback `edge.label ?? '(no label)'` — show a placeholder. Optionally add a validator warning (Phase 45/46 scope; out for Phase 44).
+   - **RESOLVED:** fallback `edge.label ?? '(no label)'` — show a placeholder. Optionally add a validator warning (Phase 45/46 scope; out for Phase 44).
 
 ## Environment Availability
 
