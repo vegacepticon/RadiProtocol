@@ -253,7 +253,11 @@ describe('ProtocolRunner', () => {
     });
   });
 
-  describe('loop-start missing continue edge (RUN-08)', () => {
+  // TODO Phase 44: rewrite for unified loop — RUN-08 (loop-start missing continue edge) теряет
+  // смысл: loop-start/loop-end kind удалены, canvas-ы с ними отвергаются GraphValidator'ом через
+  // migration-error до runtime. Контур теста сохранён для истории; Phase 44 перепишет под
+  // unified-loop «missing «выход» edge» если нужно runtime-level проверять (валидатор уже проверяет).
+  describe.skip('loop-start missing continue edge (RUN-08)', () => {
     it('transitions to error state when loop-start has no continue edge', () => {
       // loop-start.canvas: start → n-ls1 (loop-start, no outgoing edges with label 'continue')
       // Phase 6: loop support is implemented — a missing 'continue' edge is a malformed graph error
@@ -447,7 +451,11 @@ describe('ProtocolRunner', () => {
     });
   });
 
-  describe('loop support (LOOP-01 through LOOP-05, RUN-09)', () => {
+  // TODO Phase 44: rewrite for unified loop (RUN-01..RUN-07). LoopEndNode удалён, chooseLoopAction
+  // превращён в @deprecated stub (Phase 43 D-14). Тела тестов сохранены как исторический контур
+  // поведения (iteration counter, chooseLoopAction('again'/'done'), stepBack из loop body, per-loop
+  // maxIterations cap) — Phase 44 реализует unified picker и перепишет эти проверки поверх LoopNode.
+  describe.skip('loop support (LOOP-01 through LOOP-05, RUN-09)', () => {
     function reachLoopEnd(runner: ProtocolRunner, graph: ProtocolGraph): void {
       runner.start(graph);
       // Runner halts at n-q1 (first question inside loop body)
