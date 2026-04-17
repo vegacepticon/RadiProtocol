@@ -2,12 +2,16 @@
 // Pure type definitions for session persistence — zero Obsidian API imports (NFR-01)
 
 /**
- * Persisted form of a LoopContext stack frame.
+ * Persisted frame of a loop context — serialized to session JSON.
  * Identical shape to the runtime LoopContext — defined separately to keep
  * sessions/ independent of runner/ types.
+ *
+ * Phase 43 D-04 / D-13: field renamed from loopStartId to loopNodeId alongside
+ * unified loop node (LOOP-01). Break-compat: old sessions with loopStartId
+ * gracefully rejected through validateSessionNodeIds → missing IDs → clear().
  */
 export interface PersistedLoopContext {
-  loopStartId: string;
+  loopNodeId: string;
   iteration: number;
   textBeforeLoop: string;
 }
