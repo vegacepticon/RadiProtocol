@@ -92,7 +92,7 @@ Full details: `.planning/milestones/v1.5-ROADMAP.md`
 - [x] **Phase 39: Quick-Create UI in Node Editor** — Toolbar buttons to create question and answer nodes from the sidebar (completed 2026-04-16)
 - [x] **Phase 40: Node Duplication** — Duplicate selected node with all RadiProtocol properties preserved (completed 2026-04-16)
 - [x] **Phase 41: Live Canvas Update on Folder Rename** — Use canvasLiveEditor Pattern B to update snippet node text in real-time during folder rename (completed 2026-04-16)
-- [ ] **Phase 42: Snippet Node Quick-Create Button & Double-Click Node Selection Fix** — Add "Create snippet node" button; fix double-click-created nodes not loading in editor panel
+- [x] **Phase 42: Snippet Node Quick-Create Button & Double-Click Node Selection Fix** — Add "Create snippet node" button; fix double-click-created nodes not loading in editor panel (completed 2026-04-17)
 
 ---
 
@@ -195,7 +195,7 @@ Plans:
 **Plans**: 2 plans
 Plans:
 - [x] 42-01-PLAN.md — Fix double-click node selection bug (in-memory canvas fallback) + empty-type helper hint + CSS + tests
-- [ ] 42-02-PLAN.md — Add Create snippet node button to editor toolbar + widen onQuickCreate + CSS + test
+- [x] 42-02-PLAN.md — Add Create snippet node button to editor toolbar + widen onQuickCreate + CSS + test
 **UI hint**: yes
 
 ---
@@ -218,4 +218,4 @@ Phases execute in numeric order: 36 -> 37 -> 38 -> 39 -> 40 -> 41 -> 42
 | 39. Quick-Create UI in Node Editor | v1.6 | 2/2 | Complete   | 2026-04-16 |
 | 40. Node Duplication | v1.6 | 1/1 | Complete    | 2026-04-16 |
 | 41. Live Canvas Update on Folder Rename | v1.6 | 1/1 | Complete    | 2026-04-16 |
-| 42. Snippet Node Quick-Create & Double-Click Fix | v1.6 | 1/2 | In Progress|  |
+| 42. Snippet Node Quick-Create & Double-Click Fix | v1.6 | 2/2 | Complete   | 2026-04-17 |
