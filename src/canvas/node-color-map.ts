@@ -15,7 +15,8 @@ export const NODE_COLOR_MAP: Record<RPNodeKind, string> = {
   'answer':          '2',  // orange — action / selection
   'free-text-input': '2',  // orange — user input action (same family as answer)
   'text-block':      '3',  // yellow — passive content
-  'loop-start':      '1',  // red    — loop boundary
-  'loop-end':        '1',  // red    — loop boundary (intentional share with loop-start, D-01)
+  'loop-start':      '1',  // red    — @deprecated Phase 43 D-CL-05 (legacy, см. MIGRATE-01)
+  'loop-end':        '1',  // red    — @deprecated Phase 43 D-CL-05 (legacy)
   'snippet':         '6',  // purple — snippet node (Phase 29, D-11)
+  'loop':            '1',  // red    — Phase 43 D-12 unified loop (LOOP-01, LOOP-06 scaffolding)
 };
