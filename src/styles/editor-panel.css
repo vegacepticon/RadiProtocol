@@ -118,3 +118,13 @@
   cursor: not-allowed;
   filter: none;
 }
+
+/* Phase 42: Empty-type helper hint */
+.rp-editor-type-hint {
+  color: var(--text-muted);
+  font-size: var(--font-ui-smaller);
+  font-style: italic;
+  margin: var(--size-4-1) 0 0 0;
+  padding: 0;
+  line-height: 1.4;
+}

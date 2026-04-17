@@ -467,6 +467,16 @@
   filter: none;
 }
 
+/* Phase 42: Empty-type helper hint */
+.rp-editor-type-hint {
+  color: var(--text-muted);
+  font-size: var(--font-ui-smaller);
+  font-style: italic;
+  margin: var(--size-4-1) 0 0 0;
+  padding: 0;
+  line-height: 1.4;
+}
+
 /* Phase 5: SnippetManagerView (chip editor / form sections — now hosted by
    snippet-editor-modal.ts via mountChipEditor; master-detail container rules
    removed in Phase 33 Plan 04 when the legacy layout was deleted). */
