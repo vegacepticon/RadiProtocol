@@ -153,6 +153,55 @@ export class ProtocolRunner {
   }
 
   /**
+   * Phase 44 (RUN-01, RUN-03): user picks a branch at the loop picker.
+   * Valid only in 'awaiting-loop-pick'. Dispatches by edge label:
+   *   - 'выход'  → pop the current loop frame, advance along the exit edge
+   *   - other    → walk the body branch (B1 re-entry guard inside case 'loop'
+   *                handles the iteration increment on return to picker)
+   *
+   * edgeId is the stable identifier per locked decision (planner D-02): labels
+   * can duplicate and targetNodeIds can collide when two body branches point to
+   * the same node. Only edgeId is unambiguous.
+   */
+  chooseLoopBranch(edgeId: string): void {
+    if (this.runnerStatus !== 'awaiting-loop-pick') return;
+    if (this.graph === null || this.currentNodeId === null) return;
+
+    const edge = this.graph.edges.find(e => e.id === edgeId);
+    if (edge === undefined || edge.fromNodeId !== this.currentNodeId) {
+      this.transitionToError(
+        `Loop picker edge '${edgeId}' not found or does not originate at current loop node.`,
+      );
+      return;
+    }
+
+    // Undo-before-mutate (Pitfall 1)
+    this.undoStack.push({
+      nodeId: this.currentNodeId,
+      textSnapshot: this.accumulator.snapshot(),
+      loopContextStack: [...this.loopContextStack],
+    });
+
+    if (edge.label === 'выход') {
+      // RUN-03: pop frame (top-of-stack, nested-safe)
+      this.loopContextStack.pop();
+    }
+    // Body branch: DO NOT increment iteration here. The B1 re-entry guard inside
+    // case 'loop' is the sole site that increments iteration (fires on back-edge
+    // re-entry AND on inner-«выход» landing on outer). This keeps the semantic
+    // "iteration = number of times user has seen the picker for this loop node":
+    //   - First loop-entry:         iteration = 1 (halts at picker)
+    //   - Pick body → walk → return: B1 increments to 2 (2nd picker view)
+    //   - Pick body again → return:  B1 increments to 3 (3rd picker view)
+    // Without this rule, both chooseLoopBranch AND B1 would increment, giving
+    // iteration = 2*N + 1 after N picks — confusing and out of line with the
+    // Plan 02b RUN-02 assertion expect(iteration).toBe(2).
+
+    this.runnerStatus = 'at-node';
+    this.advanceThrough(edge.toNodeId);
+  }
+
+  /**
    * User submits free-text input.
    * Only valid in at-node state when the current node is a free-text-input node.
    * Wraps text with prefix/suffix if present (RUN-04).
@@ -278,27 +327,13 @@ export class ProtocolRunner {
 
   /**
    * Inject a manual textarea edit into the accumulator before an advance action (BUG-01, D-01).
-   * Must be called BEFORE chooseAnswer() / enterFreeText() / chooseLoopAction() so that
+   * Must be called BEFORE chooseAnswer() / enterFreeText() / chooseLoopBranch() so that
    * the undo snapshot captured inside those methods includes the manual edit.
    * No-op if runner is not in 'at-node' state.
    */
   syncManualEdit(text: string): void {
     if (this.runnerStatus !== 'at-node') return;
     this.accumulator.overwrite(text);
-  }
-
-  /**
-   * @deprecated Phase 43 D-14, D-18 — loop-end runtime удалён вместе с LoopEndNode;
-   * unified loop runtime реализуется в Phase 44 (RUN-01..RUN-07).
-   * Метод сохранён как stub, чтобы `.skip`-тесты (src/__tests__/runner/protocol-runner.test.ts,
-   * protocol-runner-session.test.ts) продолжали TypeScript-компилироваться.
-   * Не должен вызываться в runtime — если вызвали, переводим runner в error-state.
-   */
-  chooseLoopAction(action: 'again' | 'done'): void {
-    void action;
-    this.transitionToError(
-      'chooseLoopAction устарел (Phase 43 D-18). Loop runtime реализуется в Phase 44.',
-    );
   }
 
   /**
@@ -310,16 +345,11 @@ export class ProtocolRunner {
       case 'idle':
         return { status: 'idle' };
       case 'at-node': {
-        // Phase 43 D-14 — label assembly упрощён до undefined.
-        // Phase 44 (RUN-01..RUN-07) реализует полный header + iteration counter поверх LoopNode.headerText.
-        const loopIterationLabel: string | undefined = undefined;
         return {
           status: 'at-node',
           currentNodeId: this.currentNodeId ?? '',
           accumulatedText: this.accumulator.current,
           canStepBack: this.undoStack.length > 0,
-          loopIterationLabel,
-          isAtLoopEnd: undefined,
         };
       }
       case 'awaiting-snippet-pick': {
@@ -337,6 +367,13 @@ export class ProtocolRunner {
           canStepBack: this.undoStack.length > 0,
         };
       }
+      case 'awaiting-loop-pick':
+        return {
+          status: 'awaiting-loop-pick',
+          nodeId: this.currentNodeId ?? '',
+          accumulatedText: this.accumulator.current,
+          canStepBack: this.undoStack.length > 0,
+        };
       case 'awaiting-snippet-fill':
         return {
           status: 'awaiting-snippet-fill',
@@ -370,7 +407,7 @@ export class ProtocolRunner {
    * savedAt, and version to complete the PersistedSession shape before writing.
    */
   getSerializableState(): {
-    runnerStatus: 'at-node' | 'awaiting-snippet-pick' | 'awaiting-snippet-fill';
+    runnerStatus: 'at-node' | 'awaiting-snippet-pick' | 'awaiting-snippet-fill' | 'awaiting-loop-pick';
     currentNodeId: string;
     accumulatedText: string;
     undoStack: Array<{ nodeId: string; textSnapshot: string; loopContextStack: Array<{ loopNodeId: string; iteration: number; textBeforeLoop: string }>; returnToBranchList?: boolean }>;
@@ -381,7 +418,8 @@ export class ProtocolRunner {
     if (
       this.runnerStatus !== 'at-node' &&
       this.runnerStatus !== 'awaiting-snippet-fill' &&
-      this.runnerStatus !== 'awaiting-snippet-pick'
+      this.runnerStatus !== 'awaiting-snippet-pick' &&
+      this.runnerStatus !== 'awaiting-loop-pick'
     ) {
       return null;
     }
@@ -427,7 +465,7 @@ export class ProtocolRunner {
    * is never in error state).
    */
   restoreFrom(session: {
-    runnerStatus: 'at-node' | 'awaiting-snippet-pick' | 'awaiting-snippet-fill';
+    runnerStatus: 'at-node' | 'awaiting-snippet-pick' | 'awaiting-snippet-fill' | 'awaiting-loop-pick';
     currentNodeId: string;
     accumulatedText: string;
     undoStack: Array<{ nodeId: string; textSnapshot: string; loopContextStack: Array<{ loopNodeId: string; iteration: number; textBeforeLoop: string }>; returnToBranchList?: boolean }>;
@@ -481,6 +519,17 @@ export class ProtocolRunner {
    */
   private advanceThrough(nodeId: string): void {
     let cursor = nodeId;
+    // B2 — previousCursor records the node we were at BEFORE the current cursor was assigned.
+    // Used by case 'loop' below to push an undo entry with nodeId=<predecessor> so step-back
+    // from the picker restores the predecessor. When advanceThrough is called directly from
+    // start() or chooseLoopBranch() and the first node IS the loop itself, previousCursor stays
+    // null; the loop-entry undo push then falls back to nodeId=cursor (step-back becomes a
+    // logical no-op — re-running advanceThrough lands back at the same picker).
+    let previousCursor: string | null = null;
+    // steps counter resets on each advanceThrough entry (RUN-07 context: per-call cycle guard,
+    // NOT per-loop cap). W4 — long-body integration test in Plan 02b Task 2 exercises a loop
+    // body with 10 text-blocks × 10 iterations ≈ 110 nodes-per-call to confirm the guard does
+    // NOT trip in realistic long-body cases. ProtocolRunner.maxIterations stays at its default.
     let steps = 0;
 
     while (true) {
@@ -507,11 +556,9 @@ export class ProtocolRunner {
         case 'start': {
           // Auto-advance through the start node to the first real node
           const next = this.firstNeighbour(cursor);
-          if (next === undefined) {
-            this.transitionToComplete();
-            return;
-          }
-          cursor = next;
+          if (this.advanceOrReturnToLoop(next) === 'halted') return;
+          previousCursor = cursor;   // B2 threading
+          cursor = next!;
           break;
         }
         case 'text-block': {
@@ -525,11 +572,9 @@ export class ProtocolRunner {
           // RUN-05: auto-append static text — no user interaction required
           this.accumulator.appendWithSeparator(node.content, this.resolveSeparator(node));
           const next = this.firstNeighbour(cursor);
-          if (next === undefined) {
-            this.transitionToComplete();
-            return;
-          }
-          cursor = next;
+          if (this.advanceOrReturnToLoop(next) === 'halted') return;
+          previousCursor = cursor;   // B2 threading
+          cursor = next!;
           break;
         }
         case 'question':
@@ -544,21 +589,53 @@ export class ProtocolRunner {
           // This handles answer → text-block → question chains correctly.
           this.accumulator.appendWithSeparator(node.answerText, this.resolveSeparator(node));
           const next = this.firstNeighbour(cursor);
-          if (next === undefined) {
-            this.transitionToComplete();
-            return;
-          }
-          cursor = next;
+          if (this.advanceOrReturnToLoop(next) === 'halted') return;
+          previousCursor = cursor;   // B2 threading
+          cursor = next!;
           break;
         }
-        // Phase 43 D-14, D-CL-04 — unified loop runtime реализуется в Phase 44 (RUN-01..RUN-07).
-        // Канвасы с loop-start/loop-end отвергаются GraphValidator'ом через migration-error (MIGRATE-01),
-        // поэтому сюда legacy kinds не доходят. Unified 'loop' kind встречается только если канвас
-        // прошёл validator — в Phase 43 это soft-error до имплементации runtime picker'а.
+        // Phase 44 (RUN-01) — unified loop runtime: halt at picker.
         case 'loop': {
-          this.transitionToError(
-            'Loop runtime ещё не реализован (запланировано в Phase 44 — см. ROADMAP v1.7).',
-          );
+          // B1 re-entry guard — check top-of-stack BEFORE pushing a new frame.
+          // If the top frame's loopNodeId === cursor, this call is a re-entry via a body
+          // back-edge (e.g. n-a1 → n-loop in unified-loop-valid.canvas) OR an inner «выход»
+          // that lands on the outer loop node (e.g. e5: n-inner → n-outer in
+          // unified-loop-nested.canvas). In both cases the frame already exists — increment
+          // iteration in-place and halt at the picker WITHOUT pushing a second frame and
+          // WITHOUT pushing a second undo entry (preserves RUN-02 iteration semantics and
+          // RUN-04 single-outer-frame invariant).
+          const top = this.loopContextStack[this.loopContextStack.length - 1];
+          if (top !== undefined && top.loopNodeId === cursor) {
+            top.iteration += 1;
+            this.currentNodeId = cursor;
+            this.runnerStatus = 'awaiting-loop-pick';
+            return;
+          }
+
+          // First-entry path — push undo snapshot + new frame + halt.
+          // Undo-before-mutate (Pitfall 1) with B2 previousCursor threading:
+          //   - If previousCursor !== null we came here via auto-advance from a real predecessor;
+          //     push undo with nodeId=previousCursor so step-back restores that predecessor.
+          //   - If previousCursor === null we entered advanceThrough directly at the loop node
+          //     (e.g. start() on a graph whose start-edge points straight at a loop, or any other
+          //     zero-auto-advance path). Push undo with nodeId=cursor so canStepBack=true. Step-back
+          //     will restore currentNodeId=loopNode + empty loopContextStack; re-running advanceThrough
+          //     from the loop node will fall through here again and re-halt at the picker. This is
+          //     a logical no-op from the user's perspective (the button clicks but nothing visible
+          //     changes) — acceptable because (a) consistent canStepBack behaviour in the union type,
+          //     (b) keeps the UI "Step back" button enabled symmetrically, (c) no data loss.
+          this.undoStack.push({
+            nodeId: previousCursor !== null ? previousCursor : cursor,
+            textSnapshot: this.accumulator.snapshot(),
+            loopContextStack: [...this.loopContextStack],  // shallow spread — frames are primitive-only
+          });
+          this.loopContextStack.push({
+            loopNodeId: cursor,
+            iteration: 1,
+            textBeforeLoop: this.accumulator.snapshot(),
+          });
+          this.currentNodeId = cursor;
+          this.runnerStatus = 'awaiting-loop-pick';
           return;
         }
         case 'loop-start':
@@ -586,6 +663,40 @@ export class ProtocolRunner {
         }
       }
     }
+  }
+
+  /**
+   * Phase 44 (RUN-02): helper for auto-advance dead-end handling.
+   * When `next` is undefined (current node has no outgoing edge):
+   *   - if inside a loop frame, increment the top frame's iteration, set
+   *     currentNodeId to the top frame's loopNodeId, set runnerStatus to
+   *     'awaiting-loop-pick', and return 'halted';
+   *   - otherwise call transitionToComplete() and return 'halted'.
+   * When `next` is defined, return 'continue' — caller updates its local cursor.
+   *
+   * Iteration semantic: dead-end bodies and back-edge bodies BOTH count as one
+   * new iteration per return to the picker. Back-edge bodies hit B1 re-entry
+   * guard inside case 'loop' (different code path); this helper is ONLY for the
+   * true-dead-end case (node with zero outgoing edges).
+   */
+  private advanceOrReturnToLoop(next: string | undefined): 'continue' | 'halted' {
+    if (next !== undefined) return 'continue';
+    if (this.loopContextStack.length > 0) {
+      const frame = this.loopContextStack[this.loopContextStack.length - 1];
+      if (frame !== undefined) {
+        // Dead-end body (no outgoing edge) returning to the owning picker counts as a new
+        // iteration, same as a back-edge body would (via B1 re-entry guard). This keeps the
+        // semantic consistent: EVERY return to a picker from a body pass increments iteration
+        // exactly once. Note that back-edge bodies reach the loop node via cursor = next! →
+        // case 'loop' → B1 guard, which is a different code path and NOT this helper.
+        frame.iteration += 1;
+        this.currentNodeId = frame.loopNodeId;
+        this.runnerStatus = 'awaiting-loop-pick';
+        return 'halted';
+      }
+    }
+    this.transitionToComplete();
+    return 'halted';
   }
 
   private firstNeighbour(nodeId: string): string | undefined {

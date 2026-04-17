@@ -486,6 +486,19 @@ export class RunnerView extends ItemView {
         return;
       }
 
+      case 'awaiting-loop-pick': {
+        // Phase 44 Plan 02a: runtime live but picker UI lives in Plan 03 (RUN-01 view layer).
+        // Minimal placeholder — exhaustiveness arm to keep TS compile green until Plan 03
+        // replaces this with the real picker render arm (headerText + edge buttons + step-back).
+        questionZone.createEl('p', {
+          text: 'Loop picker (Phase 44 Plan 03 will render this).',
+          cls: 'rp-empty-state-body',
+        });
+        this.renderPreviewZone(previewZone, state.accumulatedText);
+        this.renderOutputToolbar(outputToolbar, state.accumulatedText, false);
+        break;
+      }
+
       default: {
         // TypeScript exhaustiveness check
         const _exhaustive: never = state;

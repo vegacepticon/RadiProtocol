@@ -341,7 +341,8 @@ describe.skip('Loop context stack survives session round-trip (SESSION-05)', () 
     // Reach loop-end on iteration 1
     runner.chooseAnswer('n-a1');  // → n-le1
     // Loop again → iteration 2 → halts at n-q1
-    runner.chooseLoopAction('again');
+    // Phase 44 02a: chooseLoopAction stub deleted; Plan 02b rewrites this test against unified loop runtime.
+    (runner as unknown as { chooseLoopAction(a: 'again' | 'done'): void }).chooseLoopAction('again');
 
     const savedState = runner.getSerializableState();
     if (savedState === null) return;
@@ -360,6 +361,6 @@ describe.skip('Loop context stack survives session round-trip (SESSION-05)', () 
     const state = restored.getState();
     if (state.status !== 'at-node') return;
     // loopIterationLabel should reflect iteration 2: "Lesion 2"
-    expect(state.loopIterationLabel).toBe('Lesion 2');
+    expect((state as unknown as { loopIterationLabel?: string }).loopIterationLabel).toBe('Lesion 2');
   });
 });
