@@ -4,7 +4,7 @@
 // CANVAS-03: answer node creation
 // Phase 42: in-memory canvas fallback + empty-type helper hint render path
 
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { Notice, Setting, TFile } from 'obsidian';
 import { EditorPanelView } from '../views/editor-panel-view';
 
@@ -476,5 +476,151 @@ describe('EditorPanelView double-click fallback + empty-type hint', () => {
       .renderForm({ id: 'n1', radiprotocol_nodeType: 'question' }, 'question');
 
     expect(createdElements.find(e => e.cls === 'rp-editor-type-hint')).toBeUndefined();
+  });
+});
+
+describe('EditorPanelView double-click auto-select (gap closure)', () => {
+  let mockPlugin: Record<string, unknown>;
+  let mockLeaf: { containerEl: Record<string, unknown> };
+  let view: EditorPanelView;
+  let fakeContainer: Record<string, unknown>;
+  let fakeCanvas: { selection?: Set<{ id: string }> };
+  let canvasLeaf: {
+    containerEl: Record<string, unknown>;
+    view: { file?: { path: string }; canvas: typeof fakeCanvas };
+  };
+  let registeredEvents: Array<{ target: unknown; event: string; handler: () => void }>;
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.useFakeTimers();
+
+    fakeCanvas = { selection: new Set() };
+    fakeContainer = {};
+    canvasLeaf = {
+      containerEl: fakeContainer,
+      view: {
+        file: { path: 'test.canvas' },
+        canvas: fakeCanvas,
+      },
+    };
+
+    mockPlugin = {
+      app: {
+        vault: {},
+        workspace: {
+          getLeavesOfType: vi.fn().mockReturnValue([canvasLeaf]),
+          getMostRecentLeaf: vi.fn().mockReturnValue(canvasLeaf),
+        },
+      },
+      settings: {},
+      canvasNodeFactory: { createNode: vi.fn() },
+      canvasLiveEditor: { saveLive: vi.fn().mockResolvedValue(false) },
+      ensureEditorPanelVisible: vi.fn().mockResolvedValue(undefined),
+    };
+
+    mockLeaf = { containerEl: {} };
+
+    view = new EditorPanelView(
+      mockLeaf as unknown as import('obsidian').WorkspaceLeaf,
+      mockPlugin as unknown as import('../main').default
+    );
+
+    // Capture registerDomEvent calls — EditorPanelView extends ItemView which
+    // provides registerDomEvent; replace with a capturing spy for the test.
+    // vi.mock('obsidian') auto-stubs ItemView so registerDomEvent may not be
+    // a writable prototype property — use Object.defineProperty for safety.
+    registeredEvents = [];
+    Object.defineProperty(view, 'registerDomEvent', {
+      value: (target: unknown, event: string, handler: () => void) => {
+        registeredEvents.push({ target, event, handler });
+      },
+      configurable: true,
+      writable: true,
+    });
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it('deferred selection read invokes handleNodeClick when node appears after setTimeout(0)', () => {
+    const handleNodeClickSpy = vi
+      .spyOn(
+        view as unknown as { handleNodeClick: (f: string, n: string) => Promise<void> },
+        'handleNodeClick'
+      )
+      .mockResolvedValue(undefined);
+
+    (view as unknown as { attachCanvasListener: () => void }).attachCanvasListener();
+
+    // Find the registered 'click' handler
+    const clickReg = registeredEvents.find(r => r.event === 'click');
+    expect(clickReg).toBeDefined();
+
+    // Simulate: at event-time selection is still empty (Obsidian hasn't updated yet)
+    fakeCanvas.selection = new Set();
+    clickReg!.handler();
+
+    // Now Obsidian updates selection (happens inside the deferred tick)
+    fakeCanvas.selection = new Set([{ id: 'newly-created-node' }]);
+
+    // Tick the setTimeout(0)
+    vi.advanceTimersByTime(0);
+
+    expect(handleNodeClickSpy).toHaveBeenCalledTimes(1);
+    expect(handleNodeClickSpy).toHaveBeenCalledWith('test.canvas', 'newly-created-node');
+  });
+
+  it('deferred read does NOT call handleNodeClick when selection stays empty', () => {
+    const handleNodeClickSpy = vi
+      .spyOn(
+        view as unknown as { handleNodeClick: (f: string, n: string) => Promise<void> },
+        'handleNodeClick'
+      )
+      .mockResolvedValue(undefined);
+
+    (view as unknown as { attachCanvasListener: () => void }).attachCanvasListener();
+
+    const clickReg = registeredEvents.find(r => r.event === 'click');
+    fakeCanvas.selection = new Set();
+    clickReg!.handler();
+    vi.advanceTimersByTime(0);
+
+    expect(handleNodeClickSpy).not.toHaveBeenCalled();
+  });
+
+  it('deferred read ignores multi-select', () => {
+    const handleNodeClickSpy = vi
+      .spyOn(
+        view as unknown as { handleNodeClick: (f: string, n: string) => Promise<void> },
+        'handleNodeClick'
+      )
+      .mockResolvedValue(undefined);
+
+    (view as unknown as { attachCanvasListener: () => void }).attachCanvasListener();
+
+    const clickReg = registeredEvents.find(r => r.event === 'click');
+    clickReg!.handler();
+    fakeCanvas.selection = new Set([{ id: 'a' }, { id: 'b' }]);
+    vi.advanceTimersByTime(0);
+
+    expect(handleNodeClickSpy).not.toHaveBeenCalled();
+  });
+
+  it('registers BOTH click and dblclick on the canvas container', () => {
+    (view as unknown as { attachCanvasListener: () => void }).attachCanvasListener();
+
+    const clickRegs = registeredEvents.filter(
+      r => r.event === 'click' && r.target === fakeContainer
+    );
+    const dblclickRegs = registeredEvents.filter(
+      r => r.event === 'dblclick' && r.target === fakeContainer
+    );
+
+    expect(clickRegs.length).toBeGreaterThanOrEqual(1);
+    expect(dblclickRegs.length).toBeGreaterThanOrEqual(1);
+    // Same handler reused for both events
+    expect(clickRegs[0]!.handler).toBe(dblclickRegs[0]!.handler);
   });
 });
