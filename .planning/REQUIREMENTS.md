@@ -10,8 +10,8 @@
 
 ### Loop Node Unification (LOOP)
 
-- [ ] **LOOP-01**: Graph model exposes a single `loop` node kind; `loop-start` and `loop-end` are removed from the `RPNodeKind` discriminated union
-- [ ] **LOOP-02**: `LoopNode` carries an editable `headerText` field shown as the prompt header in the runner
+- [x] **LOOP-01**: Graph model exposes a single `loop` node kind; `loop-start` and `loop-end` are removed from the `RPNodeKind` discriminated union
+- [x] **LOOP-02**: `LoopNode` carries an editable `headerText` field shown as the prompt header in the runner
 - [ ] **LOOP-03**: Canvas parser recognizes `radiprotocol_nodeType = "loop"` and materializes a `LoopNode` with `headerText` from canvas JSON
 - [ ] **LOOP-04**: `GraphValidator` requires each `loop` node to have exactly one outgoing edge labelled «выход» and at least one additional outgoing (body) edge
 - [ ] **LOOP-05**: Node Editor form for the loop node lets the author edit `headerText` and removes any `maxIterations` control
@@ -67,8 +67,8 @@ Which phases cover which requirements. Populated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| LOOP-01 | Phase 43 | Pending |
-| LOOP-02 | Phase 43 | Pending |
+| LOOP-01 | Phase 43 | Complete |
+| LOOP-02 | Phase 43 | Complete |
 | LOOP-03 | Phase 43 | Pending |
 | LOOP-04 | Phase 43 | Pending |
 | LOOP-05 | Phase 45 | Pending |

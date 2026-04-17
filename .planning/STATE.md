@@ -2,36 +2,36 @@
 gsd_state_version: 1.0
 milestone: v1.7
 milestone_name: Loop Rework & Regression Cleanup
-status: planning
-stopped_at: Phase 43 context gathered
-last_updated: "2026-04-17T08:24:48.070Z"
-last_activity: 2026-04-17 — v1.7 roadmap created (4 phases, 19/19 requirements mapped)
+status: executing
+stopped_at: Completed 43-01-PLAN.md (graph-model unified loop types)
+last_updated: "2026-04-17T09:26:29.548Z"
+last_activity: 2026-04-17
 progress:
   total_phases: 4
   completed_phases: 0
-  total_plans: 0
-  completed_plans: 0
-  percent: 0
+  total_plans: 7
+  completed_plans: 1
+  percent: 14
 ---
 
 # RadiProtocol — Project State
 
 **Updated:** 2026-04-17
 **Milestone:** v1.7 — Loop Rework & Regression Cleanup
-**Status:** Roadmap complete, ready for phase planning
-**Last session:** 2026-04-17T08:24:48.065Z
-**Stopped at:** Phase 43 context gathered
+**Status:** Executing Phase 43 (plan 2/7)
+**Last session:** 2026-04-17T09:26:29.540Z
+**Stopped at:** Completed 43-01-PLAN.md (graph-model unified loop types)
 
 ---
 
 ## Current Position
 
-Phase: 43 (Unified Loop — Graph Model, Parser, Validator & Migration Errors)
-Plan: Not yet planned
-Status: Ready for planning
-Last activity: 2026-04-17 — v1.7 roadmap created (4 phases, 19/19 requirements mapped)
+Phase: 43 (unified-loop-graph-model-parser-validator-migration-errors) — EXECUTING
+Plan: 2 of 7
+Status: Executing Phase 43
+Last activity: 2026-04-17 — Completed plan 43-01 (unified LoopNode in graph-model)
 
-Progress: [░░░░░░░░░░] 0% (0/4 phases, 0/? plans)
+Progress: [█░░░░░░░░░] 14% (0/4 phases, 1/7 plans)
 
 ---
 
@@ -40,7 +40,7 @@ Progress: [░░░░░░░░░░] 0% (0/4 phases, 0/? plans)
 See: `.planning/PROJECT.md` (updated 2026-04-17)
 
 **Core value:** A radiologist can generate a structured, accurate protocol in seconds by answering a guided algorithm — without writing a single line of code.
-**Current focus:** v1.7 — unify loop node; remove free-text-input regression
+**Current focus:** Phase 43 — unified-loop-graph-model-parser-validator-migration-errors
 
 ---
 
@@ -62,6 +62,12 @@ See: `.planning/PROJECT.md` (updated 2026-04-17)
 - Total plans completed (v1.6): 14
 - v1.6 duration: 1 day (2026-04-16 → 2026-04-17)
 - Average plan size: 1–5 plans per phase
+
+**v1.7 plan metrics:**
+
+| Phase | Plan | Duration | Tasks | Files |
+|-------|------|----------|-------|-------|
+| 43    | 01   | 2min     | 1     | 1     |
 
 ---
 
@@ -104,6 +110,10 @@ See: `.planning/PROJECT.md` (updated 2026-04-17)
 - Node Editor panel stale `subfolderPath` display after folder move/rename (cosmetic)
 - Chip editor English labels (Phase 27 legacy)
 - Nyquist VALIDATION.md draft for phases 12–19, 28–31, 32–35, 36–42
+
+### Decisions (Phase 43)
+
+- Plan 43-01: kept `LoopStartNode` / `LoopEndNode` names with `@deprecated` JSDoc (D-CL-05 variant b) instead of renaming to `LegacyLoop*` — simpler downstream wiring; `LoopNode` shape mirrors `QuestionNode` (`headerText: string`, parser normalizes missing to `''`).
 
 ---
 
