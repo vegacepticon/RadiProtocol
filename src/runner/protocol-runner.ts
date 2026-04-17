@@ -90,11 +90,14 @@ export class ProtocolRunner {
     // Append the answer text
     this.accumulator.appendWithSeparator(answerNode.answerText, this.resolveSeparator(answerNode));
 
-    // Advance to the next node after this answer
+    // Advance to the next node after this answer.
+    // Phase 44 UAT-fix: dead-end answer inside a loop body returns to the owning picker
+    // (iteration++) instead of completing the protocol — matches the auto-advance contract in
+    // advanceOrReturnToLoop (protocol-runner.ts:682-700). Outside a loop, dead-end still completes.
     const neighbors = this.graph.adjacency.get(answerId);
     const next = neighbors !== undefined ? neighbors[0] : undefined;
     if (next === undefined) {
-      this.transitionToComplete();
+      this.advanceOrReturnToLoop(undefined);
       return;
     }
     this.advanceThrough(next);
@@ -229,11 +232,13 @@ export class ProtocolRunner {
     const suffix = node.suffix ?? '';
     this.accumulator.appendWithSeparator(prefix + text + suffix, this.resolveSeparator(node));
 
-    // Advance to the next node
+    // Advance to the next node.
+    // Phase 44 UAT-fix: dead-end free-text-input inside a loop body returns to the owning picker
+    // (iteration++) instead of completing the protocol — same contract as dead-end answer.
     const neighbors = this.graph.adjacency.get(this.currentNodeId);
     const next = neighbors !== undefined ? neighbors[0] : undefined;
     if (next === undefined) {
-      this.transitionToComplete();
+      this.advanceOrReturnToLoop(undefined);
       return;
     }
     this.advanceThrough(next);
@@ -315,11 +320,13 @@ export class ProtocolRunner {
     this.snippetNodeId = null;
     this.runnerStatus = 'at-node'; // Reset before advanceThrough determines next state
 
-    // Advance from the node that had the snippetId
+    // Advance from the node that had the snippetId.
+    // Phase 44 UAT-fix: dead-end snippet inside a loop body returns to the owning picker
+    // (iteration++) instead of completing the protocol — same contract as dead-end answer.
     const neighbors = this.graph.adjacency.get(pendingNodeId);
     const next = neighbors !== undefined ? neighbors[0] : undefined;
     if (next === undefined) {
-      this.transitionToComplete();
+      this.advanceOrReturnToLoop(undefined);
       return;
     }
     this.advanceThrough(next);
