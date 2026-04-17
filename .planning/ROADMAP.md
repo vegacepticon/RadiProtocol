@@ -165,7 +165,7 @@ Full details: `.planning/milestones/v1.6-ROADMAP.md`
 | 28-31 | v1.4 | 12/12 | Complete | 2026-04-15 |
 | 32-35 | v1.5 | 18/18 | Complete | 2026-04-16 |
 | 36-42 | v1.6 | 14/14 | Complete | 2026-04-17 |
-| 43 | v1.7 | 7/7 | Complete   | 2026-04-17 |
+| 43 | v1.7 | 7/7 | Complete    | 2026-04-17 |
 | 44 | v1.7 | 0/? | Not started | — |
 | 45 | v1.7 | 0/? | Not started | — |
 | 46 | v1.7 | 0/? | Not started | — |
