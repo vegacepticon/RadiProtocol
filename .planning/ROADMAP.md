@@ -218,4 +218,4 @@ Phases execute in numeric order: 36 -> 37 -> 38 -> 39 -> 40 -> 41 -> 42
 | 39. Quick-Create UI in Node Editor | v1.6 | 2/2 | Complete   | 2026-04-16 |
 | 40. Node Duplication | v1.6 | 1/1 | Complete    | 2026-04-16 |
 | 41. Live Canvas Update on Folder Rename | v1.6 | 1/1 | Complete    | 2026-04-16 |
-| 42. Snippet Node Quick-Create & Double-Click Fix | v1.6 | 4/4 | Complete   | 2026-04-17 |
+| 42. Snippet Node Quick-Create & Double-Click Fix | v1.6 | 4/4 | Complete    | 2026-04-17 |
