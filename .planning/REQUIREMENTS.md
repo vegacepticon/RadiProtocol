@@ -67,31 +67,37 @@ Which phases cover which requirements. Populated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| LOOP-01 | — | Pending |
-| LOOP-02 | — | Pending |
-| LOOP-03 | — | Pending |
-| LOOP-04 | — | Pending |
-| LOOP-05 | — | Pending |
-| LOOP-06 | — | Pending |
-| RUN-01 | — | Pending |
-| RUN-02 | — | Pending |
-| RUN-03 | — | Pending |
-| RUN-04 | — | Pending |
-| RUN-05 | — | Pending |
-| RUN-06 | — | Pending |
-| RUN-07 | — | Pending |
-| MIGRATE-01 | — | Pending |
-| MIGRATE-02 | — | Pending |
-| CLEAN-01 | — | Pending |
-| CLEAN-02 | — | Pending |
-| CLEAN-03 | — | Pending |
-| CLEAN-04 | — | Pending |
+| LOOP-01 | Phase 43 | Pending |
+| LOOP-02 | Phase 43 | Pending |
+| LOOP-03 | Phase 43 | Pending |
+| LOOP-04 | Phase 43 | Pending |
+| LOOP-05 | Phase 45 | Pending |
+| LOOP-06 | Phase 45 | Pending |
+| RUN-01 | Phase 44 | Pending |
+| RUN-02 | Phase 44 | Pending |
+| RUN-03 | Phase 44 | Pending |
+| RUN-04 | Phase 44 | Pending |
+| RUN-05 | Phase 44 | Pending |
+| RUN-06 | Phase 44 | Pending |
+| RUN-07 | Phase 44 | Pending |
+| MIGRATE-01 | Phase 43 | Pending |
+| MIGRATE-02 | Phase 43 | Pending |
+| CLEAN-01 | Phase 46 | Pending |
+| CLEAN-02 | Phase 46 | Pending |
+| CLEAN-03 | Phase 46 | Pending |
+| CLEAN-04 | Phase 46 | Pending |
 
 **Coverage:**
 - v1.7 requirements: 19 total
-- Mapped to phases: 0 (to be filled by roadmapper)
-- Unmapped: 19 ⚠️
+- Mapped to phases: 19 ✓
+- Unmapped: 0
+
+**Phase breakdown:**
+- Phase 43: 6 requirements (LOOP-01, LOOP-02, LOOP-03, LOOP-04, MIGRATE-01, MIGRATE-02)
+- Phase 44: 7 requirements (RUN-01..RUN-07)
+- Phase 45: 2 requirements (LOOP-05, LOOP-06)
+- Phase 46: 4 requirements (CLEAN-01..CLEAN-04)
 
 ---
 *Requirements defined: 2026-04-17*
-*Last updated: 2026-04-17 — initial v1.7 definition*
+*Last updated: 2026-04-17 — traceability filled by /gsd-roadmap*

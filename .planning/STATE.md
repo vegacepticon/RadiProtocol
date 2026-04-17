@@ -2,12 +2,12 @@
 gsd_state_version: 1.0
 milestone: v1.7
 milestone_name: Loop Rework & Regression Cleanup
-status: defining_requirements
-stopped_at: Milestone initialized — awaiting REQUIREMENTS.md + ROADMAP.md
+status: ready_for_planning
+stopped_at: Roadmap created — awaiting /gsd-plan-phase 43
 last_updated: "2026-04-17T00:00:00.000Z"
 last_activity: 2026-04-17
 progress:
-  total_phases: 0
+  total_phases: 4
   completed_phases: 0
   total_plans: 0
   completed_plans: 0
@@ -18,20 +18,20 @@ progress:
 
 **Updated:** 2026-04-17
 **Milestone:** v1.7 — Loop Rework & Regression Cleanup
-**Status:** Defining requirements
+**Status:** Roadmap complete, ready for phase planning
 **Last session:** 2026-04-17
-**Stopped at:** Milestone initialized — requirements and roadmap pending
+**Stopped at:** Roadmap written — next step is `/gsd-plan-phase 43`
 
 ---
 
 ## Current Position
 
-Phase: Not started (defining requirements)
-Plan: —
-Status: Defining requirements
-Last activity: 2026-04-17 — Milestone v1.7 started
+Phase: 43 (Unified Loop — Graph Model, Parser, Validator & Migration Errors)
+Plan: Not yet planned
+Status: Ready for planning
+Last activity: 2026-04-17 — v1.7 roadmap created (4 phases, 19/19 requirements mapped)
 
-Progress: [░░░░░░░░░░] 0%
+Progress: [░░░░░░░░░░] 0% (0/4 phases, 0/? plans)
 
 ---
 
@@ -44,52 +44,47 @@ See: `.planning/PROJECT.md` (updated 2026-04-17)
 
 ---
 
+## v1.7 Phase Map
+
+| Phase | Name | Requirements |
+|-------|------|--------------|
+| 43 | Unified Loop — Graph Model, Parser, Validator & Migration Errors | LOOP-01, LOOP-02, LOOP-03, LOOP-04, MIGRATE-01, MIGRATE-02 |
+| 44 | Unified Loop Runtime | RUN-01, RUN-02, RUN-03, RUN-04, RUN-05, RUN-06, RUN-07 |
+| 45 | Loop Editor Form, Picker & Color Map | LOOP-05, LOOP-06 |
+| 46 | Free-Text-Input Removal | CLEAN-01, CLEAN-02, CLEAN-03, CLEAN-04 |
+
+---
+
 ## Performance Metrics
 
 **Velocity:**
 
-- Total plans completed: 12 (v1.6)
-- Average duration: —
-- Total execution time: —
-
-**By Phase:**
-
-| Phase | Plans | Total | Avg/Plan |
-|-------|-------|-------|----------|
-| 36 | 2 | - | - |
-| 37 | 1 | - | - |
-| 38 | 2 | - | - |
-| 39 | 1 | - | - |
-| 40 | 1 | - | - |
-| 41 | 1 | - | - |
-| 42 | 4 | - | - |
+- Total plans completed (v1.6): 14
+- v1.6 duration: 1 day (2026-04-16 → 2026-04-17)
+- Average plan size: 1–5 plans per phase
 
 ---
-| Phase 37 P01 | 1min | 2 tasks | 2 files |
-| Phase 37 P02 | 3min | 1 tasks | 2 files |
-| Phase 38 P01 | 2min | 2 tasks | 3 files |
-| Phase 38 P02 | 1min | 1 tasks | 1 files |
-| Phase 39 P01 | 4min | 2 tasks | 4 files |
-| Phase 39 P02 | 1min | 2 tasks | 2 files |
-| Phase 40 P01 | 3min | 2 tasks | 3 files |
-| Phase 41 P01 | 2min | 2 tasks | 3 files |
-| Phase 42 P01 | 13min | 3 tasks | 5 files |
-| Phase 42 P02 | 4min | 2 tasks | 5 files |
-| Phase 42 P03 | 3min | 2 tasks | 2 files |
-| Phase 42 P04 | 2min | 1 tasks | 3 files |
 
 ## Accumulated Context
 
-| Phase 36 P01 | 9min | 2 tasks | 14 files |
-| Phase 36 P02 | 1min | 1 tasks | 2 files |
-
-### v1.0–v1.5 Shipped
+### v1.0–v1.6 Shipped
 
 - v1.0: 7 phases — foundation (parser, runner, UI, editor panel, snippets, loops, sessions)
 - v1.2: 8 phases — runner UX and bug fixes (layout, selectors, separators, read-back fixes)
 - v1.3: 1 phase — interactive placeholder chip editor
 - v1.4: 4 phases — auto node coloring, snippet node (8th kind), mixed answer+snippet branching
 - v1.5: 4 phases — snippet editor refactoring (tree UI, modal create/edit, DnD, rename, MD snippets in runner)
+- v1.6: 7 phases — dead-code audit, canvas node creation, node duplication, live canvas update
+
+### v1.7 Design Decisions (locked during /gsd-explore)
+
+1. Break-compatibility chosen over auto-migration — old `loop-start`/`loop-end` canvases produce a validator error, author rebuilds loops
+2. Exit edge identified by edge label «выход»
+3. Multiple body branches allowed; each iteration re-presents the picker
+4. One-step picker combining body-branch labels + «выход»
+5. `maxIterations` removed entirely; no per-loop or global cap
+6. Nested loops keep working via the existing `LoopContext` stack
+7. Loop node owns an editable `headerText` rendered above the picker
 
 ### Standing Pitfalls
 
@@ -98,22 +93,23 @@ See: `.planning/PROJECT.md` (updated 2026-04-17)
 3. No `innerHTML` — use DOM API and Obsidian helpers
 4. No `require('fs')` — use `app.vault.*` exclusively
 5. `loadData()` returns null on first install — always merge with defaults
-6. Infinite loop cycles — validate protocol graph before running; hard iteration cap (default 50)
-7. `console.log` forbidden in production — use `console.debug()` during dev
-8. CSS files are append-only per phase — edit only the relevant feature file in `src/styles/`
-9. Shared files (main.ts, editor-panel-view.ts, snippet-manager-view.ts) — only modify code relevant to the current phase
-10. Real-DOM vs mock-DOM parent lookup: always use `parentElement` first, `.parent` mock fallback second
+6. `console.log` forbidden in production — use `console.debug()` during dev
+7. CSS files are append-only per phase — edit only the relevant feature file in `src/styles/`
+8. Shared files (main.ts, editor-panel-view.ts, snippet-manager-view.ts) — only modify code relevant to the current phase
+9. Real-DOM vs mock-DOM parent lookup: always use `parentElement` first, `.parent` mock fallback second
+10. v1.7-specific: LOOP rework must delete the old iteration cap (RUN-07) — do not carry the `maxIterations` field forward for any reason
 
 ### Known Follow-ups (non-blocking)
 
 - Node Editor panel stale `subfolderPath` display after folder move/rename (cosmetic)
 - Chip editor English labels (Phase 27 legacy)
-- Nyquist VALIDATION.md draft for phases 12–19, 28–31, 32–35
+- Nyquist VALIDATION.md draft for phases 12–19, 28–31, 32–35, 36–42
 
 ---
 
 ## Repository
 
-- Branch: `gsd/phase-26-auto-switch-to-node-editor-tab`
+- Branch: `main`
 - Main: `main`
-- Last shipped: v1.5 (2026-04-16)
+- Last shipped: v1.6 (2026-04-17)
+- Current working tree: `src/styles.css` and `styles.css` modified (pre-existing, unrelated to v1.7)
