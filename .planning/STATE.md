@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.7
 milestone_name: Loop Rework & Regression Cleanup
 status: executing
-stopped_at: Completed 43-04-PLAN.md (runner-state + protocol-runner + runner-view minimal surgery; build gate deferred to plan 05/07)
-last_updated: "2026-04-17T09:47:18.198Z"
+stopped_at: Completed 43-06-PLAN.md (4 unified-loop fixtures; legacy fixtures untouched per D-16)
+last_updated: "2026-04-17T09:53:18.883Z"
 last_activity: 2026-04-17
 progress:
   total_phases: 4
   completed_phases: 0
   total_plans: 7
-  completed_plans: 4
-  percent: 57
+  completed_plans: 5
+  percent: 71
 ---
 
 # RadiProtocol — Project State
@@ -19,19 +19,19 @@ progress:
 **Updated:** 2026-04-17
 **Milestone:** v1.7 — Loop Rework & Regression Cleanup
 **Status:** Ready to execute
-**Last session:** 2026-04-17T09:47:18.191Z
-**Stopped at:** Completed 43-04-PLAN.md (runner-state + protocol-runner + runner-view minimal surgery; build gate deferred to plan 05/07)
+**Last session:** 2026-04-17T09:53:18.877Z
+**Stopped at:** Completed 43-06-PLAN.md (4 unified-loop fixtures; legacy fixtures untouched per D-16)
 
 ---
 
 ## Current Position
 
 Phase: 43 (unified-loop-graph-model-parser-validator-migration-errors) — EXECUTING
-Plan: 5 of 7
+Plan: 6 of 7
 Status: Ready to execute
 Last activity: 2026-04-17
 
-Progress: [██████░░░░] 57% (0/4 phases, 4/7 plans)
+Progress: [███████░░░] 71% (0/4 phases, 5/7 plans)
 
 ---
 
@@ -73,6 +73,7 @@ See: `.planning/PROJECT.md` (updated 2026-04-17)
 | Phase 43 P02 | 2min | 1 tasks | 1 files |
 | Phase 43 P03 | 3min | 3 tasks | 3 files |
 | Phase 43 P04 | 5min | 3 tasks | 3 files |
+| Phase 43 P06 | 2min | 1 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -121,6 +122,7 @@ See: `.planning/PROJECT.md` (updated 2026-04-17)
 - Plan 43-03: `NODE_COLOR_MAP` kept legacy `'loop-start'` / `'loop-end'` keys with `@deprecated Phase 43 D-CL-05` markers — `Record<RPNodeKind, string>` exhaustiveness forces them while Plan 01 (D-CL-05 variant b) keeps legacy kinds in `RPNodeKind` union; `'loop': '1'` (red) added per D-12 at end. Correction by reality-of-types, not deviation from D-12 intent.
 - Plan 43-03: `PersistedLoopContext.loopStartId` → `loopNodeId` (D-04 / D-13 break-compat); `validateSessionNodeIds` reader updated to `frame.loopNodeId` (4 reads across two loops). D-13 Option B chosen — no new load-path schema guard: legacy sessions flow through existing missing-id path (`graph.nodes.has(undefined)` → false), RunnerView clears via `sessionService.clear()`. Zero new code paths.
 - Plan 43-04: `advanceThrough` `case 'loop'` = soft `transitionToError` (D-CL-04 option b) — runner enters error-state, existing RunnerView error panel renders message, no uncaught throw. Merged fall-through `case 'loop-start'`/`case 'loop-end'` kept for TS-exhaustiveness (Plan 01 D-CL-05 variant b retains legacy kinds in union) with distinct programmer-error message. `chooseLoopAction` preserved as `@deprecated` no-op stub (D-18 Surprise #2: `.skip`-ed tests in `protocol-runner.test.ts`/`protocol-runner-session.test.ts` still compile against the class shape). `getState()` `'at-node'` simplified to `loopIterationLabel: undefined` — Phase 44 owns the full label format over `LoopNode.headerText`. Inline `LoopContext`-shaped type literals in `getSerializableState`/`restoreFrom` signatures migrated `loopStartId → loopNodeId`. `runner-view.ts` `case 'loop-end'` block removed entirely (Surprise #1, ~43 lines); CSS classes in `loop-support.css` preserved for Phase 45 picker restoration (Surprise #5).
+- Plan 43-06: 4 новых fixture canvases под `src/__tests__/fixtures/` — `unified-loop-valid.canvas` (happy-path для LOOP-03 + LOOP-04), `unified-loop-missing-exit.canvas` (D-08.1), `unified-loop-duplicate-exit.canvas` (D-08.2), `unified-loop-no-body.canvas` (D-08.3). Все используют Cyrillic «выход» (5 chars, case-sensitive); каждый содержит один start + один loop-узел с `radiprotocol_headerText: "Lesion loop"`. Happy-path замыкает цикл через back-edge `n-a1 → n-loop` (опирается на D-09 cycle-through-loop marker из Plan 43-03). Legacy `loop-start.canvas` / `loop-body.canvas` нетронуты (D-16) — Plan 43-07 укажет на них migration-error тесты. Additive-only: 59 insertions, 0 deletions; нулевые изменения существующих файлов.
 
 ---
 
