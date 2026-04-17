@@ -79,22 +79,38 @@ export class EditorPanelView extends ItemView {
     this.watchedCanvasContainer = canvasLeafInternal.containerEl;
 
     this.canvasPointerdownHandler = () => {
-      const selection = canvasView.canvas?.selection;
-      if (!selection || selection.size !== 1) return; // ignore multi-select
+      // Phase 42 Plan 03: defer the selection read via setTimeout(0) per
+      // canvas-internal.d.ts — Obsidian updates canvas.selection AFTER the
+      // pointer event, not synchronously. Reading sync causes the double-click
+      // -creates-node flow to miss the freshly-selected node and leaves the
+      // Node Editor stuck on the previous selection (UAT gap 1).
+      setTimeout(() => {
+        const selection = canvasView.canvas?.selection;
+        if (!selection || selection.size !== 1) return; // ignore multi-select
 
-      const node = Array.from(selection)[0];
-      if (!node?.id) return;
+        const node = Array.from(selection)[0];
+        if (!node?.id) return;
 
-      const filePath = canvasView.file?.path;
-      if (!filePath) return;
+        const filePath = canvasView.file?.path;
+        if (!filePath) return;
 
-      void this.handleNodeClick(filePath, node.id);
+        void this.handleNodeClick(filePath, node.id);
+      }, 0);
     };
 
     if (this.watchedCanvasContainer !== null) {
       this.registerDomEvent(
         this.watchedCanvasContainer,
         'click',
+        this.canvasPointerdownHandler
+      );
+      // Phase 42 Plan 03: also wire 'dblclick' so double-click-creates-node is
+      // handled even if Obsidian swallows the intermediate click events during
+      // the native text-node creation gesture. Same handler is safe to reuse —
+      // handleNodeClick guards against same-node re-selection (line 105).
+      this.registerDomEvent(
+        this.watchedCanvasContainer,
+        'dblclick',
         this.canvasPointerdownHandler
       );
     }
