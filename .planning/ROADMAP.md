@@ -101,7 +101,7 @@ Full details: `.planning/milestones/v1.6-ROADMAP.md`
 ### v1.7 Loop Rework & Regression Cleanup (Phases 43-46) — ACTIVE
 
 - [x] **Phase 43: Unified Loop — Graph Model, Parser, Validator & Migration Errors** — Collapse `loop-start`/`loop-end` into a single `loop` node in the graph model and parser; add validator rules for the «выход» edge and reject legacy canvases with plain-language rebuild guidance (completed 2026-04-17)
-- [ ] **Phase 44: Unified Loop Runtime** — Replace loop-start/loop-end runtime with single-step picker (body branches + «выход»), dead-end-return behaviour, nested loop stack preservation, step-back, session save/resume, removal of `maxIterations`
+- [x] **Phase 44: Unified Loop Runtime** — Replace loop-start/loop-end runtime with single-step picker (body branches + «выход»), dead-end-return behaviour, nested loop stack preservation, step-back, session save/resume, removal of `maxIterations` (completed 2026-04-17)
 - [ ] **Phase 45: Loop Editor Form, Picker & Color Map** — Node Editor form for the unified `loop` node with editable `headerText` (no `maxIterations`), plus `NodePickerModal` and `NODE_COLOR_MAP` integration
 - [ ] **Phase 46: Free-Text-Input Removal** — Excise `free-text-input` from graph model, parser, validator, runner, editor, picker, color map, and test fixtures
 
@@ -130,13 +130,13 @@ Full details: `.planning/milestones/v1.6-ROADMAP.md`
   3. Choosing «выход» advances along the «выход» edge and the loop frame is removed from the internal context stack; a nested-loop protocol ends with each outer loop's «выход» still reachable in order (RUN-03, RUN-04)
   4. Step-back from the loop picker restores the node and accumulated text that existed immediately before the loop was entered (RUN-05); closing and reopening Obsidian mid-loop resumes the session at the same picker with the same accumulated text (RUN-06)
   5. No loop run in any canvas is capped by `maxIterations`; the settings tab no longer exposes a "max loop iterations" control and the `LoopStartNode.maxIterations` field no longer exists in the model (RUN-07)
-**Plans:** 4/5 plans executed
+**Plans:** 5/5 plans complete
 
 Plans:
 - [x] 44-01-PLAN.md — Wave 0 test scaffolding: nested-loop fixture + protocol-runner-loop-picker.test.ts skeleton
 - [x] 44-02a-PLAN.md — Runtime state machine: AwaitingLoopPickState, chooseLoopBranch, dead-end return, B1 re-entry guard, B2 previousCursor threading, session union widening, remove chooseLoopAction stub
 - [x] 44-02b-PLAN.md — Test rewrites for the runtime: rewrite 7 skipped loop-support tests, fill protocol-runner-loop-picker.test.ts with RUN-01..05 + W4 long-body integration test
-- [ ] 44-03-PLAN.md — RunnerView picker UI + Phase 44 CSS + regenerate styles.css + rewrite 7 skipped session round-trip tests
+- [x] 44-03-PLAN.md — RunnerView picker UI + Phase 44 CSS + regenerate styles.css + rewrite 7 skipped session round-trip tests
 - [x] 44-04-PLAN.md — RUN-07 excision: delete settings.maxLoopIterations, LoopStartNode.maxIterations, parser site, legacy editor-panel forms; keep ProtocolRunner.maxIterations (RUN-09) intact
 
 ### Phase 45: Loop Editor Form, Picker & Color Map
@@ -173,6 +173,6 @@ Plans:
 | 32-35 | v1.5 | 18/18 | Complete | 2026-04-16 |
 | 36-42 | v1.6 | 14/14 | Complete | 2026-04-17 |
 | 43 | v1.7 | 7/7 | Complete    | 2026-04-17 |
-| 44 | v1.7 | 4/5 | In Progress|  |
+| 44 | v1.7 | 5/5 | Complete   | 2026-04-17 |
 | 45 | v1.7 | 0/? | Not started | — |
 | 46 | v1.7 | 0/? | Not started | — |
