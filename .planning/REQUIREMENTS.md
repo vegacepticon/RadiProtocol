@@ -29,8 +29,8 @@
 
 ### Migration (MIGRATE)
 
-- [ ] **MIGRATE-01**: A canvas containing any `loop-start` or `loop-end` node fails `GraphValidator` with a plain-language rebuild instruction; the protocol cannot be run until the author reconstructs the loop with the unified node
-- [ ] **MIGRATE-02**: The migration error surfaces in the existing RunnerView error panel using the same layout as other `GraphValidator` error classes
+- [x] **MIGRATE-01**: A canvas containing any `loop-start` or `loop-end` node fails `GraphValidator` with a plain-language rebuild instruction; the protocol cannot be run until the author reconstructs the loop with the unified node
+- [x] **MIGRATE-02**: The migration error surfaces in the existing RunnerView error panel using the same layout as other `GraphValidator` error classes
 
 ### Free-Text-Input Removal (CLEAN)
 
@@ -80,8 +80,8 @@ Which phases cover which requirements. Populated during roadmap creation.
 | RUN-05 | Phase 44 | Pending |
 | RUN-06 | Phase 44 | Pending |
 | RUN-07 | Phase 44 | Pending |
-| MIGRATE-01 | Phase 43 | Pending |
-| MIGRATE-02 | Phase 43 | Pending |
+| MIGRATE-01 | Phase 43 | Complete |
+| MIGRATE-02 | Phase 43 | Complete |
 | CLEAN-01 | Phase 46 | Pending |
 | CLEAN-02 | Phase 46 | Pending |
 | CLEAN-03 | Phase 46 | Pending |
