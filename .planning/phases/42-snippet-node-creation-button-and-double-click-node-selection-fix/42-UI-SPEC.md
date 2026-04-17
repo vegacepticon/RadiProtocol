@@ -1,10 +1,11 @@
 ---
 phase: 42
 slug: snippet-node-creation-button-and-double-click-node-selection-fix
-status: draft
+status: approved
 shadcn_initialized: false
 preset: none
 created: 2026-04-17
+reviewed_at: 2026-04-17
 ---
 
 # Phase 42 — UI Design Contract
