@@ -119,27 +119,31 @@ export function validateSessionNodeIds(
 ): string[] {
   const missing: string[] = [];
 
+  // Phase 43 D-04 / D-13: loopStartId → loopNodeId (unified loop, LOOP-01).
+  // Old sessions referencing removed legacy loop IDs surface here as missing;
+  // RunnerView.sessionService.clear() handles graceful reset.
+
   // Check currentNodeId
   if (!graph.nodes.has(session.currentNodeId)) {
     missing.push(session.currentNodeId);
   }
 
-  // Check all nodeIds in the undo stack + their loopContextStack loopStartIds
+  // Check all nodeIds in the undo stack + their loopContextStack loopNodeIds
   for (const entry of session.undoStack) {
     if (!graph.nodes.has(entry.nodeId)) {
       missing.push(entry.nodeId);
     }
     for (const frame of entry.loopContextStack) {
-      if (!graph.nodes.has(frame.loopStartId)) {
-        missing.push(frame.loopStartId);
+      if (!graph.nodes.has(frame.loopNodeId)) {
+        missing.push(frame.loopNodeId);
       }
     }
   }
 
-  // Check loopStartIds in the top-level loopContextStack
+  // Check loopNodeIds in the top-level loopContextStack
   for (const frame of session.loopContextStack) {
-    if (!graph.nodes.has(frame.loopStartId)) {
-      missing.push(frame.loopStartId);
+    if (!graph.nodes.has(frame.loopNodeId)) {
+      missing.push(frame.loopNodeId);
     }
   }
 
