@@ -20,16 +20,6 @@ export interface AtNodeState {
   accumulatedText: string;
   /** true when undoStack is non-empty — avoids exposing the stack itself (D-02) */
   canStepBack: boolean;
-  /**
-   * @deprecated Phase 43 D-14 — семантика меняется в Phase 44 (unified loop picker, RUN-01).
-   * В Phase 43 поле всегда undefined (runner-stub бросает error до достижения loop).
-   */
-  loopIterationLabel?: string;
-  /**
-   * @deprecated Phase 43 D-14 — поле теряет смысл: loop-end kind больше не существует.
-   * Оставлено как undefined-only до Phase 44, которая заменит на полноценный picker-state.
-   */
-  isAtLoopEnd?: boolean;
 }
 
 /**
@@ -41,6 +31,18 @@ export interface AwaitingSnippetPickState {
   status: 'awaiting-snippet-pick';
   nodeId: string;
   subfolderPath: string | undefined;
+  accumulatedText: string;
+  canStepBack: boolean;
+}
+
+/**
+ * Phase 44 (RUN-01): runner paused at a unified loop node, presenting a picker
+ * over all outgoing edges (body branches + «выход»). Transitions back to
+ * 'at-node' via chooseLoopBranch(edgeId).
+ */
+export interface AwaitingLoopPickState {
+  status: 'awaiting-loop-pick';
+  nodeId: string;                 // loop node id — RunnerView looks up headerText from graph
   accumulatedText: string;
   canStepBack: boolean;
 }
@@ -73,11 +75,12 @@ export interface ErrorState {
   message: string;
 }
 
-/** Discriminated union over all five runner states. */
+/** Discriminated union over all runner states. */
 export type RunnerState =
   | IdleState
   | AtNodeState
   | AwaitingSnippetPickState
+  | AwaitingLoopPickState
   | AwaitingSnippetFillState
   | CompleteState
   | ErrorState;
