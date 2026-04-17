@@ -33,6 +33,24 @@ export class GraphValidator {
     const startNodeId = startNodes[0];
     if (startNodeId === undefined) return errors; // Guard for noUncheckedIndexedAccess
 
+    // Check (migration): Legacy loop-start and loop-end узлы (Phase 43 D-07, MIGRATE-01).
+    // Если найдены — возвращаем одну сводную ошибку на русском и прекращаем валидацию,
+    // иначе LOOP-04 и cycle-check выдают ошибки поверх, что сбивает автора (D-CL-02).
+    const legacyLoopNodes: string[] = [];
+    for (const [, node] of graph.nodes) {
+      if (node.kind === 'loop-start' || node.kind === 'loop-end') {
+        legacyLoopNodes.push(`"${this.nodeLabel(node)}"`);
+      }
+    }
+    if (legacyLoopNodes.length > 0) {
+      errors.push(
+        `Канвас содержит устаревшие узлы loop-start/loop-end: ${legacyLoopNodes.join(', ')}. ` +
+        `Пересоберите цикл с единым узлом loop: метка «выход» на одном из исходящих рёбер ` +
+        `обозначает ветвь выхода, остальные исходящие рёбра — тело цикла.`
+      );
+      return errors;
+    }
+
     // Check 3: Reachability — BFS from start node
     const reachable = this.bfsReachable(graph, startNodeId);
     const unreachable: string[] = [];
@@ -53,7 +71,7 @@ export class GraphValidator {
     }
 
     // Check 4: Unintentional cycles — three-color DFS
-    // A cycle is unintentional if it does NOT pass through a loop-end node.
+    // Phase 43 D-09 — A cycle is unintentional if it does NOT pass through a unified loop node.
     const cycleErrors = this.detectUnintentionalCycles(graph, startNodeId);
     errors.push(...cycleErrors);
 
@@ -70,18 +88,44 @@ export class GraphValidator {
       }
     }
 
-    // Check 6: Orphaned loop-end nodes
+    // Check (LOOP-04): каждый unified loop-узел должен иметь
+    //  1) ровно одно исходящее ребро с label === 'выход' (Phase 43 D-08.1)
+    //  2) не более одного ребра «выход» (Phase 43 D-08.2) — дубликаты флагаем отдельно
+    //  3) минимум одно body-ребро (label !== 'выход') (Phase 43 D-08.3)
+    // «выход» — exact-match, case-sensitive, без trim. Контракт с автором.
     for (const [id, node] of graph.nodes) {
-      if (node.kind === 'loop-end') {
-        const matchingLoopStart = graph.nodes.get(node.loopStartId);
-        if (!matchingLoopStart || matchingLoopStart.kind !== 'loop-start') {
-          errors.push(
-            `Loop-end node "${id}" references loop-start "${node.loopStartId}" which does not exist. ` +
-            'Ensure every loop-end node has a matching loop-start node.'
-          );
-        }
+      if (node.kind !== 'loop') continue;
+      const outgoing = graph.edges.filter(e => e.fromNodeId === id);
+      const exitEdges = outgoing.filter(e => e.label === 'выход');
+      const bodyEdges = outgoing.filter(e => e.label !== 'выход');
+      const label = this.nodeLabel(node);
+      // D-08.1 — missing «выход»
+      if (exitEdges.length === 0) {
+        errors.push(
+          `Loop node "${label}" не имеет ребра «выход». ` +
+          `Добавьте исходящее ребро с меткой «выход», обозначающее ветвь выхода из цикла.`
+        );
+      }
+      // D-08.2 — duplicate «выход»
+      if (exitEdges.length > 1) {
+        const dupIds = exitEdges.map(e => e.id).join(', ');
+        errors.push(
+          `Loop node "${label}" имеет несколько рёбер «выход»: ${dupIds}. ` +
+          `Должно быть ровно одно исходящее ребро с меткой «выход».`
+        );
+      }
+      // D-08.3 — no body
+      if (bodyEdges.length === 0) {
+        errors.push(
+          `Loop node "${label}" не имеет ни одной body-ветви. ` +
+          `Добавьте хотя бы одно исходящее ребро с меткой, отличной от «выход».`
+        );
       }
     }
+
+    // Check 6 (orphaned loop-end) удалён в Phase 43 D-10 — LoopEndNode больше не существует
+    // как живой kind в валидных канвасах. Legacy loop-end узлы отклоняются Migration Check'ом
+    // (см. выше, Phase 43 D-07), до достижения этой точки.
 
     // TODO: Phase 5 — Check 7: Snippet reference existence
     // for (const [id, node] of graph.nodes) {
@@ -123,7 +167,7 @@ export class GraphValidator {
    * Three-color DFS cycle detection.
    * Colors: white (unvisited) | gray (in current DFS path) | black (fully processed)
    * A back-edge (gray → gray) indicates a cycle.
-   * Cycles that pass through a loop-end node are intentional and NOT reported as errors.
+   * Phase 43 D-09 — Cycles that pass through a unified loop node are intentional and NOT reported as errors.
    */
   private detectUnintentionalCycles(graph: ProtocolGraph, startNodeId: string): string[] {
     const errors: string[] = [];
@@ -143,16 +187,18 @@ export class GraphValidator {
         const neighborColor = color.get(neighborId);
 
         if (neighborColor === 'gray') {
-          // Back-edge found — determine if this cycle passes through a loop-end node
+          // Back-edge found — determine if this cycle passes through a unified loop node (Phase 43 D-09)
           const cycleStart = pathStack.indexOf(neighborId);
           const cycleNodes = pathStack.slice(cycleStart);
 
-          const passesViaLoopEnd = cycleNodes.some(id => {
+          // Phase 43 D-09 — намеренный цикл теперь проходит через unified loop node
+          // (ранее проходил через loop-end). Имя переменной обновлено.
+          const passesViaLoopNode = cycleNodes.some(id => {
             const n = graph.nodes.get(id);
-            return n?.kind === 'loop-end';
+            return n?.kind === 'loop';
           });
 
-          if (!passesViaLoopEnd) {
+          if (!passesViaLoopNode) {
             const cycleLabel = cycleNodes
               .map(id => {
                 const n = graph.nodes.get(id);
@@ -161,7 +207,7 @@ export class GraphValidator {
               .join(' → ');
             errors.push(
               `Unintentional cycle detected: ${cycleLabel}. ` +
-              'Cycles must pass through a loop-end node. Remove the back-edge or use a loop-start/loop-end pair.'
+              'Cycles must pass through a loop node. Remove the back-edge or route the cycle through a loop node.'
             );
           }
         } else if (neighborColor === 'white') {
@@ -196,9 +242,10 @@ export class GraphValidator {
       case 'answer': return (node.displayLabel ?? node.answerText) || node.id;
       case 'free-text-input': return node.promptLabel || node.id;
       case 'text-block': return node.content.slice(0, 30) || node.id;
-      case 'loop-start': return node.loopLabel || node.id;
-      case 'loop-end': return `loop-end (${node.id})`;
+      case 'loop-start': return node.loopLabel || node.id;                              // @deprecated Phase 43 D-CL-05
+      case 'loop-end': return `loop-end (${node.id})`;                                  // @deprecated Phase 43 D-CL-05
       case 'snippet': return node.subfolderPath ? `snippet (${node.subfolderPath})` : 'snippet (root)';
+      case 'loop': return node.headerText || node.id;                                   // Phase 43 D-11 (LOOP-02)
     }
   }
 }
