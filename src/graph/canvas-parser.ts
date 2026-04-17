@@ -15,6 +15,7 @@ import type {
   LoopStartNode,
   LoopEndNode,
   SnippetNode,  // Phase 29
+  LoopNode,     // Phase 43 D-05 — unified loop kind (LOOP-01, LOOP-02)
 } from './graph-model';
 
 // Minimal canvas JSON shape we need from the JSON Canvas v1.0 spec.
@@ -159,6 +160,7 @@ export class CanvasParser {
     const validKinds: RPNodeKind[] = [
       'start', 'question', 'answer', 'free-text-input',
       'text-block', 'loop-start', 'loop-end', 'snippet',  // Phase 29
+      'loop',  // Phase 43 D-05 — unified loop (LOOP-01, LOOP-02)
     ];
 
     if (!(validKinds as string[]).includes(kind)) {
@@ -275,6 +277,17 @@ export class CanvasParser {
           radiprotocol_snippetSeparator: rawSep === 'space' ? 'space'
             : rawSep === 'newline' ? 'newline'
             : undefined,
+        };
+        return node;
+      }
+      case 'loop': {
+        // Phase 43 D-05 — unified loop node (LOOP-01, LOOP-02, LOOP-03).
+        // headerText нормализуется в '' если radiprotocol_headerText отсутствует/undefined
+        // (симметрия с TextBlockNode.content, НЕ SnippetNode.subfolderPath?: string | undefined).
+        const node: LoopNode = {
+          ...base,
+          kind: 'loop',
+          headerText: getString(props, 'radiprotocol_headerText', ''),
         };
         return node;
       }
