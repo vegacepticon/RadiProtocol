@@ -2,9 +2,10 @@
 // Unit tests for quick-create toolbar behavior (Phase 39, Plan 01)
 // CANVAS-02: question node creation
 // CANVAS-03: answer node creation
+// Phase 42: in-memory canvas fallback + empty-type helper hint render path
 
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { Notice } from 'obsidian';
+import { Notice, Setting, TFile } from 'obsidian';
 import { EditorPanelView } from '../views/editor-panel-view';
 
 vi.mock('obsidian');
@@ -269,5 +270,201 @@ describe('EditorPanelView duplicate', () => {
 
     expect((mockPlugin.canvasNodeFactory as { createNode: ReturnType<typeof vi.fn> }).createNode)
       .not.toHaveBeenCalled();
+  });
+});
+
+describe('EditorPanelView double-click fallback + empty-type hint', () => {
+  let mockPlugin: Record<string, unknown>;
+  let mockLeaf: { containerEl: Record<string, unknown> };
+  let view: EditorPanelView;
+  let mockCanvas: {
+    nodes: Map<string, { getData: () => Record<string, unknown> }>;
+    requestSave: ReturnType<typeof vi.fn>;
+  };
+  let mockVault: {
+    getAbstractFileByPath: ReturnType<typeof vi.fn>;
+    read: ReturnType<typeof vi.fn>;
+  };
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+
+    mockCanvas = {
+      nodes: new Map(),
+      requestSave: vi.fn(),
+    };
+
+    const canvasLeaf = {
+      view: {
+        file: { path: 'test.canvas' },
+        canvas: mockCanvas,
+      },
+    };
+
+    // TFile mock — must be a real TFile instance so the `instanceof TFile` check
+    // inside renderNodeForm passes. Default: disk JSON has no matching node.
+    const tfile = new TFile('test.canvas');
+    mockVault = {
+      getAbstractFileByPath: vi.fn().mockReturnValue(tfile),
+      read: vi.fn().mockResolvedValue(JSON.stringify({ nodes: [], edges: [] })),
+    };
+
+    mockPlugin = {
+      app: {
+        vault: mockVault,
+        workspace: {
+          getLeavesOfType: vi.fn().mockReturnValue([canvasLeaf]),
+          getMostRecentLeaf: vi.fn().mockReturnValue(canvasLeaf),
+        },
+      },
+      settings: {},
+      canvasNodeFactory: { createNode: vi.fn() },
+      canvasLiveEditor: { saveLive: vi.fn().mockResolvedValue(false) },
+    };
+
+    mockLeaf = { containerEl: {} };
+
+    view = new EditorPanelView(
+      mockLeaf as unknown as import('obsidian').WorkspaceLeaf,
+      mockPlugin as unknown as import('../main').default
+    );
+
+    // The obsidian mock's ItemView constructor is auto-stubbed by vi.mock (no body
+    // runs), so view.contentEl is undefined by default. Inject a minimal fake that
+    // satisfies .empty() for renderNodeForm. Tests C and D replace this with a
+    // richer capturing fake before calling renderForm directly.
+    (view as unknown as { contentEl: { empty: () => void } }).contentEl = {
+      empty: () => {},
+    };
+
+    // vi.mock('obsidian') auto-stubs Setting prototype methods to return undefined,
+    // breaking the `.setName(...).setDesc(...).addDropdown(...)` chain used by
+    // renderForm. Patch the prototype to return `this` and invoke the dropdown cb
+    // with a chainable mock so renderForm can execute end-to-end.
+    const SettingProto = Setting.prototype as unknown as Record<string, unknown>;
+    SettingProto.setName = vi.fn(function (this: unknown) { return this; });
+    SettingProto.setDesc = vi.fn(function (this: unknown) { return this; });
+    SettingProto.setHeading = vi.fn(function (this: unknown) { return this; });
+    const mockDrop = {
+      addOption: vi.fn(function (this: unknown) { return this; }),
+      setValue: vi.fn(function (this: unknown) { return this; }),
+      onChange: vi.fn(function (this: unknown) { return this; }),
+    };
+    SettingProto.addDropdown = vi.fn(function (this: unknown, cb: (drop: unknown) => void) {
+      cb(mockDrop);
+      return this;
+    });
+  });
+
+  it('renderNodeForm uses in-memory canvas data when disk JSON lacks the node', async () => {
+    const liveData = { id: 'dcc-node-1' };
+    mockCanvas.nodes.set('dcc-node-1', { getData: () => liveData });
+
+    const renderFormSpy = vi.spyOn(
+      view as unknown as { renderForm: (r: Record<string, unknown>, k: string | null) => void },
+      'renderForm'
+    ).mockImplementation(() => {});
+    const renderErrorSpy = vi.spyOn(
+      view as unknown as { renderError: (m: string) => void },
+      'renderError'
+    ).mockImplementation(() => {});
+
+    await (view as unknown as { renderNodeForm(f: string, n: string): Promise<void> })
+      .renderNodeForm('test.canvas', 'dcc-node-1');
+
+    expect(renderFormSpy).toHaveBeenCalledWith(liveData, null);
+    expect(renderErrorSpy).not.toHaveBeenCalled();
+
+    renderFormSpy.mockRestore();
+    renderErrorSpy.mockRestore();
+  });
+
+  it('renderNodeForm calls renderError when disk AND in-memory both miss', async () => {
+    // canvas.nodes already empty by default; disk read returns empty nodes array
+    const renderErrorSpy = vi.spyOn(
+      view as unknown as { renderError: (m: string) => void },
+      'renderError'
+    ).mockImplementation(() => {});
+
+    await (view as unknown as { renderNodeForm(f: string, n: string): Promise<void> })
+      .renderNodeForm('test.canvas', 'ghost-node');
+
+    expect(renderErrorSpy).toHaveBeenCalledWith(
+      'Node not found in canvas — it may have been deleted.'
+    );
+
+    renderErrorSpy.mockRestore();
+  });
+
+  it('renderForm emits .rp-editor-type-hint when currentKind is null', () => {
+    const createdElements: Array<{ tag: string; cls?: string; text?: string }> = [];
+
+    const fakeNode = (): Record<string, unknown> => {
+      const self: Record<string, unknown> = {
+        empty: () => {},
+        createDiv: (_opts?: { cls?: string }) => fakeNode(),
+        createEl: (tag: string, opts?: { cls?: string; text?: string }) => {
+          createdElements.push({ tag, cls: opts?.cls, text: opts?.text });
+          return fakeNode();
+        },
+        createSpan: () => fakeNode(),
+        setAttribute: () => {},
+        appendText: () => {},
+        addClass: () => {},
+        removeClass: () => {},
+        setText: () => {},
+        disabled: false,
+      };
+      return self;
+    };
+
+    (view as unknown as { contentEl: Record<string, unknown> }).contentEl = fakeNode();
+
+    // Stub renderToolbar so it doesn't try to call setIcon / registerDomEvent
+    vi.spyOn(
+      view as unknown as { renderToolbar: (c: unknown) => void },
+      'renderToolbar'
+    ).mockImplementation(() => {});
+
+    (view as unknown as { renderForm(r: Record<string, unknown>, k: string | null): void })
+      .renderForm({ id: 'n1' }, null);
+
+    const hint = createdElements.find(e => e.cls === 'rp-editor-type-hint');
+    expect(hint).toBeDefined();
+    expect(hint?.text).toBe('Select a node type to configure this node');
+    expect(hint?.tag).toBe('p');
+  });
+
+  it('renderForm does NOT emit .rp-editor-type-hint when currentKind is set', () => {
+    const createdElements: Array<{ tag: string; cls?: string }> = [];
+    const fakeNode = (): Record<string, unknown> => {
+      const self: Record<string, unknown> = {
+        empty: () => {},
+        createDiv: (_opts?: { cls?: string }) => fakeNode(),
+        createEl: (tag: string, opts?: { cls?: string }) => {
+          createdElements.push({ tag, cls: opts?.cls });
+          return fakeNode();
+        },
+        createSpan: () => fakeNode(),
+        setAttribute: () => {},
+        appendText: () => {},
+        addClass: () => {},
+        removeClass: () => {},
+        setText: () => {},
+        disabled: false,
+      };
+      return self;
+    };
+
+    (view as unknown as { contentEl: Record<string, unknown> }).contentEl = fakeNode();
+    vi.spyOn(
+      view as unknown as { renderToolbar: (c: unknown) => void },
+      'renderToolbar'
+    ).mockImplementation(() => {});
+
+    (view as unknown as { renderForm(r: Record<string, unknown>, k: string | null): void })
+      .renderForm({ id: 'n1', radiprotocol_nodeType: 'question' }, 'question');
+
+    expect(createdElements.find(e => e.cls === 'rp-editor-type-hint')).toBeUndefined();
   });
 });
