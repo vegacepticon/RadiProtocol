@@ -1,0 +1,19 @@
+{
+  "nodes": [
+    { "id": "n-start",   "type": "text", "text": "Start",  "x": 0,   "y": 0,   "width": 200, "height": 60, "radiprotocol_nodeType": "start" },
+    { "id": "n-outer",   "type": "text", "text": "Organ",  "x": 0,   "y": 120, "width": 200, "height": 60, "radiprotocol_nodeType": "loop",       "radiprotocol_headerText": "Organ" },
+    { "id": "n-inner",   "type": "text", "text": "Lesion", "x": 0,   "y": 240, "width": 200, "height": 60, "radiprotocol_nodeType": "loop",       "radiprotocol_headerText": "Lesion" },
+    { "id": "n-inner-q", "type": "text", "text": "Size?",  "x": 260, "y": 120, "width": 200, "height": 60, "radiprotocol_nodeType": "question",   "radiprotocol_questionText": "Size?" },
+    { "id": "n-inner-a", "type": "text", "text": "1 cm",   "x": 520, "y": 240, "width": 200, "height": 60, "radiprotocol_nodeType": "answer",     "radiprotocol_answerText": "1 cm" },
+    { "id": "n-end",     "type": "text", "text": "Done",   "x": 0,   "y": 360, "width": 200, "height": 60, "radiprotocol_nodeType": "text-block", "radiprotocol_content": "Done" }
+  ],
+  "edges": [
+    { "id": "e1", "fromNode": "n-start",   "toNode": "n-outer" },
+    { "id": "e2", "fromNode": "n-outer",   "toNode": "n-inner",   "label": "проверка" },
+    { "id": "e3", "fromNode": "n-outer",   "toNode": "n-end",     "label": "выход" },
+    { "id": "e4", "fromNode": "n-inner",   "toNode": "n-inner-q", "label": "проверка" },
+    { "id": "e5", "fromNode": "n-inner",   "toNode": "n-outer",   "label": "выход" },
+    { "id": "e6", "fromNode": "n-inner-q", "toNode": "n-inner-a" },
+    { "id": "e7", "fromNode": "n-inner-a", "toNode": "n-inner" }
+  ]
+}
