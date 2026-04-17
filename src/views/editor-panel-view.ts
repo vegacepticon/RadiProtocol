@@ -553,57 +553,14 @@ export class EditorPanelView extends ItemView {
         break;
       }
 
-      case 'loop-start': {
-        new Setting(container).setHeading().setName('Loop-start node');
-        new Setting(container)
-          .setName('Loop label')
-          .setDesc('Shown as iteration prefix in the runner (e.g., "Lesion 2"). Default: Loop.')
-          .addText(t => {
-            t.setValue((nodeRecord['radiprotocol_loopLabel'] as string | undefined) ?? 'Loop')
-              .onChange(v => {
-                this.pendingEdits['radiprotocol_loopLabel'] = v || 'Loop';
-                this.scheduleAutoSave();
-              });
-          });
-        new Setting(container)
-          .setName('Exit label')
-          .setDesc('Text on the exit button shown at the loop-end node. Default: Done.')
-          .addText(t => {
-            t.setValue((nodeRecord['radiprotocol_exitLabel'] as string | undefined) ?? 'Done')
-              .onChange(v => {
-                this.pendingEdits['radiprotocol_exitLabel'] = v || 'Done';
-                this.scheduleAutoSave();
-              });
-          });
-        new Setting(container)
-          .setName('Max iterations')
-          .setDesc('Hard cap on loop repetitions. Prevents infinite loops in the runner. Default: 50.')
-          .addText(t => {
-            const inputEl = t.inputEl;
-            inputEl.type = 'number';
-            inputEl.min = '1';
-            t.setValue(String((nodeRecord['radiprotocol_maxIterations'] as number | undefined) ?? 50))
-              .onChange(v => {
-                const n = parseInt(v, 10);
-                this.pendingEdits['radiprotocol_maxIterations'] = isNaN(n) ? 50 : Math.max(1, n);
-                this.scheduleAutoSave();
-              });
-          });
-        break;
-      }
-
+      case 'loop-start':
       case 'loop-end': {
-        new Setting(container).setHeading().setName('Loop-end node');
-        new Setting(container)
-          .setName('Loop start node ID')
-          .setDesc('Must match the ID of the corresponding loop-start node on the canvas.')
-          .addText(t => {
-            t.setValue((nodeRecord['radiprotocol_loopStartId'] as string | undefined) ?? '')
-              .onChange(v => {
-                this.pendingEdits['radiprotocol_loopStartId'] = v;
-                this.scheduleAutoSave();
-              });
-          });
+        // Phase 44 (RUN-07) — legacy kinds retained for parser migration-error path (Phase 43 D-03).
+        // Validator rejects any canvas containing these; the form below is informational only.
+        new Setting(container).setHeading().setName('Legacy loop node');
+        new Setting(container).setDesc(
+          'This node type is obsolete. Rebuild the loop using a unified "loop" node. The canvas will fail validation until the legacy nodes are removed.',
+        );
         break;
       }
 

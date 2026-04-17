@@ -244,7 +244,6 @@ export class CanvasParser {
           kind: 'loop-start',
           loopLabel: getString(props, 'radiprotocol_loopLabel', 'Loop'),
           exitLabel: getString(props, 'radiprotocol_exitLabel', 'Done'),
-          maxIterations: getNumber(props, 'radiprotocol_maxIterations', 50),
         };
         return node;
       }

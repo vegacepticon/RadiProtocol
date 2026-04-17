@@ -78,7 +78,6 @@ export interface LoopStartNode extends RPNodeBase {
   kind: 'loop-start';
   loopLabel: string;
   exitLabel: string;
-  maxIterations: number;
 }
 
 /**
