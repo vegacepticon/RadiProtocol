@@ -595,17 +595,6 @@ export class ProtocolRunner {
     return neighbors[0];
   }
 
-  /**
-   * Returns the toNodeId of the first edge from nodeId with the given label.
-   * Edge count per loop-start node is ≤ 2 — O(n) find is fine (RESEARCH.md Don't Hand-Roll).
-   */
-  private edgeByLabel(nodeId: string, label: string): string | undefined {
-    if (this.graph === null) return undefined;
-    return this.graph.edges.find(
-      e => e.fromNodeId === nodeId && e.label === label,
-    )?.toNodeId;
-  }
-
   private transitionToComplete(): void {
     this.runnerStatus = 'complete';
   }
