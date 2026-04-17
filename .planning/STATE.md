@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.7
 milestone_name: Loop Rework & Regression Cleanup
 status: executing
-stopped_at: Completed 44-01-PLAN.md (Wave 0 scaffolding — nested-loop fixture + picker test skeleton; production code untouched; full suite green)
-last_updated: "2026-04-17T13:12:55.741Z"
+stopped_at: Completed 44-02a-PLAN.md (Wave 2 runtime — B1 re-entry guard + B2 previousCursor threading + chooseLoopBranch + advanceOrReturnToLoop helper; runtime live, TS green, build green, full suite 388 passed/14 skipped/3 todo. Plan 02b will replace describe.skip blocks against unified-loop-valid.canvas; Plan 03 will replace runner-view exhaustiveness stub with real picker UI)
+last_updated: "2026-04-17T13:25:24.983Z"
 last_activity: 2026-04-17
 progress:
   total_phases: 4
   completed_phases: 1
   total_plans: 12
-  completed_plans: 8
-  percent: 67
+  completed_plans: 9
+  percent: 75
 ---
 
 # RadiProtocol — Project State
@@ -19,15 +19,15 @@ progress:
 **Updated:** 2026-04-17
 **Milestone:** v1.7 — Loop Rework & Regression Cleanup
 **Status:** Ready to execute
-**Last session:** 2026-04-17T13:12:51.201Z
-**Stopped at:** Completed 44-01-PLAN.md (Wave 0 scaffolding — nested-loop fixture + picker test skeleton; production code untouched; full suite green)
+**Last session:** 2026-04-17T13:25:24.979Z
+**Stopped at:** Completed 44-02a-PLAN.md (Wave 2 runtime — B1 re-entry guard + B2 previousCursor threading + chooseLoopBranch + advanceOrReturnToLoop helper; runtime live, TS green, build green, full suite 388 passed/14 skipped/3 todo. Plan 02b will replace describe.skip blocks against unified-loop-valid.canvas; Plan 03 will replace runner-view exhaustiveness stub with real picker UI)
 
 ---
 
 ## Current Position
 
 Phase: 44 (unified-loop-runtime) — EXECUTING
-Plan: 2 of 5
+Plan: 3 of 5
 Status: Ready to execute
 Last activity: 2026-04-17
 
@@ -77,6 +77,7 @@ See: `.planning/PROJECT.md` (updated 2026-04-17)
 | Phase 43 P05 | 4min | 1 tasks | 1 files |
 | Phase 43 P07 | 4min | 3 tasks | 4 files |
 | Phase 44 P01 | 2min | 2 tasks | 2 files |
+| Phase 44 P02a | 7min | 2 tasks | 6 files |
 
 ## Accumulated Context
 
@@ -132,6 +133,7 @@ See: `.planning/PROJECT.md` (updated 2026-04-17)
 ### Decisions (Phase 44)
 
 - Plan 44-01: Wave 0 scaffolding-before-runtime per Nyquist validation strategy. Created `src/__tests__/fixtures/unified-loop-nested.canvas` (6 nodes, 7 edges — outer 'Organ' + inner 'Lesion' loops) with frame-pop semantics — inner loop's «выход» edge (e5) points back UP to outer loop node `n-outer`, NOT to terminal `n-end`. This is what makes RUN-04 testable: exiting inner returns control to outer's picker rather than completing the protocol. Outer loop's «выход» (e3) points to terminal — symmetric with `unified-loop-valid.canvas` shape. Both loops pass GraphValidator LOOP-04 (verified by inline node script). Created `src/__tests__/runner/protocol-runner-loop-picker.test.ts` (24 lines, 3 `it.todo` entries) — `ProtocolRunner` import intentionally OMITTED at Wave 0; eslint-disable on unused `loadGraph` helper (Plan 44-02 will remove both when adding real assertions). Zero production code touched (every `src/runner/*`, `src/views/*`, `src/graph/*`, `src/sessions/*`, `src/settings.ts` file remains exactly as Phase 43 left it). Full suite: 388 passed + 14 skipped + 3 todo / 0 failed; build green.
+- Plan 44-02a: Replaced Phase 43 `case 'loop'` `transitionToError` stub with real runtime — **B1 re-entry guard** (top-of-`loopContextStack` check before frame push) handles back-edge re-entry (e.g. `e5: n-a1 → n-loop`) AND inner-«выход» landing on outer loop without pushing a second frame; **B2 `previousCursor` threading** at top of `advanceThrough` + 3 auto-advance cases threads predecessor through to the loop-entry undo push so step-back from picker restores the predecessor (or the loop node itself when `previousCursor=null`, preserving symmetric `canStepBack` across all picker states). New private helper `advanceOrReturnToLoop(next): 'continue' | 'halted'` replaces three identical `firstNeighbour-undefined → transitionToComplete` sites in `case 'start'` / `case 'text-block'` (non-snippet) / `case 'answer'`; inside a loop frame increments iteration + halts at picker, outside completes. Public `chooseLoopBranch(edgeId)` dispatches by literal Cyrillic `edge.label === 'выход'` (no trim, no lowercase) — body branch does NOT increment iteration (B1 owns increment) so iteration count = number of times user has seen the picker (Plan 02b RUN-02 expects iteration === 2 after one pick + dead-end return). Deleted Phase 43 D-14/D-18 deprecated relics: `chooseLoopAction` stub method + `AtNodeState.loopIterationLabel` + `AtNodeState.isAtLoopEnd`. Widened `PersistedSession.runnerStatus` + `getSerializableState` return type + `restoreFrom` param type to include `'awaiting-loop-pick'` (RUN-06 type half — round-trip integration test belongs to Plan 03). **Rule 3 deferred-compile-fix idiom:** cast deletions inside `describe.skip` blocks at `protocol-runner.test.ts:458` and `protocol-runner-session.test.ts:336` to `(runner as unknown as { chooseLoopAction(...): void }).chooseLoopAction(...)` so TS compile stays green; Plan 02b will rewrite these blocks against `unified-loop-valid.canvas`. **Rule 3 stub in runner-view.ts:** added minimal `awaiting-loop-pick` exhaustiveness arm with placeholder text + accumulated text + output toolbar; Plan 03 will replace with real picker render (headerText + edge buttons + step-back). `ProtocolRunner.maxIterations` RUN-09 cycle guard remains intact and untouched; iteration cap test stays green. Full suite: 388 passed + 14 skipped + 3 todo / 0 failed; `npx tsc --noEmit --skipLibCheck` exit 0; build green.
 
 ---
 

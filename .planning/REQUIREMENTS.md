@@ -19,11 +19,11 @@
 
 ### Loop Runtime (RUN)
 
-- [ ] **RUN-01**: On entering a `loop` node the runner renders a single picker combining all body-branch edge labels plus «выход», displayed above the node's `headerText`
-- [ ] **RUN-02**: Selecting a body branch advances into that branch; when the branch dead-ends (current node has no outgoing edges) the runner returns to the same loop node and re-prompts
-- [ ] **RUN-03**: Selecting «выход» advances along the «выход» edge and pops the current loop context from the stack
+- [x] **RUN-01**: On entering a `loop` node the runner renders a single picker combining all body-branch edge labels plus «выход», displayed above the node's `headerText`
+- [x] **RUN-02**: Selecting a body branch advances into that branch; when the branch dead-ends (current node has no outgoing edges) the runner returns to the same loop node and re-prompts
+- [x] **RUN-03**: Selecting «выход» advances along the «выход» edge and pops the current loop context from the stack
 - [x] **RUN-04**: Nested loops continue to work — the existing `LoopContext` stack behaviour is preserved
-- [ ] **RUN-05**: Step-back from the loop picker unwinds to the last node before the loop entry and restores the accumulated text captured before the loop
+- [x] **RUN-05**: Step-back from the loop picker unwinds to the last node before the loop entry and restores the accumulated text captured before the loop
 - [ ] **RUN-06**: Session save/resume preserves loop-node state across Obsidian restarts (loop frames, pending picker, accumulated text)
 - [ ] **RUN-07**: `LoopStartNode.maxIterations` field and the global "max loop iterations" setting are removed; there is no runtime iteration cap on the new loop
 
@@ -73,11 +73,11 @@ Which phases cover which requirements. Populated during roadmap creation.
 | LOOP-04 | Phase 43 | Complete |
 | LOOP-05 | Phase 45 | Pending |
 | LOOP-06 | Phase 45 | Pending |
-| RUN-01 | Phase 44 | Pending |
-| RUN-02 | Phase 44 | Pending |
-| RUN-03 | Phase 44 | Pending |
+| RUN-01 | Phase 44 | Complete |
+| RUN-02 | Phase 44 | Complete |
+| RUN-03 | Phase 44 | Complete |
 | RUN-04 | Phase 44 | Complete |
-| RUN-05 | Phase 44 | Pending |
+| RUN-05 | Phase 44 | Complete |
 | RUN-06 | Phase 44 | Pending |
 | RUN-07 | Phase 44 | Pending |
 | MIGRATE-01 | Phase 43 | Complete |
