@@ -1,15 +1,21 @@
 // graph/graph-model.ts
 // Pure TypeScript types — zero Obsidian API imports (NFR-01, PARSE-06)
 
+// Phase 43 D-01: unified 'loop' kind добавлен; 'loop-start' / 'loop-end' сохраняются
+// как legacy parseable kinds до Phase 44 (runtime stub) и последующих фаз.
+// D-CL-05 вариант (b): сохраняем имена LoopStartNode / LoopEndNode с @deprecated JSDoc —
+// downstream (editor-panel-view, protocol-runner, validator migration-error) могут продолжать
+// ссылаться на них во время парсинга legacy-канвасов; validator выдаёт MIGRATE-01 поверх этих узлов.
 export type RPNodeKind =
   | 'start'
   | 'question'
   | 'answer'
   | 'free-text-input'
   | 'text-block'
-  | 'loop-start'
-  | 'loop-end'
-  | 'snippet';  // Phase 29
+  | 'loop-start'      // @deprecated Phase 43 D-03 — legacy parseable for migration-error (D-07)
+  | 'loop-end'        // @deprecated Phase 43 D-03 — legacy parseable for migration-error (D-07)
+  | 'snippet'         // Phase 29
+  | 'loop';           // Phase 43 D-01 — unified loop kind (see v1.7 LOOP-01, LOOP-02)
 
 export interface RPNodeBase {
   id: string;
@@ -52,6 +58,22 @@ export interface TextBlockNode extends RPNodeBase {
   radiprotocol_separator?: 'newline' | 'space';
 }
 
+/**
+ * Phase 43 D-02 — unified loop node (LOOP-01, LOOP-02).
+ * Замена пары LoopStartNode/LoopEndNode. headerText — текст заголовка над picker'ом,
+ * рендерится runtime в Phase 44. Отсутствие / undefined в canvas JSON нормализуется
+ * парсером в пустую строку (D-05).
+ */
+export interface LoopNode extends RPNodeBase {
+  kind: 'loop';
+  headerText: string;
+}
+
+/**
+ * @deprecated Phase 43 D-03, D-CL-05 — legacy parseable kind.
+ * Canvas с этим узлом теперь отвергается GraphValidator'ом c migration-error (MIGRATE-01).
+ * Удаление — в будущей фазе после того как все legacy-канвасы пересобраны.
+ */
 export interface LoopStartNode extends RPNodeBase {
   kind: 'loop-start';
   loopLabel: string;
@@ -59,6 +81,10 @@ export interface LoopStartNode extends RPNodeBase {
   maxIterations: number;
 }
 
+/**
+ * @deprecated Phase 43 D-03, D-CL-05 — legacy parseable kind.
+ * См. {@link LoopStartNode} для контекста.
+ */
 export interface LoopEndNode extends RPNodeBase {
   kind: 'loop-end';
   loopStartId: string;
@@ -75,12 +101,13 @@ export interface SnippetNode extends RPNodeBase {
 
 /**
  * One frame on the loop context stack.
- * Pushed when the runner enters a loop-start node.
+ * Pushed when the runner enters a unified loop node (Phase 43 D-04).
  * Contains only primitives — shallow array copy is sufficient for snapshots (LOOP-05).
  */
 export interface LoopContext {
-  /** ID of the loop-start node that opened this frame */
-  loopStartId: string;
+  /** Phase 43 D-04 — ID of the unified loop node that opened this frame.
+   *  Renamed from loopStartId (v1.0..v1.6). */
+  loopNodeId: string;
   /** 1-based iteration counter (starts at 1 on first entry) */
   iteration: number;
   /** Full text snapshot captured immediately before entering the loop body.
@@ -94,9 +121,10 @@ export type RPNode =
   | AnswerNode
   | FreeTextInputNode
   | TextBlockNode
-  | LoopStartNode
-  | LoopEndNode
-  | SnippetNode;  // Phase 29
+  | LoopStartNode     // @deprecated — legacy, см. interface JSDoc
+  | LoopEndNode       // @deprecated — legacy, см. interface JSDoc
+  | SnippetNode       // Phase 29
+  | LoopNode;         // Phase 43 D-02 — unified loop (LOOP-01, LOOP-02)
 
 export interface RPEdge {
   id: string;
