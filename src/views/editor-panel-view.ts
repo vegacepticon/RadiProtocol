@@ -748,7 +748,7 @@ export class EditorPanelView extends ItemView {
     return (leaf.view as unknown as { canvas?: CanvasInternal })?.canvas;
   }
 
-  private async onQuickCreate(kind: 'question' | 'answer'): Promise<void> {
+  private async onQuickCreate(kind: 'question' | 'answer' | 'snippet'): Promise<void> {
     const canvasPath = this.getActiveCanvasPath();
     if (!canvasPath) {
       new Notice('Open a canvas first to create nodes.');
@@ -869,6 +869,15 @@ export class EditorPanelView extends ItemView {
     setIcon(aIcon, 'message-square');
     aBtn.appendText('Create answer node');
     this.registerDomEvent(aBtn, 'click', () => { void this.onQuickCreate('answer'); });
+
+    // Phase 42: Create snippet node button
+    const sBtn = toolbar.createEl('button', { cls: 'rp-create-snippet-btn' });
+    sBtn.setAttribute('aria-label', 'Create snippet node');
+    sBtn.setAttribute('title', 'Create snippet node');
+    const sIcon = sBtn.createSpan();
+    setIcon(sIcon, 'file-text');
+    sBtn.appendText('Create snippet node');
+    this.registerDomEvent(sBtn, 'click', () => { void this.onQuickCreate('snippet'); });
 
     // Phase 40: Duplicate node button
     const dupBtn = toolbar.createEl('button', { cls: 'rp-duplicate-btn' });
