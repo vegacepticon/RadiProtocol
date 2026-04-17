@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { DEFAULT_SETTINGS } from '../settings';
 
-describe('Settings defaults (UI-10, UI-11, D-10)', () => {
+describe('Settings defaults (UI-10, UI-11, RUN-07)', () => {
   it('UI-10: DEFAULT_SETTINGS.outputDestination is clipboard', () => {
     expect(DEFAULT_SETTINGS.outputDestination).toBe('clipboard');
   });
@@ -10,8 +10,8 @@ describe('Settings defaults (UI-10, UI-11, D-10)', () => {
     expect(DEFAULT_SETTINGS.outputFolderPath).toBe('RadiProtocol Output');
   });
 
-  it('D-10: DEFAULT_SETTINGS.maxLoopIterations is 50', () => {
-    expect(DEFAULT_SETTINGS.maxLoopIterations).toBe(50);
+  it('RUN-07: no legacy loop-iteration-cap field on DEFAULT_SETTINGS', () => {
+    expect('maxLoopIterations' in DEFAULT_SETTINGS).toBe(false);
   });
 
   it('UI-10/D-10: RadiProtocolSettingsTab has display method (stub check)', async () => {
