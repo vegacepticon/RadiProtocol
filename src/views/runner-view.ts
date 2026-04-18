@@ -396,22 +396,6 @@ export class RunnerView extends ItemView {
             break;
           }
 
-          case 'free-text-input': {
-            questionZone.createEl('p', {
-              text: node.promptLabel,
-              cls: 'rp-question-text',
-            });
-            const textarea = questionZone.createEl('textarea', { cls: 'rp-free-text-input' });
-            const submitBtn = questionZone.createEl('button', { text: 'Submit' });
-            this.registerDomEvent(submitBtn, 'click', () => {
-              this.runner.syncManualEdit(this.previewTextarea?.value ?? '');  // BUG-01: capture manual edit (D-01)
-              this.runner.enterFreeText(textarea.value);
-              void this.autoSaveSession();   // SESSION-01 — save after free-text
-              void this.renderAsync();
-            });
-            break;
-          }
-
           // Phase 43 D-14 — case 'loop-end' удалён вместе с LoopEndNode kind.
           // Unified 'loop' picker UI реализуется в Phase 44 (RUN-01). До тех пор
           // runtime просто transitionToError'ит на loop-узле (см. ProtocolRunner.advanceThrough).

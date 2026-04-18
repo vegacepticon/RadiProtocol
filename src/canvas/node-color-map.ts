@@ -13,7 +13,6 @@ export const NODE_COLOR_MAP: Record<RPNodeKind, string> = {
   'start':           '4',  // green  — entry point ("go" semantics)
   'question':        '5',  // cyan   — information gathering
   'answer':          '2',  // orange — action / selection
-  'free-text-input': '2',  // orange — user input action (same family as answer)
   'text-block':      '3',  // yellow — passive content
   'loop-start':      '1',  // red    — @deprecated Phase 43 D-CL-05 (legacy, см. MIGRATE-01)
   'loop-end':        '1',  // red    — @deprecated Phase 43 D-CL-05 (legacy)

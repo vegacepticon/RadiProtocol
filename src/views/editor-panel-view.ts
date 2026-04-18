@@ -343,9 +343,10 @@ export class EditorPanelView extends ItemView {
           .addOption('text-block', 'Text block')
           .addOption('snippet', 'Snippet')         // Phase 29: D-06
           .addOption('loop', 'Loop')               // Phase 44 UAT-fix: expose unified loop
-          // Phase 44 UAT-fix: legacy kinds (free-text-input, loop-start, loop-end) are NOT
-          // offered here — they remain in RPNodeKind only so the parser can emit MIGRATE-01
-          // on legacy canvases (Phase 43 D-03). New nodes should use `loop` instead.
+          // Phase 46 CLEAN-03: free-text-input excised entirely from RPNodeKind (46-01 D-46-01-A).
+          // Phase 44 UAT-fix: legacy kinds (loop-start, loop-end) are NOT offered here — they
+          // remain in RPNodeKind only so the parser can emit MIGRATE-01 on legacy canvases
+          // (Phase 43 D-03). New nodes should use `loop` instead.
           .setValue(currentKind ?? '')
           .onChange(value => {
             // Immediate save with color + cancel debounce (D-04) — must run first so
@@ -438,58 +439,6 @@ export class EditorPanelView extends ItemView {
             t.setValue((nodeRecord['radiprotocol_displayLabel'] as string | undefined) ?? '')
               .onChange(v => {
                 this.pendingEdits['radiprotocol_displayLabel'] = v || undefined;
-                this.scheduleAutoSave();
-              });
-          });
-        // Separator override dropdown (D-05, D-06, SEP-02)
-        new Setting(container)
-          .setName('Text separator')
-          .setDesc('How this node\'s text is joined to the accumulated report. "Use global" inherits the setting from Settings > Runner.')
-          .addDropdown(drop => {
-            drop
-              .addOption('', 'Use global (default)')
-              .addOption('newline', 'Newline')
-              .addOption('space', 'Space')
-              .setValue((nodeRecord['radiprotocol_separator'] as string | undefined) ?? '')
-              .onChange(value => {
-                this.pendingEdits['radiprotocol_separator'] =
-                  value === '' ? undefined : (value as 'newline' | 'space');
-                this.scheduleAutoSave();
-              });
-          });
-        break;
-      }
-
-      case 'free-text-input': {
-        new Setting(container).setHeading().setName('Free-text input node');
-        new Setting(container)
-          .setName('Prompt label')
-          .setDesc('Shown to the user above the text input field during the session.')
-          .addText(t => {
-            t.setValue((nodeRecord['radiprotocol_promptLabel'] as string | undefined) ?? (nodeRecord['text'] as string | undefined) ?? '')
-              .onChange(v => {
-                this.pendingEdits['radiprotocol_promptLabel'] = v;
-                this.pendingEdits['text'] = v;
-                this.scheduleAutoSave();
-              });
-          });
-        new Setting(container)
-          .setName('Prefix (optional)')
-          .setDesc('Prepended to the user\'s input in the accumulated text.')
-          .addText(t => {
-            t.setValue((nodeRecord['radiprotocol_prefix'] as string | undefined) ?? '')
-              .onChange(v => {
-                this.pendingEdits['radiprotocol_prefix'] = v || undefined;
-                this.scheduleAutoSave();
-              });
-          });
-        new Setting(container)
-          .setName('Suffix (optional)')
-          .setDesc('Appended to the user\'s input in the accumulated text.')
-          .addText(t => {
-            t.setValue((nodeRecord['radiprotocol_suffix'] as string | undefined) ?? '')
-              .onChange(v => {
-                this.pendingEdits['radiprotocol_suffix'] = v || undefined;
                 this.scheduleAutoSave();
               });
           });

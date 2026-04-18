@@ -17,7 +17,6 @@ interface ProtocolRunnerOptions {
  * Public API (D-01):
  *   start(graph)              — begin a session
  *   chooseAnswer(answerId)    — user selects a preset-text answer
- *   enterFreeText(text)       — user submits free-text input
  *   stepBack()                — undo last user action
  *   completeSnippet(text)     — Phase 5 submits rendered snippet text
  *   getState()                — read-only snapshot of current state (D-02)
@@ -212,49 +211,9 @@ export class ProtocolRunner {
   }
 
   /**
-   * User submits free-text input.
-   * Only valid in at-node state when the current node is a free-text-input node.
-   * Wraps text with prefix/suffix if present (RUN-04).
-   * Pushes undo entry BEFORE mutation (D-03, D-04).
-   */
-  enterFreeText(text: string): void {
-    if (this.runnerStatus !== 'at-node') return;
-    if (this.graph === null || this.currentNodeId === null) return;
-
-    const node = this.graph.nodes.get(this.currentNodeId);
-    if (node === undefined || node.kind !== 'free-text-input') {
-      this.transitionToError(`Current node '${this.currentNodeId}' is not a free-text-input node.`);
-      return;
-    }
-
-    // Push undo entry BEFORE any mutation
-    this.undoStack.push({
-      nodeId: this.currentNodeId,
-      textSnapshot: this.accumulator.snapshot(),
-      loopContextStack: [...this.loopContextStack],
-    });
-
-    // Assemble final string with optional prefix/suffix (RUN-04)
-    const prefix = node.prefix ?? '';
-    const suffix = node.suffix ?? '';
-    this.accumulator.appendWithSeparator(prefix + text + suffix, this.resolveSeparator(node));
-
-    // Advance to the next node.
-    // Phase 44 UAT-fix: dead-end free-text-input inside a loop body returns to the owning picker
-    // (iteration++) instead of completing the protocol — same contract as dead-end answer.
-    const neighbors = this.graph.adjacency.get(this.currentNodeId);
-    const next = neighbors !== undefined ? neighbors[0] : undefined;
-    if (next === undefined) {
-      this.advanceOrReturnToLoop(undefined);
-      return;
-    }
-    this.advanceThrough(next);
-  }
-
-  /**
    * Undo the last user action (RUN-06).
    * Reverts both currentNodeId and accumulatedText to the state before the last
-   * chooseAnswer() or enterFreeText() call (D-03).
+   * chooseAnswer() call (D-03).
    * No-op if canStepBack is false.
    */
   stepBack(): void {
@@ -341,7 +300,7 @@ export class ProtocolRunner {
 
   /**
    * Inject a manual textarea edit into the accumulator before an advance action (BUG-01, D-01).
-   * Must be called BEFORE chooseAnswer() / enterFreeText() / chooseLoopBranch() so that
+   * Must be called BEFORE chooseAnswer() / chooseLoopBranch() so that
    * the undo snapshot captured inside those methods includes the manual edit.
    * No-op if runner is not in 'at-node' state.
    */
@@ -512,7 +471,6 @@ export class ProtocolRunner {
    */
   private resolveSeparator(
     node: import('../graph/graph-model').AnswerNode
-          | import('../graph/graph-model').FreeTextInputNode
           | import('../graph/graph-model').TextBlockNode
           | import('../graph/graph-model').SnippetNode,
   ): 'newline' | 'space' {
@@ -526,7 +484,7 @@ export class ProtocolRunner {
   /**
    * Internal auto-advance loop.
    * Processes nodes that do not require user input (start, text-block, answer) and
-   * halts at nodes that require input (question, free-text-input) or terminal conditions.
+   * halts at nodes that require input (question) or terminal conditions.
    *
    * IMPORTANT: This method NEVER pushes UndoEntry (Pitfall 1 / D-03).
    * The iteration counter guards against infinite cycles (RUN-09 / D-08).
@@ -591,8 +549,7 @@ export class ProtocolRunner {
           cursor = next!;
           break;
         }
-        case 'question':
-        case 'free-text-input': {
+        case 'question': {
           // Halts here — awaiting user input
           this.currentNodeId = cursor;
           this.runnerStatus = 'at-node';

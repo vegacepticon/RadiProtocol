@@ -46,7 +46,6 @@ const KIND_ORDER: Record<NodeOption['kind'], number> = {
  * Excluded by design (D-06 — осознанное отклонение от ROADMAP SC #3):
  *   - answer (renders as button under question, not a self-starting point)
  *   - start (implicit entry node, not author-picked)
- *   - free-text-input (scheduled for removal in Phase 46, CLEAN-01..04)
  *   - loop-start, loop-end (legacy parseable kinds — validator rejects canvases
  *     containing them via MIGRATE-01; they must not appear as picker options)
  *
@@ -74,7 +73,7 @@ export function buildNodeOptions(graph: ProtocolGraph): NodeOption[] {
       const l = node as LoopNode;
       options.push({ id, label: l.headerText || id, kind: 'loop' });
     }
-    // answer, start, free-text-input, loop-start, loop-end — сознательно исключены (D-06)
+    // answer, start, loop-start, loop-end — сознательно исключены (D-06)
   }
 
   // D-08: kind-group entry order via KIND_ORDER lookup, alphabetical within group.

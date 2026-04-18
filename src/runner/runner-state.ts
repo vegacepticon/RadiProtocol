@@ -10,9 +10,7 @@ export interface IdleState {
 }
 
 /**
- * Runner is paused at a node awaiting user input.
- * The node is either a question (awaiting chooseAnswer) or a
- * free-text-input node (awaiting enterFreeText).
+ * Runner is paused at a question node awaiting chooseAnswer.
  */
 export interface AtNodeState {
   status: 'at-node';
@@ -89,7 +87,7 @@ export type RunnerState =
 
 /**
  * One entry on the undo stack.
- * Captured BEFORE any mutation inside chooseAnswer() or enterFreeText().
+ * Captured BEFORE any mutation inside chooseAnswer().
  * Text-block auto-advances do NOT create separate UndoEntry values (D-03).
  */
 export interface UndoEntry {
