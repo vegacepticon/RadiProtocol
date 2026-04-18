@@ -8,17 +8,10 @@ An Obsidian community plugin that turns Canvas files into interactive protocol g
 
 A radiologist can generate a structured, accurate protocol in seconds by answering a guided algorithm — without writing a single line of code to build that algorithm.
 
-## Current Milestone: v1.7 Loop Rework & Regression Cleanup
+## Current Milestone
 
-**Goal:** Simplify the loop-node model to a single unified node (replacing the loop-start/loop-end pair) and remove the regressed `free-text-input` node type.
-
-**Target features:**
-- Unified `loop` node that absorbs what `loop-start` + `loop-end` used to express
-- Outgoing edge labelled «выход» designates the exit branch; remaining outgoing edges are iteration bodies
-- Single-step iteration prompt: all body branches plus «выход» rendered together above an author-editable header text
-- Dead-end nodes inside any body branch return control to the loop node; nested loops preserved via existing `LoopContext` stack; `maxIterations` retired as redundant
-- Break-compatibility migration path: existing `loop-start` / `loop-end` pairs surface a clear validation error prompting the author to rebuild
-- Full removal of the `free-text-input` node kind — model, parser, validator, runner, editor, node picker, and color map — restoring the earlier v1.0 decision after the regression
+**Shipped:** v1.7 Loop Rework & Regression Cleanup (2026-04-18)
+**Next:** TBD — planning begins with `/gsd-new-milestone`
 
 ## Requirements
 
@@ -174,6 +167,35 @@ A radiologist can generate a structured, accurate protocol in seconds by answeri
 - ✓ Empty-type node shows "Select a node type to configure this node" hint and `— unset —` dropdown — v1.6
 - ✓ Quick-create toolbar wraps at narrow sidebar widths via `flex-wrap: wrap` — v1.6
 
+### Validated (v1.7)
+
+**Loop Node Unification:**
+- ✓ Unified `loop` node kind in graph model (LOOP-01) — v1.7
+- ✓ `LoopNode.headerText` editable field rendered above picker (LOOP-02) — v1.7
+- ✓ Canvas parser recognizes `radiprotocol_nodeType = "loop"` (LOOP-03) — v1.7
+- ✓ `GraphValidator` enforces «выход» edge + ≥1 body edge (LOOP-04) — v1.7
+- ✓ Node Editor form edits `headerText`, no `maxIterations` control (LOOP-05) — v1.7
+- ✓ `NODE_COLOR_MAP` + `NodePickerModal` list `loop` as first-class kind with red color and Russian badge «Цикл» (LOOP-06) — v1.7
+
+**Loop Runtime:**
+- ✓ Single picker combining body-branch labels + «выход» above `headerText` (RUN-01) — v1.7
+- ✓ Body-branch dead-end returns to same loop picker (RUN-02) — v1.7
+- ✓ «выход» pops loop frame and exits (RUN-03) — v1.7
+- ✓ Nested loops preserve parent state via `LoopContext` stack with B1 re-entry guard (RUN-04) — v1.7
+- ✓ Step-back from picker unwinds to pre-loop state via B2 `previousCursor` threading (RUN-05) — v1.7
+- ✓ Session save/resume preserves loop-node state at `awaiting-loop-pick` (RUN-06) — v1.7
+- ✓ `maxIterations` field + settings UI removed; no runtime iteration cap (RUN-07) — v1.7
+
+**Migration:**
+- ✓ Legacy `loop-start`/`loop-end` canvases fail `GraphValidator` with plain-language rebuild instruction (MIGRATE-01) — v1.7
+- ✓ Migration error surfaces in existing RunnerView error panel (MIGRATE-02) — v1.7
+
+**Free-Text-Input Removal:**
+- ✓ `free-text-input` removed from `RPNodeKind`; `FreeTextInputNode` interface deleted (CLEAN-01) — v1.7
+- ✓ Parser rejects legacy `free-text-input` canvases with Russian error via MIGRATE-02 surface (CLEAN-02) — v1.7
+- ✓ All consumer references excised from runner, views, color map, CSS (CLEAN-03) — v1.7
+- ✓ Fixture + tests removed or rewritten; full suite green (CLEAN-04) — v1.7
+
 ### Active
 
 **(Next milestone to be defined via /gsd-new-milestone.)**
@@ -202,27 +224,24 @@ A radiologist can generate a structured, accurate protocol in seconds by answeri
 
 ## Current State
 
-**Shipped:** v1.6 Polish & Canvas Workflow (2026-04-17)
-**Current milestone:** v1.7 Loop Rework & Regression Cleanup (started 2026-04-17)
-**Latest phases in v1.6:**
-- Phase 36 (2026-04-16): Dead code audit and cleanup — 8 exports internalized, 2 dead files deleted, 3 CSS rules + 3 RED stubs removed; "Тип JSON" spacing fix
-- Phase 37 (2026-04-16): Create folder button in snippet editor header; canvas-ref sync on folder rename
-- Phase 38 (2026-04-16): Canvas node creation infrastructure — CanvasNodeFactory service with createTextNode API, auto-color, position offset
-- Phase 39 (2026-04-16): Quick-Create UI — question/answer node buttons in Node Editor sidebar
-- Phase 40 (2026-04-16): Node duplication — Duplicate button copies selected node with all RadiProtocol properties preserved
-- Phase 41 (2026-04-17): Live canvas update on folder rename — rewriteCanvasRefs uses saveLive() Pattern B for open canvases
-- Phase 42 (2026-04-17): Snippet quick-create button + double-click node selection fix — 4 plans (adds "Create snippet node" button, fixes "Node not found in canvas" error, auto-loads new node, responsive toolbar wrapping)
+**Shipped:** v1.7 Loop Rework & Regression Cleanup (2026-04-18)
+**Next milestone:** TBD — planning begins with `/gsd-new-milestone`
+**Latest phases in v1.7:**
+- Phase 43 (2026-04-17): Unified Loop graph model, parser, validator, Migration Check — `LoopNode` + `loopNodeId` + three LOOP-04 sub-checks + Russian rebuild error for legacy canvases
+- Phase 44 (2026-04-17): Unified loop runtime — single-step picker, B1 re-entry guard for dead-end returns, B2 `previousCursor` threading for step-back, `maxIterations` fully excised
+- Phase 45 (2026-04-18): Loop Editor form (editable `headerText`, no iterations control) + 4th quick-create button (red, repeat icon) + `NodePickerModal` 4-kind Russian badges + Ctrl+P `start-from-node` command with validator gate
+- Phase 46 (2026-04-18): `free-text-input` excised from every layer via TypeScript exhaustiveness — parser emits Russian rejection; fixture retained with semantic role flipped to CLEAN-02 rejection proof
 
 ## Context
 
-- Shipped v1.0 (7 phases, 28 plans) + v1.2 (8 phases, 11 plans) + v1.3 (1 phase, 1 plan) + v1.4 (4 phases, 12 plans) + v1.5 (4 phases, 18 plans) + v1.6 (7 phases, 14 plans); ~16.7K LOC TypeScript in src/
+- Shipped v1.0 (7 phases, 28 plans) + v1.2 (8 phases, 11 plans) + v1.3 (1 phase, 1 plan) + v1.4 (4 phases, 12 plans) + v1.5 (4 phases, 18 plans) + v1.6 (7 phases, 14 plans) + v1.7 (4 phases, 18 plans); ~17.6K LOC TypeScript in src/
 - Tech stack: TypeScript + Obsidian Plugin API + esbuild + Vitest
 - Target: public release on Obsidian Community Plugins
 - Primary author: radiologist (CT focus), designed for all imaging modalities
-- All phases human-UAT approved; v1.6 milestone audit passed 14/14 requirements, 7/7 phases, 7/7 integration contracts, 4/4 E2E flows
+- All phases human-UAT approved; v1.7 milestone audit passed with `tech_debt` status — 19/19 requirements, 4/4 phases, 9/9 cross-phase E2E flows verified
 - All engine code (parser, runner, snippets, sessions) has zero Obsidian imports and is fully unit-testable
-- 394 tests passing (28 test files), build green
-- Known tech debt: Nyquist VALIDATION.md draft for phases 12–19, 28–31, 32–35, 36–42 (all milestones); Node Editor stale subfolderPath display after folder move/rename (cosmetic pre-fix in v1.6); chip editor labels in English (Phase 27 legacy)
+- 419 tests passing + 1 skipped (32 test files), build green, `npx tsc --noEmit --skipLibCheck` exit 0
+- Known tech debt: Nyquist VALIDATION.md draft for phases 12–19, 28–31, 32–35, 36–42, 43, 46 (all prior milestones + 2 v1.7 phases); Phase 27 `phase-27-regressions` debug session still `awaiting_human_verify` (v1.3 legacy); 4 legacy todo files whose work was delivered in v1.5/v1.6 but the files were never deleted; `@deprecated` `LoopStartNode`/`LoopEndNode` types retained in graph-model for Migration Check enumeration
 
 ## Constraints
 
@@ -283,6 +302,19 @@ A radiologist can generate a structured, accurate protocol in seconds by answeri
 | In-memory canvas fallback `canvas.nodes.get(id).getData()` in renderNodeForm (Phase 42) | Obsidian debounced save may not have flushed disk when freshly double-click-created node is selected; fallback reads live state | ✓ Good — fixed "Node not found in canvas" UAT gap |
 | `setTimeout(0)` deferred `canvas.selection` read + `dblclick` listener (Phase 42 Plan 03) | Canvas-internal contract: selection updates AFTER pointer event; reading inside handler returns stale set | ✓ Good — auto-select on double-click works |
 | `flex-wrap: wrap` + `row-gap` appended rule for responsive toolbar (Phase 42 Plan 04) | Narrow sidebar pushes Duplicate button off-screen; equal-specificity source-order cascade preserves Phase 39 defaults | ✓ Good — no regression at wide width |
+| Break-compatibility over auto-migration for loop rework (Phase 43) | Auto-migration semantics ambiguous (which edge becomes «выход», how to collapse body); explicit author action safer than silent rewriting | ✓ Good — Migration Check gives plain-language rebuild instructions via existing error panel |
+| Cyrillic edge label «выход» as loop exit discriminator (Phase 43) | Matches domain-authoring language; avoids a second special edge property | ✓ Good — 5-char case-sensitive; no collisions with body-branch labels in practice |
+| `@deprecated` `LoopStartNode`/`LoopEndNode` kinds retained in `RPNodeKind` (Phase 43 D-CL-05b) | Migration Check enumerates legacy nodes via `nodeLabel()` — deletion would orphan the error path | ⚠️ Revisit — removal blocked until Migration Check can be rewritten to not require the kinds |
+| `LoopContext.loopStartId → loopNodeId` rename with D-13 graceful-reject (Phase 43) | Rename eliminated confusing field name when unified node replaced two-node pair; D-13 guards legacy sessions without adding new load-path schema | ✓ Good — legacy sessions flow through existing missing-id path, RunnerView clears via `sessionService.clear()` |
+| One-step picker (body labels + «выход» together) over two-step iterate-then-branch (Phase 44) | Simpler mental model; every iteration re-presents the same picker; matches how authors describe loops verbally | ✓ Good |
+| B1 re-entry guard on `loopContextStack` top (Phase 44) | Handles both back-edge re-entry AND inner-«выход» landing on outer loop without pushing a second frame — one mechanism, two concerns | ✓ Good — verified by RUN-04 nested tests |
+| B2 `previousCursor` threading through `advanceThrough` (Phase 44) | Step-back from picker must restore predecessor (or loop node itself if no predecessor) — symmetric `canStepBack` across all picker states | ✓ Good |
+| `maxIterations` retired entirely (RUN-07, Phase 44) | Author responsibility, not engine policy; `ProtocolRunner.maxIterations` RUN-09 cycle guard preserved separately | ✓ Good — no per-loop or global cap in v1.7 |
+| Kind-order sort in NodePickerModal: question → loop → text-block → snippet (Phase 45) | Semantic priority: questions drive most protocols, loops are structural, text-blocks/snippets are leaves | ✓ Good |
+| `start-from-node` command without plugin prefix (Phase 45 NFR-06) | Bare id per Obsidian convention; prefix would produce `radiprotocol:radiprotocol-start-from-node` collision | ✓ Good — confirmed by integration checker |
+| TypeScript exhaustiveness as free-text-input excision forcing function (Phase 46) | `Record<RPNodeKind, string>` + switch exhaustiveness finds every residual reference mechanically; grep sweeps are fallible | ✓ Good — 16 residual matches bounded to 4 intentional sites |
+| Fixture retention with semantic-role flip (Phase 46 D-46-01-C) | Kept `free-text.canvas` byte-identical but flipped role from happy-path to CLEAN-02 rejection proof; satisfies ROADMAP SC#4 "removed or rewritten" via rewrite path | ✓ Good — avoids churn in git history, preserves audit trail |
+| Parser-level rejection reuses existing MIGRATE-02 surface (Phase 46 CLEAN-02) | `{ success: false; error }` contract from Phase 43 already rendered by RunnerView `renderError` — no new UI path | ✓ Good — cross-phase contract preserved |
 
 ## Evolution
 
@@ -293,4 +325,4 @@ A radiologist can generate a structured, accurate protocol in seconds by answeri
 4. Update Context with current state
 
 ---
-*Last updated: 2026-04-17 — starting v1.7 milestone*
+*Last updated: 2026-04-18 after v1.7 milestone*

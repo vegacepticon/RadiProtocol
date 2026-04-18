@@ -1,5 +1,26 @@
 # Milestones
 
+## v1.7 Loop Rework & Regression Cleanup (Shipped: 2026-04-18)
+
+**Phases completed:** 4 phases (43–46), 18 plans
+**Timeline:** 2026-04-17 → 2026-04-18 (2 days)
+**Git:** 51 commits, 27 source files touched, ~17.6K LOC TypeScript
+
+**Key accomplishments:**
+
+- Phase 43: Unified `loop` node collapsed the legacy `loop-start`/`loop-end` pair at the model, parser, validator, and color-map layers — Migration Check emits a Russian rebuild instruction for legacy canvases via the existing RunnerView error panel; four fixture canvases (happy-path, missing-exit, duplicate-exit, no-body) exercise the three LOOP-04 sub-checks (LOOP-01..04, MIGRATE-01, MIGRATE-02)
+- Phase 44: Unified loop runtime — single-step picker combining body-branch labels + «выход» rendered above `headerText`, `advanceOrReturnToLoop` helper + B1 re-entry guard for dead-end returns, B2 `previousCursor` threading for step-back, nested loops preserved via existing `LoopContext` stack, session save/resume at `awaiting-loop-pick` (7 round-trip tests), `maxIterations` field + settings UI fully excised (RUN-01..07)
+- Phase 45: Node Editor loop form with editable `headerText` (no `maxIterations`), fourth quick-create button "Create loop node" (repeat icon, red `NODE_COLOR_MAP['loop']='1'`), `NodePickerModal` extended to 4 kinds with Russian badges (Вопрос/Цикл/Текст/Сниппет) and kind-group sort order, new `start-from-node` Ctrl+P command with validator gate (blocks legacy canvases via MIGRATE-01) — end-to-end wiring: handleStartFromNode → parse → validate → buildNodeOptions → activateRunnerView → picker → runner (LOOP-05, LOOP-06)
+- Phase 46: `free-text-input` excised from every layer using TypeScript exhaustiveness as the mechanical forcing function — `RPNodeKind` shrunk to 8 members, `FreeTextInputNode` interface deleted, parser emits Russian rejection with three mandatory tokens via the existing MIGRATE-02 surface, all consumer files (runner, views, color map, CSS, tests) swept clean; fixture retained byte-identically with semantic role flipped from happy-path to CLEAN-02 rejection proof (CLEAN-01..04)
+- Post-verification fixes delivered: WR-01 race between ResumeSessionModal and NodePickerModal (commit 5be09bd at main.ts:368), WR-02 exhaustive KIND_ORDER via `Record<kind, number>` (commit 40f33d8)
+- All 19 v1.7 requirements satisfied; milestone audit passed with `tech_debt` status (no blockers); 9/9 cross-phase E2E flows verified by integration checker; 419 passed + 1 skipped tests; `npx tsc --noEmit` and `npm run build` exit 0
+
+**Known deferred items at close:** 8 items (see STATE.md `## Deferred Items`) — 3 Nyquist gaps (Phase 43/44/46 VALIDATION.md missing or draft), 2 stale verification frontmatters (Phase 44/45 `human_needed` not promoted despite UAT commits), 1 legacy debug session (phase-27-regressions), 4 legacy todo files whose work was delivered in v1.5/v1.6 but the files were never deleted, plus 6 code-review info/warning items tracked for future cleanup
+
+**Archive:** `.planning/milestones/v1.7-ROADMAP.md`, `.planning/milestones/v1.7-REQUIREMENTS.md`, `.planning/milestones/v1.7-MILESTONE-AUDIT.md`
+
+---
+
 ## v1.6 Polish & Canvas Workflow (Shipped: 2026-04-17)
 
 **Phases completed:** 7 phases, 14 plans, 21 tasks

@@ -129,6 +129,30 @@ See: `.planning/PROJECT.md` (updated 2026-04-17)
 - Chip editor English labels (Phase 27 legacy)
 - Nyquist VALIDATION.md draft for phases 12–19, 28–31, 32–35, 36–42
 
+## Deferred Items
+
+Items acknowledged and deferred at milestone close on 2026-04-18:
+
+| Category | Item | Status |
+|----------|------|--------|
+| debug | phase-27-regressions | awaiting_human_verify (hypothesis CONFIRMED — color regression root cause: canvas-live-editor PROTECTED_FIELDS) |
+| uat_gap | Phase 45 (45-HUMAN-UAT.md) | partial (0 pending scenarios; WR-01 race fix verified by integration checker) |
+| verification_gap | Phase 44 (44-VERIFICATION.md) | human_needed (UAT completed per commit 8ad6ba5; frontmatter not promoted) |
+| verification_gap | Phase 45 (45-VERIFICATION.md) | human_needed (UAT completed per commit 4998ccb; frontmatter not promoted) |
+| todo | audit-dead-code.md | medium (largely delivered by Phase 36; file residual) |
+| todo | create-folder-button-snippet-editor.md | medium (delivered by Phase 37; file residual) |
+| todo | fix-snippet-modal-spacing.md | high (delivered by Phase 36; file residual) |
+| todo | sync-node-path-on-directory-rename.md | medium (delivered by Phase 37/41; file residual) |
+| nyquist | Phase 43 VALIDATION.md | missing (tests green; discovery-only) |
+| nyquist | Phase 44 VALIDATION.md | draft / nyquist_compliant: false (tests green; frontmatter not promoted) |
+| nyquist | Phase 46 VALIDATION.md | missing (tests green; discovery-only) |
+| code_review | 43-REVIEW WR-02 | Private edgeByLabel() potentially dead after Phase 44 |
+| code_review | 43-REVIEW WR-03 | Stale JSDoc in session-service.ts:112-113 references loopStartId |
+| code_review | 45-REVIEW IN-01 / 46-REVIEW IN-01 | Dead `|| id` operand in node-picker-modal.ts (duplicate finding) |
+| code_review | 45-REVIEW IN-02 | Text-block preview truncates at 60 chars without ellipsis |
+| code_review | 46-REVIEW IN-02 | validKinds array duplicates RPNodeKind (refactor suggestion) |
+| cleanup | @deprecated LoopStartNode / LoopEndNode types | retained for Migration Check enumeration; future removal candidate |
+
 ### Decisions (Phase 43)
 
 - Plan 43-01: kept `LoopStartNode` / `LoopEndNode` names with `@deprecated` JSDoc (D-CL-05 variant b) instead of renaming to `LegacyLoop*` — simpler downstream wiring; `LoopNode` shape mirrors `QuestionNode` (`headerText: string`, parser normalizes missing to `''`).

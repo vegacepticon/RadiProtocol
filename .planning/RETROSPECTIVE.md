@@ -4,6 +4,64 @@
 
 ---
 
+## Milestone: v1.7 — Loop Rework & Regression Cleanup
+
+**Shipped:** 2026-04-18
+**Phases:** 4 (43–46) | **Plans:** 18 | **Timeline:** 2 days (2026-04-17 → 2026-04-18) | **Commits:** 51
+
+### What Was Built
+
+- Unified `loop` node replaces the legacy `loop-start`/`loop-end` pair across graph model, parser, validator, runtime, Node Editor form, NodePickerModal, color map, and session persistence
+- Migration Check — legacy canvases surface a plain-language Russian rebuild instruction via the existing RunnerView error panel (reused for Phase 46 CLEAN-02 too)
+- Single-step loop picker — body-branch labels + «выход» rendered together above an author-editable `headerText`, with B1 re-entry guard for dead-end returns and B2 `previousCursor` threading for step-back
+- Per-loop `maxIterations` field and global settings UI fully excised (RUN-07); `ProtocolRunner.maxIterations` RUN-09 cycle guard preserved separately
+- Node Editor loop form + 4th quick-create button (repeat icon, red `NODE_COLOR_MAP['loop']='1'`) + `NodePickerModal` extended to 4 kinds with Russian badges (Вопрос/Цикл/Текст/Сниппет) and kind-group sort
+- New `start-from-node` Ctrl+P command with validator gate (blocks legacy canvases via MIGRATE-01) — end-to-end wiring through `handleStartFromNode` → parse → validate → `buildNodeOptions` → `activateRunnerView` → picker → runner
+- `free-text-input` node kind excised from every layer using TypeScript exhaustiveness as the mechanical forcing function — restored the original v1.0 decision after the v1.2 regression
+
+### What Worked
+
+- **TypeScript exhaustiveness as an excision forcing function** (Phase 46) — `Record<RPNodeKind, string>` and switch exhaustiveness mechanically identified every residual `free-text-input` reference; fewer missed spots than grep-only sweeps
+- **Fixture retention with role flip** (Phase 46 D-46-01-C) — keeping `free-text.canvas` byte-identical but flipping its semantic role avoided churn in git history while still satisfying ROADMAP SC#4
+- **Break-compatibility over auto-migration** (Phase 43) — declining to invent migration semantics for a two-node → one-node collapse was the right call; Migration Check surfaces rebuild instructions through the existing error-panel path with zero new UI code
+- **Reusing existing `{ success: false; error }` surface** (Phase 46 CLEAN-02) — Phase 43's MIGRATE-02 error panel already handles parse-time rejection, so Phase 46 needed zero new rendering code
+- **B1 re-entry guard** as a single mechanism for two concerns (Phase 44) — back-edge re-entry AND inner-«выход» landing on outer loop both handled without pushing a second frame
+- **Deferred tech-debt list kept explicit** — `tech_debt` audit status correctly captured the Nyquist-draft + code-review follow-ups without blocking milestone close
+
+### What Was Inefficient
+
+- **Stale audit file** — ran `/gsd-audit-milestone` mid-milestone (pre-Phase-46); file was not auto-invalidated when Phase 46 shipped and required a fresh re-run at close time
+- **Phase 44/45 verification frontmatters stuck at `human_needed`** despite UAT being completed (commits `8ad6ba5`, `4998ccb`) — needs a promotion step after UAT to flip to `passed`
+- **Duplicate code-review findings** (node-picker-modal.ts `|| id` operand flagged as IN-01 in both Phase 45 and Phase 46 reviews) — same dead code surveyed twice without resolution between phases
+- **4 legacy todo files delivered by earlier milestones** (v1.5 Phase 36/37/41) were never deleted from `.planning/todos/` — the `audit-open` pre-close check surfaced them as fresh debt, requiring explicit acknowledgment
+- **Nyquist VALIDATION.md promotion still manual** — Phase 43/46 had no VALIDATION.md at all; Phase 44's VALIDATION.md was left in `draft`/`nyquist_compliant: false` despite 402+ green tests
+
+### Patterns Established
+
+- **Migration Check as a validator first-check** with early-return — run migration-diagnostic rules before other rules so unified-model rules never fire against legacy-model canvases
+- **@deprecated kind retention** for enumeration — when a code path (error messages, nodeLabel) needs to read legacy kinds, retaining them with `@deprecated` JSDoc is cleaner than a parallel legacy-kind shadow type
+- **D-20 graceful-reject for schema renames** — legacy sessions with old field names flow through existing missing-id path rather than needing a load-path guard
+- **Parser-time rejection over validator-time rejection** (Phase 46 CLEAN-02) — when a kind is entirely unsupported, reject at parse time so `ProtocolGraph` never exists; surfaces via existing `{ success: false; error }` contract
+- **Fixture-role flipping** — a byte-identical fixture can be repurposed by swapping which test file consumes it, avoiding both fixture deletion and test-rewrite churn
+- **Russian test-literal assertions** — when error messages are user-facing in Russian, test assertions should grep the exact literals («выход», «устаревший») rather than translated English equivalents
+
+### Key Lessons
+
+1. **Decline auto-migration when semantics are ambiguous** — a clear rebuild message beats a silent rewrite that might misinterpret author intent
+2. **Cross-phase UAT fixes during verification** (commits `5be09bd`, `40f33d8` for Phase 45 WR-01/WR-02) — post-verification fixes are legitimate when race conditions surface during review; they should NOT trigger phase re-plan
+3. **Exhaustiveness > grep for type-level excisions** — the TypeScript compiler is more reliable than any grep pattern at finding every consumer of a removed union member
+4. **Audit staleness needs a self-invalidation signal** — `/gsd-audit-milestone` outputs carry a timestamp but no link to milestone-completion state; close workflow should always refresh the audit
+5. **Verification frontmatter promotion is not automatic** — `human_needed` → `passed` flip must be driven by the UAT commit or close workflow, not left to manual action
+6. **Todo files don't self-delete when work ships** — backlog items whose work landed in a phase need an explicit delete step during phase close
+
+### Cost Observations
+
+- Model mix: predominantly Opus for planning/research/verify; Sonnet for execute-phase subagents
+- Sessions: ~4 major sessions across 2 days (one per phase, interleaved with discuss → plan → execute → verify loops)
+- Notable: Phase 46 used TypeScript exhaustiveness to compress what could have been a week-long cleanup into 3 plans of 10–15 minutes each — the forcing function paid for itself within the first plan
+
+---
+
 ## Milestone: v1.0 — Community Plugin Release
 
 **Shipped:** 2026-04-07  

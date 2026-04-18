@@ -13,7 +13,7 @@
 - ✅ **v1.4 Snippets and Colors, Colors and Snippets** — Phases 28-31 (shipped 2026-04-15)
 - ✅ **v1.5 Snippet Editor Refactoring** — Phases 32-35 (shipped 2026-04-16)
 - ✅ **v1.6 Polish & Canvas Workflow** — Phases 36-42 (shipped 2026-04-17)
-- 🔄 **v1.7 Loop Rework & Regression Cleanup** — Phases 43-46 (started 2026-04-17)
+- ✅ **v1.7 Loop Rework & Regression Cleanup** — Phases 43-46 (shipped 2026-04-18)
 
 ---
 
@@ -98,16 +98,24 @@ Full details: `.planning/milestones/v1.6-ROADMAP.md`
 
 </details>
 
-### v1.7 Loop Rework & Regression Cleanup (Phases 43-46) — ACTIVE
+<details>
+<summary>✅ v1.7 Loop Rework & Regression Cleanup (Phases 43-46) — SHIPPED 2026-04-18</summary>
 
-- [x] **Phase 43: Unified Loop — Graph Model, Parser, Validator & Migration Errors** — Collapse `loop-start`/`loop-end` into a single `loop` node in the graph model and parser; add validator rules for the «выход» edge and reject legacy canvases with plain-language rebuild guidance (completed 2026-04-17)
-- [x] **Phase 44: Unified Loop Runtime** — Replace loop-start/loop-end runtime with single-step picker (body branches + «выход»), dead-end-return behaviour, nested loop stack preservation, step-back, session save/resume, removal of `maxIterations` (completed 2026-04-17)
-- [x] **Phase 45: Loop Editor Form, Picker & Color Map** — Node Editor form for the unified `loop` node with editable `headerText` (no `maxIterations`), plus `NodePickerModal` and `NODE_COLOR_MAP` integration (completed 2026-04-18)
-- [x] **Phase 46: Free-Text-Input Removal** — Excise `free-text-input` from graph model, parser, validator, runner, editor, picker, color map, and test fixtures (completed 2026-04-18)
+- [x] Phase 43: Unified Loop — Graph Model, Parser, Validator & Migration Errors (7/7 plans) — completed 2026-04-17
+- [x] Phase 44: Unified Loop Runtime (5/5 plans) — completed 2026-04-17
+- [x] Phase 45: Loop Editor Form, Picker & Color Map (3/3 plans) — completed 2026-04-18
+- [x] Phase 46: Free-Text-Input Removal (3/3 plans) — completed 2026-04-18
+
+Full details: `.planning/milestones/v1.7-ROADMAP.md`
+
+</details>
 
 ---
 
 ## Phase Details
+
+<details>
+<summary>Archived phase details (v1.0–v1.7) — see milestone archives for full context</summary>
 
 ### Phase 43: Unified Loop — Graph Model, Parser, Validator & Migration Errors
 **Goal**: The canvas format, graph model, parser, and validator all speak the new unified `loop` node — and any canvas that still uses the old `loop-start`/`loop-end` pair is clearly rejected with rebuild instructions before the runner is touched.
@@ -174,6 +182,8 @@ Plans:
 - [x] 46-01-graph-model-parser-validator-PLAN.md — Excise FreeTextInputNode + RPNodeKind member + parser case arm; parser emits Russian rejection for legacy canvases (CLEAN-01, CLEAN-02)
 - [x] 46-02-runner-views-color-map-PLAN.md — TS-exhaustiveness-driven cleanup of runner, views, color map, CSS; deletes enterFreeText method + runner-view render arm + editor-panel form branch (CLEAN-03)
 - [x] 46-03-test-cleanup-PLAN.md — Delete free-text-input test scenarios in protocol-runner.test.ts + rewrite picker exclusion test (CLEAN-04)
+
+</details>
 
 ---
 
