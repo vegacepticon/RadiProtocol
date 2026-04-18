@@ -8,10 +8,16 @@ An Obsidian community plugin that turns Canvas files into interactive protocol g
 
 A radiologist can generate a structured, accurate protocol in seconds by answering a guided algorithm — without writing a single line of code to build that algorithm.
 
-## Current Milestone
+## Current Milestone: v1.8 UX Polish & Snippet Picker Overhaul
 
-**Shipped:** v1.7 Loop Rework & Regression Cleanup (2026-04-18)
-**Next:** TBD — planning begins with `/gsd-new-milestone`
+**Goal:** Polish the Node Editor + Protocol Runner UX, close regressions uncovered during v1.7 use, overhaul the Snippet node picker with hierarchical navigation + specific-snippet binding, unify JSON snippet placeholders, and prepare the repo for BRAT installation.
+
+**Target features:**
+- Runner regressions closed — textarea edits survive loop transitions, scroll stays put after choice insert, choice button typography no longer clips.
+- Node Editor quality-of-life — create buttons move to a vertical bottom column, newly-created nodes anchor below the previous node, Question text area grows with content, Answer fields reordered (label first), the obsolete "Snippet ID" field in Text block is removed.
+- Loop and Answer edge semantics — loop exit is derived from the sole labeled outgoing edge; Answer `displayLabel` and every incoming edge label stay in sync bidirectionally.
+- Snippet node overhaul — a single hierarchical picker with search replaces the flat folder list, Snippet nodes may bind to a specific snippet file (auto-insert when sole option), and JSON placeholders collapse to two types (`free text` + unified `choice`) with a working options editor.
+- Distribution — align repo version metadata and ship GitHub Releases with `manifest.json`/`main.js`/`styles.css` assets so users can install via BRAT.
 
 ## Requirements
 
@@ -196,9 +202,22 @@ A radiologist can generate a structured, accurate protocol in seconds by answeri
 - ✓ All consumer references excised from runner, views, color map, CSS (CLEAN-03) — v1.7
 - ✓ Fixture + tests removed or rewritten; full suite green (CLEAN-04) — v1.7
 
-### Active
+### Active (v1.8 — to be enumerated in REQUIREMENTS.md)
 
-**(Next milestone to be defined via /gsd-new-milestone.)**
+- Runner textarea preservation through loop transitions
+- Runner textarea scroll position preservation on choice insert
+- Runner choice button typography safe padding
+- Node Editor: remove obsolete Snippet ID field from Text block
+- Node Editor: new nodes anchor below the last node
+- Node Editor: Answer fields — Display label above Answer text
+- Node Editor: Question text auto-grow + label repositioning
+- Node Editor: Create buttons — bottom vertical stack
+- Loop node exit derived from sole labeled outgoing edge (with validation)
+- Answer displayLabel ↔ incoming edge label bi-directional sync
+- Snippet node binding to a specific snippet file (auto-insert when sole)
+- Hierarchical snippet/folder picker with search
+- JSON snippet placeholders — collapse to `free text` + unified `choice`
+- Repo preparation for BRAT installation (version alignment + GitHub Releases)
 
 ### Deferred (Future Milestones)
 
@@ -225,7 +244,7 @@ A radiologist can generate a structured, accurate protocol in seconds by answeri
 ## Current State
 
 **Shipped:** v1.7 Loop Rework & Regression Cleanup (2026-04-18)
-**Next milestone:** TBD — planning begins with `/gsd-new-milestone`
+**Active milestone:** v1.8 UX Polish & Snippet Picker Overhaul — requirements being defined
 **Latest phases in v1.7:**
 - Phase 43 (2026-04-17): Unified Loop graph model, parser, validator, Migration Check — `LoopNode` + `loopNodeId` + three LOOP-04 sub-checks + Russian rebuild error for legacy canvases
 - Phase 44 (2026-04-17): Unified loop runtime — single-step picker, B1 re-entry guard for dead-end returns, B2 `previousCursor` threading for step-back, `maxIterations` fully excised
@@ -325,4 +344,4 @@ A radiologist can generate a structured, accurate protocol in seconds by answeri
 4. Update Context with current state
 
 ---
-*Last updated: 2026-04-18 after v1.7 milestone*
+*Last updated: 2026-04-18 — v1.8 UX Polish & Snippet Picker Overhaul milestone opened*
