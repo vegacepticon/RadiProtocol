@@ -3,33 +3,33 @@ gsd_state_version: 1.0
 milestone: v1.8
 milestone_name: UX Polish & Snippet Picker Overhaul
 status: in_progress
-stopped_at: Phase 47 Plan 01 complete (RUNFIX-01 closed); Plans 47-02 and 47-03 remain
-last_updated: "2026-04-18T23:00:00.000Z"
+stopped_at: Phase 47 Plan 02 complete (RUNFIX-02 closed); Plan 47-03 remains
+last_updated: "2026-04-18T23:06:30.000Z"
 last_activity: 2026-04-18
 resume_file: .planning/phases/47-runner-regressions/
 progress:
   total_phases: 7
   completed_phases: 0
   total_plans: 3
-  completed_plans: 1
-  percent: 5
+  completed_plans: 2
+  percent: 10
 ---
 
 # RadiProtocol — Project State
 
 **Updated:** 2026-04-18
 **Milestone:** v1.8 — UX Polish & Snippet Picker Overhaul
-**Status:** In progress — Phase 47 Plan 01 complete (RUNFIX-01 closed); Plans 47-02 + 47-03 remain
-**Stopped at:** Phase 47 Plan 01 executed successfully (2 commits: 7603bc5 RED test, bdb227f GREEN fix); awaiting execution of 47-02 (RUNFIX-02 scroll preservation) and 47-03 (RUNFIX-03 button typography)
+**Status:** In progress — Phase 47 Plans 01-02 complete (RUNFIX-01 + RUNFIX-02 closed); Plan 47-03 remains
+**Stopped at:** Phase 47 Plan 02 executed successfully (2 commits: 126ee08 RED test, 325f39d GREEN fix); awaiting execution of 47-03 (RUNFIX-03 button typography)
 
 ---
 
 ## Current Position
 
-Phase: 47 (Runner Regressions) — 1 of 3 plans complete
-Plans: 47-01 ✅ complete (RUNFIX-01); 47-02 pending (RUNFIX-02); 47-03 pending (RUNFIX-03)
-Status: Phase 47 Plan 01 — executed and verified; full test suite green (423 passed)
-Last activity: 2026-04-18 — Executed Plan 47-01 (syncManualEdit gate extension)
+Phase: 47 (Runner Regressions) — 2 of 3 plans complete
+Plans: 47-01 ✅ complete (RUNFIX-01); 47-02 ✅ complete (RUNFIX-02); 47-03 pending (RUNFIX-03)
+Status: Phase 47 Plan 02 — executed and verified; full test suite green (428 passed, +5 RUNFIX-02 tests)
+Last activity: 2026-04-18 — Executed Plan 47-02 (pending-scroll capture + restore in renderPreviewZone)
 
 ---
 
@@ -80,6 +80,7 @@ See: `.planning/PROJECT.md` (updated 2026-04-18)
 ### v1.8 Execution Log
 
 - **Phase 47 Plan 01 (2026-04-18):** RUNFIX-01 closed via single-line state-gate relaxation in `ProtocolRunner.syncManualEdit` (extended from `{at-node}` to `{at-node, awaiting-loop-pick}`) plus 4 RUNFIX-01 regression tests in `protocol-runner-loop-picker.test.ts`. Commits: 7603bc5 (test RED), bdb227f (fix GREEN). Decision: preferred gate relaxation over introducing a new sync method — keeps the capture-before-advance touch-point at the single call-site in `runner-view.ts:479`. No view changes, no other method touched. Summary: `.planning/phases/47-runner-regressions/47-01-SUMMARY.md`.
+- **Phase 47 Plan 02 (2026-04-18):** RUNFIX-02 closed by introducing `pendingTextareaScrollTop` private field + `capturePendingTextareaScroll` helper on `RunnerView`; helper is called as the FIRST line of each choice-click handler (answer, snippet-branch, loop-body/exit, snippet-picker row) and consumed inside `renderPreviewZone`'s existing `requestAnimationFrame` callback after the height recompute — scrolls are now preserved across the render-triggered textarea rebuild. Commits: 126ee08 (test RED, 5 tests), 325f39d (fix GREEN). Diff strictly additive (+31/-0 in runner-view.ts); all four pre-existing BUG-01 `syncManualEdit(previewTextarea)` calls preserved verbatim. Summary: `.planning/phases/47-runner-regressions/47-02-SUMMARY.md`.
 
 ### Open Tech Debt Carried Over from v1.7
 

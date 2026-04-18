@@ -16,7 +16,7 @@
   - **Source:** `.planning/todos/pending/bug-runner-textarea-edits-lost-on-loop-transition.md`
   - **Signal:** capture-before-advance (BUG-01 pattern) must fire on every loop-node state transition, not only on step-advance.
 
-- [ ] **RUNFIX-02**: After selecting a choice button in the Runner, the textarea scroll position is preserved (or scrolled to the point of insertion) — it never jumps back to the top.
+- [x] **RUNFIX-02**: After selecting a choice button in the Runner, the textarea scroll position is preserved (or scrolled to the point of insertion) — it never jumps back to the top. ✅ Closed by Phase 47 Plan 02 (2026-04-18).
   - **Source:** `.planning/todos/pending/runner-textarea-preserve-scroll-on-insert.md`
   - **Signal:** `scrollTop` captured before insert and restored (or advanced to insertion point) after the content update.
 
@@ -103,7 +103,7 @@
 | Requirement | Phase | Status |
 |-------------|-------|--------|
 | RUNFIX-01 | Phase 47 | ✅ complete (2026-04-18) |
-| RUNFIX-02 | Phase 47 | planned |
+| RUNFIX-02 | Phase 47 | ✅ complete (2026-04-18) |
 | RUNFIX-03 | Phase 47 | planned |
 | NODEUI-01 | Phase 48 | planned |
 | NODEUI-02 | Phase 48 | planned |
