@@ -118,7 +118,12 @@ Full details: `.planning/milestones/v1.6-ROADMAP.md`
   2. Validator surfaces a clear error when a `loop` node is missing its «выход» edge or has no body-branch outgoing edges (LOOP-04)
   3. Opening a canvas that still contains a `loop-start` or `loop-end` node produces a plain-language validator error naming the obsolete node type and instructing the author to rebuild the loop with the unified `loop` node (MIGRATE-01)
   4. The migration error appears in the existing RunnerView error panel using the same layout used for other `GraphValidator` error classes — not in a Notice or console (MIGRATE-02)
-**Plans**: TBD
+**Plans:** 3 plans
+
+Plans:
+- [ ] 45-01-node-picker-modal-rewrite-PLAN.md — Extend NodePickerModal to 4 kinds with Russian badges + exhaustive unit tests
+- [ ] 45-02-editor-panel-loop-button-and-lockin-PLAN.md — Loop quick-create button + CSS + Phase 44 UAT-fix form lock-in tests
+- [ ] 45-03-start-from-node-command-PLAN.md — Register start-from-node command; plumb optional startNodeId through RunnerView + ProtocolRunner
 
 ### Phase 44: Unified Loop Runtime
 **Goal**: Running a protocol that contains a unified `loop` node produces the agreed single-step picker UX, walks branches correctly, returns to the loop on dead-ends, follows «выход» to leave, preserves nested-loop behaviour, and survives step-back and session restart — all without any iteration cap.
@@ -147,7 +152,12 @@ Plans:
   1. Selecting a `loop` node in the Node Editor shows a form where the author can edit `headerText`; the form contains no `maxIterations` control (LOOP-05)
   2. Saving the Node Editor form writes the updated `headerText` back to the canvas JSON and colours the node with the `loop`-kind colour from `NODE_COLOR_MAP` (LOOP-06)
   3. `NodePickerModal` (Start-From-Node) lists `loop` as a first-class node kind alongside question, answer, snippet, and text-block (LOOP-06)
-**Plans**: TBD
+**Plans:** 3 plans
+
+Plans:
+- [ ] 45-01-node-picker-modal-rewrite-PLAN.md — Extend NodePickerModal to 4 kinds with Russian badges + exhaustive unit tests
+- [ ] 45-02-editor-panel-loop-button-and-lockin-PLAN.md — Loop quick-create button + CSS + Phase 44 UAT-fix form lock-in tests
+- [ ] 45-03-start-from-node-command-PLAN.md — Register start-from-node command; plumb optional startNodeId through RunnerView + ProtocolRunner
 
 ### Phase 46: Free-Text-Input Removal
 **Goal**: The `free-text-input` node kind is gone from every layer of the plugin — model, parser, validator, runner, editor, picker, colour map, and test fixtures — restoring the original v1.0 decision after the v1.2 regression.
@@ -158,7 +168,12 @@ Plans:
   2. Parsing a canvas node whose `radiprotocol_nodeType = "free-text-input"` produces a validator error — it is no longer silently accepted as a runnable node kind (CLEAN-02)
   3. `EditorPanelView`, `NodePickerModal`, `NODE_COLOR_MAP`, and the runner state machine contain no remaining references to `free-text-input`; the Node Editor type dropdown no longer offers it (CLEAN-03)
   4. `src/__tests__/fixtures/free-text.canvas` and every free-text-input-specific test case are removed or rewritten; `npm test` is green with no skipped or orphaned free-text-input tests (CLEAN-04)
-**Plans**: TBD
+**Plans:** 3 plans
+
+Plans:
+- [ ] 45-01-node-picker-modal-rewrite-PLAN.md — Extend NodePickerModal to 4 kinds with Russian badges + exhaustive unit tests
+- [ ] 45-02-editor-panel-loop-button-and-lockin-PLAN.md — Loop quick-create button + CSS + Phase 44 UAT-fix form lock-in tests
+- [ ] 45-03-start-from-node-command-PLAN.md — Register start-from-node command; plumb optional startNodeId through RunnerView + ProtocolRunner
 
 ---
 
