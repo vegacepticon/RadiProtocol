@@ -2,37 +2,37 @@
 gsd_state_version: 1.0
 milestone: v1.7
 milestone_name: Loop Rework & Regression Cleanup
-status: ready-to-execute
-stopped_at: Phase 45 planned — 3 plans in 2 waves, ready to execute
-last_updated: "2026-04-18T00:00:00.000Z"
+status: in-progress
+stopped_at: Phase 45 Plan 01 complete — 2 plans remaining (45-02, 45-03)
+last_updated: "2026-04-18T08:20:00.000Z"
 last_activity: 2026-04-18
-resume_file: .planning/phases/45-loop-editor-form-picker-color-map/45-01-node-picker-modal-rewrite-PLAN.md
+resume_file: .planning/phases/45-loop-editor-form-picker-color-map/45-02-editor-panel-loop-button-and-lockin-PLAN.md
 progress:
   total_phases: 4
   completed_phases: 2
-  total_plans: 12
-  completed_plans: 12
-  percent: 100
+  total_plans: 15
+  completed_plans: 13
+  percent: 87
 ---
 
 # RadiProtocol — Project State
 
 **Updated:** 2026-04-18
 **Milestone:** v1.7 — Loop Rework & Regression Cleanup
-**Status:** Phase 45 planned — ready to execute (3 plans, 2 waves)
-**Last session:** 2026-04-18T00:00:00.000Z
-**Stopped at:** Phase 45 planned — 3 plans in 2 waves, ready to execute
+**Status:** Phase 45 in progress — Plan 01 shipped (1/3 plans complete)
+**Last session:** 2026-04-18T08:20:00.000Z
+**Stopped at:** Phase 45 Plan 01 complete — Plan 02 ready to execute
 
 ---
 
 ## Current Position
 
-Phase: 45 (loop-editor-form-picker-color-map) — READY TO EXECUTE
-Plan: 0 of 3
-Status: Plans written and verified — ready to execute
+Phase: 45 (loop-editor-form-picker-color-map) — IN PROGRESS
+Plan: 1 of 3 complete (45-01 shipped)
+Status: Plan 45-02 (editor-panel loop button + lock-in tests) next
 Last activity: 2026-04-18
 
-Progress: [█████████░] 92% (2/4 phases, 12/12 plans in shipped phases — Phase 43 + 44 complete; Phase 45 planned 3/3)
+Progress: [█████████░] 93% (2/4 phases shipped, 13/15 plans complete — Phase 43 + 44 + 45-01 complete; Phase 45 remaining 2/3)
 
 ---
 
@@ -82,6 +82,7 @@ See: `.planning/PROJECT.md` (updated 2026-04-17)
 | Phase 44 P04 | 5min | 2 tasks | 8 files |
 | Phase 44 P02b | 3min | 2 tasks | 3 files |
 | Phase 44 P03 | 5min | 2 tasks | 5 files |
+| Phase 45 P01 | 3min | 2 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -141,6 +142,10 @@ See: `.planning/PROJECT.md` (updated 2026-04-17)
 - Plan 44-04: Excised the legacy per-loop iteration cap (RUN-07) per STATE.md Standing Pitfall #10. **Settings layer:** dropped `Notice` import + `RadiProtocolSettings.maxLoopIterations` + `DEFAULT_SETTINGS.maxLoopIterations` + the entire 'Group 4 — Protocol engine' Settings block (heading + Setting + onChange parseInt validation). **Type layer:** deleted `maxIterations: number` from `@deprecated LoopStartNode` (only that line; surrounding 3 fields + JSDoc preserved byte-identically). **Parser layer:** deleted `maxIterations: getNumber(props, 'radiprotocol_maxIterations', 50)` line in `case 'loop-start'` body (4-line case body remains). **Editor layer:** replaced 53-line legacy `case 'loop-start': { ... }` + `case 'loop-end': { ... }` form arms with a 9-line merged `case 'loop-start': case 'loop-end':` informational stub that names 'Legacy loop node' + the user-facing rebuild guidance. **TDD per task:** 4 commits in RED/GREEN order — `test(44-04): add failing RUN-07 absence test` for settings (`7893d02`) + `feat(44-04): excise maxLoopIterations from settings and dead test mocks` (`71859f5`) + `test(44-04): add failing RUN-07 absence test for parser` (`99bb5cf`) + `feat(44-04): excise legacy maxIterations from graph-model, parser, editor-panel` (`b40a07f`). **Rule 3 dead-mock cleanup:** `snippet-service.test.ts:79` and `snippet-service-move.test.ts:111` had orphan `maxLoopIterations: 50` entries in untyped settings-mock object literals (`as never`-cast — TS allowed them silently) — removed in the same commit as the field deletion so the plan-level grep gate (`grep -rn 'maxLoopIterations\|radiprotocol_maxIterations' src/ --include='*.ts' returns 0`) is enforceable. **Documentation-criterion mismatch:** done-criterion `grep -c 'D-10' src/__tests__/settings-tab.test.ts returns 0` conflicted with the explicit instruction to preserve the `UI-10/D-10: ...display method (stub check)` test verbatim — honoured the explicit instruction; final grep returns 1 (the stub-check name). **Critical retention:** `ProtocolRunner.maxIterations` (RUN-09 auto-advance cycle guard, default 50) intact and untouched — verified by 3 grep hits in protocol-runner.ts + 2 green tests in `describe('iteration cap (RUN-09, D-08)')`. Full suite: 389 passed + 14 skipped + 3 todo / 0 failed (+1 from new RUN-07 parser test); tsc green; build green. STATE.md Standing Pitfall #10 enforced; all 7 RUN requirements now satisfied across Phase 44 (Plan 03 outstanding for picker UI only).
 - Plan 44-02b: Replaced 3 `it.todo` entries in `protocol-runner-loop-picker.test.ts` with 5 concrete RUN-0x tests + 1 long-body integration test (W4). Created `src/__tests__/fixtures/unified-loop-long-body.canvas` (13-node, 13-edge — start + loop + 10 text-blocks + terminal; back-edge `n-t10→n-loop` triggers B1 re-entry on each iteration). **Step A** retargeted RUN-08 `describe.skip` comment marker from `TODO Phase 44` to `TODO Phase 45` per user-locked decision 3 (RUN-08 not in Phase 44 requirement list; GraphValidator LOOP-04 already covers the contract). **Step B (B3 deletion scope)** deleted the entire `'loop support (LOOP-01..05, RUN-09)'` `describe.skip` block (87 lines: helper `reachLoopEnd` + 6 inner tests calling deleted `chooseLoopAction` API + reading deleted `loopIterationLabel` / `isAtLoopEnd` fields) ALONG WITH its preceding 4-line `TODO Phase 44` comment header — required to satisfy `grep TODO Phase 44 returns 0` done-criterion (the canonical gate hits the comment, not the describe). **Step C** wrote 6 concrete tests asserting Plan 02a contract: RUN-01 (halt at `awaiting-loop-pick`), RUN-02 (body+back-edge B1+I1 with `loopContextStack.length=1` AND `iteration=2`), RUN-03 («выход» pops + completes), RUN-04 (nested B1 single-frame invariant via 4-halt sequence outer/inner/outer-re-entry/outer-exit), RUN-05 (step-back B2 — `canStepBack=true` even at first halt), W4 (long-body 10-iteration test with `iteration = i + 1` formula proving Pitfall 10 cycle-guard reset). **I1 strengthened** — every back-edge / nested-exit walk asserts `loopContextStack.length` explicitly (8 occurrences across 4 tests). Full suite: **395 passed + 8 skipped / 0 failed** (was 389 + 14 skipped — net +6 passing, -6 skipped because 7-test `describe.skip` block deleted, 6 inline new tests added; RUN-08 single skip preserved). RUN-09 iteration cap test still green. tsc clean; build green; 0 file deletions. Two test-only commits: `1a2cf27` (fixture) + `02ee321` (test rewrites). RUN-01..RUN-05 fully closed at the test layer; only Plan 03 (picker UI + session round-trip rewrites for RUN-06) remains outstanding for Phase 44.
 - Plan 44-03: Replaced Plan 02a `awaiting-loop-pick` exhaustiveness placeholder in `RunnerView.render()` with the real picker arm — `graph.edges.filter(e => e.fromNodeId === state.nodeId)` (Pitfall 4 — NOT adjacency) drives one button per outgoing edge with `edge.label` as text; «выход» gets `rp-loop-exit-btn` (border-modifier neutral), body branches get `rp-loop-body-btn` (interactive-accent). Click handler does `syncManualEdit(preview.value ?? '')` BEFORE `chooseLoopBranch(edge.id)` (Pitfall 7 / BUG-01) then `void autoSaveSession()` + `void renderAsync()`. Step-back when `canStepBack` copies at-node arm verbatim (`stepBack` + `autoSaveSession` + `render`). `headerText` rendered in `<p class="rp-loop-header-text">` only when non-empty. Arm positioned between `awaiting-snippet-pick` and `awaiting-snippet-fill` per "picker variants stay adjacent" convention. `handleSelectorSelect` `needsConfirmation` extended to include `awaiting-loop-pick` (canvas-switch parity with other picker states). CSS appended to `src/styles/loop-support.css` under `/* Phase 44: Unified loop picker (RUN-01) */` marker — 4 new classes (`rp-loop-header-text`, `rp-loop-picker-list`, `rp-loop-body-btn`, `rp-loop-exit-btn`) + Phase 6 block byte-preserved per CLAUDE.md never-delete; `npm run build` regenerated `styles.css` + `src/styles.css` (esbuild concatenation). Test rewrite: deleted 6 `it.skip` + 1 `describe.skip` + their `TODO Phase 44` comments in `protocol-runner-session.test.ts`. **Rule 3 deviation:** removed two now-empty `describe` wrappers (`ProtocolRunner.restoreFrom() (SESSION-01, SESSION-05)` and `ProtocolRunner session round-trip serialization (SESSION-01, SESSION-07)`) because vitest fails on empty suites — surviving SESSION-01 tests now live under the single `getSerializableState()` describe. Added new `describe('session — awaiting-loop-pick (RUN-06)')` with 7 concrete tests against `unified-loop-valid.canvas` covering: non-null serialization with loop node id, all required PersistedSession fields with `loopContextStack[0].iteration === 1`, currentNodeId/status round-trip, accumulatedText round-trip after `chooseLoopBranch('e2') + chooseAnswer('n-a1')` (drives B1 to iteration 2), `canStepBack === true` B2 invariant survives round-trip, JSON.stringify/parse idempotency at picker, and `loopContextStack` iteration=2 frame survives JSON round-trip. Two commits: `5e0448d` (feat — picker arm + CSS + rebuild) + `ae1d97a` (test — session-roundtrip rewrites). Full suite: **402 passed + 1 skipped / 0 failed** (was 395 + 8 — net +7 passing, -7 skipped; only RUN-08 skip remains, preserved per Plan 02b for Phase 45). `npx tsc --noEmit --skipLibCheck` exit 0; `npm run build` exit 0; zero file deletions. With this plan all 7 RUN requirements close at runtime + UI + test layers — Phase 44 functionally complete pending verifier sign-off + manual UAT in Obsidian.
+
+### Decisions (Phase 45)
+
+- Plan 45-01: `src/views/node-picker-modal.ts` расширен для 4 startable kinds — `NodeOption.kind` union (`'question' | 'text-block' | 'snippet' | 'loop'`, D-09), exported `KIND_LABELS: Record<NodeOption['kind'], string>` с русскими ярлыками (Вопрос/Текст/Сниппет/Цикл, D-10), module-internal `KIND_ORDER = ['question', 'loop', 'text-block', 'snippet']` (D-08). `buildNodeOptions` переписан с 4 kind-ветками и id-fallback лейблами (D-06 + D-07) — snippet без `subfolderPath` → `'(корень snippets)'`, все остальные без текст-поля → `node.id`. Sort — primary `KIND_ORDER.indexOf`, secondary `a.label.toLowerCase().localeCompare(b.label.toLowerCase())` (Pitfall 7 mitigation — case-insensitive alphabetical). `renderSuggestion` теперь использует `KIND_LABELS[option.kind]` вместо `option.kind` в badge (D-10). `setPlaceholder` остался английским `'Search nodes by label…'` (D-11). Public API `NodePickerModal` (constructor, `getSuggestions`, `onChooseSuggestion`, `setPlaceholder`) — byte-preserved per CLAUDE.md never-delete rule. Новый `src/__tests__/node-picker-modal.test.ts` — 9 unit-тестов в 2 describe-блоках без `vi.mock('obsidian')` (pure-function test + vitest config alias автоматически подставляет `__mocks__/obsidian.ts`). Покрывают D-06 (exclusion answer/start/free-text-input/loop-start/loop-end), D-07 (id fallback для всех 4 kinds), D-08 (kind-group entry-order + within-group alphabetical), D-10 (KIND_LABELS exhaustive + locked Russian text), empty-graph smoke test, legacy-loops-excluded-with-unified-present. **Косметика:** первая ревизия test-файла содержала literal `vi.mock('obsidian')` в head-комментарии; reworded до commit'a (один edit-call внутри одной сессии), чтобы `grep -c "vi.mock"` возвращал 0 per Task 2 acceptance criterion. Финальное состояние: `npm test -- --run` → **411 passed + 1 skipped / 0 failed** (+9 net, было 402+1). `npx tsc --noEmit --skipLibCheck` exit 0; `npm run build` exit 0. Два task-коммита (`8a1e8a5` feat + `e4d7de5` test) + metadata-commit. LOOP-06 picker-слой закрыт; 45-03 теперь может импортировать `buildNodeOptions` + `NodePickerModal` из обновлённого module'а (contract unchanged).
 
 ---
 

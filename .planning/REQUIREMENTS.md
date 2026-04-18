@@ -72,7 +72,7 @@ Which phases cover which requirements. Populated during roadmap creation.
 | LOOP-03 | Phase 43 | Complete |
 | LOOP-04 | Phase 43 | Complete |
 | LOOP-05 | Phase 45 | Pending |
-| LOOP-06 | Phase 45 | Pending |
+| LOOP-06 | Phase 45 | In progress (picker layer done in 45-01; color integration in 45-02) |
 | RUN-01 | Phase 44 | Complete |
 | RUN-02 | Phase 44 | Complete |
 | RUN-03 | Phase 44 | Complete |
