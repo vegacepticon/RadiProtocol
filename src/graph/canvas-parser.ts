@@ -10,7 +10,6 @@ import type {
   StartNode,
   QuestionNode,
   AnswerNode,
-  FreeTextInputNode,
   TextBlockNode,
   LoopStartNode,
   LoopEndNode,
@@ -158,10 +157,17 @@ export class CanvasParser {
     }
 
     const validKinds: RPNodeKind[] = [
-      'start', 'question', 'answer', 'free-text-input',
+      'start', 'question', 'answer',
       'text-block', 'loop-start', 'loop-end', 'snippet',  // Phase 29
       'loop',  // Phase 43 D-05 — unified loop (LOOP-01, LOOP-02)
     ];
+
+    // Phase 46 CLEAN-02 — legacy free-text-input канвасы отвергаются на parse-time.
+    // Kind удалён из RPNodeKind (Phase 46 D-46-01-A); отдельная ветка даёт автору
+    // осмысленное русское сообщение вместо generic "unknown radiprotocol_nodeType".
+    if (kind === 'free-text-input') {
+      return { parseError: `Узел "${raw.id}" использует устаревший тип "free-text-input". Этот тип был удалён. Замените узел на question или text-block и перестройте ветвь вручную.` };
+    }
 
     if (!(validKinds as string[]).includes(kind)) {
       return { parseError: `Node "${raw.id}" has unknown radiprotocol_nodeType: "${kind}"` };
@@ -200,23 +206,6 @@ export class CanvasParser {
           answerText: getString(props, 'radiprotocol_answerText', raw.text ?? ''),
           displayLabel: props['radiprotocol_displayLabel'] !== undefined
             ? getString(props, 'radiprotocol_displayLabel')
-            : undefined,
-          radiprotocol_separator: props['radiprotocol_separator'] === 'space' ? 'space'
-            : props['radiprotocol_separator'] === 'newline' ? 'newline'
-            : undefined,
-        };
-        return node;
-      }
-      case 'free-text-input': {
-        const node: FreeTextInputNode = {
-          ...base,
-          kind: 'free-text-input',
-          promptLabel: getString(props, 'radiprotocol_promptLabel', raw.text ?? ''),
-          prefix: props['radiprotocol_prefix'] !== undefined
-            ? getString(props, 'radiprotocol_prefix')
-            : undefined,
-          suffix: props['radiprotocol_suffix'] !== undefined
-            ? getString(props, 'radiprotocol_suffix')
             : undefined,
           radiprotocol_separator: props['radiprotocol_separator'] === 'space' ? 'space'
             : props['radiprotocol_separator'] === 'newline' ? 'newline'

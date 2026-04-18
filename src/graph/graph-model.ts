@@ -10,7 +10,6 @@ export type RPNodeKind =
   | 'start'
   | 'question'
   | 'answer'
-  | 'free-text-input'
   | 'text-block'
   | 'loop-start'      // @deprecated Phase 43 D-03 — legacy parseable for migration-error (D-07)
   | 'loop-end'        // @deprecated Phase 43 D-03 — legacy parseable for migration-error (D-07)
@@ -40,14 +39,6 @@ export interface AnswerNode extends RPNodeBase {
   kind: 'answer';
   answerText: string;
   displayLabel?: string;
-  radiprotocol_separator?: 'newline' | 'space';
-}
-
-export interface FreeTextInputNode extends RPNodeBase {
-  kind: 'free-text-input';
-  promptLabel: string;
-  prefix?: string;
-  suffix?: string;
   radiprotocol_separator?: 'newline' | 'space';
 }
 
@@ -118,7 +109,6 @@ export type RPNode =
   | StartNode
   | QuestionNode
   | AnswerNode
-  | FreeTextInputNode
   | TextBlockNode
   | LoopStartNode     // @deprecated — legacy, см. interface JSDoc
   | LoopEndNode       // @deprecated — legacy, см. interface JSDoc

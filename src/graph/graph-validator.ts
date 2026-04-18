@@ -240,7 +240,6 @@ export class GraphValidator {
       case 'start': return `start (${node.id})`;
       case 'question': return node.questionText || node.id;
       case 'answer': return (node.displayLabel ?? node.answerText) || node.id;
-      case 'free-text-input': return node.promptLabel || node.id;
       case 'text-block': return node.content.slice(0, 30) || node.id;
       case 'loop-start': return node.loopLabel || node.id;                              // @deprecated Phase 43 D-CL-05
       case 'loop-end': return `loop-end (${node.id})`;                                  // @deprecated Phase 43 D-CL-05
