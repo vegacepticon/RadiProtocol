@@ -11,6 +11,9 @@ import { SessionService } from './sessions/session-service';
 import { WriteMutex } from './utils/write-mutex';
 import { CanvasLiveEditor } from './canvas/canvas-live-editor';
 import { CanvasNodeFactory } from './canvas/canvas-node-factory';
+// Phase 45 (LOOP-06): start-from-node command dependencies
+import { NodePickerModal, buildNodeOptions } from './views/node-picker-modal';
+import { GraphValidator } from './graph/graph-validator';
 
 export default class RadiProtocolPlugin extends Plugin {
   settings!: RadiProtocolSettings;
@@ -78,6 +81,13 @@ export default class RadiProtocolPlugin extends Plugin {
       id: 'open-node-editor',
       name: 'Open node editor',
       callback: () => { void this.activateEditorPanelView(); },
+    });
+
+    // Phase 45 (LOOP-06): start-from-node command (NFR-06: no plugin name prefix)
+    this.addCommand({
+      id: 'start-from-node',
+      name: 'Start from specific node',
+      callback: () => { void this.handleStartFromNode(); },
     });
 
     // Settings tab
@@ -273,5 +283,89 @@ export default class RadiProtocolPlugin extends Plugin {
     if (view instanceof EditorPanelView) {
       view.loadNode(filePath, nodeId);
     }
+  }
+
+  /**
+   * Phase 45 (LOOP-06, D-12/D-13): "Start from specific node" command callback.
+   *
+   * Flow:
+   *   1. Discover active canvas leaf (editor-panel pattern).
+   *   2. Read canvas content (live-JSON preferred, disk fallback — Pitfall BUG-02/03).
+   *   3. Parse via CanvasParser; validate via GraphValidator.
+   *   4. Any parse/validate error -> Notice + abort (D-CL-06 - validator blocks start
+   *      including MIGRATE-01 on legacy loop-start/loop-end).
+   *   5. buildNodeOptions produces 4-kind picker list (Plan 45-01).
+   *   6. Activate RunnerView (D-15), then open NodePickerModal. User's pick
+   *      routes through RunnerView.openCanvas(path, startNodeId) which bypasses
+   *      session resume and starts at the chosen node (Plan 45-03 Task 1).
+   */
+  private async handleStartFromNode(): Promise<void> {
+    // 1. Find active canvas leaf — same pattern as editor-panel-view.ts:54-57
+    const canvasLeaves = this.app.workspace.getLeavesOfType('canvas');
+    const activeLeaf = this.app.workspace.getMostRecentLeaf();
+    const canvasLeaf = canvasLeaves.find(l => l === activeLeaf) ?? canvasLeaves[0];
+    if (!canvasLeaf) {
+      new Notice('Open a canvas first.');
+      return;
+    }
+
+    const canvasPath = (canvasLeaf.view as { file?: { path: string } }).file?.path;
+    if (!canvasPath) {
+      new Notice('Active canvas has no file path.');
+      return;
+    }
+
+    // 2. Read canvas content — prefer live in-memory JSON (BUG-02/03 avoidance).
+    let content: string;
+    const liveJson = this.canvasLiveEditor.getCanvasJSON(canvasPath);
+    if (liveJson !== null) {
+      content = liveJson;
+    } else {
+      const file = this.app.vault.getAbstractFileByPath(canvasPath);
+      if (!(file instanceof TFile)) {
+        new Notice('Canvas file not found.');
+        return;
+      }
+      try {
+        content = await this.app.vault.read(file);
+      } catch {
+        new Notice('Could not read canvas file.');
+        return;
+      }
+    }
+
+    // 3. Parse
+    const parseResult = this.canvasParser.parse(content, canvasPath);
+    if (!parseResult.success) {
+      new Notice(`Canvas parse failed: ${parseResult.error}`);
+      return;
+    }
+
+    // 4. Validate — MIGRATE-01 (legacy loop-start/loop-end) blocks start per D-CL-06
+    const validator = new GraphValidator();
+    const errors = validator.validate(parseResult.graph);
+    if (errors.length > 0) {
+      const firstError = errors[0] ?? 'Canvas validation failed.';
+      new Notice(`Canvas validation failed: ${firstError}`);
+      return;
+    }
+
+    // 5. Build picker options (4 kinds via Plan 45-01)
+    const options = buildNodeOptions(parseResult.graph);
+    if (options.length === 0) {
+      new Notice('No startable nodes in this canvas.');
+      return;
+    }
+
+    // 6. Open RunnerView (D-15) then picker modal
+    await this.activateRunnerView();
+    const runnerLeaves = this.app.workspace.getLeavesOfType(RUNNER_VIEW_TYPE);
+    const runnerLeaf = runnerLeaves[0];
+    if (runnerLeaf === undefined) return;
+    const runnerView = runnerLeaf.view as RunnerView;
+
+    new NodePickerModal(this.app, options, (opt) => {
+      void runnerView.openCanvas(canvasPath, opt.id);
+    }).open();
   }
 }
