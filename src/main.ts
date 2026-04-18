@@ -357,7 +357,16 @@ export default class RadiProtocolPlugin extends Plugin {
       return;
     }
 
-    // 6. Open RunnerView (D-15) then picker modal
+    // 6. Open RunnerView (D-15) then picker modal.
+    // Phase 45 WR-01 fix: clear the session BEFORE activating the runner view.
+    // activateRunnerView() fires an implicit `void view.openCanvas(filePath)` without
+    // a startNodeId (main.ts ~L239), which calls sessionService.load(filePath) and
+    // can open ResumeSessionModal on top of / underneath NodePickerModal. Clearing
+    // the session first makes that implicit load find nothing and keeps the picker
+    // the only modal on screen. The picker callback then calls
+    // openCanvas(canvasPath, opt.id), which bypasses session resume (runner-view.ts:108).
+    await this.sessionService.clear(canvasPath);
+
     await this.activateRunnerView();
     const runnerLeaves = this.app.workspace.getLeavesOfType(RUNNER_VIEW_TYPE);
     const runnerLeaf = runnerLeaves[0];
