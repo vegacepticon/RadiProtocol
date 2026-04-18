@@ -113,7 +113,7 @@ Full details: `.planning/milestones/v1.7-ROADMAP.md`
 
 ### v1.8 UX Polish & Snippet Picker Overhaul (Phases 47-53)
 
-- [⏳] **Phase 47: Runner Regressions** — All 3 plans complete (RUNFIX-01 + RUNFIX-02 + RUNFIX-03 closed); phase-level gates (regression gate, code review, verify_phase_goal) still pending
+- [x] **Phase 47: Runner Regressions** — ✅ Complete. RUNFIX-01/02/03 closed; code review (0 critical), verification, and live UAT all PASS (2026-04-19). RUNFIX-02 revised post-UAT to scroll-to-insertion-point (commit 95e7d0b).
 - [ ] **Phase 48: Node Editor UX Polish** — Remove obsolete Snippet ID field, re-anchor new nodes below last, reorder Answer fields, auto-grow Question textarea, relocate quick-create buttons to bottom vertical column
 - [ ] **Phase 49: Loop Exit Edge Convention** — Derive loop exit button from the sole labeled outgoing edge; validator rejects zero or ≥2 labeled edges
 - [ ] **Phase 50: Answer ↔ Edge Label Sync** — Bind `Answer.displayLabel` bi-directionally with every incoming edge label across Node Editor, canvas save path, and edge label rendering

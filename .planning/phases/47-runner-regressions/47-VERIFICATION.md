@@ -1,17 +1,23 @@
 ---
 phase: 47-runner-regressions
-verified: 2026-04-18T23:55:00Z
-status: human_needed
-score: 3/3 must-haves verified (code-level); 1 UAT already done for RUNFIX-03, 2 manual smoke tests still recommended for RUNFIX-01/02
+verified: 2026-04-19T00:10:00Z
+status: pass
+score: 3/3 must-haves — code-level PASS + live-Obsidian UAT PASS for all three requirements
 overrides_applied: 0
-re_verification: false
-human_verification:
-  - test: "Manual smoke — RUNFIX-01 in live Obsidian vault"
-    expected: "Open a canvas with a Loop node reachable via a Snippet node. Run the protocol to the loop picker. Type manual edits into the preview textarea. Click a body-branch button → verify edit survives in the next at-node render. Repeat for «выход» exit and for a dead-end return back to the picker. No edit loss on any of the four transition flavours (body entry, «выход» exit, dead-end return, B1 re-entry)."
-    why_human: "Requires real DOM, real Obsidian runtime, and a live canvas — unit tests cover the runner state machine but do not exercise the RunnerView click-handler → runner transition end-to-end."
-  - test: "Manual smoke — RUNFIX-02 in live Obsidian vault"
-    expected: "Open a long protocol in the Runner. Scroll the preview textarea to the middle. Click a choice button (answer, snippet-branch, loop-body, loop-exit, snippet-picker row). Textarea scroll position is retained (or advances to insertion point) — never snaps back to scrollTop=0."
-    why_human: "Requires real browser scroll clamping + real rAF cadence. Unit tests use a fake textarea without clamping semantics (see code-review IN-05)."
+re_verification: true
+uat_log:
+  - requirement: RUNFIX-01
+    date: 2026-04-19
+    verdict: pass
+    notes: "Live smoke in TEST-BASE vault — manual edits survive body-branch, «выход», dead-end return, B1 re-entry."
+  - requirement: RUNFIX-02
+    date: 2026-04-19
+    verdict: pass
+    notes: "Initial preserve-verbatim impl was UAT-rejected (user wanted scroll-to-insertion-point). Revision commit 95e7d0b flipped the restore target to scrollHeight (scroll to bottom after each choice click). UAT re-verified: textarea scrolls to bottom after every click, freshly inserted content visible."
+  - requirement: RUNFIX-03
+    date: 2026-04-18
+    verdict: pass
+    notes: "Live smoke in TEST-BASE vault with narrow sidebar + tab-mode. Three revision passes required; final revision (d23aaff) overrode Obsidian's default button height + vertical centering."
 ---
 
 # Phase 47: Runner Regressions Verification Report
