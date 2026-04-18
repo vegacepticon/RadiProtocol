@@ -164,3 +164,116 @@ describe('ProtocolRunner loop picker (RUN-01..RUN-05)', () => {
     expect(state.status).toBe('complete');
   });
 });
+
+// Phase 47 RUNFIX-01 — manual textarea edits made while the runner is halted at an
+// `awaiting-loop-pick` state must survive every loop-node transition (body-branch entry,
+// «выход» exit, dead-end return via back-edge to picker, undo snapshot capture).
+//
+// Root cause: syncManualEdit() gate was `runnerStatus !== 'at-node'` only — so the call
+// from runner-view.ts:479 (fired BEFORE chooseLoopBranch) was a silent no-op while halted
+// at the loop picker. The undo snapshot captured inside chooseLoopBranch (line 190) then
+// recorded the pre-edit accumulator text, and every post-transition render showed stale text.
+//
+// Fix: extend the valid-state set to include 'awaiting-loop-pick'. See protocol-runner.ts
+// syncManualEdit() JSDoc for the full rationale.
+describe('ProtocolRunner RUNFIX-01 — manual edits survive loop transitions', () => {
+
+  it('RUNFIX-01 Test 1: body-branch entry preserves manual edit made at awaiting-loop-pick', () => {
+    const runner = new ProtocolRunner();
+    runner.start(loadGraph('unified-loop-valid.canvas'));
+    // Halted at n-loop picker with empty accumulator
+    let state = runner.getState();
+    expect(state.status).toBe('awaiting-loop-pick');
+    if (state.status !== 'awaiting-loop-pick') return;
+    expect(state.accumulatedText).toBe('');
+
+    // Inject a manual textarea edit while halted at the picker
+    runner.syncManualEdit('MANUAL_EDIT_TEXT');
+    // Walk body branch (e2: n-loop → n-q1); after advanceThrough halts at n-q1 question
+    runner.chooseLoopBranch('e2');
+
+    state = runner.getState();
+    expect(state.status).toBe('at-node');
+    if (state.status !== 'at-node') return;
+    expect(state.currentNodeId).toBe('n-q1');
+    // Accumulator must still contain the manual edit — the body branch walks question →
+    // (no auto-append before the halt) so accumulatedText should equal 'MANUAL_EDIT_TEXT'.
+    expect(state.accumulatedText).toContain('MANUAL_EDIT_TEXT');
+  });
+
+  it('RUNFIX-01 Test 2: «выход» exit preserves manual edit made at awaiting-loop-pick', () => {
+    const runner = new ProtocolRunner();
+    runner.start(loadGraph('unified-loop-valid.canvas'));
+    let state = runner.getState();
+    expect(state.status).toBe('awaiting-loop-pick');
+
+    runner.syncManualEdit('EXIT_EDIT');
+    // e3 is the «выход» edge → n-end (text-block "Done") → complete
+    runner.chooseLoopBranch('e3');
+
+    state = runner.getState();
+    // n-end auto-appends 'Done' then completes
+    expect(state.status).toBe('complete');
+    if (state.status !== 'complete') return;
+    expect(state.finalText).toContain('EXIT_EDIT');
+    // Separator + appended text from n-end text-block
+    expect(state.finalText).toContain('Done');
+  });
+
+  it('RUNFIX-01 Test 3: back-edge re-entry to picker preserves a manual edit made at at-node (non-regression guard)', () => {
+    // This test exercises the already-working at-node gate — it protects the existing
+    // BUG-01 contract: manual edits at at-node (question) must survive back-edge re-entry
+    // into the picker via B1. A regression here would mean syncManualEdit no longer
+    // writes through at at-node.
+    const runner = new ProtocolRunner();
+    runner.start(loadGraph('unified-loop-valid.canvas'));
+    // Halted at n-loop picker — walk body branch to reach n-q1 at-node
+    runner.chooseLoopBranch('e2');
+    let state = runner.getState();
+    expect(state.status).toBe('at-node');
+    if (state.status !== 'at-node') return;
+    expect(state.currentNodeId).toBe('n-q1');
+
+    // User types a manual edit at the question at-node (pre-existing at-node gate path)
+    runner.syncManualEdit('DEADEND_EDIT');
+    // Answer n-a1 → back-edge e5 → n-loop → B1 re-entry → halt at picker
+    runner.chooseAnswer('n-a1');
+
+    state = runner.getState();
+    expect(state.status).toBe('awaiting-loop-pick');
+    if (state.status !== 'awaiting-loop-pick') return;
+    // The manual edit survives the back-edge re-entry; chooseAnswer's undo snapshot captured
+    // 'DEADEND_EDIT' and then appended the answer text '1 cm'.
+    expect(state.accumulatedText).toContain('DEADEND_EDIT');
+    expect(state.accumulatedText).toContain('1 cm');
+  });
+
+  it('RUNFIX-01 Test 4: undo snapshot captured inside chooseLoopBranch contains the manual edit, not the pre-edit text', () => {
+    const runner = new ProtocolRunner();
+    runner.start(loadGraph('unified-loop-valid.canvas'));
+    let state = runner.getState();
+    expect(state.status).toBe('awaiting-loop-pick');
+
+    runner.syncManualEdit('PRE_EXIT_EDIT');
+    // e2 is body branch — going through so we have an at-node to step back from; but
+    // actually the clean assertion is: step back from the POST-transition state to the
+    // undo entry that was pushed INSIDE chooseLoopBranch. That entry's textSnapshot must
+    // contain 'PRE_EXIT_EDIT' (not empty pre-edit text).
+    runner.chooseLoopBranch('e2');
+    state = runner.getState();
+    expect(state.status).toBe('at-node');
+
+    runner.stepBack();
+    state = runner.getState();
+    // stepBack restores currentNodeId=n-loop via the undo entry pushed inside
+    // chooseLoopBranch and sets runnerStatus='at-node' (generic undo contract — see
+    // ProtocolRunner.stepBack). What matters for RUNFIX-01 is the restored
+    // accumulatedText: it must equal 'PRE_EXIT_EDIT' (the value written by
+    // syncManualEdit right before chooseLoopBranch took the snapshot).
+    expect(state.status).toBe('at-node');
+    if (state.status !== 'at-node') return;
+    // The undo entry's restored snapshot must equal the post-edit accumulator — proving the
+    // snapshot in chooseLoopBranch captured the manual edit, not the pre-edit value.
+    expect(state.accumulatedText).toBe('PRE_EXIT_EDIT');
+  });
+});
