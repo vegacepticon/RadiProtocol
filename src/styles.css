@@ -238,6 +238,19 @@
   min-height: 44px; /* was 40px — adds room for descender clearance on single-line labels */
 }
 
+/* Phase 47: RUNFIX-03 revision — narrow-sidebar overflow fix ──────────── */
+/* Without box-sizing:border-box, width:100% + horizontal padding overflows */
+/* the button's layout box when the Runner is docked in a narrow sidebar,  */
+/* so glyphs clip past the visible rectangle. Bump horizontal padding to   */
+/* --size-4-3 (12px) so wrapped lines don't kiss the border.               */
+
+.rp-answer-btn,
+.rp-snippet-branch-btn {
+  box-sizing: border-box;
+  padding: var(--size-4-2) var(--size-4-3); /* 8px vertical, 12px horizontal */
+  overflow-wrap: anywhere;
+}
+
 /* Phase 13: CanvasSelectorWidget ─────────────────────────────────────────── */
 
 .rp-selector-bar {
@@ -1216,4 +1229,18 @@
   min-height: 44px;
   white-space: normal;
   word-break: break-word;
+}
+
+/* Phase 47: RUNFIX-03 revision — narrow-sidebar overflow fix ──────────── */
+/* Loop buttons live in a flex-column .rp-loop-picker-list. Without        */
+/* box-sizing + explicit width they can overflow the list when the sidebar */
+/* is narrow. min-width:0 lets the flex item shrink below intrinsic size.  */
+
+.rp-loop-body-btn,
+.rp-loop-exit-btn {
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
+  padding: var(--size-4-2) var(--size-4-3); /* 8px vertical, 12px horizontal */
+  overflow-wrap: anywhere;
 }

@@ -237,3 +237,16 @@
   line-height: 1.55;
   min-height: 44px; /* was 40px — adds room for descender clearance on single-line labels */
 }
+
+/* Phase 47: RUNFIX-03 revision — narrow-sidebar overflow fix ──────────── */
+/* Without box-sizing:border-box, width:100% + horizontal padding overflows */
+/* the button's layout box when the Runner is docked in a narrow sidebar,  */
+/* so glyphs clip past the visible rectangle. Bump horizontal padding to   */
+/* --size-4-3 (12px) so wrapped lines don't kiss the border.               */
+
+.rp-answer-btn,
+.rp-snippet-branch-btn {
+  box-sizing: border-box;
+  padding: var(--size-4-2) var(--size-4-3); /* 8px vertical, 12px horizontal */
+  overflow-wrap: anywhere;
+}

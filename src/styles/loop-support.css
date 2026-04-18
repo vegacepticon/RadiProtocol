@@ -102,3 +102,17 @@
   white-space: normal;
   word-break: break-word;
 }
+
+/* Phase 47: RUNFIX-03 revision — narrow-sidebar overflow fix ──────────── */
+/* Loop buttons live in a flex-column .rp-loop-picker-list. Without        */
+/* box-sizing + explicit width they can overflow the list when the sidebar */
+/* is narrow. min-width:0 lets the flex item shrink below intrinsic size.  */
+
+.rp-loop-body-btn,
+.rp-loop-exit-btn {
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
+  padding: var(--size-4-2) var(--size-4-3); /* 8px vertical, 12px horizontal */
+  overflow-wrap: anywhere;
+}
