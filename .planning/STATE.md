@@ -3,36 +3,36 @@ gsd_state_version: 1.0
 milestone: v1.7
 milestone_name: Loop Rework & Regression Cleanup
 status: in-progress
-stopped_at: Phase 46 Plan 01 complete — 46-02 + 46-03 wave 2 next
-last_updated: "2026-04-18T12:36:50.000Z"
+stopped_at: Phase 46 Plan 02 complete — 46-03 test cleanup next
+last_updated: "2026-04-18T12:45:22.000Z"
 last_activity: 2026-04-18
 resume_file: .planning/phases/46-free-text-input-removal/
 progress:
   total_phases: 4
   completed_phases: 3
   total_plans: 18
-  completed_plans: 16
-  percent: 89
+  completed_plans: 17
+  percent: 94
 ---
 
 # RadiProtocol — Project State
 
 **Updated:** 2026-04-18
 **Milestone:** v1.7 — Loop Rework & Regression Cleanup
-**Status:** Phase 46 Plan 01 complete — Plans 46-02 + 46-03 (wave 2, parallel) ready to execute
-**Last session:** 2026-04-18T12:36:50.000Z
-**Stopped at:** Phase 46 Plan 01 complete — 46-02 + 46-03 wave 2 next
+**Status:** Phase 46 Plan 02 complete — Plan 46-03 (test cleanup, CLEAN-04) ready to execute
+**Last session:** 2026-04-18T12:45:22.000Z
+**Stopped at:** Phase 46 Plan 02 complete — 46-03 test cleanup next
 
 ---
 
 ## Current Position
 
 Phase: 46 (free-text-input-removal) — IN PROGRESS
-Plan: 1 of 3 complete (46-01 wave 1 done; 46-02 + 46-03 wave 2 parallel next)
-Status: CLEAN-01 + CLEAN-02 closed; CLEAN-03 + CLEAN-04 pending
+Plan: 2 of 3 complete (46-01 + 46-02 done; 46-03 test cleanup next)
+Status: CLEAN-01 + CLEAN-02 + CLEAN-03 closed; CLEAN-04 pending
 Last activity: 2026-04-18
 
-Progress: [█████████░] 89% (3/4 phases shipped, 16/18 plans complete — Phase 46 Plan 01 of 3 done)
+Progress: [█████████░] 94% (3/4 phases shipped, 17/18 plans complete — Phase 46 Plan 02 of 3 done)
 
 ---
 
@@ -86,6 +86,7 @@ See: `.planning/PROJECT.md` (updated 2026-04-17)
 | Phase 45 P02 | 4min | 2 tasks | 4 files |
 | Phase 45 P03 | 4min | 3 tasks | 4 files |
 | Phase 46 P01 | 4min | 2 tasks | 4 files |
+| Phase 46 P02 | 3min | 2 tasks | 9 files |
 
 ## Accumulated Context
 
@@ -155,6 +156,7 @@ See: `.planning/PROJECT.md` (updated 2026-04-17)
 ### Decisions (Phase 46)
 
 - Plan 46-01: excised `free-text-input` at type + parse layers per D-46-01-A (hard-delete, not `@deprecated`-keep). **graph-model.ts** — 3 deletions: union member `| 'free-text-input'`, `FreeTextInputNode` interface (7 lines incl. `promptLabel`/`prefix`/`suffix`/`radiprotocol_separator`), RPNode arm `| FreeTextInputNode`. **canvas-parser.ts** — 3 deletions + 1 addition: removed `FreeTextInputNode` from import list, removed `'free-text-input'` token from `validKinds` array, deleted 17-line `case 'free-text-input': { ... }` arm; added dedicated rejection branch (D-46-01-A2) IMMEDIATELY BEFORE `if (!(validKinds as string[]).includes(kind))` — `if (kind === 'free-text-input') { return { parseError: <Russian>  }; }` where error text (D-46-01-B) contains three mandatory tokens «устаревший» + «free-text-input» + `${raw.id}`. **graph-validator.ts** — 1 deletion (D-46-01-D, TS-exhaustiveness-forced): `case 'free-text-input': return node.promptLabel || node.id;` arm in `nodeLabel()` switch. **Rejection surfaces via parse-time, not validate-time** (D-46-01-A2): `GraphValidator.validate()` is structurally unreachable by free-text-input because the parser short-circuits to `{ success: false, error }` before a ProtocolGraph ever exists; the existing RunnerView error panel renders the parseError the same way it renders MIGRATE-01. **Fixture repurposed** (D-46-01-C): `src/__tests__/fixtures/free-text.canvas` content untouched — only semantic role flips from RUN-04 happy-path to CLEAN-02 rejection proof consumed by the new test file. **New test** `src/__tests__/free-text-input-migration.test.ts` — 3 vitest tests (fixture rejection, inline JSON rejection, text-block.canvas negative control) all GREEN after Task 2. Two commits: `0ea6616` RED (test) + `8185dbb` GREEN (feat). **Intentional downstream breakage** (per PLAN `<success_criteria>`): `npx tsc --noEmit --skipLibCheck` exits non-zero with **13 errors across 6 files** — handed off as baseline to Plan 46-02 (9 errors in `node-color-map.ts` / `protocol-runner.ts` / `editor-panel-view.ts` / `runner-view.ts`) and Plan 46-03 (4 errors in `protocol-runner.test.ts` / `node-picker-modal.test.ts`). Plan 46-01 does NOT attempt to close these — Rule 4 architectural scope boundary. Full suite `npm test` would also be red due to the same compile breakage + orphaned RUN-04 runtime tests (CLEAN-04 Plan 46-03 deletes those). Migration test in isolation: `npm test -- src/__tests__/free-text-input-migration.test.ts --run` → 3/3 passing. CLEAN-01 + CLEAN-02 closed at the type + parse layers.
+- Plan 46-02: closed CLEAN-03 at the runtime + view + color-map + CSS layers — pure excision, zero additions aside from the editor-panel dropdown comment refresh. **node-color-map.ts** — deleted `'free-text-input': '2'` arm (TS `Record<RPNodeKind, string>` exhaustiveness). **runner-state.ts** — reworded AtNodeState JSDoc (drops free-text-input alternation; now "Runner is paused at a question node awaiting chooseAnswer.") + UndoEntry JSDoc (drops `or enterFreeText()`). **protocol-runner.ts** — 6 deletion sites: class-JSDoc `enterFreeText(text)` bullet; entire 39-line `enterFreeText(text: string): void` public method including JSDoc header; `stepBack` JSDoc mention; `syncManualEdit` JSDoc mention; `FreeTextInputNode` line from `resolveSeparator` parameter-type union (preserves AnswerNode/TextBlockNode/SnippetNode arms); fused `case 'question': case 'free-text-input':` arm collapsed to single `case 'question':`. **runner-view.ts** — deleted entire 15-line `case 'free-text-input':` render block (textarea with `cls: 'rp-free-text-input'` + submit button + enterFreeText handler). **editor-panel-view.ts** — deleted entire 51-line `case 'free-text-input':` form block (prompt label + prefix + suffix + separator Settings); dropdown comment (lines 346-348) refreshed per D-46-02-C to literal `// Phase 46 CLEAN-03: free-text-input excised entirely from RPNodeKind (46-01 D-46-01-A). // Phase 44 UAT-fix: legacy kinds (loop-start, loop-end) are NOT offered here...`; contingency check verified dropdown at lines 339-345 does NOT contain `.addOption('free-text-input', ...)` — already omitted per Phase 44 UAT-fix. **node-picker-modal.ts** — 2 comment sites trimmed (JSDoc exclusion bullet + inline comment list). **runner-view.css** — deleted 8-line `.rp-free-text-input` rule block (preserves .rp-answer-btn / .rp-step-back-btn surrounding rules). **Rule 3 deviation (D-46-02-A)**: `npm run build` halts on `tsc -noEmit -skipLibCheck` first step because 7 test-file errors remain in `__tests__/runner/protocol-runner.test.ts` + `node-picker-modal.test.ts` (Plan 46-03 scope). Ran `node esbuild.config.mjs production` directly to regenerate `styles.css` + `src/styles.css` — esbuild CSS concatenation runs cleanly in isolation; both generated files committed with 27-deletion delta mirroring source CSS. **D-46-02-B (+3 test errors)**: deleting `enterFreeText` method surfaced 3 new TS2339 errors at `protocol-runner.test.ts:113,138,430` — absorbed by Plan 46-03's CLEAN-04 scope (delete entire RUN-04 describe block), no scope expansion. Two commits: `8b8b5e5` feat (6 files, 11+/125-) + `8082740` style (3 files, 27-). Final gates: `npx tsc --noEmit --skipLibCheck` production = 0 errors; total = 7 (all in __tests__). Production build verified via direct esbuild. CLEAN-03 closed; Plan 46-03 scope is now clear at 7 test-file errors + orphan RUN-04 describe block + `free-text.canvas` fixture removal.
 
 ---
 
