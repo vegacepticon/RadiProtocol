@@ -50,8 +50,15 @@ export class ProtocolRunner {
   /**
    * Start a new protocol session.
    * Transitions from idle to at-node (or error if graph has no start node).
+   *
+   * @param graph — protocol graph to traverse
+   * @param startNodeId — Phase 45 (LOOP-06 / D-14): optional explicit starting node id.
+   *                      When provided, auto-advance begins from this node instead of
+   *                      graph.startNodeId. Used by the start-from-node command
+   *                      (main.ts handleStartFromNode). When omitted, defaults to
+   *                      graph.startNodeId for backward compatibility with v1.0 flow.
    */
-  start(graph: ProtocolGraph): void {
+  start(graph: ProtocolGraph, startNodeId?: string): void {
     this.graph = graph;
     this.currentNodeId = null;
     this.accumulator = new TextAccumulator();
@@ -61,8 +68,8 @@ export class ProtocolRunner {
     this.snippetNodeId = null;
     this.loopContextStack = [];
     this.runnerStatus = 'at-node';
-    // Auto-advance from the start node
-    this.advanceThrough(graph.startNodeId);
+    // Auto-advance from the explicit start or graph.startNodeId default
+    this.advanceThrough(startNodeId ?? graph.startNodeId);
   }
 
   /**

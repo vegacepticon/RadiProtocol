@@ -58,7 +58,7 @@ export class RunnerView extends ItemView {
     }
   }
 
-  async openCanvas(filePath: string): Promise<void> {
+  async openCanvas(filePath: string, startNodeId?: string): Promise<void> {
     // Phase 15: re-create runner to pick up the current textSeparator setting
     this.runner = new ProtocolRunner({
       defaultSeparator: this.plugin.settings.textSeparator,
@@ -100,6 +100,18 @@ export class RunnerView extends ItemView {
     }
 
     const graph = parseResult.graph;
+
+    // Phase 45 (LOOP-06 / D-14): explicit start-from-node path bypasses session resume.
+    // When the start-from-node command callback supplies a startNodeId, clear any stale
+    // session and begin the runner at the chosen node. This preserves the v1.0 contract
+    // for openCanvas(path) setState restoration (Pitfall 8) by making startNodeId optional.
+    if (startNodeId !== undefined) {
+      await this.plugin.sessionService.clear(filePath);
+      this.graph = graph;
+      this.runner.start(graph, startNodeId);
+      this.render();
+      return;
+    }
 
     // ── SESSION-02: check for existing incomplete session ─────────────────────
     const session = await this.plugin.sessionService.load(filePath);
