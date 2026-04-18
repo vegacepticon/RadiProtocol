@@ -3,36 +3,36 @@ gsd_state_version: 1.0
 milestone: v1.7
 milestone_name: Loop Rework & Regression Cleanup
 status: in-progress
-stopped_at: Phase 45 Plan 01 complete — 2 plans remaining (45-02, 45-03)
-last_updated: "2026-04-18T08:20:00.000Z"
+stopped_at: Phase 45 Plan 02 complete — 1 plan remaining (45-03)
+last_updated: "2026-04-18T08:29:25.000Z"
 last_activity: 2026-04-18
-resume_file: .planning/phases/45-loop-editor-form-picker-color-map/45-02-editor-panel-loop-button-and-lockin-PLAN.md
+resume_file: .planning/phases/45-loop-editor-form-picker-color-map/45-03-start-from-node-command-PLAN.md
 progress:
   total_phases: 4
   completed_phases: 2
   total_plans: 15
-  completed_plans: 13
-  percent: 87
+  completed_plans: 14
+  percent: 93
 ---
 
 # RadiProtocol — Project State
 
 **Updated:** 2026-04-18
 **Milestone:** v1.7 — Loop Rework & Regression Cleanup
-**Status:** Phase 45 in progress — Plan 01 shipped (1/3 plans complete)
-**Last session:** 2026-04-18T08:20:00.000Z
-**Stopped at:** Phase 45 Plan 01 complete — Plan 02 ready to execute
+**Status:** Phase 45 in progress — Plans 01 & 02 shipped (2/3 plans complete)
+**Last session:** 2026-04-18T08:29:25.000Z
+**Stopped at:** Phase 45 Plan 02 complete — Plan 03 ready to execute
 
 ---
 
 ## Current Position
 
 Phase: 45 (loop-editor-form-picker-color-map) — IN PROGRESS
-Plan: 1 of 3 complete (45-01 shipped)
-Status: Plan 45-02 (editor-panel loop button + lock-in tests) next
+Plan: 2 of 3 complete (45-01, 45-02 shipped)
+Status: Plan 45-03 (start-from-node command wiring) next
 Last activity: 2026-04-18
 
-Progress: [█████████░] 93% (2/4 phases shipped, 13/15 plans complete — Phase 43 + 44 + 45-01 complete; Phase 45 remaining 2/3)
+Progress: [█████████▌] 97% (2/4 phases shipped, 14/15 plans complete — Phase 43 + 44 + 45-01/45-02 complete; Phase 45 remaining 1/3)
 
 ---
 
@@ -83,6 +83,7 @@ See: `.planning/PROJECT.md` (updated 2026-04-17)
 | Phase 44 P02b | 3min | 2 tasks | 3 files |
 | Phase 44 P03 | 5min | 2 tasks | 5 files |
 | Phase 45 P01 | 3min | 2 tasks | 2 files |
+| Phase 45 P02 | 4min | 2 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -146,6 +147,7 @@ See: `.planning/PROJECT.md` (updated 2026-04-17)
 ### Decisions (Phase 45)
 
 - Plan 45-01: `src/views/node-picker-modal.ts` расширен для 4 startable kinds — `NodeOption.kind` union (`'question' | 'text-block' | 'snippet' | 'loop'`, D-09), exported `KIND_LABELS: Record<NodeOption['kind'], string>` с русскими ярлыками (Вопрос/Текст/Сниппет/Цикл, D-10), module-internal `KIND_ORDER = ['question', 'loop', 'text-block', 'snippet']` (D-08). `buildNodeOptions` переписан с 4 kind-ветками и id-fallback лейблами (D-06 + D-07) — snippet без `subfolderPath` → `'(корень snippets)'`, все остальные без текст-поля → `node.id`. Sort — primary `KIND_ORDER.indexOf`, secondary `a.label.toLowerCase().localeCompare(b.label.toLowerCase())` (Pitfall 7 mitigation — case-insensitive alphabetical). `renderSuggestion` теперь использует `KIND_LABELS[option.kind]` вместо `option.kind` в badge (D-10). `setPlaceholder` остался английским `'Search nodes by label…'` (D-11). Public API `NodePickerModal` (constructor, `getSuggestions`, `onChooseSuggestion`, `setPlaceholder`) — byte-preserved per CLAUDE.md never-delete rule. Новый `src/__tests__/node-picker-modal.test.ts` — 9 unit-тестов в 2 describe-блоках без `vi.mock('obsidian')` (pure-function test + vitest config alias автоматически подставляет `__mocks__/obsidian.ts`). Покрывают D-06 (exclusion answer/start/free-text-input/loop-start/loop-end), D-07 (id fallback для всех 4 kinds), D-08 (kind-group entry-order + within-group alphabetical), D-10 (KIND_LABELS exhaustive + locked Russian text), empty-graph smoke test, legacy-loops-excluded-with-unified-present. **Косметика:** первая ревизия test-файла содержала literal `vi.mock('obsidian')` в head-комментарии; reworded до commit'a (один edit-call внутри одной сессии), чтобы `grep -c "vi.mock"` возвращал 0 per Task 2 acceptance criterion. Финальное состояние: `npm test -- --run` → **411 passed + 1 skipped / 0 failed** (+9 net, было 402+1). `npx tsc --noEmit --skipLibCheck` exit 0; `npm run build` exit 0. Два task-коммита (`8a1e8a5` feat + `e4d7de5` test) + metadata-commit. LOOP-06 picker-слой закрыт; 45-03 теперь может импортировать `buildNodeOptions` + `NodePickerModal` из обновлённого module'а (contract unchanged).
+- Plan 45-02: editor-panel получил 4-ю quick-create кнопку «Create loop node» (D-03). В `src/views/editor-panel-view.ts` расширен `onQuickCreate` kind-union до `'question' | 'answer' | 'snippet' | 'loop'` (D-04) — ровно одна строка изменена; body функции не тронут (kind-agnostic). В `renderToolbar` добавлен 8-строчный блок `.rp-create-loop-btn` с icon `'repeat'` (D-CL-01 finalize — прямая loop-семантика, не refresh/single-replay), aria-label/title `'Create loop node'`, handler `() => { void this.onQuickCreate('loop'); }` через `registerDomEvent` — строго между Phase 42 snippet block'ом (line 874) и Phase 40 duplicate block'ом (line 876), что подтверждено awk-тестом позиции. В `src/styles/editor-panel.css` append-only добавлен блок `/* Phase 45: loop quick-create button */` с base/:hover/:active/:disabled селекторами (параллель Phase 42 snippet button CSS) — Phase 4/39/40/42 секции (lines 1-168) byte-identical. `styles.css` + `src/styles.css` regenerated через `npm run build` (esbuild CSS concat plugin) — дельта +30 строк каждый, только новый `.rp-create-loop-btn` блок. `CanvasNodeFactory.createNode` НЕ редактирован — kind-agnostic тело уже возвращает `NODE_COLOR_MAP['loop']='1'` для kind='loop' (D-CL-03 zero-delta verified). Phase 44 UAT-fix форма (editor-panel-view.ts:568-586) НЕ переписана — только зафиксирована тестами (D-01 lock-in). Новый `src/__tests__/editor-panel-loop-form.test.ts` — 7 vitest cases в 2 describe-блоках: 5 на loop-форму (dropdown 'loop' option, heading 'Loop node' exact, 'Header text' exactly-1 setting, negative `/iterations/i` regression guard для Phase 44 RUN-07 excision, onChange dual-field sync radiprotocol_headerText+text), D-17 integration color-injection через `saveNodeEdits` → `canvasLiveEditor.saveLive` spy с `saveLive.mockResolvedValue(true)` short-circuit (exits pipeline до vault.modify fallback — pure unit-test); 2 на кнопку (onQuickCreate('loop') factory call + debounce flush). Pitfall-2 Setting.prototype chainable stubs, Pitfall-3 contentEl fake, Pitfall-4 renderToolbar spy. **Косметика:** первоначальный комментарий содержал literal `vi.mock('obsidian')` — reworded до commit'a ради `grep -c "vi.mock('obsidian')"` === 1 acceptance criterion. Тесты 6-7 формально должны были быть RED до Task 2 widening union, но runtime `onQuickCreate` body kind-agnostic + тест использует `as unknown as` cast — compile и runtime проходят одинаково до и после; factual TDD RED gate = TS compile-time only (не наблюдаемый в vitest). Два task-коммита (`306adff` test + `926ed43` feat+CSS+rebuild) + metadata commit. Full suite: **418 passed + 1 skipped / 0 failed** (было 411+1 — net +7 от Plan 02). `npx tsc --noEmit --skipLibCheck` exit 0; `npm run build` exit 0. LANDMINES preserved: `case 'loop': {` count=1, `case 'loop-start':` count=1, `Legacy loop node` count=1, `rp-create-snippet-btn` count=1. CSS scope discipline: `Phase 45` markers in `loop-support.css` count=0. LOOP-05 fully closed; LOOP-06 color-map integration (D-17) закрыта; picker-command wiring остаётся Plan 45-03's job.
 
 ---
 
