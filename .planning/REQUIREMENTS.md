@@ -102,19 +102,19 @@
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| RUNFIX-01 | TBD | pending |
-| RUNFIX-02 | TBD | pending |
-| RUNFIX-03 | TBD | pending |
-| NODEUI-01 | TBD | pending |
-| NODEUI-02 | TBD | pending |
-| NODEUI-03 | TBD | pending |
-| NODEUI-04 | TBD | pending |
-| NODEUI-05 | TBD | pending |
-| EDGE-01   | TBD | pending |
-| EDGE-02   | TBD | pending |
-| PICKER-01 | TBD | pending |
-| PICKER-02 | TBD | pending |
-| PHLD-01   | TBD | pending |
-| BRAT-01   | TBD | pending |
+| RUNFIX-01 | Phase 47 | planned |
+| RUNFIX-02 | Phase 47 | planned |
+| RUNFIX-03 | Phase 47 | planned |
+| NODEUI-01 | Phase 48 | planned |
+| NODEUI-02 | Phase 48 | planned |
+| NODEUI-03 | Phase 48 | planned |
+| NODEUI-04 | Phase 48 | planned |
+| NODEUI-05 | Phase 48 | planned |
+| EDGE-01   | Phase 49 | planned |
+| EDGE-02   | Phase 50 | planned |
+| PICKER-01 | Phase 51 | planned |
+| PICKER-02 | Phase 51 | planned |
+| PHLD-01   | Phase 52 | planned |
+| BRAT-01   | Phase 53 | planned |
 
-*Phase assignments filled in by the roadmapper.*
+*Phase assignments filled in by the roadmapper on 2026-04-18.*

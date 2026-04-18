@@ -2,13 +2,13 @@
 gsd_state_version: 1.0
 milestone: v1.8
 milestone_name: UX Polish & Snippet Picker Overhaul
-status: defining-requirements
-stopped_at: Milestone v1.8 opened — defining requirements
+status: planning
+stopped_at: Milestone v1.8 roadmap created — Phases 47-53 defined, awaiting plan-phase 47
 last_updated: "2026-04-18T00:00:00.000Z"
 last_activity: 2026-04-18
-resume_file: .planning/REQUIREMENTS.md
+resume_file: .planning/ROADMAP.md
 progress:
-  total_phases: 0
+  total_phases: 7
   completed_phases: 0
   total_plans: 0
   completed_plans: 0
@@ -19,17 +19,17 @@ progress:
 
 **Updated:** 2026-04-18
 **Milestone:** v1.8 — UX Polish & Snippet Picker Overhaul
-**Status:** Defining requirements
-**Stopped at:** Milestone v1.8 opened — requirements being defined
+**Status:** Planning — roadmap drafted, phase planning not yet started
+**Stopped at:** Phases 47-53 defined in ROADMAP.md; next step is `/gsd-plan-phase 47`
 
 ---
 
 ## Current Position
 
-Phase: Not started (defining requirements)
+Phase: 47 (Runner Regressions) — not started
 Plan: —
-Status: Defining requirements
-Last activity: 2026-04-18 — Milestone v1.8 started
+Status: Roadmap complete; awaiting plan-phase for Phase 47
+Last activity: 2026-04-18 — v1.8 roadmap created (7 phases, 14/14 requirements mapped)
 
 ---
 
@@ -87,6 +87,24 @@ See: `.planning/PROJECT.md` (updated 2026-04-18)
 - Nyquist VALIDATION.md draft for phases 12–19, 28–31, 32–35, 36–42
 
 These are non-blocking for v1.8 delivery but may be cleaned up opportunistically during relevant phases.
+
+---
+
+## v1.8 Phase Map
+
+| Phase | Name | Requirements | Depends on |
+|-------|------|--------------|------------|
+| 47 | Runner Regressions | RUNFIX-01, RUNFIX-02, RUNFIX-03 | Nothing |
+| 48 | Node Editor UX Polish | NODEUI-01, NODEUI-02, NODEUI-03, NODEUI-04, NODEUI-05 | Nothing |
+| 49 | Loop Exit Edge Convention | EDGE-01 | Phase 43 (v1.7 LoopNode model), Phase 44 (v1.7 loop picker) |
+| 50 | Answer ↔ Edge Label Sync | EDGE-02 | Nothing |
+| 51 | Snippet Picker Overhaul | PICKER-01, PICKER-02 | Nothing (builds on v1.4 Snippet node + v1.5 tree primitives) |
+| 52 | JSON Placeholder Rework | PHLD-01 | Nothing |
+| 53 | BRAT Distribution Readiness | BRAT-01 | Phases 47–52 (release artifact must be shippable) |
+
+**Coverage:** 14/14 v1.8 requirements mapped; no orphans, no duplicates.
+
+**Suggested execution order:** 47 → 48 → 49 → 50 → 51 → 52 → 53. Phases 47/48/50/52 are independent and may be executed in any order between 47 and 53; 49 requires v1.7 scaffolding already shipped; 53 is scheduled last because it packages the final build.
 
 ---
 

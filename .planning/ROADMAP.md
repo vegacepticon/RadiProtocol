@@ -14,6 +14,7 @@
 - ✅ **v1.5 Snippet Editor Refactoring** — Phases 32-35 (shipped 2026-04-16)
 - ✅ **v1.6 Polish & Canvas Workflow** — Phases 36-42 (shipped 2026-04-17)
 - ✅ **v1.7 Loop Rework & Regression Cleanup** — Phases 43-46 (shipped 2026-04-18)
+- ⏳ **v1.8 UX Polish & Snippet Picker Overhaul** — Phases 47-53
 
 ---
 
@@ -110,6 +111,16 @@ Full details: `.planning/milestones/v1.7-ROADMAP.md`
 
 </details>
 
+### v1.8 UX Polish & Snippet Picker Overhaul (Phases 47-53)
+
+- [ ] **Phase 47: Runner Regressions** — Close three runner bugs uncovered during v1.7 use (textarea edits through loop transitions, scroll-on-insert, choice-button typography padding)
+- [ ] **Phase 48: Node Editor UX Polish** — Remove obsolete Snippet ID field, re-anchor new nodes below last, reorder Answer fields, auto-grow Question textarea, relocate quick-create buttons to bottom vertical column
+- [ ] **Phase 49: Loop Exit Edge Convention** — Derive loop exit button from the sole labeled outgoing edge; validator rejects zero or ≥2 labeled edges
+- [ ] **Phase 50: Answer ↔ Edge Label Sync** — Bind `Answer.displayLabel` bi-directionally with every incoming edge label across Node Editor, canvas save path, and edge label rendering
+- [ ] **Phase 51: Snippet Picker Overhaul** — Add specific-snippet binding on Snippet nodes + replace flat folder list with unified hierarchical picker (tree drill-down, breadcrumb, tree-wide search)
+- [ ] **Phase 52: JSON Placeholder Rework** — Collapse placeholder types to `free text` + unified `choice`; fix broken options-list editor; hard-reject legacy `number`/`multichoice`/old-choice snippets
+- [ ] **Phase 53: BRAT Distribution Readiness** — Align `manifest.json` / `versions.json` / git tags; publish first GitHub Release with `manifest.json` + `main.js` + `styles.css` assets; verify BRAT install end-to-end
+
 ---
 
 ## Phase Details
@@ -185,6 +196,84 @@ Plans:
 
 </details>
 
+### Phase 47: Runner Regressions
+**Goal**: Three user-facing runner bugs reported during v1.7 use are closed so manual textarea edits, scroll position, and button typography behave correctly end-to-end.
+**Depends on**: Nothing (independent bug-fix cluster scoped to `runner-view.ts` + `src/styles/runner-view.css`)
+**Requirements**: RUNFIX-01, RUNFIX-02, RUNFIX-03
+**Success Criteria** (what must be TRUE):
+  1. Manual textarea edits entered before advancing through a `loop` node survive every loop transition — body-branch entry, «выход»/labeled-exit advance, and dead-end re-entry — with no edit loss, by extending the v1.2 capture-before-advance (BUG-01) pattern to every loop-node state transition (RUNFIX-01)
+  2. Clicking a choice button in the Runner preserves the textarea scroll position (or advances to the insertion point); it never snaps back to the top, as verified by inserting content below the visible viewport and re-reading `scrollTop` after the DOM update (RUNFIX-02)
+  3. Choice buttons show adequate horizontal and vertical padding plus `line-height` so Cyrillic descenders («р», «у», «ц») and parentheses `(`, `)` render fully inside the button box at every wrap count, verified by rendering a multi-line choice with descender-heavy text (RUNFIX-03)
+**Plans**: TBD
+
+### Phase 48: Node Editor UX Polish
+**Goal**: The Node Editor panel presents the forms and quick-create buttons in the agreed cleaner layout — Snippet ID field gone, new-node anchor is vertical, Answer form reads label-first, Question textarea auto-grows, and create buttons form a bottom vertical stack.
+**Depends on**: Nothing (all changes land in `editor-panel-view.ts` + `src/styles/editor-panel.css`; independent of phases 47/49–53)
+**Requirements**: NODEUI-01, NODEUI-02, NODEUI-03, NODEUI-04, NODEUI-05
+**Success Criteria** (what must be TRUE):
+  1. Selecting a Text block in the Node Editor shows no "Snippet ID (optional)" input; the Text block save path no longer writes `radiprotocol_snippetId`, and the field is ignored (or removed) if present on existing canvases (NODEUI-01)
+  2. Every quick-create button (question, answer, snippet, loop) now positions the new canvas node **below** the anchor node — `CanvasNodeFactory`'s offset is `(0, dy)` rather than `(dx, 0)` — so chained quick-creates produce a vertical tree by default (NODEUI-02)
+  3. In the Answer form, "Display label (optional)" renders above "Answer text"; both labels and helper text accompany their inputs in the new order (NODEUI-03)
+  4. In the Question form, the "Question text" textarea auto-grows on input, and its label + helper description ("Displayed to the user during the protocol session") stack **above** the textarea so full panel width is available (NODEUI-04)
+  5. The `.rp-editor-create-toolbar` is anchored at the bottom of the Node Editor panel and lays out as a single full-width vertical column of four buttons; the v1.6 `flex-wrap` row-wrapping rule is no longer needed because each button is its own row (NODEUI-05)
+**Plans**: TBD
+**UI hint**: yes
+
+### Phase 49: Loop Exit Edge Convention
+**Goal**: A loop node's outgoing edges follow the new label-based exit convention — exactly one labeled edge is the exit, its label becomes the Runner button caption, and validator rejects ambiguous configurations with plain-language Russian errors.
+**Depends on**: Phase 43 (needs the unified `LoopNode` model + `GraphValidator` scaffolding from v1.7) and Phase 44 (needs the loop picker rendering path in `RunnerView` that Phase 49 rewires)
+**Requirements**: EDGE-01
+**Success Criteria** (what must be TRUE):
+  1. `GraphValidator` emits a clear Russian error naming the offending `loop` node when its outgoing edges have **zero** labeled edges ("нет выхода") or **two or more** labeled edges ("должен быть ровно один выход"), per `.planning/notes/loop-node-exit-edge-convention.md` (EDGE-01)
+  2. In the Runner, the loop picker's exit button caption reads the label of the sole labeled outgoing edge verbatim — the hardcoded «выход» fallback in `RunnerView` is removed; body-branch iteration behaviour over unlabeled edges is unchanged (EDGE-01)
+  3. A canvas that happened to use the literal label «выход» under the v1.7 convention continues to work because «выход» is still a valid label for the sole labeled edge; canvases with multiple labeled edges now surface the new validator error by design (no automatic migration, per REQUIREMENTS.md Out-of-Scope row 3)
+**Plans**: TBD
+
+### Phase 50: Answer ↔ Edge Label Sync
+**Goal**: `Answer.displayLabel` is the single source of truth for every incoming Question→Answer edge label — edits to either side propagate through the canvas save path, Node Editor form, and edge label rendering so both views stay consistent.
+**Depends on**: Nothing new from v1.8 (touches independent areas from Phase 49; schedulable in parallel)
+**Requirements**: EDGE-02
+**Success Criteria** (what must be TRUE):
+  1. Editing "Display label (optional)" in the Node Editor Answer form writes `Answer.displayLabel` and updates the rendered label on every incoming edge across the canvas (Pattern B live write when canvas open, Strategy A on save when closed), per `.planning/notes/answer-label-edge-sync.md` (EDGE-02)
+  2. Editing the label of any incoming edge on the canvas writes back to `Answer.displayLabel` and re-syncs every **other** incoming edge to the new value; new edges created with a label seed `Answer.displayLabel` (EDGE-02)
+  3. Multi-incoming Answer topologies render the same label on every incoming edge — per-edge override is explicitly out of scope for v1.8 (per REQUIREMENTS.md Out-of-Scope row 1), with the constraint documented in code comments for future maintainers (EDGE-02)
+**Plans**: TBD
+**UI hint**: yes
+
+### Phase 51: Snippet Picker Overhaul
+**Goal**: Snippet nodes can bind to either a directory (existing) or a specific snippet file (new), and every snippet/folder selection in the plugin is driven by one reusable hierarchical navigator with search, replacing the flat directory list.
+**Depends on**: Nothing new from v1.8 (the v1.4 Snippet node model and the v1.5 Snippet tree primitives already exist; Phase 51 adds a binding discriminant + a new picker widget that both Node Editor and Runner consume)
+**Requirements**: PICKER-01, PICKER-02
+**Success Criteria** (what must be TRUE):
+  1. A Snippet node bound to a specific snippet file **auto-inserts** its content when it is the sole option at the current step, and renders as a single clickable choice button when it sits among sibling options — for `.json` snippets with placeholders the fill-in modal still runs before insertion on both paths, per `.planning/notes/snippet-node-binding-and-picker.md` (PICKER-01)
+  2. A hierarchical navigator widget (tree drill-down with breadcrumb + tree-wide search field at the top) replaces the flat-list folder picker wherever Node Editor selects a snippet target; selecting a **folder** binds the node to that directory (legacy shape) and selecting a **snippet file** binds to that specific path (new shape) — the widget is reused in both directory and specific flows (PICKER-02)
+  3. Existing directory-bound Snippet nodes continue to load and run unchanged from saved canvases — the stored canvas shape stays backward-compatible per v1.8 Standing Pitfall #11 in STATE.md; the new binding variant co-exists under a stored discriminant (PICKER-01)
+  4. Opening an existing protocol that uses the v1.4 directory-bound Snippet picker in Runner still shows the same drill-down picker (now implemented via the unified hierarchical component) — no saved canvas requires editing for the UI change (PICKER-02)
+**Plans**: TBD
+**UI hint**: yes
+
+### Phase 52: JSON Placeholder Rework
+**Goal**: JSON snippet placeholders are reduced to exactly two types (`free text` + unified `choice`), the broken options-list editor is fixed, the Runner fill-in modal renders unified `choice` as multi-select with a joinable separator, and legacy snippet files declaring removed types fail loudly instead of silently.
+**Depends on**: Nothing (independent schema + UI rework in the snippet editor, fill-in modal, and snippet validation paths; schedulable in parallel with Phases 47–51)
+**Requirements**: PHLD-01
+**Success Criteria** (what must be TRUE):
+  1. The JSON snippet placeholder schema defines exactly two types — `"free text"` and `"choice"` — where `choice` carries `options: string[]` and an optional `separator: string` (default `", "`), per `.planning/notes/json-snippet-placeholder-rework.md`; `number` and `multichoice` are removed from the type union and from the snippet editor's type selector (PHLD-01)
+  2. The snippet editor's options-list UI works end-to-end — users can add, edit, reorder, and remove option values on a `choice` placeholder and the changes persist to the `.json` file; the existing bug where option entries cannot be edited is fixed (PHLD-01)
+  3. The Runner fill-in modal renders a unified `choice` placeholder as multi-select; selecting a single option inserts that value verbatim, selecting multiple joins them using the placeholder's `separator` (default `", "`) (PHLD-01)
+  4. Loading a `.json` snippet that declares `number`, `multichoice`, or an unreadable legacy `choice` schema surfaces a hard validation error in the snippet editor and blocks its use in Runner — no automatic migration runs (per REQUIREMENTS.md Out-of-Scope row 2) (PHLD-01)
+**Plans**: TBD
+**UI hint**: yes
+
+### Phase 53: BRAT Distribution Readiness
+**Goal**: The repository is shippable via BRAT — `manifest.json`, `versions.json`, and git tags align on one version, and a GitHub Release exists with the three required assets so users can install through BRAT with identifier `vegacepticon/RadiProtocol`.
+**Depends on**: Phases 47–52 (release asset must reflect a shippable build; this phase is scheduled last and does not touch TypeScript source)
+**Requirements**: BRAT-01
+**Success Criteria** (what must be TRUE):
+  1. `manifest.json` `version`, `versions.json` mapping (min-Obsidian per version), and the git tag naming scheme all agree on the v1.8 release version; `npm run build` produces a clean `main.js` + `styles.css` against that manifest version (BRAT-01)
+  2. `gh release list` shows at least one GitHub Release whose assets include `manifest.json`, `main.js`, and `styles.css` as individually downloadable files at the root of the release (not inside a zip) (BRAT-01)
+  3. Installing the plugin in a fresh Obsidian vault via BRAT with identifier `vegacepticon/RadiProtocol` succeeds end-to-end — plugin appears in Community Plugins list, enables, and opens the Runner view (BRAT-01)
+**Plans**: TBD
+
 ---
 
 ## Progress
@@ -201,3 +290,10 @@ Plans:
 | 44 | v1.7 | 5/5 | Complete   | 2026-04-17 |
 | 45 | v1.7 | 3/3 | Complete | 2026-04-18 |
 | 46 | v1.7 | 3/3 | Complete | 2026-04-18 |
+| 47 | v1.8 | 0/0 | Not started | - |
+| 48 | v1.8 | 0/0 | Not started | - |
+| 49 | v1.8 | 0/0 | Not started | - |
+| 50 | v1.8 | 0/0 | Not started | - |
+| 51 | v1.8 | 0/0 | Not started | - |
+| 52 | v1.8 | 0/0 | Not started | - |
+| 53 | v1.8 | 0/0 | Not started | - |
