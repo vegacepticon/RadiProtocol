@@ -113,7 +113,7 @@ Full details: `.planning/milestones/v1.7-ROADMAP.md`
 
 ### v1.8 UX Polish & Snippet Picker Overhaul (Phases 47-53)
 
-- [ ] **Phase 47: Runner Regressions** — Close three runner bugs uncovered during v1.7 use (textarea edits through loop transitions, scroll-on-insert, choice-button typography padding)
+- [⏳] **Phase 47: Runner Regressions** — All 3 plans complete (RUNFIX-01 + RUNFIX-02 + RUNFIX-03 closed); phase-level gates (regression gate, code review, verify_phase_goal) still pending
 - [ ] **Phase 48: Node Editor UX Polish** — Remove obsolete Snippet ID field, re-anchor new nodes below last, reorder Answer fields, auto-grow Question textarea, relocate quick-create buttons to bottom vertical column
 - [ ] **Phase 49: Loop Exit Edge Convention** — Derive loop exit button from the sole labeled outgoing edge; validator rejects zero or ≥2 labeled edges
 - [ ] **Phase 50: Answer ↔ Edge Label Sync** — Bind `Answer.displayLabel` bi-directionally with every incoming edge label across Node Editor, canvas save path, and edge label rendering
@@ -209,7 +209,7 @@ Plans:
 Plans:
 - [x] 47-01-loop-transition-capture-before-advance-PLAN.md — Relax ProtocolRunner.syncManualEdit gate to include awaiting-loop-pick + add RUNFIX-01 regression tests (body-branch, «выход», dead-end, undo) — completed 2026-04-18
 - [x] 47-02-choice-click-preserve-scroll-PLAN.md — Capture textarea scrollTop before renderAsync; restore inside renderPreviewZone rAF; wire into all four choice-button click handlers — completed 2026-04-18
-- [ ] 47-03-choice-button-padding-line-height-PLAN.md — Append Phase 47 CSS blocks to runner-view.css + loop-support.css (padding, line-height: 1.55, min-height: 44px); regenerate styles.css via npm run build
+- [x] 47-03-choice-button-padding-line-height-PLAN.md — Append Phase 47 CSS blocks to runner-view.css + loop-support.css (padding, line-height: 1.55, min-height: 44px, box-sizing/overflow-wrap revision, height:auto + align-items:flex-start override of Obsidian default button); regenerate styles.css via npm run build; UAT-approved after 2 revisions — completed 2026-04-18
 
 ### Phase 48: Node Editor UX Polish
 **Goal**: The Node Editor panel presents the forms and quick-create buttons in the agreed cleaner layout — Snippet ID field gone, new-node anchor is vertical, Answer form reads label-first, Question textarea auto-grows, and create buttons form a bottom vertical stack.
@@ -295,7 +295,7 @@ Plans:
 | 44 | v1.7 | 5/5 | Complete   | 2026-04-17 |
 | 45 | v1.7 | 3/3 | Complete | 2026-04-18 |
 | 46 | v1.7 | 3/3 | Complete | 2026-04-18 |
-| 47 | v1.8 | 1/3 | In progress | - |
+| 47 | v1.8 | 3/3 | In progress | - |
 | 48 | v1.8 | 0/0 | Not started | - |
 | 49 | v1.8 | 0/0 | Not started | - |
 | 50 | v1.8 | 0/0 | Not started | - |

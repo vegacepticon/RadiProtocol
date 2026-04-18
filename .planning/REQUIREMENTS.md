@@ -20,7 +20,7 @@
   - **Source:** `.planning/todos/pending/runner-textarea-preserve-scroll-on-insert.md`
   - **Signal:** `scrollTop` captured before insert and restored (or advanced to insertion point) after the content update.
 
-- [ ] **RUNFIX-03**: Choice button text has visible horizontal and vertical padding so long, wrapping content never clips descenders, brackets, or other glyphs that hang below the baseline (e.g. «р», "(", ")").
+- [x] **RUNFIX-03**: Choice button text has visible horizontal and vertical padding so long, wrapping content never clips descenders, brackets, or other glyphs that hang below the baseline (e.g. «р», "(", ")"). ✅ Closed by Phase 47 Plan 03 (2026-04-18).
   - **Source:** `.planning/todos/pending/runner-choice-button-text-padding.md`
   - **Signal:** the choice-button CSS applies adequate `padding` + `line-height` so descenders render inside the button box at every wrap count.
 
@@ -104,7 +104,7 @@
 |-------------|-------|--------|
 | RUNFIX-01 | Phase 47 | ✅ complete (2026-04-18) |
 | RUNFIX-02 | Phase 47 | ✅ complete (2026-04-18) |
-| RUNFIX-03 | Phase 47 | planned |
+| RUNFIX-03 | Phase 47 | ✅ complete (2026-04-18) |
 | NODEUI-01 | Phase 48 | planned |
 | NODEUI-02 | Phase 48 | planned |
 | NODEUI-03 | Phase 48 | planned |
