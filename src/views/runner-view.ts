@@ -822,12 +822,15 @@ export class RunnerView extends ItemView {
     requestAnimationFrame(() => {
       textarea.style.height = 'auto';
       textarea.style.height = textarea.scrollHeight + 'px';
-      // Phase 47 RUNFIX-02: restore the pre-click scrollTop onto the fresh textarea
-      // AFTER the height is recomputed — scrollTop has no effect on an auto-sized
-      // element until it has a non-auto height. Consume once, clear the field so
-      // a stale pending value cannot leak into a later unrelated render.
+      // Phase 47 RUNFIX-02: after a choice click, scroll the fresh textarea to its
+      // BOTTOM so the newly inserted content is visible (the todo's "scroll to the
+      // insertion point" option — user-preferred over scroll-preservation). The
+      // pending field now acts as a non-null FLAG: its captured scrollTop value is
+      // not used for the target position, only its presence gates the restore so
+      // unrelated renders (initial load, step-back, window resize) keep default
+      // scrollTop=0. Consume the flag exactly once per render.
       if (this.pendingTextareaScrollTop !== null) {
-        textarea.scrollTop = this.pendingTextareaScrollTop;
+        textarea.scrollTop = textarea.scrollHeight;
         this.pendingTextareaScrollTop = null;
       }
     });

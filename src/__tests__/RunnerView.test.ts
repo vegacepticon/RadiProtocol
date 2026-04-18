@@ -146,10 +146,11 @@ describe('RunnerView RUNFIX-02 — choice click preserves textarea scroll', () =
     expect(getField('pendingTextareaScrollTop')).toBe(500);
   });
 
-  it('RUNFIX-02: renderPreviewZone restores pending scrollTop onto the new textarea and consumes it (clears to null)', () => {
+  it('RUNFIX-02: renderPreviewZone scrolls new textarea to BOTTOM when pending flag is set (scroll to insertion point) and consumes the flag', () => {
     const { getField, setField, callMethod } = makePartialView();
 
-    // Pretend a choice handler already captured the pre-click scroll.
+    // Pretend a choice handler already flagged pending — captured value is ignored;
+    // only non-null presence gates the scroll-to-bottom.
     setField('pendingTextareaScrollTop', 500);
 
     const zone = makeFakeZone();
@@ -157,9 +158,10 @@ describe('RunnerView RUNFIX-02 — choice click preserves textarea scroll', () =
 
     const created = zone.lastCreated;
     expect(created).not.toBeNull();
-    // Preserved (or advanced) — never reset to 0 when tall content remains.
-    expect(created!.scrollTop).toBeGreaterThanOrEqual(500);
-    // Consumed once — stale pending value must not leak into a later unrelated render.
+    // After RUNFIX-02 revision (2026-04-19 UAT): the new textarea scrolls to BOTTOM
+    // so the freshly inserted content is visible — matches scrollHeight exactly.
+    expect(created!.scrollTop).toBe(created!.scrollHeight);
+    // Consumed once — stale pending flag must not leak into a later unrelated render.
     expect(getField('pendingTextareaScrollTop')).toBeNull();
   });
 
@@ -203,8 +205,9 @@ describe('RunnerView RUNFIX-02 — choice click preserves textarea scroll', () =
     expect(second).not.toBeNull();
     expect(second).not.toBe(first);
 
-    // Load-bearing invariant: new textarea keeps (or exceeds) pre-click scroll.
-    expect(second!.scrollTop).toBeGreaterThanOrEqual(500);
+    // Load-bearing invariant (RUNFIX-02 revision): after a choice click, the new
+    // textarea scrolls to its BOTTOM so freshly inserted content is visible.
+    expect(second!.scrollTop).toBe(second!.scrollHeight);
     // Pending field consumed.
     expect(getField('pendingTextareaScrollTop')).toBeNull();
 
