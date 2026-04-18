@@ -302,10 +302,18 @@ export class ProtocolRunner {
    * Inject a manual textarea edit into the accumulator before an advance action (BUG-01, D-01).
    * Must be called BEFORE chooseAnswer() / chooseLoopBranch() so that
    * the undo snapshot captured inside those methods includes the manual edit.
-   * No-op if runner is not in 'at-node' state.
+   * No-op if runner is not in 'at-node' or 'awaiting-loop-pick' state.
+   *
+   * Phase 47 RUNFIX-01: the awaiting-loop-pick gate extension keeps the BUG-01
+   * capture-before-advance invariant alive on every loop transition — runner-view.ts:479
+   * calls syncManualEdit before chooseLoopBranch, and chooseLoopBranch (line 190) takes
+   * the undo snapshot from the accumulator the instant after this call returns. Without
+   * the awaiting-loop-pick gate the call was a no-op and the undo snapshot recorded
+   * pre-edit text, so manual textarea edits were silently discarded on body-branch entry,
+   * «выход» exit, back-edge re-entry, and dead-end return.
    */
   syncManualEdit(text: string): void {
-    if (this.runnerStatus !== 'at-node') return;
+    if (this.runnerStatus !== 'at-node' && this.runnerStatus !== 'awaiting-loop-pick') return;
     this.accumulator.overwrite(text);
   }
 
