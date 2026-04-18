@@ -100,8 +100,11 @@ function makePartialView(): {
     (view as unknown as Record<string, unknown>)[name] = value;
   };
   const callMethod = (name: string, ...args: unknown[]): unknown => {
-    const fn = (view as unknown as Record<string, (...a: unknown[]) => unknown>)[name];
-    return fn.call(view, ...args);
+    const fn = (view as unknown as Record<string, (...a: unknown[]) => unknown> | undefined)?.[name];
+    if (typeof fn !== 'function') {
+      throw new TypeError(`RunnerView has no method '${name}' (pre-plan state or typo)`);
+    }
+    return (fn as (this: RunnerView, ...a: unknown[]) => unknown).call(view, ...args);
   };
 
   return { view, getField, setField, callMethod };
