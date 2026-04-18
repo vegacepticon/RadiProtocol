@@ -100,49 +100,6 @@ describe('ProtocolRunner', () => {
     });
   });
 
-  describe('enterFreeText() — free-text input node (RUN-04)', () => {
-    it('wraps user text with prefix/suffix and appends to accumulatedText', () => {
-      // free-text.canvas: start → n-ft1 (promptLabel, prefix="Findings: ", suffix=".")
-      const runner = new ProtocolRunner();
-      runner.start(loadGraph('free-text.canvas'));
-      const stateAtFT = runner.getState();
-      expect(stateAtFT.status).toBe('at-node');
-      if (stateAtFT.status !== 'at-node') return;
-      expect(stateAtFT.currentNodeId).toBe('n-ft1');
-
-      runner.enterFreeText('enlarged spleen');
-      const state = runner.getState();
-      // n-ft1 has no outgoing edge → complete
-      expect(state.status).toBe('complete');
-      if (state.status !== 'complete') return;
-      // Expected: prefix + text + suffix = "Findings: enlarged spleen."
-      expect(state.finalText).toBe('Findings: enlarged spleen.');
-    });
-
-    it('handles free-text node with no prefix/suffix — appends raw text', () => {
-      // Build a minimal inline graph with a free-text node that has no prefix/suffix
-      // We construct a ProtocolGraph directly to avoid needing a new fixture.
-      const graph: ProtocolGraph = {
-        canvasFilePath: 'inline.canvas',
-        nodes: new Map([
-          ['n-start', { id: 'n-start', kind: 'start', x: 0, y: 0, width: 100, height: 60 }],
-          ['n-ft1', { id: 'n-ft1', kind: 'free-text-input', promptLabel: 'Notes:', x: 0, y: 120, width: 100, height: 60 }],
-        ]),
-        edges: [{ id: 'e1', fromNodeId: 'n-start', toNodeId: 'n-ft1' }],
-        adjacency: new Map([['n-start', ['n-ft1']]]),
-        reverseAdjacency: new Map([['n-ft1', ['n-start']]]),
-        startNodeId: 'n-start',
-      };
-      const runner = new ProtocolRunner();
-      runner.start(graph);
-      runner.enterFreeText('raw note');
-      const state = runner.getState();
-      expect(state.status).toBe('complete');
-      if (state.status !== 'complete') return;
-      expect(state.finalText).toBe('raw note');
-    });
-  });
-
   describe('stepBack() — undo last user action (RUN-06, RUN-07)', () => {
     it('reverts currentNodeId and accumulatedText to state before last chooseAnswer', () => {
       // text-block.canvas: start → n-q1 → n-a1 → n-tb1 (terminal)
@@ -406,33 +363,6 @@ describe('ProtocolRunner', () => {
       // tb1 gets 'newline' default (first chunk, no separator anyway)
       // a1 overrides to 'space'
       expect(state.finalText).toBe('chunk1 chunk2');
-    });
-
-    it('D-02: enterFreeText separator precedes entire prefix+text+suffix chunk', () => {
-      // Start with a text-block to fill the buffer, then a free-text node
-      const graph: ProtocolGraph = {
-        canvasFilePath: 'sep-ft.canvas',
-        nodes: new Map([
-          ['s', { id: 's', kind: 'start' as const, x: 0, y: 0, width: 100, height: 60 }],
-          ['tb1', { id: 'tb1', kind: 'text-block' as const, content: 'first', x: 0, y: 60, width: 100, height: 60 }],
-          ['ft1', { id: 'ft1', kind: 'free-text-input' as const, promptLabel: 'Enter:', prefix: 'P: ', suffix: '.', x: 0, y: 120, width: 100, height: 60 }],
-        ]),
-        edges: [
-          { id: 'e1', fromNodeId: 's', toNodeId: 'tb1' },
-          { id: 'e2', fromNodeId: 'tb1', toNodeId: 'ft1' },
-        ],
-        adjacency: new Map([['s', ['tb1']], ['tb1', ['ft1']]]),
-        reverseAdjacency: new Map([['tb1', ['s']], ['ft1', ['tb1']]]),
-        startNodeId: 's',
-      };
-      const runner = new ProtocolRunner({ defaultSeparator: 'newline' });
-      runner.start(graph);
-      runner.enterFreeText('X');
-      const state = runner.getState();
-      expect(state.status).toBe('complete');
-      if (state.status !== 'complete') return;
-      // separator before the whole assembled chunk: 'first' + '\n' + 'P: X.'
-      expect(state.finalText).toBe('first\nP: X.');
     });
 
     it('D-03: completeSnippet inserts separator before rendered text', () => {
@@ -742,27 +672,6 @@ describe('ProtocolRunner', () => {
       runner.chooseSnippetBranch('n-a1');
       const state = runner.getState();
       expect(state.status).toBe('error');
-    });
-
-    it('Test 6: chooseSnippetBranch when current node is not a question transitions to error', () => {
-      // Inline graph: start → free-text-input (halts at-node but not question)
-      const graph: ProtocolGraph = {
-        canvasFilePath: 'inline.canvas',
-        nodes: new Map<string, RPNode>([
-          ['n-start', { id: 'n-start', kind: 'start', x: 0, y: 0, width: 100, height: 60 }],
-          ['n-ft', { id: 'n-ft', kind: 'free-text-input', promptLabel: 'L', x: 0, y: 60, width: 100, height: 60 }],
-          ['n-s', { id: 'n-s', kind: 'snippet', x: 0, y: 120, width: 100, height: 60 }],
-        ]),
-        edges: [{ id: 'e1', fromNodeId: 'n-start', toNodeId: 'n-ft' }],
-        adjacency: new Map([['n-start', ['n-ft']]]),
-        reverseAdjacency: new Map([['n-ft', ['n-start']]]),
-        startNodeId: 'n-start',
-      };
-      const runner = new ProtocolRunner();
-      runner.start(graph);
-      expect(runner.getState().status).toBe('at-node');
-      runner.chooseSnippetBranch('n-s');
-      expect(runner.getState().status).toBe('error');
     });
 
     it('Test 7 (D-04): completeSnippet at S2 uses per-node space separator', () => {

@@ -14,7 +14,6 @@ import type {
   LoopNode,
   AnswerNode,
   StartNode,
-  FreeTextInputNode,
   LoopStartNode,
   LoopEndNode,
 } from '../graph/graph-model';
@@ -54,9 +53,6 @@ function answer(id: string, answerText: string): AnswerNode {
 function start(id: string): StartNode {
   return { ...baseNodeProps, id, kind: 'start' };
 }
-function freeText(id: string, promptLabel: string): FreeTextInputNode {
-  return { ...baseNodeProps, id, kind: 'free-text-input', promptLabel };
-}
 function loopStart(id: string, loopLabel: string, exitLabel: string): LoopStartNode {
   return { ...baseNodeProps, id, kind: 'loop-start', loopLabel, exitLabel };
 }
@@ -79,12 +75,12 @@ describe('buildNodeOptions (Phase 45 LOOP-06 / D-06..D-08)', () => {
     expect(kindSet).toEqual(new Set(['question', 'text-block', 'snippet', 'loop']));
   });
 
-  it('excludes answer, start, free-text-input, loop-start, loop-end (D-06 conscious deviation from ROADMAP SC #3)', () => {
+  it('excludes answer, start, loop-start, loop-end (D-06 conscious deviation from ROADMAP SC #3)', () => {
+    // Phase 46 CLEAN-04: removed assertion for deleted kind (46-01 D-46-01-A excised it from RPNodeKind).
     const g = makeGraph([
       question('q1', 'Q'),
       answer('a1', 'A'),
       start('s1'),
-      freeText('f1', 'prompt'),
       loopStart('ls1', 'inner', 'выход'),
       loopEnd('le1', 'ls1'),
     ]);
@@ -94,7 +90,6 @@ describe('buildNodeOptions (Phase 45 LOOP-06 / D-06..D-08)', () => {
     // Defensive — none of the non-startable kinds appeared
     expect(opts.find(o => (o.kind as string) === 'answer')).toBeUndefined();
     expect(opts.find(o => (o.kind as string) === 'start')).toBeUndefined();
-    expect(opts.find(o => (o.kind as string) === 'free-text-input')).toBeUndefined();
     expect(opts.find(o => (o.kind as string) === 'loop-start')).toBeUndefined();
     expect(opts.find(o => (o.kind as string) === 'loop-end')).toBeUndefined();
   });
