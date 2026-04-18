@@ -2,34 +2,34 @@
 gsd_state_version: 1.0
 milestone: v1.8
 milestone_name: UX Polish & Snippet Picker Overhaul
-status: planning
-stopped_at: Phase 47 planned (3 plans, 1 wave) — ready to execute
-last_updated: "2026-04-18T00:00:00.000Z"
+status: in_progress
+stopped_at: Phase 47 Plan 01 complete (RUNFIX-01 closed); Plans 47-02 and 47-03 remain
+last_updated: "2026-04-18T23:00:00.000Z"
 last_activity: 2026-04-18
 resume_file: .planning/phases/47-runner-regressions/
 progress:
   total_phases: 7
   completed_phases: 0
   total_plans: 3
-  completed_plans: 0
-  percent: 0
+  completed_plans: 1
+  percent: 5
 ---
 
 # RadiProtocol — Project State
 
 **Updated:** 2026-04-18
 **Milestone:** v1.8 — UX Polish & Snippet Picker Overhaul
-**Status:** Ready to execute — Phase 47 planned (3 plans, 1 wave)
-**Stopped at:** Phase 47 plans verified (RUNFIX-01/02/03 all covered); next step is `/gsd-execute-phase 47`
+**Status:** In progress — Phase 47 Plan 01 complete (RUNFIX-01 closed); Plans 47-02 + 47-03 remain
+**Stopped at:** Phase 47 Plan 01 executed successfully (2 commits: 7603bc5 RED test, bdb227f GREEN fix); awaiting execution of 47-02 (RUNFIX-02 scroll preservation) and 47-03 (RUNFIX-03 button typography)
 
 ---
 
 ## Current Position
 
-Phase: 47 (Runner Regressions) — planned, ready to execute
-Plans: 47-01, 47-02, 47-03 (all Wave 1, parallel)
-Status: Planning complete; verification passed; awaiting execution
-Last activity: 2026-04-18 — Phase 47 planned and verified
+Phase: 47 (Runner Regressions) — 1 of 3 plans complete
+Plans: 47-01 ✅ complete (RUNFIX-01); 47-02 pending (RUNFIX-02); 47-03 pending (RUNFIX-03)
+Status: Phase 47 Plan 01 — executed and verified; full test suite green (423 passed)
+Last activity: 2026-04-18 — Executed Plan 47-01 (syncManualEdit gate extension)
 
 ---
 
@@ -76,6 +76,10 @@ See: `.planning/PROJECT.md` (updated 2026-04-18)
 9. Real-DOM vs mock-DOM parent lookup: always use `parentElement` first, `.parent` mock fallback second.
 10. v1.7 excised `maxIterations`; do not reintroduce a per-loop or global iteration cap in v1.8.
 11. v1.8-specific: preserve backward compatibility of stored canvas shape — directory-bound Snippet nodes must keep working unchanged when the specific-snippet binding is added.
+
+### v1.8 Execution Log
+
+- **Phase 47 Plan 01 (2026-04-18):** RUNFIX-01 closed via single-line state-gate relaxation in `ProtocolRunner.syncManualEdit` (extended from `{at-node}` to `{at-node, awaiting-loop-pick}`) plus 4 RUNFIX-01 regression tests in `protocol-runner-loop-picker.test.ts`. Commits: 7603bc5 (test RED), bdb227f (fix GREEN). Decision: preferred gate relaxation over introducing a new sync method — keeps the capture-before-advance touch-point at the single call-site in `runner-view.ts:479`. No view changes, no other method touched. Summary: `.planning/phases/47-runner-regressions/47-01-SUMMARY.md`.
 
 ### Open Tech Debt Carried Over from v1.7
 

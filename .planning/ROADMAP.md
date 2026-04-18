@@ -207,7 +207,7 @@ Plans:
 **Plans:** 3 plans
 
 Plans:
-- [ ] 47-01-loop-transition-capture-before-advance-PLAN.md — Relax ProtocolRunner.syncManualEdit gate to include awaiting-loop-pick + add RUNFIX-01 regression tests (body-branch, «выход», dead-end, undo)
+- [x] 47-01-loop-transition-capture-before-advance-PLAN.md — Relax ProtocolRunner.syncManualEdit gate to include awaiting-loop-pick + add RUNFIX-01 regression tests (body-branch, «выход», dead-end, undo) — completed 2026-04-18
 - [ ] 47-02-choice-click-preserve-scroll-PLAN.md — Capture textarea scrollTop before renderAsync; restore inside renderPreviewZone rAF; wire into all four choice-button click handlers
 - [ ] 47-03-choice-button-padding-line-height-PLAN.md — Append Phase 47 CSS blocks to runner-view.css + loop-support.css (padding, line-height: 1.55, min-height: 44px); regenerate styles.css via npm run build
 
@@ -295,7 +295,7 @@ Plans:
 | 44 | v1.7 | 5/5 | Complete   | 2026-04-17 |
 | 45 | v1.7 | 3/3 | Complete | 2026-04-18 |
 | 46 | v1.7 | 3/3 | Complete | 2026-04-18 |
-| 47 | v1.8 | 0/0 | Not started | - |
+| 47 | v1.8 | 1/3 | In progress | - |
 | 48 | v1.8 | 0/0 | Not started | - |
 | 49 | v1.8 | 0/0 | Not started | - |
 | 50 | v1.8 | 0/0 | Not started | - |

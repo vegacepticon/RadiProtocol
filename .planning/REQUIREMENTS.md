@@ -12,7 +12,7 @@
 
 ### Runner Regressions (RUNFIX)
 
-- [ ] **RUNFIX-01**: Manual textarea edits made before advancing through a loop node are preserved across every loop transition — entering a body branch, exiting via «выход», or re-entering the loop on dead-end return — so the user never loses hand-typed edits.
+- [x] **RUNFIX-01**: Manual textarea edits made before advancing through a loop node are preserved across every loop transition — entering a body branch, exiting via «выход», or re-entering the loop on dead-end return — so the user never loses hand-typed edits. ✅ Closed by Phase 47 Plan 01 (2026-04-18).
   - **Source:** `.planning/todos/pending/bug-runner-textarea-edits-lost-on-loop-transition.md`
   - **Signal:** capture-before-advance (BUG-01 pattern) must fire on every loop-node state transition, not only on step-advance.
 
@@ -102,7 +102,7 @@
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| RUNFIX-01 | Phase 47 | planned |
+| RUNFIX-01 | Phase 47 | ✅ complete (2026-04-18) |
 | RUNFIX-02 | Phase 47 | planned |
 | RUNFIX-03 | Phase 47 | planned |
 | NODEUI-01 | Phase 48 | planned |
