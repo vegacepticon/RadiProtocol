@@ -226,44 +226,20 @@
   border-style: dashed;
 }
 
-/* Phase 47: RUNFIX-03 — choice-button typography padding ──────────────── */
-/* Override vertical padding + line-height so Cyrillic descenders («р», «у», «ц») */
-/* and parentheses «(», «)» render inside the button box at every wrap count. */
-/* Horizontal padding kept at --size-4-2 (matches existing rhythm). */
-
-.rp-answer-btn,
-.rp-snippet-branch-btn {
-  padding: var(--size-4-2) var(--size-4-2); /* ~8px vertical, ~8px horizontal */
-  line-height: 1.55;
-  min-height: 44px; /* was 40px — adds room for descender clearance on single-line labels */
-}
-
-/* Phase 47: RUNFIX-03 revision — narrow-sidebar overflow fix ──────────── */
-/* Without box-sizing:border-box, width:100% + horizontal padding overflows */
-/* the button's layout box when the Runner is docked in a narrow sidebar,  */
-/* so glyphs clip past the visible rectangle. Bump horizontal padding to   */
-/* --size-4-3 (12px) so wrapped lines don't kiss the border.               */
-
-.rp-answer-btn,
-.rp-snippet-branch-btn {
-  box-sizing: border-box;
-  padding: var(--size-4-2) var(--size-4-3); /* 8px vertical, 12px horizontal */
-  overflow-wrap: anywhere;
-}
-
-/* Phase 47: RUNFIX-03 revision 2 — defeat Obsidian default <button> sizing */
-/* Obsidian's base `button { height: var(--input-height); white-space: nowrap; } */
-/* align-items: center }` combination clips multi-line labels vertically and   */
-/* pushes content outside the button rectangle. Force intrinsic height and     */
-/* top-aligned content so wrapped Cyrillic labels render inside the box.       */
-/* Also bump horizontal padding to --size-4-4 (~16px) for Obsidian's standard  */
-/* button rhythm and clearer breathing room at narrow widths.                  */
-
+/* Phase 47: RUNFIX-03 — choice-button typography + narrow-sidebar overflow + Obsidian
+ * default-button defeat. Three successive revisions (tight padding → sidebar overflow →
+ * Obsidian's base `button { height: var(--input-height); align-items: center;
+ * white-space: nowrap }` clipping wrapped labels) converged on the declarations below.
+ * Do NOT compress further without testing Cyrillic descenders in a narrow sidebar. */
 .rp-answer-btn,
 .rp-snippet-branch-btn {
   height: auto;
   align-items: flex-start;
+  box-sizing: border-box;
   padding: var(--size-4-2) var(--size-4-4); /* 8px vertical, 16px horizontal */
+  line-height: 1.55;
+  min-height: 44px;
   white-space: normal;
+  overflow-wrap: anywhere;
   max-width: 100%;
 }

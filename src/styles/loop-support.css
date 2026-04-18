@@ -89,44 +89,23 @@
   opacity: 0.9;
 }
 
-/* Phase 47: RUNFIX-03 — loop picker button typography padding ─────────── */
-/* Loop body + exit buttons previously had no line-height override and tight */
-/* padding — long labels («следующая проверка (базовая)», «другое») clipped */
-/* descenders and parentheses. Match the answer-button rhythm from runner-view.css. */
-
-.rp-loop-body-btn,
-.rp-loop-exit-btn {
-  padding: var(--size-4-2) var(--size-4-2);
-  line-height: 1.55;
-  min-height: 44px;
-  white-space: normal;
-  word-break: break-word;
-}
-
-/* Phase 47: RUNFIX-03 revision — narrow-sidebar overflow fix ──────────── */
-/* Loop buttons live in a flex-column .rp-loop-picker-list. Without        */
-/* box-sizing + explicit width they can overflow the list when the sidebar */
-/* is narrow. min-width:0 lets the flex item shrink below intrinsic size.  */
-
-.rp-loop-body-btn,
-.rp-loop-exit-btn {
-  box-sizing: border-box;
-  width: 100%;
-  min-width: 0;
-  padding: var(--size-4-2) var(--size-4-3); /* 8px vertical, 12px horizontal */
-  overflow-wrap: anywhere;
-}
-
-/* Phase 47: RUNFIX-03 revision 2 — defeat Obsidian default <button> sizing */
-/* Same story as answer buttons: Obsidian's base `button` sets height:var() */
-/* and align-items:center, clipping wrapped content. Unfix the height and   */
-/* top-align content. Match the 16px horizontal padding rhythm.             */
-
+/* Phase 47: RUNFIX-03 — loop picker button typography + narrow-sidebar overflow +
+ * Obsidian default-button defeat. Parallel to the runner-view.css consolidation; loop
+ * buttons additionally need width: 100% + min-width: 0 because they sit inside a
+ * flex-column .rp-loop-picker-list (answer buttons do not need this). Do NOT compress
+ * further without testing Cyrillic descenders in a narrow sidebar. */
 .rp-loop-body-btn,
 .rp-loop-exit-btn {
   height: auto;
   align-items: flex-start;
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
   padding: var(--size-4-2) var(--size-4-4); /* 8px vertical, 16px horizontal */
+  line-height: 1.55;
+  min-height: 44px;
   white-space: normal;
+  word-break: break-word;
+  overflow-wrap: anywhere;
   max-width: 100%;
 }
