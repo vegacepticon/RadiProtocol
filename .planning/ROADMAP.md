@@ -204,7 +204,12 @@ Plans:
   1. Manual textarea edits entered before advancing through a `loop` node survive every loop transition — body-branch entry, «выход»/labeled-exit advance, and dead-end re-entry — with no edit loss, by extending the v1.2 capture-before-advance (BUG-01) pattern to every loop-node state transition (RUNFIX-01)
   2. Clicking a choice button in the Runner preserves the textarea scroll position (or advances to the insertion point); it never snaps back to the top, as verified by inserting content below the visible viewport and re-reading `scrollTop` after the DOM update (RUNFIX-02)
   3. Choice buttons show adequate horizontal and vertical padding plus `line-height` so Cyrillic descenders («р», «у», «ц») and parentheses `(`, `)` render fully inside the button box at every wrap count, verified by rendering a multi-line choice with descender-heavy text (RUNFIX-03)
-**Plans**: TBD
+**Plans:** 3 plans
+
+Plans:
+- [ ] 47-01-loop-transition-capture-before-advance-PLAN.md — Relax ProtocolRunner.syncManualEdit gate to include awaiting-loop-pick + add RUNFIX-01 regression tests (body-branch, «выход», dead-end, undo)
+- [ ] 47-02-choice-click-preserve-scroll-PLAN.md — Capture textarea scrollTop before renderAsync; restore inside renderPreviewZone rAF; wire into all four choice-button click handlers
+- [ ] 47-03-choice-button-padding-line-height-PLAN.md — Append Phase 47 CSS blocks to runner-view.css + loop-support.css (padding, line-height: 1.55, min-height: 44px); regenerate styles.css via npm run build
 
 ### Phase 48: Node Editor UX Polish
 **Goal**: The Node Editor panel presents the forms and quick-create buttons in the agreed cleaner layout — Snippet ID field gone, new-node anchor is vertical, Answer form reads label-first, Question textarea auto-grows, and create buttons form a bottom vertical stack.
