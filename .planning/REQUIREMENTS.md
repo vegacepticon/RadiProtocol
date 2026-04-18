@@ -34,8 +34,8 @@
 
 ### Free-Text-Input Removal (CLEAN)
 
-- [ ] **CLEAN-01**: `free-text-input` is removed from `RPNodeKind`; `FreeTextInputNode` interface is deleted from the graph model
-- [ ] **CLEAN-02**: Canvas parser no longer recognizes `radiprotocol_nodeType = "free-text-input"`; encountering one produces a `GraphValidator` error
+- [x] **CLEAN-01**: `free-text-input` is removed from `RPNodeKind`; `FreeTextInputNode` interface is deleted from the graph model
+- [x] **CLEAN-02**: Canvas parser no longer recognizes `radiprotocol_nodeType = "free-text-input"`; encountering one produces a `GraphValidator` error
 - [ ] **CLEAN-03**: Runner, Node Editor (`EditorPanelView`), `NodePickerModal`, and `NODE_COLOR_MAP` no longer reference free-text-input
 - [ ] **CLEAN-04**: Fixture `src/__tests__/fixtures/free-text.canvas` and free-text-input related tests are removed or rewritten to reflect the deletion
 
@@ -82,8 +82,8 @@ Which phases cover which requirements. Populated during roadmap creation.
 | RUN-07 | Phase 44 | Complete |
 | MIGRATE-01 | Phase 43 | Complete |
 | MIGRATE-02 | Phase 43 | Complete |
-| CLEAN-01 | Phase 46 | Pending |
-| CLEAN-02 | Phase 46 | Pending |
+| CLEAN-01 | Phase 46 | Complete (46-01) |
+| CLEAN-02 | Phase 46 | Complete (46-01) |
 | CLEAN-03 | Phase 46 | Pending |
 | CLEAN-04 | Phase 46 | Pending |
 

@@ -103,7 +103,7 @@ Full details: `.planning/milestones/v1.6-ROADMAP.md`
 - [x] **Phase 43: Unified Loop — Graph Model, Parser, Validator & Migration Errors** — Collapse `loop-start`/`loop-end` into a single `loop` node in the graph model and parser; add validator rules for the «выход» edge and reject legacy canvases with plain-language rebuild guidance (completed 2026-04-17)
 - [x] **Phase 44: Unified Loop Runtime** — Replace loop-start/loop-end runtime with single-step picker (body branches + «выход»), dead-end-return behaviour, nested loop stack preservation, step-back, session save/resume, removal of `maxIterations` (completed 2026-04-17)
 - [x] **Phase 45: Loop Editor Form, Picker & Color Map** — Node Editor form for the unified `loop` node with editable `headerText` (no `maxIterations`), plus `NodePickerModal` and `NODE_COLOR_MAP` integration (completed 2026-04-18)
-- [ ] **Phase 46: Free-Text-Input Removal** — Excise `free-text-input` from graph model, parser, validator, runner, editor, picker, color map, and test fixtures
+- 🔄 **Phase 46: Free-Text-Input Removal** — Excise `free-text-input` from graph model, parser, validator, runner, editor, picker, color map, and test fixtures (Plan 01 of 3 complete — CLEAN-01 + CLEAN-02 closed; 02 + 03 wave 2 pending)
 
 ---
 
@@ -171,7 +171,7 @@ Plans:
 **Plans:** 3 plans
 
 Plans:
-- [ ] 46-01-graph-model-parser-validator-PLAN.md — Excise FreeTextInputNode + RPNodeKind member + parser case arm; parser emits Russian rejection for legacy canvases (CLEAN-01, CLEAN-02)
+- [x] 46-01-graph-model-parser-validator-PLAN.md — Excise FreeTextInputNode + RPNodeKind member + parser case arm; parser emits Russian rejection for legacy canvases (CLEAN-01, CLEAN-02)
 - [ ] 46-02-runner-views-color-map-PLAN.md — TS-exhaustiveness-driven cleanup of runner, views, color map, CSS; deletes enterFreeText method + runner-view render arm + editor-panel form branch (CLEAN-03)
 - [ ] 46-03-test-cleanup-PLAN.md — Delete free-text-input test scenarios in protocol-runner.test.ts + rewrite picker exclusion test (CLEAN-04)
 
@@ -190,4 +190,4 @@ Plans:
 | 43 | v1.7 | 7/7 | Complete    | 2026-04-17 |
 | 44 | v1.7 | 5/5 | Complete   | 2026-04-17 |
 | 45 | v1.7 | 3/3 | Complete | 2026-04-18 |
-| 46 | v1.7 | 0/? | Not started | — |
+| 46 | v1.7 | 1/3 | In progress | — |
