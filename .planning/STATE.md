@@ -41,7 +41,7 @@ Progress: [██████████] 100% (4/4 phases shipped, 18/18 plans
 See: `.planning/PROJECT.md` (updated 2026-04-17)
 
 **Core value:** A radiologist can generate a structured, accurate protocol in seconds by answering a guided algorithm — without writing a single line of code.
-**Current focus:** Phase 45 — loop-editor-form-picker-color-map
+**Current focus:** Phase 46 complete — v1.7 milestone fully shipped (4/4 phases, 18/18 plans); ready for milestone audit/close
 
 ---
 
