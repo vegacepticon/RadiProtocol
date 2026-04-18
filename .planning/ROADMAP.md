@@ -152,12 +152,12 @@ Plans:
   1. Selecting a `loop` node in the Node Editor shows a form where the author can edit `headerText`; the form contains no `maxIterations` control (LOOP-05)
   2. Saving the Node Editor form writes the updated `headerText` back to the canvas JSON and colours the node with the `loop`-kind colour from `NODE_COLOR_MAP` (LOOP-06)
   3. `NodePickerModal` (Start-From-Node) lists `loop` as a first-class node kind alongside question, answer, snippet, and text-block (LOOP-06)
-**Plans:** 2/3 plans complete
+**Plans:** 3/3 plans complete
 
 Plans:
 - [x] 45-01-node-picker-modal-rewrite-PLAN.md — Extend NodePickerModal to 4 kinds with Russian badges + exhaustive unit tests
 - [x] 45-02-editor-panel-loop-button-and-lockin-PLAN.md — Loop quick-create button + CSS + Phase 44 UAT-fix form lock-in tests
-- [ ] 45-03-start-from-node-command-PLAN.md — Register start-from-node command; plumb optional startNodeId through RunnerView + ProtocolRunner
+- [x] 45-03-start-from-node-command-PLAN.md — Register start-from-node command; plumb optional startNodeId through RunnerView + ProtocolRunner
 
 ### Phase 46: Free-Text-Input Removal
 **Goal**: The `free-text-input` node kind is gone from every layer of the plugin — model, parser, validator, runner, editor, picker, colour map, and test fixtures — restoring the original v1.0 decision after the v1.2 regression.
@@ -189,5 +189,5 @@ Plans:
 | 36-42 | v1.6 | 14/14 | Complete | 2026-04-17 |
 | 43 | v1.7 | 7/7 | Complete    | 2026-04-17 |
 | 44 | v1.7 | 5/5 | Complete   | 2026-04-17 |
-| 45 | v1.7 | 2/3 | In progress | — |
+| 45 | v1.7 | 3/3 | Complete | 2026-04-18 |
 | 46 | v1.7 | 0/? | Not started | — |

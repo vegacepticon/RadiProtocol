@@ -15,7 +15,7 @@
 - [x] **LOOP-03**: Canvas parser recognizes `radiprotocol_nodeType = "loop"` and materializes a `LoopNode` with `headerText` from canvas JSON
 - [x] **LOOP-04**: `GraphValidator` requires each `loop` node to have exactly one outgoing edge labelled «выход» and at least one additional outgoing (body) edge
 - [x] **LOOP-05**: Node Editor form for the loop node lets the author edit `headerText` and removes any `maxIterations` control
-- [ ] **LOOP-06**: Node color map and `NodePickerModal` list `loop` as a first-class node kind
+- [x] **LOOP-06**: Node color map and `NodePickerModal` list `loop` as a first-class node kind
 
 ### Loop Runtime (RUN)
 
@@ -72,7 +72,7 @@ Which phases cover which requirements. Populated during roadmap creation.
 | LOOP-03 | Phase 43 | Complete |
 | LOOP-04 | Phase 43 | Complete |
 | LOOP-05 | Phase 45 | Complete |
-| LOOP-06 | Phase 45 | In progress (picker layer done in 45-01; color integration done in 45-02; command wiring pending in 45-03) |
+| LOOP-06 | Phase 45 | Complete (picker layer 45-01; color integration 45-02; command wiring 45-03) |
 | RUN-01 | Phase 44 | Complete |
 | RUN-02 | Phase 44 | Complete |
 | RUN-03 | Phase 44 | Complete |
