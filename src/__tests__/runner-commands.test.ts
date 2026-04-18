@@ -26,4 +26,41 @@ describe('Runner commands (RUN-10, UI-04)', () => {
     expect(Array.isArray(errors)).toBe(true);
     expect(errors.length).toBeGreaterThan(0);
   });
+
+  it('LOOP-06 (D-20): buildNodeOptions returns a loop option for a mixed-kind graph', async () => {
+    // Phase 45 strengthens the Phase 4/RUN-10 smoke test: import buildNodeOptions
+    // and verify the 4-kind union actually includes 'loop' on a real mixed graph.
+    const { buildNodeOptions } = await import('../views/node-picker-modal');
+
+    const loopNode = {
+      id: 'loop-1',
+      kind: 'loop' as const,
+      headerText: 'Lesion loop',
+      x: 0, y: 0, width: 0, height: 0,
+    };
+    const graph = {
+      canvasFilePath: 'test.canvas',
+      nodes: new Map<string, typeof loopNode>([[loopNode.id, loopNode]]),
+      edges: [],
+      adjacency: new Map<string, string[]>(),
+      reverseAdjacency: new Map<string, string[]>(),
+      startNodeId: loopNode.id,
+    };
+    const opts = buildNodeOptions(graph as unknown as import('../graph/graph-model').ProtocolGraph);
+    const loopOpt = opts.find(o => o.kind === 'loop');
+    expect(loopOpt).toBeDefined();
+    expect(loopOpt?.id).toBe('loop-1');
+    expect(loopOpt?.label).toBe('Lesion loop');
+  });
+
+  it('NFR-06 (Pitfall 10): start-from-node command id has no plugin prefix', () => {
+    // Phase 45 Plan 03 Task 2 registers this command in main.ts. The id must NOT
+    // carry a plugin-name prefix — Obsidian already namespaces commands by
+    // plugin manifest id (radiprotocol:start-from-node). A double prefix would
+    // collide in the Ctrl+P command palette (see NFR-06, RESEARCH.md Pitfall 10).
+    const mainTsPath = path.join(__dirname, '..', 'main.ts');
+    const mainTs = fs.readFileSync(mainTsPath, 'utf-8');
+    expect(mainTs).toContain(`id: 'start-from-node'`);
+    expect(mainTs).not.toContain(`id: 'radiprotocol-start-from-node'`);
+  });
 });
