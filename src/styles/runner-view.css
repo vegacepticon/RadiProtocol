@@ -225,3 +225,15 @@
   /* визуально отделено от answer-кнопок — более мягкий accent */
   border-style: dashed;
 }
+
+/* Phase 47: RUNFIX-03 — choice-button typography padding ──────────────── */
+/* Override vertical padding + line-height so Cyrillic descenders («р», «у», «ц») */
+/* and parentheses «(», «)» render inside the button box at every wrap count. */
+/* Horizontal padding kept at --size-4-2 (matches existing rhythm). */
+
+.rp-answer-btn,
+.rp-snippet-branch-btn {
+  padding: var(--size-4-2) var(--size-4-2); /* ~8px vertical, ~8px horizontal */
+  line-height: 1.55;
+  min-height: 44px; /* was 40px — adds room for descender clearance on single-line labels */
+}

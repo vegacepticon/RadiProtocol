@@ -226,6 +226,18 @@
   border-style: dashed;
 }
 
+/* Phase 47: RUNFIX-03 — choice-button typography padding ──────────────── */
+/* Override vertical padding + line-height so Cyrillic descenders («р», «у», «ц») */
+/* and parentheses «(», «)» render inside the button box at every wrap count. */
+/* Horizontal padding kept at --size-4-2 (matches existing rhythm). */
+
+.rp-answer-btn,
+.rp-snippet-branch-btn {
+  padding: var(--size-4-2) var(--size-4-2); /* ~8px vertical, ~8px horizontal */
+  line-height: 1.55;
+  min-height: 44px; /* was 40px — adds room for descender clearance on single-line labels */
+}
+
 /* Phase 13: CanvasSelectorWidget ─────────────────────────────────────────── */
 
 .rp-selector-bar {
@@ -1190,4 +1202,18 @@
 .rp-loop-exit-btn:hover {
   background: var(--background-modifier-border-hover, var(--background-modifier-border));
   opacity: 0.9;
+}
+
+/* Phase 47: RUNFIX-03 — loop picker button typography padding ─────────── */
+/* Loop body + exit buttons previously had no line-height override and tight */
+/* padding — long labels («следующая проверка (базовая)», «другое») clipped */
+/* descenders and parentheses. Match the answer-button rhythm from runner-view.css. */
+
+.rp-loop-body-btn,
+.rp-loop-exit-btn {
+  padding: var(--size-4-2) var(--size-4-2);
+  line-height: 1.55;
+  min-height: 44px;
+  white-space: normal;
+  word-break: break-word;
 }
