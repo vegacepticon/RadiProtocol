@@ -25,8 +25,19 @@ export const KIND_LABELS: Record<NodeOption['kind'], string> = {
  * Phase 45 (LOOP-06, D-08): sort key for kind-group ordering in buildNodeOptions.
  * Order: question (most common start) → loop (common for repeating blocks) →
  * text-block → snippet. Within each group options sort alphabetically by label.
+ *
+ * Phase 45 WR-02 fix: keyed as Record<NodeOption['kind'], number> so TypeScript
+ * enforces exhaustiveness the same way KIND_LABELS does. Adding a new kind to
+ * the NodeOption['kind'] union without updating KIND_ORDER will now fail the
+ * TS build at the declaration site instead of silently mapping to indexOf === -1
+ * at runtime (which previously clustered unknown kinds ahead of every known group).
  */
-const KIND_ORDER: NodeOption['kind'][] = ['question', 'loop', 'text-block', 'snippet'];
+const KIND_ORDER: Record<NodeOption['kind'], number> = {
+  'question':   0,
+  'loop':       1,
+  'text-block': 2,
+  'snippet':    3,
+};
 
 /**
  * Build a sorted list of NodeOption values from a ProtocolGraph.
@@ -66,10 +77,13 @@ export function buildNodeOptions(graph: ProtocolGraph): NodeOption[] {
     // answer, start, free-text-input, loop-start, loop-end — сознательно исключены (D-06)
   }
 
-  // D-08: kind-group entry order via KIND_ORDER indexOf, alphabetical within group.
+  // D-08: kind-group entry order via KIND_ORDER lookup, alphabetical within group.
+  // Phase 45 WR-02 fix: KIND_ORDER is now a Record<kind, number> so lookup cannot
+  // return -1 for unknown kinds — TypeScript enforces exhaustiveness at the
+  // declaration site (see KIND_ORDER JSDoc above).
   options.sort((a, b) => {
-    const kaIdx = KIND_ORDER.indexOf(a.kind);
-    const kbIdx = KIND_ORDER.indexOf(b.kind);
+    const kaIdx = KIND_ORDER[a.kind];
+    const kbIdx = KIND_ORDER[b.kind];
     if (kaIdx !== kbIdx) return kaIdx - kbIdx;
     return a.label.toLowerCase().localeCompare(b.label.toLowerCase());
   });
