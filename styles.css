@@ -251,6 +251,23 @@
   overflow-wrap: anywhere;
 }
 
+/* Phase 47: RUNFIX-03 revision 2 — defeat Obsidian default <button> sizing */
+/* Obsidian's base `button { height: var(--input-height); white-space: nowrap; } */
+/* align-items: center }` combination clips multi-line labels vertically and   */
+/* pushes content outside the button rectangle. Force intrinsic height and     */
+/* top-aligned content so wrapped Cyrillic labels render inside the box.       */
+/* Also bump horizontal padding to --size-4-4 (~16px) for Obsidian's standard  */
+/* button rhythm and clearer breathing room at narrow widths.                  */
+
+.rp-answer-btn,
+.rp-snippet-branch-btn {
+  height: auto;
+  align-items: flex-start;
+  padding: var(--size-4-2) var(--size-4-4); /* 8px vertical, 16px horizontal */
+  white-space: normal;
+  max-width: 100%;
+}
+
 /* Phase 13: CanvasSelectorWidget ─────────────────────────────────────────── */
 
 .rp-selector-bar {
@@ -1243,4 +1260,18 @@
   min-width: 0;
   padding: var(--size-4-2) var(--size-4-3); /* 8px vertical, 12px horizontal */
   overflow-wrap: anywhere;
+}
+
+/* Phase 47: RUNFIX-03 revision 2 — defeat Obsidian default <button> sizing */
+/* Same story as answer buttons: Obsidian's base `button` sets height:var() */
+/* and align-items:center, clipping wrapped content. Unfix the height and   */
+/* top-align content. Match the 16px horizontal padding rhythm.             */
+
+.rp-loop-body-btn,
+.rp-loop-exit-btn {
+  height: auto;
+  align-items: flex-start;
+  padding: var(--size-4-2) var(--size-4-4); /* 8px vertical, 16px horizontal */
+  white-space: normal;
+  max-width: 100%;
 }

@@ -116,3 +116,17 @@
   padding: var(--size-4-2) var(--size-4-3); /* 8px vertical, 12px horizontal */
   overflow-wrap: anywhere;
 }
+
+/* Phase 47: RUNFIX-03 revision 2 — defeat Obsidian default <button> sizing */
+/* Same story as answer buttons: Obsidian's base `button` sets height:var() */
+/* and align-items:center, clipping wrapped content. Unfix the height and   */
+/* top-align content. Match the 16px horizontal padding rhythm.             */
+
+.rp-loop-body-btn,
+.rp-loop-exit-btn {
+  height: auto;
+  align-items: flex-start;
+  padding: var(--size-4-2) var(--size-4-4); /* 8px vertical, 16px horizontal */
+  white-space: normal;
+  max-width: 100%;
+}
