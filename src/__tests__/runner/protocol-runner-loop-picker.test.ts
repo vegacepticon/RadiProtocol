@@ -3,6 +3,7 @@ import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { CanvasParser } from '../../graph/canvas-parser';
 import { ProtocolRunner } from '../../runner/protocol-runner';
+import { stripExitPrefix } from '../../graph/node-label';
 import type { ProtocolGraph, RPNode } from '../../graph/graph-model';
 
 const fixturesDir = path.join(__dirname, '..', 'fixtures');
@@ -164,13 +165,14 @@ describe('ProtocolRunner loop picker (RUN-01..RUN-05)', () => {
     expect(state.status).toBe('complete');
   });
 
-  // Phase 49 D-05 / D-08 regression guards — the runtime dispatch MUST be
-  // label-state-based (isExitEdge = non-empty-after-trim), NOT a literal string
-  // compare against «выход». These two tests construct an inline graph whose
-  // labeled edge reads "готово" (a legitimate non-«выход» Russian word) and
-  // verify (a) the labeled edge still pops the frame / advances, (b) the
-  // unlabeled body edge re-enters the picker without popping. If somebody
-  // re-introduces `edge.label === 'выход'` at dispatch, both tests fail.
+  // Phase 50.1 D-10 regression guards — the runtime dispatch MUST be
+  // "+"-prefix-based (isExitEdge = label.trim().startsWith('+')), NOT a literal
+  // compare against «выход» and NOT the Phase 49 alias-to-isLabeledEdge. These
+  // tests construct an inline graph whose exit edge reads "+готово" and verify
+  // (a) the "+"-prefixed edge pops the frame / advances, (b) an unlabeled body
+  // edge re-enters the picker without popping. If someone reverts the predicate
+  // to a literal «выход» compare or re-aliases isExitEdge = isLabeledEdge, both
+  // tests fail.
   function makeLoopGraph(): ProtocolGraph {
     return {
       canvasFilePath: 'test:phase-49-d05.canvas',
@@ -183,7 +185,7 @@ describe('ProtocolRunner loop picker (RUN-01..RUN-05)', () => {
       edges: [
         { id: 'e1', fromNodeId: 'n-start', toNodeId: 'n-loop' },
         { id: 'e2', fromNodeId: 'n-loop',  toNodeId: 'n-body' },                    // unlabeled body
-        { id: 'e3', fromNodeId: 'n-loop',  toNodeId: 'n-end',  label: 'готово' },   // labeled exit (non-«выход»)
+        { id: 'e3', fromNodeId: 'n-loop',  toNodeId: 'n-end',  label: '+готово' },  // Phase 50.1 D-10 "+"-prefix exit
         { id: 'e4', fromNodeId: 'n-body',  toNodeId: 'n-loop' },                    // body → back-edge
       ],
       adjacency: new Map<string, string[]>([
@@ -202,10 +204,11 @@ describe('ProtocolRunner loop picker (RUN-01..RUN-05)', () => {
     };
   }
 
-  it('Phase 49 D-05/D-08: labeled edge with a non-«выход» word ("готово") still pops the loop frame via isExitEdge', () => {
-    // Regression guard — if someone re-introduces a literal `'выход'` string comparison
-    // at the dispatch site, this test fails: "готово" is non-empty after trim so isExitEdge
-    // returns true, and the frame should pop.
+  it('Phase 50.1 D-10: "+"-prefixed edge ("+готово") pops the loop frame via isExitEdge', () => {
+    // Regression guard — if someone reverts isExitEdge to the Phase 49 alias
+    // (= isLabeledEdge) OR re-introduces a literal `'выход'` compare, this test
+    // fails: under Phase 50.1 only "+"-prefixed labels are exits, and "+готово"
+    // must still pop the loop frame.
     const runner = new ProtocolRunner();
     runner.start(makeLoopGraph());
     // Runner reaches n-loop → awaiting-loop-pick
@@ -215,7 +218,7 @@ describe('ProtocolRunner loop picker (RUN-01..RUN-05)', () => {
     expect(runner.getState().status).toBe('complete');
   });
 
-  it('Phase 49 D-05: unlabeled body edge does NOT pop the loop frame (picker re-entry)', () => {
+  it('Phase 50.1 D-10: unlabeled body edge does NOT pop the loop frame (picker re-entry)', () => {
     // Same graph shape as above, but pick the body edge first.
     const runner = new ProtocolRunner();
     runner.start(makeLoopGraph());
@@ -223,6 +226,51 @@ describe('ProtocolRunner loop picker (RUN-01..RUN-05)', () => {
     runner.chooseLoopBranch('e2');   // unlabeled body — walk n-body → back-edge → picker
     // After walking the body and hitting the back-edge, we should be at the picker again, NOT complete.
     expect(runner.getState().status).toBe('awaiting-loop-pick');
+  });
+
+  it('Phase 50.1 D-09/D-11: exit-button caption strips the "+" prefix (stripExitPrefix wiring)', () => {
+    // RunnerView caption expression changed from (edge.label ?? '').trim() to
+    // stripExitPrefix(edge.label ?? ''). This test asserts the pure-module
+    // wiring — the DOM-level rendering is covered by Phase 50.1 Plan 05 UAT.
+    expect(stripExitPrefix('+готово')).toBe('готово');
+    expect(stripExitPrefix('+ готово')).toBe('готово');
+    expect(stripExitPrefix('+\u00a0готово')).toBe('готово');
+    expect(stripExitPrefix('+')).toBe('');
+  });
+
+  it('Phase 50.1 D-14: labeled body edge (Phase 50 synced) coexists with "+"-exit — Runner dispatches both correctly', () => {
+    // Fixture: n-loop has two outgoing edges:
+    //  - "+выход" exit
+    //  - unprefixed label (Phase 50 reconciler-synced displayLabel of target Answer node)
+    // Under Phase 49 the labeled body edge was misclassified as a second exit and
+    // validation failed. Under Phase 50.1 the body edge has no "+" prefix so
+    // isExitEdge(bodyEdge) = false; the picker renders one exit + one body button.
+    const graph = loadGraph('unified-loop-labeled-body.canvas');
+    const runner = new ProtocolRunner();
+    runner.start(graph);
+    // Reach the loop picker
+    expect(runner.getState().status).toBe('awaiting-loop-pick');
+    // Identify edges defensively — the fixture assigns e3 as the "+"-exit and e2
+    // as the labeled body per Plan 04 SUMMARY; this test reads them from the graph
+    // to survive fixture renumbering.
+    const loopOut = graph.edges.filter(e => e.fromNodeId === 'n-loop');
+    const exitEdge = loopOut.find(e => e.label?.trim().startsWith('+'));
+    const bodyEdge = loopOut.find(e => e.label === undefined || !e.label.trim().startsWith('+'));
+    expect(exitEdge).toBeDefined();
+    expect(bodyEdge).toBeDefined();
+    if (exitEdge === undefined || bodyEdge === undefined) return;
+    // Body-branch dispatch → back-edge → picker re-entry (NOT complete)
+    runner.chooseLoopBranch(bodyEdge.id);
+    // The body walks into n-q1 (a question) and halts at-node; the back-edge
+    // re-entry is exercised in RUN-02 style. For this test the key assertion is
+    // that body dispatch does NOT complete (exit predicate returned false).
+    expect(runner.getState().status).not.toBe('complete');
+    // Now drive a fresh runner to exit-dispatch test (can't reuse above — state advanced).
+    const runner2 = new ProtocolRunner();
+    runner2.start(graph);
+    expect(runner2.getState().status).toBe('awaiting-loop-pick');
+    runner2.chooseLoopBranch(exitEdge.id);
+    expect(runner2.getState().status).toBe('complete');
   });
 });
 
