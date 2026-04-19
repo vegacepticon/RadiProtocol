@@ -224,7 +224,7 @@ Plans:
 **Plans:** 2 plans
 
 Plans:
-- [ ] 48-01-editor-form-ts-core-PLAN.md — Remove Snippet ID row from Text-block form (NODEUI-01), flip CanvasNodeFactory anchor offset from horizontal to vertical (NODEUI-02), swap Answer form Display-label above Answer-text (NODEUI-03), replace Question Setting.addTextArea with custom-DOM auto-growing textarea using runner-view.ts:816-840 scrollHeight pattern (NODEUI-04); add Wave 0 assertions in new editor-panel-forms.test.ts + flip canvas-node-factory.test.ts Test 5
+- [x] 48-01-editor-form-ts-core-PLAN.md — Remove Snippet ID row from Text-block form (NODEUI-01), flip CanvasNodeFactory anchor offset from horizontal to vertical (NODEUI-02), swap Answer form Display-label above Answer-text (NODEUI-03), replace Question Setting.addTextArea with custom-DOM auto-growing textarea using runner-view.ts:816-840 scrollHeight pattern (NODEUI-04); add Wave 0 assertions in new editor-panel-forms.test.ts + flip canvas-node-factory.test.ts Test 5
 - [ ] 48-02-toolbar-css-bottom-stack-PLAN.md — Move renderToolbar call-site to the end of renderIdle + renderForm so toolbar becomes the last child of contentEl (NODEUI-05); append Phase 48 CSS blocks to src/styles/editor-panel.css (NODEUI-04 rp-question-block visuals + NODEUI-05 flex-direction:column + margin-top:auto override); run npm run build to regenerate styles.css; human-verify checkpoint UAT in TEST-BASE vault
 **UI hint**: yes
 
