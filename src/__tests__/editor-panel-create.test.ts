@@ -293,8 +293,15 @@ describe('EditorPanelView double-click fallback + empty-type hint', () => {
     read: ReturnType<typeof vi.fn>;
   };
 
+  // Phase 48 NODEUI-04: buildKindForm('question') now calls requestAnimationFrame.
+  // Install a synchronous polyfill so tests in this describe block don't throw.
+  let originalRaf: typeof globalThis.requestAnimationFrame | undefined;
+
   beforeEach(() => {
     vi.clearAllMocks();
+    originalRaf = (globalThis as unknown as { requestAnimationFrame?: typeof requestAnimationFrame }).requestAnimationFrame;
+    (globalThis as unknown as { requestAnimationFrame: (cb: FrameRequestCallback) => number }).requestAnimationFrame =
+      (cb: FrameRequestCallback) => { cb(0); return 0; };
 
     mockCanvas = {
       nodes: new Map(),
@@ -347,6 +354,11 @@ describe('EditorPanelView double-click fallback + empty-type hint', () => {
       empty: () => {},
     };
 
+    // Phase 48 NODEUI-04: buildKindForm('question') calls this.registerDomEvent.
+    // The obsidian ItemView mock does not provide it — stub it as a no-op.
+    (view as unknown as { registerDomEvent: (...args: unknown[]) => void })
+      .registerDomEvent = () => {};
+
     // vi.mock('obsidian') auto-stubs Setting prototype methods to return undefined,
     // breaking the `.setName(...).setDesc(...).addDropdown(...)` chain used by
     // renderForm. Patch the prototype to return `this` and invoke the dropdown cb
@@ -364,6 +376,14 @@ describe('EditorPanelView double-click fallback + empty-type hint', () => {
       cb(mockDrop);
       return this;
     });
+  });
+
+  afterEach(() => {
+    if (originalRaf === undefined) {
+      delete (globalThis as unknown as { requestAnimationFrame?: unknown }).requestAnimationFrame;
+    } else {
+      (globalThis as unknown as { requestAnimationFrame: typeof requestAnimationFrame }).requestAnimationFrame = originalRaf;
+    }
   });
 
   it('renderNodeForm uses in-memory canvas data when disk JSON lacks the node', async () => {
@@ -453,7 +473,16 @@ describe('EditorPanelView double-click fallback + empty-type hint', () => {
         createDiv: (_opts?: { cls?: string }) => fakeNode(),
         createEl: (tag: string, opts?: { cls?: string }) => {
           createdElements.push({ tag, cls: opts?.cls });
-          return fakeNode();
+          const child = fakeNode();
+          // Phase 48 NODEUI-04: buildKindForm('question') creates a textarea and
+          // requestAnimationFrame (now synchronous polyfill) sets style.height.
+          // Attach a style stub so the height assignment doesn't throw.
+          if (tag === 'textarea') {
+            (child as Record<string, unknown>).style = { height: '' };
+            (child as Record<string, unknown>).scrollHeight = 0;
+            (child as Record<string, unknown>).value = '';
+          }
+          return child;
         },
         createSpan: () => fakeNode(),
         setAttribute: () => {},

@@ -405,22 +405,48 @@ export class EditorPanelView extends ItemView {
 
       case 'question': {
         new Setting(container).setHeading().setName('Question node');
-        new Setting(container)
-          .setName('Question text')
-          .setDesc('Displayed to the user during the protocol session.')
-          .addTextArea(ta => {
-            ta.setValue((nodeRecord['radiprotocol_questionText'] as string | undefined) ?? (nodeRecord['text'] as string | undefined) ?? '')
-              .onChange(v => {
-                this.pendingEdits['radiprotocol_questionText'] = v;
-                this.pendingEdits['text'] = v;
-                this.scheduleAutoSave();
-              });
-          });
+        // Phase 48 NODEUI-04: custom-DOM textarea with label-above + auto-grow.
+        // Setting API forces label-left/control-right layout and caps textarea width;
+        // here we emit the three DOM nodes directly so the textarea can be full-width
+        // and auto-grow via the runner-view.ts:816-840 scrollHeight pattern.
+        const qBlock = container.createDiv({ cls: 'rp-question-block' });
+        qBlock.createDiv({ cls: 'rp-field-label', text: 'Question text' });
+        qBlock.createEl('p', {
+          cls: 'rp-field-desc',
+          text: 'Displayed to the user during the protocol session.',
+        });
+        const qTextarea = qBlock.createEl('textarea', { cls: 'rp-question-textarea' });
+        qTextarea.value =
+          (nodeRecord['radiprotocol_questionText'] as string | undefined) ??
+          (nodeRecord['text'] as string | undefined) ??
+          '';
+        requestAnimationFrame(() => {
+          qTextarea.style.height = 'auto';
+          qTextarea.style.height = qTextarea.scrollHeight + 'px';
+        });
+        this.registerDomEvent(qTextarea, 'input', () => {
+          qTextarea.style.height = 'auto';
+          qTextarea.style.height = qTextarea.scrollHeight + 'px';
+          this.pendingEdits['radiprotocol_questionText'] = qTextarea.value;
+          this.pendingEdits['text'] = qTextarea.value;
+          this.scheduleAutoSave();
+        });
         break;
       }
 
       case 'answer': {
         new Setting(container).setHeading().setName('Answer node');
+        // Phase 48 NODEUI-03: Display label renders BEFORE Answer text (swapped from original order).
+        new Setting(container)
+          .setName('Display label (optional)')
+          .setDesc('Short label shown in the runner button if set. Leave blank to use answer text.')
+          .addText(t => {
+            t.setValue((nodeRecord['radiprotocol_displayLabel'] as string | undefined) ?? '')
+              .onChange(v => {
+                this.pendingEdits['radiprotocol_displayLabel'] = v || undefined;
+                this.scheduleAutoSave();
+              });
+          });
         new Setting(container)
           .setName('Answer text')
           .setDesc('Appended to the accumulated report text when this answer is chosen.')
@@ -429,16 +455,6 @@ export class EditorPanelView extends ItemView {
               .onChange(v => {
                 this.pendingEdits['radiprotocol_answerText'] = v;
                 this.pendingEdits['text'] = v;
-                this.scheduleAutoSave();
-              });
-          });
-        new Setting(container)
-          .setName('Display label (optional)')
-          .setDesc('Short label shown in the runner button if set. Leave blank to use answer text.')
-          .addText(t => {
-            t.setValue((nodeRecord['radiprotocol_displayLabel'] as string | undefined) ?? '')
-              .onChange(v => {
-                this.pendingEdits['radiprotocol_displayLabel'] = v || undefined;
                 this.scheduleAutoSave();
               });
           });
@@ -471,16 +487,6 @@ export class EditorPanelView extends ItemView {
               .onChange(v => {
                 this.pendingEdits['radiprotocol_content'] = v;
                 this.pendingEdits['text'] = v;
-                this.scheduleAutoSave();
-              });
-          });
-        new Setting(container)
-          .setName('Snippet ID (optional)')
-          .setDesc('Snippet ID for Phase 5 dynamic snippet fill-in. Leave blank if not using snippets.')
-          .addText(t => {
-            t.setValue((nodeRecord['radiprotocol_snippetId'] as string | undefined) ?? '')
-              .onChange(v => {
-                this.pendingEdits['radiprotocol_snippetId'] = v || undefined;
                 this.scheduleAutoSave();
               });
           });

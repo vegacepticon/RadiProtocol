@@ -49,7 +49,8 @@ export class CanvasNodeFactory {
     if (anchorNodeId) {
       const anchor = canvas.nodes.get(anchorNodeId);
       if (anchor) {
-        pos = { x: anchor.x + anchor.width + NODE_GAP, y: anchor.y };
+        // Phase 48 NODEUI-02: vertical offset — place new node BELOW anchor (was rightward).
+        pos = { x: anchor.x, y: anchor.y + anchor.height + NODE_GAP };
       } else {
         console.warn(`[RadiProtocol] Anchor node '${anchorNodeId}' not found — using default position.`);
       }
