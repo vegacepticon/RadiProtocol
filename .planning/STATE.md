@@ -3,16 +3,16 @@ gsd_state_version: 1.0
 milestone: v1.8
 milestone_name: UX Polish & Snippet Picker Overhaul
 status: in_progress
-stopped_at: Phase 49 planned — 5 plans in 3 waves, verification passed, ready to execute
-last_updated: "2026-04-19T09:15:00.000Z"
+stopped_at: Phase 49 Plan 01 shipped — shared node-label module + tests green; Plan 02 next (validator rewire)
+last_updated: "2026-04-19T09:07:05.000Z"
 last_activity: 2026-04-19
 resume_file: .planning/phases/49-loop-exit-edge-convention/
 progress:
   total_phases: 8
   completed_phases: 2
   total_plans: 8
-  completed_plans: 3
-  percent: 25
+  completed_plans: 4
+  percent: 28
 ---
 
 # RadiProtocol — Project State
@@ -26,12 +26,11 @@ progress:
 
 ## Current Position
 
-Phase: 48.1 (Toolbar Gap Tighten, INSERTED) — ✅ complete (2 commits)
-Commits: 25ab41f (feat — margin-top:auto → var(--size-4-3)); f23b841 (fix — .rp-editor-panel height:100% → auto so form panel does not push toolbar off-screen).
-Tests: 440 passed / 1 skipped (was 438 after Phase 48).
-UAT: PASS 2026-04-19 (idle + form states; narrow sidebar unaffected).
-Next: /gsd-plan-phase 49 (Loop Exit Edge Convention — EDGE-01).
-Last activity: 2026-04-19 — Phase 48.1 shipped as direct 2-commit CSS fix (user opted out of full plan-phase workflow given trivial scope). Phase 48 UAT follow_up Test 7 marked resolved.
+Phase: 49 (Loop Exit Edge Convention) — 🔄 Plan 01 complete (2 commits), Plan 02 next
+Plan 49-01 commits: 4fce768 (feat — shared node-label.ts with nodeLabel/isLabeledEdge/isExitEdge); c39876f (test — 23 unit tests covering all 8 nodeLabel arms + D-05 trim semantics + D-07 alias identity).
+Tests: 463 passed / 1 skipped (was 440; +23 new tests from Plan 49-01).
+Next: /gsd-execute-plan 49 02 (validator rewire — LOOP-04 check + delegate private nodeLabel to shared util per D-04/D-13).
+Last activity: 2026-04-19 — Plan 49-01 shipped. New shared pure module `src/graph/node-label.ts` establishes the interface contract for Plans 49-02 (validator) and 49-03 (runtime + view). Zero existing call-sites rewired in this plan. tsc --noEmit green; full suite green.
 
 ---
 
@@ -88,6 +87,7 @@ See: `.planning/PROJECT.md` (updated 2026-04-18)
 - **Phase 47 Plan 01 (2026-04-18):** RUNFIX-01 closed via single-line state-gate relaxation in `ProtocolRunner.syncManualEdit` (extended from `{at-node}` to `{at-node, awaiting-loop-pick}`) plus 4 RUNFIX-01 regression tests in `protocol-runner-loop-picker.test.ts`. Commits: 7603bc5 (test RED), bdb227f (fix GREEN). Decision: preferred gate relaxation over introducing a new sync method — keeps the capture-before-advance touch-point at the single call-site in `runner-view.ts:479`. No view changes, no other method touched. Summary: `.planning/phases/47-runner-regressions/47-01-SUMMARY.md`.
 - **Phase 47 Plan 02 (2026-04-18):** RUNFIX-02 closed by introducing `pendingTextareaScrollTop` private field + `capturePendingTextareaScroll` helper on `RunnerView`; helper is called as the FIRST line of each choice-click handler (answer, snippet-branch, loop-body/exit, snippet-picker row) and consumed inside `renderPreviewZone`'s existing `requestAnimationFrame` callback after the height recompute — scrolls are now preserved across the render-triggered textarea rebuild. Commits: 126ee08 (test RED, 5 tests), 325f39d (fix GREEN). Diff strictly additive (+31/-0 in runner-view.ts); all four pre-existing BUG-01 `syncManualEdit(previewTextarea)` calls preserved verbatim. Summary: `.planning/phases/47-runner-regressions/47-02-SUMMARY.md`.
 - **Phase 47 Plan 03 (2026-04-18):** RUNFIX-03 closed by appending three successive Phase 47 CSS blocks to `src/styles/runner-view.css` + `src/styles/loop-support.css` — strictly additive, CLAUDE.md append-only-per-phase compliant. Initial commit 3f7f628 (feat — typography: padding, line-height 1.55, min-height 44px on .rp-answer-btn / .rp-snippet-branch-btn / .rp-loop-body-btn / .rp-loop-exit-btn). UAT revision 1 — 84adf10 (fix — narrow-sidebar overflow: box-sizing:border-box, horizontal padding --size-4-3, overflow-wrap:anywhere, width:100% + min-width:0 on loop buttons). UAT revision 2 — d23aaff (fix — final: defeated Obsidian base `button { height: var(--input-height); align-items: center }` default with height:auto + align-items:flex-start + horizontal padding --size-4-4 ~16px). User approved in TEST-BASE vault with narrow sidebar + tab-mode layout after revision 2. Key-decision pattern: three-revision UAT loop on a CSS-only plan where each UAT rejection appends a new block below the previous one naming the DevTools-confirmed root cause. Zero TypeScript changes; full vitest suite stays at 428 passed / 1 skipped. Summary: `.planning/phases/47-runner-regressions/47-03-SUMMARY.md`. Phase-level gates (regression gate, code review, verify_phase_goal) still pending — orchestrator responsibility.
+- **Phase 49 Plan 01 (2026-04-19):** New pure module `src/graph/node-label.ts` (51 lines) extracts `nodeLabel()` verbatim from `GraphValidator.nodeLabel()` (graph-validator.ts:238-249) and adds `isLabeledEdge(edge)` (D-05 trim predicate) + `isExitEdge = isLabeledEdge` (D-07 named alias, same function reference). All 8 `RPNodeKind` arms preserved including `@deprecated` `loop-start`/`loop-end`. 23 new unit tests in `src/__tests__/graph/node-label.test.ts` (new subdir mirrors existing `src/__tests__/runner/` convention) cover every arm, D-05 trim semantics (6 falsy + 5 truthy + null-defensive via `it.each`), and D-07 alias identity (`isExitEdge === isLabeledEdge` via `toBe`). Commits: 4fce768 (feat — module), c39876f (test — 23 tests). Tests: 463 passed / 1 skipped (+23 from baseline 440). tsc --noEmit exit 0. Auto-fix: [Rule 3 — Blocking] `it.each` callback needed a 3rd `_description` parameter for TypeScript strict-mode tuple inference — fixed before commit. Zero existing call-sites rewired; graph-validator.ts untouched (Plan 49-02 will delegate). No CSS changes (per D-19, Phase 49 ships zero CSS edits). Summary: `.planning/phases/49-loop-exit-edge-convention/49-01-SUMMARY.md`.
 
 ### Open Tech Debt Carried Over from v1.7
 
