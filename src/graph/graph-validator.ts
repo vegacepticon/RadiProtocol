@@ -2,6 +2,7 @@
 // Pure module — zero Obsidian API imports (PARSE-07, NFR-01)
 
 import type { ProtocolGraph, RPNode } from './graph-model';
+import { nodeLabel as sharedNodeLabel, isLabeledEdge } from './node-label';
 
 export class GraphValidator {
   /**
@@ -88,37 +89,37 @@ export class GraphValidator {
       }
     }
 
-    // Check (LOOP-04): каждый unified loop-узел должен иметь
-    //  1) ровно одно исходящее ребро с label === 'выход' (Phase 43 D-08.1)
-    //  2) не более одного ребра «выход» (Phase 43 D-08.2) — дубликаты флагаем отдельно
-    //  3) минимум одно body-ребро (label !== 'выход') (Phase 43 D-08.3)
-    // «выход» — exact-match, case-sensitive, без trim. Контракт с автором.
+    // Check (LOOP-04): каждый unified loop-узел должен иметь (Phase 49 EDGE-01):
+    //  1) ровно одно помеченное исходящее ребро (его метка = подпись кнопки выхода) — D-01/D-02
+    //  2) хотя бы одно НЕ-помеченное исходящее ребро (body-ветвь) — D-03/D-09
+    // «Помеченное» (labeled) — edge.label !== null/undefined И edge.label.trim() !== ''
+    // (D-05, в shared src/graph/node-label.ts::isLabeledEdge). Пробельные метки считаются
+    // непомеченными.
     for (const [id, node] of graph.nodes) {
       if (node.kind !== 'loop') continue;
       const outgoing = graph.edges.filter(e => e.fromNodeId === id);
-      const exitEdges = outgoing.filter(e => e.label === 'выход');
-      const bodyEdges = outgoing.filter(e => e.label !== 'выход');
+      const exitEdges = outgoing.filter(e => isLabeledEdge(e));
+      const bodyEdges = outgoing.filter(e => !isLabeledEdge(e));
       const label = this.nodeLabel(node);
-      // D-08.1 — missing «выход»
+      // D-01 — zero labeled edges
       if (exitEdges.length === 0) {
         errors.push(
-          `Loop node "${label}" не имеет ребра «выход». ` +
-          `Добавьте исходящее ребро с меткой «выход», обозначающее ветвь выхода из цикла.`
+          `Loop-узел "${label}" не имеет выхода. ` +
+          `Пометьте ровно одно исходящее ребро — его метка станет подписью кнопки выхода.`
         );
       }
-      // D-08.2 — duplicate «выход»
+      // D-02 — ≥2 labeled edges
       if (exitEdges.length > 1) {
         const dupIds = exitEdges.map(e => e.id).join(', ');
         errors.push(
-          `Loop node "${label}" имеет несколько рёбер «выход»: ${dupIds}. ` +
-          `Должно быть ровно одно исходящее ребро с меткой «выход».`
+          `Loop-узел "${label}" имеет несколько помеченных исходящих рёбер: ${dupIds}. ` +
+          `Должно быть ровно одно выходное ребро — снимите метки с остальных.`
         );
       }
-      // D-08.3 — no body
+      // D-03 — zero unlabeled (body) edges
       if (bodyEdges.length === 0) {
         errors.push(
-          `Loop node "${label}" не имеет ни одной body-ветви. ` +
-          `Добавьте хотя бы одно исходящее ребро с меткой, отличной от «выход».`
+          `Loop-узел "${label}" не имеет тела — добавьте исходящее ребро без метки.`
         );
       }
     }
@@ -234,17 +235,10 @@ export class GraphValidator {
 
   /**
    * Returns a human-readable label for a node (for use in error messages).
+   * Phase 49 D-13: delegates to the shared src/graph/node-label.ts so validator
+   * error text and RunnerView loop-picker captions stay in lock-step.
    */
   private nodeLabel(node: RPNode): string {
-    switch (node.kind) {
-      case 'start': return `start (${node.id})`;
-      case 'question': return node.questionText || node.id;
-      case 'answer': return (node.displayLabel ?? node.answerText) || node.id;
-      case 'text-block': return node.content.slice(0, 30) || node.id;
-      case 'loop-start': return node.loopLabel || node.id;                              // @deprecated Phase 43 D-CL-05
-      case 'loop-end': return `loop-end (${node.id})`;                                  // @deprecated Phase 43 D-CL-05
-      case 'snippet': return node.subfolderPath ? `snippet (${node.subfolderPath})` : 'snippet (root)';
-      case 'loop': return node.headerText || node.id;                                   // Phase 43 D-11 (LOOP-02)
-    }
+    return sharedNodeLabel(node);
   }
 }
