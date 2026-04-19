@@ -5,7 +5,7 @@
 //
 // All assertions in this file are expected RED before Task 2/3 implementation.
 
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { Setting } from 'obsidian';
 import { EditorPanelView } from '../views/editor-panel-view';
 import type RadiProtocolPlugin from '../main';
@@ -186,11 +186,27 @@ describe('NODEUI-03: answer form renders Display label before Answer text', () =
 // ── NODEUI-04: question form custom DOM + auto-grow textarea ──────────────
 
 describe('NODEUI-04: question form custom DOM + auto-grow textarea', () => {
+  // vitest node environment does not define requestAnimationFrame — install a
+  // synchronous polyfill (same pattern as RunnerView.test.ts:114-134) so the
+  // deferred height block runs inside the same tick, then tear it down.
+  let originalRaf: typeof globalThis.requestAnimationFrame | undefined;
+
   beforeEach(() => {
     installSettingPrototypeMock();
     createdElements.length = 0;
     textareaInputCb.cb = null;
     lastTextarea = null;
+    originalRaf = (globalThis as unknown as { requestAnimationFrame?: typeof requestAnimationFrame }).requestAnimationFrame;
+    (globalThis as unknown as { requestAnimationFrame: (cb: FrameRequestCallback) => number }).requestAnimationFrame =
+      (cb: FrameRequestCallback) => { cb(0); return 0; };
+  });
+
+  afterEach(() => {
+    if (originalRaf === undefined) {
+      delete (globalThis as unknown as { requestAnimationFrame?: unknown }).requestAnimationFrame;
+    } else {
+      (globalThis as unknown as { requestAnimationFrame: typeof requestAnimationFrame }).requestAnimationFrame = originalRaf;
+    }
   });
 
   it('renders a <textarea class="rp-question-textarea"> NOT wrapped in a .setting-item row', () => {
