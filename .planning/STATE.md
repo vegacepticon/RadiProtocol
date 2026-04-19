@@ -3,33 +3,35 @@ gsd_state_version: 1.0
 milestone: v1.8
 milestone_name: UX Polish & Snippet Picker Overhaul
 status: in_progress
-stopped_at: Phase 48 planned (2 plans, Waves 1-2) — ready to execute
-last_updated: "2026-04-19T01:00:00.000Z"
+stopped_at: Phase 48.1 complete — cosmetic toolbar-gap fix shipped; next is Phase 49
+last_updated: "2026-04-19T07:50:00.000Z"
 last_activity: 2026-04-19
-resume_file: .planning/phases/48-node-editor-ux-polish/
+resume_file: .planning/phases/48.1-toolbar-gap-tighten/
 progress:
-  total_phases: 7
-  completed_phases: 1
+  total_phases: 8
+  completed_phases: 2
   total_plans: 3
   completed_plans: 3
-  percent: 14
+  percent: 25
 ---
 
 # RadiProtocol — Project State
 
 **Updated:** 2026-04-19
 **Milestone:** v1.8 — UX Polish & Snippet Picker Overhaul
-**Status:** In progress — Phase 48 PLANNED (2 plans, Waves 1-2). Ready to execute.
-**Stopped at:** Phase 48 planned; next is /gsd-execute-phase 48
+**Status:** In progress — Phase 48 + 48.1 shipped. Next is Phase 49.
+**Stopped at:** Phase 48.1 complete (cosmetic toolbar-gap fix); next is /gsd-plan-phase 49
 
 ---
 
 ## Current Position
 
-Phase: 48 (Node Editor UX Polish) — 📋 planned (0/2 plans executed)
-Plans: 48-01 (TS core: NODEUI-01/02/03/04, Wave 1) ⏳; 48-02 (CSS + toolbar DOM re-order: NODEUI-05, Wave 2) ⏳
-Status: Research + Patterns + Validation + Plans + checker PASS all on disk. Next: /gsd-execute-phase 48.
-Last activity: 2026-04-19 — Phase 48 plans created (research → pattern-map → plan → verify), checker PASSED with 3 INFO-only observations; all 5 NODEUI-01..05 covered by plan requirements.
+Phase: 48.1 (Toolbar Gap Tighten, INSERTED) — ✅ complete (2 commits)
+Commits: 25ab41f (feat — margin-top:auto → var(--size-4-3)); f23b841 (fix — .rp-editor-panel height:100% → auto so form panel does not push toolbar off-screen).
+Tests: 440 passed / 1 skipped (was 438 after Phase 48).
+UAT: PASS 2026-04-19 (idle + form states; narrow sidebar unaffected).
+Next: /gsd-plan-phase 49 (Loop Exit Edge Convention — EDGE-01).
+Last activity: 2026-04-19 — Phase 48.1 shipped as direct 2-commit CSS fix (user opted out of full plan-phase workflow given trivial scope). Phase 48 UAT follow_up Test 7 marked resolved.
 
 ---
 
@@ -53,6 +55,10 @@ See: `.planning/PROJECT.md` (updated 2026-04-18)
 - v1.5: 4 phases — snippet editor refactoring (tree UI, modal create/edit, DnD, rename, MD snippets in runner)
 - v1.6: 7 phases — dead-code audit, canvas node creation, node duplication, live canvas update
 - v1.7: 4 phases — unified loop node, runtime picker, editor form + picker-modal + start-from-node command, free-text-input removal
+
+### Roadmap Evolution
+
+- Phase 48.1 inserted after Phase 48: Toolbar Gap Tighten — cosmetic UAT follow-up to shrink the empty gap between Node Editor form content and the bottom-anchored quick-create toolbar (originated from Phase 48 UAT Test 7 feedback) (URGENT)
 
 ### v1.8 Design Decisions (locked during /gsd-explore on 2026-04-18)
 

@@ -1,7 +1,7 @@
 # Roadmap: RadiProtocol
 
 **Project:** RadiProtocol
-**Last updated:** 2026-04-18
+**Last updated:** 2026-04-19
 
 ---
 
@@ -115,6 +115,7 @@ Full details: `.planning/milestones/v1.7-ROADMAP.md`
 
 - [x] **Phase 47: Runner Regressions** — ✅ Complete. RUNFIX-01/02/03 closed; code review (0 critical), verification, and live UAT all PASS (2026-04-19). RUNFIX-02 revised post-UAT to scroll-to-insertion-point (commit 95e7d0b).
 - [ ] **Phase 48: Node Editor UX Polish** — Remove obsolete Snippet ID field, re-anchor new nodes below last, reorder Answer fields, auto-grow Question textarea, relocate quick-create buttons to bottom vertical column
+- [x] **Phase 48.1: Toolbar Gap Tighten (INSERTED)** — ✅ Complete. Replaced `margin-top: auto` with `var(--size-4-3)` + overrode `.rp-editor-panel { height: auto }` (Phase 48.1b) to keep the form panel from pushing the toolbar off-screen. Live UAT PASS (2026-04-19). Commits: 25ab41f, f23b841.
 - [ ] **Phase 49: Loop Exit Edge Convention** — Derive loop exit button from the sole labeled outgoing edge; validator rejects zero or ≥2 labeled edges
 - [ ] **Phase 50: Answer ↔ Edge Label Sync** — Bind `Answer.displayLabel` bi-directionally with every incoming edge label across Node Editor, canvas save path, and edge label rendering
 - [ ] **Phase 51: Snippet Picker Overhaul** — Add specific-snippet binding on Snippet nodes + replace flat folder list with unified hierarchical picker (tree drill-down, breadcrumb, tree-wide search)
@@ -228,6 +229,17 @@ Plans:
 - [ ] 48-02-toolbar-css-bottom-stack-PLAN.md — Move renderToolbar call-site to the end of renderIdle + renderForm so toolbar becomes the last child of contentEl (NODEUI-05); append Phase 48 CSS blocks to src/styles/editor-panel.css (NODEUI-04 rp-question-block visuals + NODEUI-05 flex-direction:column + margin-top:auto override); run npm run build to regenerate styles.css; human-verify checkpoint UAT in TEST-BASE vault
 **UI hint**: yes
 
+### Phase 48.1: Toolbar Gap Tighten (INSERTED)
+**Goal**: Shrink the large empty vertical gap between the Node Editor form body and the bottom-anchored `.rp-editor-create-toolbar` so the quick-create buttons sit closer to the form content while keeping NODEUI-05 invariants (bottom anchor, full-width column, no wrap on narrow sidebar).
+**Depends on**: Phase 48 (touches the same `src/styles/editor-panel.css` Phase 48 NODEUI-05 block + potentially `renderIdle` / `renderForm` call-site in `editor-panel-view.ts`)
+**Requirements**: UAT-originated cosmetic follow-up — see `.planning/phases/48-node-editor-ux-polish/48-UAT.md` Gaps section (Test 7 feedback, severity: cosmetic)
+**Success Criteria** (what must be TRUE):
+  1. In both idle and form states the visual gap between the last form/idle content and the first toolbar button is reduced to a small fixed spacing (approx. `--size-4-3` / `--size-4-4`) instead of the current `margin-top: auto` fill-to-bottom gap
+  2. NODEUI-05 invariants are preserved: toolbar is still the last child of the panel's content element (below form fields), remains a full-width vertical column, and does not wrap horizontally on a ~300px-wide sidebar
+  3. All 3 existing Phase 48 NODEUI-05 tests in `src/__tests__/editor-panel-forms.test.ts` (DOM-order × 2 + CSS-file-parse × 1) stay green; the CSS-file-parse assertion updates if the CSS rule changes, but the toolbar-after-content ordering and flex-column+nowrap layout assertions stay intact
+**Plans**: None — shipped as a direct 2-commit CSS fix (25ab41f Phase 48.1 `margin-top` tighten + f23b841 Phase 48.1b `.rp-editor-panel { height: auto }` form-state fix). UAT pass 2026-04-19.
+**UI hint**: yes
+
 ### Phase 49: Loop Exit Edge Convention
 **Goal**: A loop node's outgoing edges follow the new label-based exit convention — exactly one labeled edge is the exit, its label becomes the Runner button caption, and validator rejects ambiguous configurations with plain-language Russian errors.
 **Depends on**: Phase 43 (needs the unified `LoopNode` model + `GraphValidator` scaffolding from v1.7) and Phase 44 (needs the loop picker rendering path in `RunnerView` that Phase 49 rewires)
@@ -301,6 +313,7 @@ Plans:
 | 46 | v1.7 | 3/3 | Complete | 2026-04-18 |
 | 47 | v1.8 | 3/3 | In progress | - |
 | 48 | v1.8 | 0/0 | Not started | - |
+| 48.1 | v1.8 | 1/1 | Complete (INSERTED) | 2026-04-19 |
 | 49 | v1.8 | 0/0 | Not started | - |
 | 50 | v1.8 | 0/0 | Not started | - |
 | 51 | v1.8 | 0/0 | Not started | - |

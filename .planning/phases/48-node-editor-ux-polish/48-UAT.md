@@ -66,9 +66,10 @@ skipped: 0
 ## Gaps
 
 - truth: "Quick-create toolbar should sit closer to form content (smaller gap between last form field and toolbar)"
-  status: follow_up
+  status: resolved
   reason: "User feedback during UAT Test 7: 'большой фиксированный разрыв, можно их подвинуть ближе?' — bottom-anchor via margin-top:auto pushes toolbar all the way to panel bottom, leaving a large visible empty gap when form content is short"
   severity: cosmetic
   test: 7
+  resolved_in: "Phase 48.1 (commits 25ab41f + f23b841) — margin-top:auto → var(--size-4-3) and .rp-editor-panel height:100% → auto; UAT pass 2026-04-19"
   artifacts: []
   missing: []
