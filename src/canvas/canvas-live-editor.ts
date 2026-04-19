@@ -148,11 +148,16 @@ export class CanvasLiveEditor {
    */
   async saveLiveBatch(
     filePath: string,
-    nodeEdits: Array<{ nodeId: string; edits: Record<string, unknown> }>
+    nodeEdits: Array<{ nodeId: string; edits: Record<string, unknown> }>,
+    // Phase 50 D-14: optional edge-label edits applied in the SAME Pattern B
+    // write so node + incoming-edge updates land in one setData/requestSave
+    // cycle. undefined label ≡ delete the 'label' key (D-08 symmetry with
+    // canvas-parser.ts:207-209). Design source: .planning/notes/answer-label-edge-sync.md
+    edgeEdits?: Array<{ edgeId: string; label: string | undefined }>
   ): Promise<boolean> {
     const view = this.getCanvasView(filePath);
     if (!view) return false;
-    if (nodeEdits.length === 0) return true;
+    if (nodeEdits.length === 0 && (!edgeEdits || edgeEdits.length === 0)) return true;
 
     const originalData: CanvasData = view.canvas.getData();
     const updatedData: CanvasData = view.canvas.getData();
@@ -163,6 +168,15 @@ export class CanvasLiveEditor {
       const node = updatedData.nodes.find((n: CanvasNodeData) => n.id === nodeId);
       if (!node) return false;
       targets.push({ node, edits });
+    }
+
+    // Phase 50 D-14: first-pass validate edge targets — bail without mutating
+    // if any edgeId is missing (mirrors node-target validation above).
+    if (edgeEdits) {
+      for (const { edgeId } of edgeEdits) {
+        const edge = updatedData.edges.find((e) => e.id === edgeId);
+        if (!edge) return false;
+      }
     }
 
     // Second pass: apply edits to each target's copy
@@ -187,6 +201,80 @@ export class CanvasLiveEditor {
             (node as Record<string, unknown>)[key] = value;
           }
         }
+      }
+    }
+
+    // Phase 50 D-14: apply edge mutations to updatedData. Same setData call
+    // below commits node + edge changes atomically — NEVER split into two
+    // setData/requestSave cycles (WR-01 doc-comment lines 138-148).
+    if (edgeEdits) {
+      for (const { edgeId, label } of edgeEdits) {
+        const edge = updatedData.edges.find((e) => e.id === edgeId);
+        if (!edge) continue; // first-pass already rejected; defensive
+        if (label === undefined) {
+          delete (edge as Record<string, unknown>)['label']; // D-08 strip-key
+        } else {
+          (edge as Record<string, unknown>)['label'] = label;
+        }
+      }
+    }
+
+    try {
+      view.canvas.setData(updatedData);
+      this.debouncedRequestSave(filePath, view);
+      return true;
+    } catch (err) {
+      try {
+        view.canvas.setData(originalData);
+      } catch (rollbackErr) {
+        console.error('[RadiProtocol] Canvas rollback failed — canvas may be in inconsistent state:', rollbackErr);
+      }
+      throw err;
+    }
+  }
+
+  /**
+   * Phase 50 D-12: Pattern B write for edge-label-only changes.
+   *
+   * Same getData → mutate → setData → debouncedRequestSave pattern as saveLive
+   * (lines 75-133) and saveLiveBatch (lines 149-205). Used by the modify-event
+   * reconciler (EdgeLabelSyncService) when a canvas-side edge edit has to be
+   * re-synced onto OTHER incoming edges of the same Answer, without touching
+   * any Answer node's radiprotocol_* fields.
+   *
+   * When an Answer's radiprotocol_displayLabel also needs updating, callers
+   * MUST use saveLiveBatch with edgeEdits instead — D-14 atomicity.
+   *
+   * undefined label ≡ delete 'label' key (D-08 symmetry with
+   * canvas-parser.ts:207-209).
+   *
+   * Design source: .planning/notes/answer-label-edge-sync.md
+   */
+  async saveLiveEdges(
+    filePath: string,
+    edgeEdits: Array<{ edgeId: string; label: string | undefined }>
+  ): Promise<boolean> {
+    const view = this.getCanvasView(filePath);
+    if (!view) return false;
+    if (edgeEdits.length === 0) return true;
+
+    const originalData: CanvasData = view.canvas.getData();
+    const updatedData: CanvasData = view.canvas.getData();
+
+    // First pass: locate every target edge; bail without mutating if any missing
+    for (const { edgeId } of edgeEdits) {
+      const edge = updatedData.edges.find((e) => e.id === edgeId);
+      if (!edge) return false;
+    }
+
+    // Second pass: apply label edits
+    for (const { edgeId, label } of edgeEdits) {
+      const edge = updatedData.edges.find((e) => e.id === edgeId);
+      if (!edge) continue; // defensive — first-pass already validated
+      if (label === undefined) {
+        delete (edge as Record<string, unknown>)['label']; // D-08 strip-key
+      } else {
+        (edge as Record<string, unknown>)['label'] = label;
       }
     }
 
