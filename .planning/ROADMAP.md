@@ -248,7 +248,14 @@ Plans:
   1. `GraphValidator` emits a clear Russian error naming the offending `loop` node when its outgoing edges have **zero** labeled edges ("нет выхода") or **two or more** labeled edges ("должен быть ровно один выход"), per `.planning/notes/loop-node-exit-edge-convention.md` (EDGE-01)
   2. In the Runner, the loop picker's exit button caption reads the label of the sole labeled outgoing edge verbatim — the hardcoded «выход» fallback in `RunnerView` is removed; body-branch iteration behaviour over unlabeled edges is unchanged (EDGE-01)
   3. A canvas that happened to use the literal label «выход» under the v1.7 convention continues to work because «выход» is still a valid label for the sole labeled edge; canvases with multiple labeled edges now surface the new validator error by design (no automatic migration, per REQUIREMENTS.md Out-of-Scope row 3)
-**Plans**: TBD
+**Plans:** 5 plans
+
+Plans:
+- [ ] 49-01-PLAN.md — Shared node-label util (nodeLabel + isLabeledEdge + isExitEdge) + unit tests
+- [ ] 49-02-PLAN.md — GraphValidator LOOP-04 rewrite (D-01/D-02/D-03 error copy) + graph-validator test updates
+- [ ] 49-03-PLAN.md — ProtocolRunner dispatch + RunnerView loop picker rewire + non-«выход» regression tests
+- [ ] 49-04-PLAN.md — Fixture audit: strip stray body-edge labels; add unified-loop-stray-body-label.canvas
+- [ ] 49-05-PLAN.md — Build + full test gate + UAT checkpoint (human-verify)
 
 ### Phase 50: Answer ↔ Edge Label Sync
 **Goal**: `Answer.displayLabel` is the single source of truth for every incoming Question→Answer edge label — edits to either side propagate through the canvas save path, Node Editor form, and edge label rendering so both views stay consistent.
