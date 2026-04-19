@@ -11,6 +11,7 @@ import type { PersistedSession } from '../sessions/session-model';
 import { validateSessionNodeIds } from '../sessions/session-service';
 import { CanvasSelectorWidget } from './canvas-selector-widget';
 import { CanvasSwitchModal } from './canvas-switch-modal';
+import { isExitEdge, nodeLabel } from '../graph/node-label';
 
 export const RUNNER_VIEW_TYPE = 'radiprotocol-runner';
 
@@ -480,11 +481,22 @@ export class RunnerView extends ItemView {
         const outgoing = this.graph.edges.filter(e => e.fromNodeId === state.nodeId);
         const list = questionZone.createDiv({ cls: 'rp-loop-picker-list' });
         for (const edge of outgoing) {
-          const label = edge.label ?? '(no label)';
-          const isExit = edge.label === 'выход'; // exact-match contract — Phase 43 D-08
+          // Phase 49 EDGE-01 — label-state convention:
+          //   * labeled edge (exit, uniqueness enforced by GraphValidator) → caption = trimmed label (D-06),
+          //                                                                   CSS class = rp-loop-exit-btn.
+          //   * unlabeled edge (body branch) → caption = nodeLabel() of the target node (D-11 / D-12),
+          //                                    CSS class = rp-loop-body-btn.
+          const exit = isExitEdge(edge);
+          let caption: string;
+          if (exit) {
+            caption = (edge.label ?? '').trim();            // D-06 — trimmed label verbatim
+          } else {
+            const target = this.graph.nodes.get(edge.toNodeId);
+            caption = target !== undefined ? nodeLabel(target) : edge.toNodeId;
+          }
           const btn = list.createEl('button', {
-            cls: isExit ? 'rp-loop-exit-btn' : 'rp-loop-body-btn',
-            text: label,
+            cls: exit ? 'rp-loop-exit-btn' : 'rp-loop-body-btn',
+            text: caption,
           });
           this.registerDomEvent(btn, 'click', () => {
             this.capturePendingTextareaScroll();  // RUNFIX-02: preserve scroll across re-render
