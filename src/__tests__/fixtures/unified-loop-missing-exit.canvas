@@ -7,7 +7,7 @@
   ],
   "edges": [
     { "id": "e1", "fromNode": "n-start", "toNode": "n-loop" },
-    { "id": "e2", "fromNode": "n-loop",  "toNode": "n-q1",   "label": "проверка" },
+    { "id": "e2", "fromNode": "n-loop",  "toNode": "n-q1" },
     { "id": "e3", "fromNode": "n-q1",    "toNode": "n-a1" },
     { "id": "e4", "fromNode": "n-a1",    "toNode": "n-loop" }
   ]
