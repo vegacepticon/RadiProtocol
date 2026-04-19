@@ -141,7 +141,7 @@ describe('CanvasNodeFactory', () => {
     expect(msg.toLowerCase()).toMatch(/unavailable|update/);
   });
 
-  it('Test 5: when anchorNodeId is provided and exists in canvas.nodes, pos is offset from anchor', async () => {
+  it('Test 5: when anchorNodeId is provided and exists in canvas.nodes, pos is offset BELOW anchor (Phase 48 NODEUI-02)', async () => {
     const fakeNode = makeFakeCanvasNode();
     const anchorNodes = new Map([
       ['anchor-1', { id: 'anchor-1', x: 100, y: 200, width: 300, height: 80 }],
@@ -155,7 +155,7 @@ describe('CanvasNodeFactory', () => {
 
     expect(leaf.view.canvas.createTextNode).toHaveBeenCalledWith(
       expect.objectContaining({
-        pos: { x: 100 + 300 + 40, y: 200 }, // anchor.x + anchor.width + NODE_GAP
+        pos: { x: 100, y: 200 + 80 + 40 }, // Phase 48 NODEUI-02: anchor.x, anchor.y + anchor.height + NODE_GAP
       })
     );
   });
