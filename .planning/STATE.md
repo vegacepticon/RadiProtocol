@@ -3,8 +3,8 @@ gsd_state_version: 1.0
 milestone: v1.8
 milestone_name: UX Polish & Snippet Picker Overhaul
 status: in_progress
-stopped_at: Phase 47 complete (all gates PASS + UAT approved for RUNFIX-01/02/03) — ready to advance to Phase 48 (Node Editor UX Polish)
-last_updated: "2026-04-19T00:10:00.000Z"
+stopped_at: Phase 48 planned (2 plans, Waves 1-2) — ready to execute
+last_updated: "2026-04-19T01:00:00.000Z"
 last_activity: 2026-04-19
 resume_file: .planning/phases/48-node-editor-ux-polish/
 progress:
@@ -19,17 +19,17 @@ progress:
 
 **Updated:** 2026-04-19
 **Milestone:** v1.8 — UX Polish & Snippet Picker Overhaul
-**Status:** In progress — Phase 47 COMPLETE (code review + verification + UAT all PASS). Ready to start Phase 48.
-**Stopped at:** Phase 47 complete; next is Phase 48 (Node Editor UX Polish)
+**Status:** In progress — Phase 48 PLANNED (2 plans, Waves 1-2). Ready to execute.
+**Stopped at:** Phase 48 planned; next is /gsd-execute-phase 48
 
 ---
 
 ## Current Position
 
-Phase: 47 (Runner Regressions) — ✅ complete (3/3 plans + code review + verification + UAT)
-Plans: 47-01 ✅ complete (RUNFIX-01); 47-02 ✅ complete (RUNFIX-02 — revised 2026-04-19 to scroll-to-bottom per UAT); 47-03 ✅ complete (RUNFIX-03, UAT-approved after 2 revisions)
-Status: Phase 47 closed. Next: /gsd-next → Phase 48 Node Editor UX Polish.
-Last activity: 2026-04-19 — RUNFIX-02 revision (scroll-to-insertion-point) UAT-approved; all three must-haves verified live in TEST-BASE vault; VERIFICATION.md status flipped to `pass`.
+Phase: 48 (Node Editor UX Polish) — 📋 planned (0/2 plans executed)
+Plans: 48-01 (TS core: NODEUI-01/02/03/04, Wave 1) ⏳; 48-02 (CSS + toolbar DOM re-order: NODEUI-05, Wave 2) ⏳
+Status: Research + Patterns + Validation + Plans + checker PASS all on disk. Next: /gsd-execute-phase 48.
+Last activity: 2026-04-19 — Phase 48 plans created (research → pattern-map → plan → verify), checker PASSED with 3 INFO-only observations; all 5 NODEUI-01..05 covered by plan requirements.
 
 ---
 
