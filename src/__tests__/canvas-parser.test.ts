@@ -182,3 +182,40 @@ describe('CanvasParser — snippet node extra fields (Phase 31)', () => {
     expect(node.radiprotocol_snippetSeparator).toBeUndefined();
   });
 });
+
+// Phase 50 fixtures for bi-directional Answer.displayLabel ↔ incoming edge label sync
+// (D-17: exercises reverseAdjacency enumeration used by edge-label-reconciler.ts
+// and regression-guards RPEdge.label propagation that the reconciler depends on).
+describe('Phase 50 fixtures — multi-incoming + displayLabel-edge mismatch', () => {
+  it('parses branching-multi-incoming.canvas — reverseAdjacency.get(sharedAnswerId) returns both Question parents', () => {
+    const parser = new CanvasParser();
+    const result = parser.parse(loadFixture('branching-multi-incoming.canvas'), 'branching-multi-incoming.canvas');
+    expect(result.success).toBe(true);
+    if (!result.success) return;
+    const graph = result.graph;
+    const incoming = graph.reverseAdjacency.get('n-a-shared');
+    expect(incoming).toBeDefined();
+    expect(incoming).toContain('n-q1');
+    expect(incoming).toContain('n-q2');
+    expect(incoming!.length).toBe(2);
+    // Edge labels preserved on RPEdge.label (reconciler's input)
+    const e1 = graph.edges.find(e => e.id === 'e1');
+    const e2 = graph.edges.find(e => e.id === 'e2');
+    expect(e1?.label).toBe('Вариант X');
+    expect(e2?.label).toBe('Вариант Y');
+  });
+
+  it('parses displayLabel-edge-mismatch.canvas — edge.label preserved on RPEdge.label; Answer.displayLabel preserved on node', () => {
+    const parser = new CanvasParser();
+    const result = parser.parse(loadFixture('displayLabel-edge-mismatch.canvas'), 'displayLabel-edge-mismatch.canvas');
+    expect(result.success).toBe(true);
+    if (!result.success) return;
+    const graph = result.graph;
+    const edge = graph.edges.find(e => e.id === 'e1');
+    expect(edge?.label).toBe('Y');
+    const answer = graph.nodes.get('n-a1');
+    expect(answer).toBeDefined();
+    if (!answer || answer.kind !== 'answer') return;
+    expect(answer.displayLabel).toBe('X');
+  });
+});
