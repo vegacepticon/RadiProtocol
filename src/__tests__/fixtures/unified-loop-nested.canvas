@@ -10,9 +10,9 @@
   "edges": [
     { "id": "e1", "fromNode": "n-start",   "toNode": "n-outer" },
     { "id": "e2", "fromNode": "n-outer",   "toNode": "n-inner" },
-    { "id": "e3", "fromNode": "n-outer",   "toNode": "n-end",     "label": "выход" },
+    { "id": "e3", "fromNode": "n-outer",   "toNode": "n-end",     "label": "+выход" },
     { "id": "e4", "fromNode": "n-inner",   "toNode": "n-inner-q" },
-    { "id": "e5", "fromNode": "n-inner",   "toNode": "n-outer",   "label": "выход" },
+    { "id": "e5", "fromNode": "n-inner",   "toNode": "n-outer",   "label": "+выход" },
     { "id": "e6", "fromNode": "n-inner-q", "toNode": "n-inner-a" },
     { "id": "e7", "fromNode": "n-inner-a", "toNode": "n-inner" }
   ]

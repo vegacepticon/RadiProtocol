@@ -9,9 +9,9 @@
   ],
   "edges": [
     { "id": "e1", "fromNode": "n-start", "toNode": "n-loop" },
-    { "id": "e2", "fromNode": "n-loop",  "toNode": "n-q1",   "label": "проверка" },
-    { "id": "e3", "fromNode": "n-loop",  "toNode": "n-end1", "label": "выход" },
-    { "id": "e4", "fromNode": "n-loop",  "toNode": "n-end2", "label": "выход" },
+    { "id": "e2", "fromNode": "n-loop",  "toNode": "n-q1" },
+    { "id": "e3", "fromNode": "n-loop",  "toNode": "n-end1", "label": "+выход" },
+    { "id": "e4", "fromNode": "n-loop",  "toNode": "n-end2", "label": "+готово" },
     { "id": "e5", "fromNode": "n-q1",    "toNode": "n-a1" },
     { "id": "e6", "fromNode": "n-a1",    "toNode": "n-loop" }
   ]
