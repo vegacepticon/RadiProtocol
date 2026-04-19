@@ -77,6 +77,14 @@ Phase 49 touches `GraphValidator`, `ProtocolRunner` dispatch, and `RunnerView` l
 - Exact test structure for the new error-copy assertions, provided each of D-01/D-02/D-03 is asserted at least once against a realistic fixture.
 - Whether to keep both CSS classes (`rp-loop-exit-btn` / `rp-loop-body-btn`) or collapse — **recommend keeping** so the exit button retains its visual accent.
 
+### Resolved During Plan-Phase (2026-04-19)
+
+Pattern mapper surfaced three discrepancies between CONTEXT.md (drafted before the codebase re-scan) and the current code. Resolved with user:
+
+- **D-18 (supersedes D-14 / corrects canonical_refs CSS path):** `.rp-loop-body-btn` and `.rp-loop-exit-btn` live in `src/styles/loop-support.css`, **not** `src/styles/runner-view.css`. Planner targets `loop-support.css` per the CLAUDE.md per-feature routing rule.
+- **D-19 (supersedes D-14):** **Keep Phase 47 wrap behavior** (`white-space: normal; word-break: break-word; overflow-wrap: anywhere` on `.rp-loop-body-btn`, loop-support.css:92-111). Do **not** override to `nowrap + ellipsis`. Rationale: under D-11/D-12 body-button captions are now `nodeLabel()`-extracted previews (typically short); wrap rarely triggers and Phase 47's narrow-sidebar Cyrillic readability fix must be preserved. Phase 49 ships **no CSS changes** to `loop-support.css`.
+- **D-20 (augments D-16):** `unified-loop-valid.canvas`, `unified-loop-nested.canvas`, and `unified-loop-long-body.canvas` currently carry `"проверка"`-labeled body edges that will fail validation under D-05 (≥2 labeled edges). The plan **strips the body-edge labels** on these three fixtures, keeping exactly one labeled (exit) edge each, preserving the fixtures' original intent (valid / nested / long-body) under the new convention.
+
 </decisions>
 
 <canonical_refs>
