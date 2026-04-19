@@ -117,7 +117,8 @@ Full details: `.planning/milestones/v1.7-ROADMAP.md`
 - [ ] **Phase 48: Node Editor UX Polish** — Remove obsolete Snippet ID field, re-anchor new nodes below last, reorder Answer fields, auto-grow Question textarea, relocate quick-create buttons to bottom vertical column
 - [x] **Phase 48.1: Toolbar Gap Tighten (INSERTED)** — ✅ Complete. Replaced `margin-top: auto` with `var(--size-4-3)` + overrode `.rp-editor-panel { height: auto }` (Phase 48.1b) to keep the form panel from pushing the toolbar off-screen. Live UAT PASS (2026-04-19). Commits: 25ab41f, f23b841.
 - [x] **Phase 49: Loop Exit Edge Convention** — ✅ Complete 2026-04-19. EDGE-01 closed by human UAT (non-«выход» exit label verbatim, D-01/D-02/D-03 error panel text, legacy «выход» canvases regress-free in TEST-BASE). Tests: 466 passed / 0 failed / 1 skipped (+26 vs Phase 48.1 baseline). Zero runtime `edge.label === 'выход'` in src/. gsd-verifier: 11/11 must-haves verified, status `passed`.
-- [x] **Phase 50: Answer ↔ Edge Label Sync** — ✅ Complete 2026-04-19. EDGE-02 closed by human UAT PASS (5/5 scenarios in TEST-BASE: canvas-open Pattern B D-14 atomic write, canvas-closed Strategy A single vault.modify, D-04 inbound reconcile with D-07 self-termination, multi-incoming sibling re-sync, clearing symmetry 5a+5b). Tests: 484 passed / 1 skipped / 0 failed (+18 vs Phase 49 baseline). gsd-verifier: 37/37 must-haves verified (commit 62dd212), status `passed`. Follow-up Phase 51 loop-exit `+`-prefix convention captured as out-of-scope design note.
+- [x] **Phase 50: Answer ↔ Edge Label Sync** — ✅ Complete 2026-04-19. EDGE-02 closed by human UAT PASS (5/5 scenarios in TEST-BASE: canvas-open Pattern B D-14 atomic write, canvas-closed Strategy A single vault.modify, D-04 inbound reconcile with D-07 self-termination, multi-incoming sibling re-sync, clearing symmetry 5a+5b). Tests: 484 passed / 1 skipped / 0 failed (+18 vs Phase 49 baseline). gsd-verifier: 37/37 must-haves verified (commit 62dd212), status `passed`. Follow-up captured as Phase 50.1 (INSERTED).
+- [ ] **Phase 50.1: Loop Exit `+` Prefix Convention (INSERTED)** — Replace Phase 49 D-07 `isExitEdge = isLabeledEdge` alias with strict `label.trim().startsWith('+')` rule so multiple body edges may carry labels (unblocked by Phase 50 auto-sync) while exit edge remains unambiguously marked. Updates `isExitEdge` in `src/graph/node-label.ts`, LOOP-04 validator, ProtocolRunner.chooseLoopBranch, RunnerView captions (strip `+` in UI), and migrates 4 loop-canvas fixtures. Requires discuss-phase before planning — vault migration policy + `+`-count constraint + UI stripping semantics are open questions.
 - [ ] **Phase 51: Snippet Picker Overhaul** — Add specific-snippet binding on Snippet nodes + replace flat folder list with unified hierarchical picker (tree drill-down, breadcrumb, tree-wide search)
 - [ ] **Phase 52: JSON Placeholder Rework** — Collapse placeholder types to `free text` + unified `choice`; fix broken options-list editor; hard-reject legacy `number`/`multichoice`/old-choice snippets
 - [ ] **Phase 53: BRAT Distribution Readiness** — Align `manifest.json` / `versions.json` / git tags; publish first GitHub Release with `manifest.json` + `main.js` + `styles.css` assets; verify BRAT install end-to-end
@@ -274,6 +275,25 @@ Plans:
 - [x] 50-04-PLAN.md — EdgeLabelSyncService + main.ts wire-up + editor-panel-view Display-label atomic write (D-01/D-06/D-10/D-13/D-14) — ✅ 3cf8bd2+00690e2+fd7c78b (2026-04-19)
 - [x] 50-05-PLAN.md — Build + full test gate + human UAT checkpoint (5 scenarios) — ✅ 95a5f15 + rollup (2026-04-19; UAT PASS in TEST-BASE)
 **UI hint**: yes
+
+### Phase 50.1: Loop Exit `+` Prefix Convention (INSERTED)
+**Goal**: Replace Phase 49 D-07 convention (exit edge = any labeled edge) with a `+`-prefix marker so loop nodes can have multiple labeled body edges without ambiguity, while keeping exactly one (or more, TBD in discuss) `+`-prefixed exit edge. Resolves the conflict identified post-Phase-50 UAT between Phase 49 loop-exit convention and Phase 50 auto-sync of shared Answer.displayLabel labels on multi-incoming topologies.
+**Depends on**: Phase 49 (rewires its `isExitEdge` contract), Phase 50 (preserves its sync semantics on Answer.displayLabel — out-of-scope for this phase)
+**Requirements**: EDGE-03 (new; supersedes EDGE-01 from Phase 49)
+**Success Criteria** (what must be TRUE — locked by Phase 50.1 CONTEXT + plan-phase):
+  1. `isExitEdge(edge)` returns true iff `edge.label?.trim().startsWith('+')` — the Phase 49 alias to `isLabeledEdge` is removed; body edges with non-`+` labels are NOT exits (D-10)
+  2. LOOP-04 validator emits five distinct Russian error texts (D-04..D-08) with locked verbatim strings: clean zero-exit, legacy-hint with candidate `{edgeIds}`, ≥2 `+`-edges, empty caption post-strip (per-edge), and no-body — in that order (D-04/D-05 → D-06 → D-08 → D-07); exactly one `+`-edge allowed per loop node (D-01)
+  3. ProtocolRunner.chooseLoopBranch dispatches via `isExitEdge` (unchanged call site, new predicate semantics); RunnerView exit-button caption uses `stripExitPrefix` to strip `+` and any following whitespace (D-09/D-11/D-12); body-button caption stays `nodeLabel(target)` byte-identical to Phase 49; click-handler ordering preserved character-for-character
+  4. All seven existing `unified-loop-*.canvas` Phase 49 fixtures migrated in-place to `+`-prefix labels (D-13); three new fixtures added (D-14): `unified-loop-legacy-vyhod` (D-05), `unified-loop-labeled-body` (Phase 49↔50 conflict regression), `unified-loop-empty-plus` (D-08); NO auto-migration — legacy bare-«выход» canvases surface D-05 hard validation error (D-02/D-03)
+  5. Full-suite tests green (target: ≥484 preserved + ≥15 new Phase 50.1 tests); `node-label.test.ts` covers the D-15 input matrix (`+выход`, `+ выход`, `+ выход`, `"  +выход  "`, `"+"`, `"+ "`, `"++foo"`, `"foo+"`, `""`, `null`) plus the alias-removal regression `expect(isExitEdge).not.toBe(isLabeledEdge)`; Phase 50 reconciler tests stay green untouched; zero runtime literal-«выход» comparison outside the preserved Phase 43 MIGRATE-01 block
+**Plans**: 5 plans
+Plans:
+- [ ] 50.1-01-PLAN.md — node-label.ts redefine isExitEdge + add stripExitPrefix + node-label tests + EDGE-03 in REQUIREMENTS.md (Wave 1)
+- [ ] 50.1-02-PLAN.md — graph-validator.ts LOOP-04 rewrite (D-04..D-08) + graph-validator tests (Wave 2)
+- [ ] 50.1-03-PLAN.md — runner-view caption via stripExitPrefix + protocol-runner JSDoc + runner-loop-picker tests (incl. Phase 49↔50 conflict regression) (Wave 2)
+- [ ] 50.1-04-PLAN.md — migrate 7 existing unified-loop-*.canvas fixtures + 3 new fixtures (legacy-vyhod, labeled-body, empty-plus) (Wave 1)
+- [ ] 50.1-05-PLAN.md — build + full test gate + regression-protection audits + canonical-note rewrite + human UAT (Wave 3)
+**UI hint**: yes (runtime exit-button caption rendering changes)
 
 ### Phase 51: Snippet Picker Overhaul
 **Goal**: Snippet nodes can bind to either a directory (existing) or a specific snippet file (new), and every snippet/folder selection in the plugin is driven by one reusable hierarchical navigator with search, replacing the flat directory list.
