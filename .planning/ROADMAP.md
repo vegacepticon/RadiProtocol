@@ -116,7 +116,7 @@ Full details: `.planning/milestones/v1.7-ROADMAP.md`
 - [x] **Phase 47: Runner Regressions** — ✅ Complete. RUNFIX-01/02/03 closed; code review (0 critical), verification, and live UAT all PASS (2026-04-19). RUNFIX-02 revised post-UAT to scroll-to-insertion-point (commit 95e7d0b).
 - [ ] **Phase 48: Node Editor UX Polish** — Remove obsolete Snippet ID field, re-anchor new nodes below last, reorder Answer fields, auto-grow Question textarea, relocate quick-create buttons to bottom vertical column
 - [x] **Phase 48.1: Toolbar Gap Tighten (INSERTED)** — ✅ Complete. Replaced `margin-top: auto` with `var(--size-4-3)` + overrode `.rp-editor-panel { height: auto }` (Phase 48.1b) to keep the form panel from pushing the toolbar off-screen. Live UAT PASS (2026-04-19). Commits: 25ab41f, f23b841.
-- [x] **Phase 49: Loop Exit Edge Convention** — ✅ Plans 01-05 complete 2026-04-19. EDGE-01 closed by human UAT (non-«выход» exit label verbatim, D-01/D-02/D-03 error panel text, legacy «выход» canvases regress-free in TEST-BASE). Tests: 466 passed / 0 failed / 1 skipped (+26 vs Phase 48.1 baseline). Zero runtime `edge.label === 'выход'` in src/. Phase-level gates (regression / code-review / verify_phase_goal) pending orchestrator before the ROADMAP tick propagates to the progress table row.
+- [x] **Phase 49: Loop Exit Edge Convention** — ✅ Complete 2026-04-19. EDGE-01 closed by human UAT (non-«выход» exit label verbatim, D-01/D-02/D-03 error panel text, legacy «выход» canvases regress-free in TEST-BASE). Tests: 466 passed / 0 failed / 1 skipped (+26 vs Phase 48.1 baseline). Zero runtime `edge.label === 'выход'` in src/. gsd-verifier: 11/11 must-haves verified, status `passed`.
 - [ ] **Phase 50: Answer ↔ Edge Label Sync** — Bind `Answer.displayLabel` bi-directionally with every incoming edge label across Node Editor, canvas save path, and edge label rendering
 - [ ] **Phase 51: Snippet Picker Overhaul** — Add specific-snippet binding on Snippet nodes + replace flat folder list with unified hierarchical picker (tree drill-down, breadcrumb, tree-wide search)
 - [ ] **Phase 52: JSON Placeholder Rework** — Collapse placeholder types to `free text` + unified `choice`; fix broken options-list editor; hard-reject legacy `number`/`multichoice`/old-choice snippets
@@ -321,7 +321,7 @@ Plans:
 | 47 | v1.8 | 3/3 | In progress | - |
 | 48 | v1.8 | 0/0 | Not started | - |
 | 48.1 | v1.8 | 1/1 | Complete (INSERTED) | 2026-04-19 |
-| 49 | v1.8 | 5/5 | Complete (plans shipped; phase-level gates pending) | 2026-04-19 |
+| 49 | v1.8 | 5/5 | Complete | 2026-04-19 |
 | 50 | v1.8 | 0/0 | Not started | - |
 | 51 | v1.8 | 0/0 | Not started | - |
 | 52 | v1.8 | 0/0 | Not started | - |
