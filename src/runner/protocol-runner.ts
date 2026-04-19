@@ -3,6 +3,7 @@
 import type { ProtocolGraph, LoopContext } from '../graph/graph-model';
 import type { RunnerState, UndoEntry } from './runner-state';
 import { TextAccumulator } from './text-accumulator';
+import { isExitEdge } from '../graph/node-label';
 
 interface ProtocolRunnerOptions {
   /** Hard maximum loop iteration count before transitioning to error state. Default: 50. (D-08, RUN-09) */
@@ -164,7 +165,7 @@ export class ProtocolRunner {
   /**
    * Phase 44 (RUN-01, RUN-03): user picks a branch at the loop picker.
    * Valid only in 'awaiting-loop-pick'. Dispatches by edge label:
-   *   - 'выход'  → pop the current loop frame, advance along the exit edge
+   *   - labeled edge (Phase 49 EDGE-01) → pop the current loop frame, advance along the exit edge
    *   - other    → walk the body branch (B1 re-entry guard inside case 'loop'
    *                handles the iteration increment on return to picker)
    *
@@ -191,13 +192,14 @@ export class ProtocolRunner {
       loopContextStack: [...this.loopContextStack],
     });
 
-    if (edge.label === 'выход') {
-      // RUN-03: pop frame (top-of-stack, nested-safe)
+    if (isExitEdge(edge)) {
+      // RUN-03: pop frame (top-of-stack, nested-safe). Phase 49 EDGE-01:
+      // the labeled outgoing edge (uniqueness enforced by GraphValidator) is the exit.
       this.loopContextStack.pop();
     }
     // Body branch: DO NOT increment iteration here. The B1 re-entry guard inside
     // case 'loop' is the sole site that increments iteration (fires on back-edge
-    // re-entry AND on inner-«выход» landing on outer). This keeps the semantic
+    // re-entry AND on inner-exit landing on outer). This keeps the semantic
     // "iteration = number of times user has seen the picker for this loop node":
     //   - First loop-entry:         iteration = 1 (halts at picker)
     //   - Pick body → walk → return: B1 increments to 2 (2nd picker view)
