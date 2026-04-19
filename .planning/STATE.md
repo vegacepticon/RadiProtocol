@@ -3,16 +3,16 @@ gsd_state_version: 1.0
 milestone: v1.8
 milestone_name: UX Polish & Snippet Picker Overhaul
 status: in_progress
-stopped_at: Phase 49 Plan 01 shipped — shared node-label module + tests green; Plan 02 next (validator rewire)
-last_updated: "2026-04-19T09:07:05.000Z"
+stopped_at: Phase 49 Plan 02 shipped — validator LOOP-04 rewired to isLabeledEdge + D-01/D-02/D-03 error copy; Plan 03 next (runner + view rewire)
+last_updated: "2026-04-19T12:14:00.000Z"
 last_activity: 2026-04-19
 resume_file: .planning/phases/49-loop-exit-edge-convention/
 progress:
   total_phases: 8
   completed_phases: 2
   total_plans: 8
-  completed_plans: 4
-  percent: 28
+  completed_plans: 5
+  percent: 31
 ---
 
 # RadiProtocol — Project State
@@ -26,11 +26,12 @@ progress:
 
 ## Current Position
 
-Phase: 49 (Loop Exit Edge Convention) — 🔄 Plan 01 complete (2 commits), Plan 02 next
+Phase: 49 (Loop Exit Edge Convention) — 🔄 Plans 01-02 complete (4 commits), Plan 03 next
 Plan 49-01 commits: 4fce768 (feat — shared node-label.ts with nodeLabel/isLabeledEdge/isExitEdge); c39876f (test — 23 unit tests covering all 8 nodeLabel arms + D-05 trim semantics + D-07 alias identity).
-Tests: 463 passed / 1 skipped (was 440; +23 new tests from Plan 49-01).
-Next: /gsd-execute-plan 49 02 (validator rewire — LOOP-04 check + delegate private nodeLabel to shared util per D-04/D-13).
-Last activity: 2026-04-19 — Plan 49-01 shipped. New shared pure module `src/graph/node-label.ts` establishes the interface contract for Plans 49-02 (validator) and 49-03 (runtime + view). Zero existing call-sites rewired in this plan. tsc --noEmit green; full suite green.
+Plan 49-02 commits: f4effe5 (refactor — GraphValidator LOOP-04 rewired to isLabeledEdge + D-01/D-02/D-03 Russian error copy verbatim; private nodeLabel() delegates to sharedNodeLabel); a9c9fa8 (test — 4 LOOP-04 assertions updated to new wording + 1 new stray-body-label test + D-CL-02 order test updated).
+Tests: 461 passed / 1 skipped / 3 failed (was 463/1/0 before Plan 02). The 3 red tests are plan-documented Plan-04 dependencies (2 assertion flips on fixtures still carrying pre-Phase-49 «проверка» labels on body edges; 1 ENOENT for unified-loop-stray-body-label.canvas which Plan 04 will create). Plan 05 is the combined gate.
+Next: /gsd-execute-plan 49 03 (runtime + view rewire — protocol-runner.ts line 194 + runner-view.ts lines 479-496 rewired to isExitEdge + nodeLabel for body-button captions per D-08/D-11/D-12).
+Last activity: 2026-04-19 — Plan 49-02 shipped. Validator now speaks the Phase 49 convention (label-state-based, not literal-string-based). Error copy matches 49-CONTEXT.md D-01/D-02/D-03 verbatim. Shared `nodeLabel()` is the single source of truth (validator delegates via 1-line private wrapper). Migration-error block at lines 47-50 left verbatim per D-15.
 
 ---
 
@@ -88,6 +89,7 @@ See: `.planning/PROJECT.md` (updated 2026-04-18)
 - **Phase 47 Plan 02 (2026-04-18):** RUNFIX-02 closed by introducing `pendingTextareaScrollTop` private field + `capturePendingTextareaScroll` helper on `RunnerView`; helper is called as the FIRST line of each choice-click handler (answer, snippet-branch, loop-body/exit, snippet-picker row) and consumed inside `renderPreviewZone`'s existing `requestAnimationFrame` callback after the height recompute — scrolls are now preserved across the render-triggered textarea rebuild. Commits: 126ee08 (test RED, 5 tests), 325f39d (fix GREEN). Diff strictly additive (+31/-0 in runner-view.ts); all four pre-existing BUG-01 `syncManualEdit(previewTextarea)` calls preserved verbatim. Summary: `.planning/phases/47-runner-regressions/47-02-SUMMARY.md`.
 - **Phase 47 Plan 03 (2026-04-18):** RUNFIX-03 closed by appending three successive Phase 47 CSS blocks to `src/styles/runner-view.css` + `src/styles/loop-support.css` — strictly additive, CLAUDE.md append-only-per-phase compliant. Initial commit 3f7f628 (feat — typography: padding, line-height 1.55, min-height 44px on .rp-answer-btn / .rp-snippet-branch-btn / .rp-loop-body-btn / .rp-loop-exit-btn). UAT revision 1 — 84adf10 (fix — narrow-sidebar overflow: box-sizing:border-box, horizontal padding --size-4-3, overflow-wrap:anywhere, width:100% + min-width:0 on loop buttons). UAT revision 2 — d23aaff (fix — final: defeated Obsidian base `button { height: var(--input-height); align-items: center }` default with height:auto + align-items:flex-start + horizontal padding --size-4-4 ~16px). User approved in TEST-BASE vault with narrow sidebar + tab-mode layout after revision 2. Key-decision pattern: three-revision UAT loop on a CSS-only plan where each UAT rejection appends a new block below the previous one naming the DevTools-confirmed root cause. Zero TypeScript changes; full vitest suite stays at 428 passed / 1 skipped. Summary: `.planning/phases/47-runner-regressions/47-03-SUMMARY.md`. Phase-level gates (regression gate, code review, verify_phase_goal) still pending — orchestrator responsibility.
 - **Phase 49 Plan 01 (2026-04-19):** New pure module `src/graph/node-label.ts` (51 lines) extracts `nodeLabel()` verbatim from `GraphValidator.nodeLabel()` (graph-validator.ts:238-249) and adds `isLabeledEdge(edge)` (D-05 trim predicate) + `isExitEdge = isLabeledEdge` (D-07 named alias, same function reference). All 8 `RPNodeKind` arms preserved including `@deprecated` `loop-start`/`loop-end`. 23 new unit tests in `src/__tests__/graph/node-label.test.ts` (new subdir mirrors existing `src/__tests__/runner/` convention) cover every arm, D-05 trim semantics (6 falsy + 5 truthy + null-defensive via `it.each`), and D-07 alias identity (`isExitEdge === isLabeledEdge` via `toBe`). Commits: 4fce768 (feat — module), c39876f (test — 23 tests). Tests: 463 passed / 1 skipped (+23 from baseline 440). tsc --noEmit exit 0. Auto-fix: [Rule 3 — Blocking] `it.each` callback needed a 3rd `_description` parameter for TypeScript strict-mode tuple inference — fixed before commit. Zero existing call-sites rewired; graph-validator.ts untouched (Plan 49-02 will delegate). No CSS changes (per D-19, Phase 49 ships zero CSS edits). Summary: `.planning/phases/49-loop-exit-edge-convention/49-01-SUMMARY.md`.
+- **Phase 49 Plan 02 (2026-04-19):** Validator LOOP-04 check in `src/graph/graph-validator.ts` rewritten to use `isLabeledEdge()` from shared `src/graph/node-label.ts` — literal `edge.label === 'выход'` comparisons removed from runtime (migration-error block at lines 47-50 left verbatim per D-15). D-01/D-02/D-03 Russian error strings emitted verbatim matching 49-CONTEXT.md locked copy: `не имеет выхода. Пометьте ровно одно исходящее ребро — его метка станет подписью кнопки выхода.`, `имеет несколько помеченных исходящих рёбер: {edgeIds}. Должно быть ровно одно выходное ребро — снимите метки с остальных.`, `не имеет тела — добавьте исходящее ребро без метки.`. Private `GraphValidator.nodeLabel()` delegates to `sharedNodeLabel()` via a 1-line wrapper — 12-line duplicated switch body removed, all 4 callers (`:42/:65/:103/:206`) unchanged. Test file updated: 4 existing LOOP-04 tests point at D-01/D-02/D-03 wording; 1 new stray-body-label test added (references `unified-loop-stray-body-label.canvas` that Plan 04 will create); D-CL-02 order test updated to Phase 49 wording + added a negative guard `не имеет ребра` to prove the old literal is dead from the validator. Commits: f4effe5 (refactor — LOOP-04 rewire + nodeLabel delegation; -26/+20), a9c9fa8 (test — 4 updates + 1 new test + D-CL-02 update; -33/+56). Tests: 461 passed / 1 skipped / 3 failed — the 3 reds are all plan-documented Plan-04 dependencies (2 fixtures still carry pre-Phase-49 «проверка» body-edge labels, 1 fixture doesn't exist yet). Plan 05 is the combined gate. tsc --noEmit exit 0. Deviations: [Rule 2] added the sibling negative-guard assertion on `не имеет ребра` in the D-CL-02 order test — the plan offered a choice between "update to new wording" OR "keep as strict old-wording guard"; chose "both" for maximum regression protection. Summary: `.planning/phases/49-loop-exit-edge-convention/49-02-SUMMARY.md`.
 
 ### Open Tech Debt Carried Over from v1.7
 
