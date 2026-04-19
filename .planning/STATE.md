@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.8
 milestone_name: UX Polish & Snippet Picker Overhaul
 status: in_progress
-stopped_at: Phase 48.1 complete — cosmetic toolbar-gap fix shipped; next is Phase 49
-last_updated: "2026-04-19T07:50:00.000Z"
+stopped_at: Phase 49 planned — 5 plans in 3 waves, verification passed, ready to execute
+last_updated: "2026-04-19T09:15:00.000Z"
 last_activity: 2026-04-19
-resume_file: .planning/phases/48.1-toolbar-gap-tighten/
+resume_file: .planning/phases/49-loop-exit-edge-convention/
 progress:
   total_phases: 8
   completed_phases: 2
-  total_plans: 3
+  total_plans: 8
   completed_plans: 3
   percent: 25
 ---
@@ -19,8 +19,8 @@ progress:
 
 **Updated:** 2026-04-19
 **Milestone:** v1.8 — UX Polish & Snippet Picker Overhaul
-**Status:** In progress — Phase 48 + 48.1 shipped. Next is Phase 49.
-**Stopped at:** Phase 48.1 complete (cosmetic toolbar-gap fix); next is /gsd-plan-phase 49
+**Status:** In progress — Phase 48 + 48.1 shipped. Phase 49 planned (5 plans, 3 waves) and ready to execute.
+**Stopped at:** Phase 49 planning complete — run /gsd-execute-phase 49
 
 ---
 
