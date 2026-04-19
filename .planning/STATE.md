@@ -3,30 +3,30 @@ gsd_state_version: 1.0
 milestone: v1.8
 milestone_name: UX Polish & Snippet Picker Overhaul
 status: in_progress
-stopped_at: Phase 49 Plan 03 shipped — ProtocolRunner + RunnerView rewired to isExitEdge + nodeLabel captions; Plan 04 next (fixture audit + stripping body-edge labels per D-20)
-last_updated: "2026-04-19T09:25:00.000Z"
+stopped_at: Phase 49 Plan 04 shipped — fixture corpus aligned with Phase 49 D-05/D-09 convention; all 7 previously-expected reds flipped green (466/0 failed); Plan 05 next (combined-gate verification)
+last_updated: "2026-04-19T09:30:00.000Z"
 last_activity: 2026-04-19
 resume_file: .planning/phases/49-loop-exit-edge-convention/
 progress:
   total_phases: 8
   completed_phases: 2
   total_plans: 8
-  completed_plans: 6
-  percent: 38
+  completed_plans: 7
+  percent: 44
 ---
 
 # RadiProtocol — Project State
 
 **Updated:** 2026-04-19
 **Milestone:** v1.8 — UX Polish & Snippet Picker Overhaul
-**Status:** In progress — Phase 48 + 48.1 shipped. Phase 49 plans 01-03 complete (Waves 1 + 2).
-**Stopped at:** Phase 49 Plan 03 shipped — run /gsd-execute-plan 49 04 (fixture audit + body-label stripping)
+**Status:** In progress — Phase 48 + 48.1 shipped. Phase 49 plans 01-04 complete (Waves 1 + 2 + 3), Plan 05 combined gate pending.
+**Stopped at:** Phase 49 Plan 04 shipped — run /gsd-execute-plan 49 05 (combined-gate verification)
 
 ---
 
 ## Current Position
 
-Phase: 49 (Loop Exit Edge Convention) — 🔄 Plans 01-03 complete (7 commits), Plan 04 next
+Phase: 49 (Loop Exit Edge Convention) — 🔄 Plans 01-04 complete (9 commits), Plan 05 next
 Plan 49-01 commits: 4fce768 (feat — shared node-label.ts with nodeLabel/isLabeledEdge/isExitEdge); c39876f (test — 23 unit tests covering all 8 nodeLabel arms + D-05 trim semantics + D-07 alias identity).
 Plan 49-02 commits: f4effe5 (refactor — GraphValidator LOOP-04 rewired to isLabeledEdge + D-01/D-02/D-03 Russian error copy verbatim; private nodeLabel() delegates to sharedNodeLabel); a9c9fa8 (test — 4 LOOP-04 assertions updated to new wording + 1 new stray-body-label test + D-CL-02 order test updated).
 Plan 49-03 commits: 98df8ee (refactor — ProtocolRunner.chooseLoopBranch dispatch swapped from literal `edge.label === 'выход'` to `isExitEdge(edge)`; JSDoc + inline comment updates at lines 167 and 200); 0846db2 (refactor — RunnerView awaiting-loop-pick arm rewired to isExitEdge + nodeLabel; exit caption uses trimmed label per D-06; body caption uses `nodeLabel(target)` per D-11/D-12; click-handler ordering preserved character-for-character); c5c1729 (test — 2 regression tests with an inline ProtocolGraph factory using `label: 'готово'` proving dispatch is label-state-based not literal-«выход»).
