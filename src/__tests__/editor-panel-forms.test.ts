@@ -321,4 +321,15 @@ describe('NODEUI-05: editor-panel.css has Phase 48 column-stack rules', () => {
     expect(phase481Region).toContain('.rp-editor-create-toolbar');
     expect(phase481Region).toContain('margin-top: var(--size-4-3)');
   });
+
+  it('Phase 48.1b: .rp-editor-panel height override is present so form panel does not push the toolbar off-screen', () => {
+    const cssPath = path.resolve(__dirname, '../styles/editor-panel.css');
+    const css = fs.readFileSync(cssPath, 'utf8');
+    const phase481bIdx = css.indexOf('/* Phase 48.1b');
+    expect(phase481bIdx).toBeGreaterThanOrEqual(0);
+    const phase4PanelIdx = css.indexOf('.rp-editor-panel');
+    expect(phase481bIdx).toBeGreaterThan(phase4PanelIdx);
+    const phase481bRegion = css.slice(phase481bIdx);
+    expect(phase481bRegion).toMatch(/\.rp-editor-panel\s*\{[^}]*height:\s*auto/);
+  });
 });

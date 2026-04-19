@@ -238,3 +238,7 @@
 .rp-editor-create-toolbar {
   margin-top: var(--size-4-3);
 }
+/* Phase 48.1b: prevent form panel's height:100% (Phase 4) from pushing the bottom toolbar off-screen in form state — panel must take natural height so the toolbar sits directly beneath form content */
+.rp-editor-panel {
+  height: auto;
+}
