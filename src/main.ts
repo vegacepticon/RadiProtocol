@@ -11,6 +11,7 @@ import { SessionService } from './sessions/session-service';
 import { WriteMutex } from './utils/write-mutex';
 import { CanvasLiveEditor } from './canvas/canvas-live-editor';
 import { CanvasNodeFactory } from './canvas/canvas-node-factory';
+import { EdgeLabelSyncService } from './canvas/edge-label-sync-service';
 // Phase 45 (LOOP-06): start-from-node command dependencies
 import { NodePickerModal, buildNodeOptions } from './views/node-picker-modal';
 import { GraphValidator } from './graph/graph-validator';
@@ -22,6 +23,7 @@ export default class RadiProtocolPlugin extends Plugin {
   sessionService!: SessionService;
   canvasLiveEditor!: CanvasLiveEditor;
   canvasNodeFactory!: CanvasNodeFactory;
+  edgeLabelSyncService!: EdgeLabelSyncService;
   private readonly insertMutex = new WriteMutex();
 
   async onload(): Promise<void> {
@@ -42,6 +44,12 @@ export default class RadiProtocolPlugin extends Plugin {
 
     // Instantiate canvas node factory (CANVAS-01)
     this.canvasNodeFactory = new CanvasNodeFactory(this.app);
+
+    // Phase 50 D-01: own the vault.on('modify') subscription for bi-directional
+    // Answer.displayLabel ↔ incoming-edge label sync. Design source:
+    // .planning/notes/answer-label-edge-sync.md
+    this.edgeLabelSyncService = new EdgeLabelSyncService(this.app, this);
+    this.edgeLabelSyncService.register();
 
     this.addRibbonIcon('activity', 'Radiprotocol', () => { void this.activateRunnerView(); });
 
@@ -134,6 +142,7 @@ export default class RadiProtocolPlugin extends Plugin {
   async onunload(): Promise<void> {
     this.canvasLiveEditor.destroy();
     this.canvasNodeFactory.destroy();
+    this.edgeLabelSyncService.destroy();
     console.debug('[RadiProtocol] Plugin unloaded');
   }
 
