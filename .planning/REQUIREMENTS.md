@@ -48,7 +48,7 @@
 
 ### Edge Semantics (EDGE)
 
-- [ ] **EDGE-01**: A loop node's outgoing edges follow a new convention: **exactly one** labeled edge is the loop exit (its label becomes the exit button caption in Runner); all unlabeled outgoing edges are body branches. `GraphValidator` rejects loop nodes with zero or two-or-more labeled outgoing edges with clear Russian error messages naming the offending node.
+- [x] **EDGE-01**: A loop node's outgoing edges follow a new convention: **exactly one** labeled edge is the loop exit (its label becomes the exit button caption in Runner); all unlabeled outgoing edges are body branches. `GraphValidator` rejects loop nodes with zero or two-or-more labeled outgoing edges with clear Russian error messages naming the offending node. ✅ Closed by Phase 49 Plans 01-05 (2026-04-19; UAT PASS in TEST-BASE: non-«выход» exit labels, D-01/D-02/D-03 error panel, legacy «выход» regression-free).
   - **Source:** `.planning/todos/pending/loop-node-exit-from-edge-label.md` + `.planning/notes/loop-node-exit-edge-convention.md`
   - **Signal:** Runner's exit button text equals the labeled edge's label (no hardcoded «выход»); validation catches both error cases; unlabeled-edges iteration behaviour unchanged.
   - **Migration note:** this supersedes the v1.7 convention of matching the literal label «выход» as the exit discriminator. A migration step may be needed for canvases that relied on the old convention.
@@ -110,7 +110,7 @@
 | NODEUI-03 | Phase 48 | planned |
 | NODEUI-04 | Phase 48 | planned |
 | NODEUI-05 | Phase 48 | planned |
-| EDGE-01   | Phase 49 | planned |
+| EDGE-01   | Phase 49 | ✅ complete (2026-04-19) |
 | EDGE-02   | Phase 50 | planned |
 | PICKER-01 | Phase 51 | planned |
 | PICKER-02 | Phase 51 | planned |
