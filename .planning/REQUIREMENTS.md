@@ -59,7 +59,7 @@
   - **Signal:** editing Display label in Node Editor updates every incoming edge's rendered label; editing any incoming edge label updates `Answer.displayLabel` and re-syncs the other incoming edges.
   - **Trade-off:** multi-incoming Answer nodes always display the same label on every incoming edge (user confirmed no current multi-incoming topologies).
 
-- [ ] **EDGE-03**: Loop nodes use a "+"-prefix convention on outgoing edge labels to distinguish exit edges from body edges. Exactly one outgoing edge per loop node may carry a label whose trimmed value starts with `+`; the text after the `+` (with following whitespace stripped) is the Runner exit-button caption. All other outgoing edges — labeled or unlabeled — are body branches. Canvases using the Phase 49 convention (a bare `label: "выход"` without `+`) surface a dedicated Russian validation error directing the author to add the `+` prefix manually; no auto-migration.
+- [x] **EDGE-03**: Loop nodes use a "+"-prefix convention on outgoing edge labels to distinguish exit edges from body edges. Exactly one outgoing edge per loop node may carry a label whose trimmed value starts with `+`; the text after the `+` (with following whitespace stripped) is the Runner exit-button caption. All other outgoing edges — labeled or unlabeled — are body branches. Canvases using the Phase 49 convention (a bare `label: "выход"` without `+`) surface a dedicated Russian validation error directing the author to add the `+` prefix manually; no auto-migration.
   - **Source:** `.planning/phases/50.1-loop-exit-plus-prefix/50.1-CONTEXT.md` + `.planning/notes/loop-node-exit-edge-convention.md`
   - **Signal:** `isExitEdge(edge) === edge.label?.trim().startsWith('+')`; `stripExitPrefix` lives in `src/graph/node-label.ts`; validator emits five Russian error texts (D-04..D-08) for zero-`+`, ≥2-`+`, legacy-labeled-non-`+`, no-body, and empty-caption-post-strip cases.
   - **Supersedes:** EDGE-01 (Phase 49) — EDGE-01 closure stays as historical record; EDGE-03 is the active convention.
@@ -118,7 +118,7 @@
 | NODEUI-05 | Phase 48 | planned |
 | EDGE-01   | Phase 49 | ⚠ superseded by EDGE-03 (Phase 50.1) |
 | EDGE-02   | Phase 50 | ✅ complete (2026-04-19) |
-| EDGE-03   | Phase 50.1 | planned |
+| EDGE-03   | Phase 50.1 | ✅ complete (2026-04-19) |
 | PICKER-01 | Phase 51 | planned |
 | PICKER-02 | Phase 51 | planned |
 | PHLD-01   | Phase 52 | planned |
