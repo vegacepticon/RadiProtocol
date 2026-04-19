@@ -42,10 +42,40 @@ export function isLabeledEdge(edge: RPEdge): boolean {
 }
 
 /**
- * Phase 49 D-07: alias spelling the runtime intent. Under the Phase 49 convention
- * the sole labeled outgoing edge of a loop node IS the exit edge; GraphValidator
- * guarantees uniqueness (0 or ≥2 labeled edges are hard errors) before the
- * Runner starts, so runtime callers never need to count — a single boolean
- * predicate suffices.
+ * Phase 50.1 D-10: exit-edge predicate. An edge is an exit edge iff its label
+ * is non-null/undefined AND its trimmed value starts with "+". The prefix
+ * distinguishes exit edges from body edges so a loop node can carry any number
+ * of labeled body branches (Phase 50 reconciler legitimately labels body edges
+ * that point to Answer nodes with displayLabel — see
+ * .planning/notes/loop-node-exit-edge-convention.md).
+ *
+ * Supersedes the Phase 49 alias `isExitEdge = isLabeledEdge`. The two
+ * predicates are now semantically distinct:
+ *   - isLabeledEdge: "edge has any non-empty trimmed label" — Phase 50
+ *     EdgeLabelReconciler uses this as the sync discriminator (preserved).
+ *   - isExitEdge:    "edge label starts with '+' after trim" — Phase 50.1
+ *     runtime exit dispatch + validator LOOP-04 + RunnerView caption arm.
  */
-export const isExitEdge = isLabeledEdge;
+export function isExitEdge(edge: RPEdge): boolean {
+  return edge.label != null && edge.label.trim().startsWith('+');
+}
+
+/**
+ * Phase 50.1 D-09: caption extractor for an exit edge. Caller MUST verify
+ * isExitEdge(edge) first — this function assumes the label has already been
+ * trimmed-and-checked for the "+" prefix at a higher layer.
+ *
+ * Behaviour:
+ *   - Outer whitespace is trimmed first (matches Phase 49 D-06 "trimmed verbatim").
+ *   - Exactly ONE "+" character is removed.
+ *   - Any whitespace (including Unicode nbsp) immediately following the "+" is
+ *     stripped, so "+ выход" and "+\u00a0выход" both yield "выход".
+ *   - "+" alone (or "+ ") yields "" — GraphValidator LOOP-04 D-08 rejects the
+ *     canvas before Runner ever dispatches, so runtime never sees an empty
+ *     caption.
+ *   - "++foo" yields "+foo" — an author may consciously opt into a
+ *     "+"-prefixed caption; rare.
+ */
+export function stripExitPrefix(label: string): string {
+  return label.trim().slice(1).replace(/^\s+/, '');
+}
