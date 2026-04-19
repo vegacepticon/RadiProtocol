@@ -1,0 +1,16 @@
+{
+  "nodes": [
+    { "id": "n-start", "type": "text", "text": "Start",       "x": 0,   "y": 0,   "width": 200, "height": 60, "radiprotocol_nodeType": "start" },
+    { "id": "n-loop",  "type": "text", "text": "Lesion loop", "x": 0,   "y": 120, "width": 200, "height": 60, "radiprotocol_nodeType": "loop",      "radiprotocol_headerText": "Lesion loop" },
+    { "id": "n-q1",    "type": "text", "text": "Size?",       "x": 260, "y": 120, "width": 200, "height": 60, "radiprotocol_nodeType": "question",  "radiprotocol_questionText": "Size?" },
+    { "id": "n-a1",    "type": "text", "text": "1 cm",        "x": 520, "y": 120, "width": 200, "height": 60, "radiprotocol_nodeType": "answer",    "radiprotocol_answerText": "1 cm" },
+    { "id": "n-end",   "type": "text", "text": "Done",        "x": 0,   "y": 240, "width": 200, "height": 60, "radiprotocol_nodeType": "text-block","radiprotocol_content": "Done" }
+  ],
+  "edges": [
+    { "id": "e1", "fromNode": "n-start", "toNode": "n-loop" },
+    { "id": "e2", "fromNode": "n-loop",  "toNode": "n-q1",   "label": "проверка" },
+    { "id": "e3", "fromNode": "n-loop",  "toNode": "n-end",  "label": "выход" },
+    { "id": "e4", "fromNode": "n-q1",    "toNode": "n-a1" },
+    { "id": "e5", "fromNode": "n-a1",    "toNode": "n-loop" }
+  ]
+}
