@@ -3,10 +3,10 @@ gsd_state_version: 1.0
 milestone: v1.8
 milestone_name: UX Polish & Snippet Picker Overhaul
 status: in_progress
-stopped_at: Phase 50 complete and verified (commit 62dd212, 37/37 must-haves, status passed). EDGE-02 closed. ROADMAP Phase 50 row flipped to ✅. Next — user-identified follow-up Phase 51 for loop-exit `+`-prefix convention (supersedes Phase 49 D-07 `isExitEdge = isLabeledEdge` alias; requires discuss-phase before planning). Note: existing ROADMAP Phase 51 (Snippet Picker Overhaul) needs renumbering or insertion-of-new-phase decision.
+stopped_at: Phase 50.1 context captured (commit 7ee4bfc). CONTEXT.md + DISCUSSION-LOG.md written with 16 decisions (D-01 exactly-1 `+`-edge, D-02 no-auto-migration / hard validation error, D-03 dedicated legacy-detection error, D-04..D-08 five Russian error texts verbatim, D-09 stripExitPrefix = slice(1) + trimStart, D-10 isExitEdge redefined to `+`-predicate / isLabeledEdge unchanged, D-11/D-12 Runner dispatch + caption, D-13 in-place fixture migration, D-14 three new fixtures incl. Phase 49↔50 conflict-scenario, D-15 ~10 edge-case tests, D-16 new EDGE-03 requirement supersedes EDGE-01). Next: /gsd-plan-phase 50.1. Phase 50 (Answer↔Edge Sync) remains complete and verified upstream.
 last_updated: "2026-04-19T00:00:00.000Z"
 last_activity: 2026-04-19
-resume_file: .planning/phases/50-answer-edge-label-sync/
+resume_file: .planning/phases/50.1-loop-exit-plus-prefix/50.1-CONTEXT.md
 progress:
   total_phases: 8
   completed_phases: 4
@@ -19,14 +19,17 @@ progress:
 
 **Updated:** 2026-04-19
 **Milestone:** v1.8 — UX Polish & Snippet Picker Overhaul
-**Status:** In progress — Phase 47 + 48.1 + 49 + 50 shipped and verified. Phase 50 verified by gsd-verifier (37/37 must-haves, commit 62dd212). Next: user-identified follow-up for loop-exit `+`-prefix convention (supersedes Phase 49 D-07 alias). Requires ROADMAP disambiguation — existing Phase 51 slot is "Snippet Picker Overhaul".
-**Stopped at:** Phase 50 Plan 05 complete — EDGE-02 closed. Task 1 automated gate landed as `95a5f15`: build exit 0 + `main.js` deployed to TEST-BASE, 484 passed / 1 skipped / 0 failed, canonical-refs audit 6/6 files, D-14 atomicity audit counted greps all matched (3 setData inside try / 1 vault.modify per write cycle in both service + saveNodeEdits), zero CSS diff, Shared Pattern G audit 338 insertions / 4 in-scope deletions (zero unrelated). Task 2 human UAT: user signed off `"approved"` on 2026-04-19 with all 5 scenarios PASS (canvas-open Display-label→edges Pattern B D-14 atomic, canvas-open edge→displayLabel D-04 reconcile with D-07 self-termination, canvas-closed Strategy A single vault.modify, multi-incoming deterministic sibling re-sync in graph.edges order, clearing symmetry 5a+5b both directions with D-08/D-09 strip-key). Rollup commit bundles SUMMARY + STATE + ROADMAP + REQUIREMENTS + UAT finalisation. Follow-up design note (Phase 51 loop-exit `+`-prefix convention) captured but DEFERRED — out of scope for Phase 50.
+**Status:** In progress — Phase 47 + 48.1 + 49 + 50 shipped and verified. Phase 50.1 (Loop Exit `+` Prefix Convention) inserted + context captured (commit 7ee4bfc). Ready for `/gsd-plan-phase 50.1`.
+**Stopped at:** Phase 50.1 CONTEXT.md + DISCUSSION-LOG.md written with 16 locked decisions: D-01 exactly-1 `+`-edge policy; D-02 no-auto-migration / hard validation error; D-03 dedicated legacy-detection branch (D-05 text); D-04..D-08 five Russian error texts locked verbatim (D-04 clean zero-exit, D-05 legacy hint with {edgeIds}, D-06 ≥2 `+`-edges, D-07 no body, D-08 empty caption post-strip — per-edge); D-09 `stripExitPrefix = label.trim().slice(1).replace(/^\s+/, '')`; D-10 `isExitEdge` redefined to `label.trim().startsWith('+')` (Phase 49 alias removed), `isLabeledEdge` preserved (Phase 50 reconciler uses it unchanged); D-11/D-12 Runner dispatch + caption wire-up (click-handler ordering preserved verbatim); D-13 in-place migration of 4 Phase 49 `unified-loop-*.canvas` fixtures; D-14 three new fixtures (`legacy-vyhod`, `labeled-body` = Phase 49↔50 conflict regression, `empty-plus`); D-15 ~10 edge-case tests in `node-label.test.ts` + alias-regression guard; D-16 new EDGE-03 requirement supersedes EDGE-01 (EDGE-02 unaffected). Phase 50.1 is CSS-free. Canonical-refs locked: `.planning/notes/loop-node-exit-edge-convention.md` (to be rewritten by plan-phase), `src/graph/node-label.ts`, `graph-validator.ts` LOOP-04, `protocol-runner.ts` chooseLoopBranch, `runner-view.ts` loop-picker arm.
+**Stopped at (previous):** Phase 50 Plan 05 complete — EDGE-02 closed. Task 1 automated gate landed as `95a5f15`: build exit 0 + `main.js` deployed to TEST-BASE, 484 passed / 1 skipped / 0 failed, canonical-refs audit 6/6 files, D-14 atomicity audit counted greps all matched (3 setData inside try / 1 vault.modify per write cycle in both service + saveNodeEdits), zero CSS diff, Shared Pattern G audit 338 insertions / 4 in-scope deletions (zero unrelated). Task 2 human UAT: user signed off `"approved"` on 2026-04-19 with all 5 scenarios PASS (canvas-open Display-label→edges Pattern B D-14 atomic, canvas-open edge→displayLabel D-04 reconcile with D-07 self-termination, canvas-closed Strategy A single vault.modify, multi-incoming deterministic sibling re-sync in graph.edges order, clearing symmetry 5a+5b both directions with D-08/D-09 strip-key). Rollup commit bundles SUMMARY + STATE + ROADMAP + REQUIREMENTS + UAT finalisation. Follow-up design note (Phase 51 loop-exit `+`-prefix convention) captured but DEFERRED — out of scope for Phase 50.
 
 ---
 
 ## Current Position
 
-Phase: 50 (Answer ↔ Edge Label Sync) — ✅ Complete and verified 2026-04-19. All 5 plans shipped, UAT PASS in TEST-BASE, gsd-verifier 37/37 must-haves passed (commit 62dd212), ROADMAP row flipped to ✅. EDGE-02 closed in REQUIREMENTS.md. Next phase undecided — user flagged loop-exit `+`-prefix convention as follow-up work; existing ROADMAP Phase 51 is "Snippet Picker Overhaul", so disambiguation needed (insert new phase vs renumber vs decimal).
+Phase: 50.1 (Loop Exit `+` Prefix Convention) — context gathered 2026-04-19 (commit 7ee4bfc). CONTEXT.md + DISCUSSION-LOG.md written. Ready for `/gsd-plan-phase 50.1`. Supersedes Phase 49 D-07 alias (`isExitEdge = isLabeledEdge`) with `+`-prefix predicate. Resolves Phase 49↔Phase 50 conflict on multi-incoming Answer.displayLabel sync onto loop body edges.
+
+Phase: 50 (Answer ↔ Edge Label Sync) — ✅ Complete and verified 2026-04-19. All 5 plans shipped, UAT PASS in TEST-BASE, gsd-verifier 37/37 must-haves passed (commit 62dd212), ROADMAP row flipped to ✅. EDGE-02 closed in REQUIREMENTS.md.
 
 Phase: 49 (Loop Exit Edge Convention) — ✅ Plans 01-05 complete (13 commits + 1 rollup), UAT approved 2026-04-19.
 Plan 49-01 commits: 4fce768 (feat — shared node-label.ts with nodeLabel/isLabeledEdge/isExitEdge); c39876f (test — 23 unit tests covering all 8 nodeLabel arms + D-05 trim semantics + D-07 alias identity); 313b544 (docs).
@@ -64,6 +67,7 @@ See: `.planning/PROJECT.md` (updated 2026-04-18)
 ### Roadmap Evolution
 
 - Phase 48.1 inserted after Phase 48: Toolbar Gap Tighten — cosmetic UAT follow-up to shrink the empty gap between Node Editor form content and the bottom-anchored quick-create toolbar (originated from Phase 48 UAT Test 7 feedback) (URGENT)
+- Phase 50.1 inserted after Phase 50: Loop Exit `+` Prefix Convention — supersedes Phase 49 D-07 alias (`isExitEdge = isLabeledEdge`) with `label.trim().startsWith('+')` so loop nodes can carry multiple labeled body edges unambiguously. Originated from design conflict surfaced during Phase 50 UAT sign-off (user noted Phase 49's "exactly-one-labeled-edge" constraint contradicts Phase 50's auto-sync of shared Answer.displayLabel on multi-incoming). (URGENT)
 
 ### v1.8 Design Decisions (locked during /gsd-explore on 2026-04-18)
 
