@@ -52,11 +52,17 @@
   - **Source:** `.planning/todos/pending/loop-node-exit-from-edge-label.md` + `.planning/notes/loop-node-exit-edge-convention.md`
   - **Signal:** Runner's exit button text equals the labeled edge's label (no hardcoded «выход»); validation catches both error cases; unlabeled-edges iteration behaviour unchanged.
   - **Migration note:** this supersedes the v1.7 convention of matching the literal label «выход» as the exit discriminator. A migration step may be needed for canvases that relied on the old convention.
+  - **Superseded by EDGE-03 (Phase 50.1):** the Phase 49 convention (any labeled edge = exit) is replaced by a "+"-prefix convention so loop nodes can carry labeled body edges unambiguously — EDGE-01 is superseded by EDGE-03 as the active contract. EDGE-01's Phase 49 closure stays valid as a historical milestone; EDGE-03 is the active contract for the exit discriminator.
 
 - [x] **EDGE-02**: `Answer.displayLabel` and every incoming Question→Answer edge label are bound to the same source of truth: editing either side updates the other. On the canvas, edge labels on Question→Answer connections render from `Answer.displayLabel`. Per-edge label overrides are not supported in this milestone. ✅ Closed by Phase 50 Plans 01-05 (2026-04-19; UAT PASS in TEST-BASE: Pattern B atomic node+edges write on canvas-open, Strategy A single vault.modify on canvas-closed, multi-incoming sibling re-sync deterministic, D-08/D-09 clearing symmetry both directions).
   - **Source:** `.planning/todos/pending/sync-answer-displaylabel-with-edge-label.md` + `.planning/notes/answer-label-edge-sync.md`
   - **Signal:** editing Display label in Node Editor updates every incoming edge's rendered label; editing any incoming edge label updates `Answer.displayLabel` and re-syncs the other incoming edges.
   - **Trade-off:** multi-incoming Answer nodes always display the same label on every incoming edge (user confirmed no current multi-incoming topologies).
+
+- [ ] **EDGE-03**: Loop nodes use a "+"-prefix convention on outgoing edge labels to distinguish exit edges from body edges. Exactly one outgoing edge per loop node may carry a label whose trimmed value starts with `+`; the text after the `+` (with following whitespace stripped) is the Runner exit-button caption. All other outgoing edges — labeled or unlabeled — are body branches. Canvases using the Phase 49 convention (a bare `label: "выход"` without `+`) surface a dedicated Russian validation error directing the author to add the `+` prefix manually; no auto-migration.
+  - **Source:** `.planning/phases/50.1-loop-exit-plus-prefix/50.1-CONTEXT.md` + `.planning/notes/loop-node-exit-edge-convention.md`
+  - **Signal:** `isExitEdge(edge) === edge.label?.trim().startsWith('+')`; `stripExitPrefix` lives in `src/graph/node-label.ts`; validator emits five Russian error texts (D-04..D-08) for zero-`+`, ≥2-`+`, legacy-labeled-non-`+`, no-body, and empty-caption-post-strip cases.
+  - **Supersedes:** EDGE-01 (Phase 49) — EDGE-01 closure stays as historical record; EDGE-03 is the active convention.
 
 ### Snippet Node & Picker (PICKER)
 
@@ -110,8 +116,9 @@
 | NODEUI-03 | Phase 48 | planned |
 | NODEUI-04 | Phase 48 | planned |
 | NODEUI-05 | Phase 48 | planned |
-| EDGE-01   | Phase 49 | ✅ complete (2026-04-19) |
+| EDGE-01   | Phase 49 | ⚠ superseded by EDGE-03 (Phase 50.1) |
 | EDGE-02   | Phase 50 | ✅ complete (2026-04-19) |
+| EDGE-03   | Phase 50.1 | planned |
 | PICKER-01 | Phase 51 | planned |
 | PICKER-02 | Phase 51 | planned |
 | PHLD-01   | Phase 52 | planned |
