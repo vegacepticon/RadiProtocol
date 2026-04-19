@@ -49,7 +49,7 @@
   - Edge ribbon on canvas changes to «Новое».
   - Canvas JSON (open the `.canvas` file in an external text editor, or inspect via `view.canvas.getData()` in DevTools) shows `radiprotocol_displayLabel: "Новое"` on the Answer node AND `label: "Новое"` on every incoming edge.
   - Sync completes in ≤1 second after typing stops; edge ribbon and Node Editor field always agree.
-- **RESULT:** ☐ PASS / ☐ FAIL  — _evidence:_ ________________
+- **RESULT:** ☑ PASS  — _evidence:_ approved interactively in TEST-BASE on 2026-04-19.
 
 ### Scenario 2 — Canvas open, edge label → displayLabel (D-04 inbound reconcile)
 
@@ -60,7 +60,7 @@
 - **EXPECTED:**
   - Reconciler picks up the edge edit, applies edge-wins rule → Answer.displayLabel.
   - Reconciler self-terminates on the follow-up modify event (D-07 idempotency — no infinite write loop; DevTools console does not spam reconcile messages).
-- **RESULT:** ☐ PASS / ☐ FAIL  — _evidence:_ ________________
+- **RESULT:** ☑ PASS  — _evidence:_ approved interactively in TEST-BASE on 2026-04-19 (reconciler self-terminated without infinite-write spam).
 
 ### Scenario 3 — Canvas closed, displayLabel → edges (Strategy A D-13/D-14)
 
@@ -73,7 +73,7 @@
   - `radiprotocol_displayLabel: "Третье"` on the Answer node AND `label: "Третье"` on every incoming edge.
   - Strategy A path wrote node+edges in a single `vault.modify()`; no divergence between displayLabel and edge.label.
   - Re-opening the canvas in Obsidian: edge ribbon shows «Третье».
-- **RESULT:** ☐ PASS / ☐ FAIL  — _evidence:_ ________________
+- **RESULT:** ☑ PASS  — _evidence:_ approved interactively in TEST-BASE on 2026-04-19 (single vault.modify wrote node+edges atomically).
 
 ### Scenario 4 — Multi-incoming Answer — sibling re-sync
 
@@ -88,7 +88,7 @@
   - All incoming edges at any after-reconcile moment show an identical label.
   - Multi-incoming trade-off (D-10) works: per-edge override is impossible by design.
   - **If** the second edge ends up persisting as «B» (not re-synced to «A») — that is a BUG, reconciler enumeration is not deterministic. Document as FAIL with file path and reproduction steps.
-- **RESULT:** ☐ PASS / ☐ FAIL  — _evidence:_ ________________
+- **RESULT:** ☑ PASS  — _evidence:_ approved interactively in TEST-BASE on 2026-04-19 (sibling re-sync deterministic in graph.edges order).
 
 ### Scenario 5 — Clearing symmetry (both directions)
 
@@ -113,8 +113,8 @@
   - Answer.displayLabel is now `undefined` (Node Editor field empty).
   - Second edge has also lost its `label` key (D-09: clearing ANY incoming edge → clears displayLabel AND every OTHER incoming edge).
   - Canvas JSON confirms absence of both `radiprotocol_displayLabel` and `label` keys.
-- **RESULT (5a):** ☐ PASS / ☐ FAIL  — _evidence:_ ________________
-- **RESULT (5b):** ☐ PASS / ☐ FAIL  — _evidence:_ ________________
+- **RESULT (5a):** ☑ PASS  — _evidence:_ approved interactively in TEST-BASE on 2026-04-19 (ribbons removed; displayLabel + label keys fully stripped).
+- **RESULT (5b):** ☑ PASS  — _evidence:_ approved interactively in TEST-BASE on 2026-04-19 (D-09 symmetry confirmed — clearing one incoming edge cleared displayLabel + all sibling incoming labels).
 
 ---
 
@@ -135,7 +135,9 @@ Fill all 5 scenarios above with PASS / FAIL. On any FAIL, attach:
 
 ## Verdict
 
-- ☐ All 5 scenarios PASS → EDGE-02 closed, Phase 50 shippable.
+- ☑ **All 5 scenarios PASS → EDGE-02 closed, Phase 50 shippable.**
 - ☐ Blocker found → document below + create `50-0X-PLAN.md` gap-closure.
 
-**Tester's final verdict:** ________________ (fill on sign-off)
+**Tester's final verdict:** approved — all 5 scenarios PASS, signed off 2026-04-19 by shulgharoman@gmail.com.
+
+**Follow-up design note captured during UAT (NOT scope of Phase 50):** The tester identified a design conflict between Phase 50's edge-label sync convention and Phase 49's loop-exit-edge convention (EDGE-01, any-non-empty-label marks the exit). To disambiguate Question→Answer edge labels (which now mirror `Answer.displayLabel`) from loop-exit edge labels (which are intentionally user-authored and must not be auto-synced), a future **Phase 51** will introduce a `+`-prefix convention on loop-exit edge labels so the two feature families remain visually and semantically distinct. This is tracked as a separate future phase and does not affect Phase 50 sign-off.

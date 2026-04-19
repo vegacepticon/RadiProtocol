@@ -53,7 +53,7 @@
   - **Signal:** Runner's exit button text equals the labeled edge's label (no hardcoded «выход»); validation catches both error cases; unlabeled-edges iteration behaviour unchanged.
   - **Migration note:** this supersedes the v1.7 convention of matching the literal label «выход» as the exit discriminator. A migration step may be needed for canvases that relied on the old convention.
 
-- [ ] **EDGE-02**: `Answer.displayLabel` and every incoming Question→Answer edge label are bound to the same source of truth: editing either side updates the other. On the canvas, edge labels on Question→Answer connections render from `Answer.displayLabel`. Per-edge label overrides are not supported in this milestone.
+- [x] **EDGE-02**: `Answer.displayLabel` and every incoming Question→Answer edge label are bound to the same source of truth: editing either side updates the other. On the canvas, edge labels on Question→Answer connections render from `Answer.displayLabel`. Per-edge label overrides are not supported in this milestone. ✅ Closed by Phase 50 Plans 01-05 (2026-04-19; UAT PASS in TEST-BASE: Pattern B atomic node+edges write on canvas-open, Strategy A single vault.modify on canvas-closed, multi-incoming sibling re-sync deterministic, D-08/D-09 clearing symmetry both directions).
   - **Source:** `.planning/todos/pending/sync-answer-displaylabel-with-edge-label.md` + `.planning/notes/answer-label-edge-sync.md`
   - **Signal:** editing Display label in Node Editor updates every incoming edge's rendered label; editing any incoming edge label updates `Answer.displayLabel` and re-syncs the other incoming edges.
   - **Trade-off:** multi-incoming Answer nodes always display the same label on every incoming edge (user confirmed no current multi-incoming topologies).
@@ -111,7 +111,7 @@
 | NODEUI-04 | Phase 48 | planned |
 | NODEUI-05 | Phase 48 | planned |
 | EDGE-01   | Phase 49 | ✅ complete (2026-04-19) |
-| EDGE-02   | Phase 50 | planned |
+| EDGE-02   | Phase 50 | ✅ complete (2026-04-19) |
 | PICKER-01 | Phase 51 | planned |
 | PICKER-02 | Phase 51 | planned |
 | PHLD-01   | Phase 52 | planned |
