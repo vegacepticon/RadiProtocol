@@ -9,6 +9,8 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { Setting } from 'obsidian';
 import { EditorPanelView } from '../views/editor-panel-view';
 import type RadiProtocolPlugin from '../main';
+import * as fs from 'fs';
+import * as path from 'path';
 
 vi.mock('obsidian');
 
@@ -246,5 +248,68 @@ describe('NODEUI-04: question form custom DOM + auto-grow textarea', () => {
     (lastTextarea as { style: { height: string } }).style.height = 'prev';
     textareaInputCb.cb?.();
     expect((lastTextarea as { style: { height: string } }).style.height).toBe('123px');
+  });
+});
+
+// ── NODEUI-05: toolbar renders at the bottom of contentEl ────────────────
+
+describe('NODEUI-05: toolbar renders at the bottom of contentEl', () => {
+  let originalRaf: typeof globalThis.requestAnimationFrame | undefined;
+
+  beforeEach(() => {
+    installSettingPrototypeMock();
+    createdElements.length = 0;
+    originalRaf = (globalThis as unknown as { requestAnimationFrame?: typeof requestAnimationFrame }).requestAnimationFrame;
+    (globalThis as unknown as { requestAnimationFrame: (cb: FrameRequestCallback) => number }).requestAnimationFrame =
+      (cb: FrameRequestCallback) => { cb(0); return 0; };
+  });
+
+  afterEach(() => {
+    if (originalRaf === undefined) {
+      delete (globalThis as unknown as { requestAnimationFrame?: unknown }).requestAnimationFrame;
+    } else {
+      (globalThis as unknown as { requestAnimationFrame: typeof requestAnimationFrame }).requestAnimationFrame = originalRaf;
+    }
+  });
+
+  it('renderIdle: toolbar is invoked AFTER the idle container <p> elements', () => {
+    const view = makeView();
+    (view as unknown as { renderToolbar: (c: unknown) => void })['renderToolbar'] =
+      () => { createdElements.push({ tag: '__TOOLBAR__' }); };
+    // @ts-expect-error accessing private
+    view['renderIdle']();
+    const idleIdx = createdElements.findIndex(e => e.cls === 'rp-editor-idle');
+    const toolbarIdx = createdElements.findIndex(e => e.tag === '__TOOLBAR__');
+    expect(idleIdx).toBeGreaterThanOrEqual(0);
+    expect(toolbarIdx).toBeGreaterThanOrEqual(0);
+    expect(toolbarIdx).toBeGreaterThan(idleIdx);
+  });
+
+  it('renderForm: toolbar is invoked AFTER the .rp-editor-panel container', () => {
+    const view = makeView();
+    (view as unknown as { renderToolbar: (c: unknown) => void })['renderToolbar'] =
+      () => { createdElements.push({ tag: '__TOOLBAR__' }); };
+    // @ts-expect-error accessing private
+    view['renderForm']({}, null);
+    const panelIdx = createdElements.findIndex(e => e.cls === 'rp-editor-panel');
+    const toolbarIdx = createdElements.findIndex(e => e.tag === '__TOOLBAR__');
+    expect(panelIdx).toBeGreaterThanOrEqual(0);
+    expect(toolbarIdx).toBeGreaterThanOrEqual(0);
+    expect(toolbarIdx).toBeGreaterThan(panelIdx);
+  });
+});
+
+// ── NODEUI-05: editor-panel.css has Phase 48 column-stack rules ──────────
+
+describe('NODEUI-05: editor-panel.css has Phase 48 column-stack rules', () => {
+  it('contains a /* Phase 48 */ marker with flex-direction: column + margin-top: auto + flex-wrap: nowrap', () => {
+    const cssPath = path.resolve(__dirname, '../styles/editor-panel.css');
+    const css = fs.readFileSync(cssPath, 'utf8');
+    const phase48Idx = css.indexOf('/* Phase 48');
+    expect(phase48Idx).toBeGreaterThanOrEqual(0);
+    const phase48Region = css.slice(phase48Idx);
+    expect(phase48Region).toContain('flex-direction: column');
+    expect(phase48Region).toContain('margin-top: auto');
+    expect(phase48Region).toContain('flex-wrap: nowrap');
   });
 });
