@@ -198,75 +198,109 @@ describe('GraphValidator — snippet node (Phase 29, D-12)', () => {
 // ─────────────────────────────────────────────────────────────────────────────
 describe('GraphValidator — Phase 43: unified loop + migration (LOOP-04, MIGRATE-01)', () => {
 
-  // ── LOOP-04 happy path (Phase 49 EDGE-01) ───────────────────────────────────
-  it('unified-loop-valid.canvas passes LOOP-04 checks (no label/body errors under Phase 49 convention)', () => {
-    // Fixture: один loop узел с ровно одним помеченным (exit) ребром + одним непомеченным body-ребром.
-    // Post-Phase-49: «проверка»-метка на body-ребре снята (см. Plan 04 fixture audit).
+  // ── LOOP-04 happy path (Phase 50.1 EDGE-03) ─────────────────────────────────
+  it('unified-loop-valid.canvas passes LOOP-04 checks (no +-prefix/body errors under Phase 50.1 convention)', () => {
+    // Fixture (post-Plan-04): один loop узел с одним "+выход" ребром и одним непомеченным body-ребром.
     const graph = parseFixture('unified-loop-valid.canvas');
     const validator = new GraphValidator();
     const errors = validator.validate(graph);
     expect(errors.some(e => e.includes('не имеет выхода'))).toBe(false);
-    expect(errors.some(e => e.includes('несколько помеченных исходящих рёбер'))).toBe(false);
-    expect(errors.some(e => e.includes('не имеет тела'))).toBe(false);
-    // И никаких migration-ошибок (в этом канвасе нет legacy узлов):
+    expect(errors.some(e => e.includes('"+"-рёбер'))).toBe(false);       // D-06 wording
+    expect(errors.some(e => e.includes('не имеет тела'))).toBe(false);    // D-07 fragment
+    expect(errors.some(e => e.includes('не имеет подписи'))).toBe(false); // D-08 fragment
     expect(errors.some(e => e.includes('устаревшие узлы loop-start/loop-end'))).toBe(false);
   });
 
-  // ── LOOP-04 D-01 — missing labeled (exit) edge ──────────────────────────────
-  it('unified-loop-missing-exit.canvas flags zero labeled outgoing edges (Phase 49 D-01)', () => {
+  // ── LOOP-04 D-04 — zero "+"-edges, no other labeled edges ───────────────────
+  it('unified-loop-missing-exit.canvas flags D-04 (zero "+"-edges, no other labeled edges)', () => {
     const graph = parseFixture('unified-loop-missing-exit.canvas');
     const validator = new GraphValidator();
     const errors = validator.validate(graph);
-    expect(errors.some(e => e.includes('не имеет выхода'))).toBe(true);
-    const err = errors.find(e => e.includes('не имеет выхода'));
-    expect(err).toBeDefined();
-    if (err === undefined) return;
-    expect(err).toContain('Пометьте ровно одно исходящее ребро');
-    expect(err).toContain('Lesion loop');
+    const d04 = errors.find(e => e.includes('не имеет выхода. Пометьте ровно одно исходящее ребро префиксом "+"'));
+    expect(d04).toBeDefined();
+    if (d04 === undefined) return;
+    expect(d04).toContain('"Lesion loop"');
+    expect(d04).toContain('текст после "+" станет подписью кнопки выхода');
   });
 
-  // ── LOOP-04 D-02 — ≥2 labeled edges (with offending edge IDs) ───────────────
-  it('unified-loop-duplicate-exit.canvas flags multiple labeled edges with edge IDs (Phase 49 D-02)', () => {
-    // Fixture has three labeled edges: e2 (label "проверка"), e3 (label "выход"), e4 (label "выход")
-    // — all three are "labeled" under D-05, so D-02 fires listing all three ids.
+  // ── LOOP-04 D-05 — zero "+"-edges, ≥1 legacy labeled edge ───────────────────
+  it('unified-loop-legacy-vyhod.canvas flags D-05 (zero "+"-edges, ≥1 legacy labeled edge)', () => {
+    const graph = parseFixture('unified-loop-legacy-vyhod.canvas');
+    const validator = new GraphValidator();
+    const errors = validator.validate(graph);
+    const d05 = errors.find(e => e.includes('не имеет выхода с префиксом "+"'));
+    expect(d05).toBeDefined();
+    if (d05 === undefined) return;
+    expect(d05).toContain('"Lesion loop"');
+    expect(d05).toContain('Добавьте "+" к одному из помеченных рёбер');
+    expect(d05).toContain('текст после "+" станет подписью кнопки выхода');
+    // {edgeIds} — fixture from Plan 04 has edge id e3 on the legacy-"выход" edge.
+    expect(d05).toMatch(/\(e3\)|\(e3, /);
+  });
+
+  // ── LOOP-04 D-06 — ≥2 "+"-edges ─────────────────────────────────────────────
+  it('unified-loop-duplicate-exit.canvas flags D-06 (≥2 "+"-edges)', () => {
     const graph = parseFixture('unified-loop-duplicate-exit.canvas');
     const validator = new GraphValidator();
     const errors = validator.validate(graph);
-    expect(errors.some(e => e.includes('несколько помеченных исходящих рёбер'))).toBe(true);
-    const dupErr = errors.find(e => e.includes('несколько помеченных исходящих рёбер'));
-    expect(dupErr).toBeDefined();
-    if (dupErr === undefined) return;
-    expect(dupErr).toContain('e2');
-    expect(dupErr).toContain('e3');
-    expect(dupErr).toContain('e4');
-    expect(dupErr).toContain('снимите метки с остальных');
+    const d06 = errors.find(e => e.includes('имеет несколько "+"-рёбер'));
+    expect(d06).toBeDefined();
+    if (d06 === undefined) return;
+    expect(d06).toContain('"Lesion loop"');
+    expect(d06).toContain('Должно быть ровно одно выходное ребро');
+    expect(d06).toContain('уберите "+" с остальных');
+    // Plan 04 fixture assigns "+"-prefix to e3 and e4 (the two exits). edgeIds comma-joined.
+    expect(d06).toMatch(/e3.*e4|e4.*e3/);
   });
 
-  // ── LOOP-04 D-03 — zero body (unlabeled) edges ──────────────────────────────
-  it('unified-loop-no-body.canvas flags zero unlabeled outgoing edges (Phase 49 D-03)', () => {
+  // ── LOOP-04 D-07 — zero non-"+" outgoing edges ──────────────────────────────
+  it('unified-loop-no-body.canvas flags D-07 (zero non-"+" outgoing edges)', () => {
     const graph = parseFixture('unified-loop-no-body.canvas');
     const validator = new GraphValidator();
     const errors = validator.validate(graph);
-    expect(errors.some(e => e.includes('не имеет тела'))).toBe(true);
-    const err = errors.find(e => e.includes('не имеет тела'));
-    expect(err).toBeDefined();
-    if (err === undefined) return;
-    expect(err).toContain('добавьте исходящее ребро без метки');
+    const d07 = errors.find(e => e.includes('не имеет тела — добавьте исходящее ребро без префикса "+"'));
+    expect(d07).toBeDefined();
+    if (d07 === undefined) return;
+    expect(d07).toContain('"Lesion loop"');
   });
 
-  // ── LOOP-04 D-02 — stray label on what was meant to be a body edge ──────────
-  it('unified-loop-stray-body-label.canvas flags a second labeled edge (Phase 49 D-02 + D-16)', () => {
-    // Fixture (Plan 04): n-loop has e2 (label "проверка", meant as body) + e3 (label "выход", legit exit)
-    // → two labeled edges → D-02 fires listing both e2 and e3.
+  // ── LOOP-04 D-08 — per-offending-edge, empty caption post-strip ─────────────
+  it('unified-loop-empty-plus.canvas flags D-08 (per-offending-edge, empty caption post-strip)', () => {
+    const graph = parseFixture('unified-loop-empty-plus.canvas');
+    const validator = new GraphValidator();
+    const errors = validator.validate(graph);
+    const d08 = errors.find(e => e.includes('не имеет подписи — добавьте текст после "+"'));
+    expect(d08).toBeDefined();
+    if (d08 === undefined) return;
+    expect(d08).toContain('"Lesion loop"');
+    expect(d08).toMatch(/"\+"-ребро \w+ не имеет подписи/);
+  });
+
+  // ── LOOP-04 Phase 49↔50 conflict regression: labeled body edge + "+"-exit ───
+  it('unified-loop-labeled-body.canvas VALIDATES — labeled body edge + "+"-exit coexist (Phase 49↔50 conflict resolved)', () => {
+    // Fixture: loop node with one "+выход" exit AND a body edge pointing to an Answer node
+    // that carries displayLabel — Phase 50 reconciler legitimately labels the body edge.
+    // Under Phase 49 this broke validation (body edge counted as a second exit). Under
+    // Phase 50.1 the body edge has no "+" prefix so it is a body, not an exit.
+    const graph = parseFixture('unified-loop-labeled-body.canvas');
+    const validator = new GraphValidator();
+    const errors = validator.validate(graph);
+    // No LOOP-04 errors:
+    expect(errors.some(e => e.includes('не имеет выхода'))).toBe(false);
+    expect(errors.some(e => e.includes('"+"-рёбер'))).toBe(false);
+    expect(errors.some(e => e.includes('не имеет тела'))).toBe(false);
+    expect(errors.some(e => e.includes('не имеет подписи'))).toBe(false);
+  });
+
+  // ── LOOP-04 — stray non-"+" body label is accepted under Phase 50.1 ─────────
+  it('unified-loop-stray-body-label.canvas VALIDATES under 50.1 — non-"+" body label is allowed', () => {
+    // Plan 04 migration: e3 → "+выход" (legit exit); e2 "проверка" preserved as a labeled body edge.
+    // Under Phase 50.1 labeled body edges are legal (body = any edge without "+"), so this fixture
+    // now validates cleanly rather than firing Phase 49 D-02.
     const graph = parseFixture('unified-loop-stray-body-label.canvas');
     const validator = new GraphValidator();
     const errors = validator.validate(graph);
-    expect(errors.some(e => e.includes('несколько помеченных исходящих рёбер'))).toBe(true);
-    const dupErr = errors.find(e => e.includes('несколько помеченных исходящих рёбер'));
-    expect(dupErr).toBeDefined();
-    if (dupErr === undefined) return;
-    expect(dupErr).toContain('e2');
-    expect(dupErr).toContain('e3');
+    expect(errors.some(e => e.includes('"+"-рёбер'))).toBe(false);
   });
 
   // ── MIGRATE-01 (D-07) — legacy loop-body.canvas ─────────────────────────────
@@ -311,11 +345,13 @@ describe('GraphValidator — Phase 43: unified loop + migration (LOOP-04, MIGRAT
     const errors = validator.validate(graph);
     // Migration-error присутствует:
     expect(errors.some(e => e.includes('устаревш'))).toBe(true);
-    // НЕТ Phase 49 D-01 «не имеет выхода» ошибки:
+    // НЕТ Phase 49 D-01 / Phase 50.1 D-04 «не имеет выхода» ошибки:
     expect(errors.some(e => e.includes('не имеет выхода'))).toBe(false);
     // И старое Phase 43 D-08.1 сообщение «не имеет ребра «выход»» больше нигде не выпускается
     // валидатором (гарантия чистоты Phase 49 rewrite — literal removed from LOOP-04 block):
     expect(errors.some(e => e.includes('не имеет ребра'))).toBe(false);
+    // Phase 50.1 guard: no D-06 «"+"-рёбер» wording leaks into a legacy-migration canvas.
+    expect(errors.some(e => e.includes('"+"-рёбер'))).toBe(false);
   });
 
   // ── D-09: cycle through unified loop node is NOT flagged as unintentional ───
