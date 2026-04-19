@@ -15,9 +15,22 @@ export interface CanvasNodeData {
   [key: string]: unknown; // radiprotocol_* fields and any other custom properties
 }
 
+// Phase 50 D-15: typed edge data (was unknown[]). Field names mirror the raw
+// canvas JSON edge shape parsed by CanvasParser (src/graph/canvas-parser.ts:36-41)
+// and Obsidian's internal canvas model. Index signature keeps the interface
+// forward-compat with fromSide / toSide / color / etc. — same escape hatch
+// CanvasNodeData uses above. Design source: .planning/notes/answer-label-edge-sync.md
+export interface CanvasEdgeData {
+  id: string;
+  fromNode: string;
+  toNode: string;
+  label?: string;
+  [key: string]: unknown; // forward-compat: fromSide, toSide, color, etc.
+}
+
 export interface CanvasData {
   nodes: CanvasNodeData[];
-  edges: unknown[];
+  edges: CanvasEdgeData[];   // ← Phase 50 D-15 (was unknown[])
 }
 
 /** A live canvas node instance (returned by createTextNode). */
