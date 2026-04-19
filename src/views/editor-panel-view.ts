@@ -421,6 +421,17 @@ export class EditorPanelView extends ItemView {
 
       case 'answer': {
         new Setting(container).setHeading().setName('Answer node');
+        // Phase 48 NODEUI-03: Display label renders BEFORE Answer text (swapped from original order).
+        new Setting(container)
+          .setName('Display label (optional)')
+          .setDesc('Short label shown in the runner button if set. Leave blank to use answer text.')
+          .addText(t => {
+            t.setValue((nodeRecord['radiprotocol_displayLabel'] as string | undefined) ?? '')
+              .onChange(v => {
+                this.pendingEdits['radiprotocol_displayLabel'] = v || undefined;
+                this.scheduleAutoSave();
+              });
+          });
         new Setting(container)
           .setName('Answer text')
           .setDesc('Appended to the accumulated report text when this answer is chosen.')
@@ -429,16 +440,6 @@ export class EditorPanelView extends ItemView {
               .onChange(v => {
                 this.pendingEdits['radiprotocol_answerText'] = v;
                 this.pendingEdits['text'] = v;
-                this.scheduleAutoSave();
-              });
-          });
-        new Setting(container)
-          .setName('Display label (optional)')
-          .setDesc('Short label shown in the runner button if set. Leave blank to use answer text.')
-          .addText(t => {
-            t.setValue((nodeRecord['radiprotocol_displayLabel'] as string | undefined) ?? '')
-              .onChange(v => {
-                this.pendingEdits['radiprotocol_displayLabel'] = v || undefined;
                 this.scheduleAutoSave();
               });
           });
@@ -471,16 +472,6 @@ export class EditorPanelView extends ItemView {
               .onChange(v => {
                 this.pendingEdits['radiprotocol_content'] = v;
                 this.pendingEdits['text'] = v;
-                this.scheduleAutoSave();
-              });
-          });
-        new Setting(container)
-          .setName('Snippet ID (optional)')
-          .setDesc('Snippet ID for Phase 5 dynamic snippet fill-in. Leave blank if not using snippets.')
-          .addText(t => {
-            t.setValue((nodeRecord['radiprotocol_snippetId'] as string | undefined) ?? '')
-              .onChange(v => {
-                this.pendingEdits['radiprotocol_snippetId'] = v || undefined;
                 this.scheduleAutoSave();
               });
           });
