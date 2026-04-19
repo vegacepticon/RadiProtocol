@@ -2,7 +2,7 @@
 // Pure module — zero Obsidian API imports (PARSE-07, NFR-01)
 
 import type { ProtocolGraph, RPNode } from './graph-model';
-import { nodeLabel as sharedNodeLabel, isLabeledEdge } from './node-label';
+import { nodeLabel as sharedNodeLabel, isLabeledEdge, isExitEdge, stripExitPrefix } from './node-label';
 
 export class GraphValidator {
   /**
@@ -89,37 +89,61 @@ export class GraphValidator {
       }
     }
 
-    // Check (LOOP-04): каждый unified loop-узел должен иметь (Phase 49 EDGE-01):
-    //  1) ровно одно помеченное исходящее ребро (его метка = подпись кнопки выхода) — D-01/D-02
-    //  2) хотя бы одно НЕ-помеченное исходящее ребро (body-ветвь) — D-03/D-09
-    // «Помеченное» (labeled) — edge.label !== null/undefined И edge.label.trim() !== ''
-    // (D-05, в shared src/graph/node-label.ts::isLabeledEdge). Пробельные метки считаются
-    // непомеченными.
+    // Check (LOOP-04): каждый unified loop-узел под Phase 50.1 EDGE-03:
+    //  (D-04) 0 "+"-edges AND 0 non-"+" labeled edges → "не имеет выхода" с подсказкой "+"-префикса
+    //  (D-05) 0 "+"-edges AND ≥1 non-"+" labeled edges → legacy-hint с {edgeIds}
+    //  (D-06) ≥2 "+"-edges → список offending edge ids, уберите "+"
+    //  (D-08) iterate "+"-edges, stripExitPrefix(label) === '' → per-offending-edge error
+    //  (D-07) 0 non-"+" outgoing edges → нет тела
+    // Error-check ordering: D-04/D-05 → D-06 → D-08 → D-07. Multiple errors per loop node
+    // accumulate (see RunnerView Error panel). `isExitEdge` and `stripExitPrefix` live in
+    // `src/graph/node-label.ts` (Phase 50.1 D-09/D-10). `isLabeledEdge` is still used below
+    // to detect the legacy "labeled but non-'+' prefix" case (D-05 branch).
     for (const [id, node] of graph.nodes) {
       if (node.kind !== 'loop') continue;
       const outgoing = graph.edges.filter(e => e.fromNodeId === id);
-      const exitEdges = outgoing.filter(e => isLabeledEdge(e));
-      const bodyEdges = outgoing.filter(e => !isLabeledEdge(e));
+      const exitEdges = outgoing.filter(e => isExitEdge(e));
+      const legacyLabeledEdges = outgoing.filter(e => !isExitEdge(e) && isLabeledEdge(e));
+      const bodyEdges = outgoing.filter(e => !isExitEdge(e));
       const label = this.nodeLabel(node);
-      // D-01 — zero labeled edges
+
+      // D-04 / D-05 — zero "+"-edges
       if (exitEdges.length === 0) {
-        errors.push(
-          `Loop-узел "${label}" не имеет выхода. ` +
-          `Пометьте ровно одно исходящее ребро — его метка станет подписью кнопки выхода.`
-        );
+        if (legacyLabeledEdges.length === 0) {
+          // D-04: clean zero-exit — no labeled edges at all
+          errors.push(
+            `Loop-узел "${label}" не имеет выхода. Пометьте ровно одно исходящее ребро префиксом "+" — текст после "+" станет подписью кнопки выхода.`
+          );
+        } else {
+          // D-05: legacy hint — list the labeled non-"+" candidates
+          const edgeIds = legacyLabeledEdges.map(e => e.id).join(', ');
+          errors.push(
+            `Loop-узел "${label}" не имеет выхода с префиксом "+". Добавьте "+" к одному из помеченных рёбер (${edgeIds}) — текст после "+" станет подписью кнопки выхода.`
+          );
+        }
       }
-      // D-02 — ≥2 labeled edges
+
+      // D-06 — ≥2 "+"-edges
       if (exitEdges.length > 1) {
         const dupIds = exitEdges.map(e => e.id).join(', ');
         errors.push(
-          `Loop-узел "${label}" имеет несколько помеченных исходящих рёбер: ${dupIds}. ` +
-          `Должно быть ровно одно выходное ребро — снимите метки с остальных.`
+          `Loop-узел "${label}" имеет несколько "+"-рёбер: ${dupIds}. Должно быть ровно одно выходное ребро — уберите "+" с остальных.`
         );
       }
-      // D-03 — zero unlabeled (body) edges
+
+      // D-08 — per-offending-edge, "+"-edge with empty caption post-strip
+      for (const edge of exitEdges) {
+        if (stripExitPrefix(edge.label ?? '').length === 0) {
+          errors.push(
+            `Loop-узел "${label}": "+"-ребро ${edge.id} не имеет подписи — добавьте текст после "+".`
+          );
+        }
+      }
+
+      // D-07 — zero non-"+" outgoing edges (no body)
       if (bodyEdges.length === 0) {
         errors.push(
-          `Loop-узел "${label}" не имеет тела — добавьте исходящее ребро без метки.`
+          `Loop-узел "${label}" не имеет тела — добавьте исходящее ребро без префикса "+".`
         );
       }
     }
