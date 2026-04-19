@@ -3,6 +3,9 @@ import type { RPNodeKind } from '../graph/graph-model';
 import type RadiProtocolPlugin from '../main';
 import type { CanvasInternal } from '../types/canvas-internal';
 import { NODE_COLOR_MAP } from '../canvas/node-color-map';
+// Phase 50 D-14: enumerates incoming Question→Answer edges for atomic Node Editor write
+import { collectIncomingEdgeEdits } from '../canvas/edge-label-sync-service';
+import { CanvasParser } from '../graph/canvas-parser';
 
 export const EDITOR_PANEL_VIEW_TYPE = 'radiprotocol-editor-panel';
 
@@ -185,7 +188,29 @@ export class EditorPanelView extends ItemView {
     // LIVE-03: Attempt live save via internal Canvas API first (Pattern B).
     // If saveLive() returns true, the canvas view owns the write — do not call vault.modify().
     try {
-      const savedLive = await this.plugin.canvasLiveEditor.saveLive(filePath, nodeId, enrichedEdits);
+      // Phase 50 D-14: when displayLabel is in edits, read live-or-disk canvas JSON
+      // to enumerate incoming Question→Answer edges, then commit node + edges in
+      // ONE saveLiveBatch call. Otherwise fall back to the Phase 28 saveLive path.
+      const isDisplayLabelEdit = 'radiprotocol_displayLabel' in enrichedEdits;
+      let savedLive: boolean;
+      if (isDisplayLabelEdit) {
+        const newLabel = enrichedEdits['radiprotocol_displayLabel'] as string | undefined;
+        const liveJson = this.plugin.canvasLiveEditor.getCanvasJSON(filePath);
+        const canvasContent = liveJson ?? await (async () => {
+          const f = this.plugin.app.vault.getAbstractFileByPath(filePath);
+          if (!(f instanceof TFile)) return '';
+          try { return await this.plugin.app.vault.read(f); } catch { return ''; }
+        })();
+        const parser = new CanvasParser();
+        const edgeEdits = collectIncomingEdgeEdits(parser, canvasContent, filePath, nodeId, newLabel);
+        savedLive = await this.plugin.canvasLiveEditor.saveLiveBatch(
+          filePath,
+          [{ nodeId, edits: enrichedEdits }],
+          edgeEdits,
+        );
+      } else {
+        savedLive = await this.plugin.canvasLiveEditor.saveLive(filePath, nodeId, enrichedEdits);
+      }
       if (savedLive) {
         return;
       }
@@ -262,6 +287,26 @@ export class EditorPanelView extends ItemView {
           } else {
             node[key] = value;
           }
+        }
+      }
+    }
+
+    // Phase 50 D-13/D-14: when displayLabel is in edits, mutate every incoming
+    // Question→Answer edge label in the SAME canvasData payload — one vault.modify
+    // writes node + edges atomically (avoids WR-01 race). Symmetric to the node
+    // mutation above: undefined ≡ delete 'label' key (D-08, canvas-parser.ts:207-209).
+    if ('radiprotocol_displayLabel' in enrichedEdits) {
+      const newLabel = enrichedEdits['radiprotocol_displayLabel'] as string | undefined;
+      const parser = new CanvasParser();
+      const edgeEdits = collectIncomingEdgeEdits(parser, raw, filePath, nodeId, newLabel);
+      const incomingIds = new Set(edgeEdits.map(e => e.edgeId));
+      for (const edge of canvasData.edges) {
+        const edgeObj = edge as Record<string, unknown>;
+        if (!incomingIds.has(edgeObj['id'] as string)) continue;
+        if (newLabel === undefined) {
+          delete edgeObj['label']; // D-08 strip-key
+        } else {
+          edgeObj['label'] = newLabel;
         }
       }
     }
@@ -438,6 +483,14 @@ export class EditorPanelView extends ItemView {
 
       case 'answer': {
         new Setting(container).setHeading().setName('Answer node');
+        // Phase 50 D-10: Answer.displayLabel is the single source of truth for every
+        // incoming Question→Answer edge label. Multi-incoming Answer nodes share ONE
+        // label across all incoming edges — per-edge override is explicitly out of scope
+        // for v1.8. Writes flow through saveNodeEdits (D-14 atomic batch): node
+        // radiprotocol_displayLabel + every incoming edge.label land in ONE saveLiveBatch
+        // or ONE vault.modify call. Undefined displayLabel strips the 'label' key on
+        // every incoming edge (D-08 symmetry with canvas-parser.ts:207-209).
+        // Design source: .planning/notes/answer-label-edge-sync.md
         // Phase 48 NODEUI-03: Display label renders BEFORE Answer text (swapped from original order).
         new Setting(container)
           .setName('Display label (optional)')

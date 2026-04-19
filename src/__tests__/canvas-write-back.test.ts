@@ -45,6 +45,12 @@ describe('saveNodeEdits — write-back contract (EDIT-03, EDIT-04)', () => {
       settings: {},
       canvasLiveEditor: {
         saveLive: mockSaveLive,
+        // Phase 50 D-14: Display-label edits now route through saveLiveBatch with
+        // edgeEdits (atomic node+incoming-edges write). Preserve the prior
+        // "canvas closed → fall through to vault.modify" contract by returning
+        // false from both Pattern B entry points and null from the live-read probe.
+        saveLiveBatch: vi.fn().mockResolvedValue(false),
+        getCanvasJSON: vi.fn().mockReturnValue(null),
       },
     };
 
