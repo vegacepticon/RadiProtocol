@@ -3,7 +3,7 @@ import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { CanvasParser } from '../../graph/canvas-parser';
 import { ProtocolRunner } from '../../runner/protocol-runner';
-import type { ProtocolGraph } from '../../graph/graph-model';
+import type { ProtocolGraph, RPNode } from '../../graph/graph-model';
 
 const fixturesDir = path.join(__dirname, '..', 'fixtures');
 
@@ -162,6 +162,67 @@ describe('ProtocolRunner loop picker (RUN-01..RUN-05)', () => {
     runner.chooseLoopBranch('e3');
     state = runner.getState();
     expect(state.status).toBe('complete');
+  });
+
+  // Phase 49 D-05 / D-08 regression guards — the runtime dispatch MUST be
+  // label-state-based (isExitEdge = non-empty-after-trim), NOT a literal string
+  // compare against «выход». These two tests construct an inline graph whose
+  // labeled edge reads "готово" (a legitimate non-«выход» Russian word) and
+  // verify (a) the labeled edge still pops the frame / advances, (b) the
+  // unlabeled body edge re-enters the picker without popping. If somebody
+  // re-introduces `edge.label === 'выход'` at dispatch, both tests fail.
+  function makeLoopGraph(): ProtocolGraph {
+    return {
+      canvasFilePath: 'test:phase-49-d05.canvas',
+      nodes: new Map<string, RPNode>([
+        ['n-start', { id: 'n-start', kind: 'start', x: 0, y: 0, width: 200, height: 60 }],
+        ['n-loop',  { id: 'n-loop',  kind: 'loop',  x: 0, y: 120, width: 200, height: 60, headerText: 'Loop' }],
+        ['n-body',  { id: 'n-body',  kind: 'text-block', x: 260, y: 120, width: 200, height: 60, content: 'Body' }],
+        ['n-end',   { id: 'n-end',   kind: 'text-block', x: 0, y: 240, width: 200, height: 60, content: 'End' }],
+      ]),
+      edges: [
+        { id: 'e1', fromNodeId: 'n-start', toNodeId: 'n-loop' },
+        { id: 'e2', fromNodeId: 'n-loop',  toNodeId: 'n-body' },                    // unlabeled body
+        { id: 'e3', fromNodeId: 'n-loop',  toNodeId: 'n-end',  label: 'готово' },   // labeled exit (non-«выход»)
+        { id: 'e4', fromNodeId: 'n-body',  toNodeId: 'n-loop' },                    // body → back-edge
+      ],
+      adjacency: new Map<string, string[]>([
+        ['n-start', ['n-loop']],
+        ['n-loop',  ['n-body', 'n-end']],
+        ['n-body',  ['n-loop']],
+        ['n-end',   []],
+      ]),
+      reverseAdjacency: new Map<string, string[]>([
+        ['n-start', []],
+        ['n-loop',  ['n-start', 'n-body']],
+        ['n-body',  ['n-loop']],
+        ['n-end',   ['n-loop']],
+      ]),
+      startNodeId: 'n-start',
+    };
+  }
+
+  it('Phase 49 D-05/D-08: labeled edge with a non-«выход» word ("готово") still pops the loop frame via isExitEdge', () => {
+    // Regression guard — if someone re-introduces a literal `'выход'` string comparison
+    // at the dispatch site, this test fails: "готово" is non-empty after trim so isExitEdge
+    // returns true, and the frame should pop.
+    const runner = new ProtocolRunner();
+    runner.start(makeLoopGraph());
+    // Runner reaches n-loop → awaiting-loop-pick
+    expect(runner.getState().status).toBe('awaiting-loop-pick');
+    // Choose the labeled exit edge — frame must pop + complete at n-end
+    runner.chooseLoopBranch('e3');
+    expect(runner.getState().status).toBe('complete');
+  });
+
+  it('Phase 49 D-05: unlabeled body edge does NOT pop the loop frame (picker re-entry)', () => {
+    // Same graph shape as above, but pick the body edge first.
+    const runner = new ProtocolRunner();
+    runner.start(makeLoopGraph());
+    expect(runner.getState().status).toBe('awaiting-loop-pick');
+    runner.chooseLoopBranch('e2');   // unlabeled body — walk n-body → back-edge → picker
+    // After walking the body and hitting the back-edge, we should be at the picker again, NOT complete.
+    expect(runner.getState().status).toBe('awaiting-loop-pick');
   });
 });
 
