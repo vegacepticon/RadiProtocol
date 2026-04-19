@@ -1,0 +1,41 @@
+{
+  "nodes": [
+    {
+      "id": "n-start",
+      "type": "text",
+      "text": "Start",
+      "x": 0, "y": 0, "width": 200, "height": 60,
+      "radiprotocol_nodeType": "start"
+    },
+    {
+      "id": "n-q1",
+      "type": "text",
+      "text": "Q1",
+      "x": -200, "y": 120, "width": 200, "height": 60,
+      "radiprotocol_nodeType": "question",
+      "radiprotocol_questionText": "Q1"
+    },
+    {
+      "id": "n-q2",
+      "type": "text",
+      "text": "Q2",
+      "x": 200, "y": 120, "width": 200, "height": 60,
+      "radiprotocol_nodeType": "question",
+      "radiprotocol_questionText": "Q2"
+    },
+    {
+      "id": "n-a-shared",
+      "type": "text",
+      "text": "A",
+      "x": 0, "y": 240, "width": 200, "height": 60,
+      "radiprotocol_nodeType": "answer",
+      "radiprotocol_answerText": "Общий ответ",
+      "radiprotocol_displayLabel": "Старое"
+    }
+  ],
+  "edges": [
+    { "id": "e0", "fromNode": "n-start", "toNode": "n-q1" },
+    { "id": "e1", "fromNode": "n-q1",   "toNode": "n-a-shared", "label": "Вариант X" },
+    { "id": "e2", "fromNode": "n-q2",   "toNode": "n-a-shared", "label": "Вариант Y" }
+  ]
+}
