@@ -11,7 +11,7 @@ import type { PersistedSession } from '../sessions/session-model';
 import { validateSessionNodeIds } from '../sessions/session-service';
 import { CanvasSelectorWidget } from './canvas-selector-widget';
 import { CanvasSwitchModal } from './canvas-switch-modal';
-import { isExitEdge, nodeLabel } from '../graph/node-label';
+import { isExitEdge, nodeLabel, stripExitPrefix } from '../graph/node-label';
 
 export const RUNNER_VIEW_TYPE = 'radiprotocol-runner';
 
@@ -481,15 +481,17 @@ export class RunnerView extends ItemView {
         const outgoing = this.graph.edges.filter(e => e.fromNodeId === state.nodeId);
         const list = questionZone.createDiv({ cls: 'rp-loop-picker-list' });
         for (const edge of outgoing) {
-          // Phase 49 EDGE-01 — label-state convention:
-          //   * labeled edge (exit, uniqueness enforced by GraphValidator) → caption = trimmed label (D-06),
-          //                                                                   CSS class = rp-loop-exit-btn.
-          //   * unlabeled edge (body branch) → caption = nodeLabel() of the target node (D-11 / D-12),
-          //                                    CSS class = rp-loop-body-btn.
+          // Phase 50.1 EDGE-03 — "+"-prefix convention:
+          //   * "+"-prefixed edge (exit; uniqueness + non-empty caption enforced by GraphValidator
+          //     LOOP-04 D-06/D-08) → caption = stripExitPrefix(label) (D-09),
+          //                           CSS class = rp-loop-exit-btn.
+          //   * non-"+" edge (body branch, labeled or unlabeled — both valid under D-10)
+          //     → caption = nodeLabel() of the target node (preserved from Phase 49 D-11/D-12),
+          //       CSS class = rp-loop-body-btn.
           const exit = isExitEdge(edge);
           let caption: string;
           if (exit) {
-            caption = (edge.label ?? '').trim();            // D-06 — trimmed label verbatim
+            caption = stripExitPrefix(edge.label ?? '');    // Phase 50.1 D-09 — strip "+" + following ws
           } else {
             const target = this.graph.nodes.get(edge.toNodeId);
             caption = target !== undefined ? nodeLabel(target) : edge.toNodeId;

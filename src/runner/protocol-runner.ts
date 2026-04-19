@@ -172,6 +172,9 @@ export class ProtocolRunner {
    * edgeId is the stable identifier per locked decision (planner D-02): labels
    * can duplicate and targetNodeIds can collide when two body branches point to
    * the same node. Only edgeId is unambiguous.
+   *
+   * Phase 50.1 update: dispatch predicate is `isExitEdge` = `label.trim().startsWith('+')`
+   * (D-10). The dispatch call site is unchanged; only the predicate semantics shifted.
    */
   chooseLoopBranch(edgeId: string): void {
     if (this.runnerStatus !== 'awaiting-loop-pick') return;
@@ -193,8 +196,11 @@ export class ProtocolRunner {
     });
 
     if (isExitEdge(edge)) {
-      // RUN-03: pop frame (top-of-stack, nested-safe). Phase 49 EDGE-01:
-      // the labeled outgoing edge (uniqueness enforced by GraphValidator) is the exit.
+      // RUN-03: pop frame (top-of-stack, nested-safe). Phase 50.1 EDGE-03:
+      // the sole "+"-prefixed outgoing edge (D-06 uniqueness + D-08 non-empty caption
+      // enforced by GraphValidator LOOP-04) is the exit. isExitEdge is the Phase 50.1
+      // D-10 predicate (label.trim().startsWith('+')); Phase 49's alias to
+      // isLabeledEdge is removed — see `src/graph/node-label.ts`.
       this.loopContextStack.pop();
     }
     // Body branch: DO NOT increment iteration here. The B1 re-entry guard inside
