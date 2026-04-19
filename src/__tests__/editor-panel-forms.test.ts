@@ -309,4 +309,16 @@ describe('NODEUI-05: editor-panel.css has Phase 48 column-stack rules', () => {
     expect(phase48Region).toContain('margin-top: auto');
     expect(phase48Region).toContain('flex-wrap: nowrap');
   });
+
+  it('Phase 48.1: toolbar margin-top is overridden to a small fixed gap (var(--size-4-3)) after the Phase 48 block', () => {
+    const cssPath = path.resolve(__dirname, '../styles/editor-panel.css');
+    const css = fs.readFileSync(cssPath, 'utf8');
+    const phase481Idx = css.indexOf('/* Phase 48.1');
+    expect(phase481Idx).toBeGreaterThanOrEqual(0);
+    const phase48Idx = css.indexOf('/* Phase 48 NODEUI-05');
+    expect(phase481Idx).toBeGreaterThan(phase48Idx);
+    const phase481Region = css.slice(phase481Idx);
+    expect(phase481Region).toContain('.rp-editor-create-toolbar');
+    expect(phase481Region).toContain('margin-top: var(--size-4-3)');
+  });
 });

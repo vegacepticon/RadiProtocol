@@ -591,6 +591,11 @@
   justify-content: center;
 }
 
+/* Phase 48.1: tighten gap between form content and bottom toolbar (UAT follow-up from Phase 48 Test 7 — replaces margin-top:auto fill with small fixed spacing) */
+.rp-editor-create-toolbar {
+  margin-top: var(--size-4-3);
+}
+
 /* Phase 5: SnippetManagerView (chip editor / form sections — now hosted by
    snippet-editor-modal.ts via mountChipEditor; master-detail container rules
    removed in Phase 33 Plan 04 when the legacy layout was deleted). */
