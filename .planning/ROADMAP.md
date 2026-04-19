@@ -265,7 +265,14 @@ Plans:
   1. Editing "Display label (optional)" in the Node Editor Answer form writes `Answer.displayLabel` and updates the rendered label on every incoming edge across the canvas (Pattern B live write when canvas open, Strategy A on save when closed), per `.planning/notes/answer-label-edge-sync.md` (EDGE-02)
   2. Editing the label of any incoming edge on the canvas writes back to `Answer.displayLabel` and re-syncs every **other** incoming edge to the new value; new edges created with a label seed `Answer.displayLabel` (EDGE-02)
   3. Multi-incoming Answer topologies render the same label on every incoming edge — per-edge override is explicitly out of scope for v1.8 (per REQUIREMENTS.md Out-of-Scope row 1), with the constraint documented in code comments for future maintainers (EDGE-02)
-**Plans**: TBD
+**Plans:** 5 plans
+
+Plans:
+- [ ] 50-01-PLAN.md — Type-lift CanvasData.edges to CanvasEdgeData[] (D-15 prerequisite)
+- [ ] 50-02-PLAN.md — Pure edge-label-reconciler module + unit tests + multi-incoming and mismatch fixtures (D-04/D-07/D-08/D-09/D-17/D-18)
+- [ ] 50-03-PLAN.md — Extend CanvasLiveEditor: saveLiveEdges + saveLiveBatch(edgeEdits) + write-back integration tests (D-12/D-14)
+- [ ] 50-04-PLAN.md — EdgeLabelSyncService + main.ts wire-up + editor-panel-view Display-label atomic write (D-01/D-06/D-10/D-13/D-14)
+- [ ] 50-05-PLAN.md — Build + full test gate + human UAT checkpoint (5 scenarios)
 **UI hint**: yes
 
 ### Phase 51: Snippet Picker Overhaul
