@@ -198,55 +198,75 @@ describe('GraphValidator — snippet node (Phase 29, D-12)', () => {
 // ─────────────────────────────────────────────────────────────────────────────
 describe('GraphValidator — Phase 43: unified loop + migration (LOOP-04, MIGRATE-01)', () => {
 
-  // ── LOOP-04 happy path ──────────────────────────────────────────────────────
-  it('unified-loop-valid.canvas passes LOOP-04 checks (no «выход» / body errors)', () => {
-    // Fixture: один loop узел с ровно одним ребром «выход» + body-веткой (back-edge).
+  // ── LOOP-04 happy path (Phase 49 EDGE-01) ───────────────────────────────────
+  it('unified-loop-valid.canvas passes LOOP-04 checks (no label/body errors under Phase 49 convention)', () => {
+    // Fixture: один loop узел с ровно одним помеченным (exit) ребром + одним непомеченным body-ребром.
+    // Post-Phase-49: «проверка»-метка на body-ребре снята (см. Plan 04 fixture audit).
     const graph = parseFixture('unified-loop-valid.canvas');
     const validator = new GraphValidator();
     const errors = validator.validate(graph);
-    // Не должно быть LOOP-04-специфичных ошибок. (Другие checks могут что-то вернуть —
-    // тест-контракт: отсутствие именно LOOP-04 сообщений.)
-    expect(errors.some(e => e.includes('не имеет ребра «выход»'))).toBe(false);
-    expect(errors.some(e => e.includes('имеет несколько рёбер «выход»'))).toBe(false);
-    expect(errors.some(e => e.includes('не имеет ни одной body-ветви'))).toBe(false);
+    expect(errors.some(e => e.includes('не имеет выхода'))).toBe(false);
+    expect(errors.some(e => e.includes('несколько помеченных исходящих рёбер'))).toBe(false);
+    expect(errors.some(e => e.includes('не имеет тела'))).toBe(false);
     // И никаких migration-ошибок (в этом канвасе нет legacy узлов):
     expect(errors.some(e => e.includes('устаревшие узлы loop-start/loop-end'))).toBe(false);
   });
 
-  // ── LOOP-04 D-08.1 missing «выход» ──────────────────────────────────────────
-  it('unified-loop-missing-exit.canvas flags missing «выход» edge (D-08.1)', () => {
+  // ── LOOP-04 D-01 — missing labeled (exit) edge ──────────────────────────────
+  it('unified-loop-missing-exit.canvas flags zero labeled outgoing edges (Phase 49 D-01)', () => {
     const graph = parseFixture('unified-loop-missing-exit.canvas');
     const validator = new GraphValidator();
     const errors = validator.validate(graph);
-    expect(
-      errors.some(e => e.includes('«выход»') && e.includes('не имеет ребра')),
-    ).toBe(true);
+    expect(errors.some(e => e.includes('не имеет выхода'))).toBe(true);
+    const err = errors.find(e => e.includes('не имеет выхода'));
+    expect(err).toBeDefined();
+    if (err === undefined) return;
+    expect(err).toContain('Пометьте ровно одно исходящее ребро');
+    expect(err).toContain('Lesion loop');
   });
 
-  // ── LOOP-04 D-08.2 duplicate «выход» (with edge IDs) ────────────────────────
-  it('unified-loop-duplicate-exit.canvas flags duplicate «выход» edges with edge IDs (D-08.2)', () => {
+  // ── LOOP-04 D-02 — ≥2 labeled edges (with offending edge IDs) ───────────────
+  it('unified-loop-duplicate-exit.canvas flags multiple labeled edges with edge IDs (Phase 49 D-02)', () => {
+    // Fixture has three labeled edges: e2 (label "проверка"), e3 (label "выход"), e4 (label "выход")
+    // — all three are "labeled" under D-05, so D-02 fires listing all three ids.
     const graph = parseFixture('unified-loop-duplicate-exit.canvas');
     const validator = new GraphValidator();
     const errors = validator.validate(graph);
-    expect(
-      errors.some(e => e.includes('несколько рёбер «выход»')),
-    ).toBe(true);
-    // Обе edge-ID (e3, e4 в fixture) должны упоминаться в error-строке.
-    const duplicateErr = errors.find(e => e.includes('несколько рёбер «выход»'));
-    expect(duplicateErr).toBeDefined();
-    if (duplicateErr === undefined) return;
-    expect(duplicateErr).toContain('e3');
-    expect(duplicateErr).toContain('e4');
+    expect(errors.some(e => e.includes('несколько помеченных исходящих рёбер'))).toBe(true);
+    const dupErr = errors.find(e => e.includes('несколько помеченных исходящих рёбер'));
+    expect(dupErr).toBeDefined();
+    if (dupErr === undefined) return;
+    expect(dupErr).toContain('e2');
+    expect(dupErr).toContain('e3');
+    expect(dupErr).toContain('e4');
+    expect(dupErr).toContain('снимите метки с остальных');
   });
 
-  // ── LOOP-04 D-08.3 no body ──────────────────────────────────────────────────
-  it('unified-loop-no-body.canvas flags no-body-branch (D-08.3)', () => {
+  // ── LOOP-04 D-03 — zero body (unlabeled) edges ──────────────────────────────
+  it('unified-loop-no-body.canvas flags zero unlabeled outgoing edges (Phase 49 D-03)', () => {
     const graph = parseFixture('unified-loop-no-body.canvas');
     const validator = new GraphValidator();
     const errors = validator.validate(graph);
-    expect(
-      errors.some(e => e.includes('не имеет ни одной body-ветви')),
-    ).toBe(true);
+    expect(errors.some(e => e.includes('не имеет тела'))).toBe(true);
+    const err = errors.find(e => e.includes('не имеет тела'));
+    expect(err).toBeDefined();
+    if (err === undefined) return;
+    expect(err).toContain('добавьте исходящее ребро без метки');
+  });
+
+  // ── LOOP-04 D-02 — stray label on what was meant to be a body edge ──────────
+  it('unified-loop-stray-body-label.canvas flags a second labeled edge (Phase 49 D-02 + D-16)', () => {
+    // Fixture (Plan 04): n-loop has e2 (label "проверка", meant as body) + e3 (label "выход", legit exit)
+    // → two labeled edges → D-02 fires listing both e2 and e3.
+    const graph = parseFixture('unified-loop-stray-body-label.canvas');
+    const validator = new GraphValidator();
+    const errors = validator.validate(graph);
+    expect(errors.some(e => e.includes('несколько помеченных исходящих рёбер'))).toBe(true);
+    const dupErr = errors.find(e => e.includes('несколько помеченных исходящих рёбер'));
+    expect(dupErr).toBeDefined();
+    if (dupErr === undefined) return;
+    expect(dupErr).toContain('e2');
+    expect(dupErr).toContain('e3');
   });
 
   // ── MIGRATE-01 (D-07) — legacy loop-body.canvas ─────────────────────────────
@@ -282,17 +302,20 @@ describe('GraphValidator — Phase 43: unified loop + migration (LOOP-04, MIGRAT
   });
 
   // ── D-CL-02 order: migration check runs BEFORE LOOP-04 (early-return) ───────
-  it('legacy canvas with 0 outgoing edges gives migration-error, NOT LOOP-04 «выход» error (D-CL-02 order)', () => {
+  it('legacy canvas with 0 outgoing edges gives migration-error, NOT LOOP-04 exit error (D-CL-02 order, Phase 49)', () => {
     // loop-start.canvas содержит loop-start без continue-edge. Без early-return
-    // в Migration Check, LOOP-04 бы сгенерировал «не имеет ребра «выход»» поверх.
+    // в Migration Check, LOOP-04 сгенерировал бы D-01 «не имеет выхода» поверх.
     // Правильный порядок (D-CL-02): migration check срабатывает первым и делает return.
     const graph = parseFixture('loop-start.canvas');
     const validator = new GraphValidator();
     const errors = validator.validate(graph);
     // Migration-error присутствует:
     expect(errors.some(e => e.includes('устаревш'))).toBe(true);
-    // НЕТ LOOP-04 «не имеет ребра «выход»» ошибки, хотя loop-start формально такое ребро не имеет:
-    expect(errors.some(e => e.includes('не имеет ребра «выход»'))).toBe(false);
+    // НЕТ Phase 49 D-01 «не имеет выхода» ошибки:
+    expect(errors.some(e => e.includes('не имеет выхода'))).toBe(false);
+    // И старое Phase 43 D-08.1 сообщение «не имеет ребра «выход»» больше нигде не выпускается
+    // валидатором (гарантия чистоты Phase 49 rewrite — literal removed from LOOP-04 block):
+    expect(errors.some(e => e.includes('не имеет ребра'))).toBe(false);
   });
 
   // ── D-09: cycle through unified loop node is NOT flagged as unintentional ───
