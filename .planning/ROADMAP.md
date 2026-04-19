@@ -221,7 +221,11 @@ Plans:
   3. In the Answer form, "Display label (optional)" renders above "Answer text"; both labels and helper text accompany their inputs in the new order (NODEUI-03)
   4. In the Question form, the "Question text" textarea auto-grows on input, and its label + helper description ("Displayed to the user during the protocol session") stack **above** the textarea so full panel width is available (NODEUI-04)
   5. The `.rp-editor-create-toolbar` is anchored at the bottom of the Node Editor panel and lays out as a single full-width vertical column of four buttons; the v1.6 `flex-wrap` row-wrapping rule is no longer needed because each button is its own row (NODEUI-05)
-**Plans**: TBD
+**Plans:** 2 plans
+
+Plans:
+- [ ] 48-01-editor-form-ts-core-PLAN.md — Remove Snippet ID row from Text-block form (NODEUI-01), flip CanvasNodeFactory anchor offset from horizontal to vertical (NODEUI-02), swap Answer form Display-label above Answer-text (NODEUI-03), replace Question Setting.addTextArea with custom-DOM auto-growing textarea using runner-view.ts:816-840 scrollHeight pattern (NODEUI-04); add Wave 0 assertions in new editor-panel-forms.test.ts + flip canvas-node-factory.test.ts Test 5
+- [ ] 48-02-toolbar-css-bottom-stack-PLAN.md — Move renderToolbar call-site to the end of renderIdle + renderForm so toolbar becomes the last child of contentEl (NODEUI-05); append Phase 48 CSS blocks to src/styles/editor-panel.css (NODEUI-04 rp-question-block visuals + NODEUI-05 flex-direction:column + margin-top:auto override); run npm run build to regenerate styles.css; human-verify checkpoint UAT in TEST-BASE vault
 **UI hint**: yes
 
 ### Phase 49: Loop Exit Edge Convention
