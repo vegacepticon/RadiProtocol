@@ -152,7 +152,6 @@ describe('NODEUI-01: text-block form has no Snippet ID row', () => {
     view['buildKindForm'](container, {}, 'text-block');
     // simulate a user edit through whatever text-input onChange ran last;
     // for text-block after Phase 48 this is the Separator dropdown only, not Snippet ID.
-    // @ts-expect-error accessing private for test
     expect(Object.keys(view['pendingEdits'])).not.toContain('radiprotocol_snippetId');
   });
 });
@@ -276,7 +275,6 @@ describe('NODEUI-05: toolbar renders at the bottom of contentEl', () => {
     const view = makeView();
     (view as unknown as { renderToolbar: (c: unknown) => void })['renderToolbar'] =
       () => { createdElements.push({ tag: '__TOOLBAR__' }); };
-    // @ts-expect-error accessing private
     view['renderIdle']();
     const idleIdx = createdElements.findIndex(e => e.cls === 'rp-editor-idle');
     const toolbarIdx = createdElements.findIndex(e => e.tag === '__TOOLBAR__');
@@ -289,7 +287,6 @@ describe('NODEUI-05: toolbar renders at the bottom of contentEl', () => {
     const view = makeView();
     (view as unknown as { renderToolbar: (c: unknown) => void })['renderToolbar'] =
       () => { createdElements.push({ tag: '__TOOLBAR__' }); };
-    // @ts-expect-error accessing private
     view['renderForm']({}, null);
     const panelIdx = createdElements.findIndex(e => e.cls === 'rp-editor-panel');
     const toolbarIdx = createdElements.findIndex(e => e.tag === '__TOOLBAR__');

@@ -141,12 +141,13 @@ export class EditorPanelView extends ItemView {
 
   private renderIdle(): void {
     this.contentEl.empty();
-    this.renderToolbar(this.contentEl);  // Phase 39: quick-create toolbar
     const container = this.contentEl.createDiv({ cls: 'rp-editor-idle' });
     container.createEl('p', { text: 'No node selected' });
     container.createEl('p', {
       text: "Right-click a canvas node and choose 'Edit RadiProtocol properties' to open its configuration form.",
     });
+    // Phase 48 NODEUI-05: toolbar moved to bottom (was Phase 39 top-of-panel).
+    this.renderToolbar(this.contentEl);
   }
 
   loadNode(canvasFilePath: string, nodeId: string): void {
@@ -326,7 +327,6 @@ export class EditorPanelView extends ItemView {
 
   private renderForm(nodeRecord: Record<string, unknown>, currentKind: RPNodeKind | null): void {
     this.contentEl.empty();
-    this.renderToolbar(this.contentEl);  // Phase 39: quick-create toolbar
     const panel = this.contentEl.createDiv({ cls: 'rp-editor-panel' });
     const formArea = panel.createDiv({ cls: 'rp-editor-form' });
 
@@ -384,6 +384,8 @@ export class EditorPanelView extends ItemView {
     this._savedIndicatorEl = indicatorRow;
     // Reset indicator visibility on each form render (Pitfall 2 fix)
     indicatorRow.removeClass('is-visible');
+    // Phase 48 NODEUI-05: toolbar moved to bottom (was Phase 39 top-of-panel).
+    this.renderToolbar(this.contentEl);
   }
 
   private buildKindForm(

@@ -554,6 +554,43 @@
   filter: none;
 }
 
+/* Phase 48 NODEUI-04: Question textarea custom layout (label + helper above, full-width) */
+.rp-question-block {
+  padding: var(--size-4-2) 0;
+  border-top: 1px solid var(--background-modifier-border);
+}
+.rp-question-block .rp-field-label {
+  font-size: var(--font-ui-small);
+  font-weight: var(--font-semibold);
+  margin-bottom: var(--size-2-1);
+}
+.rp-question-block .rp-field-desc {
+  color: var(--text-muted);
+  font-size: var(--font-ui-smaller);
+  margin: 0 0 var(--size-4-1) 0;
+}
+.rp-question-textarea {
+  width: 100%;
+  min-height: 80px;
+  box-sizing: border-box;
+  resize: vertical;
+}
+
+/* Phase 48 NODEUI-05: anchor create toolbar at bottom of panel, vertical column */
+.rp-editor-create-toolbar {
+  flex-direction: column;
+  flex-wrap: nowrap;
+  margin-top: auto;
+  width: 100%;
+  border-bottom: none;
+  border-top: 1px solid var(--background-modifier-border);
+  padding-top: var(--size-4-2);
+}
+.rp-editor-create-toolbar > button {
+  width: 100%;
+  justify-content: center;
+}
+
 /* Phase 5: SnippetManagerView (chip editor / form sections — now hosted by
    snippet-editor-modal.ts via mountChipEditor; master-detail container rules
    removed in Phase 33 Plan 04 when the legacy layout was deleted). */
