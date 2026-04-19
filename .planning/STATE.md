@@ -3,16 +3,16 @@ gsd_state_version: 1.0
 milestone: v1.8
 milestone_name: UX Polish & Snippet Picker Overhaul
 status: in_progress
-stopped_at: Phase 50.1 context captured (commit 7ee4bfc). CONTEXT.md + DISCUSSION-LOG.md written with 16 decisions (D-01 exactly-1 `+`-edge, D-02 no-auto-migration / hard validation error, D-03 dedicated legacy-detection error, D-04..D-08 five Russian error texts verbatim, D-09 stripExitPrefix = slice(1) + trimStart, D-10 isExitEdge redefined to `+`-predicate / isLabeledEdge unchanged, D-11/D-12 Runner dispatch + caption, D-13 in-place fixture migration, D-14 three new fixtures incl. Phase 49↔50 conflict-scenario, D-15 ~10 edge-case tests, D-16 new EDGE-03 requirement supersedes EDGE-01). Next: /gsd-plan-phase 50.1. Phase 50 (Answer↔Edge Sync) remains complete and verified upstream.
+stopped_at: Phase 50.1 planned — 5 PLAN.md files written (commit 69d6e96), plan-checker PASS on 16 explicit checks + 10 standard dimensions (zero blockers, zero warnings). Wave structure: Wave 1 Plans 01 (node-label redefine + D-15 test matrix + EDGE-03 insert) + 04 (7 fixture migrations + 3 new fixtures); Wave 2 Plans 02 (LOOP-04 D-04..D-08 rewrite) + 03 (Runner/View caption + JSDoc); Wave 3 Plan 05 (canonical-note rewrite + automated gate + 3-scenario UAT). EDGE-03 declared in all 5 plans' requirements frontmatter. Ready for /gsd-execute-phase 50.1.
 last_updated: "2026-04-19T00:00:00.000Z"
 last_activity: 2026-04-19
 resume_file: .planning/phases/50.1-loop-exit-plus-prefix/50.1-CONTEXT.md
 progress:
   total_phases: 8
   completed_phases: 4
-  total_plans: 18
+  total_plans: 23
   completed_plans: 18
-  percent: 100
+  percent: 78
 ---
 
 # RadiProtocol — Project State
