@@ -3,30 +3,30 @@ gsd_state_version: 1.0
 milestone: v1.8
 milestone_name: UX Polish & Snippet Picker Overhaul
 status: in_progress
-stopped_at: Phase 50 Plan 03 complete — CanvasLiveEditor.saveLiveEdges + saveLiveBatch(edgeEdits) landed (TDD RED→GREEN); tsc clean, 484/1/0. Plan 50-04 (EdgeLabelSyncService wire-up) is next.
-last_updated: "2026-04-19T13:11:09.000Z"
+stopped_at: Phase 50 Plan 04 complete — EdgeLabelSyncService + main.ts wire-up + Node Editor Display-label atomic node+edge write landed; tsc clean, npm run build clean, 484/1/0. Plan 50-05 (build + full test gate + human UAT checkpoint) is next.
+last_updated: "2026-04-19T13:22:53.000Z"
 last_activity: 2026-04-19
 resume_file: .planning/phases/50-answer-edge-label-sync/
 progress:
   total_phases: 8
   completed_phases: 3
   total_plans: 18
-  completed_plans: 15
-  percent: 83
+  completed_plans: 16
+  percent: 89
 ---
 
 # RadiProtocol — Project State
 
 **Updated:** 2026-04-19
 **Milestone:** v1.8 — UX Polish & Snippet Picker Overhaul
-**Status:** In progress — Phase 47 + 48.1 + 49 shipped; Phase 50 Wave 1 + Wave 2 (reconciler + writers) complete. Plan 50-04 (`EdgeLabelSyncService` wire-up + Display-label atomic write) is next.
-**Stopped at:** Phase 50 Plan 03 complete — `CanvasLiveEditor.saveLiveEdges(filePath, edgeEdits)` + `saveLiveBatch` extended with optional `edgeEdits` 3rd param (D-14 atomicity); 5 new write-back integration tests green (D-08 strip-key, D-14 single-setData, first-pass-validate reject, back-compat). Commits `91e4121` (test RED), `dec2474` (feat GREEN); tsc clean, 484/1/0.
+**Status:** In progress — Phase 47 + 48.1 + 49 shipped; Phase 50 Wave 1 + Wave 2 + Wave 3 (type-lift + reconciler + writers + runtime wire-up) complete. Plan 50-05 (build + full test gate + human UAT checkpoint) is next.
+**Stopped at:** Phase 50 Plan 04 complete — `EdgeLabelSyncService` (vault.on('modify') + 250ms debounce + Pattern B/Strategy A dispatch) + `main.ts` lifecycle wire-up + Node Editor Display-label handler now commits node+incoming-edges atomically via `saveLiveBatch` (Pattern B — D-14) or single `vault.modify` (Strategy A). Commits `3cf8bd2` (service), `00690e2` (main.ts wire-up), `fd7c78b` (editor-panel-view + test mock extension); tsc clean, npm run build clean, 484/1/0.
 
 ---
 
 ## Current Position
 
-Phase: 50 (Answer ↔ Edge Label Sync) — 🟡 In progress. Plans 01 + 02 + 03 complete (CanvasEdgeData type-lift; pure reconciler + tests + fixtures; saveLiveEdges + saveLiveBatch edgeEdits). Plan 04 (`EdgeLabelSyncService` + Node Editor atomic write wire-up) is next.
+Phase: 50 (Answer ↔ Edge Label Sync) — 🟡 In progress. Plans 01 + 02 + 03 + 04 complete (CanvasEdgeData type-lift; pure reconciler + tests + fixtures; saveLiveEdges + saveLiveBatch edgeEdits; EdgeLabelSyncService + main.ts + Node Editor atomic write wire-up). Plan 05 (build + full test gate + human UAT checkpoint) is next.
 
 Phase: 49 (Loop Exit Edge Convention) — ✅ Plans 01-05 complete (13 commits + 1 rollup), UAT approved 2026-04-19.
 Plan 49-01 commits: 4fce768 (feat — shared node-label.ts with nodeLabel/isLabeledEdge/isExitEdge); c39876f (test — 23 unit tests covering all 8 nodeLabel arms + D-05 trim semantics + D-07 alias identity); 313b544 (docs).

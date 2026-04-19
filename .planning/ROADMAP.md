@@ -271,7 +271,7 @@ Plans:
 - [x] 50-01-PLAN.md — Type-lift CanvasData.edges to CanvasEdgeData[] (D-15 prerequisite) — ✅ f920522 (2026-04-19)
 - [x] 50-02-PLAN.md — Pure edge-label-reconciler module + unit tests + multi-incoming and mismatch fixtures (D-04/D-07/D-08/D-09/D-17/D-18) — ✅ f8d08c7+b6489db+31d1322+39d3c7e (2026-04-19)
 - [x] 50-03-PLAN.md — Extend CanvasLiveEditor: saveLiveEdges + saveLiveBatch(edgeEdits) + write-back integration tests (D-12/D-14) — ✅ 91e4121+dec2474 (2026-04-19)
-- [ ] 50-04-PLAN.md — EdgeLabelSyncService + main.ts wire-up + editor-panel-view Display-label atomic write (D-01/D-06/D-10/D-13/D-14)
+- [x] 50-04-PLAN.md — EdgeLabelSyncService + main.ts wire-up + editor-panel-view Display-label atomic write (D-01/D-06/D-10/D-13/D-14) — ✅ 3cf8bd2+00690e2+fd7c78b (2026-04-19)
 - [ ] 50-05-PLAN.md — Build + full test gate + human UAT checkpoint (5 scenarios)
 **UI hint**: yes
 
