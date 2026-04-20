@@ -338,12 +338,18 @@ Plans:
 ### Phase 53: Runner Skip & Close Buttons
 **Goal**: Add two new buttons to the Protocol Runner UI — **Skip** advances past the current node without inserting anything into the Runner textarea, and **Close** unloads the current canvas (with the same confirmation dialog used when switching canvases mid-run) and returns the Runner to the "no canvas selected" state.
 **Depends on**: Nothing (pure Runner UI addition; schedulable independently of other v1.8 phases)
-**Requirements**: TBD (to be allocated in discuss-phase)
+**Requirements**: RUNNER-SKIP-01, RUNNER-SKIP-02, RUNNER-SKIP-03, RUNNER-CLOSE-01, RUNNER-CLOSE-02, RUNNER-CLOSE-03
 **Success Criteria** (what must be TRUE):
   1. A **Skip** button is visible in the Runner while a node is active — clicking it advances to the next node per the existing dispatch logic without appending anything to the Runner textarea and without emitting a choice/edge traversal that would fail non-skip expectations downstream
   2. A **Close** button is visible in the Runner while a canvas is loaded — clicking it shows the existing mid-run switch confirmation prompt; on confirm, the active canvas is unloaded and the Runner returns to the "no canvas selected" state (same state as on fresh plugin open / post-canvas-clear)
   3. Both buttons do nothing (or are disabled/hidden) when no canvas is loaded, and skip is only operative when a node is currently active (not during terminal / empty-buffer states)
-**Plans**: TBD
+**Plans**: 4 plans
+
+Plans:
+- [ ] 53-01-PLAN.md — Add RUNNER-SKIP-* / RUNNER-CLOSE-* to REQUIREMENTS.md + ProtocolRunner.skip() method + 6 unit tests (D-07..D-11)
+- [ ] 53-02-PLAN.md — Skip button UI in RunnerView question-zone (icon-only setIcon + 5-step click prologue) + Phase 53 CSS block append (D-01/D-04/D-05/D-07/D-08/D-11)
+- [ ] 53-03-PLAN.md — Close button in selectorBarEl + handleClose() with D-14 teardown + visibility toggle + Close CSS (D-02/D-12..D-16)
+- [ ] 53-04-PLAN.md — Automated gate (10 audits + 5 counter-checks) + human UAT in TEST-BASE (3 scenarios mapped to SC-1/2/3) + rollup commit
 **UI hint**: yes
 
 ### Phase 54: Inline Protocol Display Mode
