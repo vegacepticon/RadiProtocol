@@ -363,6 +363,100 @@ describe('SnippetEditorModal Phase 52 D-04 — broken snippet banner + disabled 
     expect(banner?.querySelector('script')).toBeNull();
   });
 
+  // ───── Phase 56 D-08: unsaved-folder dot indicator ─────
+  // The five behaviour cases below mirror the five behaviours in the plan:
+  //   D1 — initial open: dot exists, NOT visible (savedFolder === currentFolder)
+  //   D2 — picker onSelect different folder: dot becomes visible (.is-visible)
+  //   D3 — successful save commits new baseline: dot hides again
+  //   D4 — selecting back to the saved folder: dot hides
+  //   D5 — dot is a <span> child of the «Папка» label, not in the modal header
+
+  it('D1: opening edit modal — unsaved-folder dot exists but is hidden (savedFolder === currentFolder)', async () => {
+    const snippet = makeBrokenSnippet(null);
+    const modal = await openModal(snippet);
+    const contentEl = (modal as unknown as { contentEl: MockEl }).contentEl;
+    const dot = contentEl.querySelector('.rp-snippet-editor-unsaved-dot');
+    expect(dot).not.toBeNull();
+    expect(dot!.classList.has('is-visible')).toBe(false);
+  });
+
+  it('D2: SnippetTreePicker onSelect → folder differs → dot becomes visible', async () => {
+    const snippet = makeBrokenSnippet(null);
+    const modal = await openModal(snippet);
+    const contentEl = (modal as unknown as { contentEl: MockEl }).contentEl;
+    // Simulate a folder change: write currentFolder to a new value and trigger
+    // updateFolderUnsavedDot via the same channel the onSelect callback uses.
+    const m = modal as unknown as {
+      currentFolder: string;
+      updateFolderUnsavedDot: () => void;
+    };
+    m.currentFolder = 'Protocols/Snippets/Subfolder';
+    m.updateFolderUnsavedDot();
+    const dot = contentEl.querySelector('.rp-snippet-editor-unsaved-dot');
+    expect(dot).not.toBeNull();
+    expect(dot!.classList.has('is-visible')).toBe(true);
+  });
+
+  it('D3: after save commits the new folder as savedFolder baseline, dot hides', async () => {
+    const snippet = makeBrokenSnippet(null);
+    const modal = await openModal(snippet);
+    const contentEl = (modal as unknown as { contentEl: MockEl }).contentEl;
+    const m = modal as unknown as {
+      currentFolder: string;
+      savedFolder: string;
+      updateFolderUnsavedDot: () => void;
+    };
+    // Step 1: differ → visible
+    m.currentFolder = 'Protocols/Snippets/Subfolder';
+    m.updateFolderUnsavedDot();
+    let dot = contentEl.querySelector('.rp-snippet-editor-unsaved-dot');
+    expect(dot!.classList.has('is-visible')).toBe(true);
+    // Step 2: save commits baseline
+    m.savedFolder = m.currentFolder;
+    m.updateFolderUnsavedDot();
+    dot = contentEl.querySelector('.rp-snippet-editor-unsaved-dot');
+    expect(dot!.classList.has('is-visible')).toBe(false);
+  });
+
+  it('D4: selecting the same folder as savedFolder hides the dot', async () => {
+    const snippet = makeBrokenSnippet(null);
+    const modal = await openModal(snippet);
+    const contentEl = (modal as unknown as { contentEl: MockEl }).contentEl;
+    const m = modal as unknown as {
+      currentFolder: string;
+      savedFolder: string;
+      updateFolderUnsavedDot: () => void;
+    };
+    // Differ first
+    m.currentFolder = 'Protocols/Snippets/Other';
+    m.updateFolderUnsavedDot();
+    let dot = contentEl.querySelector('.rp-snippet-editor-unsaved-dot');
+    expect(dot!.classList.has('is-visible')).toBe(true);
+    // Now revert to saved
+    m.currentFolder = m.savedFolder;
+    m.updateFolderUnsavedDot();
+    dot = contentEl.querySelector('.rp-snippet-editor-unsaved-dot');
+    expect(dot!.classList.has('is-visible')).toBe(false);
+  });
+
+  it('D5: dot is a <span> child of the «Папка» label element (not in modal header)', async () => {
+    const snippet = makeBrokenSnippet(null);
+    const modal = await openModal(snippet);
+    const contentEl = (modal as unknown as { contentEl: MockEl }).contentEl;
+    // Locate the «Папка» label among all rendered <label> nodes.
+    const labels = contentEl.querySelectorAll('label');
+    const folderLabel = labels.find(
+      (l) => (l as unknown as { _text: string })._text === 'Папка',
+    );
+    expect(folderLabel).toBeTruthy();
+    const dotInLabel = folderLabel!.querySelector('.rp-snippet-editor-unsaved-dot');
+    expect(dotInLabel).not.toBeNull();
+    expect(dotInLabel!.tagName).toBe('SPAN');
+    // titleEl must NOT contain the dot
+    const titleEl = (modal as unknown as { titleEl: MockEl }).titleEl;
+    expect(titleEl.querySelector('.rp-snippet-editor-unsaved-dot')).toBeNull();
+  });
+
   it('B5: valid snippet (validationError: null) renders NO banner and Save enabled (control)', async () => {
     const snippet = makeBrokenSnippet(null);
     const modal = await openModal(snippet);
