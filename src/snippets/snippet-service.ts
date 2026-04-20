@@ -3,6 +3,7 @@
 import type { App } from 'obsidian';
 import type { RadiProtocolSettings } from '../settings';
 import type { Snippet, JsonSnippet } from './snippet-model';
+import { validatePlaceholders } from './snippet-model';
 import { WriteMutex } from '../utils/write-mutex';
 import { ensureFolderPath } from '../utils/vault-utils';
 
@@ -117,15 +118,20 @@ export class SnippetService {
         try {
           const raw = await this.app.vault.adapter.read(filePath);
           const parsed = JSON.parse(raw) as Partial<JsonSnippet>;
+          // Phase 52 D-03: hard-validation — surface legacy placeholder types
+          // and empty-choice options as validationError so Editor/Runner can
+          // block rendering. Syntax-broken JSON still silently skipped via catch.
+          const validationError = validatePlaceholders(parsed.placeholders);
           snippets.push({
             kind: 'json',
             path: filePath,
             name: basename,
             template: parsed.template ?? '',
-            placeholders: parsed.placeholders ?? [],
+            placeholders: (parsed.placeholders ?? []) as JsonSnippet['placeholders'],
+            validationError,
           });
         } catch {
-          // Corrupt file — skip silently.
+          // Corrupt file — skip silently (D-03 explicit: syntax-broken JSON stays silent-skip).
         }
       } else if (filePath.endsWith('.md')) {
         try {
@@ -162,12 +168,15 @@ export class SnippetService {
       const basename = this.basenameNoExt(normalized);
       if (normalized.endsWith('.json')) {
         const parsed = JSON.parse(raw) as Partial<JsonSnippet>;
+        // Phase 52 D-03: populate validationError on every JsonSnippet return.
+        const validationError = validatePlaceholders(parsed.placeholders);
         return {
           kind: 'json',
           path: normalized,
           name: basename,
           template: parsed.template ?? '',
-          placeholders: parsed.placeholders ?? [],
+          placeholders: (parsed.placeholders ?? []) as JsonSnippet['placeholders'],
+          validationError,
         };
       }
       if (normalized.endsWith('.md')) {
@@ -484,8 +493,8 @@ export class SnippetService {
         ...p,
         label: clean(p.label),
         options: p.options?.map(clean),
-        unit: p.unit !== undefined ? clean(p.unit) : undefined,
-        joinSeparator: p.joinSeparator !== undefined ? clean(p.joinSeparator) : undefined,
+        // Phase 52 D-02: legacy join-field renamed to `separator`; D-07: legacy unit field removed.
+        separator: p.separator !== undefined ? clean(p.separator) : undefined,
       })),
     };
   }
