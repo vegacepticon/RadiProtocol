@@ -174,8 +174,63 @@ vi.mock('obsidian', () => {
     renderSuggestion(_item: T, _el: unknown): void {}
     onChooseSuggestion(_item: T, _evt: unknown): void {}
   }
-  return { ItemView, WorkspaceLeaf, Notice, setIcon, Menu, SuggestModal };
+  // Phase 51 Plan 04 D-07 — Modal instrumentation to drive the SnippetTreePicker-hosting
+  // «Переместить в…» flow in tests. Captures setTitle + onOpen/onClose + open/close calls.
+  class Modal {
+    app: unknown;
+    contentEl: MockEl;
+    titleEl: MockEl;
+    _captured: CapturedModal;
+    constructor(app: unknown) {
+      this.app = app;
+      this.contentEl = makeEl('div');
+      this.titleEl = makeEl('div');
+      const captured: CapturedModal = {
+        title: '',
+        contentEl: this.contentEl,
+        onOpenFn: null,
+        onCloseFn: null,
+        open: () => { captured.isOpen = true; captured.onOpenFn?.(); },
+        close: () => { if (!captured.isOpen) return; captured.isOpen = false; captured.onCloseFn?.(); },
+        isOpen: false,
+      };
+      this._captured = captured;
+      modalInstances.push(captured);
+    }
+    setTitle(t: string): void { this._captured.title = t; this.titleEl.setText(t); }
+    set onOpen(fn: () => void) { this._captured.onOpenFn = fn; }
+    get onOpen(): () => void { return this._captured.onOpenFn ?? (() => {}); }
+    set onClose(fn: () => void) { this._captured.onCloseFn = fn; }
+    get onClose(): () => void { return this._captured.onCloseFn ?? (() => {}); }
+    open(): void { this._captured.open(); }
+    close(): void { this._captured.close(); }
+  }
+  return { ItemView, WorkspaceLeaf, Notice, setIcon, Menu, Modal, SuggestModal };
 });
+
+// Phase 51 Plan 04 D-07 — captured Modal instrumentation.
+interface CapturedModal {
+  title: string;
+  contentEl: MockEl;
+  onOpenFn: (() => void) | null;
+  onCloseFn: (() => void) | null;
+  open: () => void;
+  close: () => void;
+  isOpen: boolean;
+}
+const modalInstances: CapturedModal[] = [];
+
+// Phase 51 Plan 04 D-07 — SnippetTreePicker stub capturing constructor options.
+interface CapturedPicker { options: Record<string, unknown>; }
+const pickerInstances: CapturedPicker[] = [];
+const pickerUnmountSpy = vi.fn();
+vi.mock('../views/snippet-tree-picker', () => ({
+  SnippetTreePicker: class {
+    constructor(options: Record<string, unknown>) { pickerInstances.push({ options }); }
+    async mount(): Promise<void> {}
+    unmount(): void { pickerUnmountSpy(); }
+  },
+}));
 
 // --- Spy on rewriteCanvasRefs --------------------------------------------
 const rewriteCanvasRefsSpy = vi.fn(async (_app: unknown, _mapping: Map<string, string>) => ({
@@ -526,7 +581,31 @@ describe('SnippetManagerView — drag-and-drop (Phase 34 Plan 02)', () => {
       rewriteCanvasRefsSpy.mockClear();
       lastPickerCall = null;
       lastMenuItems = [];
+      // Phase 51 Plan 04 D-07 — new Modal + SnippetTreePicker instrumentation
+      modalInstances.length = 0;
+      pickerInstances.length = 0;
+      pickerUnmountSpy.mockClear();
     });
+
+    // Phase 51 Plan 04 D-07 helper — invoke the latest SnippetTreePicker's onSelect with
+    // an absolute target path (tests express intent in absolute paths; the picker emits
+    // root-relative paths, so we translate).
+    async function selectAbsolute(absPath: string): Promise<void> {
+      const opts = pickerInstances[pickerInstances.length - 1]!.options as {
+        onSelect: (r: { kind: 'folder' | 'file'; relativePath: string }) => void;
+        rootPath: string;
+      };
+      const rel = absPath === opts.rootPath
+        ? ''
+        : absPath.startsWith(opts.rootPath + '/')
+          ? absPath.slice(opts.rootPath.length + 1)
+          : absPath;
+      opts.onSelect({ kind: 'folder', relativePath: rel });
+      // handleSelect is async — flush microtasks
+      await Promise.resolve();
+      await Promise.resolve();
+      await Promise.resolve();
+    }
 
     it('file branch: selecting folder in picker calls moveSnippet; rewriteCanvasRefs NOT called', async () => {
       const { plugin, service } = makePlugin({
@@ -542,11 +621,13 @@ describe('SnippetManagerView — drag-and-drop (Phase 34 Plan 02)', () => {
       const node = { kind: 'file' as const, path: `${root}/note.json`, name: 'note', snippetKind: 'json' as const };
       await (view as any).openMovePicker(node);
 
-      expect(folderPickerCtorSpy).toHaveBeenCalled();
-      expect(lastPickerCall).not.toBeNull();
+      // Phase 51 D-07 — Modal + SnippetTreePicker replaced FolderPickerModal
+      expect(modalInstances.length).toBe(1);
+      expect(modalInstances[0]!.isOpen).toBe(true);
+      expect(pickerInstances.length).toBe(1);
+      expect((pickerInstances[0]!.options as Record<string, unknown>).mode).toBe('folder-only');
 
-      // Invoke the picker callback as if the user selected `${root}/dst`
-      await lastPickerCall!.onChoose(`${root}/dst`);
+      await selectAbsolute(`${root}/dst`);
 
       expect(service.moveSnippet).toHaveBeenCalledWith(`${root}/note.json`, `${root}/dst`);
       expect(service.moveFolder).not.toHaveBeenCalled();
@@ -568,8 +649,7 @@ describe('SnippetManagerView — drag-and-drop (Phase 34 Plan 02)', () => {
       const node = { kind: 'folder' as const, path: `${root}/a`, name: 'a', children: [] };
       await (view as any).openMovePicker(node);
 
-      expect(lastPickerCall).not.toBeNull();
-      await lastPickerCall!.onChoose(`${root}/b`);
+      await selectAbsolute(`${root}/b`);
 
       expect(service.moveFolder).toHaveBeenCalledWith(`${root}/a`, `${root}/b`);
       expect(rewriteCanvasRefsSpy).toHaveBeenCalledTimes(1);
@@ -578,8 +658,11 @@ describe('SnippetManagerView — drag-and-drop (Phase 34 Plan 02)', () => {
       expect(Array.from(mapping.entries())).toEqual([['a', 'b/a']]);
     });
 
-    it('folder branch: picker folders list EXCLUDES source folder and its descendants', async () => {
-      const { plugin } = makePlugin({
+    it('folder branch: move-target safety guards reject source-self and descendants with Russian Notices', async () => {
+      // Phase 51 D-07 — the picker is a generic widget; source-self + descendants are
+      // filtered by the in-handler whitelist + explicit guard, surfacing Russian Notices
+      // instead of silently failing.
+      const { plugin, service } = makePlugin({
         listings: {
           [root]: { folders: ['a', 'b'], snippets: [] },
           [`${root}/a`]: { folders: ['sub'], snippets: [] },
@@ -594,12 +677,20 @@ describe('SnippetManagerView — drag-and-drop (Phase 34 Plan 02)', () => {
       const node = { kind: 'folder' as const, path: `${root}/a`, name: 'a', children: [] };
       await (view as any).openMovePicker(node);
 
-      expect(lastPickerCall).not.toBeNull();
-      const folders = lastPickerCall!.folders;
-      expect(folders).not.toContain(`${root}/a`);
-      expect(folders).not.toContain(`${root}/a/sub`);
-      expect(folders).toContain(root);
-      expect(folders).toContain(`${root}/b`);
+      // Attempt: select source itself → must be rejected
+      await selectAbsolute(`${root}/a`);
+      expect(service.moveFolder).not.toHaveBeenCalled();
+      expect(modalInstances[0]!.isOpen).toBe(true);
+
+      // Attempt: select a descendant of source → must be rejected
+      await selectAbsolute(`${root}/a/sub`);
+      expect(service.moveFolder).not.toHaveBeenCalled();
+      expect(modalInstances[0]!.isOpen).toBe(true);
+
+      // Attempt: select a valid sibling folder → allowed, performMove runs, modal closes
+      await selectAbsolute(`${root}/b`);
+      expect(service.moveFolder).toHaveBeenCalledWith(`${root}/a`, `${root}/b`);
+      expect(modalInstances[0]!.isOpen).toBe(false);
     });
 
     it('folder branch: expand-state paths are prefix-rewritten after folder move', async () => {
@@ -618,7 +709,7 @@ describe('SnippetManagerView — drag-and-drop (Phase 34 Plan 02)', () => {
 
       const node = { kind: 'folder' as const, path: `${root}/a`, name: 'a', children: [] };
       await (view as any).openMovePicker(node);
-      await lastPickerCall!.onChoose(`${root}/b`);
+      await selectAbsolute(`${root}/b`);
 
       const expanded: string[] = plugin.settings.snippetTreeExpandedPaths;
       // Source entries rewritten

@@ -6,6 +6,13 @@
 // in the caller before the `folders` array is passed in.
 import { App, SuggestModal } from 'obsidian';
 
+/**
+ * @deprecated Phase 51 D-07 (PICKER-02) — superseded by an inline SnippetTreePicker-hosting
+ *   Modal in `src/views/snippet-manager-view.ts` (openMovePicker). This file is retained per
+ *   CLAUDE.md Shared Pattern G ("never remove existing code you didn't add") and may be
+ *   safely deleted in a future cleanup phase if `git grep FolderPickerModal` returns zero
+ *   imports outside this file.
+ */
 export class FolderPickerModal extends SuggestModal<string> {
   private readonly folders: string[];
   private readonly onChooseCb: (folder: string) => void | Promise<void>;

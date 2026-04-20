@@ -6,13 +6,16 @@
 // 120ms-debounced redraw when files change under settings.snippetFolderPath
 // (D-18 prefix filter). The chip editor extracted in Plan 02 is reached via
 // the modal, not directly.
-import { ItemView, Menu, Notice, WorkspaceLeaf, setIcon, type EventRef } from 'obsidian';
+import { ItemView, Menu, Modal, Notice, WorkspaceLeaf, setIcon, type EventRef } from 'obsidian';
 import type RadiProtocolPlugin from '../main';
 import type { Snippet } from '../snippets/snippet-model';
 import { SnippetEditorModal } from './snippet-editor-modal';
 import { ConfirmModal } from './confirm-modal';
-// Phase 34 Plan 01: «Переместить в…» context-menu flow
-import { FolderPickerModal } from './folder-picker-modal';
+// Phase 51 Plan 04 D-07 (PICKER-02): «Переместить в…» now uses SnippetTreePicker
+// (folder-only mode) inside an inline Modal. The legacy SuggestModal-based picker
+// in folder-picker-modal.ts is retained (marked @deprecated) per CLAUDE.md Shared
+// Pattern G. See `.planning/notes/snippet-node-binding-and-picker.md`.
+import { SnippetTreePicker } from './snippet-tree-picker';
 import { rewriteCanvasRefs } from '../snippets/canvas-ref-sync';
 import { toCanvasKey } from '../snippets/snippet-service';
 
@@ -662,7 +665,60 @@ export class SnippetManagerView extends ItemView {
       }
     };
 
-    new FolderPickerModal(this.app, folders, onChoose).open();
+    // Phase 51 D-07 (PICKER-02) — inline Modal hosting a folder-only SnippetTreePicker
+    // replaces the legacy flat-list picker.
+    // Host wrapper class `rp-stp-modal-host` is defined in src/styles/snippet-tree-picker.css
+    // (owned by Plan 02). This plan does NOT modify CSS.
+    // See `.planning/notes/snippet-node-binding-and-picker.md`.
+    const rootPath = this.plugin.settings.snippetFolderPath;
+    // `folders` is the whitelist of valid move destinations (verified at
+    // snippet-manager-view.ts:642-654). Membership check: target is valid iff included
+    // in the `folders` whitelist.
+    const allowedSet = new Set(folders);
+
+    const modal = new Modal(this.app);
+    modal.setTitle('Переместить в…');
+    let pickerInstance: SnippetTreePicker | null = null;
+
+    const handleSelect = async (result: { kind: 'folder' | 'file'; relativePath: string }): Promise<void> => {
+      const absPath = result.relativePath === '' ? rootPath : `${rootPath}/${result.relativePath}`;
+      // Move-target safety guard (D-07): block source-self and source-descendant targets.
+      if (absPath === node.path && node.kind === 'folder') {
+        new Notice('Нельзя переместить папку в саму себя.');
+        return;
+      }
+      if (node.kind === 'folder' && absPath.startsWith(node.path + '/')) {
+        new Notice('Нельзя переместить в подпапку самого себя.');
+        return;
+      }
+      // Whitelist membership: target must be in the allow-list of valid destinations.
+      if (!allowedSet.has(absPath)) {
+        new Notice('Эта папка недоступна как цель перемещения.');
+        return;
+      }
+      modal.close();
+      await onChoose(absPath);
+    };
+
+    modal.onOpen = () => {
+      const host = modal.contentEl.createDiv({ cls: 'rp-stp-modal-host' });
+      pickerInstance = new SnippetTreePicker({
+        app: this.app,
+        snippetService: this.plugin.snippetService,
+        container: host,
+        mode: 'folder-only',
+        rootPath,
+        onSelect: (result) => { void handleSelect(result); },
+      });
+      void pickerInstance.mount();
+    };
+    modal.onClose = () => {
+      if (pickerInstance !== null) {
+        pickerInstance.unmount();
+        pickerInstance = null;
+      }
+    };
+    modal.open();
   }
 
   // -------------------------------------------------------------------------
