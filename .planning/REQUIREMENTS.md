@@ -79,7 +79,7 @@
 
 ### JSON Snippet Placeholders (PHLD)
 
-- [ ] **PHLD-01**: JSON snippet placeholder types are collapsed to exactly two: `free text` and a unified `choice`. The `number` and `multichoice` types are removed. The unified `choice` renders as multi-select in the Runner fill-in modal; selecting a single option inserts that value, selecting multiple joins them with a separator (default `", "`, overridable via an optional per-placeholder `separator` field). The snippet editor's options-list UI works correctly — adding, editing, reordering, and removing options persists. Loading a `.json` snippet that declares a removed type is a hard validation error surfaced in the snippet editor and blocks Runner use.
+- [x] **PHLD-01**: JSON snippet placeholder types are collapsed to exactly two: `free text` and a unified `choice`. The `number` and `multichoice` types are removed. The unified `choice` renders as multi-select in the Runner fill-in modal; selecting a single option inserts that value, selecting multiple joins them with a separator (default `", "`, overridable via an optional per-placeholder `separator` field). The snippet editor's options-list UI works correctly — adding, editing, reordering, and removing options persists. Loading a `.json` snippet that declares a removed type is a hard validation error surfaced in the snippet editor and blocks Runner use. ✅ Closed by Phase 52 (2026-04-20). Union narrowed to {free-text, choice}; joinSeparator renamed to separator; unit removed; validatePlaceholders helper emits hard-validation error for legacy types; editor banner + runner error panel surface the error; UAT PASS 5/5 in TEST-BASE.
   - **Source:** `.planning/todos/pending/json-snippet-placeholder-rework.md` + `.planning/notes/json-snippet-placeholder-rework.md`
   - **Signal:** placeholder schema updated; snippet editor type selector shows two options; existing `choice`/`multichoice` options-editor bug is fixed; no automatic migration of legacy snippets (user confirmed none exist).
 
@@ -121,7 +121,7 @@
 | EDGE-03   | Phase 50.1 | ✅ complete (2026-04-19) |
 | PICKER-01 | Phase 51 | planned |
 | PICKER-02 | Phase 51 | planned |
-| PHLD-01   | Phase 52 | planned |
+| PHLD-01   | Phase 52 | ✅ complete (2026-04-20) |
 | BRAT-01   | Phase 53 | planned |
 
 *Phase assignments filled in by the roadmapper on 2026-04-18.*

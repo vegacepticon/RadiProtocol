@@ -62,7 +62,7 @@ created: 2026-04-20
 - Options persist after save/reload: two entries remain, with the edited value reflected.
 - Add/edit/remove all work without UI glitch.
 
-**User resume signal:** _____________________
+**User resume signal:** `Pass` (2026-04-20) — PASS after two gap-closure fixes to the chip click handler: (1) guard bails when target is inside `.rp-placeholder-expanded` so clicks on inner inputs/buttons don't collapse the expanded region; (2) `stopPropagation` on the expanded container so handlers that detach DOM (e.g. «×» on option rows) don't cause the bubble-up guard to miss. Pre-existing bug since Phase 33 (`ddff1d2`); RESEARCH.md «non-reproducible» verdict overturned by real UAT.
 
 ### Scenario 2 — D-02 separator rename (SC 1)
 
@@ -79,7 +79,7 @@ created: 2026-04-20
 - On disk: placeholder object has `"separator": " / "` field.
 - On disk: NO `"joinSeparator"` field.
 
-**User resume signal:** _____________________
+**User resume signal:** `pass` (2026-04-20) — D-02 rename confirmed on disk; `separator` field present, `joinSeparator` absent.
 
 ### Scenario 3 — D-05 unified choice multi-select in Runner (SC 3)
 
@@ -102,7 +102,7 @@ created: 2026-04-20
 **Assert:**
 - All 5 behaviours (checkbox render, single select, multi join, Custom override, Custom clear) work as expected.
 
-**User resume signal:** _____________________
+**User resume signal:** `pass` (2026-04-20) — D-05 unified choice multi-select confirmed end-to-end in Runner.
 
 ### Scenario 4 — D-04 SnippetEditorModal banner (SC 4, editor surface)
 
@@ -122,7 +122,7 @@ created: 2026-04-20
 - «Сохранить» / Save button is disabled.
 - The chip-editor section is visually grayed out / not interactive.
 
-**User resume signal:** _____________________
+**User resume signal:** `pass` (2026-04-20) — D-04 editor banner confirmed for legacy `type: 'number'` snippet; banner rendered, Save disabled, chip-editor grayed out.
 
 ### Scenario 5 — D-04 RunnerView error surface (SC 4, runner surface)
 
@@ -139,17 +139,17 @@ created: 2026-04-20
 - For 4a: inside the picker, an inline Russian error message appears naming the path and citing `«удалённый тип "number"»`. The Runner remains on the picker; session is alive; Step-back works.
 - For 4b: a non-fatal Notice pops up with the Russian error text; the Runner steps back to the Question and the user can pick another path.
 
-**User resume signal:** _____________________
+**User resume signal:** `pass` (2026-04-20) — D-04 Runner error surface confirmed; legacy snippet rejected with inline/Notice error.
 
 ## Sign-off
 
-- [ ] Scenario 1 PASS
-- [ ] Scenario 2 PASS
-- [ ] Scenario 3 PASS
-- [ ] Scenario 4 PASS
-- [ ] Scenario 5 PASS
+- [x] Scenario 1 PASS
+- [x] Scenario 2 PASS
+- [x] Scenario 3 PASS
+- [x] Scenario 4 PASS
+- [x] Scenario 5 PASS
 
 ---
-User final approval signal: _____________________
+User final approval signal: `pass` (2026-04-20) — all 5 scenarios PASS end-to-end; one mid-UAT gap closure applied to `snippet-chip-editor.ts` click handler (pre-Phase-33 regression surfaced during Scenario 1).
 
-PHLD-01 status → closed on 2026-04-XX
+PHLD-01 status → closed on 2026-04-20

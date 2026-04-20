@@ -1,7 +1,7 @@
 # Roadmap: RadiProtocol
 
 **Project:** RadiProtocol
-**Last updated:** 2026-04-20
+**Last updated:** 2026-04-20 (Phase 52 complete)
 
 ---
 
@@ -120,7 +120,7 @@ Full details: `.planning/milestones/v1.7-ROADMAP.md`
 - [x] **Phase 50: Answer ↔ Edge Label Sync** — ✅ Complete 2026-04-19. EDGE-02 closed by human UAT PASS (5/5 scenarios in TEST-BASE: canvas-open Pattern B D-14 atomic write, canvas-closed Strategy A single vault.modify, D-04 inbound reconcile with D-07 self-termination, multi-incoming sibling re-sync, clearing symmetry 5a+5b). Tests: 484 passed / 1 skipped / 0 failed (+18 vs Phase 49 baseline). gsd-verifier: 37/37 must-haves verified (commit 62dd212), status `passed`. Follow-up captured as Phase 50.1 (INSERTED).
 - [x] **Phase 50.1: Loop Exit `+` Prefix Convention (INSERTED)** — ✅ Complete 2026-04-19. `isExitEdge` redefined to `label.trim().startsWith('+')`; `stripExitPrefix` added; LOOP-04 validator emits 5 locked Russian errors (D-04..D-08); RunnerView exit caption uses `stripExitPrefix`; 10 loop-canvas fixtures migrated/created. EDGE-03 added to REQUIREMENTS.md; EDGE-01 superseded. Tests: 506 passed / 1 skipped / 0 failed (+22 vs Phase 50 baseline). gsd-verifier: 37/37 must-haves verified, status `passed`. UAT PASS in TEST-BASE (3/3 scenarios).
 - [ ] **Phase 51: Snippet Picker Overhaul** — Add specific-snippet binding on Snippet nodes + replace flat folder list with unified hierarchical picker (tree drill-down, breadcrumb, tree-wide search)
-- [ ] **Phase 52: JSON Placeholder Rework** — Collapse placeholder types to `free text` + unified `choice`; fix broken options-list editor; hard-reject legacy `number`/`multichoice`/old-choice snippets
+- [x] **Phase 52: JSON Placeholder Rework** — ✅ Complete 2026-04-20. PHLD-01 closed by UAT PASS 5/5 (D-08 options roundtrip, D-02 separator rename, D-05 unified choice multi-select, D-04 editor banner, D-04 runner error). Tests: 642/1/0. One mid-UAT gap closure applied to chip-editor click handler (latent bug since Phase 33).
 - [ ] **Phase 53: BRAT Distribution Readiness** — Align `manifest.json` / `versions.json` / git tags; publish first GitHub Release with `manifest.json` + `main.js` + `styles.css` assets; verify BRAT install end-to-end
 - [ ] **Phase 56: Snippet Button UX Reversal** — Откат Phase 51 D-13/D-16: file-bound Snippet всегда рендерится как кнопка + клик даёт прямую вставку (без picker); UI indicators для folder selection в SnippetEditorModal (unsaved marker + button color feedback)
 
@@ -328,11 +328,11 @@ Plans:
 **Plans**: 5 plans
 
 Plans:
-- [ ] 52-01-wave0-test-scaffolding-PLAN.md — Wave 0 RED test scaffolding: 4 new test files (snippet-service-validation, snippet-chip-editor, snippet-fill-in-modal, snippet-editor-modal-banner) + fixture updates in snippet-model.test.ts + runner-snippet-picker.test.ts
-- [ ] 52-02-model-and-service-narrowing-PLAN.md — Narrow SnippetPlaceholder union to 2 types; rename joinSeparator → separator; drop unit; add validationError to JsonSnippet + validatePlaceholders helper; wire into SnippetService.load/listFolder/sanitizeJson (D-01/D-02/D-03/D-07)
-- [ ] 52-03-chip-editor-and-fill-in-modal-PLAN.md — Chip editor narrowed to 2-type selector + renderNumberExpanded deleted + Разделитель rendered for all choice; fill-in modal checkbox-only dispatch + renderNumberField deleted (D-05/D-06/D-09)
-- [ ] 52-04-banner-and-runner-error-surface-PLAN.md — SnippetEditorModal validation banner + disabled save + read-only content; RunnerView validationError guards in handleSnippetFill (Notice+stepBack) and renderSnippetPicker onSelect (inline error); CSS appended + npm run build (D-04)
-- [ ] 52-05-uat-and-regression-gate-PLAN.md — Full test + build gate; static audits; dev-vault human UAT (5 scenarios: D-08 roundtrip, D-02 on-disk, D-05 multi-select, D-04 editor, D-04 runner); STATE/ROADMAP/REQUIREMENTS rollup
+- [x] 52-01-wave0-test-scaffolding-PLAN.md — Wave 0 RED test scaffolding: 4 new test files + fixture updates (20 RED tests) — ✅ e33b99a/0ee9100/6382186/08af83c/384c65d/63b2e96/9a02327 (2026-04-20)
+- [x] 52-02-model-and-service-narrowing-PLAN.md — Narrow SnippetPlaceholder union to 2 types; rename joinSeparator → separator; drop unit; add validationError + validatePlaceholders (D-01/D-02/D-03/D-07) — ✅ fb3c8d1/b8c7e01/a218b2a (2026-04-20)
+- [x] 52-03-chip-editor-and-fill-in-modal-PLAN.md — Chip editor narrowed to 2-type selector; fill-in modal checkbox-only dispatch (D-05/D-06/D-09) — ✅ 7d17039/9f1f23d/892ea8f (2026-04-20)
+- [x] 52-04-banner-and-runner-error-surface-PLAN.md — SnippetEditorModal validation banner + RunnerView validationError guards + CSS appended (D-04) — ✅ 794a922/611f4ff/f7baa6a/55f7c6a (2026-04-20)
+- [x] 52-05-uat-and-regression-gate-PLAN.md — Full test + build gate; 10 static audits; dev-vault UAT 5/5 PASS + mid-UAT chip-editor gap closure; STATE/ROADMAP/REQUIREMENTS rollup — ✅ b7459bd/9900a56 + rollup (2026-04-20)
 **UI hint**: yes
 
 ### Phase 53: Runner Skip & Close Buttons
@@ -407,7 +407,7 @@ Plans:
 | 50 | v1.8 | 5/5 | Complete | 2026-04-19 |
 | 50.1 | v1.8 | 5/5 | Complete (INSERTED) | 2026-04-19 |
 | 51 | v1.8 | 0/6 | Planned | - |
-| 52 | v1.8 | 0/5 | Planned | - |
+| 52 | v1.8 | 5/5 | Complete | 2026-04-20 |
 | 53 | v1.8 | 0/0 | Not started | - |
 | 54 | v1.8 | 0/0 | Not started | - |
 | 55 | v1.8 | 0/0 | Not started | - |
