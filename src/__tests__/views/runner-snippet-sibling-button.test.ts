@@ -233,7 +233,6 @@ function mountAtQuestion(graph: ProtocolGraph): Harness {
 function makeSnippetNode(partial: Partial<SnippetNode> & { id: string }): SnippetNode {
   return {
     kind: 'snippet',
-    id: partial.id,
     x: 0, y: 0, width: 100, height: 40,
     ...partial,
   } as SnippetNode;
@@ -325,17 +324,19 @@ describe('Phase 51 Plan 05 — Specific-bound Snippet sibling button (D-16)', ()
     expect(btns[0]!.text).toBe(`${GLYPH_FOLDER} Snippet`);
   });
 
-  it('Test 6b: file-bound snippet with path stripped to pure dot-prefix falls through to literal "📄 Snippet"', () => {
+  it('Test 6b: file-bound snippet with dotfile-style basename (".md") renders stem as-is (dot-at-position-0 preserved)', () => {
     const sn = makeSnippetNode({
       id: 's1',
-      // pathological path "stems" to empty string: ".md" → basename=".md", dot at 0 → stem="" → fallback
-      radiprotocol_snippetPath: '.md',
+      // Edge case: "foo/.md" basename is ".md" — dot is at position 0. Per plan spec
+      // (dot > 0 ? slice(0, dot) : basename), dotfiles are returned as-is, not stripped
+      // to empty → does NOT fall through to "Snippet" literal.
+      radiprotocol_snippetPath: 'foo/.md',
     });
     const { contentEl } = mountAtQuestion(buildGraph({ snippetNodes: [sn] }));
 
     const btns = findByClass(contentEl, 'rp-snippet-branch-btn');
     expect(btns.length).toBe(1);
-    expect(btns[0]!.text).toBe(`${GLYPH_FILE} Snippet`);
+    expect(btns[0]!.text).toBe(`${GLYPH_FILE} .md`);
   });
 
   it('Test 7 (RUNFIX-02): click handler invokes capturePendingTextareaScroll FIRST, then syncManualEdit, then chooseSnippetBranch', () => {

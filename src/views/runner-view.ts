@@ -418,9 +418,32 @@ export class RunnerView extends ItemView {
               // Phase 31 D-02: snippet branches rendered below answers, visually distinct.
               const snippetList = questionZone.createDiv({ cls: 'rp-snippet-branch-list' });
               for (const snippetNode of snippetNeighbors) {
-                const label = (snippetNode.snippetLabel !== undefined && snippetNode.snippetLabel.length > 0)
-                  ? `\uD83D\uDCC1 ${snippetNode.snippetLabel}`   // 📁
-                  : '\uD83D\uDCC1 Snippet';                      // D-01 fallback
+                // Phase 51 D-16 (PICKER-01) — caption fallback split by binding variant.
+                // Directory-bound (radiprotocol_snippetPath undefined/empty): keep Phase 31 📁 prefix.
+                // File-bound (radiprotocol_snippetPath non-empty):              📄 prefix + 3-step fallback chain.
+                // See `.planning/notes/snippet-node-binding-and-picker.md`.
+                const isFileBound =
+                  typeof snippetNode.radiprotocol_snippetPath === 'string' &&
+                  snippetNode.radiprotocol_snippetPath !== '';
+                let label: string;
+                if (isFileBound) {
+                  const snippetPath = snippetNode.radiprotocol_snippetPath as string;
+                  if (snippetNode.snippetLabel !== undefined && snippetNode.snippetLabel.length > 0) {
+                    label = `\uD83D\uDCC4 ${snippetNode.snippetLabel}`;  // 📄
+                  } else {
+                    // basename → strip extension
+                    const lastSlash = snippetPath.lastIndexOf('/');
+                    const basename = lastSlash >= 0 ? snippetPath.slice(lastSlash + 1) : snippetPath;
+                    const dot = basename.lastIndexOf('.');
+                    const stem = dot > 0 ? basename.slice(0, dot) : basename;
+                    label = stem.length > 0 ? `\uD83D\uDCC4 ${stem}` : '\uD83D\uDCC4 Snippet';
+                  }
+                } else {
+                  // Directory binding — preserved Phase 31 D-01 caption with 📁 prefix
+                  label = (snippetNode.snippetLabel !== undefined && snippetNode.snippetLabel.length > 0)
+                    ? `\uD83D\uDCC1 ${snippetNode.snippetLabel}`   // 📁
+                    : '\uD83D\uDCC1 Snippet';                       // D-01 fallback
+                }
                 const btn = snippetList.createEl('button', {
                   cls: 'rp-snippet-branch-btn',
                   text: label,
