@@ -185,6 +185,7 @@ function makePlugin(): RadiProtocolPlugin {
 interface Harness {
   view: RunnerView;
   chooseSnippetBranchSpy: ReturnType<typeof vi.fn>;
+  pickFileBoundSnippetSpy: ReturnType<typeof vi.fn>;
   syncManualEditSpy: ReturnType<typeof vi.fn>;
   capturePendingTextareaScrollSpy: ReturnType<typeof vi.fn>;
   contentEl: FakeNode;
@@ -198,6 +199,7 @@ function mountAtQuestion(graph: ProtocolGraph): Harness {
   (view as unknown as { contentEl: FakeNode }).contentEl = contentEl;
 
   const chooseSnippetBranchSpy = vi.fn();
+  const pickFileBoundSnippetSpy = vi.fn();
   const syncManualEditSpy = vi.fn();
   (view as unknown as { runner: unknown }).runner = {
     getState: () => ({
@@ -207,6 +209,7 @@ function mountAtQuestion(graph: ProtocolGraph): Harness {
       canStepBack: false,
     }),
     chooseSnippetBranch: chooseSnippetBranchSpy,
+    pickFileBoundSnippet: pickFileBoundSnippetSpy,
     chooseAnswer: vi.fn(),
     syncManualEdit: syncManualEditSpy,
     stepBack: vi.fn(),
@@ -234,7 +237,7 @@ function mountAtQuestion(graph: ProtocolGraph): Harness {
 
   (view as unknown as { render: () => void }).render();
 
-  return { view, chooseSnippetBranchSpy, syncManualEditSpy, capturePendingTextareaScrollSpy, contentEl };
+  return { view, chooseSnippetBranchSpy, pickFileBoundSnippetSpy, syncManualEditSpy, capturePendingTextareaScrollSpy, contentEl };
 }
 
 function makeSnippetNode(partial: Partial<SnippetNode> & { id: string }): SnippetNode {
@@ -346,7 +349,9 @@ describe('Phase 51 Plan 05 — Specific-bound Snippet sibling button (D-16)', ()
     expect(btns[0]!.text).toBe(`${GLYPH_FILE} .md`);
   });
 
-  it('Test 7 (RUNFIX-02): click handler invokes capturePendingTextareaScroll FIRST, then syncManualEdit, then chooseSnippetBranch', () => {
+  it('Test 7 (RUNFIX-02): file-bound click handler invokes capturePendingTextareaScroll FIRST, then syncManualEdit, then pickFileBoundSnippet', () => {
+    // Phase 56 D-04: file-bound click now routes through pickFileBoundSnippet,
+    // not chooseSnippetBranch (Phase 51 D-16 routing reversed).
     const sn = makeSnippetNode({
       id: 's1',
       radiprotocol_snippetPath: 'abdomen/ct.md',
@@ -360,8 +365,8 @@ describe('Phase 51 Plan 05 — Specific-bound Snippet sibling button (D-16)', ()
     h.syncManualEditSpy.mockImplementation(() => {
       callOrder.push('syncManualEdit');
     });
-    h.chooseSnippetBranchSpy.mockImplementation(() => {
-      callOrder.push('chooseSnippetBranch');
+    h.pickFileBoundSnippetSpy.mockImplementation(() => {
+      callOrder.push('pickFileBoundSnippet');
     });
 
     const btns = findByClass(h.contentEl, 'rp-snippet-branch-btn');
@@ -369,8 +374,10 @@ describe('Phase 51 Plan 05 — Specific-bound Snippet sibling button (D-16)', ()
 
     expect(callOrder[0]).toBe('capturePendingTextareaScroll');
     expect(callOrder[1]).toBe('syncManualEdit');
-    expect(callOrder[2]).toBe('chooseSnippetBranch');
-    expect(h.chooseSnippetBranchSpy).toHaveBeenCalledWith('s1');
+    expect(callOrder[2]).toBe('pickFileBoundSnippet');
+    // Phase 56 D-04: dispatch is direct — chooseSnippetBranch must NOT be called.
+    expect(h.chooseSnippetBranchSpy).not.toHaveBeenCalled();
+    expect(h.pickFileBoundSnippetSpy).toHaveBeenCalledWith('q1', 's1', 'abdomen/ct.md');
   });
 
   it('Test 8: TWO snippet siblings (directory-bound + file-bound) render with distinct glyphs', () => {
@@ -392,5 +399,84 @@ describe('Phase 51 Plan 05 — Specific-bound Snippet sibling button (D-16)', ()
     expect(btns.length).toBe(2);
     expect(btns[0]!.text).toBe(`${GLYPH_FOLDER} Abdomen`);
     expect(btns[1]!.text).toBe(`${GLYPH_FILE} Liver Report`);
+  });
+
+  // ── Phase 56 D-04 direct-dispatch additions ─────────────────────────────
+
+  it('Test 9 (D-04): file-bound .md single sibling click → pickFileBoundSnippet(q,s,path), NOT chooseSnippetBranch', () => {
+    const sn = makeSnippetNode({
+      id: 'sFile',
+      radiprotocol_snippetPath: 'abdomen/ct.md',
+    });
+    const h = mountAtQuestion(buildGraph({ snippetNodes: [sn] }));
+
+    const btns = findByClass(h.contentEl, 'rp-snippet-branch-btn');
+    expect(btns.length).toBe(1);
+    btns[0]!._clickHandler?.();
+
+    expect(h.pickFileBoundSnippetSpy).toHaveBeenCalledTimes(1);
+    expect(h.pickFileBoundSnippetSpy).toHaveBeenCalledWith('q1', 'sFile', 'abdomen/ct.md');
+    expect(h.chooseSnippetBranchSpy).not.toHaveBeenCalled();
+  });
+
+  it('Test 10 (D-04): file-bound .json single sibling click → pickFileBoundSnippet with .json path', () => {
+    const sn = makeSnippetNode({
+      id: 'sJson',
+      radiprotocol_snippetPath: 'liver/r.json',
+    });
+    const h = mountAtQuestion(buildGraph({ snippetNodes: [sn] }));
+
+    const btns = findByClass(h.contentEl, 'rp-snippet-branch-btn');
+    expect(btns.length).toBe(1);
+    btns[0]!._clickHandler?.();
+
+    expect(h.pickFileBoundSnippetSpy).toHaveBeenCalledTimes(1);
+    expect(h.pickFileBoundSnippetSpy).toHaveBeenCalledWith('q1', 'sJson', 'liver/r.json');
+    expect(h.chooseSnippetBranchSpy).not.toHaveBeenCalled();
+  });
+
+  it('Test 11 (D-04): mixed siblings — file-bound click → pickFileBoundSnippet, directory-bound click → chooseSnippetBranch (split per-click)', () => {
+    const snDir = makeSnippetNode({
+      id: 'sDir',
+      subfolderPath: 'abdomen',
+      snippetLabel: 'Abdomen',
+    });
+    const snFile = makeSnippetNode({
+      id: 'sFile',
+      radiprotocol_snippetPath: 'liver/report.md',
+      snippetLabel: 'Liver Report',
+    });
+    const h = mountAtQuestion(buildGraph({ snippetNodes: [snDir, snFile] }));
+
+    const btns = findByClass(h.contentEl, 'rp-snippet-branch-btn');
+    expect(btns.length).toBe(2);
+
+    // Click directory-bound first — must hit chooseSnippetBranch (Phase 51 path preserved, SC 3).
+    btns[0]!._clickHandler?.();
+    expect(h.chooseSnippetBranchSpy).toHaveBeenCalledTimes(1);
+    expect(h.chooseSnippetBranchSpy).toHaveBeenCalledWith('sDir');
+    expect(h.pickFileBoundSnippetSpy).not.toHaveBeenCalled();
+
+    // Click file-bound second — must hit pickFileBoundSnippet (D-04 direct dispatch).
+    btns[1]!._clickHandler?.();
+    expect(h.pickFileBoundSnippetSpy).toHaveBeenCalledTimes(1);
+    expect(h.pickFileBoundSnippetSpy).toHaveBeenCalledWith('q1', 'sFile', 'liver/report.md');
+    // chooseSnippetBranch count stays at 1 — file-bound did NOT route through it.
+    expect(h.chooseSnippetBranchSpy).toHaveBeenCalledTimes(1);
+  });
+
+  it('Test 12 (D-04 + RUNFIX-02): file-bound click — capturePendingTextareaScroll fires before pickFileBoundSnippet (5-step prologue parity)', () => {
+    const sn = makeSnippetNode({
+      id: 'sFile',
+      radiprotocol_snippetPath: 'abdomen/ct.md',
+    });
+    const h = mountAtQuestion(buildGraph({ snippetNodes: [sn] }));
+
+    const btns = findByClass(h.contentEl, 'rp-snippet-branch-btn');
+    btns[0]!._clickHandler?.();
+
+    expect(h.capturePendingTextareaScrollSpy).toHaveBeenCalledTimes(1);
+    expect(h.syncManualEditSpy).toHaveBeenCalledTimes(1);
+    expect(h.pickFileBoundSnippetSpy).toHaveBeenCalledTimes(1);
   });
 });
