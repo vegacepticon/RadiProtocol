@@ -21,6 +21,7 @@ import type { Snippet } from '../snippets/snippet-model';
 
 const SEARCH_DEBOUNCE_MS = 120;
 const SELECT_FOLDER_LABEL = 'Выбрать эту папку';
+const SELECT_FOLDER_COMMITTED_LABEL = '\u2713 Выбрано'; // ✓ Выбрано — Phase 56 D-10
 const EMPTY_RESULTS_LABEL = 'Ничего не найдено';
 const EMPTY_FOLDER_LABEL = 'Здесь пусто';
 const UP_BUTTON_LABEL = 'Up';
@@ -84,6 +85,12 @@ export class SnippetTreePicker {
   private listeners: TrackedListener[] = [];
   private searchInputEl: HTMLInputElement | null = null;
 
+  /** Phase 56 D-10 (PICKER-01 follow-up): relative path (drillPath.join('/'))
+   *  of the folder the user has "committed" via the «Выбрать эту папку» button.
+   *  null when no commit has occurred in the current drill session, or when
+   *  drillPath no longer equals this value (drilled elsewhere / navigated up). */
+  private committedRelativePath: string | null = null;
+
   constructor(options: SnippetTreePickerOptions) {
     this.options = options;
   }
@@ -93,6 +100,7 @@ export class SnippetTreePicker {
     this.drillPath = [];
     this.currentQuery = '';
     this.searchInputEl = null;
+    this.committedRelativePath = null;
 
     const container = this.options.container;
     this.containerEl = container;
@@ -130,6 +138,7 @@ export class SnippetTreePicker {
     }
     this.containerEl = null;
     this.searchInputEl = null;
+    this.committedRelativePath = null;
   }
 
   // ── Listener tracking ─────────────────────────────────────────────────
@@ -221,15 +230,19 @@ export class SnippetTreePicker {
       (this.options.mode === 'folder-only' || this.options.mode === 'both') &&
       this.drillPath.length > 0
     ) {
+      const currentRel = this.drillPath.join('/');
+      const isCommitted = this.committedRelativePath === currentRel;
       const selectBtn = host.createEl('button', {
-        cls: 'rp-stp-select-folder-btn',
-        text: SELECT_FOLDER_LABEL,
+        cls: isCommitted ? 'rp-stp-select-folder-btn is-committed' : 'rp-stp-select-folder-btn',
+        text: isCommitted ? SELECT_FOLDER_COMMITTED_LABEL : SELECT_FOLDER_LABEL,
       }) as HTMLButtonElement;
       this.addListener(selectBtn, 'click', () => {
+        this.committedRelativePath = currentRel;
         this.options.onSelect({
           kind: 'folder',
-          relativePath: this.drillPath.join('/'),
+          relativePath: currentRel,
         });
+        void this.renderDrillView();
       });
     }
 
