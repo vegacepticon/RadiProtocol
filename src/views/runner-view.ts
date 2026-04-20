@@ -19,7 +19,10 @@ export class RunnerView extends ItemView {
   private readonly plugin: RadiProtocolPlugin;
   // Phase 15: runner is re-created in openCanvas() to pick up textSeparator
   private runner: ProtocolRunner = new ProtocolRunner();
-  private readonly validator = new GraphValidator();
+  // Phase 51 D-04 (PICKER-01): validator is now stateful (carries snippet-file probe).
+  // Instantiated in constructor after `this.plugin` is assigned so the probe closes over
+  // the live app + settings. See `.planning/notes/snippet-node-binding-and-picker.md`.
+  private readonly validator: GraphValidator;
   private canvasFilePath: string | null = null;
   private previewTextarea: HTMLTextAreaElement | null = null;
   /**
@@ -43,6 +46,11 @@ export class RunnerView extends ItemView {
   constructor(leaf: WorkspaceLeaf, plugin: RadiProtocolPlugin) {
     super(leaf);
     this.plugin = plugin;
+    // Phase 51 D-04 (PICKER-01): wire vault-backed snippet-file probe + snippet root.
+    this.validator = new GraphValidator({
+      snippetFileProbe: (absPath) => this.plugin.app.vault.getAbstractFileByPath(absPath) !== null,
+      snippetFolderPath: this.plugin.settings.snippetFolderPath,
+    });
   }
 
   getViewType(): string { return RUNNER_VIEW_TYPE; }

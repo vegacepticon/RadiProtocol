@@ -350,8 +350,15 @@ export default class RadiProtocolPlugin extends Plugin {
       return;
     }
 
-    // 4. Validate — MIGRATE-01 (legacy loop-start/loop-end) blocks start per D-CL-06
-    const validator = new GraphValidator();
+    // 4. Validate — MIGRATE-01 (legacy loop-start/loop-end) blocks start per D-CL-06.
+    // Phase 51 D-04 (PICKER-01): inject snippet-file probe so specific-bound
+    // SnippetNode references are verified at canvas-open. Legacy directory-bound
+    // snippets are unaffected (probe never invoked when radiprotocol_snippetPath is absent).
+    // See `.planning/notes/snippet-node-binding-and-picker.md`.
+    const validator = new GraphValidator({
+      snippetFileProbe: (absPath) => this.app.vault.getAbstractFileByPath(absPath) !== null,
+      snippetFolderPath: this.settings.snippetFolderPath,
+    });
     const errors = validator.validate(parseResult.graph);
     if (errors.length > 0) {
       const firstError = errors[0] ?? 'Canvas validation failed.';

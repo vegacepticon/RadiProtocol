@@ -1,10 +1,34 @@
 // graph/graph-validator.ts
 // Pure module — zero Obsidian API imports (PARSE-07, NFR-01)
+// Phase 51 D-04 (PICKER-01): optional snippet-file probe injected via constructor.
+// See `.planning/notes/snippet-node-binding-and-picker.md`.
 
 import type { ProtocolGraph, RPNode } from './graph-model';
 import { nodeLabel as sharedNodeLabel, isLabeledEdge, isExitEdge, stripExitPrefix } from './node-label';
 
+/**
+ * Phase 51 D-04 (PICKER-01) — options bag for GraphValidator.
+ * Optional to preserve the zero-arg construction used by pure-test sites.
+ */
+export interface GraphValidatorOptions {
+  /** Phase 51 D-04: probe used to verify radiprotocol_snippetPath references an existing snippet file.
+   *  Returns true if the file exists under snippetFolderPath. When undefined (legacy zero-arg
+   *  construction), the D-04 check is skipped silently. Production callers inject
+   *  `(absPath: string) => app.vault.getAbstractFileByPath(absPath) !== null`. */
+  snippetFileProbe?: (absPath: string) => boolean;
+  /** Phase 51 D-04: snippet root from settings.snippetFolderPath; required for absolute-path
+   *  composition and for the error message. When undefined, the D-04 check is skipped silently. */
+  snippetFolderPath?: string;
+}
+
 export class GraphValidator {
+  private readonly snippetFileProbe?: (absPath: string) => boolean;
+  private readonly snippetFolderPath?: string;
+
+  constructor(options?: GraphValidatorOptions) {
+    this.snippetFileProbe = options?.snippetFileProbe;
+    this.snippetFolderPath = options?.snippetFolderPath;
+  }
   /**
    * Validates a ProtocolGraph and returns human-readable error strings (PARSE-08).
    * Returns [] if the graph is valid.
@@ -145,6 +169,27 @@ export class GraphValidator {
         errors.push(
           `Loop-узел "${label}" не имеет тела — добавьте исходящее ребро без префикса "+".`
         );
+      }
+    }
+
+    // Phase 51 D-04 (PICKER-01): Snippet node references a specific file via
+    // radiprotocol_snippetPath. Verify the file exists under snippetFolderPath; emit a
+    // hard Russian error if not. Skipped silently when no probe is injected (legacy
+    // zero-arg construction in pure tests). Directory-bound snippets (no snippetPath)
+    // are exempt — Pitfall #11 back-compat.
+    // See `.planning/notes/snippet-node-binding-and-picker.md`.
+    if (this.snippetFileProbe !== undefined && this.snippetFolderPath !== undefined) {
+      for (const [, node] of graph.nodes) {
+        if (node.kind !== 'snippet') continue;
+        const relPath = node.radiprotocol_snippetPath;
+        if (relPath === undefined || relPath === '') continue;
+        const absPath = `${this.snippetFolderPath}/${relPath}`;
+        if (!this.snippetFileProbe(absPath)) {
+          const label = this.nodeLabel(node);
+          errors.push(
+            `Snippet-узел "${label}" ссылается на несуществующий файл "${relPath}" — файл не найден в ${this.snippetFolderPath}. Проверьте путь или восстановите файл.`
+          );
+        }
       }
     }
 
