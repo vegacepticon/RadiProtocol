@@ -4,18 +4,6 @@ import { Modal, App } from 'obsidian';
 import type { JsonSnippet, SnippetPlaceholder } from '../snippets/snippet-model';
 import { renderSnippet } from '../snippets/snippet-model';
 
-// Phase 52 Plan 02 tsc-tolerance (escalation gate): the production union has
-// narrowed to 'free-text' | 'choice', but this modal still dispatches to legacy
-// renderNumberField + renderChoiceField-as-multi. Plan 03 owns the full rewire
-// to a single checkbox-only renderChoiceField + unit removal. Until then, we
-// widen SnippetPlaceholder locally so the existing 'number' / 'multi-choice'
-// branches compile. Plan 03 MUST delete this alias and the downstream casts.
-type LegacyPlaceholderType = SnippetPlaceholder['type'] | 'multi-choice' | 'number';
-type LegacyPlaceholder = Omit<SnippetPlaceholder, 'type'> & {
-  type: LegacyPlaceholderType;
-  joinSeparator?: string;
-  unit?: string;
-};
 // Phase 32 (D-01): JsonSnippet is the canonical type for fill-in modal input.
 // Previously typed as `SnippetFile`, which is now an alias for `JsonSnippet`.
 
@@ -98,21 +86,12 @@ export class SnippetFillInModal extends Modal {
   /** Render the appropriate input field for a single placeholder. */
   private renderField(placeholder: SnippetPlaceholder): void {
     const fieldDiv = this.contentEl.createDiv({ cls: 'rp-snippet-modal-field' });
-
-    // Phase 52 Plan 02 tsc-tolerance: widen to LegacyPlaceholderType so the
-    // legacy 'number' / 'multi-choice' arms still compile. Plan 03 collapses
-    // this dispatch to free-text → renderFreeTextField, choice → renderChoiceField
-    // with isMulti = true always.
-    const legacyType = placeholder.type as LegacyPlaceholderType;
-    if (legacyType === 'free-text') {
+    if (placeholder.type === 'free-text') {
       this.renderFreeTextField(fieldDiv, placeholder);
-    } else if (legacyType === 'number') {
-      this.renderNumberField(fieldDiv, placeholder);
-    } else if (legacyType === 'choice') {
-      this.renderChoiceField(fieldDiv, placeholder, false);
-    } else if (legacyType === 'multi-choice') {
-      this.renderChoiceField(fieldDiv, placeholder, true);
+    } else if (placeholder.type === 'choice') {
+      this.renderChoiceField(fieldDiv, placeholder);
     }
+    // Phase 52: unknown types render nothing. Plan 04 guards upstream via validationError.
   }
 
   /** free-text: visible label + full-width text input */
@@ -129,34 +108,14 @@ export class SnippetFillInModal extends Modal {
   }
 
   /**
-   * number: visible label (with optional unit hint) + numeric text input.
-   * Values stored as raw text; renderSnippet appends the unit suffix when needed (D-08).
-   */
-  private renderNumberField(container: HTMLElement, placeholder: SnippetPlaceholder): void {
-    // Phase 52 Plan 02 tsc-tolerance: legacy .unit field access via LegacyPlaceholder cast.
-    const phLegacy = placeholder as unknown as LegacyPlaceholder;
-    const label = container.createEl('label', { cls: 'rp-snippet-modal-label' });
-    label.textContent = placeholder.label + (phLegacy.unit ? ` (${phLegacy.unit})` : '');
-
-    const input = container.createEl('input', { type: 'text' });
-    input.inputMode = 'numeric';
-
-    input.addEventListener('input', () => {
-      // Store raw number string — renderSnippet handles unit concatenation (D-08)
-      this.values[placeholder.id] = input.value.trim();
-      this.updatePreview();
-    });
-  }
-
-  /**
-   * choice (radio) or multi-choice (checkbox) field.
-   * Includes a "Custom:" free-text override at the bottom (SNIP-09, D-09).
-   * Selecting a radio/checkbox clears custom input; typing in custom clears selections.
+   * Phase 52 D-05: unified choice field — checkbox-list always.
+   * Includes a "Custom:" free-text override at the bottom (SNIP-09, D-06/D-09).
+   * Selecting a checkbox clears custom input; typing in custom clears all checkboxes.
+   * 0 checked + empty Custom → empty string (D-09).
    */
   private renderChoiceField(
     container: HTMLElement,
     placeholder: SnippetPlaceholder,
-    isMulti: boolean,
   ): void {
     const fieldset = container.createEl('fieldset');
     const legend = fieldset.createEl('legend', { cls: 'rp-snippet-modal-label' });
@@ -168,35 +127,29 @@ export class SnippetFillInModal extends Modal {
     const checkboxEls: HTMLInputElement[] = [];
     let customInput: HTMLInputElement | null = null;
 
-    /** Recompute the current value from custom input or checkbox/radio state. */
+    /** Recompute the current value from custom input or checkbox state. */
     const recomputeValue = (): void => {
       if (customInput && customInput.value.trim() !== '') {
-        // Custom value takes precedence over radio/checkbox selection (D-09)
+        // Custom value takes precedence over checkbox selection (D-06)
         this.values[placeholder.id] = customInput.value.trim();
-      } else if (isMulti) {
+      } else {
         const selected = checkboxEls
           .filter(cb => cb.checked)
           .map(cb => cb.value);
-        // Phase 52 Plan 02 tsc-tolerance: legacy .joinSeparator; Plan 03 uses placeholder.separator.
-        const phLegacy = placeholder as unknown as LegacyPlaceholder;
-        const sep = phLegacy.joinSeparator ?? ', ';
+        const sep = placeholder.separator ?? ', ';
         this.values[placeholder.id] = selected.join(sep);
-      } else {
-        const selected = checkboxEls.find(cb => cb.checked);
-        this.values[placeholder.id] = selected ? selected.value : '';
       }
       this.updatePreview();
     };
 
-    // Render one radio/checkbox per predefined option
+    // Render one checkbox per predefined option
     for (const opt of options) {
       const row = optionsDiv.createDiv();
       row.style.display = 'flex';
       row.style.alignItems = 'center';
       row.style.gap = '4px';
 
-      const inputType = isMulti ? 'checkbox' : 'radio';
-      const ctrl = row.createEl('input', { type: inputType });
+      const ctrl = row.createEl('input', { type: 'checkbox' });
       ctrl.name = `rp-${placeholder.id}`;
       ctrl.value = opt;
 
@@ -206,7 +159,7 @@ export class SnippetFillInModal extends Modal {
       checkboxEls.push(ctrl);
 
       ctrl.addEventListener('change', () => {
-        // Clear custom input when a predefined option is selected (D-09)
+        // Clear custom input when a checkbox is toggled (D-06)
         if (customInput) {
           customInput.value = '';
         }
@@ -214,7 +167,7 @@ export class SnippetFillInModal extends Modal {
       });
     }
 
-    // Custom: free-text override (SNIP-09, D-09) — always shown below options
+    // Custom: free-text override (SNIP-09, D-06/D-09) — always shown below options
     const customRow = optionsDiv.createDiv({ cls: 'rp-snippet-modal-custom-row' });
     const customLabel = customRow.createEl('label');
     customLabel.textContent = 'Custom:';
@@ -224,7 +177,7 @@ export class SnippetFillInModal extends Modal {
 
     customInput.addEventListener('input', () => {
       if (customInput && customInput.value.trim() !== '') {
-        // Deselect all radios/checkboxes when custom is typed (D-09)
+        // Deselect all checkboxes when custom is typed (D-06)
         for (const cb of checkboxEls) {
           cb.checked = false;
         }
