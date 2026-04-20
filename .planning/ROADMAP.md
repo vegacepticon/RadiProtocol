@@ -304,7 +304,15 @@ Plans:
   2. A hierarchical navigator widget (tree drill-down with breadcrumb + tree-wide search field at the top) replaces the flat-list folder picker wherever Node Editor selects a snippet target; selecting a **folder** binds the node to that directory (legacy shape) and selecting a **snippet file** binds to that specific path (new shape) — the widget is reused in both directory and specific flows (PICKER-02)
   3. Existing directory-bound Snippet nodes continue to load and run unchanged from saved canvases — the stored canvas shape stays backward-compatible per v1.8 Standing Pitfall #11 in STATE.md; the new binding variant co-exists under a stored discriminant (PICKER-01)
   4. Opening an existing protocol that uses the v1.4 directory-bound Snippet picker in Runner still shows the same drill-down picker (now implemented via the unified hierarchical component) — no saved canvas requires editing for the UI change (PICKER-02)
-**Plans**: TBD
+**Plans:** 6 plans
+
+Plans:
+- [ ] 51-01-PLAN.md — SnippetNode model field + canvas-parser arm + GraphValidator D-04 missing-file check (PICKER-01)
+- [ ] 51-02-PLAN.md — SnippetTreePicker component (modes folder-only/file-only/both) + new src/styles/snippet-tree-picker.css + esbuild CSS_FILES registration (PICKER-02)
+- [ ] 51-03-PLAN.md — Node Editor inline SnippetTreePicker integration (mode both) replacing flat dropdown in case 'snippet' arm (PICKER-02)
+- [ ] 51-04-PLAN.md — SnippetEditorModal «Папка» + Snippet Manager «Переместить в…» migration to SnippetTreePicker (mode folder-only); FolderPickerModal preserved as @deprecated (PICKER-02)
+- [ ] 51-05-PLAN.md — Runner renderSnippetPicker rewrite on SnippetTreePicker (mode file-only) + specific-bound sibling button caption + click (D-16) (PICKER-01 + PICKER-02)
+- [ ] 51-06-PLAN.md — Runner auto-insert dispatch (D-13/D-14/D-15): single-edge Question → file-bound Snippet skips picker and lands directly in awaiting-snippet-fill (PICKER-01)
 **UI hint**: yes
 
 ### Phase 52: JSON Placeholder Rework
@@ -375,7 +383,7 @@ Plans:
 | 49 | v1.8 | 5/5 | Complete | 2026-04-19 |
 | 50 | v1.8 | 5/5 | Complete | 2026-04-19 |
 | 50.1 | v1.8 | 5/5 | Complete (INSERTED) | 2026-04-19 |
-| 51 | v1.8 | 0/0 | Not started | - |
+| 51 | v1.8 | 0/6 | Planned | - |
 | 52 | v1.8 | 0/0 | Not started | - |
 | 53 | v1.8 | 0/0 | Not started | - |
 | 54 | v1.8 | 0/0 | Not started | - |
