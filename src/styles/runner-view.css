@@ -243,3 +243,34 @@
   overflow-wrap: anywhere;
   max-width: 100%;
 }
+
+/* Phase 53: Skip & Close buttons — icon-only neutral-styled controls.
+ * Skip lives inside rp-question-zone (sibling of rp-answer-list, per D-01);
+ * Close lives inside rp-selector-bar (added by Plan 53-03). Both use setIcon()
+ * so the inner <svg> inherits --icon-color + --icon-size from Obsidian theme vars.
+ * D-04: icon-only — no visible text. D-06: neutral — NO mod-warning, NO red. */
+.rp-skip-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-top: var(--size-2-2); /* 8px — space below rp-answer-list */
+  padding: var(--size-2-2) var(--size-4-2); /* 8px 16px */
+  min-height: 32px;
+  width: auto;
+  align-self: flex-start; /* don't stretch full width like rp-answer-btn */
+  background: transparent;
+  border: 1px solid var(--background-modifier-border);
+  border-radius: var(--radius-s);
+  cursor: pointer;
+  color: var(--text-muted);
+}
+
+.rp-skip-btn:hover {
+  background: var(--background-modifier-hover);
+  color: var(--text-normal);
+}
+
+.rp-skip-btn:focus-visible {
+  outline: 2px solid var(--interactive-accent);
+  outline-offset: 1px;
+}
