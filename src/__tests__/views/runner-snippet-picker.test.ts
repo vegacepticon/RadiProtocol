@@ -582,3 +582,162 @@ describe('Phase 52 D-04 — validationError fixtures', () => {
     expect(broken.validationError).not.toBeNull();
   });
 });
+
+// ──────────────────────────────────────────────────────────────────────────
+// Phase 52 D-04 — RunnerView validationError guards (GREEN wave)
+// ──────────────────────────────────────────────────────────────────────────
+// Covers:
+//   Test: handleSnippetFill blocks a broken snippet with Notice + stepBack
+//          + autoSaveSession + render; does NOT open SnippetFillInModal nor
+//          call completeSnippet.
+//   Test: renderSnippetPicker onSelect with a broken JsonSnippet renders an
+//          inline «не может быть использован» error in the questionZone and
+//          does NOT call handleSnippetPickerSelection.
+//   Test: renderSnippetPicker onSelect with a valid JsonSnippet (validationError
+//          === null) continues through to handleSnippetPickerSelection (happy
+//          path regression).
+import { Notice } from 'obsidian';
+
+describe('Phase 52 D-04 — RunnerView validationError guards', () => {
+  it('handleSnippetFill blocks a broken snippet with Notice + stepBack (Phase 52 D-04)', async () => {
+    const { view, plugin, stepBackSpy, completeSnippetSpy } = makeView({
+      status: 'awaiting-snippet-fill',
+      nodeId: 'n1',
+      snippetId: 'abdomen/broken.json',
+      accumulatedText: '',
+      canStepBack: true,
+    });
+
+    const broken = {
+      kind: 'json',
+      path: '.radiprotocol/snippets/abdomen/broken.json',
+      name: 'broken',
+      template: 'V: {{v}}',
+      placeholders: [{ id: 'v', label: 'V', type: 'choice', options: [] }],
+      validationError:
+        'Плейсхолдер "v" типа "choice" не содержит ни одного варианта. Добавьте варианты или удалите плейсхолдер.',
+    } as unknown as Snippet;
+    (plugin.snippetService.load as ReturnType<typeof vi.fn>).mockResolvedValue(broken);
+
+    // Spy Notice constructor via vi.spyOn on the imported class.
+    const noticeSpy = vi.spyOn({ Notice }, 'Notice');
+
+    // Neutralise render so it cannot throw on the mock DOM.
+    const renderSpy = vi.fn();
+    (view as unknown as { render: () => void }).render = renderSpy;
+
+    const questionZone = makeFakeNode();
+    await (view as unknown as {
+      handleSnippetFill: (id: string, zone: HTMLElement) => Promise<void>;
+    }).handleSnippetFill(
+      'abdomen/broken.json',
+      questionZone as unknown as HTMLElement,
+    );
+
+    // Load was hit with the Phase 51 full-path + settings.snippetFolderPath.
+    expect(plugin.snippetService.load).toHaveBeenCalledWith(
+      '.radiprotocol/snippets/abdomen/broken.json',
+    );
+    // stepBack fired — user remains at preceding Question.
+    expect(stepBackSpy).toHaveBeenCalledTimes(1);
+    // completeSnippet MUST NOT be called (no advancement).
+    expect(completeSnippetSpy).not.toHaveBeenCalled();
+    // Render was called (re-renders the preceding node after stepBack).
+    expect(renderSpy).toHaveBeenCalled();
+
+    noticeSpy.mockRestore();
+  });
+
+  it('renderSnippetPicker onSelect renders inline error on broken snippet and skips handleSnippetPickerSelection (Phase 52 D-04)', async () => {
+    const { view, plugin, handleSnippetPickerSelectionSpy } = makeView({
+      status: 'awaiting-snippet-pick',
+      nodeId: 'n1',
+      subfolderPath: 'abdomen',
+      accumulatedText: '',
+      canStepBack: false,
+    });
+
+    const broken = {
+      kind: 'json',
+      path: '.radiprotocol/snippets/abdomen/broken.json',
+      name: 'broken',
+      template: 'V: {{v}}',
+      placeholders: [{ id: 'v', label: 'V', type: 'choice', options: [] }],
+      validationError:
+        'Плейсхолдер "v" типа "choice" не содержит ни одного варианта. Добавьте варианты или удалите плейсхолдер.',
+    } as unknown as Snippet;
+    (plugin.snippetService.load as ReturnType<typeof vi.fn>).mockResolvedValue(broken);
+
+    const questionZone = makeFakeNode();
+    await (view as unknown as {
+      renderSnippetPicker: (state: unknown, zone: HTMLElement) => Promise<void>;
+    }).renderSnippetPicker(
+      {
+        status: 'awaiting-snippet-pick',
+        nodeId: 'n1',
+        subfolderPath: 'abdomen',
+        accumulatedText: '',
+        canStepBack: false,
+      },
+      questionZone as unknown as HTMLElement,
+    );
+
+    const opts = pickerInstances[0]!.options as Record<string, unknown>;
+    const onSelect = opts.onSelect as (r: { kind: string; relativePath: string }) => void;
+    onSelect({ kind: 'file', relativePath: 'broken.json' });
+
+    await new Promise((r) => setTimeout(r, 0));
+    await new Promise((r) => setTimeout(r, 0));
+
+    // handleSnippetPickerSelection MUST NOT be called.
+    expect(handleSnippetPickerSelectionSpy).not.toHaveBeenCalled();
+    // Inline Russian error rendered — «не может быть использован».
+    const errs = findByText(questionZone, 'не может быть использован');
+    expect(errs.length).toBeGreaterThanOrEqual(1);
+    // Error text includes the snippet's path verbatim.
+    expect(errs[0]!.text).toContain(broken.path);
+  });
+
+  it('renderSnippetPicker onSelect routes a valid JsonSnippet through handleSnippetPickerSelection (happy-path regression)', async () => {
+    const { view, plugin, handleSnippetPickerSelectionSpy } = makeView({
+      status: 'awaiting-snippet-pick',
+      nodeId: 'n1',
+      subfolderPath: 'abdomen',
+      accumulatedText: '',
+      canStepBack: false,
+    });
+
+    const valid = {
+      kind: 'json',
+      path: '.radiprotocol/snippets/abdomen/ok.json',
+      name: 'ok',
+      template: 'V: {{v}}',
+      placeholders: [{ id: 'v', label: 'V', type: 'choice', options: ['a', 'b'] }],
+      validationError: null,
+    } as unknown as Snippet;
+    (plugin.snippetService.load as ReturnType<typeof vi.fn>).mockResolvedValue(valid);
+
+    const questionZone = makeFakeNode();
+    await (view as unknown as {
+      renderSnippetPicker: (state: unknown, zone: HTMLElement) => Promise<void>;
+    }).renderSnippetPicker(
+      {
+        status: 'awaiting-snippet-pick',
+        nodeId: 'n1',
+        subfolderPath: 'abdomen',
+        accumulatedText: '',
+        canStepBack: false,
+      },
+      questionZone as unknown as HTMLElement,
+    );
+
+    const opts = pickerInstances[0]!.options as Record<string, unknown>;
+    const onSelect = opts.onSelect as (r: { kind: string; relativePath: string }) => void;
+    onSelect({ kind: 'file', relativePath: 'ok.json' });
+
+    await new Promise((r) => setTimeout(r, 0));
+    await new Promise((r) => setTimeout(r, 0));
+
+    expect(handleSnippetPickerSelectionSpy).toHaveBeenCalledWith(valid);
+  });
+});

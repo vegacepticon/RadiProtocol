@@ -699,6 +699,17 @@ export class RunnerView extends ItemView {
             });
             return;
           }
+          // Phase 52 D-04: validationError guard for the picker-click path.
+          // Keeps session alive — user can pick another snippet or step back.
+          // Matches the «Сниппет не найден» UX above for consistency.
+          if (snippet.kind === 'json' && snippet.validationError !== null) {
+            questionZone.empty();
+            questionZone.createEl('p', {
+              cls: 'rp-empty-state-body',
+              text: `Сниппет «${snippet.path}» не может быть использован. ${snippet.validationError}`,
+            });
+            return;
+          }
           await this.handleSnippetPickerSelection(snippet);
         })();
       },
@@ -730,6 +741,18 @@ export class RunnerView extends ItemView {
    *  - Else open SnippetFillInModal; on resolve → completeSnippet(rendered); on cancel → completeSnippet('') (D-14).
    */
   private async handleSnippetPickerSelection(snippet: Snippet): Promise<void> {
+    // Phase 52 D-04: defensive validationError guard. The renderSnippetPicker
+    // onSelect callback already intercepts this case for the file-row path, but
+    // other callers (or future refactors) could route a broken snippet here.
+    // Emit a non-fatal Notice and bail before any state mutation or scroll
+    // capture — a rejected snippet never advances, so no scroll preservation is
+    // needed.
+    if (snippet.kind === 'json' && snippet.validationError !== null) {
+      new Notice(
+        `Сниппет «${snippet.path}» не может быть использован. ${snippet.validationError}`,
+      );
+      return;
+    }
     this.capturePendingTextareaScroll();  // RUNFIX-02: preserve scroll across re-render
     // BUG-01: capture any manual edit before advancing
     this.runner.syncManualEdit(this.previewTextarea?.value ?? '');
@@ -802,6 +825,23 @@ export class RunnerView extends ItemView {
         text: `Snippet '${snippetId}' not found. The snippet may have been deleted. Use step-back to continue.`,
         cls: 'rp-empty-state-body',
       });
+      return;
+    }
+
+    // Phase 52 D-04: validationError guard for the auto-insert path (Phase 51 D-14).
+    // A JsonSnippet carrying a non-null validationError (emitted by Plan 02's
+    // validatePlaceholders in the snippet-service load path) is unusable. Surface
+    // a non-fatal Notice, step the runner back so the user remains at the
+    // preceding Question node, persist the session, and re-render. Placement is
+    // AFTER the null-check and BEFORE the md-kind branch — Phase 51 D-14 path-
+    // shape detection at :788-795 remains upstream and unchanged.
+    if (snippet.kind === 'json' && snippet.validationError !== null) {
+      new Notice(
+        `Сниппет «${snippet.path}» не может быть использован. ${snippet.validationError}`,
+      );
+      this.runner.stepBack();
+      void this.autoSaveSession();
+      this.render();
       return;
     }
 
