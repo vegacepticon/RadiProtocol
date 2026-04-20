@@ -1,0 +1,233 @@
+---
+phase: 53-runner-skip-close-buttons
+plan: 02
+subsystem: runner
+tags: [runner, view, css, ui]
+requires:
+  - 53-01-protocol-runner-skip-method
+provides:
+  - runner-view-skip-button
+  - phase-53-css-block
+affects:
+  - src/views/runner-view.ts
+  - src/styles/runner-view.css
+  - styles.css (generated)
+  - src/styles.css (generated)
+  - src/__mocks__/obsidian.ts
+  - src/__tests__/views/runner-snippet-sibling-button.test.ts
+tech-stack:
+  added:
+    - "Obsidian setIcon helper (imported into runner-view.ts)"
+  patterns:
+    - "5-step canonical click prologue (capturePendingTextareaScroll → syncManualEdit → runner.X → autoSaveSession → renderAsync)"
+    - "Icon-only button with aria-label + title (Phase 53 D-04/D-05)"
+    - "Append-only CSS per phase (CLAUDE.md)"
+key-files:
+  created: []
+  modified:
+    - src/views/runner-view.ts
+    - src/styles/runner-view.css
+    - src/__mocks__/obsidian.ts
+    - src/__tests__/views/runner-snippet-sibling-button.test.ts
+    - styles.css
+    - src/styles.css
+decisions:
+  - "Skip visibility gated on `answerNeighbors.length > 0` — matches Plan 01 runner-layer guard for defence-in-depth (D-07/D-08)"
+  - "setIcon added to src/__mocks__/obsidian.ts as no-op export so vi.mock('obsidian') auto-mock can replace it with vi.fn() (Rule 3 — test infra)"
+  - "FakeNode in runner-snippet-sibling-button.test.ts extended with setAttribute + title — minimal additive stub to match new Skip button DOM surface (Rule 3 — test infra)"
+metrics:
+  completed: 2026-04-20
+  duration_minutes: "~8"
+  tasks: 2
+  commits: 2
+  test_delta: "648 → 648 (preserved, no new tests in Plan 02)"
+---
+
+# Phase 53 Plan 02: Skip Button UI + Phase 53 CSS Summary
+
+Rendered the Skip icon-button in `RunnerView`'s `case 'question':` branch,
+wired the canonical 5-step click prologue to `runner.skip()` (landed in
+Plan 01), and appended the Phase 53 CSS block to `runner-view.css`. The
+Skip button surfaces the state-machine `skip()` method to the UI, preserving
+every existing click-handler invariant (RUNFIX-02 scroll capture, BUG-01
+manual edit sync, Pitfall 8 session auto-save).
+
+## What shipped
+
+### Task 1 — Skip button render + click handler (commit `247a70a`)
+
+**`src/views/runner-view.ts` — additive only, zero deletions**
+
+- **Line 2 (obsidian import extension)**: extended the existing import
+  from `{ ItemView, WorkspaceLeaf, Notice, TFile, TFolder, MarkdownView }`
+  to `{ ItemView, WorkspaceLeaf, Notice, TFile, TFolder, MarkdownView, setIcon }`.
+  Single in-place swap; no other imports touched.
+- **Lines 418–438 (Skip button block)**: inserted between the answer-list
+  block (ends line 415) and the snippet-branch-list block (now opens at
+  line 440). Five key behaviours:
+  1. Visibility gate: `if (answerNeighbors.length > 0)` — identical
+     predicate to the answer-btn block above; satisfies D-07 (no Skip
+     when question has zero answer neighbors) without needing a disabled
+     state.
+  2. DOM: `questionZone.createEl('button', { cls: 'rp-skip-btn' })`.
+  3. Icon: `setIcon(skipBtn, 'skip-forward')` per D-05; aria-label + title
+     `'Skip this question'` per D-04.
+  4. Click handler via `this.registerDomEvent(skipBtn, 'click', …)` (no
+     raw addEventListener — Pattern: registerDomEvent).
+  5. 5-step canonical prologue, identical to answer-btn (line 407–412):
+     `capturePendingTextareaScroll()` → `syncManualEdit(previewTextarea?.value ?? '')`
+     → `this.runner.skip()` → `void autoSaveSession()` → `void renderAsync()`.
+
+**Import + Skip block diff: +22 / -1 lines. Zero other modifications to
+runner-view.ts**. All pre-existing `chooseAnswer` / `chooseSnippetBranch` /
+`chooseLoopBranch` call-sites and all Phase 3/5/15/27/28/30/31/36/43/44/45/47/50/51/52
+view code byte-identical.
+
+### Task 2 — Phase 53 CSS block + regenerated styles.css (commit `6447ac5`)
+
+**`src/styles/runner-view.css` — append-only at EOF**
+
+Appended lines 246–276 (+31 lines) under the header
+`/* Phase 53: Skip & Close buttons — icon-only neutral-styled controls. … */`.
+Three rules:
+
+| Rule | Purpose |
+|------|---------|
+| `.rp-skip-btn` | inline-flex icon button, transparent bg, neutral border (`--background-modifier-border`), `--text-muted` color, `align-self: flex-start` (does NOT stretch full-width like `.rp-answer-btn`), 32px min-height, 8px margin-top below answer-list |
+| `.rp-skip-btn:hover` | `--background-modifier-hover` + `--text-normal` on hover |
+| `.rp-skip-btn:focus-visible` | 2px accent outline + 1px offset for keyboard a11y |
+
+D-06 compliance: **neutral styling — NO `mod-warning`, NO destructive
+red**. `.rp-close-btn` rules are deferred to Plan 53-03 per the block
+header's forward-note.
+
+Phase comment headers in runner-view.css post-Plan-02: Phase 3 (line 1),
+Phase 30 (line 151), Phase 31 (line 208), Phase 36 (line 71, inline), Phase
+47 (line 229), **Phase 53 (line 247)** — 6 total. Phase 47 rule at lines
+234–245 byte-identical.
+
+**`styles.css` + `src/styles.css`** (generated by esbuild cssPlugin) —
+contains the full Phase 53 block concatenated in `CSS_FILES` order. `grep -c
+"rp-skip-btn" styles.css` returns 3 (base + :hover + :focus-visible).
+
+### Rule 3 deviations (test-infra extensions)
+
+Two additive test-infra fixes were required to keep the pre-existing Phase 51
+test suite green against the new Skip button DOM contract:
+
+#### [Rule 3 — Blocking] `src/__mocks__/obsidian.ts` — add `setIcon` no-op
+
+The manual mock at `src/__mocks__/obsidian.ts` did NOT export `setIcon`.
+`runner-snippet-sibling-button.test.ts` uses `vi.mock('obsidian')` auto-mock,
+which can only replace exports that **exist** in the source module — since
+the manual mock lacked `setIcon`, auto-mock yielded `undefined`, producing
+`TypeError: setIcon is not a function` on every render that hit the new
+Skip block.
+
+Fix: appended a 4-line no-op `export function setIcon(_el, _iconId): void {}`
+at EOF of the mock. Zero existing exports touched.
+
+#### [Rule 3 — Blocking] `runner-snippet-sibling-button.test.ts` — FakeNode extended
+
+The Phase 51 Plan 05 test uses a hand-rolled `FakeNode` stub that had no
+`setAttribute` method and no `title` field. The Skip render block calls
+`skipBtn.setAttribute('aria-label', …)` and assigns `skipBtn.title = …`.
+Added:
+- `title?: string` + `setAttribute: (name, value) => void` to the
+  `FakeNode` interface.
+- Matching `setAttribute` implementation in `makeFakeNode()` that stores
+  values in a lazy `_attrs` record.
+- Assignment to `.title` Just Works via the existing freely-structured
+  JS object.
+
+Zero existing fields, methods, or test assertions touched. All 9 pre-existing
+D-16 specs continue to pass.
+
+### Verification gates
+
+| Gate | Status |
+|------|--------|
+| `npx tsc --noEmit --skipLibCheck` | Exit 0 |
+| `npm test` | 648 passed / 1 skipped / 0 failed (48 files — baseline preserved from Plan 01) |
+| `npm run build` | Exit 0, deployed to `Z:\documents\vaults\TEST-BASE\.obsidian\plugins\radiprotocol` |
+| `grep -c "rp-skip-btn" styles.css` | 3 |
+| `grep -c "\.rp-skip-btn" src/styles/runner-view.css` | 3 |
+| `grep -c "/\* Phase [0-9]" src/styles/runner-view.css` | 6 |
+| Phase 47 block (lines 234–245) byte-identical | ✅ |
+| All pre-existing `chooseAnswer` / `chooseSnippetBranch` call-sites preserved | ✅ |
+
+### capturePendingTextareaScroll count before/after
+
+- **Before (post-Plan-01):** 6 call-sites (+ 1 method definition = 7 total grep hits)
+- **After (post-Plan-02):** 7 call-sites (+ 1 method definition + 1 comment
+  mention = 8 total grep hits)
+- Delta: +1 — the new Skip click handler at line 431. Every pre-existing
+  call-site at lines 408 / 474 / 578 / 701 / 778 preserved byte-identical.
+
+## Deviations from Plan
+
+### [Rule 3 — Blocking] Mock + test-infra extensions
+
+**Found during:** Task 1 verification (`npm test`).
+**Issue:** 9 tests in `runner-snippet-sibling-button.test.ts` failed with
+`TypeError: setIcon is not a function` after the new Skip block was mounted
+during the test's `view.render()` call. Root cause: missing `setIcon`
+export in `src/__mocks__/obsidian.ts` (vi.mock auto-mock requires the
+source export to exist). Secondary failure after mock fix:
+`TypeError: skipBtn.setAttribute is not a function` — FakeNode stub
+lacked the method.
+**Fix:** Additive extensions to both files. Zero pre-existing code
+modified in either file.
+**Files modified:** `src/__mocks__/obsidian.ts`, `src/__tests__/views/runner-snippet-sibling-button.test.ts`.
+**Commit:** `247a70a` (bundled with Task 1).
+
+No other deviations. Rules 1, 2, 4 not triggered.
+
+## Commits landed
+
+| Commit | Message |
+|--------|---------|
+| `247a70a` | `feat(53-02): render Skip button + wire click handler in RunnerView` |
+| `6447ac5` | `feat(53-02): append Phase 53 CSS block for Skip button + regenerate styles.css` |
+
+## Line ranges touched
+
+### `src/views/runner-view.ts`
+
+| Section | Lines | Change |
+|---------|-------|--------|
+| obsidian import | 2 | +setIcon in-place swap |
+| Skip button block | 418–438 | +22 inserted between answer-list and snippet-branch-list |
+
+### `src/styles/runner-view.css`
+
+| Section | Lines | Change |
+|---------|-------|--------|
+| Phase 53 block | 246–276 | +31 appended at EOF |
+
+## Threat Flags
+
+None — the Skip button introduces no new network surface, no new auth paths,
+no new trust boundaries, and no new file access. The T-53-01 DoS threat
+(Skip clicked when no answer neighbor) is already mitigated by the
+visibility gate `answerNeighbors.length > 0` AND the runner-layer guard
+from Plan 01 (`if (skipTargetId === undefined) return;`).
+
+T-53-03 (double-click race) is mitigated by the synchronous state guard
+in `ProtocolRunner.skip()` (`if (this.runnerStatus !== 'at-node') return;`)
+plus `renderAsync`'s DOM rebuild after the first click.
+
+## Self-Check: PASSED
+
+- Files claimed modified:
+  - `src/views/runner-view.ts`: FOUND — contains `rp-skip-btn` + `setIcon(skipBtn, 'skip-forward')` + `this.runner.skip()`
+  - `src/styles/runner-view.css`: FOUND — contains `/* Phase 53:` + `.rp-skip-btn` (3x)
+  - `styles.css`: FOUND — contains `rp-skip-btn` (3x, generated)
+  - `src/__mocks__/obsidian.ts`: FOUND — contains `export function setIcon`
+  - `src/__tests__/views/runner-snippet-sibling-button.test.ts`: FOUND — contains `setAttribute` on FakeNode
+- Commits claimed:
+  - `247a70a`: FOUND in git log (`feat(53-02): render Skip button + wire click handler in RunnerView`)
+  - `6447ac5`: FOUND in git log (`feat(53-02): append Phase 53 CSS block for Skip button + regenerate styles.css`)
+- Test baseline 648 → 648 (0 regressions): confirmed by vitest output
+- tsc exit 0: confirmed
+- build exit 0 + TEST-BASE deploy: confirmed
