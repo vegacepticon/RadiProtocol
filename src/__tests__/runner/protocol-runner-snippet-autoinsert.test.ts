@@ -97,8 +97,10 @@ function buildGraph(nodes: RPNode[], edgeList: Array<[string, string, string?]>,
 
 describe('Phase 51 Plan 06 — ProtocolRunner D-13/D-14/D-15 auto-insert dispatch', () => {
 
-  it('Test 1: positive D-13 — Question with single edge → file-bound .md Snippet auto-advances to awaiting-snippet-fill', () => {
-    // start → q1 (question) → sn (snippet, snippetPath:"abdomen/ct.md")
+  it('Test 1 (Phase 56 D-02): Question → file-bound .md Snippet HALTS at Question (no auto-advance); pickFileBoundSnippet then transitions to awaiting-snippet-fill', () => {
+    // Phase 56 D-02 inversion: D-13 auto-advance REMOVED. The single-edge Question
+    // now halts at-node and dispatch is driven by RunnerView click handler →
+    // ProtocolRunner.pickFileBoundSnippet (Plan 01).
     const graph = buildGraph(
       [
         makeStart('n-start'),
@@ -114,7 +116,15 @@ describe('Phase 51 Plan 06 — ProtocolRunner D-13/D-14/D-15 auto-insert dispatc
 
     const runner = new ProtocolRunner();
     runner.start(graph);
-    const state = runner.getState();
+    let state = runner.getState();
+    // Phase 56: halts at Question, no auto-advance.
+    expect(state.status).toBe('at-node');
+    if (state.status !== 'at-node') return;
+    expect(state.currentNodeId).toBe('q1');
+
+    // Simulate click on the rp-snippet-branch-btn → pickFileBoundSnippet.
+    runner.pickFileBoundSnippet('q1', 'sn', 'abdomen/ct.md');
+    state = runner.getState();
     expect(state.status).toBe('awaiting-snippet-fill');
     if (state.status !== 'awaiting-snippet-fill') return;
     expect(state.snippetId).toBe('abdomen/ct.md');
@@ -122,7 +132,8 @@ describe('Phase 51 Plan 06 — ProtocolRunner D-13/D-14/D-15 auto-insert dispatc
     expect(state.canStepBack).toBe(true);
   });
 
-  it('Test 2: positive D-13 — Question with single edge → file-bound .json Snippet auto-advances; snippetId keeps full path with ext', () => {
+  it('Test 2 (Phase 56 D-02): Question → file-bound .json Snippet HALTS; pickFileBoundSnippet keeps full path with .json ext', () => {
+    // Phase 56 D-02 inversion of Phase 51 D-13 .json positive case.
     const graph = buildGraph(
       [
         makeStart('n-start'),
@@ -138,7 +149,14 @@ describe('Phase 51 Plan 06 — ProtocolRunner D-13/D-14/D-15 auto-insert dispatc
 
     const runner = new ProtocolRunner();
     runner.start(graph);
-    const state = runner.getState();
+    let state = runner.getState();
+    expect(state.status).toBe('at-node');
+    if (state.status !== 'at-node') return;
+    expect(state.currentNodeId).toBe('q1');
+
+    // Click → direct dispatch.
+    runner.pickFileBoundSnippet('q1', 'sn', 'liver/r.json');
+    state = runner.getState();
     expect(state.status).toBe('awaiting-snippet-fill');
     if (state.status !== 'awaiting-snippet-fill') return;
     expect(state.snippetId).toBe('liver/r.json');
@@ -235,7 +253,9 @@ describe('Phase 51 Plan 06 — ProtocolRunner D-13/D-14/D-15 auto-insert dispatc
     expect(state.currentNodeId).toBe('q1');
   });
 
-  it('Test 7: D-15 undo — stepBack from auto-insert state returns to Question with pre-insertion accumulator', () => {
+  it('Test 7 (Phase 56 D-02): undo — stepBack from awaiting-snippet-fill (entered via pickFileBoundSnippet) returns to Question with pre-insertion accumulator', () => {
+    // Phase 56 D-02 inversion: must explicitly enter awaiting-snippet-fill via
+    // pickFileBoundSnippet (no longer auto-entered by D-13). Undo path identical.
     const graph = buildGraph(
       [
         makeStart('n-start'),
@@ -251,7 +271,9 @@ describe('Phase 51 Plan 06 — ProtocolRunner D-13/D-14/D-15 auto-insert dispatc
 
     const runner = new ProtocolRunner();
     runner.start(graph);
-    // pre-state: awaiting-snippet-fill
+    // Phase 56: halt at Question first, then click-dispatch.
+    expect(runner.getState().status).toBe('at-node');
+    runner.pickFileBoundSnippet('q1', 'sn', 'abdomen/ct.md');
     const pre = runner.getState();
     expect(pre.status).toBe('awaiting-snippet-fill');
 
@@ -263,7 +285,8 @@ describe('Phase 51 Plan 06 — ProtocolRunner D-13/D-14/D-15 auto-insert dispatc
     expect(post.accumulatedText).toBe('');
   });
 
-  it('Test 8: D-15 undo after completeSnippet — stepBack from subsequent node restores pre-insertion accumulator', () => {
+  it('Test 8 (Phase 56 D-02): undo after completeSnippet — stepBack from subsequent node restores pre-insertion accumulator (entry via pickFileBoundSnippet)', () => {
+    // Phase 56 D-02 inversion: explicitly drive awaiting-snippet-fill via pickFileBoundSnippet.
     // start → tb-pre (appends "preceding text") → q1 → sn (snippetPath) → tb-post
     const graph = buildGraph(
       [
@@ -284,23 +307,31 @@ describe('Phase 51 Plan 06 — ProtocolRunner D-13/D-14/D-15 auto-insert dispatc
 
     const runner = new ProtocolRunner();
     runner.start(graph);
-    // State = awaiting-snippet-fill, accumulator = "preceding text"
+    // After start: tb-pre auto-appended, halts at Question (Phase 56: no auto-advance).
+    let s0 = runner.getState();
+    expect(s0.status).toBe('at-node');
+    if (s0.status !== 'at-node') return;
+    expect(s0.currentNodeId).toBe('q1');
+    expect(s0.accumulatedText).toBe('preceding text');
+
+    // Click on file-bound snippet button → pickFileBoundSnippet.
+    runner.pickFileBoundSnippet('q1', 'sn', 'abdomen/ct.md');
     const mid = runner.getState();
     expect(mid.status).toBe('awaiting-snippet-fill');
     if (mid.status !== 'awaiting-snippet-fill') return;
     expect(mid.accumulatedText).toBe('preceding text');
 
-    // Complete the snippet — inserts snippet text and advances through sn to tb-post (auto-appends "tail"), completes
+    // Complete the snippet — inserts text and advances to tb-post, completes.
     runner.completeSnippet('snippet text');
-    let after = runner.getState();
-    // Should reach complete state because tb-post is terminal
+    const after = runner.getState();
     expect(after.status).toBe('complete');
     if (after.status !== 'complete') return;
     expect(after.finalText).toBe('preceding text\nsnippet text\ntail');
 
-    // A second stepBack chain: restart and stepBack from awaiting-snippet-fill directly
+    // A second stepBack chain: restart, click-dispatch, then stepBack from awaiting-snippet-fill.
     const runner2 = new ProtocolRunner();
     runner2.start(graph);
+    runner2.pickFileBoundSnippet('q1', 'sn', 'abdomen/ct.md');
     runner2.stepBack();
     const s = runner2.getState();
     expect(s.status).toBe('at-node');
@@ -361,7 +392,8 @@ describe('Phase 51 Plan 06 — ProtocolRunner D-13/D-14/D-15 auto-insert dispatc
     expect(after.status).toBe('awaiting-snippet-pick');
   });
 
-  it('Test 11: loop integration — Question inside loop body with single edge → file-bound Snippet auto-inserts; stepBack returns to Question with loop context restored', () => {
+  it('Test 11 (Phase 56 D-02): loop integration — Question inside loop body halts at-node; pickFileBoundSnippet drives awaiting-snippet-fill; stepBack returns to Question with loop context restored', () => {
+    // Phase 56 D-02 inversion: no auto-advance through Question; click-dispatch instead.
     // start → loop → (body: q1 → sn → back-edge to loop) / (exit: end)
     const graph = buildGraph(
       [
@@ -390,7 +422,14 @@ describe('Phase 51 Plan 06 — ProtocolRunner D-13/D-14/D-15 auto-insert dispatc
     // Pick the body branch (e-1, which is loop → q1)
     runner.chooseLoopBranch('e-1');
     state = runner.getState();
-    // Should land directly in awaiting-snippet-fill (auto-insert through Question q1)
+    // Phase 56: halts at Question q1, no auto-advance.
+    expect(state.status).toBe('at-node');
+    if (state.status !== 'at-node') return;
+    expect(state.currentNodeId).toBe('q1');
+
+    // Simulate rp-snippet-branch-btn click → pickFileBoundSnippet.
+    runner.pickFileBoundSnippet('q1', 'sn', 'abdomen/ct.md');
+    state = runner.getState();
     expect(state.status).toBe('awaiting-snippet-fill');
     if (state.status !== 'awaiting-snippet-fill') return;
     expect(state.snippetId).toBe('abdomen/ct.md');

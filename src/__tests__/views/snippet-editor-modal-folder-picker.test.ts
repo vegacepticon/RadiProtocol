@@ -41,6 +41,7 @@ interface MockEl {
   addClass: (cls: string) => void;
   removeClass: (cls: string) => void;
   hasClass: (cls: string) => boolean;
+  toggleClass: (cls: string, force?: boolean) => void;
   setAttribute: (k: string, v: string) => void;
   getAttribute: (k: string) => string | null;
   removeAttribute: (k: string) => void;
@@ -105,6 +106,11 @@ function makeEl(tag = 'div'): MockEl {
     addClass(cls: string): void { classSet.add(cls); },
     removeClass(cls: string): void { classSet.delete(cls); },
     hasClass(cls: string): boolean { return classSet.has(cls); },
+    toggleClass(cls: string, force?: boolean): void {
+      const shouldAdd = force ?? !classSet.has(cls);
+      if (shouldAdd) classSet.add(cls);
+      else classSet.delete(cls);
+    },
     setAttribute(k: string, v: string): void { attrs[k] = v; },
     getAttribute(k: string): string | null { return attrs[k] ?? null; },
     removeAttribute(k: string): void { delete attrs[k]; },
