@@ -741,3 +741,243 @@ describe('Phase 52 D-04 — RunnerView validationError guards', () => {
     expect(handleSnippetPickerSelectionSpy).toHaveBeenCalledWith(valid);
   });
 });
+
+// ──────────────────────────────────────────────────────────────────────────
+// Phase 56 Plan 04 — Directory-bound dispatch regression (D-04 / SC 3)
+// ──────────────────────────────────────────────────────────────────────────
+// The Phase 56 reversal (PICKER-01) only retargets FILE-bound Snippet sibling
+// clicks. Directory-bound siblings must continue to route through
+// runner.chooseSnippetBranch → awaiting-snippet-pick → SnippetTreePicker.
+// These regressions guard SC 3: per-click branching is by binding kind, not
+// per-Question — a directory-bound sibling sitting next to a file-bound sibling
+// must still hit chooseSnippetBranch on click.
+
+import type {
+  AnswerNode as AN,
+  SnippetNode as SN,
+  ProtocolGraph as PG,
+} from '../../graph/graph-model';
+
+interface FakeNode56 {
+  tag: string;
+  cls?: string;
+  text?: string;
+  children: FakeNode56[];
+  createDiv: (opts?: { cls?: string; text?: string }) => FakeNode56;
+  createEl: (tag: string, opts?: { cls?: string; text?: string; type?: string }) => FakeNode56;
+  createSpan: (opts?: { cls?: string; text?: string }) => FakeNode56;
+  empty: () => void;
+  setText: (t: string) => void;
+  setAttribute: (name: string, value: string) => void;
+  prepend: (el: FakeNode56) => void;
+  _clickHandler?: () => void;
+  _attrs?: Record<string, string>;
+  disabled: boolean;
+  value: string;
+  style: Record<string, string>;
+  scrollTop: number;
+  scrollHeight: number;
+}
+
+function makeFakeNode56(tag = 'div', cls?: string, text?: string): FakeNode56 {
+  const node: FakeNode56 = {
+    tag,
+    cls,
+    text,
+    children: [],
+    createDiv(opts?: { cls?: string; text?: string }): FakeNode56 {
+      const child = makeFakeNode56('div', opts?.cls, opts?.text);
+      node.children.push(child);
+      return child;
+    },
+    createEl(t: string, opts?: { cls?: string; text?: string; type?: string }): FakeNode56 {
+      const child = makeFakeNode56(t, opts?.cls, opts?.text);
+      node.children.push(child);
+      return child;
+    },
+    createSpan(opts?: { cls?: string; text?: string }): FakeNode56 {
+      return node.createEl('span', opts);
+    },
+    empty(): void {
+      node.children.length = 0;
+    },
+    setText(t: string): void {
+      node.text = t;
+    },
+    setAttribute(name: string, value: string): void {
+      if (node._attrs === undefined) node._attrs = {};
+      node._attrs[name] = value;
+    },
+    prepend(_el: FakeNode56): void {},
+    disabled: false,
+    value: '',
+    style: {},
+    scrollTop: 0,
+    scrollHeight: 0,
+  };
+  return node;
+}
+
+function findByClass56(root: FakeNode56, cls: string): FakeNode56[] {
+  const out: FakeNode56[] = [];
+  const visit = (n: FakeNode56): void => {
+    if (n.cls === cls) out.push(n);
+    for (const c of n.children) visit(c);
+  };
+  visit(root);
+  return out;
+}
+
+function buildAtQuestionGraph(snippetNodes: SN[]): PG {
+  const nodes = new Map<string, AN | SN | {
+    kind: 'question';
+    id: string;
+    questionText: string;
+    x: number; y: number; width: number; height: number;
+  }>();
+  nodes.set('q1', {
+    kind: 'question',
+    id: 'q1',
+    questionText: 'Pick?',
+    x: 0, y: 0, width: 200, height: 80,
+  });
+  const adjacency = new Map<string, string[]>();
+  adjacency.set('q1', []);
+  for (const sn of snippetNodes) {
+    nodes.set(sn.id, sn);
+    adjacency.get('q1')!.push(sn.id);
+  }
+  return {
+    canvasFilePath: 'test.canvas',
+    nodes: nodes as unknown as PG['nodes'],
+    edges: snippetNodes.map((sn) => ({ id: `e-${sn.id}`, fromNodeId: 'q1', toNodeId: sn.id })),
+    adjacency,
+    reverseAdjacency: new Map(),
+    startNodeId: 'q1',
+  };
+}
+
+function makeSnippetNode56(partial: Partial<SN> & { id: string }): SN {
+  return {
+    kind: 'snippet',
+    x: 0, y: 0, width: 100, height: 40,
+    ...partial,
+  } as SN;
+}
+
+interface AtQuestionHarness {
+  view: RunnerView;
+  contentEl: FakeNode56;
+  chooseSnippetBranchSpy: ReturnType<typeof vi.fn>;
+  pickFileBoundSnippetSpy: ReturnType<typeof vi.fn>;
+  syncManualEditSpy: ReturnType<typeof vi.fn>;
+  capturePendingTextareaScrollSpy: ReturnType<typeof vi.fn>;
+}
+
+function mountAtQuestion56(graph: PG): AtQuestionHarness {
+  const plugin = makePlugin();
+  const leaf = {} as unknown as import('obsidian').WorkspaceLeaf;
+  const view = new RunnerView(leaf, plugin);
+  const contentEl = makeFakeNode56();
+  (view as unknown as { contentEl: FakeNode56 }).contentEl = contentEl;
+
+  const chooseSnippetBranchSpy = vi.fn();
+  const pickFileBoundSnippetSpy = vi.fn();
+  const syncManualEditSpy = vi.fn();
+  (view as unknown as { runner: unknown }).runner = {
+    getState: () => ({
+      status: 'at-node',
+      currentNodeId: 'q1',
+      accumulatedText: '',
+      canStepBack: false,
+    }),
+    chooseSnippetBranch: chooseSnippetBranchSpy,
+    pickFileBoundSnippet: pickFileBoundSnippetSpy,
+    chooseAnswer: vi.fn(),
+    syncManualEdit: syncManualEditSpy,
+    stepBack: vi.fn(),
+  };
+  (view as unknown as { graph: PG }).graph = graph;
+
+  (view as unknown as { registerDomEvent: unknown }).registerDomEvent = (
+    el: FakeNode56,
+    type: string,
+    handler: () => void,
+  ) => {
+    if (type === 'click') el._clickHandler = handler;
+  };
+  (view as unknown as { autoSaveSession: () => Promise<void> }).autoSaveSession =
+    async () => {};
+  (view as unknown as { renderAsync: () => Promise<void> }).renderAsync = async () => {};
+
+  const capturePendingTextareaScrollSpy = vi.fn();
+  (view as unknown as { capturePendingTextareaScroll: () => void })
+    .capturePendingTextareaScroll = capturePendingTextareaScrollSpy;
+
+  (view as unknown as { renderPreviewZone: () => void }).renderPreviewZone = () => {};
+  (view as unknown as { renderOutputToolbar: () => void }).renderOutputToolbar = () => {};
+
+  (view as unknown as { render: () => void }).render();
+
+  return {
+    view,
+    contentEl,
+    chooseSnippetBranchSpy,
+    pickFileBoundSnippetSpy,
+    syncManualEditSpy,
+    capturePendingTextareaScrollSpy,
+  };
+}
+
+describe('Phase 56 Plan 04 — Directory-bound dispatch regression (D-04 / SC 3)', () => {
+  it('Test 56-04-A: directory-bound single-edge Question — single 📁 button click → chooseSnippetBranch (Phase 51 path preserved)', () => {
+    const sn = makeSnippetNode56({
+      id: 'sDirOnly',
+      subfolderPath: 'abdomen',
+      snippetLabel: 'Abdomen Picker',
+    });
+    const h = mountAtQuestion56(buildAtQuestionGraph([sn]));
+
+    const btns = findByClass56(h.contentEl, 'rp-snippet-branch-btn');
+    expect(btns.length).toBe(1);
+    expect(btns[0]!.text).toContain('Abdomen Picker');
+    btns[0]!._clickHandler?.();
+
+    expect(h.chooseSnippetBranchSpy).toHaveBeenCalledTimes(1);
+    expect(h.chooseSnippetBranchSpy).toHaveBeenCalledWith('sDirOnly');
+    // pickFileBoundSnippet must NOT fire — directory-bound never routes through it.
+    expect(h.pickFileBoundSnippetSpy).not.toHaveBeenCalled();
+    // RUNFIX-02 prologue intact.
+    expect(h.capturePendingTextareaScrollSpy).toHaveBeenCalledTimes(1);
+    expect(h.syncManualEditSpy).toHaveBeenCalledTimes(1);
+  });
+
+  it('Test 56-04-B: sibling directory-bound Snippet click ALSO routes through chooseSnippetBranch even when a file-bound sibling exists (per-click branching)', () => {
+    const snDir = makeSnippetNode56({
+      id: 'sDir',
+      subfolderPath: 'liver',
+      snippetLabel: 'Liver Folder',
+    });
+    const snFile = makeSnippetNode56({
+      id: 'sFile',
+      radiprotocol_snippetPath: 'kidney/k.md',
+      snippetLabel: 'Kidney',
+    });
+    const h = mountAtQuestion56(buildAtQuestionGraph([snDir, snFile]));
+
+    const btns = findByClass56(h.contentEl, 'rp-snippet-branch-btn');
+    expect(btns.length).toBe(2);
+
+    // Click directory-bound sibling — must route to chooseSnippetBranch (SC 3).
+    btns[0]!._clickHandler?.();
+    expect(h.chooseSnippetBranchSpy).toHaveBeenCalledTimes(1);
+    expect(h.chooseSnippetBranchSpy).toHaveBeenCalledWith('sDir');
+    expect(h.pickFileBoundSnippetSpy).not.toHaveBeenCalled();
+
+    // Independent click on file-bound sibling — does NOT regress directory-bound dispatch.
+    btns[1]!._clickHandler?.();
+    expect(h.pickFileBoundSnippetSpy).toHaveBeenCalledTimes(1);
+    // chooseSnippetBranch count stays at 1 — file-bound did not double-fire it.
+    expect(h.chooseSnippetBranchSpy).toHaveBeenCalledTimes(1);
+  });
+});
