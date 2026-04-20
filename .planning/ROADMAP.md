@@ -349,7 +349,8 @@ Plans:
 - [x] 53-01-PLAN.md — Add RUNNER-SKIP-* / RUNNER-CLOSE-* to REQUIREMENTS.md + ProtocolRunner.skip() method + 6 unit tests (D-07..D-11) — ✅ f832ddd/8aa912f/2ceae8d (2026-04-20)
 - [x] 53-02-PLAN.md — Skip button UI in RunnerView question-zone (icon-only setIcon + 5-step click prologue) + Phase 53 CSS block append (D-01/D-04/D-05/D-07/D-08/D-11) — ✅ 247a70a/6447ac5 (2026-04-20)
 - [x] 53-03-PLAN.md — Close button in selectorBarEl + handleClose() with D-14 teardown + visibility toggle + Close CSS (D-02/D-12..D-16) — ✅ 631b2e6/f6bc1b4 (2026-04-21)
-- [ ] 53-04-PLAN.md — Automated gate (10 audits + 5 counter-checks) + human UAT in TEST-BASE (3 scenarios mapped to SC-1/2/3) + rollup commit
+- [x] 53-04-PLAN.md — Automated gate (10 audits + 5 counter-checks) + human UAT in TEST-BASE (3 scenarios mapped to SC-1/2/3) + rollup commit — ✅ ca8d2d2 + rollup (2026-04-21)
+**Status**: ✅ Complete (plan-level; phase-level gates pending orchestrator)
 **UI hint**: yes
 
 ### Phase 54: Inline Protocol Display Mode
