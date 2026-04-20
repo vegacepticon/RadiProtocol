@@ -35,6 +35,7 @@ const CSS_FILES = [
   'snippet-manager',
   'snippet-fill-modal',
   'loop-support',
+  'snippet-tree-picker',
 ];
 
 /**

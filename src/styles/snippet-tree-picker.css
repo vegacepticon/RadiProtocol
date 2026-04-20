@@ -1,0 +1,109 @@
+/* Phase 51 PICKER-02 — SnippetTreePicker styles. */
+/* See .planning/notes/snippet-node-binding-and-picker.md */
+/* Class prefix: rp-stp-* (distinct from rp-snippet-* runner picker classes). */
+/* Plan 02 owns this file end-to-end — host wrappers for Plans 03/04/05 included here. */
+
+.rp-stp-root {
+  display: flex;
+  flex-direction: column;
+  gap: var(--size-4-2);
+}
+
+.rp-stp-search {
+  display: flex;
+  align-items: center;
+  width: 100%;
+}
+
+.rp-stp-search-input {
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.rp-stp-breadcrumb {
+  display: flex;
+  align-items: center;
+  gap: var(--size-4-2);
+  font-size: var(--font-ui-small);
+  color: var(--text-muted);
+}
+
+.rp-stp-breadcrumb-label {
+  flex: 1 1 auto;
+  overflow-wrap: anywhere;
+}
+
+.rp-stp-up-btn {
+  padding: var(--size-2-2) var(--size-4-2);
+}
+
+.rp-stp-select-folder-btn {
+  align-self: flex-start;
+}
+
+.rp-stp-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--size-2-1);
+  max-height: 320px;
+  overflow-y: auto;
+}
+
+.rp-stp-folder-row,
+.rp-stp-file-row {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  padding: var(--size-4-2) var(--size-4-3);
+  text-align: left;
+  width: 100%;
+  box-sizing: border-box;
+  cursor: pointer;
+}
+
+.rp-stp-result-name {
+  font-weight: var(--font-medium);
+}
+
+.rp-stp-result-path {
+  font-size: var(--font-ui-smaller);
+  color: var(--text-muted);
+  overflow-wrap: anywhere;
+}
+
+.rp-stp-empty {
+  color: var(--text-muted);
+  padding: var(--size-4-3);
+}
+
+/* Phase 51 Plan 03 — Node Editor inline mount host (consumed by editor-panel-view.ts). */
+/* Caps height + scroll inside the editor panel so the picker doesn't dominate. */
+.rp-stp-editor-host {
+  max-height: 360px;
+  overflow-y: auto;
+  border: 1px solid var(--background-modifier-border);
+  border-radius: var(--radius-s);
+  padding: var(--size-4-2);
+}
+.rp-stp-editor-host .rp-stp-list {
+  /* Editor-host already scrolls — disable inner-list cap to avoid double scrollbars. */
+  max-height: none;
+  overflow-y: visible;
+}
+
+/* Phase 51 Plan 04 — Modal host (consumed by snippet-manager-view.ts «Переместить в…»). */
+.rp-stp-modal-host {
+  min-width: 360px;
+  max-width: 100%;
+}
+.rp-stp-modal-host .rp-stp-list {
+  max-height: 480px;
+}
+
+/* Phase 51 Plan 05 — Runner host (consumed by runner-view.ts awaiting-snippet-pick). */
+.rp-stp-runner-host {
+  width: 100%;
+}
+.rp-stp-runner-host .rp-stp-list {
+  max-height: 50vh;
+}
