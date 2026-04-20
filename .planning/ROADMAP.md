@@ -363,7 +363,13 @@ Plans:
   3. The Runner's internal textarea is not used in inline mode — the note itself is the buffer; there is no "commit all at once" step and no staging area; Obsidian's native undo is the only rollback path
   4. The protocol is bound to the source note for the duration of the run — if the user switches to a different note, the modal closes or freezes (discuss-phase picks one) and output never silently redirects elsewhere; on return to the source note the run resumes or is shown as ended (discuss-phase picks one)
   5. The existing `sidebar` and `tab` display modes are unchanged — no regression in their behavior; inline is strictly additive and reachable only through the new command, not through settings, canvas attributes, or the existing Runner launch paths
-**Plans**: TBD
+**Plans**: 4 plans
+
+Plans:
+- [ ] 54-01-inline-runner-modal-shell-PLAN.md — InlineRunnerModal class (floating DOM host) + inline-runner.css + esbuild CSS registration (Wave 1)
+- [ ] 54-02-command-registration-PLAN.md — 'Run protocol in inline' command + canvas picker + D8/D9 guards (Wave 2)
+- [ ] 54-03-render-arms-and-append-PLAN.md — All render arms (snippet/loop/fill-in/complete/error) + appendAnswerToNote + D6 inline fill-in (Wave 3)
+- [ ] 54-04-uat-and-gate-PLAN.md — Build + test gate + 9 static audits + human UAT (5 SC scenarios) (Wave 4)
 **UI hint**: yes
 
 ### Phase 55: BRAT Distribution Readiness
