@@ -1,5 +1,5 @@
 // views/runner-view.ts — Phase 5: Full RunnerView with awaiting-snippet-fill branch
-import { ItemView, WorkspaceLeaf, Notice, TFile, TFolder, MarkdownView } from 'obsidian';
+import { ItemView, WorkspaceLeaf, Notice, TFile, TFolder, MarkdownView, setIcon } from 'obsidian';
 import type RadiProtocolPlugin from '../main';
 import { ProtocolRunner } from '../runner/protocol-runner';
 import { GraphValidator } from '../graph/graph-validator';
@@ -412,6 +412,28 @@ export class RunnerView extends ItemView {
                   void this.renderAsync();
                 });
               }
+            }
+
+            // Phase 53 RUNNER-SKIP-01 / D-07 / D-08: Skip button visible only when the runner
+            // is at-node + question + has ≥ 1 answer-kind neighbor. Icon-only per D-04/D-05.
+            // Click handler mirrors the answer-btn canonical 5-step prologue:
+            //   capturePendingTextareaScroll → syncManualEdit → runner.skip → autoSaveSession → renderAsync
+            // BUG-01 / D-11: syncManualEdit captures the live textarea value BEFORE skip() so
+            // manual edits survive the undo snapshot.
+            if (answerNeighbors.length > 0) {
+              const skipBtn = questionZone.createEl('button', {
+                cls: 'rp-skip-btn',
+              });
+              setIcon(skipBtn, 'skip-forward');
+              skipBtn.setAttribute('aria-label', 'Skip this question');
+              skipBtn.title = 'Skip this question';
+              this.registerDomEvent(skipBtn, 'click', () => {
+                this.capturePendingTextareaScroll();  // RUNFIX-02: preserve scroll across re-render
+                this.runner.syncManualEdit(this.previewTextarea?.value ?? '');  // BUG-01 / D-11
+                this.runner.skip();
+                void this.autoSaveSession();   // SESSION-01 — save after skip (D-10: recordable step)
+                void this.renderAsync();
+              });
             }
 
             if (snippetNeighbors.length > 0) {

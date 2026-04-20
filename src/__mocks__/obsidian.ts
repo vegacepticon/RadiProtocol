@@ -171,3 +171,9 @@ export class TFile {
     this.path = path;
   }
 }
+
+/** Mock setIcon — no-op stub matching Obsidian's signature.
+ * Real runtime injects an <svg> into the element; tests only verify call wiring. */
+export function setIcon(_el: unknown, _iconId: string): void {
+  // no-op
+}

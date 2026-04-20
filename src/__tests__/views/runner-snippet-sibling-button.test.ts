@@ -40,14 +40,17 @@ interface FakeNode {
   tag: string;
   cls?: string;
   text?: string;
+  title?: string;
   children: FakeNode[];
   createDiv: (opts?: { cls?: string; text?: string }) => FakeNode;
   createEl: (tag: string, opts?: { cls?: string; text?: string; type?: string }) => FakeNode;
   createSpan: (opts?: { cls?: string; text?: string }) => FakeNode;
   empty: () => void;
   setText: (t: string) => void;
+  setAttribute: (name: string, value: string) => void;
   prepend: (el: FakeNode) => void;
   _clickHandler?: () => void;
+  _attrs?: Record<string, string>;
   disabled: boolean;
   value: string;
   style: Record<string, string>;
@@ -82,6 +85,10 @@ function makeFakeNode(tag = 'div', cls?: string, text?: string): FakeNode {
     },
     setText(t: string): void {
       node.text = t;
+    },
+    setAttribute(name: string, value: string): void {
+      if (node._attrs === undefined) node._attrs = {};
+      node._attrs[name] = value;
     },
     prepend(_el: FakeNode): void {},
     disabled: false,
