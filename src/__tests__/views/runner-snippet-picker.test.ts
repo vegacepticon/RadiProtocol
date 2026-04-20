@@ -252,8 +252,9 @@ describe('Phase 51 Plan 05 — RunnerView renderSnippetPicker on SnippetTreePick
     });
     const questionZone = makeFakeNode();
 
-    // @ts-expect-error private access
-    await view['renderSnippetPicker'](
+    await (view as unknown as {
+      renderSnippetPicker: (state: unknown, zone: HTMLElement) => Promise<void>;
+    }).renderSnippetPicker(
       {
         status: 'awaiting-snippet-pick',
         nodeId: 'n1',
@@ -261,7 +262,7 @@ describe('Phase 51 Plan 05 — RunnerView renderSnippetPicker on SnippetTreePick
         accumulatedText: '',
         canStepBack: false,
       },
-      questionZone,
+      questionZone as unknown as HTMLElement,
     );
 
     expect(pickerCtorSpy).toHaveBeenCalledTimes(1);
@@ -281,8 +282,9 @@ describe('Phase 51 Plan 05 — RunnerView renderSnippetPicker on SnippetTreePick
     });
     const questionZone = makeFakeNode();
 
-    // @ts-expect-error private access
-    await view['renderSnippetPicker'](
+    await (view as unknown as {
+      renderSnippetPicker: (state: unknown, zone: HTMLElement) => Promise<void>;
+    }).renderSnippetPicker(
       {
         status: 'awaiting-snippet-pick',
         nodeId: 'n1',
@@ -290,7 +292,7 @@ describe('Phase 51 Plan 05 — RunnerView renderSnippetPicker on SnippetTreePick
         accumulatedText: '',
         canStepBack: false,
       },
-      questionZone,
+      questionZone as unknown as HTMLElement,
     );
 
     const opts = pickerInstances[0]!.options as Record<string, unknown>;
@@ -314,8 +316,9 @@ describe('Phase 51 Plan 05 — RunnerView renderSnippetPicker on SnippetTreePick
     (plugin.snippetService.load as ReturnType<typeof vi.fn>).mockResolvedValue(fakeSnippet);
 
     const questionZone = makeFakeNode();
-    // @ts-expect-error private access
-    await view['renderSnippetPicker'](
+    await (view as unknown as {
+      renderSnippetPicker: (state: unknown, zone: HTMLElement) => Promise<void>;
+    }).renderSnippetPicker(
       {
         status: 'awaiting-snippet-pick',
         nodeId: 'n1',
@@ -323,7 +326,7 @@ describe('Phase 51 Plan 05 — RunnerView renderSnippetPicker on SnippetTreePick
         accumulatedText: '',
         canStepBack: false,
       },
-      questionZone,
+      questionZone as unknown as HTMLElement,
     );
 
     const opts = pickerInstances[0]!.options as Record<string, unknown>;
@@ -349,8 +352,9 @@ describe('Phase 51 Plan 05 — RunnerView renderSnippetPicker on SnippetTreePick
     (plugin.snippetService.load as ReturnType<typeof vi.fn>).mockResolvedValue(null);
 
     const questionZone = makeFakeNode();
-    // @ts-expect-error private access
-    await view['renderSnippetPicker'](
+    await (view as unknown as {
+      renderSnippetPicker: (state: unknown, zone: HTMLElement) => Promise<void>;
+    }).renderSnippetPicker(
       {
         status: 'awaiting-snippet-pick',
         nodeId: 'n1',
@@ -358,7 +362,7 @@ describe('Phase 51 Plan 05 — RunnerView renderSnippetPicker on SnippetTreePick
         accumulatedText: '',
         canStepBack: false,
       },
-      questionZone,
+      questionZone as unknown as HTMLElement,
     );
 
     const opts = pickerInstances[0]!.options as Record<string, unknown>;
@@ -391,8 +395,9 @@ describe('Phase 51 Plan 05 — RunnerView renderSnippetPicker on SnippetTreePick
     (plugin.snippetService.load as ReturnType<typeof vi.fn>).mockReturnValue(loadPromise);
 
     const questionZone = makeFakeNode();
-    // @ts-expect-error private access
-    await view['renderSnippetPicker'](
+    await (view as unknown as {
+      renderSnippetPicker: (state: unknown, zone: HTMLElement) => Promise<void>;
+    }).renderSnippetPicker(
       {
         status: 'awaiting-snippet-pick',
         nodeId: 'n1',
@@ -400,7 +405,7 @@ describe('Phase 51 Plan 05 — RunnerView renderSnippetPicker on SnippetTreePick
         accumulatedText: '',
         canStepBack: false,
       },
-      questionZone,
+      questionZone as unknown as HTMLElement,
     );
 
     const opts = pickerInstances[0]!.options as Record<string, unknown>;
@@ -436,8 +441,9 @@ describe('Phase 51 Plan 05 — RunnerView renderSnippetPicker on SnippetTreePick
     (view as unknown as { render: () => void }).render = renderSpy;
 
     const questionZone = makeFakeNode();
-    // @ts-expect-error private access
-    await view['renderSnippetPicker'](
+    await (view as unknown as {
+      renderSnippetPicker: (state: unknown, zone: HTMLElement) => Promise<void>;
+    }).renderSnippetPicker(
       {
         status: 'awaiting-snippet-pick',
         nodeId: 'n1',
@@ -445,7 +451,7 @@ describe('Phase 51 Plan 05 — RunnerView renderSnippetPicker on SnippetTreePick
         accumulatedText: '',
         canStepBack: true,
       },
-      questionZone,
+      questionZone as unknown as HTMLElement,
     );
 
     const stepBackBtns = findByClass(questionZone, 'rp-step-back-btn');
@@ -484,8 +490,9 @@ describe('Phase 51 Plan 05 — RunnerView renderSnippetPicker on SnippetTreePick
     });
 
     const questionZone = makeFakeNode();
-    // @ts-expect-error private access
-    await view['renderSnippetPicker'](
+    await (view as unknown as {
+      renderSnippetPicker: (state: unknown, zone: HTMLElement) => Promise<void>;
+    }).renderSnippetPicker(
       {
         status: 'awaiting-snippet-pick',
         nodeId: 'n1',
@@ -493,7 +500,7 @@ describe('Phase 51 Plan 05 — RunnerView renderSnippetPicker on SnippetTreePick
         accumulatedText: '',
         canStepBack: false,
       },
-      questionZone,
+      questionZone as unknown as HTMLElement,
     );
 
     const opts = pickerInstances[0]!.options as Record<string, unknown>;
@@ -519,8 +526,9 @@ describe('Phase 51 Plan 05 — RunnerView renderSnippetPicker on SnippetTreePick
     });
 
     const qz1 = makeFakeNode();
-    // @ts-expect-error private access
-    await view['renderSnippetPicker'](
+    await (view as unknown as {
+      renderSnippetPicker: (state: unknown, zone: HTMLElement) => Promise<void>;
+    }).renderSnippetPicker(
       {
         status: 'awaiting-snippet-pick',
         nodeId: 'n1',
@@ -528,14 +536,15 @@ describe('Phase 51 Plan 05 — RunnerView renderSnippetPicker on SnippetTreePick
         accumulatedText: '',
         canStepBack: false,
       },
-      qz1,
+      qz1 as unknown as HTMLElement,
     );
     expect(pickerInstances.length).toBe(1);
     expect(pickerUnmountSpy).toHaveBeenCalledTimes(0);
 
     const qz2 = makeFakeNode();
-    // @ts-expect-error private access
-    await view['renderSnippetPicker'](
+    await (view as unknown as {
+      renderSnippetPicker: (state: unknown, zone: HTMLElement) => Promise<void>;
+    }).renderSnippetPicker(
       {
         status: 'awaiting-snippet-pick',
         nodeId: 'n1',
@@ -543,7 +552,7 @@ describe('Phase 51 Plan 05 — RunnerView renderSnippetPicker on SnippetTreePick
         accumulatedText: '',
         canStepBack: false,
       },
-      qz2,
+      qz2 as unknown as HTMLElement,
     );
     expect(pickerInstances.length).toBe(2);
     // Defensive cleanup in renderSnippetPicker — prior picker unmounted before new mount.

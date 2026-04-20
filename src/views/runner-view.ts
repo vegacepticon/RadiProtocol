@@ -12,6 +12,7 @@ import { validateSessionNodeIds } from '../sessions/session-service';
 import { CanvasSelectorWidget } from './canvas-selector-widget';
 import { CanvasSwitchModal } from './canvas-switch-modal';
 import { isExitEdge, nodeLabel, stripExitPrefix } from '../graph/node-label';
+import { SnippetTreePicker } from './snippet-tree-picker';
 
 export const RUNNER_VIEW_TYPE = 'radiprotocol-runner';
 
@@ -39,9 +40,22 @@ export class RunnerView extends ItemView {
   private graph: ProtocolGraph | null = null;
   private selector: CanvasSelectorWidget | null = null;
   private selectorBarEl: HTMLDivElement | null = null;
-  /** Phase 30 D-05/D-23: local picker drill-down segments, reset on exit from picker state. */
+  /**
+   * @deprecated Phase 51 D-06 — superseded by SnippetTreePicker; retained per
+   *   CLAUDE.md Shared Pattern G for legacy state-restoration paths if any.
+   * Phase 30 D-05/D-23: local picker drill-down segments, reset on exit from picker state.
+   */
   private snippetPickerPath: string[] = [];
+  /**
+   * @deprecated Phase 51 D-06 — superseded by SnippetTreePicker; retained per
+   *   CLAUDE.md Shared Pattern G for legacy state-restoration paths if any.
+   */
   private snippetPickerNodeId: string | null = null;
+  /**
+   * Phase 51 D-06 — SnippetTreePicker for awaiting-snippet-pick state.
+   * Replaces the Phase 30 hand-rolled drill-down. Null when not in picker state.
+   */
+  private snippetTreePicker: SnippetTreePicker | null = null;
 
   constructor(leaf: WorkspaceLeaf, plugin: RadiProtocolPlugin) {
     super(leaf);
@@ -322,6 +336,13 @@ export class RunnerView extends ItemView {
   // ── Render ────────────────────────────────────────────────────────────────
 
   private render(): void {
+    // Phase 51 D-06: unmount picker if state has left awaiting-snippet-pick
+    const renderState = this.runner.getState();
+    if (this.snippetTreePicker !== null && renderState.status !== 'awaiting-snippet-pick') {
+      this.snippetTreePicker.unmount();
+      this.snippetTreePicker = null;
+    }
+
     this.contentEl.empty();
     // Re-prepend the selector bar: contentEl.empty() removes it from the DOM
     // but the element and its CanvasSelectorWidget subtree remain valid in memory.
@@ -588,8 +609,15 @@ export class RunnerView extends ItemView {
   }
 
   /**
-   * Phase 30 D-01..D-05, D-13..D-17: render the drill-down picker for a snippet node.
-   * Local state only — drill-down does NOT push undo.
+   * Phase 51 D-06 (PICKER-02) — drill-down rebuilt on the unified SnippetTreePicker
+   * in file-only mode rooted at the Snippet node's subfolderPath. Phase 30 D-05 semantics
+   * preserved: drill does NOT push undo (internal to picker); only pickSnippet via
+   * handleSnippetPickerSelection mutates runner state (Pattern A).
+   * File-row glyphs (📄/📝) are dispatched by the picker's built-in extension logic
+   * (Phase 35 MD-01 preservation, shipped by Plan 02). No per-call-site customisation.
+   * Host wrapper class `rp-stp-runner-host` is defined in src/styles/snippet-tree-picker.css
+   * (owned by Plan 02). This plan does NOT modify CSS.
+   * See `.planning/notes/snippet-node-binding-and-picker.md`.
    */
   private async renderSnippetPicker(
     state: {
@@ -604,94 +632,67 @@ export class RunnerView extends ItemView {
     const rootPath = this.plugin.settings.snippetFolderPath;
     const nodeRootRel = state.subfolderPath ?? '';
     const nodeRootAbs = nodeRootRel === '' ? rootPath : `${rootPath}/${nodeRootRel}`;
-    const currentAbs =
-      this.snippetPickerPath.length === 0
-        ? nodeRootAbs
-        : `${nodeRootAbs}/${this.snippetPickerPath.join('/')}`;
 
-    const listing = await this.plugin.snippetService.listFolder(currentAbs);
-
-    // T-30-04: drop stale results if runner has moved on
-    const currentState = this.runner.getState();
-    if (
-      currentState.status !== 'awaiting-snippet-pick' ||
-      currentState.nodeId !== state.nodeId
-    ) {
-      return;
+    // Defensive cleanup of any prior picker instance (lifecycle discipline)
+    if (this.snippetTreePicker !== null) {
+      this.snippetTreePicker.unmount();
+      this.snippetTreePicker = null;
     }
 
     questionZone.empty();
+    const pickerHost = questionZone.createDiv({ cls: 'rp-stp-runner-host' });
 
-    // Breadcrumb (D-02)
-    const crumbBar = questionZone.createDiv({ cls: 'rp-snippet-breadcrumb' });
-    const crumbLabel =
-      this.snippetPickerPath.length === 0
-        ? nodeRootRel === ''
-          ? '/'
-          : nodeRootRel
-        : nodeRootRel === ''
-          ? this.snippetPickerPath.join('/')
-          : `${nodeRootRel}/${this.snippetPickerPath.join('/')}`;
-    crumbBar.createEl('span', { cls: 'rp-snippet-breadcrumb-label', text: crumbLabel });
+    const capturedNodeId = state.nodeId;  // T-30-04 stale-result guard
 
-    if (this.snippetPickerPath.length > 0) {
-      const upBtn = crumbBar.createEl('button', {
-        cls: 'rp-snippet-up-btn',
-        text: 'Up',
-      });
-      this.registerDomEvent(upBtn, 'click', () => {
-        this.snippetPickerPath.pop();
-        this.render(); // D-05: local nav, no undo
-      });
-    }
+    this.snippetTreePicker = new SnippetTreePicker({
+      app: this.app,
+      snippetService: this.plugin.snippetService,
+      container: pickerHost as unknown as HTMLElement,
+      mode: 'file-only',
+      rootPath: nodeRootAbs,
+      onSelect: (result) => {
+        // RUNFIX-02 (Phase 47) — capture textarea scroll BEFORE any state mutation.
+        // MUST be the FIRST line of any forward-advance click handler in RunnerView.
+        this.capturePendingTextareaScroll();
+        void (async () => {
+          const absPath = result.relativePath === ''
+            ? nodeRootAbs
+            : `${nodeRootAbs}/${result.relativePath}`;
+          const snippet = await this.plugin.snippetService.load(absPath);
+          // T-30-04 stale-result guard — bail if user advanced/stepped-back during await
+          const currentState = this.runner.getState();
+          if (
+            currentState.status !== 'awaiting-snippet-pick' ||
+            currentState.nodeId !== capturedNodeId
+          ) {
+            return;
+          }
+          if (snippet === null) {
+            // D-04-style inline error in picker — does NOT mutate runner state
+            questionZone.empty();
+            questionZone.createEl('p', {
+              cls: 'rp-empty-state-body',
+              text: `Сниппет не найден: ${result.relativePath}`,
+            });
+            return;
+          }
+          await this.handleSnippetPickerSelection(snippet);
+        })();
+      },
+    });
+    void this.snippetTreePicker.mount();
 
-    // Empty state (D-15, D-17)
-    if (listing.folders.length === 0 && listing.snippets.length === 0) {
-      questionZone.createEl('p', {
-        cls: 'rp-empty-state-body',
-        text: `No snippets found in ${crumbLabel}`,
-      });
-    } else {
-      const list = questionZone.createDiv({ cls: 'rp-snippet-picker-list' });
-
-      // D-03: folders first
-      for (const folderName of listing.folders) {
-        const row = list.createEl('button', {
-          cls: 'rp-snippet-folder-row',
-          text: `📁 ${folderName}`,
-        });
-        this.registerDomEvent(row, 'click', () => {
-          this.snippetPickerPath.push(folderName);
-          this.render(); // D-05: local nav, no undo
-        });
-      }
-
-      // Then snippets.
-      // Phase 35 (MD-01, D-01): MD and JSON snippets both appear in picker.
-      // Prefix glyph differentiates kind: 📄 JSON, 📝 MD.
-      // Click always routes through handleSnippetPickerSelection(Snippet);
-      // MD branch inside handler skips fill-in modal (MD-02, D-04).
-      for (const snippet of listing.snippets) {
-        const prefix = snippet.kind === 'md' ? '📝' : '📄';
-        const row = list.createEl('button', {
-          cls: 'rp-snippet-item-row',
-          text: `${prefix} ${snippet.name}`,
-        });
-        this.registerDomEvent(row, 'click', () => {
-          void this.handleSnippetPickerSelection(snippet);
-        });
-      }
-    }
-
-    // Step-back (D-11) — mirrors existing pattern
+    // Step-back (Phase 30 D-11) — preserved
     if (state.canStepBack) {
       const stepBackBtn = questionZone.createEl('button', {
         cls: 'rp-step-back-btn',
         text: 'Step back',
       });
       this.registerDomEvent(stepBackBtn, 'click', () => {
-        this.snippetPickerPath = [];
-        this.snippetPickerNodeId = null;
+        if (this.snippetTreePicker !== null) {
+          this.snippetTreePicker.unmount();
+          this.snippetTreePicker = null;
+        }
         this.runner.stepBack();
         void this.autoSaveSession();
         this.render();
