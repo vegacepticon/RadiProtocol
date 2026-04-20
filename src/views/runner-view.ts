@@ -40,6 +40,10 @@ export class RunnerView extends ItemView {
   private graph: ProtocolGraph | null = null;
   private selector: CanvasSelectorWidget | null = null;
   private selectorBarEl: HTMLDivElement | null = null;
+  // Phase 53 RUNNER-CLOSE-01: button attached once in onOpen() alongside selectorBarEl.
+  // Shares selectorBarEl's lifetime — the prepend-survives-empty pattern carries it
+  // across every render(). Nulled in onClose().
+  private closeBtn: HTMLButtonElement | null = null;
   /**
    * @deprecated Phase 51 D-06 — superseded by SnippetTreePicker; retained per
    *   CLAUDE.md Shared Pattern G for legacy state-restoration paths if any.
@@ -212,6 +216,28 @@ export class RunnerView extends ItemView {
       (filePath) => { void this.handleSelectorSelect(filePath); },
     );
 
+    // Phase 53 RUNNER-CLOSE-01 / D-02: Close button lives inside selectorBarEl next
+    // to the selector trigger. Attached ONCE here so that contentEl.empty() +
+    // prepend(selectorBarEl) in render() carries it across re-renders (same lifetime
+    // as selector — avoids the Phase 30 WR-01 class of listener-accumulation bug).
+    // D-06: neutral styling (no mod-warning, no destructive red).
+    //
+    // CSS ownership (CLAUDE.md): `.rp-selector-bar` is owned by canvas-selector.css
+    // and is block-level with padding. To lay out the selector trigger and Close
+    // button inline without touching the canvas-selector feature, we apply a
+    // RUNNER-OWNED modifier class `rp-selector-bar--has-close` here. All layout
+    // rules for this modifier live in runner-view.css (runner-owned selectors only).
+    selectorBarEl.addClass('rp-selector-bar--has-close');
+
+    const closeBtn = selectorBarEl.createEl('button', { cls: 'rp-close-btn' });
+    setIcon(closeBtn, 'x');
+    closeBtn.setAttribute('aria-label', 'Close protocol');
+    closeBtn.title = 'Close protocol';
+    this.closeBtn = closeBtn;
+    // Initial visibility: canvasFilePath is null at fresh open — hide.
+    closeBtn.toggleClass('is-hidden', this.canvasFilePath === null);
+    this.registerDomEvent(closeBtn, 'click', () => { void this.handleClose(); });
+
     // Sync selector label if a canvas is already set (e.g. restored from state)
     if (this.canvasFilePath !== null) {
       this.selector.setSelectedPath(this.canvasFilePath);
@@ -280,6 +306,7 @@ export class RunnerView extends ItemView {
     this.selector?.destroy();
     this.selector = null;
     this.selectorBarEl = null;
+    this.closeBtn = null;  // Phase 53 RUNNER-CLOSE-01
     this.contentEl.empty();
   }
 
