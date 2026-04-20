@@ -319,6 +319,47 @@ export class ProtocolRunner {
   }
 
   /**
+   * Phase 56 D-03 (PICKER-01 reversal) — click-driven entry point for file-bound
+   * Snippet insertion. Called by RunnerView sibling-button click handler when the
+   * clicked Snippet node is file-bound (radiprotocol_snippetPath non-empty,
+   * radiprotocol_subfolderPath empty/absent). Mirrors pickSnippet's undo-before-mutate
+   * pattern but is triggered from a user click at at-node instead of from
+   * awaiting-snippet-pick.
+   *
+   * Semantics:
+   *   1. Guard: runnerStatus must be 'at-node' and currentNodeId must equal questionNodeId.
+   *   2. Push UndoEntry keyed on the Question node (D-15 undo-before-mutate).
+   *   3. Set snippetId = snippetPath, snippetNodeId = snippetNodeId, currentNodeId = snippetNodeId.
+   *   4. Flip runnerStatus to 'awaiting-snippet-fill' — existing arm in RunnerView
+   *      dispatches .md insert / .json fill-in modal / .json no-placeholder insert.
+   *
+   * stepBack() from awaiting-snippet-fill restores the Question with pre-insertion
+   * accumulator via the existing stepBack path (no new branch — reuses UndoEntry shape).
+   *
+   * Signature: pickFileBoundSnippet(questionNodeId, snippetNodeId, snippetPath) → void
+   */
+  pickFileBoundSnippet(
+    questionNodeId: string,
+    snippetNodeId: string,
+    snippetPath: string,
+  ): void {
+    if (this.runnerStatus !== 'at-node') return;
+    if (this.currentNodeId !== questionNodeId) return;
+
+    // D-15 undo-before-mutate — identical UndoEntry shape to pickSnippet (:305).
+    this.undoStack.push({
+      nodeId: questionNodeId,
+      textSnapshot: this.accumulator.snapshot(),
+      loopContextStack: [...this.loopContextStack],
+    });
+
+    this.snippetId = snippetPath;
+    this.snippetNodeId = snippetNodeId;
+    this.currentNodeId = snippetNodeId;
+    this.runnerStatus = 'awaiting-snippet-fill';
+  }
+
+  /**
    * Phase 5 calls this after the user completes the snippet fill-in modal.
    * Only valid in awaiting-snippet-fill state (D-06, D-07).
    * Appends the pre-rendered text and advances past the snippet text-block node.
