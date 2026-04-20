@@ -79,6 +79,10 @@ export class SnippetEditorModal extends Modal {
   private draft: JsonSnippet | MdSnippet;
   private draftKind: 'json' | 'md';
   private currentFolder: string;
+  /** Phase 56 D-08 — baseline against which the «Папка» unsaved-dot is computed.
+   *  Initialised to the same value as currentFolder; advanced to the new
+   *  currentFolder on every successful save commit. */
+  private savedFolder: string;
   private hasUnsavedChanges = false;
 
   // DOM refs
@@ -90,6 +94,9 @@ export class SnippetEditorModal extends Modal {
   private saveErrorEl!: HTMLElement;
   /** Phase 52 D-04: banner shown when the loaded snippet carries a validationError. */
   private validationBannerEl: HTMLElement | null = null;
+  /** Phase 56 D-08 — bullet («•») rendered inside the «Папка» label; toggles
+   *  via the .is-visible modifier whenever currentFolder !== savedFolder. */
+  private folderUnsavedDotEl: HTMLSpanElement | null = null;
   /** @deprecated Phase 51 D-07 — superseded by snippetTreePicker (folder-only
    *  SnippetTreePicker mounted in renderFolderDropdown). Field retained per
    *  CLAUDE.md Shared Pattern G (never remove existing code you didn't add);
@@ -116,9 +123,11 @@ export class SnippetEditorModal extends Modal {
       this.draft = cloneSnippet(options.snippet);
       this.draftKind = options.snippet.kind;
       this.currentFolder = dirname(options.snippet.path);
+      this.savedFolder = this.currentFolder; // Phase 56 D-08 baseline
     } else {
       this.draftKind = options.initialKind ?? 'json';
       this.currentFolder = options.initialFolder;
+      this.savedFolder = this.currentFolder; // Phase 56 D-08 baseline
       this.draft = this.draftKind === 'json'
         ? emptyJsonDraft(this.currentFolder)
         : emptyMdDraft(this.currentFolder);
@@ -288,7 +297,15 @@ export class SnippetEditorModal extends Modal {
     // (owned by Plan 02). This plan does NOT modify CSS.
     // See `.planning/notes/snippet-node-binding-and-picker.md`.
     const row = container.createDiv({ cls: 'radi-snippet-editor-row' });
-    row.createEl('label', { text: 'Папка' });
+    const folderLabel = row.createEl('label', { text: 'Папка' });
+    // Phase 56 D-08: bullet indicator inside the label; toggled by
+    // updateFolderUnsavedDot() whenever currentFolder !== savedFolder.
+    this.folderUnsavedDotEl = folderLabel.createEl('span', {
+      cls: 'rp-snippet-editor-unsaved-dot',
+      text: '\u2022',
+    }) as unknown as HTMLSpanElement;
+    this.folderUnsavedDotEl.setAttribute('aria-label', 'Несохранённые изменения');
+    this.updateFolderUnsavedDot();
     const pickerHost = row.createDiv({ cls: 'rp-stp-editor-host' });
 
     const rootPath = this.plugin.settings.snippetFolderPath;
@@ -319,9 +336,18 @@ export class SnippetEditorModal extends Modal {
           : `${rootPath}/${result.relativePath}`;
         this.hasUnsavedChanges = true;
         void this.runCollisionCheck();
+        this.updateFolderUnsavedDot(); // Phase 56 D-08
       },
     });
     void this.snippetTreePicker.mount();
+  }
+
+  /** Phase 56 D-08 — toggle the «Папка»-label bullet based on whether the
+   *  current pending folder selection differs from the saved baseline. */
+  private updateFolderUnsavedDot(): void {
+    if (this.folderUnsavedDotEl === null) return;
+    const diff = this.currentFolder !== this.savedFolder;
+    this.folderUnsavedDotEl.toggleClass('is-visible', diff);
   }
 
   /** @deprecated Phase 51 D-07 — replaced by SnippetTreePicker. Retained per
@@ -539,6 +565,8 @@ export class SnippetEditorModal extends Modal {
       if (this.options.mode === 'create' || oldPath === null || oldPath === newPath) {
         // Simple save (no move) — unchanged Phase 33 flow
         await this.plugin.snippetService.save(draftToSave);
+        this.savedFolder = this.currentFolder; // Phase 56 D-08 — commit baseline
+        this.updateFolderUnsavedDot();
         this.safeResolve({ saved: true, snippet: draftToSave, movedFrom: null });
         super.close();
         return;
@@ -593,6 +621,8 @@ export class SnippetEditorModal extends Modal {
       } else {
         new Notice('Сниппет перемещён и переименован.');
       }
+      this.savedFolder = this.currentFolder; // Phase 56 D-08 — commit baseline
+      this.updateFolderUnsavedDot();
       this.safeResolve({ saved: true, snippet: finalDraft, movedFrom: oldPath });
       super.close();
     } catch (err) {
