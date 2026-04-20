@@ -1,4 +1,17 @@
 // src/__tests__/views/runner-snippet-autoinsert-fill.test.ts
+//
+// Phase 56 D-02 (PICKER-01 reversal): Phase 51 D-13 auto-insert is REMOVED.
+// All single-edge file-bound Question → Snippet paths now render a button
+// and dispatch via ProtocolRunner.pickFileBoundSnippet on click.
+// See .planning/phases/56-snippet-button-ux-reversal/56-CONTEXT.md
+//
+// The tests below cover the awaiting-snippet-fill landing previously triggered
+// automatically by Phase 51 D-13 — now reached only AFTER the user clicks the
+// .rp-snippet-branch-btn rendered for a file-bound Snippet sibling. They drive
+// `handleSnippetFill` directly because the per-click dispatch + path-shape
+// resolver are the two layers under test; the click-handler wiring itself is
+// covered in runner-snippet-sibling-button.test.ts (Tests 9-12).
+//
 // Phase 51 Plan 06 (PICKER-01, D-14) — RunnerView.handleSnippetFill path-shape detection.
 //
 // handleSnippetFill now recognises two snippetId shapes:
@@ -177,7 +190,7 @@ async function callHandle(h: Harness, snippetId: string): Promise<void> {
 
 // ── Tests ─────────────────────────────────────────────────────────────────
 
-describe('Phase 51 Plan 06 — RunnerView.handleSnippetFill path-shape detection (D-14)', () => {
+describe('Phase 56 (D-02 reversal) — RunnerView.handleSnippetFill (post-pickFileBoundSnippet click landing, ex-D-14 path-shape detection)', () => {
 
   beforeEach(() => {
     modalCtorSpy.mockClear();
@@ -185,7 +198,10 @@ describe('Phase 51 Plan 06 — RunnerView.handleSnippetFill path-shape detection
     modalResultOverride = '<<rendered>>';
   });
 
-  it('Test 1: legacy id-string "legacy-id" (no slash, no ext) loads via `${root}/legacy-id.json`', async () => {
+  it('Test 1: after rp-snippet-branch-btn click → pickFileBoundSnippet → legacy id-string "legacy-id" loads via `${root}/legacy-id.json`', async () => {
+    // Phase 56 (D-02): pre-D-13 removal, this path was reached automatically.
+    // Now reached only after the user clicks the file-bound .rp-snippet-branch-btn,
+    // which dispatches runner.pickFileBoundSnippet → handleSnippetFill (legacy resolver branch).
     const json = makeJsonSnippet({ path: '.radiprotocol/snippets/legacy-id.json', name: 'legacy-id' });
     const h = mountHarness(json);
     await callHandle(h, 'legacy-id');
@@ -194,7 +210,9 @@ describe('Phase 51 Plan 06 — RunnerView.handleSnippetFill path-shape detection
     expect(h.loadSpy).toHaveBeenCalledWith('.radiprotocol/snippets/legacy-id.json');
   });
 
-  it('Test 2: Phase 51 full-path "abdomen/ct.md" loads via `${root}/abdomen/ct.md` (no ext append)', async () => {
+  it('Test 2: after pickFileBoundSnippet click — full-path "abdomen/ct.md" loads via `${root}/abdomen/ct.md` (no ext append)', async () => {
+    // Phase 56 (D-02): handleSnippetFill is invoked from runner.pickFileBoundSnippet
+    // after the rp-snippet-branch-btn click — full-path shape resolver branch.
     const md = makeMdSnippet({ path: '.radiprotocol/snippets/abdomen/ct.md', name: 'ct', content: 'CT body' });
     const h = mountHarness(md);
     await callHandle(h, 'abdomen/ct.md');
@@ -203,7 +221,8 @@ describe('Phase 51 Plan 06 — RunnerView.handleSnippetFill path-shape detection
     expect(h.loadSpy).toHaveBeenCalledWith('.radiprotocol/snippets/abdomen/ct.md');
   });
 
-  it('Test 3: Phase 51 full-path "liver/r.json" loads via `${root}/liver/r.json` (no ext append)', async () => {
+  it('Test 3: after pickFileBoundSnippet click — full-path "liver/r.json" loads via `${root}/liver/r.json` (no ext append)', async () => {
+    // Phase 56 (D-02): pickFileBoundSnippet → handleSnippetFill (no auto-advance prior).
     const json = makeJsonSnippet({ path: '.radiprotocol/snippets/liver/r.json', name: 'r' });
     const h = mountHarness(json);
     await callHandle(h, 'liver/r.json');
@@ -212,7 +231,8 @@ describe('Phase 51 Plan 06 — RunnerView.handleSnippetFill path-shape detection
     expect(h.loadSpy).toHaveBeenCalledWith('.radiprotocol/snippets/liver/r.json');
   });
 
-  it('Test 4: Phase 51 full-path "x.md" (extension only, no slash) treated as full-path, loads via `${root}/x.md`', async () => {
+  it('Test 4: after pickFileBoundSnippet click — full-path "x.md" (extension only, no slash) loads via `${root}/x.md`', async () => {
+    // Phase 56 (D-02): post-click landing — extension-only path treated as full-path.
     const md = makeMdSnippet({ path: '.radiprotocol/snippets/x.md', name: 'x', content: 'root md' });
     const h = mountHarness(md);
     await callHandle(h, 'x.md');
@@ -221,7 +241,10 @@ describe('Phase 51 Plan 06 — RunnerView.handleSnippetFill path-shape detection
     expect(h.loadSpy).toHaveBeenCalledWith('.radiprotocol/snippets/x.md');
   });
 
-  it('Test 5: D-14 .md auto-insert end-to-end — full-path snippetId → MdSnippet → runner.completeSnippet(content)', async () => {
+  it('Test 5: after pickFileBoundSnippet click — .md path → MdSnippet → runner.completeSnippet(content) (no modal)', async () => {
+    // Phase 56 (D-02): end-to-end — user clicks .rp-snippet-branch-btn → pickFileBoundSnippet →
+    // handleSnippetFill recognises .md → completeSnippet(content). No modal opens for .md
+    // (Phase 35 D-04 contract preserved).
     const md = makeMdSnippet({ path: '.radiprotocol/snippets/abdomen/ct.md', name: 'ct', content: 'Hello MD' });
     const h = mountHarness(md);
     await callHandle(h, 'abdomen/ct.md');
@@ -233,7 +256,9 @@ describe('Phase 51 Plan 06 — RunnerView.handleSnippetFill path-shape detection
     expect(modalOpenSpy).not.toHaveBeenCalled();
   });
 
-  it('Test 6: D-14 .json auto-insert WITH placeholders — opens SnippetFillInModal', async () => {
+  it('Test 6: after pickFileBoundSnippet click — .json WITH placeholders opens SnippetFillInModal', async () => {
+    // Phase 56 (D-02): post-click landing — JsonSnippet with placeholders → modal opens
+    // (the awaiting-snippet-fill arm previously triggered automatically by D-13).
     const json = makeJsonSnippet({
       path: '.radiprotocol/snippets/liver/r.json',
       name: 'r',
@@ -248,7 +273,8 @@ describe('Phase 51 Plan 06 — RunnerView.handleSnippetFill path-shape detection
     expect(h.completeSnippetSpy).toHaveBeenCalledWith('<<rendered>>');
   });
 
-  it('Test 7: D-14 .json auto-insert WITHOUT placeholders — short-circuit to completeSnippet(template); no modal (Phase 30 D-09 harmonisation)', async () => {
+  it('Test 7: after pickFileBoundSnippet click — .json WITHOUT placeholders short-circuits to completeSnippet(template); no modal (Phase 30 D-09 harmonisation)', async () => {
+    // Phase 56 (D-02): post-click landing — JsonSnippet zero-placeholder fast-path.
     const json = makeJsonSnippet({
       path: '.radiprotocol/snippets/liver/empty.json',
       name: 'empty',
@@ -264,7 +290,10 @@ describe('Phase 51 Plan 06 — RunnerView.handleSnippetFill path-shape detection
     expect(modalOpenSpy).not.toHaveBeenCalled();
   });
 
-  it('Test 8: legacy id-string + load returns null — renders «not found» inline error, no mutation', async () => {
+  it('Test 8: after pickFileBoundSnippet click — legacy id-string + load returns null renders «not found» inline error, no mutation', async () => {
+    // Phase 56 (D-02): post-click landing — missing snippet error path.
+    // (This test never relied on D-13 auto-advance; rp-snippet-branch-btn click is the
+    // only non-test entry point post-Phase-56.)
     const h = mountHarness(null);
     await callHandle(h, 'missing-id');
 
