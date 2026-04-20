@@ -36,6 +36,7 @@ const CSS_FILES = [
   'snippet-fill-modal',
   'loop-support',
   'snippet-tree-picker',
+  'inline-runner',
 ];
 
 /**
