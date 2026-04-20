@@ -319,17 +319,7 @@ Plans:
 **Plans**: TBD
 **UI hint**: yes
 
-### Phase 53: BRAT Distribution Readiness
-**Goal**: The repository is shippable via BRAT — `manifest.json`, `versions.json`, and git tags align on one version, and a GitHub Release exists with the three required assets so users can install through BRAT with identifier `vegacepticon/RadiProtocol`.
-**Depends on**: Phases 47–52 (release asset must reflect a shippable build; this phase is scheduled last and does not touch TypeScript source)
-**Requirements**: BRAT-01
-**Success Criteria** (what must be TRUE):
-  1. `manifest.json` `version`, `versions.json` mapping (min-Obsidian per version), and the git tag naming scheme all agree on the v1.8 release version; `npm run build` produces a clean `main.js` + `styles.css` against that manifest version (BRAT-01)
-  2. `gh release list` shows at least one GitHub Release whose assets include `manifest.json`, `main.js`, and `styles.css` as individually downloadable files at the root of the release (not inside a zip) (BRAT-01)
-  3. Installing the plugin in a fresh Obsidian vault via BRAT with identifier `vegacepticon/RadiProtocol` succeeds end-to-end — plugin appears in Community Plugins list, enables, and opens the Runner view (BRAT-01)
-**Plans**: TBD
-
-### Phase 54: Runner Skip & Close Buttons
+### Phase 53: Runner Skip & Close Buttons
 **Goal**: Add two new buttons to the Protocol Runner UI — **Skip** advances past the current node without inserting anything into the Runner textarea, and **Close** unloads the current canvas (with the same confirmation dialog used when switching canvases mid-run) and returns the Runner to the "no canvas selected" state.
 **Depends on**: Nothing (pure Runner UI addition; schedulable independently of other v1.8 phases)
 **Requirements**: TBD (to be allocated in discuss-phase)
@@ -340,9 +330,9 @@ Plans:
 **Plans**: TBD
 **UI hint**: yes
 
-### Phase 55: Inline Protocol Display Mode
+### Phase 54: Inline Protocol Display Mode
 **Goal**: Introduce a third Runner display mode — **inline** — where the protocol appears as a floating, non-blocking modal over the active note and each answer selection is appended directly to the end of that note, replacing the Runner's internal textarea with the note itself. Launched only via a new command palette entry `Run protocol in inline`, which prompts the user to pick a canvas from the `Protocol` folder and then opens the modal on the currently active note.
-**Depends on**: Nothing strictly (touches Runner display layer + new command; parallel to Phase 51/52). Design decisions locked in `.planning/notes/inline-protocol-mode.md` — discuss-phase should build on those, not reopen them.
+**Depends on**: Nothing strictly (touches Runner display layer + new command; parallel to Phase 51/52/53). Design decisions locked in `.planning/notes/inline-protocol-mode.md` — discuss-phase should build on those, not reopen them.
 **Requirements**: TBD (to be allocated in discuss-phase)
 **Success Criteria** (what must be TRUE):
   1. A new command `Run protocol in inline` is registered in the Obsidian command palette; executing it with an active note opens a canvas picker (scoped to the `Protocol` folder), and selecting a canvas spawns a floating modal anchored over that note, starting at the canvas's entry node, per `.planning/notes/inline-protocol-mode.md`
@@ -352,6 +342,16 @@ Plans:
   5. The existing `sidebar` and `tab` display modes are unchanged — no regression in their behavior; inline is strictly additive and reachable only through the new command, not through settings, canvas attributes, or the existing Runner launch paths
 **Plans**: TBD
 **UI hint**: yes
+
+### Phase 55: BRAT Distribution Readiness
+**Goal**: The repository is shippable via BRAT — `manifest.json`, `versions.json`, and git tags align on one version, and a GitHub Release exists with the three required assets so users can install through BRAT with identifier `vegacepticon/RadiProtocol`.
+**Depends on**: Phases 47–54 (release asset must reflect a shippable build; this phase is scheduled last and does not touch TypeScript source)
+**Requirements**: BRAT-01
+**Success Criteria** (what must be TRUE):
+  1. `manifest.json` `version`, `versions.json` mapping (min-Obsidian per version), and the git tag naming scheme all agree on the v1.8 release version; `npm run build` produces a clean `main.js` + `styles.css` against that manifest version (BRAT-01)
+  2. `gh release list` shows at least one GitHub Release whose assets include `manifest.json`, `main.js`, and `styles.css` as individually downloadable files at the root of the release (not inside a zip) (BRAT-01)
+  3. Installing the plugin in a fresh Obsidian vault via BRAT with identifier `vegacepticon/RadiProtocol` succeeds end-to-end — plugin appears in Community Plugins list, enables, and opens the Runner view (BRAT-01)
+**Plans**: TBD
 
 ---
 
