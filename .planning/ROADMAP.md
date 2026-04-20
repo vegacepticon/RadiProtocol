@@ -1,7 +1,7 @@
 # Roadmap: RadiProtocol
 
 **Project:** RadiProtocol
-**Last updated:** 2026-04-19
+**Last updated:** 2026-04-20
 
 ---
 
@@ -14,7 +14,7 @@
 - ✅ **v1.5 Snippet Editor Refactoring** — Phases 32-35 (shipped 2026-04-16)
 - ✅ **v1.6 Polish & Canvas Workflow** — Phases 36-42 (shipped 2026-04-17)
 - ✅ **v1.7 Loop Rework & Regression Cleanup** — Phases 43-46 (shipped 2026-04-18)
-- ⏳ **v1.8 UX Polish & Snippet Picker Overhaul** — Phases 47-53
+- ⏳ **v1.8 UX Polish & Snippet Picker Overhaul** — Phases 47-55
 
 ---
 
@@ -329,6 +329,30 @@ Plans:
   3. Installing the plugin in a fresh Obsidian vault via BRAT with identifier `vegacepticon/RadiProtocol` succeeds end-to-end — plugin appears in Community Plugins list, enables, and opens the Runner view (BRAT-01)
 **Plans**: TBD
 
+### Phase 54: Runner Skip & Close Buttons
+**Goal**: Add two new buttons to the Protocol Runner UI — **Skip** advances past the current node without inserting anything into the Runner textarea, and **Close** unloads the current canvas (with the same confirmation dialog used when switching canvases mid-run) and returns the Runner to the "no canvas selected" state.
+**Depends on**: Nothing (pure Runner UI addition; schedulable independently of other v1.8 phases)
+**Requirements**: TBD (to be allocated in discuss-phase)
+**Success Criteria** (what must be TRUE):
+  1. A **Skip** button is visible in the Runner while a node is active — clicking it advances to the next node per the existing dispatch logic without appending anything to the Runner textarea and without emitting a choice/edge traversal that would fail non-skip expectations downstream
+  2. A **Close** button is visible in the Runner while a canvas is loaded — clicking it shows the existing mid-run switch confirmation prompt; on confirm, the active canvas is unloaded and the Runner returns to the "no canvas selected" state (same state as on fresh plugin open / post-canvas-clear)
+  3. Both buttons do nothing (or are disabled/hidden) when no canvas is loaded, and skip is only operative when a node is currently active (not during terminal / empty-buffer states)
+**Plans**: TBD
+**UI hint**: yes
+
+### Phase 55: Inline Protocol Display Mode
+**Goal**: Introduce a third Runner display mode — **inline** — where the protocol appears as a floating, non-blocking modal over the active note and each answer selection is appended directly to the end of that note, replacing the Runner's internal textarea with the note itself. Launched only via a new command palette entry `Run protocol in inline`, which prompts the user to pick a canvas from the `Protocol` folder and then opens the modal on the currently active note.
+**Depends on**: Nothing strictly (touches Runner display layer + new command; parallel to Phase 51/52). Design decisions locked in `.planning/notes/inline-protocol-mode.md` — discuss-phase should build on those, not reopen them.
+**Requirements**: TBD (to be allocated in discuss-phase)
+**Success Criteria** (what must be TRUE):
+  1. A new command `Run protocol in inline` is registered in the Obsidian command palette; executing it with an active note opens a canvas picker (scoped to the `Protocol` folder), and selecting a canvas spawns a floating modal anchored over that note, starting at the canvas's entry node, per `.planning/notes/inline-protocol-mode.md`
+  2. The floating modal does not block editing of the underlying note — the user can continue to type / edit the note while the modal is visible; selecting an answer option appends the resulting text to the **end** of that specific note (never cursor position, never another note)
+  3. The Runner's internal textarea is not used in inline mode — the note itself is the buffer; there is no "commit all at once" step and no staging area; Obsidian's native undo is the only rollback path
+  4. The protocol is bound to the source note for the duration of the run — if the user switches to a different note, the modal closes or freezes (discuss-phase picks one) and output never silently redirects elsewhere; on return to the source note the run resumes or is shown as ended (discuss-phase picks one)
+  5. The existing `sidebar` and `tab` display modes are unchanged — no regression in their behavior; inline is strictly additive and reachable only through the new command, not through settings, canvas attributes, or the existing Runner launch paths
+**Plans**: TBD
+**UI hint**: yes
+
 ---
 
 ## Progress
@@ -354,3 +378,5 @@ Plans:
 | 51 | v1.8 | 0/0 | Not started | - |
 | 52 | v1.8 | 0/0 | Not started | - |
 | 53 | v1.8 | 0/0 | Not started | - |
+| 54 | v1.8 | 0/0 | Not started | - |
+| 55 | v1.8 | 0/0 | Not started | - |
