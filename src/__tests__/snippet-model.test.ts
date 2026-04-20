@@ -12,15 +12,18 @@ describe('SnippetPlaceholder interface (SNIP-02, D-16)', () => {
   });
 
   it('has optional separator field for choice placeholders (D-02)', () => {
-    const p: SnippetPlaceholder = {
+    // `separator` not yet on SnippetPlaceholder pre-Plan-02; cast via unknown.
+    const p = {
       id: 'findings', label: 'Findings', type: 'choice',
       options: ['cyst', 'mass'], separator: ' and ',
-    } as SnippetPlaceholder;
+    } as unknown as SnippetPlaceholder & { separator: string };
     expect(p.separator).toBe(' and ');
   });
 });
 
 describe('renderSnippet (SNIP-02)', () => {
+  // validationError not yet on JsonSnippet pre-Plan-02; cast via unknown so
+  // tsc accepts the forward-compat field.
   const snippet: SnippetFile = {
     kind: 'json',
     path: '.radiprotocol/snippets/liver-report.json',
@@ -32,7 +35,7 @@ describe('renderSnippet (SNIP-02)', () => {
       { id: 'laterality', label: 'Side', type: 'choice', options: ['Left', 'Right'] },
     ],
     validationError: null,
-  } as SnippetFile;
+  } as unknown as SnippetFile;
 
   it('substitutes free-text placeholder tokens', () => {
     const result = renderSnippet(snippet, { age: '45', laterality: 'Left' });
@@ -57,7 +60,7 @@ describe('renderSnippet choice (D-02, D-05)', () => {
         options: ['cyst', 'mass'], separator: ' and ',
       }],
       validationError: null,
-    } as SnippetFile;
+    } as unknown as SnippetFile;
     const result = renderSnippet(s, { f: 'cyst and mass' });
     expect(result).toBe('Findings: cyst and mass.');
   });
