@@ -350,6 +350,59 @@ export class RunnerView extends ItemView {
   }
 
   /**
+   * Phase 53 RUNNER-CLOSE-02 / D-13 / D-14 / D-16:
+   * Unload the current canvas and return the view to the fresh-plugin-open idle
+   * state. Mirrors handleSelectorSelect's D-12 confirmation predicate byte-for-byte;
+   * on confirm (or no-confirmation path) executes the D-14 teardown in exact order.
+   * D-15: reuses CanvasSwitchModal verbatim (no new modal). D-16: no selector memory
+   * after close — setSelectedPath(null) restores the placeholder.
+   */
+  private async handleClose(): Promise<void> {
+    if (this.canvasFilePath === null) return;  // defence in depth (button is hidden)
+
+    const state = this.runner.getState();
+    const needsConfirmation =
+      state.status === 'at-node' ||
+      state.status === 'awaiting-snippet-pick' ||
+      state.status === 'awaiting-snippet-fill' ||
+      state.status === 'awaiting-loop-pick';
+
+    if (needsConfirmation) {
+      const modal = new CanvasSwitchModal(this.app);
+      modal.open();
+      const confirmed = await modal.result;
+      if (!confirmed) {
+        // D-13: user cancelled — nothing to revert (selector never changed).
+        return;
+      }
+    }
+    // D-13 idle/complete/error path falls through directly — no modal.
+
+    // D-14 teardown — exact order matters.
+    // 1. Clear persisted session for the canvas we are unloading.
+    await this.plugin.sessionService.clear(this.canvasFilePath);
+
+    // 2. Re-create the runner to match openCanvas's pattern (lines 93-97) so that
+    //    getState().status === 'idle' post-reset. defaultSeparator pulled from
+    //    plugin settings, same as openCanvas.
+    this.runner = new ProtocolRunner({
+      defaultSeparator: this.plugin.settings.textSeparator,
+    });
+
+    // 3. Null out runner-local state.
+    this.graph = null;
+    this.canvasFilePath = null;
+    this.previewTextarea = null;
+
+    // 4. D-16: reset selector to placeholder ("Select a protocol…").
+    this.selector?.setSelectedPath(null);
+
+    // 5. Re-render — enters the idle branch of render(), visually identical to
+    //    a fresh plugin open with no canvas ever selected.
+    this.render();
+  }
+
+  /**
    * Restart the current canvas from the beginning without showing ResumeSessionModal.
    * Called by the "Run again" button (gap-closure: RUNNER-01).
    * Clears any persisted session before calling openCanvas() so that openCanvas()
@@ -376,6 +429,11 @@ export class RunnerView extends ItemView {
     if (this.selectorBarEl !== null) {
       this.contentEl.prepend(this.selectorBarEl);
     }
+    // Phase 53 RUNNER-CLOSE-01 / D-12: Close button is hidden when no canvas is loaded.
+    // Visibility re-computed on every render so the first render after openCanvas
+    // (canvasFilePath newly non-null) reveals it, and the render after handleClose
+    // (canvasFilePath newly null) hides it again. is-hidden class maps to display:none.
+    this.closeBtn?.toggleClass('is-hidden', this.canvasFilePath === null);
     this.previewTextarea = null;
 
     const root = this.contentEl.createDiv({ cls: 'rp-runner-view' });

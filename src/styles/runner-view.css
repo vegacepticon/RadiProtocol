@@ -274,3 +274,47 @@
   outline: 2px solid var(--interactive-accent);
   outline-offset: 1px;
 }
+
+/* Phase 53 (cont.): Close button in selector bar — neutral styling (D-06).
+ * CSS ownership: `.rp-selector-bar` lives in canvas-selector.css (Phase 13) and is
+ * intentionally NOT touched here. Runner-view.ts applies the runner-owned modifier
+ * class `rp-selector-bar--has-close` to selectorBarEl in onOpen(), and the modifier
+ * rule below switches that instance to flex layout so the selector trigger and
+ * Close button sit inline. All other `.rp-selector-bar` instances (if any) keep
+ * the canvas-selector.css block layout.
+ *
+ * is-hidden applied in render() when canvasFilePath === null (D-12 visibility gate). */
+.rp-selector-bar--has-close {
+  display: flex;
+  align-items: center;
+  gap: var(--size-2-2); /* 8px — spaces selector trigger from Close button */
+}
+
+.rp-close-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-inline-start: auto; /* push to the end of the flex row */
+  padding: var(--size-2-1) var(--size-2-2); /* 4px 8px */
+  min-width: 28px;
+  min-height: 28px;
+  background: transparent;
+  border: 1px solid var(--background-modifier-border);
+  border-radius: var(--radius-s);
+  cursor: pointer;
+  color: var(--text-muted);
+}
+
+.rp-close-btn:hover {
+  background: var(--background-modifier-hover);
+  color: var(--text-normal);
+}
+
+.rp-close-btn:focus-visible {
+  outline: 2px solid var(--interactive-accent);
+  outline-offset: 1px;
+}
+
+.rp-close-btn.is-hidden {
+  display: none;
+}
