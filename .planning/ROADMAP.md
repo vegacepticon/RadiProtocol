@@ -389,7 +389,14 @@ Plans:
   6. SnippetEditorModal «Папка» row shows a visible "unsaved changes" indicator (badge/marker near the field or in the modal header) whenever the current folder selection differs from the saved value; indicator clears on save/reset
   7. The «Выбрать эту папку» button inside SnippetTreePicker (in SnippetEditorModal + Snippet Manager contexts) transitions to a "committed" colour state immediately after click so the user has visual confirmation that the selection was recorded
   8. Full-suite tests green including new Phase 56 tests covering: single-edge file-bound button rendering (previously absent in Phase 51), direct-insert click path for .md and .json (with and without placeholders), back-compat of directory-bound → picker flow, and visual-state transitions for folder-select indicators
-**Plans**: TBD
+**Plans:** 4 plans
+
+Plans:
+- [ ] 56-01-runner-core-file-bound-dispatch-PLAN.md — Remove Phase 51 D-13 auto-insert block + add ProtocolRunner.pickFileBoundSnippet public method (PICKER-01, RUNFIX-02)
+- [ ] 56-02-editor-modal-unsaved-dot-PLAN.md — SnippetEditorModal «Папка» unsaved-change bullet indicator (D-08) + Phase 56 CSS appended to snippet-manager.css (PICKER-01)
+- [ ] 56-03-tree-picker-committed-state-PLAN.md — SnippetTreePicker «✓ Выбрано» committed-state button (D-10) + Phase 56 CSS appended to snippet-tree-picker.css (PICKER-01)
+- [ ] 56-04-runner-view-click-dispatch-and-tests-PLAN.md — RunnerView sibling-button isFileBound dispatch branching + invert autoinsert-fill tests + directory-bound regression tests + full-suite gate (PICKER-01, RUNFIX-02)
+**UI hint**: yes
 
 ---
 
