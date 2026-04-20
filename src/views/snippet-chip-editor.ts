@@ -14,20 +14,6 @@
 
 import type { JsonSnippet, SnippetPlaceholder } from '../snippets/snippet-model';
 
-// Phase 52 Plan 02 tsc-tolerance (escalation gate): the production union has
-// narrowed to 'free-text' | 'choice' but Wave 3 (Plan 03) owns the full chip-editor
-// rewiring. The legacy code still references 'multi-choice' / 'number' literals
-// and `joinSeparator` / `unit` fields. To keep `tsc --noEmit` green without
-// semantic rewiring, we widen `SnippetPlaceholder` locally here and cast `type`
-// through this widened shape at comparison sites. Plan 03 MUST remove this alias
-// and the `as LegacyPlaceholder` casts when it rewrites the chip-editor.
-type LegacyPlaceholderType = SnippetPlaceholder['type'] | 'multi-choice' | 'number';
-type LegacyPlaceholder = Omit<SnippetPlaceholder, 'type'> & {
-  type: LegacyPlaceholderType;
-  joinSeparator?: string;
-  unit?: string;
-};
-
 // --- Module-local helpers (copied verbatim from legacy snippet-manager-view.ts) ---
 
 function insertAtCursor(textarea: HTMLTextAreaElement, text: string): void {
@@ -39,15 +25,10 @@ function insertAtCursor(textarea: HTMLTextAreaElement, text: string): void {
   textarea.dispatchEvent(new Event('input'));
 }
 
-// Phase 27 D-02: fixed colour bar per placeholder type
-// Phase 52 Plan 02 tsc-tolerance: widened to LegacyPlaceholderType so the
-// legacy 'multi-choice' / 'number' runtime branches below still compile.
-// Plan 03 narrows to `SnippetPlaceholder['type']`.
-const PH_COLOR: Record<LegacyPlaceholderType, string> = {
+// Phase 27 D-02 / Phase 52 D-01: fixed colour bar per placeholder type (narrowed to 2)
+const PH_COLOR: Record<SnippetPlaceholder['type'], string> = {
   'free-text':    'var(--color-cyan)',
   'choice':       'var(--color-orange)',
-  'multi-choice': 'var(--color-purple)',
-  'number':       'var(--color-green)',
 };
 
 // --- Public surface ---------------------------------------------------------
@@ -157,12 +138,9 @@ export function mountChipEditor(
   miniTypeLabel.htmlFor = 'rp-add-ph-type';
   const miniTypeSelect = addPlaceholderForm.createEl('select');
   miniTypeSelect.id = 'rp-add-ph-type';
-  // Phase 52 Plan 02 tsc-tolerance: widened to LegacyPlaceholderType; Plan 03 narrows.
-  const phTypes: Array<{ value: LegacyPlaceholderType; label: string }> = [
+  const phTypes: Array<{ value: SnippetPlaceholder['type']; label: string }> = [
     { value: 'free-text', label: 'Free text' },
     { value: 'choice', label: 'Choice' },
-    { value: 'multi-choice', label: 'Multi-choice' },
-    { value: 'number', label: 'Number' },
   ];
   for (const { value, label } of phTypes) {
     const opt = miniTypeSelect.createEl('option', { text: label });
@@ -206,18 +184,15 @@ export function mountChipEditor(
       .replace(/^-+|-+$/g, '');
     if (!slug) { miniLabelInput.focus(); return; }
 
-    // Phase 52 Plan 02 tsc-tolerance: widened cast; Plan 03 narrows to SnippetPlaceholder['type'].
-    const phType = miniTypeSelect.value as LegacyPlaceholderType;
-    const newPh: LegacyPlaceholder = {
+    const phType = miniTypeSelect.value as SnippetPlaceholder['type'];
+    const newPh: SnippetPlaceholder = {
       id: slug,
       label: rawLabel,
       type: phType,
-      ...(phType === 'choice' || phType === 'multi-choice' ? { options: [] } : {}),
-      ...(phType === 'multi-choice' ? { joinSeparator: ', ' } : {}),
-      ...(phType === 'number' ? { unit: '' } : {}),
+      ...(phType === 'choice' ? { options: [] } : {}),
     };
 
-    draft.placeholders.push(newPh as unknown as SnippetPlaceholder);
+    draft.placeholders.push(newPh);
     insertAtCursor(templateArea, `{{${slug}}}`);
     draft.template = templateArea.value;
 
@@ -248,11 +223,8 @@ export function mountChipEditor(
   }
 
   function renderPlaceholderChip(ph: SnippetPlaceholder, index: number): void {
-    // Phase 52 Plan 02 tsc-tolerance: cast to LegacyPlaceholder so the legacy
-    // 'number' / 'multi-choice' branches still compile (Plan 03 rewires).
-    const phLegacy = ph as unknown as LegacyPlaceholder;
     const chip = placeholderList.createDiv({ cls: 'rp-placeholder-chip' });
-    chip.style.borderLeftColor = PH_COLOR[phLegacy.type] ?? 'transparent';
+    chip.style.borderLeftColor = PH_COLOR[ph.type] ?? 'transparent';
     chip.setAttribute('draggable', 'true');
 
     const handle = chip.createSpan({ cls: 'rp-placeholder-chip-handle' });
@@ -313,12 +285,7 @@ export function mountChipEditor(
       ) return;
       chip.toggleClass('is-expanded', !chip.hasClass('is-expanded'));
       if (chip.hasClass('is-expanded')) {
-        // Phase 52 Plan 02 tsc-tolerance: legacy 'number' arm still referenced at runtime.
-        if (phLegacy.type === 'number') {
-          renderNumberExpanded(ph, chip);
-        } else {
-          renderExpandedPlaceholder(ph, chip, labelSpan, badge);
-        }
+        renderExpandedPlaceholder(ph, chip, labelSpan, badge);
       } else {
         chip.querySelector('.rp-placeholder-expanded')?.remove();
       }
@@ -340,16 +307,11 @@ export function mountChipEditor(
   }
 
   function renderExpandedPlaceholder(
-    phArg: SnippetPlaceholder,
+    ph: SnippetPlaceholder,
     row: HTMLElement,
     labelSpan: HTMLElement,
     badge: HTMLElement,
   ): void {
-    // Phase 52 Plan 02 tsc-tolerance: widen to LegacyPlaceholder so the legacy
-    // 'multi-choice' / 'number' arms + joinSeparator/unit fields still compile.
-    // Plan 03 owns the real narrowing to the 2-option selector; these cast paths
-    // are marked for deletion.
-    const ph = phArg as unknown as LegacyPlaceholder;
     const existing = row.querySelector('.rp-placeholder-expanded');
     if (existing) existing.remove();
 
@@ -376,11 +338,9 @@ export function mountChipEditor(
     typeLbl.htmlFor = `rp-ph-type-${ph.id}`;
     const typeSelect = typeSec.createEl('select');
     typeSelect.id = `rp-ph-type-${ph.id}`;
-    const phTypesLocal: Array<{ value: LegacyPlaceholderType; label: string }> = [
+    const phTypesLocal: Array<{ value: SnippetPlaceholder['type']; label: string }> = [
       { value: 'free-text', label: 'Free text' },
       { value: 'choice', label: 'Choice' },
-      { value: 'multi-choice', label: 'Multi-choice' },
-      { value: 'number', label: 'Number' },
     ];
     for (const { value, label } of phTypesLocal) {
       const opt = typeSelect.createEl('option', { text: label });
@@ -388,22 +348,16 @@ export function mountChipEditor(
     }
     typeSelect.value = ph.type;
     on(typeSelect, 'change', () => {
-      ph.type = typeSelect.value as LegacyPlaceholderType;
+      ph.type = typeSelect.value as SnippetPlaceholder['type'];
       badge.textContent = ph.type;
-      if (ph.type === 'choice' || ph.type === 'multi-choice') {
+      if (ph.type === 'choice') {
         if (!ph.options) ph.options = [];
-        if (ph.type === 'multi-choice' && !ph.joinSeparator) ph.joinSeparator = ', ';
-        if (ph.type === 'choice') ph.joinSeparator = undefined;
-        ph.unit = undefined;
-      } else if (ph.type === 'number') {
-        ph.options = undefined;
-        ph.joinSeparator = undefined;
       } else {
+        // free-text: drop choice-only fields
         ph.options = undefined;
-        ph.joinSeparator = undefined;
-        ph.unit = undefined;
+        ph.separator = undefined;
       }
-      renderExpandedPlaceholder(phArg, row, labelSpan, badge);
+      renderExpandedPlaceholder(ph, row, labelSpan, badge);
       onChange();
     });
 
@@ -453,43 +407,21 @@ export function mountChipEditor(
       onChange();
     });
 
-    // Join separator for multi-choice (D-07)
-    if (ph.type === 'multi-choice') {
+    // Phase 52 D-02/D-05: Разделитель rendered for all choice placeholders
+    if (ph.type === 'choice') {
       const sepSec = expanded.createDiv({ cls: 'rp-snippet-form-section' });
       const sepLabel = sepSec.createEl('label');
-      sepLabel.textContent = 'Join separator';
+      sepLabel.textContent = 'Разделитель';
       sepLabel.htmlFor = `rp-ph-sep-${ph.id}`;
       const sepInput = sepSec.createEl('input', { type: 'text' });
       sepInput.id = `rp-ph-sep-${ph.id}`;
-      sepInput.value = ph.joinSeparator ?? ', ';
+      sepInput.value = ph.separator ?? ', ';
       sepInput.placeholder = ', ';
       on(sepInput, 'input', () => {
-        ph.joinSeparator = sepInput.value;
+        ph.separator = sepInput.value;
         onChange();
       });
     }
-  }
-
-  function renderNumberExpanded(phArg: SnippetPlaceholder, row: HTMLElement): void {
-    // Phase 52 Plan 02 tsc-tolerance: legacy 'number' arm; unit field via LegacyPlaceholder cast.
-    const ph = phArg as unknown as LegacyPlaceholder;
-    const existing = row.querySelector('.rp-placeholder-expanded');
-    if (existing) existing.remove();
-
-    const expanded = row.createDiv({ cls: 'rp-placeholder-expanded' });
-
-    const unitSec = expanded.createDiv({ cls: 'rp-snippet-form-section' });
-    const unitLabel = unitSec.createEl('label');
-    unitLabel.textContent = 'Unit (optional)';
-    unitLabel.htmlFor = `rp-ph-unit-${ph.id}`;
-    const unitInput = unitSec.createEl('input', { type: 'text' });
-    unitInput.id = `rp-ph-unit-${ph.id}`;
-    unitInput.value = ph.unit ?? '';
-    unitInput.placeholder = 'e.g. mm';
-    on(unitInput, 'input', () => {
-      ph.unit = unitInput.value || undefined;
-      onChange();
-    });
   }
 
   // Initial placeholder list render
