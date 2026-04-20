@@ -183,6 +183,98 @@ describe('CanvasParser — snippet node extra fields (Phase 31)', () => {
   });
 });
 
+describe('Phase 51 — radiprotocol_snippetPath parsing (PICKER-01)', () => {
+  // Local factory mirroring the Phase 31 `buildSnippetCanvas` / `parseSnippet` pair
+  // so the new tests remain independent from those of the earlier phase.
+  // See `.planning/notes/snippet-node-binding-and-picker.md` (D-01/D-02/D-03).
+  function buildSnippetCanvas(extraProps: Record<string, unknown>): string {
+    return JSON.stringify({
+      nodes: [
+        {
+          id: 'n-start',
+          type: 'text',
+          text: 'Start',
+          x: 0,
+          y: 0,
+          width: 100,
+          height: 60,
+          radiprotocol_nodeType: 'start',
+        },
+        {
+          id: 'n-snippet1',
+          type: 'text',
+          text: 'Snippet',
+          x: 200,
+          y: 0,
+          width: 100,
+          height: 60,
+          radiprotocol_nodeType: 'snippet',
+          ...extraProps,
+        },
+      ],
+      edges: [{ id: 'e1', fromNode: 'n-start', toNode: 'n-snippet1' }],
+    });
+  }
+
+  function parseSnippet(extraProps: Record<string, unknown>) {
+    const parser = new CanvasParser();
+    const result = parser.parse(buildSnippetCanvas(extraProps), 'phase51-snippet.canvas');
+    if (!result.success) throw new Error(result.error);
+    const node = result.graph.nodes.get('n-snippet1');
+    expect(node).toBeDefined();
+    expect(node?.kind).toBe('snippet');
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    return node as any;
+  }
+
+  it('reads radiprotocol_snippetPath into node.radiprotocol_snippetPath (D-01) with subfolderPath undefined', () => {
+    const node = parseSnippet({ radiprotocol_snippetPath: 'abdomen/ct-routine.md' });
+    expect(node.radiprotocol_snippetPath).toBe('abdomen/ct-routine.md');
+    expect(node.subfolderPath).toBeUndefined();
+  });
+
+  it('keeps the extension verbatim per D-03 — .json path stored as-is', () => {
+    const node = parseSnippet({ radiprotocol_snippetPath: 'liver/report.json' });
+    expect(node.radiprotocol_snippetPath).toBe('liver/report.json');
+  });
+
+  it('normalises empty-string radiprotocol_snippetPath to undefined (D-02)', () => {
+    const node = parseSnippet({ radiprotocol_snippetPath: '' });
+    expect(node.radiprotocol_snippetPath).toBeUndefined();
+  });
+
+  it('normalises JSON null radiprotocol_snippetPath to undefined (D-02)', () => {
+    const node = parseSnippet({ radiprotocol_snippetPath: null });
+    expect(node.radiprotocol_snippetPath).toBeUndefined();
+  });
+
+  it('normalises non-string radiprotocol_snippetPath (e.g. number 123) to undefined (D-02)', () => {
+    const node = parseSnippet({ radiprotocol_snippetPath: 123 });
+    expect(node.radiprotocol_snippetPath).toBeUndefined();
+  });
+
+  it('back-compat: snippet node with neither radiprotocol_snippetPath nor radiprotocol_subfolderPath yields both undefined (Pitfall #11)', () => {
+    const node = parseSnippet({});
+    expect(node.radiprotocol_snippetPath).toBeUndefined();
+    expect(node.subfolderPath).toBeUndefined();
+  });
+
+  it('back-compat: legacy directory-bound snippet (only radiprotocol_subfolderPath) is byte-identical to pre-Phase-51 behaviour', () => {
+    const node = parseSnippet({ radiprotocol_subfolderPath: 'abdomen' });
+    expect(node.subfolderPath).toBe('abdomen');
+    expect(node.radiprotocol_snippetPath).toBeUndefined();
+  });
+
+  it('parser preserves both fields if both set on disk; mutual exclusivity is enforced on write per D-01', () => {
+    const node = parseSnippet({
+      radiprotocol_subfolderPath: 'abdomen',
+      radiprotocol_snippetPath: 'liver/r.md',
+    });
+    expect(node.subfolderPath).toBe('abdomen');
+    expect(node.radiprotocol_snippetPath).toBe('liver/r.md');
+  });
+});
+
 // Phase 50 fixtures for bi-directional Answer.displayLabel ↔ incoming edge label sync
 // (D-17: exercises reverseAdjacency enumeration used by edge-label-reconciler.ts
 // and regression-guards RPEdge.label propagation that the reconciler depends on).
