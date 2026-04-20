@@ -97,15 +97,15 @@
   - **Source:** 53-CONTEXT.md D-10
   - **Signal:** `undoStack.length` grows by exactly 1 per Skip click; `stepBack()` restores `currentNodeId` to the question and `runnerStatus` to `at-node`.
 
-- [ ] **RUNNER-CLOSE-01**: The Runner renders a **Close** icon-button (lucide `x`) inside `selectorBarEl` (next to `CanvasSelectorWidget`) whenever `canvasFilePath !== null`. When no canvas is loaded the Close button is hidden (via class toggle or `display: none`). The button is neutral-styled — NO `mod-warning`, NO destructive red (D-06).
+- [x] **RUNNER-CLOSE-01**: The Runner renders a **Close** icon-button (lucide `x`) inside `selectorBarEl` (next to `CanvasSelectorWidget`) whenever `canvasFilePath !== null`. When no canvas is loaded the Close button is hidden (via class toggle or `display: none`). The button is neutral-styled — NO `mod-warning`, NO destructive red (D-06).
   - **Source:** 53-CONTEXT.md D-02, D-04, D-05, D-06, D-12
   - **Signal:** `rp-close-btn` present in `selectorBarEl` exactly once (attached in `onOpen` so the `contentEl.empty()` + `prepend(selectorBarEl)` survive pattern carries it across renders — same lifetime as the selector).
 
-- [ ] **RUNNER-CLOSE-02**: Clicking **Close** branches on `runner.getState().status`: for `at-node | awaiting-snippet-pick | awaiting-snippet-fill | awaiting-loop-pick` it opens the existing `CanvasSwitchModal` and only proceeds on `true`; for `idle | complete | error` it proceeds directly without modal. The `needsConfirmation` predicate is byte-identical to `handleSelectorSelect` (53-PATTERNS.md §Analog #2).
+- [x] **RUNNER-CLOSE-02**: Clicking **Close** branches on `runner.getState().status`: for `at-node | awaiting-snippet-pick | awaiting-snippet-fill | awaiting-loop-pick` it opens the existing `CanvasSwitchModal` and only proceeds on `true`; for `idle | complete | error` it proceeds directly without modal. The `needsConfirmation` predicate is byte-identical to `handleSelectorSelect` (53-PATTERNS.md §Analog #2).
   - **Source:** 53-CONTEXT.md D-13, D-15
   - **Signal:** grep `needsConfirmation` in `runner-view.ts` finds 2 call-sites with the same 4-status union; `CanvasSwitchModal` is NOT modified.
 
-- [ ] **RUNNER-CLOSE-03**: On confirmed (or no-confirmation) Close, the Runner performs in this exact order: (1) `await sessionService.clear(canvasFilePath)` if path non-null; (2) re-create `this.runner = new ProtocolRunner({ defaultSeparator: plugin.settings.textSeparator })`; (3) null out `graph`, `canvasFilePath`, `previewTextarea`; (4) `selector.setSelectedPath(null)` to reset the widget to its placeholder; (5) `render()`. The resulting view is visually identical to a fresh plugin open — selector shows "Select a protocol…" and the `idle` branch of `render()` runs.
+- [x] **RUNNER-CLOSE-03**: On confirmed (or no-confirmation) Close, the Runner performs in this exact order: (1) `await sessionService.clear(canvasFilePath)` if path non-null; (2) re-create `this.runner = new ProtocolRunner({ defaultSeparator: plugin.settings.textSeparator })`; (3) null out `graph`, `canvasFilePath`, `previewTextarea`; (4) `selector.setSelectedPath(null)` to reset the widget to its placeholder; (5) `render()`. The resulting view is visually identical to a fresh plugin open — selector shows "Select a protocol…" and the `idle` branch of `render()` runs.
   - **Source:** 53-CONTEXT.md D-14, D-16
   - **Signal:** after Close, `canvasFilePath === null`, `getState().status === 'idle'`, selector label matches the placeholder string `'Select a protocol\u2026'`.
 
@@ -151,9 +151,9 @@
 | RUNNER-SKIP-01  | Phase 53 | planned |
 | RUNNER-SKIP-02  | Phase 53 | planned |
 | RUNNER-SKIP-03  | Phase 53 | planned |
-| RUNNER-CLOSE-01 | Phase 53 | planned |
-| RUNNER-CLOSE-02 | Phase 53 | planned |
-| RUNNER-CLOSE-03 | Phase 53 | planned |
+| RUNNER-CLOSE-01 | Phase 53 | ✅ complete (2026-04-21) |
+| RUNNER-CLOSE-02 | Phase 53 | ✅ complete (2026-04-21) |
+| RUNNER-CLOSE-03 | Phase 53 | ✅ complete (2026-04-21) |
 | BRAT-01   | Phase 55 | planned |
 
 *Phase assignments filled in by the roadmapper on 2026-04-18.*
