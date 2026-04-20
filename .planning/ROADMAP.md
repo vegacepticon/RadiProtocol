@@ -122,6 +122,7 @@ Full details: `.planning/milestones/v1.7-ROADMAP.md`
 - [ ] **Phase 51: Snippet Picker Overhaul** — Add specific-snippet binding on Snippet nodes + replace flat folder list with unified hierarchical picker (tree drill-down, breadcrumb, tree-wide search)
 - [ ] **Phase 52: JSON Placeholder Rework** — Collapse placeholder types to `free text` + unified `choice`; fix broken options-list editor; hard-reject legacy `number`/`multichoice`/old-choice snippets
 - [ ] **Phase 53: BRAT Distribution Readiness** — Align `manifest.json` / `versions.json` / git tags; publish first GitHub Release with `manifest.json` + `main.js` + `styles.css` assets; verify BRAT install end-to-end
+- [ ] **Phase 56: Snippet Button UX Reversal** — Откат Phase 51 D-13/D-16: file-bound Snippet всегда рендерится как кнопка + клик даёт прямую вставку (без picker); UI indicators для folder selection в SnippetEditorModal (unsaved marker + button color feedback)
 
 ---
 
@@ -324,7 +325,14 @@ Plans:
   2. The snippet editor's options-list UI works end-to-end — users can add, edit, reorder, and remove option values on a `choice` placeholder and the changes persist to the `.json` file; the existing bug where option entries cannot be edited is fixed (PHLD-01)
   3. The Runner fill-in modal renders a unified `choice` placeholder as multi-select; selecting a single option inserts that value verbatim, selecting multiple joins them using the placeholder's `separator` (default `", "`) (PHLD-01)
   4. Loading a `.json` snippet that declares `number`, `multichoice`, or an unreadable legacy `choice` schema surfaces a hard validation error in the snippet editor and blocks its use in Runner — no automatic migration runs (per REQUIREMENTS.md Out-of-Scope row 2) (PHLD-01)
-**Plans**: TBD
+**Plans**: 5 plans
+
+Plans:
+- [ ] 52-01-wave0-test-scaffolding-PLAN.md — Wave 0 RED test scaffolding: 4 new test files (snippet-service-validation, snippet-chip-editor, snippet-fill-in-modal, snippet-editor-modal-banner) + fixture updates in snippet-model.test.ts + runner-snippet-picker.test.ts
+- [ ] 52-02-model-and-service-narrowing-PLAN.md — Narrow SnippetPlaceholder union to 2 types; rename joinSeparator → separator; drop unit; add validationError to JsonSnippet + validatePlaceholders helper; wire into SnippetService.load/listFolder/sanitizeJson (D-01/D-02/D-03/D-07)
+- [ ] 52-03-chip-editor-and-fill-in-modal-PLAN.md — Chip editor narrowed to 2-type selector + renderNumberExpanded deleted + Разделитель rendered for all choice; fill-in modal checkbox-only dispatch + renderNumberField deleted (D-05/D-06/D-09)
+- [ ] 52-04-banner-and-runner-error-surface-PLAN.md — SnippetEditorModal validation banner + disabled save + read-only content; RunnerView validationError guards in handleSnippetFill (Notice+stepBack) and renderSnippetPicker onSelect (inline error); CSS appended + npm run build (D-04)
+- [ ] 52-05-uat-and-regression-gate-PLAN.md — Full test + build gate; static audits; dev-vault human UAT (5 scenarios: D-08 roundtrip, D-02 on-disk, D-05 multi-select, D-04 editor, D-04 runner); STATE/ROADMAP/REQUIREMENTS rollup
 **UI hint**: yes
 
 ### Phase 53: Runner Skip & Close Buttons
@@ -353,12 +361,27 @@ Plans:
 
 ### Phase 55: BRAT Distribution Readiness
 **Goal**: The repository is shippable via BRAT — `manifest.json`, `versions.json`, and git tags align on one version, and a GitHub Release exists with the three required assets so users can install through BRAT with identifier `vegacepticon/RadiProtocol`.
-**Depends on**: Phases 47–54 (release asset must reflect a shippable build; this phase is scheduled last and does not touch TypeScript source)
+**Depends on**: Phases 47–54 + 56 (release asset must reflect a shippable build; this phase is scheduled last and does not touch TypeScript source)
 **Requirements**: BRAT-01
 **Success Criteria** (what must be TRUE):
   1. `manifest.json` `version`, `versions.json` mapping (min-Obsidian per version), and the git tag naming scheme all agree on the v1.8 release version; `npm run build` produces a clean `main.js` + `styles.css` against that manifest version (BRAT-01)
   2. `gh release list` shows at least one GitHub Release whose assets include `manifest.json`, `main.js`, and `styles.css` as individually downloadable files at the root of the release (not inside a zip) (BRAT-01)
   3. Installing the plugin in a fresh Obsidian vault via BRAT with identifier `vegacepticon/RadiProtocol` succeeds end-to-end — plugin appears in Community Plugins list, enables, and opens the Runner view (BRAT-01)
+**Plans**: TBD
+
+### Phase 56: Snippet Button UX Reversal
+**Goal**: Reverse Phase 51 D-13/D-16 design decisions so every file-bound Snippet node renders as a click-button (never auto-inserts, never leads through picker): clicking the button directly inserts the snippet content (or opens SnippetFillInModal for `.json` with placeholders). Directory-bound Snippet nodes keep the current button→picker flow. Additionally add visible indicators in SnippetEditorModal for folder-selection state (unsaved-change marker + «Выбрать эту папку» button colour feedback after click).
+**Depends on**: Phase 51 (overturns D-13 in `protocol-runner.ts` case `'question'` auto-insert dispatch and D-16 sibling-button routing in `runner-view.ts`; preserves Phase 51 picker component + directory-bound code paths untouched)
+**Requirements**: Follow-up to PICKER-01; PICKER-02 unaffected
+**Success Criteria** (what must be TRUE — to be locked during discuss/plan):
+  1. A Question → single-edge → file-bound Snippet path renders a single choice button (with 📄 glyph + D-16 three-step caption fallback preserved) instead of auto-advancing to awaiting-snippet-fill (reverses Phase 51 D-13 in `protocol-runner.ts:~580-613`)
+  2. Clicking any file-bound Snippet button (single-edge or sibling) dispatches the snippet fill path directly — `.md` inserts content immediately, `.json` with placeholders opens SnippetFillInModal before insertion, `.json` without placeholders inserts template immediately — without routing through `chooseSnippetBranch → awaiting-snippet-pick` (reverses Phase 51 D-16 in `runner-view.ts:~452-459`)
+  3. Directory-bound Snippet nodes (no `radiprotocol_snippetPath`, only `radiprotocol_subfolderPath`) continue to render button → SnippetTreePicker drill-down identically to Phase 51; zero regression on directory-bound UX
+  4. Undo (stepBack) semantics preserved: pressing Undo from awaiting-snippet-fill (or from post-insertion state) returns to the Question with the pre-insertion accumulator snapshot; D-15 undo-before-mutate ordering retained at every new click handler
+  5. RUNFIX-02 `capturePendingTextareaScroll()` remains the FIRST line of every new/modified click handler in `runner-view.ts`
+  6. SnippetEditorModal «Папка» row shows a visible "unsaved changes" indicator (badge/marker near the field or in the modal header) whenever the current folder selection differs from the saved value; indicator clears on save/reset
+  7. The «Выбрать эту папку» button inside SnippetTreePicker (in SnippetEditorModal + Snippet Manager contexts) transitions to a "committed" colour state immediately after click so the user has visual confirmation that the selection was recorded
+  8. Full-suite tests green including new Phase 56 tests covering: single-edge file-bound button rendering (previously absent in Phase 51), direct-insert click path for .md and .json (with and without placeholders), back-compat of directory-bound → picker flow, and visual-state transitions for folder-select indicators
 **Plans**: TBD
 
 ---
@@ -384,7 +407,7 @@ Plans:
 | 50 | v1.8 | 5/5 | Complete | 2026-04-19 |
 | 50.1 | v1.8 | 5/5 | Complete (INSERTED) | 2026-04-19 |
 | 51 | v1.8 | 0/6 | Planned | - |
-| 52 | v1.8 | 0/0 | Not started | - |
+| 52 | v1.8 | 0/5 | Planned | - |
 | 53 | v1.8 | 0/0 | Not started | - |
 | 54 | v1.8 | 0/0 | Not started | - |
 | 55 | v1.8 | 0/0 | Not started | - |

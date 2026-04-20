@@ -777,27 +777,27 @@ private renderValidationBanner(container: HTMLElement, msg: string): void {
 | A6 | Russian text format for D-04 banner and runner panel mirrors Phase 50.1 D-04..D-08 verbatim style | § Banner Copy | Low. Explicit CONTEXT instruction: «в стиле Phase 50.1». [CITED: CONTEXT §Claude's Discretion last bullet refers explicitly to Phase 50.1 D-04..D-08] |
 | A7 | «Reorder» in SC 2 means reorder-placeholder-chips (already works), NOT reorder-options-within-placeholder (not implemented) | § D-08 Bug Repro recommendation | Moderate. If user expects option-level reorder, Wave 2 work expands. Verify with user during plan-phase. [ASSUMED] |
 
-## Open Questions
+## Open Questions (RESOLVED)
 
 1. **Runner state on auto-insert failure — Notice vs error state.**
    - What we know: CONTEXT explicitly marks this as Claude's Discretion. Two options listed (non-fatal Notice + stepBack, or `error` state).
    - What's unclear: User's preferred severity for this path.
-   - Recommendation: Non-fatal Notice + stepBack for D-14 auto-insert path; `error` state for explicit D-16 picker-click path. Planner surfaces during plan review.
+   - **RESOLVED:** Non-fatal Notice + stepBack for D-14 auto-insert path; `error` state for explicit D-16 picker-click path. Matches Plan 04 Task 02 implementation.
 
 2. **«Reorder» granularity in SC 2.**
    - What we know: SC 2 reads «adding, editing, reordering, and removing options persists». Chip-editor supports reorder of placeholder-chips via drag, not of options-within-a-chip.
    - What's unclear: Whether user expects per-option reorder UI.
-   - Recommendation: Read as placeholder-chip reorder only; confirm with user in plan-phase. If option-level reorder is needed, add to Wave 2.
+   - **RESOLVED:** SC 2 is satisfied by a functional regression test covering add/edit/remove (no option-level reorder required by SC 2 text). Matches Plan 01 Task 05 coverage scope.
 
 3. **`validationError` on `MdSnippet`.**
    - What we know: MD snippets have no placeholders → no legacy types to reject.
    - What's unclear: Whether future schema drift in MD (e.g., front-matter validation) would benefit from a unified error field across `Snippet` union.
-   - Recommendation: Restrict to `JsonSnippet`. If MD validation becomes a requirement, add then.
+   - **RESOLVED:** `validationError` lives only on the `JsonSnippet` discriminated arm; `MdSnippet` does not carry it. Matches Plan 02 Task 01 interface shape.
 
 4. **Banner visual weight in SnippetEditorModal.**
    - What we know: D-04 wants read-only form + disabled save.
    - What's unclear: Full takeover (hide chip-editor entirely and show only banner + «Name» field for archive-rename) vs. gray-out + banner-at-top.
-   - Recommendation: Gray-out + banner — lets user move the file to an archive folder via «Папка» picker without full-UI teardown. Planner chooses.
+   - **RESOLVED:** Gray-out content + banner with `role="alert"`, copy style matching Phase 50.1 D-04..D-08. Matches Plan 04 Task 01 implementation.
 
 ## Environment Availability
 

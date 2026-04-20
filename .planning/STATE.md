@@ -68,6 +68,7 @@ See: `.planning/PROJECT.md` (updated 2026-04-18)
 
 - Phase 48.1 inserted after Phase 48: Toolbar Gap Tighten — cosmetic UAT follow-up to shrink the empty gap between Node Editor form content and the bottom-anchored quick-create toolbar (originated from Phase 48 UAT Test 7 feedback) (URGENT)
 - Phase 50.1 inserted after Phase 50: Loop Exit `+` Prefix Convention — supersedes Phase 49 D-07 alias (`isExitEdge = isLabeledEdge`) with `label.trim().startsWith('+')` so loop nodes can carry multiple labeled body edges unambiguously. Originated from design conflict surfaced during Phase 50 UAT sign-off (user noted Phase 49's "exactly-one-labeled-edge" constraint contradicts Phase 50's auto-sync of shared Answer.displayLabel on multi-incoming). (URGENT)
+- Phase 56 added to v1.8: Snippet Button UX Reversal — overturns Phase 51 D-13 (auto-insert on single-edge file-bound Snippet) and D-16 (sibling-button routes through picker) per user verdict during Phase 51 UAT (2026-04-20). New rule: file-bound Snippet always renders a button + click = direct insert (or placeholder modal for .json with placeholders); directory-bound continues to use button→picker. Also adds visible unsaved-changes indicator + button colour feedback in SnippetEditorModal folder-select.
 
 ### v1.8 Design Decisions (locked during /gsd-explore on 2026-04-18)
 
