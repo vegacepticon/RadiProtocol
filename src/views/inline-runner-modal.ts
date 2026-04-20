@@ -8,6 +8,7 @@ import { GraphValidator } from '../graph/graph-validator';
 import type { ProtocolGraph, AnswerNode, SnippetNode } from '../graph/graph-model';
 import { SnippetTreePicker } from './snippet-tree-picker';
 import { isExitEdge, nodeLabel, stripExitPrefix } from '../graph/node-label';
+import { renderSnippet, type JsonSnippet } from '../snippets/snippet-model';
 
 /**
  * InlineRunnerModal — floating panel that hosts the Runner UI over an active note.
@@ -800,7 +801,6 @@ export class InlineRunnerModal {
         }
       }
 
-      const { renderSnippet } = require('../snippets/snippet-model');
       const rendered = renderSnippet(snippet, filledValues);
       this.runner.completeSnippet(rendered);
       void this.appendAnswerToNote(rendered).then(() => {
