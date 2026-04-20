@@ -19,13 +19,20 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 // Minimal DOM-ish mock element (mirrors src/__tests__/snippet-tree-view.test.ts)
 // ---------------------------------------------------------------------------
 
+interface MockClassList {
+  add: (cls: string) => void;
+  remove: (cls: string) => void;
+  contains: (cls: string) => boolean;
+  has: (cls: string) => boolean;
+}
+
 interface MockEl {
   tagName: string;
   children: MockEl[];
   parent: MockEl | null;
   _text: string;
   textContent: string;
-  classList: Set<string>;
+  classList: MockClassList;
   _attrs: Record<string, string>;
   _style: Record<string, string>;
   _listeners: Map<string, Array<(ev: unknown) => void>>;
@@ -47,6 +54,7 @@ interface MockEl {
   addEventListener: (type: string, handler: (ev: unknown) => void) => void;
   removeEventListener: (type: string, handler: (ev: unknown) => void) => void;
   dispatchEvent: (event: { type: string; target?: unknown }) => void;
+  remove: () => void;
   focus: () => void;
 }
 
@@ -56,6 +64,12 @@ function makeEl(tag = 'div'): MockEl {
   const attrs: Record<string, string> = {};
   const dataset: Record<string, string> = {};
   const classSet = new Set<string>();
+  const classList: MockClassList = {
+    add: (c: string) => { classSet.add(c); },
+    remove: (c: string) => { classSet.delete(c); },
+    contains: (c: string) => classSet.has(c),
+    has: (c: string) => classSet.has(c),
+  };
   const children: MockEl[] = [];
   const el: MockEl = {
     tagName: tag.toUpperCase(),
@@ -63,7 +77,7 @@ function makeEl(tag = 'div'): MockEl {
     parent: null,
     _text: '',
     textContent: '',
-    classList: classSet,
+    classList,
     _attrs: attrs,
     _style: style,
     _listeners: listeners,
@@ -122,6 +136,13 @@ function makeEl(tag = 'div'): MockEl {
     dispatchEvent(event: { type: string; target?: unknown }): void {
       const arr = listeners.get(event.type) ?? [];
       for (const h of arr) h(event);
+    },
+    remove(): void {
+      const p = el.parent;
+      if (!p) return;
+      const idx = p.children.indexOf(el);
+      if (idx >= 0) p.children.splice(idx, 1);
+      el.parent = null;
     },
     focus(): void {},
   };
@@ -223,24 +244,28 @@ function makePicker(
   return { picker, container, onSelect };
 }
 
-function findFirst(root: MockEl, predicate: (el: MockEl) => boolean): MockEl | null {
-  const stack: MockEl[] = [root];
-  while (stack.length > 0) {
-    const el = stack.pop()!;
+function findFirst(root: MockEl | undefined, predicate: (el: MockEl) => boolean): MockEl | null {
+  if (!root) return null;
+  // DFS in document order.
+  function walk(el: MockEl): MockEl | null {
     if (predicate(el)) return el;
-    for (const c of el.children) stack.push(c);
+    for (const c of el.children) {
+      const r = walk(c);
+      if (r) return r;
+    }
+    return null;
   }
-  return null;
+  return walk(root);
 }
 
 function findAll(root: MockEl, predicate: (el: MockEl) => boolean): MockEl[] {
   const out: MockEl[] = [];
-  const stack: MockEl[] = [root];
-  while (stack.length > 0) {
-    const el = stack.pop()!;
+  // DFS in document order: visit self, then recurse into children left-to-right.
+  function walk(el: MockEl): void {
     if (predicate(el)) out.push(el);
-    for (const c of el.children) stack.push(c);
+    for (const c of el.children) walk(c);
   }
+  walk(root);
   return out;
 }
 
@@ -248,22 +273,22 @@ function findByClass(root: MockEl, cls: string): MockEl[] {
   return findAll(root, (el) => el.classList.has(cls));
 }
 
-function triggerClick(el: MockEl): void {
+function triggerClick(el: MockEl | undefined): void {
+  if (!el) throw new Error('triggerClick: element is undefined');
   el.dispatchEvent({ type: 'click', target: el });
 }
 
-function triggerInput(inputEl: MockEl, value: string): void {
+function triggerInput(inputEl: MockEl | undefined, value: string): void {
+  if (!inputEl) throw new Error('triggerInput: element is undefined');
   inputEl.value = value;
   inputEl.dispatchEvent({ type: 'input', target: inputEl });
 }
 
-function flushDebounce(): Promise<void> {
-  // Debounce = 120ms in the component (SEARCH_DEBOUNCE_MS). Advance timers past it.
-  return new Promise((resolve) => {
-    vi.advanceTimersByTime(200);
-    // Allow microtasks (the debounced handler awaits listFolderDescendants) to flush.
-    setImmediate(() => resolve());
-  });
+async function flushDebounce(): Promise<void> {
+  // Debounce = 120ms in the component (SEARCH_DEBOUNCE_MS). Use real timers + a brief wait.
+  await new Promise((resolve) => setTimeout(resolve, 180));
+  // Allow microtasks (the debounced handler awaits listFolderDescendants) to flush.
+  for (let i = 0; i < 5; i++) await Promise.resolve();
 }
 
 // =========================================================================
@@ -275,7 +300,6 @@ describe('Mode discriminator (D-08, D-09)', () => {
 
   beforeEach(() => {
     svc = makeFakeSnippetService();
-    vi.useFakeTimers();
   });
 
   it('folder-only mode hides files in drill view', async () => {
@@ -348,17 +372,19 @@ describe('Mode discriminator (D-08, D-09)', () => {
   });
 
   it('file-only mode hides folders in search results', async () => {
+    // Both a folder named "match" and a file named "match-report.md" exist.
+    // Query "match" hits both — file-only mode must show the file row and hide the folder row.
     svc.listFolder.mockResolvedValue({ folders: [], snippets: [] });
     svc.listFolderDescendants.mockResolvedValue({
-      files: [`${ROOT}/abdomen/ct-routine.md`],
-      folders: [`${ROOT}/abdomen`],
+      files: [`${ROOT}/abdomen/match-report.md`],
+      folders: [`${ROOT}/match`],
       total: 2,
     });
     const { picker, container } = makePicker({ mode: 'file-only' }, svc);
     await picker.mount();
 
     const input = findFirst(container, (el) => el.classList.has('rp-stp-search-input'))!;
-    triggerInput(input, 'abdomen');
+    triggerInput(input, 'match');
     await flushDebounce();
 
     expect(findByClass(container, 'rp-stp-folder-row').length).toBe(0);
@@ -423,7 +449,6 @@ describe('Drill navigation (D-08)', () => {
 
   beforeEach(() => {
     svc = makeFakeSnippetService();
-    vi.useFakeTimers();
   });
 
   it('mount() at empty drillPath calls listFolder(rootPath) and renders top-level entries', async () => {
@@ -517,7 +542,6 @@ describe('Tree-wide search (D-09, D-10, D-11)', () => {
 
   beforeEach(() => {
     svc = makeFakeSnippetService();
-    vi.useFakeTimers();
   });
 
   it('non-empty query switches to search view rooted at rootPath (NOT drillPath)', async () => {
@@ -622,7 +646,6 @@ describe('File glyph dispatch (Phase 35 MD-01 preservation)', () => {
 
   beforeEach(() => {
     svc = makeFakeSnippetService();
-    vi.useFakeTimers();
   });
 
   it('file row for .md file renders 📝 prefix in primary text (drill view, file-only mode)', async () => {
@@ -696,7 +719,6 @@ describe('Search row click (D-12)', () => {
 
   beforeEach(() => {
     svc = makeFakeSnippetService();
-    vi.useFakeTimers();
   });
 
   it('file row click in search results commits selection (calls onSelect with kind: file)', async () => {
@@ -790,7 +812,6 @@ describe('Lifecycle', () => {
 
   beforeEach(() => {
     svc = makeFakeSnippetService();
-    vi.useFakeTimers();
   });
 
   it('constructor does not mount automatically (container remains untouched until mount() called)', () => {
@@ -808,7 +829,7 @@ describe('Lifecycle', () => {
       onSelect,
     });
     expect(container.children.length).toBe(1);
-    expect(container.children[0]._text).toBe('pre-existing');
+    expect(container.children[0]?._text).toBe('pre-existing');
   });
 
   it('mount() empties container before re-rendering', async () => {
