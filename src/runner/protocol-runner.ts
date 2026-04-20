@@ -111,6 +111,50 @@ export class ProtocolRunner {
   }
 
   /**
+   * Phase 53 RUNNER-SKIP-02 / D-08 / D-10:
+   * User clicks the Skip button on a question node — advance through the first
+   * answer-kind neighbor WITHOUT appending the answer's text to the accumulator.
+   * Pushes an UndoEntry BEFORE mutation so stepBack returns to the question.
+   * Snippet neighbors are ignored (D-09). No-op outside at-node + question context.
+   * BUG-01 / D-11 is enforced by the caller (RunnerView click handler) via
+   * syncManualEdit before invoking skip() — this method uses accumulator.snapshot()
+   * which reflects any synced manual edit.
+   */
+  skip(): void {
+    if (this.runnerStatus !== 'at-node') return;
+    if (this.graph === null || this.currentNodeId === null) return;
+
+    const currentNode = this.graph.nodes.get(this.currentNodeId);
+    if (currentNode === undefined || currentNode.kind !== 'question') return;
+
+    // D-08 / D-09: first ANSWER-kind neighbor in adjacency order; snippets ignored.
+    const neighborIds = this.graph.adjacency.get(this.currentNodeId) ?? [];
+    let skipTargetId: string | undefined;
+    for (const nid of neighborIds) {
+      const n = this.graph.nodes.get(nid);
+      if (n !== undefined && n.kind === 'answer') { skipTargetId = nid; break; }
+    }
+    if (skipTargetId === undefined) return;  // no answer neighbor — UI hides the button, this is defence in depth
+
+    // D-10: Skip is a full choice — push UndoEntry BEFORE any mutation (Pitfall 3).
+    this.undoStack.push({
+      nodeId: this.currentNodeId,
+      textSnapshot: this.accumulator.snapshot(),
+      loopContextStack: [...this.loopContextStack],
+    });
+
+    // D-08: advance through the answer's first neighbor (same dead-end / loop-return
+    // contract as chooseAnswer lines 104-110). Accumulator is NOT touched.
+    const answerNeighbors = this.graph.adjacency.get(skipTargetId);
+    const next = answerNeighbors !== undefined ? answerNeighbors[0] : undefined;
+    if (next === undefined) {
+      this.advanceOrReturnToLoop(undefined);
+      return;
+    }
+    this.advanceThrough(next);
+  }
+
+  /**
    * Phase 31 D-08: user picks a snippet-kind branch at a question node.
    * Valid only in 'at-node' state when the current node is a question AND
    * the target is a direct snippet neighbour of that question. Pushes an
