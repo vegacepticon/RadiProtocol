@@ -2,24 +2,23 @@
 gsd_state_version: 1.0
 milestone: v1.8
 milestone_name: UX Polish & Snippet Picker Overhaul
-status: in_progress
-stopped_at: Phase 50.1 shipped — all 5 plans complete + UAT PASS + gsd-verifier 37/37 must-haves verified. Tests 506/1/0. Commits 92b9772 (01 RED) → 6734924 (review). EDGE-03 flipped to complete; EDGE-01 superseded in REQUIREMENTS.md; ROADMAP Phase 50.1 row checked. Ready for next phase (47 resume or 48 start).
-last_updated: "2026-04-19T00:00:00.000Z"
-last_activity: 2026-04-19
-resume_file: .planning/phases/50.1-loop-exit-plus-prefix/50.1-VERIFICATION.md
+status: executing
+stopped_at: "Phase 50.1 CONTEXT.md + DISCUSSION-LOG.md written with 16 locked decisions: D-01 exactly-1 `+`-edge policy; D-02 no-auto-migration / hard validation error; D-03 dedicated legacy-detection branch (D-05 text); D-04..D-08 five Russian error texts locked verbatim (D-04 clean zero-exit, D-05 legacy hint with {edgeIds}, D-06 ≥2 `+`-edges, D-07 no body, D-08 empty caption post-strip — per-edge); D-09 `stripExitPrefix = label.trim().slice(1).replace(/^\s+/, '')`; D-10 `isExitEdge` redefined to `label.trim().startsWith('+')` (Phase 49 alias removed), `isLabeledEdge` preserved (Phase 50 reconciler uses it unchanged); D-11/D-12 Runner dispatch + caption wire-up (click-handler ordering preserved verbatim); D-13 in-place migration of 4 Phase 49 `unified-loop-*.canvas` fixtures; D-14 three new fixtures (`legacy-vyhod`, `labeled-body` = Phase 49↔50 conflict regression, `empty-plus`); D-15 ~10 edge-case tests in `node-label.test.ts` + alias-regression guard; D-16 new EDGE-03 requirement supersedes EDGE-01 (EDGE-02 unaffected). Phase 50.1 is CSS-free. Canonical-refs locked: `.planning/notes/loop-node-exit-edge-convention.md` (to be rewritten by plan-phase), `src/graph/node-label.ts`, `graph-validator.ts` LOOP-04, `protocol-runner.ts` chooseLoopBranch, `runner-view.ts` loop-picker arm."
+last_updated: "2026-04-20T07:25:42.383Z"
+last_activity: 2026-04-20 -- Phase 51 execution started
 progress:
-  total_phases: 8
+  total_phases: 15
   completed_phases: 5
-  total_plans: 28
-  completed_plans: 23
-  percent: 82
+  total_plans: 26
+  completed_plans: 22
+  percent: 85
 ---
 
 # RadiProtocol — Project State
 
 **Updated:** 2026-04-19
 **Milestone:** v1.8 — UX Polish & Snippet Picker Overhaul
-**Status:** In progress — Phase 47 + 48.1 + 49 + 50 + 50.1 shipped and verified. Phase 50.1 (Loop Exit `+` Prefix Convention) complete 2026-04-19: all 5 plans landed, UAT PASS in TEST-BASE (3/3 scenarios), gsd-verifier 37/37 must-haves passed. Tests 506/1/0. Ready for next phase.
+**Status:** Executing Phase 51
 **Stopped at:** Phase 50.1 CONTEXT.md + DISCUSSION-LOG.md written with 16 locked decisions: D-01 exactly-1 `+`-edge policy; D-02 no-auto-migration / hard validation error; D-03 dedicated legacy-detection branch (D-05 text); D-04..D-08 five Russian error texts locked verbatim (D-04 clean zero-exit, D-05 legacy hint with {edgeIds}, D-06 ≥2 `+`-edges, D-07 no body, D-08 empty caption post-strip — per-edge); D-09 `stripExitPrefix = label.trim().slice(1).replace(/^\s+/, '')`; D-10 `isExitEdge` redefined to `label.trim().startsWith('+')` (Phase 49 alias removed), `isLabeledEdge` preserved (Phase 50 reconciler uses it unchanged); D-11/D-12 Runner dispatch + caption wire-up (click-handler ordering preserved verbatim); D-13 in-place migration of 4 Phase 49 `unified-loop-*.canvas` fixtures; D-14 three new fixtures (`legacy-vyhod`, `labeled-body` = Phase 49↔50 conflict regression, `empty-plus`); D-15 ~10 edge-case tests in `node-label.test.ts` + alias-regression guard; D-16 new EDGE-03 requirement supersedes EDGE-01 (EDGE-02 unaffected). Phase 50.1 is CSS-free. Canonical-refs locked: `.planning/notes/loop-node-exit-edge-convention.md` (to be rewritten by plan-phase), `src/graph/node-label.ts`, `graph-validator.ts` LOOP-04, `protocol-runner.ts` chooseLoopBranch, `runner-view.ts` loop-picker arm.
 **Stopped at (previous):** Phase 50 Plan 05 complete — EDGE-02 closed. Task 1 automated gate landed as `95a5f15`: build exit 0 + `main.js` deployed to TEST-BASE, 484 passed / 1 skipped / 0 failed, canonical-refs audit 6/6 files, D-14 atomicity audit counted greps all matched (3 setData inside try / 1 vault.modify per write cycle in both service + saveNodeEdits), zero CSS diff, Shared Pattern G audit 338 insertions / 4 in-scope deletions (zero unrelated). Task 2 human UAT: user signed off `"approved"` on 2026-04-19 with all 5 scenarios PASS (canvas-open Display-label→edges Pattern B D-14 atomic, canvas-open edge→displayLabel D-04 reconcile with D-07 self-termination, canvas-closed Strategy A single vault.modify, multi-incoming deterministic sibling re-sync in graph.edges order, clearing symmetry 5a+5b both directions with D-08/D-09 strip-key). Rollup commit bundles SUMMARY + STATE + ROADMAP + REQUIREMENTS + UAT finalisation. Follow-up design note (Phase 51 loop-exit `+`-prefix convention) captured but DEFERRED — out of scope for Phase 50.
 
@@ -27,7 +26,8 @@ progress:
 
 ## Current Position
 
-Phase: 50.1 (Loop Exit `+` Prefix Convention) — ✅ Complete and verified 2026-04-19. All 5 plans shipped (commits 92b9772..6734924, 15+ atomic commits), UAT PASS in TEST-BASE (3/3 scenarios: caption strip, D-05 legacy-hint, Phase 49↔50 conflict), gsd-verifier 37/37 must-haves passed, code review clean (0 critical, 0 warning, 2 info). Tests 506/1/0 (+22 vs Phase 50 baseline). EDGE-03 closed in REQUIREMENTS.md; EDGE-01 superseded. Resolved Phase 49↔Phase 50 conflict on multi-incoming Answer.displayLabel sync onto loop body edges. `isExitEdge` redefined to `+`-prefix predicate; `stripExitPrefix` added; LOOP-04 emits 5 locked Russian errors (D-04..D-08); RunnerView exit caption uses `stripExitPrefix`; 10 `unified-loop-*.canvas` fixtures migrated/created; canonical note rewritten with supersede header.
+Phase: 51 (snippet-picker-overhaul) — EXECUTING
+Plan: 1 of 6
 
 Phase: 50 (Answer ↔ Edge Label Sync) — ✅ Complete and verified 2026-04-19. All 5 plans shipped, UAT PASS in TEST-BASE, gsd-verifier 37/37 must-haves passed (commit 62dd212), ROADMAP row flipped to ✅. EDGE-02 closed in REQUIREMENTS.md.
 
@@ -39,7 +39,7 @@ Plan 49-04 commits: 9fcbb03 (chore — strip stray 'проверка' body-edge 
 Plan 49-05: no per-task commits (gate-only plan: Task 1 = build + full test suite + literal-«выход» audit; Task 2 = human UAT). Single rollup commit bundles SUMMARY + STATE + ROADMAP + REQUIREMENTS.
 Tests: **466 passed / 1 skipped / 0 failed** (was 459/1/7 after Plan 03; +7 greens restored by Plan 04's fixture strip). +26 total new Phase 49 tests vs the 440/1 Phase 48.1 baseline. Zero runtime `edge.label === 'выход'` comparisons anywhere in `src/graph/`, `src/runner/`, `src/views/`. UAT confirmed all three observable behavioural changes in TEST-BASE (non-«выход» exit label verbatim, D-01/D-02/D-03 error panel text, legacy «выход» canvases regress-free).
 Next: orchestrator phase-level gates (regression gate, code review on commits 4fce768..2889d68, verify_phase_goal against ROADMAP §Phase 49 Success Criteria 1-3), then ROADMAP check-box for Phase 49 and `/gsd-start-phase 48`.
-Last activity: 2026-04-19 — Phase 49 closed at plan level. EDGE-01 status flipped to ✅ complete in REQUIREMENTS.md. No deviations across Plans 01-05; zero auto-fixes, zero Rule 4 escalations. UAT PASS on first presentation (no revisions across Plans 02/03/04).
+Last activity: 2026-04-20 -- Phase 51 execution started
 
 ---
 
@@ -48,7 +48,7 @@ Last activity: 2026-04-19 — Phase 49 closed at plan level. EDGE-01 status flip
 See: `.planning/PROJECT.md` (updated 2026-04-18)
 
 **Core value:** A radiologist can generate a structured, accurate protocol in seconds by answering a guided algorithm — without writing a single line of code.
-**Current focus:** Closing runner regressions, polishing Node Editor UX, overhauling Snippet picker, unifying JSON placeholders, and enabling BRAT distribution.
+**Current focus:** Phase 51 — snippet-picker-overhaul
 
 ---
 
