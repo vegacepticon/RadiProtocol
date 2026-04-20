@@ -278,7 +278,7 @@ function makeMockPlugin(): { plugin: { app: unknown; settings: { snippetFolderPa
 }
 
 function sampleJsonSnippet(path = '.radiprotocol/snippets/abdomen/ct-routine.json'): JsonSnippet {
-  return { kind: 'json', path, name: 'ct-routine', template: '', placeholders: [] };
+  return { kind: 'json', path, name: 'ct-routine', template: '', placeholders: [], validationError: null };
 }
 
 // Helper: find all descendants matching predicate

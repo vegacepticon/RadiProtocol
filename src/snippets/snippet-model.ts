@@ -4,13 +4,16 @@
 export interface SnippetPlaceholder {
   id: string;
   label: string;
-  type: 'free-text' | 'choice' | 'multi-choice' | 'number';
-  /** Predefined options for 'choice' and 'multi-choice' types (D-06) */
+  /** Phase 52 D-01: union narrowed from 4 to 2. 'number' and 'multi-choice' removed. */
+  type: 'free-text' | 'choice';
+  /** Predefined options for 'choice' type (D-06) */
   options?: string[];
-  /** Unit suffix for 'number' type, e.g. 'mm'. Rendered as '{value} {unit}' (D-08) */
-  unit?: string;
-  /** Join separator for 'multi-choice' type. Default: ', ' (D-07) */
-  joinSeparator?: string;
+  /**
+   * Phase 52 D-02: separator between values when >1 choice option selected.
+   * Default: ', '. Renamed from legacy `joinSeparator`. Applies to unified
+   * choice (single or multi-select).
+   */
+  separator?: string;
 }
 
 /**
@@ -22,6 +25,12 @@ export interface SnippetPlaceholder {
  * extension) is the source of truth. The deprecated `id` field may still
  * appear in v1.4-era JSON files on disk and is tolerated on the type for
  * compatibility, but it is ignored at runtime — basename is authoritative.
+ *
+ * Phase 52 (D-03): non-optional `validationError` field. Non-null means the
+ * file on disk declared a removed placeholder type ('number', 'multichoice',
+ * 'multi-choice') or a 'choice' placeholder with invalid options. Consumers
+ * MUST check before rendering in Editor or Runner — see SnippetEditorModal
+ * banner surface and RunnerView handleSnippetFill guard.
  */
 export interface JsonSnippet {
   readonly kind: 'json';
@@ -30,6 +39,8 @@ export interface JsonSnippet {
   name: string;
   template: string;
   placeholders: SnippetPlaceholder[];
+  /** Phase 52 D-03: null on valid snippet; Russian error string on legacy. */
+  validationError: string | null;
   /** @deprecated D-02: basename is source of truth; tolerated on disk only.
    *  Not `readonly` to preserve legacy snippet-manager-view write behavior
    *  until Phase 33 replaces that view. */
@@ -68,10 +79,38 @@ export type Snippet = JsonSnippet | MdSnippet;
 export type SnippetFile = JsonSnippet;
 
 /**
+ * Phase 52 D-03: scan an untyped placeholder array for legacy types or
+ * invalid choice configurations. Returns the first violation as a Russian
+ * error string, or null when all placeholders pass.
+ *
+ * Locked copy (matches Plan 01 test assertions verbatim):
+ *   Legacy type → `Плейсхолдер "{id}" использует удалённый тип "{type}". Пересоздайте плейсхолдер вручную — автоматическая миграция не выполняется.`
+ *   Invalid choice → `Плейсхолдер "{id}" типа "choice" не содержит ни одного варианта. Добавьте варианты или удалите плейсхолдер.`
+ *
+ * Input treated as `unknown` — no trust on shape (T-52-04).
+ */
+export function validatePlaceholders(placeholders: unknown): string | null {
+  if (!Array.isArray(placeholders)) return null;
+  const legacyTypes = new Set(['number', 'multichoice', 'multi-choice']);
+  for (const p of placeholders) {
+    if (typeof p !== 'object' || p === null) continue;
+    const ph = p as { type?: unknown; id?: unknown; options?: unknown };
+    const id = typeof ph.id === 'string' ? ph.id : '<unknown>';
+    const type = ph.type;
+    if (typeof type === 'string' && legacyTypes.has(type)) {
+      return `Плейсхолдер "${id}" использует удалённый тип "${type}". Пересоздайте плейсхолдер вручную — автоматическая миграция не выполняется.`;
+    }
+    if (type === 'choice' && (!Array.isArray(ph.options) || (ph.options as unknown[]).length === 0)) {
+      return `Плейсхолдер "${id}" типа "choice" не содержит ни одного варианта. Добавьте варианты или удалите плейсхолдер.`;
+    }
+  }
+  return null;
+}
+
+/**
  * Render a snippet template by substituting {{id}} tokens with values.
- * Number placeholders with a unit are rendered as '{value} {unit}'.
- * For multi-choice placeholders the caller pre-joins values using joinSeparator
- * before passing them in the values map.
+ * Phase 52 D-05/D-07: pure string-replace. Callers (SnippetFillInModal)
+ * pre-join choice values using `placeholder.separator`. No unit suffix.
  * Uses split/join for compatibility with ES6 targets (RESEARCH.md Pitfall / key_research_finding 4).
  *
  * Phase 32: signature accepts `JsonSnippet` (was `SnippetFile`). Since
@@ -85,14 +124,8 @@ export function renderSnippet(
   let output = snippet.template;
   for (const placeholder of snippet.placeholders) {
     const raw = values[placeholder.id] ?? '';
-    let rendered: string;
-    if (placeholder.type === 'number' && placeholder.unit) {
-      rendered = raw.trim() === '' ? '' : `${raw} ${placeholder.unit}`;
-    } else {
-      rendered = raw;
-    }
     // split/join replaces all occurrences without requiring replaceAll (ES2021+)
-    output = output.split(`{{${placeholder.id}}}`).join(rendered);
+    output = output.split(`{{${placeholder.id}}}`).join(raw);
   }
   return output;
 }

@@ -54,6 +54,7 @@ function emptyJsonDraft(folder: string): JsonSnippet {
     name: '',
     template: '',
     placeholders: [],
+    validationError: null, // Phase 52 D-03
   };
 }
 
@@ -605,6 +606,7 @@ function cloneSnippet(s: Snippet): JsonSnippet | MdSnippet {
       name: s.name,
       template: s.template,
       placeholders: s.placeholders.map((p) => ({ ...p })),
+      validationError: s.validationError, // Phase 52 D-03
     };
   }
   return {

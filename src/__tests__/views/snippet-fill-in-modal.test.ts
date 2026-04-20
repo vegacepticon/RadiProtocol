@@ -255,7 +255,6 @@ function makeSnippet(
     name: 't',
     template,
     placeholders,
-    // @ts-expect-error validationError not yet on JsonSnippet pre-Plan-02
     validationError: null,
   };
 }
@@ -342,7 +341,6 @@ describe('SnippetFillInModal Phase 52 D-05 — unified choice renders as checkbo
 
   it('joins multiple checked options with override separator " / " (D-02)', async () => {
     const snippet = makeSnippet([
-      // @ts-expect-error separator not yet on SnippetPlaceholder
       { id: 'f', label: 'F', type: 'choice', options: ['a', 'b'], separator: ' / ' },
     ]);
     const modal = new SnippetFillInModal(app, snippet);

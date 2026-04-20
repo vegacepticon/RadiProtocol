@@ -210,6 +210,7 @@ function jsonSnippet(path: string, name?: string): Snippet {
     name: name ?? path.split('/').pop()!.replace(/\.json$/, ''),
     template: '',
     placeholders: [],
+    validationError: null,
   };
 }
 

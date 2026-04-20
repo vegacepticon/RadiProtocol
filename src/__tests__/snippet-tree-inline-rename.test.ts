@@ -233,7 +233,7 @@ import { SnippetManagerView } from '../views/snippet-manager-view';
 import type { Snippet } from '../snippets/snippet-model';
 
 function makeSnippet(kind: 'json' | 'md', p: string, name: string): Snippet {
-  if (kind === 'json') return { kind: 'json', path: p, name, template: '', placeholders: [] };
+  if (kind === 'json') return { kind: 'json', path: p, name, template: '', placeholders: [], validationError: null };
   return { kind: 'md', path: p, name, content: '' };
 }
 

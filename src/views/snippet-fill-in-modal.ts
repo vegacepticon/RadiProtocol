@@ -3,6 +3,19 @@
 import { Modal, App } from 'obsidian';
 import type { JsonSnippet, SnippetPlaceholder } from '../snippets/snippet-model';
 import { renderSnippet } from '../snippets/snippet-model';
+
+// Phase 52 Plan 02 tsc-tolerance (escalation gate): the production union has
+// narrowed to 'free-text' | 'choice', but this modal still dispatches to legacy
+// renderNumberField + renderChoiceField-as-multi. Plan 03 owns the full rewire
+// to a single checkbox-only renderChoiceField + unit removal. Until then, we
+// widen SnippetPlaceholder locally so the existing 'number' / 'multi-choice'
+// branches compile. Plan 03 MUST delete this alias and the downstream casts.
+type LegacyPlaceholderType = SnippetPlaceholder['type'] | 'multi-choice' | 'number';
+type LegacyPlaceholder = Omit<SnippetPlaceholder, 'type'> & {
+  type: LegacyPlaceholderType;
+  joinSeparator?: string;
+  unit?: string;
+};
 // Phase 32 (D-01): JsonSnippet is the canonical type for fill-in modal input.
 // Previously typed as `SnippetFile`, which is now an alias for `JsonSnippet`.
 
@@ -86,13 +99,18 @@ export class SnippetFillInModal extends Modal {
   private renderField(placeholder: SnippetPlaceholder): void {
     const fieldDiv = this.contentEl.createDiv({ cls: 'rp-snippet-modal-field' });
 
-    if (placeholder.type === 'free-text') {
+    // Phase 52 Plan 02 tsc-tolerance: widen to LegacyPlaceholderType so the
+    // legacy 'number' / 'multi-choice' arms still compile. Plan 03 collapses
+    // this dispatch to free-text → renderFreeTextField, choice → renderChoiceField
+    // with isMulti = true always.
+    const legacyType = placeholder.type as LegacyPlaceholderType;
+    if (legacyType === 'free-text') {
       this.renderFreeTextField(fieldDiv, placeholder);
-    } else if (placeholder.type === 'number') {
+    } else if (legacyType === 'number') {
       this.renderNumberField(fieldDiv, placeholder);
-    } else if (placeholder.type === 'choice') {
+    } else if (legacyType === 'choice') {
       this.renderChoiceField(fieldDiv, placeholder, false);
-    } else if (placeholder.type === 'multi-choice') {
+    } else if (legacyType === 'multi-choice') {
       this.renderChoiceField(fieldDiv, placeholder, true);
     }
   }
@@ -115,8 +133,10 @@ export class SnippetFillInModal extends Modal {
    * Values stored as raw text; renderSnippet appends the unit suffix when needed (D-08).
    */
   private renderNumberField(container: HTMLElement, placeholder: SnippetPlaceholder): void {
+    // Phase 52 Plan 02 tsc-tolerance: legacy .unit field access via LegacyPlaceholder cast.
+    const phLegacy = placeholder as unknown as LegacyPlaceholder;
     const label = container.createEl('label', { cls: 'rp-snippet-modal-label' });
-    label.textContent = placeholder.label + (placeholder.unit ? ` (${placeholder.unit})` : '');
+    label.textContent = placeholder.label + (phLegacy.unit ? ` (${phLegacy.unit})` : '');
 
     const input = container.createEl('input', { type: 'text' });
     input.inputMode = 'numeric';
@@ -157,7 +177,9 @@ export class SnippetFillInModal extends Modal {
         const selected = checkboxEls
           .filter(cb => cb.checked)
           .map(cb => cb.value);
-        const sep = placeholder.joinSeparator ?? ', ';
+        // Phase 52 Plan 02 tsc-tolerance: legacy .joinSeparator; Plan 03 uses placeholder.separator.
+        const phLegacy = placeholder as unknown as LegacyPlaceholder;
+        const sep = phLegacy.joinSeparator ?? ', ';
         this.values[placeholder.id] = selected.join(sep);
       } else {
         const selected = checkboxEls.find(cb => cb.checked);

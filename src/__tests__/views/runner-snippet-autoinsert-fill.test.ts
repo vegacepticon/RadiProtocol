@@ -121,6 +121,7 @@ function makeJsonSnippet(partial: Partial<JsonSnippet> = {}): JsonSnippet {
     placeholders: partial.placeholders ?? [
       { id: 'name', label: 'Name', type: 'free-text' },
     ],
+    validationError: partial.validationError ?? null,
   };
 }
 

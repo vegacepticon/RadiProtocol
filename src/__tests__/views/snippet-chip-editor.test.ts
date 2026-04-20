@@ -271,7 +271,6 @@ function makeDraft(placeholders: JsonSnippet['placeholders'] = []): JsonSnippet 
     name: 't',
     template: '',
     placeholders,
-    // @ts-expect-error validationError not yet on JsonSnippet pre-Plan-02
     validationError: null,
   };
 }
@@ -321,7 +320,6 @@ describe('snippet-chip-editor Phase 52 — narrowing probes (RED pre-Plan-03)', 
 
   it('A4: expanded choice placeholder binds separator to ph.separator (not joinSeparator)', () => {
     const draft = makeDraft([
-      // @ts-expect-error separator not yet on SnippetPlaceholder pre-Plan-02
       { id: 'f', label: 'F', type: 'choice', options: ['a', 'b'], separator: ' / ' },
     ]);
     const container = makeEl('div');

@@ -367,6 +367,7 @@ function sampleJsonSnippet(path = '.radiprotocol/snippets/sample.json'): JsonSni
     name: 'sample',
     template: 'Hello {{who}}',
     placeholders: [{ id: 'who', label: 'Who', type: 'free-text' }],
+    validationError: null,
   };
 }
 
@@ -609,6 +610,7 @@ describe('SnippetEditorModal', () => {
       name: 'note',
       template: 'x',
       placeholders: [],
+      validationError: null,
     };
     const modal = new SnippetEditorModal({} as never, plugin as never, {
       mode: 'edit',
@@ -666,6 +668,7 @@ describe('SnippetEditorModal', () => {
         name: 'note',
         template: 'x',
         placeholders: [],
+        validationError: null,
       };
       const modal = new SnippetEditorModal({} as never, plugin as never, {
         mode: 'edit',
@@ -706,6 +709,7 @@ describe('SnippetEditorModal', () => {
       name: 'note',
       template: 'x',
       placeholders: [],
+      validationError: null,
     };
     const modal = new SnippetEditorModal({} as never, plugin as never, {
       mode: 'edit',

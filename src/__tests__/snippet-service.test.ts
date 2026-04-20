@@ -381,6 +381,7 @@ describe('save(Snippet) branching (D-03, D-11)', () => {
       name: 'Alpha',
       template: 'hello {{x}}',
       placeholders: [{ id: 'x', label: 'X', type: 'free-text' }],
+      validationError: null,
     };
     await svc.save(snippet);
 
@@ -445,6 +446,7 @@ describe('save(Snippet) branching (D-03, D-11)', () => {
       name: 'One',
       template: 't',
       placeholders: [],
+      validationError: null,
     };
     const s2: JsonSnippet = {
       kind: 'json',
@@ -452,6 +454,7 @@ describe('save(Snippet) branching (D-03, D-11)', () => {
       name: 'Two',
       template: 't',
       placeholders: [],
+      validationError: null,
     };
 
     await Promise.all([svc.save(s1), svc.save(s2)]);
@@ -479,6 +482,7 @@ describe('save(Snippet) branching (D-03, D-11)', () => {
       placeholders: [
         { id: 'x', label: 'Lbl\u001F', type: 'free-text' },
       ],
+      validationError: null,
     };
     await svc.save(snippet);
 
@@ -498,6 +502,7 @@ describe('save(Snippet) branching (D-03, D-11)', () => {
       name: 'x',
       template: '',
       placeholders: [],
+      validationError: null,
     };
     await expect(svc.save(snippet)).rejects.toThrow(/unsafe path/);
     expect(vault.adapter.write).toHaveBeenCalledTimes(0);
@@ -614,6 +619,7 @@ describe('path-safety gate applies to every entry point (D-10)', () => {
         name: 'x',
         template: '',
         placeholders: [],
+        validationError: null,
       };
       await expect(svc.save(snippet)).rejects.toThrow(/unsafe path/);
       expect(vault.adapter.write).toHaveBeenCalledTimes(0);
