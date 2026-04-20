@@ -83,6 +83,32 @@
   - **Source:** `.planning/todos/pending/json-snippet-placeholder-rework.md` + `.planning/notes/json-snippet-placeholder-rework.md`
   - **Signal:** placeholder schema updated; snippet editor type selector shows two options; existing `choice`/`multichoice` options-editor bug is fixed; no automatic migration of legacy snippets (user confirmed none exist).
 
+### Runner Skip & Close (RUNNER)
+
+- [ ] **RUNNER-SKIP-01**: The Runner renders a **Skip** icon-button (lucide `skip-forward`) inside the question zone (sibling of `rp-answer-list`) whenever `runnerStatus === 'at-node'` AND the current node is a question AND at least one outgoing answer-kind neighbor exists. The button is NOT rendered at `idle` / `awaiting-snippet-pick` / `awaiting-snippet-fill` / `awaiting-loop-pick` / `complete` / `error` or when the question has no answer neighbors.
+  - **Source:** `.planning/phases/53-runner-skip-close-buttons/53-CONTEXT.md` D-01, D-04, D-05, D-07, D-08
+  - **Signal:** `rp-skip-btn` present in the DOM only under the D-07 preconditions; `aria-label` + `title` carry the human label; `setIcon(btn, 'skip-forward')` renders the icon.
+
+- [ ] **RUNNER-SKIP-02**: Clicking **Skip** at a question node advances the runner to the first answer neighbor in `graph.adjacency` order WITHOUT appending the answer's text to the accumulator. Skip does NOT traverse any snippet neighbor — mixed answer+snippet branches (Phase 31) still pick the first *answer* neighbor. The click handler calls `capturePendingTextareaScroll()` → `syncManualEdit(previewTextarea.value)` → `runner.skip()` → `autoSaveSession()` → `renderAsync()` in that exact order (BUG-01 / RUNFIX-02 invariants preserved).
+  - **Source:** 53-CONTEXT.md D-08, D-09, D-11
+  - **Signal:** accumulator text is byte-identical before and after Skip; `currentNodeId` transitions via the answer to the answer's first neighbor.
+
+- [ ] **RUNNER-SKIP-03**: **Skip is a recordable step** — it pushes an `UndoEntry` (same shape as `chooseAnswer`) BEFORE advancing. Pressing Step back after Skip returns the user to the question node with its answer buttons re-rendered and the accumulator unchanged from pre-Skip.
+  - **Source:** 53-CONTEXT.md D-10
+  - **Signal:** `undoStack.length` grows by exactly 1 per Skip click; `stepBack()` restores `currentNodeId` to the question and `runnerStatus` to `at-node`.
+
+- [ ] **RUNNER-CLOSE-01**: The Runner renders a **Close** icon-button (lucide `x`) inside `selectorBarEl` (next to `CanvasSelectorWidget`) whenever `canvasFilePath !== null`. When no canvas is loaded the Close button is hidden (via class toggle or `display: none`). The button is neutral-styled — NO `mod-warning`, NO destructive red (D-06).
+  - **Source:** 53-CONTEXT.md D-02, D-04, D-05, D-06, D-12
+  - **Signal:** `rp-close-btn` present in `selectorBarEl` exactly once (attached in `onOpen` so the `contentEl.empty()` + `prepend(selectorBarEl)` survive pattern carries it across renders — same lifetime as the selector).
+
+- [ ] **RUNNER-CLOSE-02**: Clicking **Close** branches on `runner.getState().status`: for `at-node | awaiting-snippet-pick | awaiting-snippet-fill | awaiting-loop-pick` it opens the existing `CanvasSwitchModal` and only proceeds on `true`; for `idle | complete | error` it proceeds directly without modal. The `needsConfirmation` predicate is byte-identical to `handleSelectorSelect` (53-PATTERNS.md §Analog #2).
+  - **Source:** 53-CONTEXT.md D-13, D-15
+  - **Signal:** grep `needsConfirmation` in `runner-view.ts` finds 2 call-sites with the same 4-status union; `CanvasSwitchModal` is NOT modified.
+
+- [ ] **RUNNER-CLOSE-03**: On confirmed (or no-confirmation) Close, the Runner performs in this exact order: (1) `await sessionService.clear(canvasFilePath)` if path non-null; (2) re-create `this.runner = new ProtocolRunner({ defaultSeparator: plugin.settings.textSeparator })`; (3) null out `graph`, `canvasFilePath`, `previewTextarea`; (4) `selector.setSelectedPath(null)` to reset the widget to its placeholder; (5) `render()`. The resulting view is visually identical to a fresh plugin open — selector shows "Select a protocol…" and the `idle` branch of `render()` runs.
+  - **Source:** 53-CONTEXT.md D-14, D-16
+  - **Signal:** after Close, `canvasFilePath === null`, `getState().status === 'idle'`, selector label matches the placeholder string `'Select a protocol\u2026'`.
+
 ### Distribution (BRAT)
 
 - [ ] **BRAT-01**: The repository is prepared for installation through BRAT (Beta Reviewers Auto-update Tester). `manifest.json` `version`, `versions.json` mapping, and git tag/release naming are aligned; a GitHub **Release** exists with `manifest.json`, `main.js`, and `styles.css` attached as downloadable assets. Installing via BRAT with identifier `vegacepticon/RadiProtocol` succeeds in a fresh Obsidian vault.
@@ -122,6 +148,12 @@
 | PICKER-01 | Phase 51 | planned |
 | PICKER-02 | Phase 51 | planned |
 | PHLD-01   | Phase 52 | ✅ complete (2026-04-20) |
-| BRAT-01   | Phase 53 | planned |
+| RUNNER-SKIP-01  | Phase 53 | planned |
+| RUNNER-SKIP-02  | Phase 53 | planned |
+| RUNNER-SKIP-03  | Phase 53 | planned |
+| RUNNER-CLOSE-01 | Phase 53 | planned |
+| RUNNER-CLOSE-02 | Phase 53 | planned |
+| RUNNER-CLOSE-03 | Phase 53 | planned |
+| BRAT-01   | Phase 55 | planned |
 
 *Phase assignments filled in by the roadmapper on 2026-04-18.*
