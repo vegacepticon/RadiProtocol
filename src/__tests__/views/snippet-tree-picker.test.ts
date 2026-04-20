@@ -808,6 +808,163 @@ describe('Search row click (D-12)', () => {
   });
 });
 
+describe('Committed-state «Выбрать эту папку» button (Phase 56 D-10)', () => {
+  let svc: FakeSnippetService;
+
+  beforeEach(() => {
+    svc = makeFakeSnippetService();
+  });
+
+  it('on mount, select-folder button (after drill-in) renders default label without is-committed class', async () => {
+    svc.listFolder
+      .mockResolvedValueOnce({ folders: ['abdomen'], snippets: [] })
+      .mockResolvedValueOnce({ folders: [], snippets: [] });
+    const { picker, container } = makePicker({ mode: 'folder-only' }, svc);
+    await picker.mount();
+
+    triggerClick(findByClass(container, 'rp-stp-folder-row')[0]);
+    await Promise.resolve(); await Promise.resolve(); await Promise.resolve();
+
+    const selectBtn = findFirst(container, (el) => el.classList.has('rp-stp-select-folder-btn'));
+    expect(selectBtn).not.toBeNull();
+    expect(selectBtn!.classList.has('is-committed')).toBe(false);
+    expect(selectBtn!.textContent).toBe('Выбрать эту папку');
+  });
+
+  it('after clicking select-folder button, button renders with is-committed class and «✓ Выбрано» label', async () => {
+    svc.listFolder
+      .mockResolvedValueOnce({ folders: ['abdomen'], snippets: [] })
+      .mockResolvedValueOnce({ folders: [], snippets: [] })
+      .mockResolvedValueOnce({ folders: [], snippets: [] });
+    const { picker, container } = makePicker({ mode: 'folder-only' }, svc);
+    await picker.mount();
+
+    triggerClick(findByClass(container, 'rp-stp-folder-row')[0]);
+    await Promise.resolve(); await Promise.resolve(); await Promise.resolve();
+
+    const selectBtn = findFirst(container, (el) => el.classList.has('rp-stp-select-folder-btn'))!;
+    triggerClick(selectBtn);
+    await Promise.resolve(); await Promise.resolve(); await Promise.resolve();
+
+    const after = findFirst(container, (el) => el.classList.has('rp-stp-select-folder-btn'))!;
+    expect(after.classList.has('is-committed')).toBe(true);
+    expect(after.textContent).toBe('\u2713 Выбрано');
+  });
+
+  it('drilling into a different folder clears the committed visual state (button reverts to default)', async () => {
+    svc.listFolder
+      .mockResolvedValueOnce({ folders: ['abdomen', 'chest'], snippets: [] })  // root
+      .mockResolvedValueOnce({ folders: [], snippets: [] })                     // abdomen after drill
+      .mockResolvedValueOnce({ folders: [], snippets: [] })                     // abdomen after click (re-render)
+      .mockResolvedValueOnce({ folders: ['abdomen', 'chest'], snippets: [] })  // root after up
+      .mockResolvedValueOnce({ folders: [], snippets: [] });                    // chest after drill
+    const { picker, container } = makePicker({ mode: 'folder-only' }, svc);
+    await picker.mount();
+
+    // Drill into abdomen.
+    triggerClick(findByClass(container, 'rp-stp-folder-row')[0]);
+    await Promise.resolve(); await Promise.resolve(); await Promise.resolve();
+
+    // Commit abdomen.
+    const selectBtn = findFirst(container, (el) => el.classList.has('rp-stp-select-folder-btn'))!;
+    triggerClick(selectBtn);
+    await Promise.resolve(); await Promise.resolve(); await Promise.resolve();
+
+    // Up to root.
+    const upBtn = findFirst(container, (el) => el.classList.has('rp-stp-up-btn'))!;
+    triggerClick(upBtn);
+    await Promise.resolve(); await Promise.resolve(); await Promise.resolve();
+
+    // Drill into chest.
+    triggerClick(findByClass(container, 'rp-stp-folder-row')[1]);
+    await Promise.resolve(); await Promise.resolve(); await Promise.resolve();
+
+    const newSelectBtn = findFirst(container, (el) => el.classList.has('rp-stp-select-folder-btn'))!;
+    expect(newSelectBtn.classList.has('is-committed')).toBe(false);
+    expect(newSelectBtn.textContent).toBe('Выбрать эту папку');
+  });
+
+  it('navigating up out of the committed folder via up-button clears the committed visual state', async () => {
+    svc.listFolder
+      .mockResolvedValueOnce({ folders: ['abdomen'], snippets: [] })  // root
+      .mockResolvedValueOnce({ folders: ['ct'], snippets: [] })       // abdomen
+      .mockResolvedValueOnce({ folders: ['ct'], snippets: [] })       // abdomen after click (re-render)
+      .mockResolvedValueOnce({ folders: ['abdomen'], snippets: [] }); // root after up
+    const { picker, container } = makePicker({ mode: 'folder-only' }, svc);
+    await picker.mount();
+
+    // Drill into abdomen.
+    triggerClick(findByClass(container, 'rp-stp-folder-row')[0]);
+    await Promise.resolve(); await Promise.resolve(); await Promise.resolve();
+
+    // Commit abdomen.
+    const selectBtn = findFirst(container, (el) => el.classList.has('rp-stp-select-folder-btn'))!;
+    triggerClick(selectBtn);
+    await Promise.resolve(); await Promise.resolve(); await Promise.resolve();
+
+    // Up to root.
+    const upBtn = findFirst(container, (el) => el.classList.has('rp-stp-up-btn'))!;
+    triggerClick(upBtn);
+    await Promise.resolve(); await Promise.resolve(); await Promise.resolve();
+
+    // At root: drillPath.length === 0 ⇒ select button must NOT be rendered.
+    const noBtn = findFirst(container, (el) => el.classList.has('rp-stp-select-folder-btn'));
+    expect(noBtn).toBeNull();
+  });
+
+  it('re-mounting the picker resets committedRelativePath to null (button reverts to default after re-mount + drill)', async () => {
+    svc.listFolder
+      .mockResolvedValueOnce({ folders: ['abdomen'], snippets: [] })
+      .mockResolvedValueOnce({ folders: [], snippets: [] })
+      .mockResolvedValueOnce({ folders: [], snippets: [] })
+      .mockResolvedValueOnce({ folders: ['abdomen'], snippets: [] })  // re-mount root
+      .mockResolvedValueOnce({ folders: [], snippets: [] });          // abdomen after re-drill
+    const { picker, container } = makePicker({ mode: 'folder-only' }, svc);
+    await picker.mount();
+
+    triggerClick(findByClass(container, 'rp-stp-folder-row')[0]);
+    await Promise.resolve(); await Promise.resolve(); await Promise.resolve();
+
+    triggerClick(findFirst(container, (el) => el.classList.has('rp-stp-select-folder-btn'))!);
+    await Promise.resolve(); await Promise.resolve(); await Promise.resolve();
+
+    // Unmount + re-mount.
+    picker.unmount();
+    await picker.mount();
+
+    triggerClick(findByClass(container, 'rp-stp-folder-row')[0]);
+    await Promise.resolve(); await Promise.resolve(); await Promise.resolve();
+
+    const selectBtn = findFirst(container, (el) => el.classList.has('rp-stp-select-folder-btn'))!;
+    expect(selectBtn.classList.has('is-committed')).toBe(false);
+    expect(selectBtn.textContent).toBe('Выбрать эту папку');
+  });
+
+  it('committed state persists at the same drillPath across additional re-renders triggered by clicking select-folder again', async () => {
+    svc.listFolder
+      .mockResolvedValueOnce({ folders: ['abdomen'], snippets: [] })
+      .mockResolvedValueOnce({ folders: [], snippets: [] })
+      .mockResolvedValueOnce({ folders: [], snippets: [] })
+      .mockResolvedValueOnce({ folders: [], snippets: [] });
+    const { picker, container } = makePicker({ mode: 'folder-only' }, svc);
+    await picker.mount();
+
+    triggerClick(findByClass(container, 'rp-stp-folder-row')[0]);
+    await Promise.resolve(); await Promise.resolve(); await Promise.resolve();
+
+    triggerClick(findFirst(container, (el) => el.classList.has('rp-stp-select-folder-btn'))!);
+    await Promise.resolve(); await Promise.resolve(); await Promise.resolve();
+
+    // Click again — still at the same drill path → should remain committed.
+    triggerClick(findFirst(container, (el) => el.classList.has('rp-stp-select-folder-btn'))!);
+    await Promise.resolve(); await Promise.resolve(); await Promise.resolve();
+
+    const selectBtn = findFirst(container, (el) => el.classList.has('rp-stp-select-folder-btn'))!;
+    expect(selectBtn.classList.has('is-committed')).toBe(true);
+    expect(selectBtn.textContent).toBe('\u2713 Выбрано');
+  });
+});
+
 describe('Lifecycle', () => {
   let svc: FakeSnippetService;
 
