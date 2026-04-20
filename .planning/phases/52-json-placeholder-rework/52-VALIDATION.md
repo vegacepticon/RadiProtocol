@@ -41,20 +41,20 @@ updated: 2026-04-20
 
 | Task ID | Plan | Wave | Requirement | Threat Ref | Secure Behavior | Test Type | Automated Command | File Exists | Status |
 |---------|------|------|-------------|------------|-----------------|-----------|-------------------|-------------|--------|
-| 52-01-01 | 01 | 1 | PHLD-01 SC 1 | T-52-01 | textContent only; fixtures updated | unit | `npx vitest run src/__tests__/snippet-model.test.ts` | ✅ | ⬜ pending |
-| 52-01-02 | 01 | 1 | PHLD-01 SC 4 | T-52-01 | fixtures declare validationError | unit | `npx vitest run src/__tests__/views/runner-snippet-picker.test.ts` | ✅ | ⬜ pending |
-| 52-01-03 | 01 | 1 | PHLD-01 SC 4 | T-52-01, T-52-04 | validatePlaceholders contract | integration (RED) | `npx vitest run src/__tests__/snippet-service-validation.test.ts` | ❌ W0 (created here) | ⬜ pending |
-| 52-01-04 | 01 | 1 | PHLD-01 SC 3 | T-52-01 | checkbox-only render + separator | integration (RED) | `npx vitest run src/__tests__/views/snippet-fill-in-modal.test.ts` | ❌ W0 (created here) | ⬜ pending |
-| 52-01-05 | 01 | 1 | PHLD-01 SC 2 + SC 4 | T-52-01, T-52-03, T-52-09 | options-list regression + banner textContent | integration (mixed RED/GREEN) | `npx vitest run src/__tests__/views/snippet-chip-editor.test.ts src/__tests__/views/snippet-editor-modal-banner.test.ts` | ❌ W0 (created here) | ⬜ pending |
-| 52-02-01 | 02 | 2 | PHLD-01 SC 1 | T-52-04 | union narrowed; validatePlaceholders typed with `unknown` | unit (GREEN flip) | `npx vitest run src/__tests__/snippet-model.test.ts && npx tsc --noEmit --skipLibCheck` | ✅ | ⬜ pending |
-| 52-02-02 | 02 | 2 | PHLD-01 SC 4 | T-52-06 | sanitizeJson uses `separator`; no joinSeparator survives | integration (GREEN flip) | `npx vitest run src/__tests__/snippet-service-validation.test.ts` | ✅ | ⬜ pending |
-| 52-03-01 | 03 | 3 | PHLD-01 SC 1 + SC 2 | T-52-07 | PH_COLOR narrowed; separator input bound to ph.separator | integration (GREEN flip) | `npx vitest run src/__tests__/views/snippet-chip-editor.test.ts` | ✅ | ⬜ pending |
-| 52-03-02 | 03 | 3 | PHLD-01 SC 3 | T-52-08 | renderField 2-branch dispatch; checkbox-only | integration (GREEN flip) | `npx vitest run src/__tests__/views/snippet-fill-in-modal.test.ts` | ✅ | ⬜ pending |
-| 52-04-01 | 04 | 4 | PHLD-01 SC 4 | T-52-09, T-52-12 | banner via textContent; disabled save; grayed content | integration + build (GREEN flip) | `npx vitest run src/__tests__/views/snippet-editor-modal-banner.test.ts && npm run build` | ✅ | ⬜ pending |
-| 52-04-02 | 04 | 4 | PHLD-01 SC 4 | T-52-10 | Runner guard inserted between null-check and md-kind; Phase 51 D-14 preserved | integration (GREEN flip + new) | `npx vitest run src/__tests__/views/runner-snippet-picker.test.ts && npm test` | ✅ | ⬜ pending |
-| 52-05-01 | 05 | 5 | PHLD-01 all SCs | T-52-13 | static audits + full suite gate | end-to-end | `npm test && npm run build && npx tsc --noEmit --skipLibCheck` | n/a | ⬜ pending |
-| 52-05-02 | 05 | 5 | PHLD-01 SC 2 + SC 4 | — | dev-vault UAT 5 scenarios | manual UAT | (human UAT) | n/a | ⬜ pending |
-| 52-05-03 | 05 | 5 | PHLD-01 | — | rollup + STATE/ROADMAP/REQUIREMENTS flip | doc-only | `git log -1 --oneline && git status` | n/a | ⬜ pending |
+| 52-01-01 | 01 | 1 | PHLD-01 SC 1 | T-52-01 | textContent only; fixtures updated | unit | `npx vitest run src/__tests__/snippet-model.test.ts` | ✅ | ✅ pass (Plan 01 commit) |
+| 52-01-02 | 01 | 1 | PHLD-01 SC 4 | T-52-01 | fixtures declare validationError | unit | `npx vitest run src/__tests__/views/runner-snippet-picker.test.ts` | ✅ | ✅ pass (Plan 01 commit) |
+| 52-01-03 | 01 | 1 | PHLD-01 SC 4 | T-52-01, T-52-04 | validatePlaceholders contract | integration (RED→GREEN via Wave 2) | `npx vitest run src/__tests__/snippet-service-validation.test.ts` | ✅ | ✅ pass (Wave 2 flipped) |
+| 52-01-04 | 01 | 1 | PHLD-01 SC 3 | T-52-01 | checkbox-only render + separator | integration (RED→GREEN via Wave 3) | `npx vitest run src/__tests__/views/snippet-fill-in-modal.test.ts` | ✅ | ✅ pass (Wave 3 flipped) |
+| 52-01-05 | 01 | 1 | PHLD-01 SC 2 + SC 4 | T-52-01, T-52-03, T-52-09 | options-list regression + banner textContent | integration (mixed RED/GREEN) | `npx vitest run src/__tests__/views/snippet-chip-editor.test.ts src/__tests__/views/snippet-editor-modal-banner.test.ts` | ✅ | ✅ pass (Waves 3+4 flipped) |
+| 52-02-01 | 02 | 2 | PHLD-01 SC 1 | T-52-04 | union narrowed; validatePlaceholders typed with `unknown` | unit (GREEN flip) | `npx vitest run src/__tests__/snippet-model.test.ts && npx tsc --noEmit --skipLibCheck` | ✅ | ✅ pass (Plan 02 commit) |
+| 52-02-02 | 02 | 2 | PHLD-01 SC 4 | T-52-06 | sanitizeJson uses `separator`; no joinSeparator survives | integration (GREEN flip) | `npx vitest run src/__tests__/snippet-service-validation.test.ts` | ✅ | ✅ pass (Plan 02 commit) |
+| 52-03-01 | 03 | 3 | PHLD-01 SC 1 + SC 2 | T-52-07 | PH_COLOR narrowed; separator input bound to ph.separator | integration (GREEN flip) | `npx vitest run src/__tests__/views/snippet-chip-editor.test.ts` | ✅ | ✅ pass (Plan 03 commit) |
+| 52-03-02 | 03 | 3 | PHLD-01 SC 3 | T-52-08 | renderField 2-branch dispatch; checkbox-only | integration (GREEN flip) | `npx vitest run src/__tests__/views/snippet-fill-in-modal.test.ts` | ✅ | ✅ pass (Plan 03 commit) |
+| 52-04-01 | 04 | 4 | PHLD-01 SC 4 | T-52-09, T-52-12 | banner via textContent; disabled save; grayed content | integration + build (GREEN flip) | `npx vitest run src/__tests__/views/snippet-editor-modal-banner.test.ts && npm run build` | ✅ | ✅ pass (Plan 04 commit 794a922) |
+| 52-04-02 | 04 | 4 | PHLD-01 SC 4 | T-52-10 | Runner guard inserted between null-check and md-kind; Phase 51 D-14 preserved | integration (GREEN flip + new) | `npx vitest run src/__tests__/views/runner-snippet-picker.test.ts && npm test` | ✅ | ✅ pass (Plan 04 commit 611f4ff) |
+| 52-05-01 | 05 | 5 | PHLD-01 all SCs | T-52-13 | static audits + full suite gate | end-to-end | `npm test && npm run build && npx tsc --noEmit --skipLibCheck` | n/a | ✅ pass (642 PASS / 0 FAIL / 1 SKIP — 2026-04-20) |
+| 52-05-02 | 05 | 5 | PHLD-01 SC 2 + SC 4 | — | dev-vault UAT 5 scenarios | manual UAT | (human UAT) | n/a | ⬜ pending (Task 02) |
+| 52-05-03 | 05 | 5 | PHLD-01 | — | rollup + STATE/ROADMAP/REQUIREMENTS flip | doc-only | `git log -1 --oneline && git status` | n/a | ⬜ pending (Task 03) |
 
 ---
 
