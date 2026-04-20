@@ -391,17 +391,19 @@ export class SnippetEditorModal extends Modal {
    * Phase 52 D-04: render a red banner above the form when the loaded snippet
    * carries a non-null validationError (emitted by validatePlaceholders in
    * Plan 02's snippet-service load path). Uses `createEl({ text })` +
-   * `textContent` exclusively — never `innerHTML` (T-52-09 mitigation).
+   * `textContent` exclusively — no HTML parsing anywhere on this path
+   * (T-52-09 mitigation).
    */
   private renderValidationBanner(container: HTMLElement, msg: string): void {
     const banner = container.createDiv({ cls: 'radi-snippet-editor-validation-banner' });
     banner.setAttribute('role', 'alert');
-    // Set banner.textContent to the Russian header + blank-line + validationError
-    // verbatim. Using `textContent` (never `innerHTML`) means the msg is rendered
-    // as literal text — T-52-09 XSS mitigation. A `<script>` substring in the
-    // msg appears as the characters `<`, `s`, `c`, ... not a parsed DOM child.
-    // Plan 01 tests B3/B4 assert on `banner.textContent` (via the mock's `_text`)
-    // so the msg must live on the banner node itself, not on a child element.
+    // Assign banner.textContent to the Russian header + blank-line + the
+    // validationError verbatim. textContent treats the entire string as
+    // literal text — a `<script>` substring becomes the characters `<`, `s`,
+    // `c`, ... and is NEVER parsed as a DOM child (T-52-09 XSS mitigation).
+    // Plan 01 tests B3/B4 assert on `banner.textContent` (via the mock's
+    // `_text`) so the msg must live on the banner node itself, not on a
+    // child element.
     banner.textContent =
       'Этот сниппет не может быть использован:\n' + msg;
     this.validationBannerEl = banner;
