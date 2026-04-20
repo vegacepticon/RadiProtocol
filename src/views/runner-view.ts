@@ -556,9 +556,21 @@ export class RunnerView extends ItemView {
                   text: label,
                 });
                 this.registerDomEvent(btn, 'click', () => {
-                  this.capturePendingTextareaScroll();  // RUNFIX-02: preserve scroll across re-render
+                  this.capturePendingTextareaScroll();  // RUNFIX-02: preserve scroll across re-render — MUST be first (SC 5)
                   this.runner.syncManualEdit(this.previewTextarea?.value ?? '');  // BUG-01: capture manual edit (D-01)
-                  this.runner.chooseSnippetBranch(snippetNode.id);
+
+                  if (isFileBound) {
+                    // Phase 56 D-04 (PICKER-01 reversal): file-bound Snippet → direct dispatch,
+                    // bypassing chooseSnippetBranch → awaiting-snippet-pick → picker. Reverses
+                    // Phase 51 D-16 click routing. snippetPath is non-empty because isFileBound
+                    // gate above checked exactly that (line ~532-534).
+                    const snippetPath = snippetNode.radiprotocol_snippetPath as string;
+                    this.runner.pickFileBoundSnippet(state.currentNodeId, snippetNode.id, snippetPath);
+                  } else {
+                    // Directory-bound — Phase 51 path preserved (SC 3).
+                    this.runner.chooseSnippetBranch(snippetNode.id);
+                  }
+
                   void this.autoSaveSession();   // SESSION-01 — save after snippet branch choice
                   void this.renderAsync();
                 });
