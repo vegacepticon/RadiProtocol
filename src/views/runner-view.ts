@@ -780,22 +780,58 @@ export class RunnerView extends ItemView {
 
   /** Load snippet and open SnippetFillInModal; update runner with result (SNIP-06). */
   private async handleSnippetFill(snippetId: string, questionZone: HTMLElement): Promise<void> {
-    // Phase 32 (D-03): load now takes a path. snippetId here is a legacy
-    // id-string from the runner state machine — resolve it to a path under
-    // the snippet root. Full callsite refactor to pass paths end-to-end is
-    // Phase 33/35 scope.
-    const legacyPath = `${this.plugin.settings.snippetFolderPath}/${snippetId}.json`;
-    const snippet = await this.plugin.snippetService.load(legacyPath);
+    // Phase 51 D-14 (PICKER-01) — snippetId path-shape detection.
+    // Legacy id-string (no '/', no extension) — Phase 32/35 callers — compose with .json append.
+    // Phase 51 full-path (contains '/' OR ends with .md/.json) — auto-insert from Plan 06 —
+    // load directly without extension append.
+    // See `.planning/notes/snippet-node-binding-and-picker.md`.
+    const isPhase51FullPath =
+      snippetId.includes('/') ||
+      snippetId.endsWith('.md') ||
+      snippetId.endsWith('.json');
+    const root = this.plugin.settings.snippetFolderPath;
+    const absPath = isPhase51FullPath
+      ? `${root}/${snippetId}`
+      : `${root}/${snippetId}.json`;  // Phase 32 D-03 legacy composition
 
-    // Phase 35: rewritten from `kind !== 'json'` to `kind === 'md'` (semantically
-    // equivalent given the Snippet union has only two kinds) so the Phase 35
-    // source-contract test (no JSON-only filter anywhere in this file) passes.
-    if (snippet === null || snippet.kind === 'md') {
+    const snippet = await this.plugin.snippetService.load(absPath);
+
+    if (snippet === null) {
       questionZone.empty();
       questionZone.createEl('p', {
         text: `Snippet '${snippetId}' not found. The snippet may have been deleted. Use step-back to continue.`,
         cls: 'rp-empty-state-body',
       });
+      return;
+    }
+
+    // Phase 51 D-14: .md auto-insert (Phase 51 full-path) — completeSnippet directly, no modal
+    // (Phase 35 D-04 contract — MD snippets insert verbatim).
+    // Legacy id-string callers expecting JSON-only (Phase 32) preserve the prior behaviour: a
+    // legacy id always composes a .json path, so kind==='md' from a legacy id is unreachable in
+    // practice — guard with the existing "not found" rendering for defence.
+    if (snippet.kind === 'md') {
+      if (isPhase51FullPath) {
+        this.runner.completeSnippet(snippet.content);
+        void this.autoSaveSession();
+        this.render();
+        return;
+      }
+      questionZone.empty();
+      questionZone.createEl('p', {
+        text: `Snippet '${snippetId}' not found. The snippet may have been deleted. Use step-back to continue.`,
+        cls: 'rp-empty-state-body',
+      });
+      return;
+    }
+
+    // JsonSnippet path — Phase 30 D-09 short-circuit harmonisation: zero-placeholder snippets
+    // skip the modal (mirrors handleSnippetPickerSelection). Keeps auto-insert behaviour
+    // identical to a user-clicked specific-bound snippet per D-14.
+    if (snippet.placeholders.length === 0) {
+      this.runner.completeSnippet(snippet.template);
+      void this.autoSaveSession();
+      this.render();
       return;
     }
 
