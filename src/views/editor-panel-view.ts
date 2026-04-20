@@ -6,6 +6,9 @@ import { NODE_COLOR_MAP } from '../canvas/node-color-map';
 // Phase 50 D-14: enumerates incoming Question→Answer edges for atomic Node Editor write
 import { collectIncomingEdgeEdits } from '../canvas/edge-label-sync-service';
 import { CanvasParser } from '../graph/canvas-parser';
+// Phase 51 Plan 03 (PICKER-02 D-05): inline hierarchical snippet/folder picker for Snippet nodes.
+// See `.planning/notes/snippet-node-binding-and-picker.md` (Shared Pattern H).
+import { SnippetTreePicker } from './snippet-tree-picker';
 
 export const EDITOR_PANEL_VIEW_TYPE = 'radiprotocol-editor-panel';
 
@@ -25,6 +28,10 @@ export class EditorPanelView extends ItemView {
   private _debounceTimer: ReturnType<typeof setTimeout> | null = null;
   private _savedIndicatorEl: HTMLElement | null = null;
   private _indicatorTimer: ReturnType<typeof setTimeout> | null = null;
+  // Phase 51 Plan 03 D-05 — current SnippetTreePicker instance for the active snippet
+  // node form. Null when no snippet node is selected or after unmount. Cleaned up on
+  // form re-render (see buildKindForm head) and when a new picker is mounted.
+  private snippetTreePicker: SnippetTreePicker | null = null;
 
   constructor(leaf: WorkspaceLeaf, plugin: RadiProtocolPlugin) {
     super(leaf);
@@ -438,6 +445,14 @@ export class EditorPanelView extends ItemView {
     nodeRecord: Record<string, unknown>,
     kind: RPNodeKind | null
   ): void {
+    // Phase 51 Plan 03 D-05 — lifecycle: unmount any SnippetTreePicker from the prior
+    // render before building a new form. Protects against leaked event listeners when
+    // the user rapidly switches selection between snippet nodes or to a non-snippet kind.
+    if (this.snippetTreePicker !== null) {
+      this.snippetTreePicker.unmount();
+      this.snippetTreePicker = null;
+    }
+
     if (!kind) return; // unset — no kind-specific fields
 
     switch (kind) {
@@ -597,50 +612,65 @@ export class EditorPanelView extends ItemView {
 
       case 'snippet': {
         new Setting(container).setHeading().setName('Snippet node');
-        const subfolderSetting = new Setting(container)
-          .setName('Subfolder path')
+
+        // Phase 51 Plan 03 D-05 (PICKER-02) — inline hierarchical picker replaces the
+        // Phase 30 flat-list addDropdown. Mode 'both' lets the author pick a folder
+        // (legacy directory binding via radiprotocol_subfolderPath) OR a specific snippet
+        // file (new file binding via radiprotocol_snippetPath, D-01 mutual exclusivity on
+        // write). Host wrapper class `rp-stp-editor-host` is defined in
+        // src/styles/snippet-tree-picker.css (owned by Plan 02). This plan does NOT modify
+        // CSS. See `.planning/notes/snippet-node-binding-and-picker.md`.
+        new Setting(container)
+          .setName('Target')
           .setDesc(
-            'Select the subfolder within .radiprotocol/snippets/ that this node offers to the runner. ' +
-            'Leave as root to use all snippets from the top-level folder.'
+            'Выберите папку (узел предложит все её сниппеты) или конкретный файл сниппета. ' +
+            'Папка и файл взаимно исключительны (D-01).'
           );
 
-        // Async populate — buildKindForm is synchronous; use void IIFE pattern (per RESEARCH.md)
-        void (async () => {
-          try {
-            const basePath = this.plugin.settings.snippetFolderPath;
-            const subfolders = await this.listSnippetSubfolders(basePath);
+        const pickerHost = container.createDiv({ cls: 'rp-stp-editor-host' });
 
-            subfolderSetting.addDropdown(drop => {
-              drop.addOption('', '\u2014 root (all snippets) \u2014');  // D-09
+        const existingFilePath = nodeRecord['radiprotocol_snippetPath'];
+        const existingFolderPath = nodeRecord['radiprotocol_subfolderPath'];
+        const initialSelection =
+          (typeof existingFilePath === 'string' && existingFilePath !== '')
+            ? existingFilePath
+            : (typeof existingFolderPath === 'string' && existingFolderPath !== '')
+              ? existingFolderPath
+              : undefined;
 
-              if (subfolders.length === 0) {
-                // D-08: empty state — disabled placeholder via DOM API (no innerHTML)
-                const disabledOpt = drop.selectEl.createEl('option', {
-                  text: 'No subfolders found',
-                });
-                disabledOpt.disabled = true;
-              } else {
-                for (const sub of subfolders) {
-                  drop.addOption(sub, sub);
-                }
-              }
-
-              const currentPath = (nodeRecord['radiprotocol_subfolderPath'] as string | undefined) ?? '';
-              drop.setValue(currentPath);
-
-              drop.onChange(v => {
-                // D-09: empty value -> undefined (root fallback at runtime)
-                this.pendingEdits['radiprotocol_subfolderPath'] = v || undefined;
-                // D-10: text field mirrors the subfolder path value only
-                this.pendingEdits['text'] = v;  // empty string when root selected
-                this.scheduleAutoSave();
-              });
-            });
-          } catch {
-            // Pitfall 2: async errors silent in void IIFE — show fallback text
-            subfolderSetting.setDesc('Could not load subfolders. Check that .radiprotocol/snippets/ exists.');
-          }
-        })();
+        // Lifecycle: buildKindForm head unmounts any prior picker (see top of method).
+        // The single-site cleanup keeps the invariant clean; no defensive re-check needed.
+        this.snippetTreePicker = new SnippetTreePicker({
+          app: this.plugin.app,
+          snippetService: this.plugin.snippetService,
+          container: pickerHost as unknown as HTMLElement,
+          mode: 'both',
+          rootPath: this.plugin.settings.snippetFolderPath,
+          initialSelection,
+          onSelect: (result) => {
+            if (result.kind === 'folder') {
+              // D-01 mutual exclusivity: setting folder clears file binding.
+              this.pendingEdits['radiprotocol_subfolderPath'] = result.relativePath || undefined;
+              this.pendingEdits['radiprotocol_snippetPath'] = undefined;
+              // Phase 31 D-10 text-mirroring contract — folder path mirrored verbatim.
+              this.pendingEdits['text'] = result.relativePath;
+            } else {
+              // File selection — D-01 mutual exclusivity: setting file clears folder binding.
+              this.pendingEdits['radiprotocol_snippetPath'] = result.relativePath;
+              this.pendingEdits['radiprotocol_subfolderPath'] = undefined;
+              // Mirror basename-without-extension into text (canvas card label).
+              const lastSlash = result.relativePath.lastIndexOf('/');
+              const basename = lastSlash >= 0
+                ? result.relativePath.slice(lastSlash + 1)
+                : result.relativePath;
+              const dot = basename.lastIndexOf('.');
+              const stem = dot > 0 ? basename.slice(0, dot) : basename;
+              this.pendingEdits['text'] = stem;
+            }
+            this.scheduleAutoSave();
+          },
+        });
+        void this.snippetTreePicker.mount();
 
         // Phase 31 D-01: optional label shown on branch-list button when this snippet node
         // is reached as a variant of a question. Empty fallback = "📁 Snippet".
@@ -905,6 +935,11 @@ export class EditorPanelView extends ItemView {
    * Recursively lists all subfolder paths (relative to basePath) within basePath.
    * Uses BFS via vault.adapter.list(). Returns [] if basePath does not exist.
    * Phase 29, D-07.
+   *
+   * @deprecated Phase 51 Plan 03 — Node Editor's `case 'snippet'` now mounts
+   * SnippetTreePicker (hierarchical + search) instead of this BFS-flat-list helper.
+   * Retained per CLAUDE.md Shared Pattern G (never delete code authored by prior
+   * phases). No remaining callers in src/ as of Phase 51-03 (grep-verified).
    */
   private async listSnippetSubfolders(basePath: string): Promise<string[]> {
     const exists = await this.plugin.app.vault.adapter.exists(basePath);
