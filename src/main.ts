@@ -1,5 +1,5 @@
 // main.ts
-import { Plugin, Notice, Menu, TFile } from 'obsidian';
+import { Plugin, Notice, Menu, TFile, TFolder, SuggestModal } from 'obsidian';
 import type { WorkspaceLeaf } from 'obsidian';
 import { RadiProtocolSettings, DEFAULT_SETTINGS, RadiProtocolSettingsTab } from './settings';
 import { CanvasParser } from './graph/canvas-parser';
@@ -15,6 +15,8 @@ import { EdgeLabelSyncService } from './canvas/edge-label-sync-service';
 // Phase 45 (LOOP-06): start-from-node command dependencies
 import { NodePickerModal, buildNodeOptions } from './views/node-picker-modal';
 import { GraphValidator } from './graph/graph-validator';
+// Phase 54: inline protocol display mode
+import { InlineRunnerModal } from './views/inline-runner-modal';
 
 export default class RadiProtocolPlugin extends Plugin {
   settings!: RadiProtocolSettings;
@@ -96,6 +98,13 @@ export default class RadiProtocolPlugin extends Plugin {
       id: 'start-from-node',
       name: 'Start from specific node',
       callback: () => { void this.handleStartFromNode(); },
+    });
+
+    // Phase 54: inline protocol display mode — command palette only (D3, D9)
+    this.addCommand({
+      id: 'run-protocol-inline',
+      name: 'Run protocol in inline',
+      callback: () => { void this.handleRunProtocolInline(); },
     });
 
     // Settings tab
@@ -392,5 +401,87 @@ export default class RadiProtocolPlugin extends Plugin {
     new NodePickerModal(this.app, options, (opt) => {
       void runnerView.openCanvas(canvasPath, opt.id);
     }).open();
+  }
+
+  /**
+   * Phase 54: "Run protocol in inline" command callback.
+   *
+   * Flow:
+   *   1. D9 guard — check active file is a markdown note.
+   *   2. Protocol folder enumeration — D8 guard.
+   *   3. Canvas picker via SuggestModal.
+   *   4. Instantiate InlineRunnerModal + open().
+   */
+  private async handleRunProtocolInline(): Promise<void> {
+    // D9 guard: active file must be a markdown note
+    const activeFile = this.app.workspace.getActiveFile();
+    if (activeFile === null || activeFile.extension !== 'md') {
+      new Notice('Open a markdown note first, then run this command.');
+      return;
+    }
+
+    // Protocol folder enumeration
+    const folderPath = this.settings.protocolFolderPath.trim();
+    if (folderPath === '') {
+      new Notice('Set a protocol folder in Settings to get started.');
+      return;
+    }
+
+    const folder = this.app.vault.getAbstractFileByPath(folderPath);
+    if (!(folder instanceof TFolder)) {
+      new Notice('Protocol folder not found.');
+      return;
+    }
+
+    // Recursively enumerate .canvas files
+    const canvasFiles: TFile[] = [];
+    const collectCanvases = (f: TFolder): void => {
+      for (const child of f.children) {
+        if (child instanceof TFolder) {
+          collectCanvases(child);
+        } else if (child instanceof TFile && child.extension === 'canvas') {
+          canvasFiles.push(child);
+        }
+      }
+    };
+    collectCanvases(folder);
+
+    // D8 guard: empty list
+    if (canvasFiles.length === 0) {
+      new Notice(`No protocol canvases found in '${folderPath}'.`);
+      return;
+    }
+
+    // Canvas picker via SuggestModal
+    const plugin = this;
+    const targetNote = activeFile;
+    const picker = new (class extends SuggestModal<{ file: TFile; name: string }> {
+      constructor() {
+        super(plugin.app);
+      }
+
+      getSuggestions(query: string): { file: TFile; name: string }[] {
+        const q = query.toLowerCase();
+        return canvasFiles
+          .map(f => ({ file: f, name: f.basename }))
+          .filter(item => item.name.toLowerCase().includes(q));
+      }
+
+      renderSuggestion(item: { file: TFile; name: string }, el: HTMLElement): void {
+        el.createEl('div', { text: item.name });
+      }
+
+      onChooseSuggestion(item: { file: TFile; name: string }): void {
+        void plugin.openInlineRunner(item.file, targetNote);
+      }
+    })();
+
+    picker.open();
+  }
+
+  /** Open the InlineRunnerModal for a selected canvas and target note. */
+  private async openInlineRunner(canvasFile: TFile, targetNote: TFile): Promise<void> {
+    const modal = new InlineRunnerModal(this.app, this, canvasFile.path, targetNote);
+    await modal.open();
   }
 }
