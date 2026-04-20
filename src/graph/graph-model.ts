@@ -87,6 +87,11 @@ export interface SnippetNode extends RPNodeBase {
   snippetLabel?: string;
   /** Phase 31 D-04: per-node separator override; applies to both branch-entered and auto-advanced snippet pickers. */
   radiprotocol_snippetSeparator?: 'newline' | 'space';
+  /** Phase 51 D-01: optional binding to a SPECIFIC snippet file (mutually exclusive with subfolderPath on write).
+   *  Path is relative to settings.snippetFolderPath, extension kept (D-02, D-03).
+   *  Absence (undefined) = directory binding via subfolderPath (legacy shape, Pitfall #11 back-compat).
+   *  See `.planning/notes/snippet-node-binding-and-picker.md` (Shared Pattern H). */
+  radiprotocol_snippetPath?: string;
 }
 
 /**

@@ -252,6 +252,11 @@ export class CanvasParser {
         const rawPath = props['radiprotocol_subfolderPath'];
         const rawLabel = props['radiprotocol_snippetLabel'];
         const rawSep = props['radiprotocol_snippetSeparator'];
+        // Phase 51 D-01/D-02/D-03 — optional file-binding path relative to
+        // settings.snippetFolderPath. Empty string / null / non-string normalise
+        // to undefined (WR-02 pattern). Extension kept verbatim per D-03.
+        // See `.planning/notes/snippet-node-binding-and-picker.md`.
+        const rawSnippetPath = props['radiprotocol_snippetPath'];
         const node: SnippetNode = {
           ...base,
           kind: 'snippet',
@@ -264,6 +269,9 @@ export class CanvasParser {
           // Phase 31 D-04: strict enum normalisation (mirror radiprotocol_separator pattern)
           radiprotocol_snippetSeparator: rawSep === 'space' ? 'space'
             : rawSep === 'newline' ? 'newline'
+            : undefined,
+          radiprotocol_snippetPath: (typeof rawSnippetPath === 'string' && rawSnippetPath !== '')
+            ? rawSnippetPath
             : undefined,
         };
         return node;
