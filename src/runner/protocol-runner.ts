@@ -566,7 +566,54 @@ export class ProtocolRunner {
           break;
         }
         case 'question': {
-          // Halts here — awaiting user input
+          // Phase 51 D-13/D-14/D-15 (PICKER-01) — narrow auto-insert trigger:
+          // Question with EXACTLY ONE outgoing edge terminating at a FILE-BOUND Snippet
+          // (radiprotocol_snippetPath PRESENT AND radiprotocol_subfolderPath ABSENT — BOTH
+          // conditions per CONTEXT D-13 wording) auto-advances to awaiting-snippet-fill with
+          // the bound path pre-populated as snippetId. Linear chains (Answer→Snippet) and
+          // Snippet-as-start do NOT trigger — auto-insert is rooted at Question entry.
+          // Defensive against malformed canvases: a Snippet with BOTH snippetPath and
+          // subfolderPath set is NOT unambiguously file-bound and falls through to the
+          // existing picker click path.
+          // See `.planning/notes/snippet-node-binding-and-picker.md`.
+          const neighbours = this.graph.adjacency.get(cursor);
+          if (neighbours !== undefined && neighbours.length === 1) {
+            const onlyNeighbourId = neighbours[0]!;
+            const onlyNeighbour = this.graph.nodes.get(onlyNeighbourId);
+            if (
+              onlyNeighbour !== undefined &&
+              onlyNeighbour.kind === 'snippet' &&
+              typeof onlyNeighbour.radiprotocol_snippetPath === 'string' &&
+              onlyNeighbour.radiprotocol_snippetPath !== '' &&
+              // NOTE: the interface field is `subfolderPath` (SnippetNode in graph-model.ts),
+              // while the persisted canvas property key is `radiprotocol_subfolderPath`
+              // (canvas-parser.ts normalises it). At runtime we check the interface field.
+              // Preserving the contextual reference to the canvas property name here as the
+              // "radiprotocol_subfolderPath ABSENT" clause mandated by CONTEXT D-13.
+              (typeof onlyNeighbour.subfolderPath !== 'string' ||
+               onlyNeighbour.subfolderPath === '')
+            ) {
+              // D-15 — Pattern A undo-before-mutate (mirrors pickSnippet at the body of this file).
+              // Undo entry returns the user to the question node with pre-insertion accumulator.
+              this.undoStack.push({
+                nodeId: cursor,                                // question id
+                textSnapshot: this.accumulator.snapshot(),
+                loopContextStack: [...this.loopContextStack],
+                // returnToBranchList omitted — standard restoration path in stepBack
+              });
+
+              // D-14 — pre-populate snippet state, transition directly to awaiting-snippet-fill.
+              // No new runnerStatus enum value; identical downstream handling for .md vs .json
+              // via existing awaiting-snippet-fill arm in RunnerView.
+              this.snippetId = onlyNeighbour.radiprotocol_snippetPath;
+              this.snippetNodeId = onlyNeighbourId;
+              this.currentNodeId = onlyNeighbourId;
+              this.runnerStatus = 'awaiting-snippet-fill';
+              return;
+            }
+          }
+
+          // Default Question behaviour (byte-identical to pre-Phase-51) — halt at at-node
           this.currentNodeId = cursor;
           this.runnerStatus = 'at-node';
           return;
