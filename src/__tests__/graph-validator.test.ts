@@ -378,3 +378,126 @@ describe('GraphValidator — Phase 43: unified loop + migration (LOOP-04, MIGRAT
     expect(errors.some(e => e.includes('loop-end node'))).toBe(false);
   });
 });
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Phase 51 — D-04 snippet missing-file check (PICKER-01)
+// See `.planning/notes/snippet-node-binding-and-picker.md`.
+// ─────────────────────────────────────────────────────────────────────────────
+describe('Phase 51 — D-04 snippet missing-file check (PICKER-01)', () => {
+  /** Map-backed fake probe. Keys are absolute paths; `true` = file exists. */
+  function makeProbe(exists: Record<string, boolean>): (absPath: string) => boolean {
+    return (absPath: string) => exists[absPath] === true;
+  }
+
+  /** Build a minimal canvas containing one start → one snippet node + snippet props. */
+  function buildGraphWithSnippet(snippetProps: Record<string, unknown>, extraSnippetNodes: Array<{ id: string; props: Record<string, unknown> }> = []) {
+    const nodes: Array<Record<string, unknown>> = [
+      { id: 'n-start', type: 'text', text: 'Start', x: 0, y: 0, width: 100, height: 60, radiprotocol_nodeType: 'start' },
+      { id: 'n-snippet-1', type: 'text', text: 'Snippet 1', x: 200, y: 0, width: 100, height: 60, radiprotocol_nodeType: 'snippet', ...snippetProps },
+    ];
+    const edges: Array<Record<string, unknown>> = [
+      { id: 'e1', fromNode: 'n-start', toNode: 'n-snippet-1' },
+    ];
+    for (const extra of extraSnippetNodes) {
+      nodes.push({ id: extra.id, type: 'text', text: extra.id, x: 400, y: 0, width: 100, height: 60, radiprotocol_nodeType: 'snippet', ...extra.props });
+      edges.push({ id: `e-${extra.id}`, fromNode: 'n-snippet-1', toNode: extra.id });
+    }
+    const json = JSON.stringify({ nodes, edges });
+    const parser = new CanvasParser();
+    const result = parser.parse(json, 'phase51-d04.canvas');
+    if (!result.success) throw new Error(result.error);
+    return result.graph;
+  }
+
+  const ROOT = '.radiprotocol/snippets';
+
+  it('Test 1 — happy path: bound file exists → no D-04 error', () => {
+    const graph = buildGraphWithSnippet({ radiprotocol_snippetPath: 'abdomen/ct.md' });
+    const validator = new GraphValidator({
+      snippetFileProbe: makeProbe({ [`${ROOT}/abdomen/ct.md`]: true }),
+      snippetFolderPath: ROOT,
+    });
+    const errors = validator.validate(graph);
+    expect(errors.some(e => e.includes('не найден'))).toBe(false);
+    expect(errors.some(e => e.includes('Snippet-узел'))).toBe(false);
+  });
+
+  it('Test 2 — missing file: emits one error naming nodeId (via label) and relative path verbatim', () => {
+    const graph = buildGraphWithSnippet({ radiprotocol_snippetPath: 'missing/file.md' });
+    const validator = new GraphValidator({
+      snippetFileProbe: makeProbe({}), // nothing exists
+      snippetFolderPath: ROOT,
+    });
+    const errors = validator.validate(graph);
+    const d04 = errors.find(e => e.includes('Snippet-узел') && e.includes('не найден'));
+    expect(d04).toBeDefined();
+    if (d04 === undefined) return;
+    // nodeId surfaces via nodeLabel() — for a snippet with no snippetLabel falls back to id.
+    expect(d04).toContain('n-snippet-1');
+    expect(d04).toContain('missing/file.md');
+    expect(d04).toContain(ROOT);
+    // Only one D-04 error for one offending node
+    const d04Count = errors.filter(e => e.includes('Snippet-узел') && e.includes('не найден')).length;
+    expect(d04Count).toBe(1);
+  });
+
+  it('Test 3 — mutual exclusivity: both subfolderPath and snippetPath set; probe=true → no error (mutual-exclusivity is write-time, not validator-time)', () => {
+    const graph = buildGraphWithSnippet({
+      radiprotocol_subfolderPath: 'abdomen',
+      radiprotocol_snippetPath: 'liver/r.md',
+    });
+    const validator = new GraphValidator({
+      snippetFileProbe: makeProbe({ [`${ROOT}/liver/r.md`]: true }),
+      snippetFolderPath: ROOT,
+    });
+    const errors = validator.validate(graph);
+    expect(errors.some(e => e.includes('не найден'))).toBe(false);
+  });
+
+  it('Test 4 — back-compat directory binding: no snippetPath → probe never decides; no D-04 error regardless', () => {
+    const graph = buildGraphWithSnippet({ radiprotocol_subfolderPath: 'abdomen' });
+    let probeCalls = 0;
+    const validator = new GraphValidator({
+      snippetFileProbe: (_abs: string) => { probeCalls += 1; return false; },
+      snippetFolderPath: ROOT,
+    });
+    const errors = validator.validate(graph);
+    expect(errors.some(e => e.includes('Snippet-узел') && e.includes('не найден'))).toBe(false);
+    expect(probeCalls).toBe(0);
+  });
+
+  it('Test 5 — back-compat root binding: no subfolderPath / no snippetPath → no D-04 error', () => {
+    const graph = buildGraphWithSnippet({});
+    const validator = new GraphValidator({
+      snippetFileProbe: makeProbe({}),
+      snippetFolderPath: ROOT,
+    });
+    const errors = validator.validate(graph);
+    expect(errors.some(e => e.includes('Snippet-узел') && e.includes('не найден'))).toBe(false);
+  });
+
+  it('Test 6 — no probe configured: legacy zero-arg construction skips D-04 silently even with snippetPath set', () => {
+    const graph = buildGraphWithSnippet({ radiprotocol_snippetPath: 'x.md' });
+    const validator = new GraphValidator(); // zero-arg, legacy
+    const errors = validator.validate(graph);
+    expect(errors.some(e => e.includes('Snippet-узел') && e.includes('не найден'))).toBe(false);
+  });
+
+  it('Test 7 — multiple snippet nodes: exactly one error naming only the missing one', () => {
+    const graph = buildGraphWithSnippet(
+      { radiprotocol_snippetPath: 'good/present.md' },
+      [{ id: 'n-snippet-2', props: { radiprotocol_snippetPath: 'bad/absent.md' } }],
+    );
+    const validator = new GraphValidator({
+      snippetFileProbe: makeProbe({ [`${ROOT}/good/present.md`]: true }),
+      snippetFolderPath: ROOT,
+    });
+    const errors = validator.validate(graph);
+    const d04Errors = errors.filter(e => e.includes('Snippet-узел') && e.includes('не найден'));
+    expect(d04Errors.length).toBe(1);
+    const d04 = d04Errors[0]!;
+    expect(d04).toContain('n-snippet-2');
+    expect(d04).toContain('bad/absent.md');
+    expect(d04).not.toContain('good/present.md');
+  });
+});
