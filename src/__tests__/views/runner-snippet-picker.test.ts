@@ -559,3 +559,26 @@ describe('Phase 51 Plan 05 — RunnerView renderSnippetPicker on SnippetTreePick
     expect(pickerUnmountSpy).toHaveBeenCalledTimes(1);
   });
 });
+
+// ──────────────────────────────────────────────────────────────────────────
+// Phase 52 D-04 — validationError fixtures
+// ──────────────────────────────────────────────────────────────────────────
+// This describe block holds fixtures used by future Plan 04 tasks to drive
+// the error-panel path. Declared here so downstream plans can import without
+// touching this file again. `validationError` is not in the current JsonSnippet
+// interface — the cast preserves tsc green pre-Plan-02 and becomes redundant
+// (but harmless) after Plan 02 narrows the type.
+describe('Phase 52 D-04 — validationError fixtures', () => {
+  it('declares a broken-snippet fixture with a non-null validationError', () => {
+    const broken = {
+      kind: 'json',
+      path: 'Protocols/Snippets/broken.json',
+      name: 'broken',
+      template: 'Value: {{v}}',
+      placeholders: [{ id: 'v', label: 'Value', type: 'choice', options: [] }],
+      validationError:
+        'Плейсхолдер "v" типа "choice" не содержит ни одного варианта. Добавьте варианты или удалите плейсхолдер.',
+    } as unknown as Snippet & { validationError: string | null };
+    expect(broken.validationError).not.toBeNull();
+  });
+});
