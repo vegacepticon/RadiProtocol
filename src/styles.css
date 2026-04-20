@@ -1180,6 +1180,25 @@
   font-weight: 600;
 }
 
+/* Phase 56 D-08 (PICKER-01 follow-up): unsaved-change indicator next to «Папка» label.
+ * Visual vocabulary mirrors Obsidian's native unsaved-file tab-bar dot.
+ * Rendered as an inline <span> inside the label element; hidden by default,
+ * shown via the .is-visible modifier written by SnippetEditorModal.updateFolderUnsavedDot().
+ */
+.rp-snippet-editor-unsaved-dot {
+  display: none;
+  margin-left: var(--size-4-1);
+  color: var(--interactive-accent);
+  font-size: 1.2em;
+  line-height: 1;
+  vertical-align: middle;
+  user-select: none;
+}
+
+.rp-snippet-editor-unsaved-dot.is-visible {
+  display: inline;
+}
+
 /* Phase 5: SnippetFillInModal ──────────────────────────────────────────────── */
 
 .rp-snippet-modal {
@@ -1476,4 +1495,21 @@
 }
 .rp-stp-runner-host .rp-stp-list {
   max-height: 50vh;
+}
+
+/* Phase 56 D-10 (PICKER-01 follow-up): committed-state variant for the
+ * «Выбрать эту папку» button. Applied by SnippetTreePicker when the
+ * current drillPath equals committedRelativePath. Persistent (not an
+ * animation) — users reported blink-feedback was missed (memory note
+ * project_snippet_node_ux.md). Uses Obsidian accent vars for theme compat.
+ */
+.rp-stp-select-folder-btn.is-committed {
+  background-color: var(--interactive-accent);
+  color: var(--text-on-accent);
+  border-color: var(--interactive-accent);
+}
+
+.rp-stp-select-folder-btn.is-committed:hover {
+  background-color: var(--interactive-accent-hover);
+  color: var(--text-on-accent);
 }
