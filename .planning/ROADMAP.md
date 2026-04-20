@@ -346,7 +346,7 @@ Plans:
 **Plans**: 4 plans
 
 Plans:
-- [ ] 53-01-PLAN.md — Add RUNNER-SKIP-* / RUNNER-CLOSE-* to REQUIREMENTS.md + ProtocolRunner.skip() method + 6 unit tests (D-07..D-11)
+- [x] 53-01-PLAN.md — Add RUNNER-SKIP-* / RUNNER-CLOSE-* to REQUIREMENTS.md + ProtocolRunner.skip() method + 6 unit tests (D-07..D-11) — ✅ f832ddd/8aa912f/2ceae8d (2026-04-20)
 - [ ] 53-02-PLAN.md — Skip button UI in RunnerView question-zone (icon-only setIcon + 5-step click prologue) + Phase 53 CSS block append (D-01/D-04/D-05/D-07/D-08/D-11)
 - [ ] 53-03-PLAN.md — Close button in selectorBarEl + handleClose() with D-14 teardown + visibility toggle + Close CSS (D-02/D-12..D-16)
 - [ ] 53-04-PLAN.md — Automated gate (10 audits + 5 counter-checks) + human UAT in TEST-BASE (3 scenarios mapped to SC-1/2/3) + rollup commit
@@ -414,6 +414,6 @@ Plans:
 | 50.1 | v1.8 | 5/5 | Complete (INSERTED) | 2026-04-19 |
 | 51 | v1.8 | 0/6 | Planned | - |
 | 52 | v1.8 | 5/5 | Complete | 2026-04-20 |
-| 53 | v1.8 | 0/0 | Not started | - |
+| 53 | v1.8 | 1/4 | In progress | - |
 | 54 | v1.8 | 0/0 | Not started | - |
 | 55 | v1.8 | 0/0 | Not started | - |
