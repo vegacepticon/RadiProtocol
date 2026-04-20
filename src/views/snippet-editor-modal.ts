@@ -22,6 +22,7 @@ import type { Snippet, JsonSnippet, MdSnippet } from '../snippets/snippet-model'
 import { slugifyLabel } from '../snippets/snippet-model';
 import { mountChipEditor, type ChipEditorHandle } from './snippet-chip-editor';
 import { ConfirmModal } from './confirm-modal';
+import { SnippetTreePicker } from './snippet-tree-picker';
 import type RadiProtocolPlugin from '../main';
 
 type SnippetEditorResult =
@@ -86,7 +87,15 @@ export class SnippetEditorModal extends Modal {
   private saveBtnEl!: HTMLButtonElement;
   private contentRegionEl!: HTMLElement;
   private saveErrorEl!: HTMLElement;
+  /** @deprecated Phase 51 D-07 — superseded by snippetTreePicker (folder-only
+   *  SnippetTreePicker mounted in renderFolderDropdown). Field retained per
+   *  CLAUDE.md Shared Pattern G (never remove existing code you didn't add);
+   *  no new writes occur to this field. */
   private folderSelectEl!: HTMLSelectElement;
+
+  /** Phase 51 D-07 — SnippetTreePicker instance for the «Папка» row.
+   *  Replaces the legacy <select> dropdown; null until renderFolderDropdown mounts it. */
+  private snippetTreePicker: SnippetTreePicker | null = null;
 
   // Debounce
   private collisionCheckTimer: number | null = null;
@@ -184,6 +193,11 @@ export class SnippetEditorModal extends Modal {
       clearTimeout(this.collisionCheckTimer);
       this.collisionCheckTimer = null;
     }
+    // Phase 51 D-07 — unmount the SnippetTreePicker to release its DOM listeners.
+    if (this.snippetTreePicker !== null) {
+      this.snippetTreePicker.unmount();
+      this.snippetTreePicker = null;
+    }
     this.contentEl.empty();
   }
 
@@ -235,32 +249,52 @@ export class SnippetEditorModal extends Modal {
   }
 
   private async renderFolderDropdown(container: HTMLElement): Promise<void> {
+    // Phase 51 D-07 (PICKER-02) — folder-only SnippetTreePicker replaces the legacy
+    // flat-list <select>. Same contract: writing this.currentFolder + setting
+    // hasUnsavedChanges + scheduling collision check.
+    // Host wrapper class `rp-stp-editor-host` is defined in src/styles/snippet-tree-picker.css
+    // (owned by Plan 02). This plan does NOT modify CSS.
+    // See `.planning/notes/snippet-node-binding-and-picker.md`.
     const row = container.createDiv({ cls: 'radi-snippet-editor-row' });
     row.createEl('label', { text: 'Папка' });
+    const pickerHost = row.createDiv({ cls: 'rp-stp-editor-host' });
 
-    const select = row.createEl('select') as HTMLSelectElement;
-    this.folderSelectEl = select;
+    const rootPath = this.plugin.settings.snippetFolderPath;
+    // Compute relative initialSelection from absolute currentFolder.
+    const initialSelection: string | undefined =
+      this.currentFolder === rootPath
+        ? ''
+        : this.currentFolder.startsWith(rootPath + '/')
+          ? this.currentFolder.slice(rootPath.length + 1)
+          : undefined;
 
-    const folderOptions = await this.buildFolderOptions();
-    for (const folder of folderOptions) {
-      const opt = select.createEl('option', { text: folder });
-      (opt as HTMLOptionElement).value = folder;
+    if (this.snippetTreePicker !== null) {
+      this.snippetTreePicker.unmount();
+      this.snippetTreePicker = null;
     }
-    select.value = this.currentFolder;
-    // If initial folder isn't in options (shouldn't happen normally), append it.
-    if (select.value !== this.currentFolder && this.currentFolder) {
-      const opt = select.createEl('option', { text: this.currentFolder });
-      (opt as HTMLOptionElement).value = this.currentFolder;
-      select.value = this.currentFolder;
-    }
 
-    select.addEventListener('change', () => {
-      this.currentFolder = select.value;
-      this.hasUnsavedChanges = true;
-      void this.runCollisionCheck();
+    this.snippetTreePicker = new SnippetTreePicker({
+      app: this.app,
+      snippetService: this.plugin.snippetService,
+      container: pickerHost,
+      mode: 'folder-only',
+      rootPath,
+      initialSelection,
+      onSelect: (result) => {
+        // folder-only mode emits kind: 'folder' only
+        this.currentFolder = result.relativePath === ''
+          ? rootPath
+          : `${rootPath}/${result.relativePath}`;
+        this.hasUnsavedChanges = true;
+        void this.runCollisionCheck();
+      },
     });
+    void this.snippetTreePicker.mount();
   }
 
+  /** @deprecated Phase 51 D-07 — replaced by SnippetTreePicker. Retained per
+   *  CLAUDE.md Shared Pattern G; safe to remove in a future cleanup phase if
+   *  confirmed orphaned. */
   private async buildFolderOptions(): Promise<string[]> {
     const root = this.plugin.settings.snippetFolderPath;
     const descendants = await this.plugin.snippetService.listFolderDescendants(root);

@@ -300,6 +300,24 @@ vi.mock('../snippets/canvas-ref-sync', () => ({
   },
 }));
 
+// --- Stub SnippetTreePicker (Phase 51 Plan 04 D-07) ---
+// The real picker traverses real DOM (element.classList.contains); our MockEl uses
+// Set-based classList without .contains(). Stub it here and capture the latest onSelect
+// callback so existing tests that used to drive «Папка» change via the legacy <select>
+// can now drive the new picker via the captured callback. The new SnippetEditorModal
+// folder-picker behaviour is also covered by
+// src/__tests__/views/snippet-editor-modal-folder-picker.test.ts.
+let lastPickerOnSelect: ((result: { kind: 'folder' | 'file'; relativePath: string }) => void) | null = null;
+vi.mock('../views/snippet-tree-picker', () => ({
+  SnippetTreePicker: class {
+    constructor(opts: { onSelect: (r: { kind: 'folder' | 'file'; relativePath: string }) => void }) {
+      lastPickerOnSelect = opts.onSelect;
+    }
+    async mount(): Promise<void> {}
+    unmount(): void {}
+  },
+}));
+
 // --- Now import the module under test -------------------------------------
 import { SnippetEditorModal } from '../views/snippet-editor-modal';
 import type { JsonSnippet, MdSnippet, Snippet } from '../snippets/snippet-model';
@@ -384,6 +402,7 @@ describe('SnippetEditorModal', () => {
     confirmModalCtorSpy.mockClear();
     rewriteCanvasRefsSpy.mockClear();
     confirmModalNextResult = 'cancel';
+    lastPickerOnSelect = null;
   });
 
   it('MODAL-01: create mode sets «Новый сниппет» title and renders type toggle', async () => {
@@ -447,7 +466,7 @@ describe('SnippetEditorModal', () => {
     expect(staticLabel!._text).toBe('JSON');
   });
 
-  it('MODAL-04: create mode pre-fills the «Папка» dropdown to initialFolder', async () => {
+  it('MODAL-04: create mode seeds the «Папка» picker to initialFolder', async () => {
     const { plugin } = makeMockPlugin({
       descendants: {
         files: [],
@@ -460,15 +479,13 @@ describe('SnippetEditorModal', () => {
       initialFolder: '.radiprotocol/snippets/custom',
     });
     await modal.onOpen();
-    const select = findEl(
-      modal.contentEl as unknown as MockEl,
-      (el) => el.tagName === 'SELECT',
-    );
-    expect(select).not.toBeNull();
-    expect(select!.value).toBe('.radiprotocol/snippets/custom');
+    // Phase 51 D-07 — currentFolder is seeded from initialFolder; the picker is a
+    // SnippetTreePicker (stubbed in this suite). Probe the internal state.
+    const internals = modal as unknown as { currentFolder: string };
+    expect(internals.currentFolder).toBe('.radiprotocol/snippets/custom');
   });
 
-  it('MODAL-05: changing «Папка» and saving produces a snippet path under the new folder', async () => {
+  it('MODAL-05: changing «Папка» (via picker) and saving produces a snippet path under the new folder', async () => {
     const { plugin, service } = makeMockPlugin({
       descendants: {
         files: [],
@@ -488,13 +505,9 @@ describe('SnippetEditorModal', () => {
     )!;
     nameInput.value = 'note';
     nameInput.dispatchEvent({ type: 'input' });
-    // Change the folder
-    const select = findEl(
-      modal.contentEl as unknown as MockEl,
-      (el) => el.tagName === 'SELECT',
-    )!;
-    select.value = '.radiprotocol/snippets/b';
-    select.dispatchEvent({ type: 'change' });
+    // Phase 51 D-07 — change the folder via the picker's onSelect callback.
+    expect(lastPickerOnSelect).not.toBeNull();
+    lastPickerOnSelect!({ kind: 'folder', relativePath: 'b' });
     // Click Save button (find button with text "Создать")
     const saveBtn = findEl(
       modal.contentEl as unknown as MockEl,
@@ -603,13 +616,9 @@ describe('SnippetEditorModal', () => {
       snippet,
     });
     await modal.onOpen();
-    // Change the folder to /b
-    const select = findEl(
-      modal.contentEl as unknown as MockEl,
-      (el) => el.tagName === 'SELECT',
-    )!;
-    select.value = '.radiprotocol/snippets/b';
-    select.dispatchEvent({ type: 'change' });
+    // Phase 51 D-07 — change folder via picker onSelect callback
+    expect(lastPickerOnSelect).not.toBeNull();
+    lastPickerOnSelect!({ kind: 'folder', relativePath: 'b' });
     // Click «Сохранить»
     const saveBtn = findEl(
       modal.contentEl as unknown as MockEl,
@@ -664,12 +673,9 @@ describe('SnippetEditorModal', () => {
         snippet,
       });
       await modal.onOpen();
-      const select = findEl(
-        modal.contentEl as unknown as MockEl,
-        (el) => el.tagName === 'SELECT',
-      )!;
-      select.value = '.radiprotocol/snippets/b';
-      select.dispatchEvent({ type: 'change' });
+      // Phase 51 D-07 — change folder via picker onSelect callback
+      expect(lastPickerOnSelect).not.toBeNull();
+      lastPickerOnSelect!({ kind: 'folder', relativePath: 'b' });
       const saveBtn = findEl(
         modal.contentEl as unknown as MockEl,
         (el) => el.tagName === 'BUTTON' && el._text === 'Сохранить',
@@ -712,12 +718,9 @@ describe('SnippetEditorModal', () => {
     void modal.result.then(() => {
       resolved = true;
     });
-    const select = findEl(
-      modal.contentEl as unknown as MockEl,
-      (el) => el.tagName === 'SELECT',
-    )!;
-    select.value = '.radiprotocol/snippets/b';
-    select.dispatchEvent({ type: 'change' });
+    // Phase 51 D-07 — change folder via picker onSelect callback
+    expect(lastPickerOnSelect).not.toBeNull();
+    lastPickerOnSelect!({ kind: 'folder', relativePath: 'b' });
     const saveBtn = findEl(
       modal.contentEl as unknown as MockEl,
       (el) => el.tagName === 'BUTTON' && el._text === 'Сохранить',
