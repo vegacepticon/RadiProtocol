@@ -279,9 +279,11 @@ export function mountChipEditor(
     }) as EventListener);
 
     on(chip, 'click', (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
       if (
-        e.target === removeBtn ||
-        (e.target as HTMLElement).closest('.rp-placeholder-chip-handle')
+        target === removeBtn ||
+        target.closest('.rp-placeholder-chip-handle') ||
+        target.closest('.rp-placeholder-expanded')
       ) return;
       chip.toggleClass('is-expanded', !chip.hasClass('is-expanded'));
       if (chip.hasClass('is-expanded')) {
@@ -316,6 +318,7 @@ export function mountChipEditor(
     if (existing) existing.remove();
 
     const expanded = row.createDiv({ cls: 'rp-placeholder-expanded' });
+    on(expanded, 'click', (e: MouseEvent) => { e.stopPropagation(); });
 
     // Label field
     const labelSec = expanded.createDiv({ cls: 'rp-snippet-form-section' });
