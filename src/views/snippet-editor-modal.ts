@@ -88,6 +88,8 @@ export class SnippetEditorModal extends Modal {
   private saveBtnEl!: HTMLButtonElement;
   private contentRegionEl!: HTMLElement;
   private saveErrorEl!: HTMLElement;
+  /** Phase 52 D-04: banner shown when the loaded snippet carries a validationError. */
+  private validationBannerEl: HTMLElement | null = null;
   /** @deprecated Phase 51 D-07 — superseded by snippetTreePicker (folder-only
    *  SnippetTreePicker mounted in renderFolderDropdown). Field retained per
    *  CLAUDE.md Shared Pattern G (never remove existing code you didn't add);
@@ -165,6 +167,17 @@ export class SnippetEditorModal extends Modal {
     // Name input
     this.renderNameInput(contentEl);
 
+    // Phase 52 D-04: render validation banner BEFORE content region so the user
+    // sees it immediately. Banner is rendered above the chip editor; the form
+    // remains mounted but is locked further down (Save disabled + aria-disabled
+    // on contentRegionEl). Uses textContent only — T-52-09 mitigation.
+    if (this.draftKind === 'json') {
+      const vErr = (this.draft as JsonSnippet).validationError;
+      if (vErr !== null) {
+        this.renderValidationBanner(contentEl, vErr);
+      }
+    }
+
     // Content region (chip editor or textarea)
     // Phase 33 gap-fix: no separate «Содержимое» label above — the chip editor
     // has its own Template/Placeholders sections, and Markdown mode uses a
@@ -179,6 +192,22 @@ export class SnippetEditorModal extends Modal {
 
     // Button row
     this.renderButtonRow(contentEl);
+
+    // Phase 52 D-04: lock the form when the snippet is unusable. Save is
+    // disabled and the content region is visually disabled (aria-disabled +
+    // pointerEvents:none + opacity:0.5) so the user cannot interact with a
+    // broken snippet's chip editor. Valid snippets are byte-identical to the
+    // pre-Phase-52 behaviour.
+    if (this.validationBannerEl !== null) {
+      this.saveBtnEl.disabled = true;
+      this.saveBtnEl.setAttribute(
+        'title',
+        'Сниппет содержит ошибку — исправьте источник и откройте заново.',
+      );
+      this.contentRegionEl.setAttribute('aria-disabled', 'true');
+      this.contentRegionEl.style.pointerEvents = 'none';
+      this.contentRegionEl.style.opacity = '0.5';
+    }
 
     // Initial collision check (edit mode pre-populated name shouldn't collide with self)
     void this.runCollisionCheck();
@@ -199,6 +228,8 @@ export class SnippetEditorModal extends Modal {
       this.snippetTreePicker.unmount();
       this.snippetTreePicker = null;
     }
+    // Phase 52 D-04: release banner reference so a subsequent onOpen sees null.
+    this.validationBannerEl = null;
     this.contentEl.empty();
   }
 
@@ -356,6 +387,26 @@ export class SnippetEditorModal extends Modal {
     }
   }
 
+  /**
+   * Phase 52 D-04: render a red banner above the form when the loaded snippet
+   * carries a non-null validationError (emitted by validatePlaceholders in
+   * Plan 02's snippet-service load path). Uses `createEl({ text })` +
+   * `textContent` exclusively — never `innerHTML` (T-52-09 mitigation).
+   */
+  private renderValidationBanner(container: HTMLElement, msg: string): void {
+    const banner = container.createDiv({ cls: 'radi-snippet-editor-validation-banner' });
+    banner.setAttribute('role', 'alert');
+    // Set banner.textContent to the Russian header + blank-line + validationError
+    // verbatim. Using `textContent` (never `innerHTML`) means the msg is rendered
+    // as literal text — T-52-09 XSS mitigation. A `<script>` substring in the
+    // msg appears as the characters `<`, `s`, `c`, ... not a parsed DOM child.
+    // Plan 01 tests B3/B4 assert on `banner.textContent` (via the mock's `_text`)
+    // so the msg must live on the banner node itself, not on a child element.
+    banner.textContent =
+      'Этот сниппет не может быть использован:\n' + msg;
+    this.validationBannerEl = banner;
+  }
+
   private switchKind(newKind: 'json' | 'md'): void {
     // Create mode only — preserves folder; resets draft content but keeps name.
     const preservedName = this.draft.name;
@@ -431,6 +482,10 @@ export class SnippetEditorModal extends Modal {
 
   private updateCollisionUI(): void {
     if (!this.collisionErrorEl || !this.saveBtnEl) return;
+    // Phase 52 D-04: validation banner locks Save regardless of collision state.
+    // Bail so the banner's disabled flag + Russian title are not clobbered by a
+    // subsequent «no collision» pass.
+    if (this.validationBannerEl !== null) return;
     if (this.hasCollision) {
       this.collisionErrorEl.style.display = '';
       this.saveBtnEl.disabled = true;

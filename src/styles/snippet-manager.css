@@ -486,3 +486,19 @@
   background: var(--background-primary);
   color: var(--text-normal);
 }
+
+/* Phase 52: validation banner for SnippetEditorModal (D-04) */
+.radi-snippet-editor-validation-banner {
+  background-color: var(--background-modifier-error);
+  color: var(--text-on-accent);
+  border-left: 3px solid var(--text-error);
+  padding: var(--size-4-2) var(--size-4-3);
+  margin-bottom: var(--size-4-3);
+  border-radius: var(--radius-s);
+  font-size: var(--font-ui-small);
+}
+
+.radi-snippet-editor-validation-banner p {
+  margin: 0 0 var(--size-4-1) 0;
+  font-weight: 600;
+}
