@@ -1,5 +1,29 @@
 # Milestones
 
+## v1.8 UX Polish & Snippet Picker Overhaul (Shipped: 2026-04-21)
+
+**Phases completed:** 14 phases (47–58), 50 plans
+**Timeline:** 2026-04-18 → 2026-04-21 (4 days)
+**Git:** 170+ commits, 100+ source files touched
+
+**Key accomplishments:**
+
+- Phase 47: Three runner regressions closed — textarea edits survive loop transitions (RUNFIX-01), scroll position preserved on choice insert (RUNFIX-02), choice button padding/line-height fixed for Cyrillic descenders (RUNFIX-03)
+- Phase 48/48.1: Node Editor UX polish — Snippet ID field removed, new nodes anchor vertically below, Answer fields reordered, Question textarea auto-grows, create buttons bottom-stacked; toolbar gap tightened post-UAT
+- Phase 49/50/50.1: Edge semantics rework — loop exit derived from sole labeled edge (Phase 49), Answer.displayLabel ↔ incoming edge label bidirectional sync (Phase 50), "+"-prefix exit convention supersedes Phase 49 to allow labeled body edges unambiguously (Phase 50.1)
+- Phase 51/56: Snippet picker overhaul — hierarchical tree picker with search replaces flat folder list, Snippet nodes bind to specific files; Phase 56 reversed auto-insert decision so file-bound Snippets always render as buttons with direct insert on click
+- Phase 52: JSON placeholder rework — collapsed to 2 types (free text + unified choice), options-list editor fixed, fill-in modal renders multi-select with configurable separator
+- Phase 53: Runner Skip & Close buttons — Skip advances without text append + undo roundtrip, Close unloads canvas with confirmation modal + D-14 teardown
+- Phase 54: Inline Protocol Display Mode — third Runner mode as floating non-blocking modal over active note, answers append to end of source note, command-palette launch only
+- Phase 55: BRAT Distribution Readiness — manifest/versions/package aligned on 1.8.0, GitHub Release v1.8.0 published, BRAT install verified
+- Phase 57/58: Gap closure — REQUIREMENTS.md traceability refreshed with INLINE-01..05 promotion + 11 stale checkbox flips; 6 VERIFICATION.md files backfilled + 4 stale frontmatter flipped
+
+**Known deferred items at close:** 8 items (see STATE.md `## Deferred Items`) — 1 v1.7 carryover debug session, 2 stale UAT status fields, 5 stale todo files for delivered work
+
+**Archive:** `.planning/milestones/v1.8-ROADMAP.md`, `.planning/milestones/v1.8-REQUIREMENTS.md`, `.planning/milestones/v1.8-MILESTONE-AUDIT.md`
+
+---
+
 ## v1.7 Loop Rework & Regression Cleanup (Shipped: 2026-04-18)
 
 **Phases completed:** 4 phases (43–46), 18 plans

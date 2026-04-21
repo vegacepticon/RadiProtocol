@@ -2,10 +2,10 @@
 gsd_state_version: 1.0
 milestone: v1.8
 milestone_name: UX Polish & Snippet Picker Overhaul
-status: ready_for_lifecycle
-stopped_at: "v1.8 complete — all 14 phases (47-58) shipped. Gap-closure phases 57-58 complete. Ready for lifecycle: audit → complete → cleanup."
-last_updated: "2026-04-21T17:00:00.000Z"
-last_activity: 2026-04-21 -- Phase 58 shipped (gap closure, docs-only): 6 VERIFICATION.md files authored + 4 stale frontmatter flipped; v1.8 milestone ready for lifecycle (audit → complete → cleanup)
+status: milestone_complete
+stopped_at: "v1.8 milestone archived and tagged 2026-04-21"
+last_updated: "2026-04-21T20:00:00.000Z"
+last_activity: 2026-04-21 -- v1.8 milestone complete; all 14 phases (47-58) shipped; milestone archived to .planning/milestones/; git tag v1.8 created
 progress:
   total_phases: 14
   completed_phases: 14
@@ -24,9 +24,24 @@ progress:
 
 ---
 
+## Deferred Items
+
+Items acknowledged and deferred at milestone close on 2026-04-21:
+
+| Category | Item | Status |
+|----------|------|--------|
+| debug | phase-27-regressions | awaiting_human_verify — v1.7 carryover |
+| uat_gap | Phase 50: 50-UAT.md | unknown — 0 pending scenarios (stale status field) |
+| uat_gap | Phase 52: 52-UAT.md | pending — 0 pending scenarios (stale status field) |
+| todo | bug-runner-textarea-edits-lost-on-loop-transition.md | delivered in Phase 47, stale todo file |
+| todo | hierarchical-snippet-picker.md | delivered in Phase 51, stale todo file |
+| todo | json-snippet-placeholder-rework.md | delivered in Phase 52, stale todo file |
+| todo | loop-node-exit-from-edge-label.md | delivered in Phase 49/50.1, stale todo file |
+| todo | new-nodes-placed-below-last.md | delivered in Phase 48, stale todo file |
+
 ## Current Position
 
-**Active milestone:** v1.8 (85% complete — 34/40 plans across 15 phases).
+**Active milestone:** v1.8 — MILESTONE COMPLETE (all 14 phases shipped).
 
 **Most recent work (2026-04-21):**
 - **Phase 57 — REQUIREMENTS Traceability Refresh (GAP CLOSURE)** — ✅ Complete (docs-only). Single atomic commit: INLINE-01..05 promoted, 11 stale checkboxes flipped, Coverage Summary added. Unblocks Phase 58 (which authors missing VERIFICATION.md files and cites INLINE-01..05).

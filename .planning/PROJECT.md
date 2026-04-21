@@ -10,14 +10,7 @@ A radiologist can generate a structured, accurate protocol in seconds by answeri
 
 ## Current Milestone: v1.8 UX Polish & Snippet Picker Overhaul
 
-**Goal:** Polish the Node Editor + Protocol Runner UX, close regressions uncovered during v1.7 use, overhaul the Snippet node picker with hierarchical navigation + specific-snippet binding, unify JSON snippet placeholders, and prepare the repo for BRAT installation.
-
-**Target features:**
-- Runner regressions closed — textarea edits survive loop transitions, scroll stays put after choice insert, choice button typography no longer clips.
-- Node Editor quality-of-life — create buttons move to a vertical bottom column, newly-created nodes anchor below the previous node, Question text area grows with content, Answer fields reordered (label first), the obsolete "Snippet ID" field in Text block is removed.
-- Loop and Answer edge semantics — loop exit is derived from the sole labeled outgoing edge; Answer `displayLabel` and every incoming edge label stay in sync bidirectionally.
-- Snippet node overhaul — a single hierarchical picker with search replaces the flat folder list, Snippet nodes may bind to a specific snippet file (auto-insert when sole option), and JSON placeholders collapse to two types (`free text` + unified `choice`) with a working options editor.
-- Distribution — align repo version metadata and ship GitHub Releases with `manifest.json`/`main.js`/`styles.css` assets so users can install via BRAT.
+**Status:** ✅ SHIPPED 2026-04-21
 
 ## Requirements
 
@@ -202,22 +195,38 @@ A radiologist can generate a structured, accurate protocol in seconds by answeri
 - ✓ All consumer references excised from runner, views, color map, CSS (CLEAN-03) — v1.7
 - ✓ Fixture + tests removed or rewritten; full suite green (CLEAN-04) — v1.7
 
-### Active (v1.8 — to be enumerated in REQUIREMENTS.md)
+### Validated (v1.8)
 
-- Runner textarea preservation through loop transitions
-- Runner textarea scroll position preservation on choice insert
-- Runner choice button typography safe padding
-- Node Editor: remove obsolete Snippet ID field from Text block
-- Node Editor: new nodes anchor below the last node
-- Node Editor: Answer fields — Display label above Answer text
-- Node Editor: Question text auto-grow + label repositioning
-- Node Editor: Create buttons — bottom vertical stack
-- Loop node exit derived from sole labeled outgoing edge (with validation)
-- Answer displayLabel ↔ incoming edge label bi-directional sync
-- Snippet node binding to a specific snippet file (auto-insert when sole)
-- Hierarchical snippet/folder picker with search
-- JSON snippet placeholders — collapse to `free text` + unified `choice`
-- Repo preparation for BRAT installation (version alignment + GitHub Releases)
+**Runner Regressions:**
+- ✓ Manual textarea edits preserved across loop transitions (RUNFIX-01) — v1.8
+- ✓ Scroll position preserved on choice insert (RUNFIX-02) — v1.8
+- ✓ Choice button padding/line-height for Cyrillic descenders (RUNFIX-03) — v1.8
+
+**Node Editor UX:**
+- ✓ Snippet ID field removed from Text block (NODEUI-01) — v1.8
+- ✓ New nodes anchor below last node (NODEUI-02) — v1.8
+- ✓ Answer fields reordered: Display label above Answer text (NODEUI-03) — v1.8
+- ✓ Question textarea auto-grow + label repositioning (NODEUI-04) — v1.8
+- ✓ Create buttons bottom vertical stack (NODEUI-05) — v1.8
+
+**Edge Semantics:**
+- ✓ Loop exit derived from sole labeled outgoing edge (EDGE-01, historical) — v1.8
+- ✓ Answer displayLabel ↔ incoming edge label bidirectional sync (EDGE-02) — v1.8
+- ✓ Loop exit "+"-prefix convention (EDGE-03, active) — v1.8
+
+**Snippet System:**
+- ✓ Snippet node binding to specific file + hierarchical picker (PICKER-01/02) — v1.8
+- ✓ JSON placeholders collapsed to free text + unified choice (PHLD-01) — v1.8
+
+**Runner Features:**
+- ✓ Skip button: advances without text append + undo roundtrip (RUNNER-SKIP-01..03) — v1.8
+- ✓ Close button: unloads canvas with confirmation + teardown (RUNNER-CLOSE-01..03) — v1.8
+- ✓ Inline protocol display mode: floating modal over active note (INLINE-01..05) — v1.8
+
+**Distribution:**
+- ✓ BRAT-ready: manifest/versions aligned, GitHub Release v1.8.0 published (BRAT-01) — v1.8
+
+### Active (v1.9 — to be defined in next milestone)
 
 ### Deferred (Future Milestones)
 
@@ -243,24 +252,29 @@ A radiologist can generate a structured, accurate protocol in seconds by answeri
 
 ## Current State
 
-**Shipped:** v1.7 Loop Rework & Regression Cleanup (2026-04-18)
-**Active milestone:** v1.8 UX Polish & Snippet Picker Overhaul — requirements being defined
-**Latest phases in v1.7:**
-- Phase 43 (2026-04-17): Unified Loop graph model, parser, validator, Migration Check — `LoopNode` + `loopNodeId` + three LOOP-04 sub-checks + Russian rebuild error for legacy canvases
-- Phase 44 (2026-04-17): Unified loop runtime — single-step picker, B1 re-entry guard for dead-end returns, B2 `previousCursor` threading for step-back, `maxIterations` fully excised
-- Phase 45 (2026-04-18): Loop Editor form (editable `headerText`, no iterations control) + 4th quick-create button (red, repeat icon) + `NodePickerModal` 4-kind Russian badges + Ctrl+P `start-from-node` command with validator gate
-- Phase 46 (2026-04-18): `free-text-input` excised from every layer via TypeScript exhaustiveness — parser emits Russian rejection; fixture retained with semantic role flipped to CLEAN-02 rejection proof
+**Shipped:** v1.8 UX Polish & Snippet Picker Overhaul (2026-04-21)
+**Active milestone:** None — ready for next milestone planning
+**v1.8 shipped:** 14 phases (47–58), 50 plans, 26/26 requirements satisfied
+
+**Key v1.8 deliverables:**
+- Runner regressions closed (textarea preservation, scroll, button typography)
+- Node Editor UX polish (form layout, auto-grow, bottom-stacked buttons)
+- Edge semantics: loop exit "+"-prefix convention, Answer↔edge label sync
+- Snippet picker overhaul: hierarchical tree + specific-file binding + button UX
+- JSON placeholders collapsed to 2 types with working options editor
+- Inline protocol display mode (floating modal over active note)
+- BRAT distribution readiness (GitHub Release v1.8.0)
 
 ## Context
 
-- Shipped v1.0 (7 phases, 28 plans) + v1.2 (8 phases, 11 plans) + v1.3 (1 phase, 1 plan) + v1.4 (4 phases, 12 plans) + v1.5 (4 phases, 18 plans) + v1.6 (7 phases, 14 plans) + v1.7 (4 phases, 18 plans); ~17.6K LOC TypeScript in src/
+- Shipped v1.0 (7 phases) + v1.2 (8 phases) + v1.3 (1 phase) + v1.4 (4 phases) + v1.5 (4 phases) + v1.6 (7 phases) + v1.7 (4 phases) + v1.8 (14 phases); ~18K+ LOC TypeScript in src/
 - Tech stack: TypeScript + Obsidian Plugin API + esbuild + Vitest
-- Target: public release on Obsidian Community Plugins
+- Target: public release on Obsidian Community Plugins (BRAT-ready)
 - Primary author: radiologist (CT focus), designed for all imaging modalities
-- All phases human-UAT approved; v1.7 milestone audit passed with `tech_debt` status — 19/19 requirements, 4/4 phases, 9/9 cross-phase E2E flows verified
+- All v1.8 phases human-UAT approved; milestone audit passed — 26/26 requirements, 14/14 phases, 5/5 E2E flows verified
 - All engine code (parser, runner, snippets, sessions) has zero Obsidian imports and is fully unit-testable
-- 419 tests passing + 1 skipped (32 test files), build green, `npx tsc --noEmit --skipLibCheck` exit 0
-- Known tech debt: Nyquist VALIDATION.md draft for phases 12–19, 28–31, 32–35, 36–42, 43, 46 (all prior milestones + 2 v1.7 phases); Phase 27 `phase-27-regressions` debug session still `awaiting_human_verify` (v1.3 legacy); 4 legacy todo files whose work was delivered in v1.5/v1.6 but the files were never deleted; `@deprecated` `LoopStartNode`/`LoopEndNode` types retained in graph-model for Migration Check enumeration
+- 648+ tests passing + 1 skipped, build green, `npx tsc --noEmit --skipLibCheck` exit 0
+- Known tech debt: Nyquist VALIDATION.md gaps for older phases, 1 legacy debug session (phase-27-regressions), stale todo files for delivered work, `@deprecated` LoopStartNode/LoopEndNode retained for Migration Check
 
 ## Constraints
 
@@ -334,6 +348,10 @@ A radiologist can generate a structured, accurate protocol in seconds by answeri
 | TypeScript exhaustiveness as free-text-input excision forcing function (Phase 46) | `Record<RPNodeKind, string>` + switch exhaustiveness finds every residual reference mechanically; grep sweeps are fallible | ✓ Good — 16 residual matches bounded to 4 intentional sites |
 | Fixture retention with semantic-role flip (Phase 46 D-46-01-C) | Kept `free-text.canvas` byte-identical but flipped role from happy-path to CLEAN-02 rejection proof; satisfies ROADMAP SC#4 "removed or rewritten" via rewrite path | ✓ Good — avoids churn in git history, preserves audit trail |
 | Parser-level rejection reuses existing MIGRATE-02 surface (Phase 46 CLEAN-02) | `{ success: false; error }` contract from Phase 43 already rendered by RunnerView `renderError` — no new UI path | ✓ Good — cross-phase contract preserved |
+| Loop exit edge = sole labeled edge (Phase 49) | Matches domain-authoring language; avoids a second special edge property | ⚠️ Revisit — superseded by "+"-prefix convention (Phase 50.1) |
+| Loop exit "+"-prefix convention (Phase 50.1) | `+` prefix distinguishes exit from labeled body edges; resolves Phase 49↔50 conflict | ✓ Good — clean separation from `isLabeledEdge` |
+| Inline mode = floating modal over active note (Phase 54) | Command-palette only; note-as-buffer; append to end; source-note binding | ✓ Good — additive to sidebar/tab modes |
+| File-bound Snippet = button click → direct insert (Phase 56) | Reversed Phase 51 D-13 auto-insert; directory-bound = button→picker | ✓ Good — user UAT preference |
 
 ## Evolution
 
@@ -344,4 +362,4 @@ A radiologist can generate a structured, accurate protocol in seconds by answeri
 4. Update Context with current state
 
 ---
-*Last updated: 2026-04-18 — v1.8 UX Polish & Snippet Picker Overhaul milestone opened*
+*Last updated: 2026-04-21 — v1.8 UX Polish & Snippet Picker Overhaul milestone shipped*
