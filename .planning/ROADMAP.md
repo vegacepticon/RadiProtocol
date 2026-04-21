@@ -473,5 +473,5 @@ Plans:
 | 54 | v1.8 | 4/4 | Complete | 2026-04-21 |
 | 55 | v1.8 | 4/4 | Complete | 2026-04-21 |
 | 56 | v1.8 | 4/4 | Complete | 2026-04-21 |
-| 57 | v1.8 | 0/? | Planned (GAP CLOSURE) | — |
+| 57 | v1.8 | 1/1 | Complete (GAP CLOSURE) | 2026-04-21 |
 | 58 | v1.8 | 0/? | Planned (GAP CLOSURE, depends on 57) | — |

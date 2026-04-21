@@ -4,13 +4,13 @@ milestone: v1.8
 milestone_name: UX Polish & Snippet Picker Overhaul
 status: executing
 stopped_at: "v1.8 complete at plan-level — all 12 phases (47, 48, 48.1, 49, 50, 50.1, 51, 52, 53, 54, 55, 56) shipped across 48 plans. Phase 55 BRAT-01 fully closed: GitHub Release published by user via web-UI (2026-04-21); SC-2/SC-3 unblocked. Milestone ready for /gsd-complete-milestone v1.8. Phase-level orchestrator gates (regression / code-review / verify_phase_goal) skipped per user decision — equivalent coverage verified through per-phase human UAT."
-last_updated: "2026-04-21T14:30:00.000Z"
-last_activity: 2026-04-21 -- Phase 55 SC-2/SC-3 unblocked (v1.8.0 Release published); STATE.md trim + ROADMAP refresh + frontmatter counters updated in preparation for milestone closure
+last_updated: "2026-04-21T17:00:00.000Z"
+last_activity: 2026-04-21 -- Phase 57 shipped (gap closure, docs-only): REQUIREMENTS.md traceability refreshed, INLINE-01..05 promoted, 11 stale checkboxes flipped
 progress:
-  total_phases: 12
-  completed_phases: 12
-  total_plans: 48
-  completed_plans: 48
+  total_phases: 13
+  completed_phases: 13
+  total_plans: 49
+  completed_plans: 49
   percent: 100
 ---
 
@@ -29,6 +29,7 @@ progress:
 **Active milestone:** v1.8 (85% complete — 34/40 plans across 15 phases).
 
 **Most recent work (2026-04-21):**
+- **Phase 57 — REQUIREMENTS Traceability Refresh (GAP CLOSURE)** — ✅ Complete (docs-only). Single atomic commit: INLINE-01..05 promoted, 11 stale checkboxes flipped, Coverage Summary added. Unblocks Phase 58 (which authors missing VERIFICATION.md files and cites INLINE-01..05).
 - **Phase 55 — BRAT Distribution Readiness** — ✅ Complete. 4 plans + UAT PASS 7/7. BRAT-01 fully closed — GitHub Release v1.8.0 published by user via web-UI on 2026-04-21; SC-2/SC-3 verified. See `55-04-SUMMARY.md`.
 - **Phase 54 — Inline Protocol Display Mode** — ✅ Complete (plan-level). 4 plans + 3 UAT fix rounds + post-landing code-review fix cycle (CR-01/CR-02, WR-01..WR-05). See `54-REVIEW-FIX.md`.
 - **Phase 56 — Snippet Button UX Reversal** — ✅ Complete (plan-level). 4 plans + UAT PASS 5/5. Overturned Phase 51 D-13 (auto-insert on single-edge file-bound Snippet) and D-16 (sibling-button routes through picker). New rule: file-bound Snippet = direct insert (or placeholder modal for `.json`); directory-bound = picker. See `56-04-SUMMARY.md`.
@@ -106,6 +107,7 @@ One line per plan. For full detail read `{phase}/{phase}-{plan}-SUMMARY.md` or `
 - **Phase 54** — Inline Protocol Display Mode — Plans 01–04 shipped 2026-04-21. Plan 01: `InlineRunnerModal` class + CSS shell. Plan 02: command registration + canvas picker + guards. Plan 03: `renderSnippet` import fix. Plan 04: UAT (3 fix rounds: 5+3+2 fixes) + post-code-review fix cycle (CR-01/CR-02/WR-01..WR-05 in commit `cd2baa3`). See `54-REVIEW-FIX.md`.
 - **Phase 55** — BRAT Distribution Readiness — Plans 01–04 shipped 2026-04-21. Plan 01: 1.8.0 manifest/versions/package alignment. Plan 02: release preflight script. Plan 03: v1.8.0 release runbook. Plan 04: runbook polish. UAT PASS 7/7. BRAT-01 fully closed — v1.8.0 GitHub Release published by user via web-UI (2026-04-21); SC-2/SC-3 verified.
 - **Phase 56** — Snippet Button UX Reversal — Plans 01–04 shipped 2026-04-21. Plan 01: runner-core file-bound dispatch. Plan 02: editor modal unsaved-dot. Plan 03: tree-picker committed-state. Plan 04: runner-view click dispatch + tests. UAT PASS 5/5.
+- **Phase 57** — REQUIREMENTS Traceability Refresh + Phase 54 Promotion (GAP CLOSURE) — Plan 01 shipped 2026-04-21. Single atomic commit: REQUIREMENTS.md gained Coverage Summary block + new `### Inline Protocol Display Mode (INLINE)` section with INLINE-01..05 (verbatim from ROADMAP §Phase 54 SC 1-5) + flipped 11 stale checkboxes (NODEUI-01..05 Phase 48, PICKER-01/02 Phase 51, RUNNER-SKIP-01..03 Phase 53, BRAT-01 Phase 55) + refreshed Traceability table. RUNNER-CLOSE-01..03 remain `[ ]` pending Phase 58. Zero source changes (docs-only).
 
 ### Open Tech Debt Carried Over from v1.7
 

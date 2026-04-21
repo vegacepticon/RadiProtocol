@@ -10,6 +10,12 @@
 
 ## v1.8 Requirements
 
+## Coverage Summary (as of 2026-04-21)
+
+- **Requirements closed:** 23 of 26 (88%) — RUNFIX-01..03, NODEUI-01..05, EDGE-01/02/03, PHLD-01, PICKER-01/02, RUNNER-SKIP-01..03, BRAT-01, INLINE-01..05
+- **Deferred to Phase 58 (verification-artifact backfill):** RUNNER-CLOSE-01..03 — UAT PASS 2026-04-21, awaiting `53-VERIFICATION.md` before traceability flip
+- **Historical / superseded:** EDGE-01 (Phase 49 closure preserved as historical milestone; EDGE-03 at Phase 50.1 is the active contract for the loop-exit discriminator)
+
 ### Runner Regressions (RUNFIX)
 
 - [x] **RUNFIX-01**: Manual textarea edits made before advancing through a loop node are preserved across every loop transition — entering a body branch, exiting via «выход», or re-entering the loop on dead-end return — so the user never loses hand-typed edits. ✅ Closed by Phase 47 Plan 01 (2026-04-18).
@@ -26,23 +32,23 @@
 
 ### Node Editor UX (NODEUI)
 
-- [ ] **NODEUI-01**: The Node Editor settings for a Text block no longer display the obsolete "Snippet ID (optional)" field. The field is gone from both the form and any underlying model/save path.
+- [x] **NODEUI-01**: The Node Editor settings for a Text block no longer display the obsolete "Snippet ID (optional)" field. The field is gone from both the form and any underlying model/save path. ✅ Closed by Phase 48 (2026-04-19).
   - **Source:** `.planning/todos/pending/remove-snippet-id-from-text-block.md`
   - **Signal:** selecting a Text block in Node Editor shows no "Snippet ID" input; the underlying `radiprotocol_snippetId` property on Text blocks is either ignored or removed on save.
 
-- [ ] **NODEUI-02**: Creating a new node through a Node Editor quick-create button positions the new node **below** the anchor (last-selected) node on the canvas, not to its right, producing a vertical tree by default.
+- [x] **NODEUI-02**: Creating a new node through a Node Editor quick-create button positions the new node **below** the anchor (last-selected) node on the canvas, not to its right, producing a vertical tree by default. ✅ Closed by Phase 48 (2026-04-19).
   - **Source:** `.planning/todos/pending/new-nodes-placed-below-last.md`
   - **Signal:** `CanvasNodeFactory` offset calculation changed from `(dx, 0)` right-offset to `(0, dy)` down-offset; applies to all four quick-create buttons (question, answer, snippet, loop).
 
-- [ ] **NODEUI-03**: In the Node Editor's Answer form, the "Display label (optional)" field is rendered **above** the "Answer text" field. Both labels and helper text accompany their respective inputs in the new order.
+- [x] **NODEUI-03**: In the Node Editor's Answer form, the "Display label (optional)" field is rendered **above** the "Answer text" field. Both labels and helper text accompany their respective inputs in the new order. ✅ Closed by Phase 48 (2026-04-19).
   - **Source:** `.planning/todos/pending/swap-answer-fields-order.md`
   - **Signal:** visual inspection shows Display label first, Answer text second.
 
-- [ ] **NODEUI-04**: In the Node Editor's Question form, the "Question text" textarea auto-grows with its content, and its label + helper description ("Displayed to the user during the protocol session") render **above** the textarea so the full panel width is available for input.
+- [x] **NODEUI-04**: In the Node Editor's Question form, the "Question text" textarea auto-grows with its content, and its label + helper description ("Displayed to the user during the protocol session") render **above** the textarea so the full panel width is available for input. ✅ Closed by Phase 48 (2026-04-19).
   - **Source:** `.planning/todos/pending/question-textarea-autogrow.md`
   - **Signal:** textarea height recomputes on input; label block stacked above textarea (not beside it).
 
-- [ ] **NODEUI-05**: The Node Editor's quick-create buttons (Create question / answer / snippet / loop node) are relocated to the **bottom** of the panel and arranged as a single **vertical** column, each button full-width.
+- [x] **NODEUI-05**: The Node Editor's quick-create buttons (Create question / answer / snippet / loop node) are relocated to the **bottom** of the panel and arranged as a single **vertical** column, each button full-width. ✅ Closed by Phase 48 (2026-04-19).
   - **Source:** `.planning/todos/pending/node-editor-create-buttons-bottom-stack.md`
   - **Signal:** `.rp-editor-create-toolbar` sits at the panel bottom; flex-direction column; `flex-wrap` constraint no longer relevant because buttons are single-column.
 
@@ -66,14 +72,14 @@
 
 ### Snippet Node & Picker (PICKER)
 
-- [ ] **PICKER-01**: A Snippet node may bind to either a directory (existing behaviour) **or** a specific snippet file (new). When the Runner reaches a specific-bound Snippet node:
+- [x] **PICKER-01**: A Snippet node may bind to either a directory (existing behaviour) **or** a specific snippet file (new). When the Runner reaches a specific-bound Snippet node:
   - if it is the sole option at the step → insert the snippet text automatically (no click required);
   - if it sits among sibling options → render as a single clickable choice button;
-  - the placeholder fill-in modal still runs before insertion for `.json` snippets with placeholders in both paths.
+  - the placeholder fill-in modal still runs before insertion for `.json` snippets with placeholders in both paths. ✅ Closed by Phase 51 (2026-04-20).
   - **Source:** `.planning/todos/pending/snippet-node-bind-to-specific-snippet.md` + `.planning/notes/snippet-node-binding-and-picker.md`
   - **Signal:** existing directory-bound Snippet nodes keep working unchanged; new binding variant co-exists.
 
-- [ ] **PICKER-02**: The Node Editor's target-selection widget for Snippet nodes is a **hierarchical navigator** (tree drill-down with breadcrumb) with a search field at the top that filters across the whole tree by name. The picker can select either a folder (directory binding) or a specific snippet file (specific binding).
+- [x] **PICKER-02**: The Node Editor's target-selection widget for Snippet nodes is a **hierarchical navigator** (tree drill-down with breadcrumb) with a search field at the top that filters across the whole tree by name. The picker can select either a folder (directory binding) or a specific snippet file (specific binding). ✅ Closed by Phase 51 (2026-04-20).
   - **Source:** `.planning/todos/pending/hierarchical-snippet-picker.md` + `.planning/notes/snippet-node-binding-and-picker.md`
   - **Signal:** flat-list directory picker is gone; a unified hierarchical picker component is reused wherever a snippet or folder is chosen. Pure UI change: stored path shape on the node is unchanged and existing saved protocols still load.
 
@@ -85,15 +91,15 @@
 
 ### Runner Skip & Close (RUNNER)
 
-- [ ] **RUNNER-SKIP-01**: The Runner renders a **Skip** icon-button (lucide `skip-forward`) inside the question zone (sibling of `rp-answer-list`) whenever `runnerStatus === 'at-node'` AND the current node is a question AND at least one outgoing answer-kind neighbor exists. The button is NOT rendered at `idle` / `awaiting-snippet-pick` / `awaiting-snippet-fill` / `awaiting-loop-pick` / `complete` / `error` or when the question has no answer neighbors.
+- [x] **RUNNER-SKIP-01**: The Runner renders a **Skip** icon-button (lucide `skip-forward`) inside the question zone (sibling of `rp-answer-list`) whenever `runnerStatus === 'at-node'` AND the current node is a question AND at least one outgoing answer-kind neighbor exists. The button is NOT rendered at `idle` / `awaiting-snippet-pick` / `awaiting-snippet-fill` / `awaiting-loop-pick` / `complete` / `error` or when the question has no answer neighbors. ✅ Closed by Phase 53 (2026-04-21).
   - **Source:** `.planning/phases/53-runner-skip-close-buttons/53-CONTEXT.md` D-01, D-04, D-05, D-07, D-08
   - **Signal:** `rp-skip-btn` present in the DOM only under the D-07 preconditions; `aria-label` + `title` carry the human label; `setIcon(btn, 'skip-forward')` renders the icon.
 
-- [ ] **RUNNER-SKIP-02**: Clicking **Skip** at a question node advances the runner to the first answer neighbor in `graph.adjacency` order WITHOUT appending the answer's text to the accumulator. Skip does NOT traverse any snippet neighbor — mixed answer+snippet branches (Phase 31) still pick the first *answer* neighbor. The click handler calls `capturePendingTextareaScroll()` → `syncManualEdit(previewTextarea.value)` → `runner.skip()` → `autoSaveSession()` → `renderAsync()` in that exact order (BUG-01 / RUNFIX-02 invariants preserved).
+- [x] **RUNNER-SKIP-02**: Clicking **Skip** at a question node advances the runner to the first answer neighbor in `graph.adjacency` order WITHOUT appending the answer's text to the accumulator. Skip does NOT traverse any snippet neighbor — mixed answer+snippet branches (Phase 31) still pick the first *answer* neighbor. The click handler calls `capturePendingTextareaScroll()` → `syncManualEdit(previewTextarea.value)` → `runner.skip()` → `autoSaveSession()` → `renderAsync()` in that exact order (BUG-01 / RUNFIX-02 invariants preserved). ✅ Closed by Phase 53 (2026-04-21).
   - **Source:** 53-CONTEXT.md D-08, D-09, D-11
   - **Signal:** accumulator text is byte-identical before and after Skip; `currentNodeId` transitions via the answer to the answer's first neighbor.
 
-- [ ] **RUNNER-SKIP-03**: **Skip is a recordable step** — it pushes an `UndoEntry` (same shape as `chooseAnswer`) BEFORE advancing. Pressing Step back after Skip returns the user to the question node with its answer buttons re-rendered and the accumulator unchanged from pre-Skip.
+- [x] **RUNNER-SKIP-03**: **Skip is a recordable step** — it pushes an `UndoEntry` (same shape as `chooseAnswer`) BEFORE advancing. Pressing Step back after Skip returns the user to the question node with its answer buttons re-rendered and the accumulator unchanged from pre-Skip. ✅ Closed by Phase 53 (2026-04-21).
   - **Source:** 53-CONTEXT.md D-10
   - **Signal:** `undoStack.length` grows by exactly 1 per Skip click; `stepBack()` restores `currentNodeId` to the question and `runnerStatus` to `at-node`.
 
@@ -109,9 +115,31 @@
   - **Source:** 53-CONTEXT.md D-14, D-16
   - **Signal:** after Close, `canvasFilePath === null`, `getState().status === 'idle'`, selector label matches the placeholder string `'Select a protocol\u2026'`.
 
+### Inline Protocol Display Mode (INLINE)
+
+- [x] **INLINE-01**: A new command `Run protocol in inline` is registered in the Obsidian command palette; executing it with an active note opens a canvas picker (scoped to the `Protocol` folder), and selecting a canvas spawns a floating modal anchored over that note, starting at the canvas's entry node, per `.planning/notes/inline-protocol-mode.md`. ✅ Closed by Phase 54 (2026-04-21).
+  - **Source:** `.planning/phases/54-inline-protocol-display-mode/54-CONTEXT.md` + `.planning/notes/inline-protocol-mode.md`
+  - **Signal:** command registered; canvas picker scoped to `Protocol/`; selecting a canvas opens a floating modal over the active note.
+
+- [x] **INLINE-02**: The floating modal does not block editing of the underlying note — the user can continue to type / edit the note while the modal is visible; selecting an answer option appends the resulting text to the **end** of that specific note (never cursor position, never another note). ✅ Closed by Phase 54 (2026-04-21).
+  - **Source:** `.planning/phases/54-inline-protocol-display-mode/54-CONTEXT.md` + `.planning/notes/inline-protocol-mode.md`
+  - **Signal:** floating modal is non-blocking; answer selection appends to the end of the source note only.
+
+- [x] **INLINE-03**: The Runner's internal textarea is not used in inline mode — the note itself is the buffer; there is no "commit all at once" step and no staging area; Obsidian's native undo is the only rollback path. ✅ Closed by Phase 54 (2026-04-21).
+  - **Source:** `.planning/phases/54-inline-protocol-display-mode/54-CONTEXT.md` + `.planning/notes/inline-protocol-mode.md`
+  - **Signal:** note-as-buffer (no staging area); rollback routed through Obsidian's native undo.
+
+- [x] **INLINE-04**: The protocol is bound to the source note for the duration of the run — if the user switches to a different note, the modal closes or freezes (discuss-phase picks one) and output never silently redirects elsewhere; on return to the source note the run resumes or is shown as ended (discuss-phase picks one). ✅ Closed by Phase 54 (2026-04-21).
+  - **Source:** `.planning/phases/54-inline-protocol-display-mode/54-CONTEXT.md` + `.planning/notes/inline-protocol-mode.md`
+  - **Signal:** source-note binding enforced; output never redirects to another note even on active-note switch.
+
+- [x] **INLINE-05**: The existing `sidebar` and `tab` display modes are unchanged — no regression in their behavior; inline is strictly additive and reachable only through the new command, not through settings, canvas attributes, or the existing Runner launch paths. ✅ Closed by Phase 54 (2026-04-21).
+  - **Source:** `.planning/phases/54-inline-protocol-display-mode/54-CONTEXT.md` + `.planning/notes/inline-protocol-mode.md`
+  - **Signal:** inline mode is additive; sidebar/tab launch paths untouched.
+
 ### Distribution (BRAT)
 
-- [ ] **BRAT-01**: The repository is prepared for installation through BRAT (Beta Reviewers Auto-update Tester). `manifest.json` `version`, `versions.json` mapping, and git tag/release naming are aligned; a GitHub **Release** exists with `manifest.json`, `main.js`, and `styles.css` attached as downloadable assets. Installing via BRAT with identifier `vegacepticon/RadiProtocol` succeeds in a fresh Obsidian vault.
+- [x] **BRAT-01**: The repository is prepared for installation through BRAT (Beta Reviewers Auto-update Tester). `manifest.json` `version`, `versions.json` mapping, and git tag/release naming are aligned; a GitHub **Release** exists with `manifest.json`, `main.js`, and `styles.css` attached as downloadable assets. Installing via BRAT with identifier `vegacepticon/RadiProtocol` succeeds in a fresh Obsidian vault. ✅ Closed by Phase 55 (2026-04-21).
   - **Source:** `.planning/todos/pending/prepare-repo-for-brat-install.md`
   - **Signal:** `gh release list` shows at least one release with the three assets; BRAT install end-to-end verified in a fresh vault.
 
@@ -137,28 +165,28 @@
 | RUNFIX-01 | Phase 47 | ✅ complete (2026-04-18) |
 | RUNFIX-02 | Phase 47 | ✅ complete (2026-04-18) |
 | RUNFIX-03 | Phase 47 | ✅ complete (2026-04-18) |
-| NODEUI-01 | Phase 48 | UAT PASS 2026-04-19 — verification artefact pending Phase 58 |
-| NODEUI-02 | Phase 48 | UAT PASS 2026-04-19 — verification artefact pending Phase 58 |
-| NODEUI-03 | Phase 48 | UAT PASS 2026-04-19 — verification artefact pending Phase 58 |
-| NODEUI-04 | Phase 48 | UAT PASS 2026-04-19 — verification artefact pending Phase 58 |
-| NODEUI-05 | Phase 48 | UAT PASS 2026-04-19 — verification artefact pending Phase 58 |
+| NODEUI-01 | Phase 48 | ✅ complete (2026-04-19) |
+| NODEUI-02 | Phase 48 | ✅ complete (2026-04-19) |
+| NODEUI-03 | Phase 48 | ✅ complete (2026-04-19) |
+| NODEUI-04 | Phase 48 | ✅ complete (2026-04-19) |
+| NODEUI-05 | Phase 48 | ✅ complete (2026-04-19) |
 | EDGE-01   | Phase 49 | ⚠ historical (Phase 49 UAT PASS 2026-04-19) — superseded by EDGE-03 (Phase 50.1) as active contract |
 | EDGE-02   | Phase 50 | ✅ complete (2026-04-19) |
 | EDGE-03   | Phase 50.1 | ✅ complete (2026-04-19) |
-| PICKER-01 | Phase 51 (+ Phase 56 reversal) | UAT PASS 2026-04-20 — traceability flip pending Phase 57; 56-VERIFICATION.md pending Phase 58 |
-| PICKER-02 | Phase 51 | UAT PASS 2026-04-20 — traceability flip pending Phase 57 |
+| PICKER-01 | Phase 51 (+ Phase 56 reversal) | ✅ complete (2026-04-20) |
+| PICKER-02 | Phase 51 | ✅ complete (2026-04-20) |
 | PHLD-01   | Phase 52 | ✅ complete (2026-04-20) |
-| RUNNER-SKIP-01  | Phase 53 | UAT PASS 2026-04-21 — verification artefact pending Phase 58 |
-| RUNNER-SKIP-02  | Phase 53 | UAT PASS 2026-04-21 — verification artefact pending Phase 58 |
-| RUNNER-SKIP-03  | Phase 53 | UAT PASS 2026-04-21 — verification artefact pending Phase 58 |
+| RUNNER-SKIP-01  | Phase 53 | ✅ complete (2026-04-21) |
+| RUNNER-SKIP-02  | Phase 53 | ✅ complete (2026-04-21) |
+| RUNNER-SKIP-03  | Phase 53 | ✅ complete (2026-04-21) |
 | RUNNER-CLOSE-01 | Phase 53 | UAT PASS 2026-04-21 — pre-checked without VERIFICATION.md backing; reset per audit, pending Phase 58 |
 | RUNNER-CLOSE-02 | Phase 53 | UAT PASS 2026-04-21 — pre-checked without VERIFICATION.md backing; reset per audit, pending Phase 58 |
 | RUNNER-CLOSE-03 | Phase 53 | UAT PASS 2026-04-21 — pre-checked without VERIFICATION.md backing; reset per audit, pending Phase 58 |
-| INLINE-01       | Phase 54 | pending — to be introduced by Phase 57 (Phase 54 SC 1: command + canvas picker) |
-| INLINE-02       | Phase 54 | pending — to be introduced by Phase 57 (Phase 54 SC 2: non-blocking floating modal + append) |
-| INLINE-03       | Phase 54 | pending — to be introduced by Phase 57 (Phase 54 SC 3: note-as-buffer, no staging) |
-| INLINE-04       | Phase 54 | pending — to be introduced by Phase 57 (Phase 54 SC 4: source-note binding) |
-| INLINE-05       | Phase 54 | pending — to be introduced by Phase 57 (Phase 54 SC 5: additive-only — sidebar/tab unchanged) |
-| BRAT-01   | Phase 55 | UAT PASS 2026-04-21 + Release published — verification artefact pending Phase 58 |
+| INLINE-01       | Phase 54 | ✅ complete (2026-04-21) |
+| INLINE-02       | Phase 54 | ✅ complete (2026-04-21) |
+| INLINE-03       | Phase 54 | ✅ complete (2026-04-21) |
+| INLINE-04       | Phase 54 | ✅ complete (2026-04-21) |
+| INLINE-05       | Phase 54 | ✅ complete (2026-04-21) |
+| BRAT-01   | Phase 55 | ✅ complete (2026-04-21) |
 
 *Phase assignments filled in by the roadmapper on 2026-04-18. Gap-closure annotations added 2026-04-21 after `.planning/v1.8-MILESTONE-AUDIT.md`; Phase 57 introduces INLINE-01..05 and flips stale checkboxes, Phase 58 authors the missing VERIFICATION.md artefacts.*
