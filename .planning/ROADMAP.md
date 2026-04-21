@@ -1,7 +1,7 @@
 # Roadmap: RadiProtocol
 
 **Project:** RadiProtocol
-**Last updated:** 2026-04-21 (Phase 55 complete)
+**Last updated:** 2026-04-21 (Phase 58 complete)
 
 ---
 
@@ -14,7 +14,7 @@
 - ✅ **v1.5 Snippet Editor Refactoring** — Phases 32-35 (shipped 2026-04-16)
 - ✅ **v1.6 Polish & Canvas Workflow** — Phases 36-42 (shipped 2026-04-17)
 - ✅ **v1.7 Loop Rework & Regression Cleanup** — Phases 43-46 (shipped 2026-04-18)
-- ⏳ **v1.8 UX Polish & Snippet Picker Overhaul** — Phases 47-58 (12 feature phases complete; v1.8.0 Release published 2026-04-21; 2 gap-closure phases 57-58 pending per `.planning/v1.8-MILESTONE-AUDIT.md`)
+- ✅ **v1.8 UX Polish & Snippet Picker Overhaul** — Phases 47-58 (14 phases complete; v1.8.0 Release published 2026-04-21; gap-closure phases 57-58 complete 2026-04-21)
 
 ---
 
@@ -125,8 +125,8 @@ Full details: `.planning/milestones/v1.7-ROADMAP.md`
 - [x] **Phase 54: Inline Protocol Display Mode** — ✅ Complete 2026-04-21. Third Runner display mode — floating non-blocking modal over the active note; each answer selection appends directly to the end of that note. Launched via command palette entry `Run protocol in inline`. 4 plans shipped. UAT required 3 fix rounds (`e3e8cb1` 5 fixes, `22e7b0b` round 2, `f4c2352` round 2b). Post-landing code review fix cycle — CR-01/CR-02 + WR-01..WR-05 in `cd2baa3`. See `54-REVIEW-FIX.md`.
 - [x] **Phase 55: BRAT Distribution Readiness** — ✅ Complete 2026-04-21. BRAT-01 fully closed: manifest/versions/package aligned on 1.8.0, author metadata set (D9), styles.css untracked (D5), annotated tag 1.8.0 created, preflight script authored + committed, release runbook with 5 sections + curated changelog + BRAT smoke test. GitHub Release v1.8.0 published by user via web-UI (2026-04-21) — SC-2/SC-3 verified. Commits: 8bf64a8 (release-prep), 2390f21 (preflight script), 6ad3ca5 (runbook).
 - [x] **Phase 56: Snippet Button UX Reversal** — ✅ Complete 2026-04-21. Overturns Phase 51 D-13/D-16. 4 plans shipped: file-bound Snippet renders as button + click = direct insert (or placeholder modal for `.json`); directory-bound continues via picker. SnippetEditorModal folder-select gains unsaved-dot indicator + committed-state button color feedback. UAT PASS 5/5 (commit `3cc797a`).
-- [ ] **Phase 57: REQUIREMENTS Traceability Refresh + Phase 54 Promotion (GAP CLOSURE)** — Close audit gaps from `.planning/v1.8-MILESTONE-AUDIT.md`: promote Phase 54 to REQUIREMENTS.md as new `INLINE-01..05` family mapped to ROADMAP §Phase 54 SC 1-5; flip 11 stale `[ ]` → `[x]` checkboxes (NODEUI-01..05, PICKER-01, PICKER-02, RUNNER-SKIP-01..03, BRAT-01) with completion dates; refresh traceability table; clarify EDGE-01 historical annotation. Zero source-code changes — pure REQUIREMENTS.md edit.
-- [ ] **Phase 58: VERIFICATION.md Backfill + Stale Frontmatter Flip (GAP CLOSURE)** — Close audit gaps from `.planning/v1.8-MILESTONE-AUDIT.md`: author `48-VERIFICATION.md`, `48.1-VERIFICATION.md`, `53-VERIFICATION.md`, `54-VERIFICATION.md` (+ missing `54-UAT.md`), `55-VERIFICATION.md`, `56-VERIFICATION.md`; flip stale VALIDATION.md frontmatter on Phases 48/52/55 (`draft`/`planned` → `ready`/`passed`); flip `51-VERIFICATION.md` frontmatter from `human_needed` → `passed`. Depends on Phase 57 (INLINE-01..05 REQ-IDs must exist before `54-VERIFICATION.md` can reference them). Zero source-code changes — pure artefact authoring.
+- [x] **Phase 57: REQUIREMENTS Traceability Refresh + Phase 54 Promotion (GAP CLOSURE)** — ✅ Complete 2026-04-21. REQUIREMENTS.md traceability refreshed, INLINE-01..05 promoted, 11 stale checkboxes flipped. Commit 960f992 (atomic docs edit). VERIFICATION.md: 57-VERIFICATION.md status `passed`.
+- [x] **Phase 58: VERIFICATION.md Backfill + Stale Frontmatter Flip (GAP CLOSURE)** — ✅ Complete 2026-04-21. Authored 6 VERIFICATION.md files (48, 48.1, 53, 54, 55, 56) + missing 54-UAT.md. Flipped stale frontmatter on 48-VALIDATION.md, 52-VALIDATION.md, 55-VALIDATION.md, 51-VERIFICATION.md. Commit ac33c9c.
 
 ---
 
@@ -474,4 +474,4 @@ Plans:
 | 55 | v1.8 | 4/4 | Complete | 2026-04-21 |
 | 56 | v1.8 | 4/4 | Complete | 2026-04-21 |
 | 57 | v1.8 | 1/1 | Complete (GAP CLOSURE) | 2026-04-21 |
-| 58 | v1.8 | 0/? | Planned (GAP CLOSURE, depends on 57) | — |
+| 58 | v1.8 | 7/7 | Complete (GAP CLOSURE) | 2026-04-21 |
