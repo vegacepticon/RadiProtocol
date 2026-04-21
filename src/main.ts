@@ -27,6 +27,7 @@ export default class RadiProtocolPlugin extends Plugin {
   canvasNodeFactory!: CanvasNodeFactory;
   edgeLabelSyncService!: EdgeLabelSyncService;
   private readonly insertMutex = new WriteMutex();
+  private pickerModal: SuggestModal<{ file: TFile; name: string }> | null = null;
 
   async onload(): Promise<void> {
     // Load settings with defaults guard (NFR-08)
@@ -149,6 +150,11 @@ export default class RadiProtocolPlugin extends Plugin {
   }
 
   async onunload(): Promise<void> {
+    // WR-05: dismiss the canvas picker modal if it's still open
+    if (this.pickerModal !== null) {
+      this.pickerModal.close();
+      this.pickerModal = null;
+    }
     this.canvasLiveEditor.destroy();
     this.canvasNodeFactory.destroy();
     this.edgeLabelSyncService.destroy();
@@ -455,7 +461,7 @@ export default class RadiProtocolPlugin extends Plugin {
     // Canvas picker via SuggestModal
     const plugin = this;
     const targetNote = activeFile;
-    const picker = new (class extends SuggestModal<{ file: TFile; name: string }> {
+    this.pickerModal = new (class extends SuggestModal<{ file: TFile; name: string }> {
       constructor() {
         super(plugin.app);
       }
@@ -472,11 +478,12 @@ export default class RadiProtocolPlugin extends Plugin {
       }
 
       onChooseSuggestion(item: { file: TFile; name: string }): void {
+        plugin.pickerModal = null;
         void plugin.openInlineRunner(item.file, targetNote);
       }
     })();
 
-    picker.open();
+    this.pickerModal.open();
   }
 
   /** Open the InlineRunnerModal for a selected canvas and target note. */

@@ -562,6 +562,12 @@ export class InlineRunnerModal {
     const afterText = this.extractAccumulatedText(stateAfter);
 
     if (afterText.length > beforeText.length) {
+      // WR-01: defensive check — text should only grow (append-only invariant)
+      if (!afterText.startsWith(beforeText)) {
+        console.warn('[RadiProtocol] Text changed non-monotonically, skipping append');
+        this.render();
+        return;
+      }
       const appendedText = afterText.slice(beforeText.length);
       await this.appendAnswerToNote(appendedText);
     }
@@ -573,16 +579,20 @@ export class InlineRunnerModal {
    *  separators from the accumulator, but Obsidian adds a trailing newline
    *  to files on save. If the note already ends with the separator char and
    *  the delta starts with it, strip the leading separator from the delta
-   *  to avoid duplication. */
+   *  to avoid duplication.
+   *  CR-02: Protected by insertMutex to prevent read-modify-write races
+   *  with concurrent vault.modify calls (e.g., user edits, other plugins). */
   private async appendAnswerToNote(text: string): Promise<void> {
-    const currentContent = await this.app.vault.read(this.targetNote);
-    let toAppend = text;
-    const sep = this.resolveSeparator();
-    if (currentContent.endsWith(sep) && text.startsWith(sep)) {
-      toAppend = text.slice(sep.length);
-    }
-    const newContent = currentContent + toAppend;
-    await this.app.vault.modify(this.targetNote, newContent);
+    await this.plugin['insertMutex'].runExclusive(this.targetNote.path, async () => {
+      const currentContent = await this.app.vault.read(this.targetNote);
+      let toAppend = text;
+      const sep = this.resolveSeparator();
+      if (currentContent.endsWith(sep) && text.startsWith(sep)) {
+        toAppend = text.slice(sep.length);
+      }
+      const newContent = currentContent + toAppend;
+      await this.app.vault.modify(this.targetNote, newContent);
+    });
   }
 
   /** Handle loop branch click — append any traversed answer text to note. */
@@ -609,6 +619,10 @@ export class InlineRunnerModal {
       afterText = stateAfter.accumulatedText;
     } else if (stateAfter.status === 'awaiting-snippet-fill') {
       afterText = stateAfter.accumulatedText;
+    } else {
+      // WR-02: unexpected state — preserve baseline to avoid spurious append
+      console.warn('[RadiProtocol] Unexpected state after loop branch:', stateAfter.status);
+      afterText = beforeText;
     }
 
     if (afterText.length > beforeText.length) {
@@ -727,21 +741,37 @@ export class InlineRunnerModal {
             return;
           }
 
+          // CR-01: Verify the modal container is still in the DOM before
+          // operating on any captured DOM references. If the modal was
+          // closed or re-rendered, the captured questionZone is detached.
+          if (this.containerEl === null || !document.body.contains(this.containerEl)) {
+            return;
+          }
+
           if (snippet === null) {
-            questionZone.empty();
-            questionZone.createEl('p', {
-              cls: 'rp-empty-state-body',
-              text: `Snippet not found: ${result.relativePath}`,
-            });
+            // Re-render to get a fresh DOM instead of writing to a stale element.
+            this.render();
+            const freshZone = this.contentEl?.querySelector('.rp-question-zone');
+            if (freshZone) {
+              freshZone.empty();
+              freshZone.createEl('p', {
+                cls: 'rp-empty-state-body',
+                text: `Snippet not found: ${result.relativePath}`,
+              });
+            }
             return;
           }
 
           if (snippet.kind === 'json' && snippet.validationError !== null) {
-            questionZone.empty();
-            questionZone.createEl('p', {
-              cls: 'rp-empty-state-body',
-              text: `Snippet "${snippet.path}" cannot be used. ${snippet.validationError}`,
-            });
+            this.render();
+            const freshZone = this.contentEl?.querySelector('.rp-question-zone');
+            if (freshZone) {
+              freshZone.empty();
+              freshZone.createEl('p', {
+                cls: 'rp-empty-state-body',
+                text: `Snippet "${snippet.path}" cannot be used. ${snippet.validationError}`,
+              });
+            }
             return;
           }
 
@@ -806,9 +836,12 @@ export class InlineRunnerModal {
       snippetId.endsWith('.md') ||
       snippetId.endsWith('.json');
     const root = this.plugin.settings.snippetFolderPath;
-    const absPath = isPhase51FullPath
-      ? `${root}/${snippetId}`
-      : `${root}/${snippetId}.json`;
+    // WR-03: avoid double-prefixing when snippetId is already an absolute vault path
+    const absPath = snippetId.startsWith(root + '/')
+      ? snippetId
+      : isPhase51FullPath
+        ? `${root}/${snippetId}`
+        : `${root}/${snippetId}.json`;
 
     const snippet = await this.plugin.snippetService.load(absPath);
 
@@ -921,10 +954,11 @@ export class InlineRunnerModal {
     });
     submitBtn.addEventListener('click', () => {
       // Convert values to string format for renderSnippet
+      // WR-04: copy array values before processing to avoid mutation-after-submit issues
       const filledValues: Record<string, string> = {};
       for (const [key, val] of Object.entries(values)) {
         if (Array.isArray(val)) {
-          filledValues[key] = val.join(this.plugin.settings.textSeparator);
+          filledValues[key] = [...val].join(this.plugin.settings.textSeparator);
         } else {
           filledValues[key] = val as string;
         }
