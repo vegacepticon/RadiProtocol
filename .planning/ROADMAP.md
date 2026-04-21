@@ -14,7 +14,7 @@
 - ✅ **v1.5 Snippet Editor Refactoring** — Phases 32-35 (shipped 2026-04-16)
 - ✅ **v1.6 Polish & Canvas Workflow** — Phases 36-42 (shipped 2026-04-17)
 - ✅ **v1.7 Loop Rework & Regression Cleanup** — Phases 43-46 (shipped 2026-04-18)
-- ⏳ **v1.8 UX Polish & Snippet Picker Overhaul** — Phases 47-56 (Phase 55 complete)
+- ⏳ **v1.8 UX Polish & Snippet Picker Overhaul** — Phases 47-56 (all 12 phases complete; v1.8.0 Release published 2026-04-21; awaiting `/gsd-complete-milestone v1.8`)
 
 ---
 
@@ -114,16 +114,17 @@ Full details: `.planning/milestones/v1.7-ROADMAP.md`
 ### v1.8 UX Polish & Snippet Picker Overhaul (Phases 47-56)
 
 - [x] **Phase 47: Runner Regressions** — ✅ Complete. RUNFIX-01/02/03 closed; code review (0 critical), verification, and live UAT all PASS (2026-04-19). RUNFIX-02 revised post-UAT to scroll-to-insertion-point (commit 95e7d0b).
-- [ ] **Phase 48: Node Editor UX Polish** — Remove obsolete Snippet ID field, re-anchor new nodes below last, reorder Answer fields, auto-grow Question textarea, relocate quick-create buttons to bottom vertical column
+- [x] **Phase 48: Node Editor UX Polish** — ✅ Complete 2026-04-19. NODEUI-01/02/03/04/05 closed. Plan 01 (editor-form-ts-core) landed NODEUI-01..04 (Snippet ID row removed, factory offset flipped, Answer fields reordered, Question textarea replaced with custom-DOM auto-grow block). Plan 02 (toolbar-css-bottom-stack) landed NODEUI-05 (vertical bottom toolbar). UAT PASS 10/0 (1 cosmetic follow-up → Phase 48.1). Commits: `cc46b5e..740f85d` (Plan 01), `b1942a6..35dbc10` (Plan 02), `6f68794` (UAT).
 - [x] **Phase 48.1: Toolbar Gap Tighten (INSERTED)** — ✅ Complete. Replaced `margin-top: auto` with `var(--size-4-3)` + overrode `.rp-editor-panel { height: auto }` (Phase 48.1b) to keep the form panel from pushing the toolbar off-screen. Live UAT PASS (2026-04-19). Commits: 25ab41f, f23b841.
 - [x] **Phase 49: Loop Exit Edge Convention** — ✅ Complete 2026-04-19. EDGE-01 closed by human UAT (non-«выход» exit label verbatim, D-01/D-02/D-03 error panel text, legacy «выход» canvases regress-free in TEST-BASE). Tests: 466 passed / 0 failed / 1 skipped (+26 vs Phase 48.1 baseline). Zero runtime `edge.label === 'выход'` in src/. gsd-verifier: 11/11 must-haves verified, status `passed`.
 - [x] **Phase 50: Answer ↔ Edge Label Sync** — ✅ Complete 2026-04-19. EDGE-02 closed by human UAT PASS (5/5 scenarios in TEST-BASE: canvas-open Pattern B D-14 atomic write, canvas-closed Strategy A single vault.modify, D-04 inbound reconcile with D-07 self-termination, multi-incoming sibling re-sync, clearing symmetry 5a+5b). Tests: 484 passed / 1 skipped / 0 failed (+18 vs Phase 49 baseline). gsd-verifier: 37/37 must-haves verified (commit 62dd212), status `passed`. Follow-up captured as Phase 50.1 (INSERTED).
 - [x] **Phase 50.1: Loop Exit `+` Prefix Convention (INSERTED)** — ✅ Complete 2026-04-19. `isExitEdge` redefined to `label.trim().startsWith('+')`; `stripExitPrefix` added; LOOP-04 validator emits 5 locked Russian errors (D-04..D-08); RunnerView exit caption uses `stripExitPrefix`; 10 loop-canvas fixtures migrated/created. EDGE-03 added to REQUIREMENTS.md; EDGE-01 superseded. Tests: 506 passed / 1 skipped / 0 failed (+22 vs Phase 50 baseline). gsd-verifier: 37/37 must-haves verified, status `passed`. UAT PASS in TEST-BASE (3/3 scenarios).
-- [ ] **Phase 51: Snippet Picker Overhaul** — Add specific-snippet binding on Snippet nodes + replace flat folder list with unified hierarchical picker (tree drill-down, breadcrumb, tree-wide search)
+- [x] **Phase 51: Snippet Picker Overhaul** — ✅ Complete 2026-04-20. PICKER-01/02 closed. 6 plans shipped: specific-snippet binding on Snippet nodes, hierarchical picker with tree drill-down + breadcrumb + tree-wide search. Human UAT verdict overturned D-13 (auto-insert on single-edge file-bound Snippet) and D-16 (sibling-button through picker) → follow-up Phase 56. See `51-VERIFICATION.md` + `51-HUMAN-UAT.md`.
 - [x] **Phase 52: JSON Placeholder Rework** — ✅ Complete 2026-04-20. PHLD-01 closed by UAT PASS 5/5 (D-08 options roundtrip, D-02 separator rename, D-05 unified choice multi-select, D-04 editor banner, D-04 runner error). Tests: 642/1/0. One mid-UAT gap closure applied to chip-editor click handler (latent bug since Phase 33).
 - [x] **Phase 53: Runner Skip & Close Buttons** — ✅ Complete 2026-04-21. RUNNER-SKIP-01..03 + RUNNER-CLOSE-01..03 closed. UAT PASS 3/3 in TEST-BASE (SC-1 Skip advances without text append + undo roundtrip; SC-2 Close confirmation modal + D-14 teardown; SC-3 visibility gating). Tests: 648/1/0 (+6 vs Phase 52 baseline).
-- [x] **Phase 55: BRAT Distribution Readiness** — ✅ Complete 2026-04-21. BRAT-01 evidenced locally: manifest/versions/package aligned on 1.8.0, author metadata set (D9), styles.css untracked (D5), annotated tag 1.8.0 created, preflight script authored + committed, release runbook with 5 sections + curated changelog + BRAT smoke test. SC-2/SC-3 blocked only on user web-UI Release action. Commits: 8bf64a8 (release-prep), 2390f21 (preflight script), 6ad3ca5 (runbook).
-- [ ] **Phase 56: Snippet Button UX Reversal** — Откат Phase 51 D-13/D-16: file-bound Snippet всегда рендерится как кнопка + клик даёт прямую вставку (без picker); UI indicators для folder selection в SnippetEditorModal (unsaved marker + button color feedback)
+- [x] **Phase 54: Inline Protocol Display Mode** — ✅ Complete 2026-04-21. Third Runner display mode — floating non-blocking modal over the active note; each answer selection appends directly to the end of that note. Launched via command palette entry `Run protocol in inline`. 4 plans shipped. UAT required 3 fix rounds (`e3e8cb1` 5 fixes, `22e7b0b` round 2, `f4c2352` round 2b). Post-landing code review fix cycle — CR-01/CR-02 + WR-01..WR-05 in `cd2baa3`. See `54-REVIEW-FIX.md`.
+- [x] **Phase 55: BRAT Distribution Readiness** — ✅ Complete 2026-04-21. BRAT-01 fully closed: manifest/versions/package aligned on 1.8.0, author metadata set (D9), styles.css untracked (D5), annotated tag 1.8.0 created, preflight script authored + committed, release runbook with 5 sections + curated changelog + BRAT smoke test. GitHub Release v1.8.0 published by user via web-UI (2026-04-21) — SC-2/SC-3 verified. Commits: 8bf64a8 (release-prep), 2390f21 (preflight script), 6ad3ca5 (runbook).
+- [x] **Phase 56: Snippet Button UX Reversal** — ✅ Complete 2026-04-21. Overturns Phase 51 D-13/D-16. 4 plans shipped: file-bound Snippet renders as button + click = direct insert (or placeholder modal for `.json`); directory-bound continues via picker. SnippetEditorModal folder-select gains unsaved-dot indicator + committed-state button color feedback. UAT PASS 5/5 (commit `3cc797a`).
 
 ---
 
@@ -427,14 +428,15 @@ Plans:
 | 44 | v1.7 | 5/5 | Complete   | 2026-04-17 |
 | 45 | v1.7 | 3/3 | Complete | 2026-04-18 |
 | 46 | v1.7 | 3/3 | Complete | 2026-04-18 |
-| 47 | v1.8 | 3/3 | In progress | - |
-| 48 | v1.8 | 0/0 | Not started | - |
+| 47 | v1.8 | 3/3 | Complete | 2026-04-19 |
+| 48 | v1.8 | 2/2 | Complete | 2026-04-19 |
 | 48.1 | v1.8 | 1/1 | Complete (INSERTED) | 2026-04-19 |
 | 49 | v1.8 | 5/5 | Complete | 2026-04-19 |
 | 50 | v1.8 | 5/5 | Complete | 2026-04-19 |
 | 50.1 | v1.8 | 5/5 | Complete (INSERTED) | 2026-04-19 |
-| 51 | v1.8 | 0/6 | Planned | - |
+| 51 | v1.8 | 6/6 | Complete | 2026-04-20 |
 | 52 | v1.8 | 5/5 | Complete | 2026-04-20 |
-| 53 | v1.8 | 1/4 | In progress | - |
-| 54 | v1.8 | 0/0 | Not started | - |
-| 55 | v1.8 | 0/0 | Not started | - |
+| 53 | v1.8 | 4/4 | Complete | 2026-04-21 |
+| 54 | v1.8 | 4/4 | Complete | 2026-04-21 |
+| 55 | v1.8 | 4/4 | Complete | 2026-04-21 |
+| 56 | v1.8 | 4/4 | Complete | 2026-04-21 |

@@ -22,7 +22,7 @@
     "node_repair_budget": 2,
     "ui_phase": true,
     "ui_safety_gate": true,
-    "ai_integration_phase": true,
+    "ai_integration_phase": false,
     "text_mode": false,
     "research_before_questions": false,
     "discuss_mode": "discuss",
