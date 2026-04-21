@@ -1,9 +1,9 @@
 ---
 phase: 52
 slug: json-placeholder-rework
-status: planned
+status: passed
 nyquist_compliant: true
-wave_0_complete: false
+wave_0_complete: true
 created: 2026-04-20
 updated: 2026-04-20
 ---
