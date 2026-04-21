@@ -206,7 +206,6 @@ export class InlineRunnerModal {
 
     this.contentEl.empty();
 
-    const previewZone = this.contentEl.createDiv({ cls: 'rp-preview-zone' });
     const questionZone = this.contentEl.createDiv({ cls: 'rp-question-zone' });
     const outputToolbar = this.contentEl.createDiv({ cls: 'rp-output-toolbar' });
 
@@ -216,7 +215,6 @@ export class InlineRunnerModal {
           text: 'Starting protocol…',
           cls: 'rp-empty-state-body',
         });
-        this.renderPreviewZone(previewZone, '');
         this.renderOutputToolbar(outputToolbar, null, false);
         break;
       }
@@ -335,13 +333,11 @@ export class InlineRunnerModal {
           });
         }
 
-        this.renderPreviewZone(previewZone, state.accumulatedText);
         this.renderOutputToolbar(outputToolbar, state.accumulatedText, false);
         break;
       }
 
       case 'awaiting-snippet-pick': {
-        this.renderPreviewZone(previewZone, state.accumulatedText);
         this.renderOutputToolbar(outputToolbar, state.accumulatedText, false);
 
         questionZone.createEl('p', {
@@ -386,8 +382,7 @@ export class InlineRunnerModal {
             text: caption,
           });
           btn.addEventListener('click', () => {
-            this.runner.chooseLoopBranch(edge.id);
-            this.render();
+            void this.handleLoopBranchClick(edge, exit);
           });
         }
 
@@ -402,7 +397,6 @@ export class InlineRunnerModal {
           });
         }
 
-        this.renderPreviewZone(previewZone, state.accumulatedText);
         this.renderOutputToolbar(outputToolbar, state.accumulatedText, false);
         break;
       }
@@ -412,7 +406,6 @@ export class InlineRunnerModal {
           text: 'Loading snippet...',
           cls: 'rp-empty-state-body',
         });
-        this.renderPreviewZone(previewZone, state.accumulatedText);
         this.renderOutputToolbar(outputToolbar, state.accumulatedText, false);
         void this.handleSnippetFill(state.snippetId, questionZone);
         break;
@@ -420,7 +413,6 @@ export class InlineRunnerModal {
 
       case 'complete': {
         questionZone.createEl('h2', { text: 'Protocol complete', cls: 'rp-complete-heading' });
-        this.renderPreviewZone(previewZone, state.finalText);
         this.renderOutputToolbar(outputToolbar, state.finalText, true);
         break;
       }
@@ -483,29 +475,62 @@ export class InlineRunnerModal {
     this.close();
   }
 
+  /** Resolve the textSeparator enum to its actual string value. */
+  private resolveSeparator(): string {
+    const sep = this.plugin.settings.textSeparator;
+    return sep === 'newline' ? '\n' : ' ';
+  }
+
   /** Handle answer button click — append answer to note and advance. */
   private async handleAnswerClick(answerNode: AnswerNode): Promise<void> {
-    const answerText = answerNode.displayLabel ?? answerNode.answerText;
     this.runner.chooseAnswer(answerNode.id);
-    await this.appendAnswerToNote(answerText);
+    await this.appendAnswerToNote(answerNode.answerText);
     this.render();
   }
 
-  /** Append answer text to the end of the target note. */
+  /** Append text to the end of the target note with proper separator. */
   private async appendAnswerToNote(text: string): Promise<void> {
     const currentContent = await this.app.vault.read(this.targetNote);
-    const separator = currentContent.trim().length === 0 ? '' : this.plugin.settings.textSeparator;
+    const separator = currentContent.trim().length === 0 ? '' : this.resolveSeparator();
     const newContent = currentContent + separator + text;
     await this.app.vault.modify(this.targetNote, newContent);
   }
 
-  // ── Sub-renders ───────────────────────────────────────────────────────────
+  /** Handle loop branch click — append any traversed answer text to note. */
+  private async handleLoopBranchClick(edge: import('../graph/graph-model').RPEdge, isExit: boolean): Promise<void> {
+    // Capture accumulated text before the branch choice
+    const stateBefore = this.runner.getState();
+    const beforeText = stateBefore.status === 'awaiting-loop-pick'
+      ? stateBefore.accumulatedText
+      : '';
 
-  /** Render the preview zone — uses <pre> instead of <textarea> (note IS the buffer). */
-  private renderPreviewZone(zone: HTMLElement, text: string): void {
-    const pre = zone.createEl('pre', { cls: 'rp-inline-preview' });
-    pre.createEl('code', { text: text || '(no output yet)' });
+    this.runner.chooseLoopBranch(edge.id);
+
+    // After chooseLoopBranch, the runner may have advanced through answer/text-block nodes.
+    // Capture the new accumulated text — the delta is what was appended by advanceThrough.
+    const stateAfter = this.runner.getState();
+    let afterText = '';
+    if (stateAfter.status === 'at-node') {
+      afterText = stateAfter.accumulatedText;
+    } else if (stateAfter.status === 'awaiting-loop-pick') {
+      afterText = stateAfter.accumulatedText;
+    } else if (stateAfter.status === 'complete') {
+      afterText = stateAfter.finalText;
+    } else if (stateAfter.status === 'awaiting-snippet-pick') {
+      afterText = stateAfter.accumulatedText;
+    } else if (stateAfter.status === 'awaiting-snippet-fill') {
+      afterText = stateAfter.accumulatedText;
+    }
+
+    if (afterText.length > beforeText.length) {
+      const appendedText = afterText.slice(beforeText.length);
+      await this.appendAnswerToNote(appendedText.trimStart());
+    }
+
+    this.render();
   }
+
+  // ── Sub-renders ───────────────────────────────────────────────────────────
 
   /** Render the output toolbar for complete state. */
   private renderOutputToolbar(
