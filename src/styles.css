@@ -1513,3 +1513,166 @@
   background-color: var(--interactive-accent-hover);
   color: var(--text-on-accent);
 }
+
+/* Phase 54: Inline protocol display mode — bottom bar, note-width */
+
+.rp-inline-runner-container {
+  position: fixed;
+  bottom: 0;
+  max-height: 45vh;
+  background: var(--background-primary);
+  border-top: 1px solid var(--background-modifier-border);
+  box-shadow: 0 -2px 12px rgba(0, 0, 0, 0.15);
+  display: flex;
+  flex-direction: column;
+  z-index: var(--layer-modal);
+  transition: left 0.15s ease, right 0.15s ease;
+}
+
+.rp-inline-runner-container.is-hidden {
+  display: none;
+}
+
+.rp-inline-runner-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--size-4-2) var(--size-4-3);
+  border-bottom: 1px solid var(--background-modifier-border);
+  flex-shrink: 0;
+}
+
+.rp-inline-runner-header-title {
+  flex-grow: 1;
+  font-weight: var(--font-semibold);
+  font-size: var(--font-ui-small);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.rp-inline-runner-close-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: var(--size-2-2);
+  border-radius: var(--radius-s);
+  color: var(--text-muted);
+}
+
+.rp-inline-runner-close-btn:hover {
+  background: var(--background-modifier-hover);
+  color: var(--text-normal);
+}
+
+.rp-inline-runner-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: var(--size-4-3);
+}
+
+/* Reuse existing .rp-* classes for visual parity (D7) */
+.rp-inline-runner-content .rp-question-text {
+  margin: 0 0 var(--size-4-3) 0;
+}
+
+.rp-inline-runner-content .rp-answer-list,
+.rp-inline-runner-content .rp-snippet-branch-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--size-4-2);
+  margin-bottom: var(--size-4-3);
+}
+
+.rp-inline-runner-content .rp-output-toolbar {
+  display: flex;
+  gap: var(--size-4-2);
+  margin-top: var(--size-4-3);
+  padding-top: var(--size-4-2);
+  border-top: 1px solid var(--background-modifier-border);
+}
+
+/* Snippet picker inline host */
+.rp-stp-inline-host {
+  width: 100%;
+}
+
+/* Loop picker */
+.rp-inline-runner-content .rp-loop-picker-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--size-4-2);
+  margin-bottom: var(--size-4-3);
+}
+
+/* Snippet fill-in form (D6) */
+.rp-inline-runner-content .rp-snippet-fill-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--size-4-3);
+}
+
+.rp-inline-runner-content .rp-snippet-fill-title {
+  font-weight: var(--font-semibold);
+  margin: 0;
+}
+
+.rp-inline-runner-content .rp-snippet-fill-row {
+  display: flex;
+  flex-direction: column;
+  gap: var(--size-4-1);
+}
+
+.rp-inline-runner-content .rp-snippet-fill-label {
+  font-weight: var(--font-medium);
+  font-size: var(--font-ui-small);
+}
+
+.rp-inline-runner-content .rp-snippet-fill-input {
+  width: 100%;
+  padding: var(--size-4-2) var(--size-4-3);
+  border: 1px solid var(--background-modifier-border);
+  border-radius: var(--radius-s);
+  background: var(--background-modifier-form);
+}
+
+.rp-inline-runner-content .rp-snippet-fill-choices {
+  display: flex;
+  flex-direction: column;
+  gap: var(--size-4-1);
+}
+
+.rp-inline-runner-content .rp-snippet-fill-choice-label {
+  display: flex;
+  align-items: center;
+  gap: var(--size-4-2);
+  cursor: pointer;
+}
+
+.rp-inline-runner-content .rp-snippet-fill-buttons {
+  display: flex;
+  gap: var(--size-4-2);
+  justify-content: flex-end;
+  margin-top: var(--size-4-2);
+}
+
+/* Error panel */
+.rp-inline-runner-content .rp-error-panel {
+  background: var(--background-modifier-error);
+  border-radius: var(--radius-s);
+  padding: var(--size-4-3);
+}
+
+.rp-inline-runner-content .rp-error-title {
+  font-weight: var(--font-semibold);
+  color: var(--text-error);
+  margin: 0 0 var(--size-4-2) 0;
+}
+
+.rp-inline-runner-content .rp-error-list {
+  margin: 0;
+  padding-left: var(--size-4-4);
+}

@@ -38,6 +38,8 @@ export class InlineRunnerModal {
   private isHidden = false;
 
   private snippetTreePicker: SnippetTreePicker | null = null;
+  private resizeObserver: ResizeObserver | null = null;
+  private workspaceLayoutRef: import('obsidian').EventRef | null = null;
 
   constructor(
     app: App,
@@ -120,15 +122,16 @@ export class InlineRunnerModal {
       }
     });
 
-    // D2: close when target note is deleted
-    this.fileDeleteEventRef = this.app.vault.on('delete', (deletedFile) => {
-      if (deletedFile instanceof TFile && deletedFile.path === this.targetNote.path) {
-        this.handleTargetNoteDeleted();
-      }
-    });
-
     // Initial visibility check
     this.handleActiveLeafChange();
+
+    // Position modal over the active note content area
+    this.updateModalPosition();
+
+    // Reposition on layout changes
+    this.workspaceLayoutRef = this.app.workspace.on('layout-change', () => {
+      this.updateModalPosition();
+    });
   }
 
   close(): void {
@@ -149,9 +152,13 @@ export class InlineRunnerModal {
       this.app.vault.offref(this.fileDeleteEventRef);
       this.fileDeleteEventRef = null;
     }
-    if (this.fileDeleteEventRef !== null) {
-      this.app.vault.offref(this.fileDeleteEventRef);
-      this.fileDeleteEventRef = null;
+    if (this.workspaceLayoutRef !== null) {
+      this.app.workspace.offref(this.workspaceLayoutRef);
+      this.workspaceLayoutRef = null;
+    }
+    if (this.resizeObserver !== null) {
+      this.resizeObserver.disconnect();
+      this.resizeObserver = null;
     }
 
     // Remove from DOM
@@ -475,6 +482,44 @@ export class InlineRunnerModal {
     this.close();
   }
 
+  /** Position the modal to match the active note's width and position. */
+  private updateModalPosition(): void {
+    if (this.containerEl === null) return;
+
+    const activeLeaf = this.app.workspace.getActiveViewOfType(
+      (window as any).MarkdownView || require('obsidian').MarkdownView,
+    );
+    if (activeLeaf === null || !(activeLeaf as any).editorEl) {
+      // Fallback: fixed width, centered at bottom
+      this.containerEl.style.left = '';
+      this.containerEl.style.right = '';
+      this.containerEl.style.width = '600px';
+      this.containerEl.style.maxWidth = '80vw';
+      this.containerEl.style.marginLeft = 'auto';
+      this.containerEl.style.marginRight = 'auto';
+      return;
+    }
+
+    const editorEl = (activeLeaf as any).editorEl as HTMLElement;
+    const rect = editorEl.getBoundingClientRect();
+
+    this.containerEl.style.left = `${rect.left}px`;
+    this.containerEl.style.right = `${window.innerWidth - rect.right}px`;
+    this.containerEl.style.width = 'auto';
+    this.containerEl.style.maxWidth = '';
+    this.containerEl.style.marginLeft = '';
+    this.containerEl.style.marginRight = '';
+
+    // Set up ResizeObserver to reposition when note width changes
+    if (this.resizeObserver !== null) {
+      this.resizeObserver.disconnect();
+    }
+    this.resizeObserver = new ResizeObserver(() => {
+      this.updateModalPosition();
+    });
+    this.resizeObserver.observe(editorEl);
+  }
+
   /** Resolve the textSeparator enum to its actual string value. */
   private resolveSeparator(): string {
     const sep = this.plugin.settings.textSeparator;
@@ -483,8 +528,19 @@ export class InlineRunnerModal {
 
   /** Handle answer button click — append answer to note and advance. */
   private async handleAnswerClick(answerNode: AnswerNode): Promise<void> {
+    const stateBefore = this.runner.getState();
+    const beforeText = this.extractAccumulatedText(stateBefore);
+
     this.runner.chooseAnswer(answerNode.id);
-    await this.appendAnswerToNote(answerNode.answerText);
+
+    const stateAfter = this.runner.getState();
+    const afterText = this.extractAccumulatedText(stateAfter);
+
+    if (afterText.length > beforeText.length) {
+      const appendedText = afterText.slice(beforeText.length);
+      await this.appendAnswerToNote(appendedText);
+    }
+
     this.render();
   }
 
@@ -524,10 +580,25 @@ export class InlineRunnerModal {
 
     if (afterText.length > beforeText.length) {
       const appendedText = afterText.slice(beforeText.length);
-      await this.appendAnswerToNote(appendedText.trimStart());
+      await this.appendAnswerToNote(appendedText);
     }
 
     this.render();
+  }
+
+  /** Extract accumulated text from any runner state. */
+  private extractAccumulatedText(state: ReturnType<typeof this.runner.getState>): string {
+    switch (state.status) {
+      case 'at-node':
+      case 'awaiting-loop-pick':
+      case 'awaiting-snippet-pick':
+      case 'awaiting-snippet-fill':
+        return state.accumulatedText;
+      case 'complete':
+        return state.finalText;
+      default:
+        return '';
+    }
   }
 
   // ── Sub-renders ───────────────────────────────────────────────────────────
