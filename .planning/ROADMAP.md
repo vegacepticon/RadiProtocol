@@ -424,7 +424,10 @@ Plans:
   3. Traceability table at the bottom of REQUIREMENTS.md has new rows for `INLINE-01..05` (Phase 54, ✅ 2026-04-21) and updated statuses for all 11 flipped requirements; EDGE-01 row annotation clarifies it as «historical milestone, active contract is EDGE-03»
   4. Coverage count/summary at the top of REQUIREMENTS.md (if present) reflects the post-flip state — no REQ remains `[ ]` except items legitimately out of scope
   5. Zero edits to source files (`src/`, `main.js`, `styles.css`, `tests/`) — the entire phase lands as a single REQUIREMENTS.md rewrite + ROADMAP.md/STATE.md rollup commit
-**Plans**: TBD (plan-phase will decompose — likely 1-2 plans)
+**Plans**: 1 plan
+
+Plans:
+- [ ] 57-01-PLAN.md — REQUIREMENTS.md traceability refresh + Phase 54 INLINE-01..05 promotion + 11 stale-checkbox flips + Coverage Summary + Traceability table refresh + ROADMAP/STATE rollup (single atomic docs-only commit) (TRACE-57, INLINE-01..05)
 
 ### Phase 58: VERIFICATION.md Backfill + Stale Frontmatter Flip (GAP CLOSURE)
 **Goal**: Author the 6 missing `VERIFICATION.md` files (Phases 48, 48.1, 53, 54, 55, 56) and flip stale `VALIDATION.md` / `VERIFICATION.md` frontmatter (Phases 48, 51, 52, 55) so the v1.8 strict 3-source cross-reference matrix passes and the milestone can be closed via `/gsd-complete-milestone v1.8`.
