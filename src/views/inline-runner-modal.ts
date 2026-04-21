@@ -486,29 +486,54 @@ export class InlineRunnerModal {
   private updateModalPosition(): void {
     if (this.containerEl === null) return;
 
-    const activeLeaf = this.app.workspace.getActiveViewOfType(
-      (window as any).MarkdownView || require('obsidian').MarkdownView,
-    );
-    if (activeLeaf === null || !(activeLeaf as any).editorEl) {
+    // Find the visible CodeMirror editor element.
+    // Obsidian's markdown views use CodeMirror 6 with .cm-editor class.
+    // We need the one that belongs to the active (visible) tab.
+    const cmEditors = document.querySelectorAll('.cm-editor') as NodeListOf<HTMLElement>;
+    let editorEl: HTMLElement | null = null;
+
+    // Find the visible editor — the one whose parent leaf has the 'is-active' class
+    for (const editor of cmEditors) {
+      // Walk up to find if any ancestor has .is-active
+      let parent: HTMLElement | null = editor.parentElement;
+      while (parent !== null) {
+        if (parent.classList.contains('is-active') || parent.classList.contains('mod-active')) {
+          editorEl = editor;
+          break;
+        }
+        parent = parent.parentElement;
+      }
+      if (editorEl !== null) break;
+    }
+
+    // If no active editor found, use the first visible one
+    if (editorEl === null) {
+      for (const editor of cmEditors) {
+        const rect = editor.getBoundingClientRect();
+        if (rect.width > 0 && rect.height > 0) {
+          editorEl = editor;
+          break;
+        }
+      }
+    }
+
+    if (editorEl === null) {
       // Fallback: fixed width, centered at bottom
-      this.containerEl.style.left = '';
+      this.containerEl.style.left = '50%';
+      this.containerEl.style.transform = 'translateX(-50%)';
       this.containerEl.style.right = '';
       this.containerEl.style.width = '600px';
       this.containerEl.style.maxWidth = '80vw';
-      this.containerEl.style.marginLeft = 'auto';
-      this.containerEl.style.marginRight = 'auto';
       return;
     }
 
-    const editorEl = (activeLeaf as any).editorEl as HTMLElement;
     const rect = editorEl.getBoundingClientRect();
 
     this.containerEl.style.left = `${rect.left}px`;
     this.containerEl.style.right = `${window.innerWidth - rect.right}px`;
     this.containerEl.style.width = 'auto';
     this.containerEl.style.maxWidth = '';
-    this.containerEl.style.marginLeft = '';
-    this.containerEl.style.marginRight = '';
+    this.containerEl.style.transform = '';
 
     // Set up ResizeObserver to reposition when note width changes
     if (this.resizeObserver !== null) {
@@ -544,11 +569,19 @@ export class InlineRunnerModal {
     this.render();
   }
 
-  /** Append text to the end of the target note with proper separator. */
+  /** Append text to the end of the target note. The delta already contains
+   *  separators from the accumulator, but Obsidian adds a trailing newline
+   *  to files on save. If the note already ends with the separator char and
+   *  the delta starts with it, strip the leading separator from the delta
+   *  to avoid duplication. */
   private async appendAnswerToNote(text: string): Promise<void> {
     const currentContent = await this.app.vault.read(this.targetNote);
-    const separator = currentContent.trim().length === 0 ? '' : this.resolveSeparator();
-    const newContent = currentContent + separator + text;
+    let toAppend = text;
+    const sep = this.resolveSeparator();
+    if (currentContent.endsWith(sep) && text.startsWith(sep)) {
+      toAppend = text.slice(sep.length);
+    }
+    const newContent = currentContent + toAppend;
     await this.app.vault.modify(this.targetNote, newContent);
   }
 
