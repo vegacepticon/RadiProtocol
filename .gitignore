@@ -4,6 +4,7 @@ node_modules/
 # Build output
 main.js
 main.js.map
+styles.css
 
 # Dev vault config (never commit vault paths)
 .env
