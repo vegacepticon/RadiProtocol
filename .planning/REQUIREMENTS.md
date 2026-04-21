@@ -97,15 +97,15 @@
   - **Source:** 53-CONTEXT.md D-10
   - **Signal:** `undoStack.length` grows by exactly 1 per Skip click; `stepBack()` restores `currentNodeId` to the question and `runnerStatus` to `at-node`.
 
-- [x] **RUNNER-CLOSE-01**: The Runner renders a **Close** icon-button (lucide `x`) inside `selectorBarEl` (next to `CanvasSelectorWidget`) whenever `canvasFilePath !== null`. When no canvas is loaded the Close button is hidden (via class toggle or `display: none`). The button is neutral-styled — NO `mod-warning`, NO destructive red (D-06).
+- [ ] **RUNNER-CLOSE-01**: The Runner renders a **Close** icon-button (lucide `x`) inside `selectorBarEl` (next to `CanvasSelectorWidget`) whenever `canvasFilePath !== null`. When no canvas is loaded the Close button is hidden (via class toggle or `display: none`). The button is neutral-styled — NO `mod-warning`, NO destructive red (D-06).
   - **Source:** 53-CONTEXT.md D-02, D-04, D-05, D-06, D-12
   - **Signal:** `rp-close-btn` present in `selectorBarEl` exactly once (attached in `onOpen` so the `contentEl.empty()` + `prepend(selectorBarEl)` survive pattern carries it across renders — same lifetime as the selector).
 
-- [x] **RUNNER-CLOSE-02**: Clicking **Close** branches on `runner.getState().status`: for `at-node | awaiting-snippet-pick | awaiting-snippet-fill | awaiting-loop-pick` it opens the existing `CanvasSwitchModal` and only proceeds on `true`; for `idle | complete | error` it proceeds directly without modal. The `needsConfirmation` predicate is byte-identical to `handleSelectorSelect` (53-PATTERNS.md §Analog #2).
+- [ ] **RUNNER-CLOSE-02**: Clicking **Close** branches on `runner.getState().status`: for `at-node | awaiting-snippet-pick | awaiting-snippet-fill | awaiting-loop-pick` it opens the existing `CanvasSwitchModal` and only proceeds on `true`; for `idle | complete | error` it proceeds directly without modal. The `needsConfirmation` predicate is byte-identical to `handleSelectorSelect` (53-PATTERNS.md §Analog #2).
   - **Source:** 53-CONTEXT.md D-13, D-15
   - **Signal:** grep `needsConfirmation` in `runner-view.ts` finds 2 call-sites with the same 4-status union; `CanvasSwitchModal` is NOT modified.
 
-- [x] **RUNNER-CLOSE-03**: On confirmed (or no-confirmation) Close, the Runner performs in this exact order: (1) `await sessionService.clear(canvasFilePath)` if path non-null; (2) re-create `this.runner = new ProtocolRunner({ defaultSeparator: plugin.settings.textSeparator })`; (3) null out `graph`, `canvasFilePath`, `previewTextarea`; (4) `selector.setSelectedPath(null)` to reset the widget to its placeholder; (5) `render()`. The resulting view is visually identical to a fresh plugin open — selector shows "Select a protocol…" and the `idle` branch of `render()` runs.
+- [ ] **RUNNER-CLOSE-03**: On confirmed (or no-confirmation) Close, the Runner performs in this exact order: (1) `await sessionService.clear(canvasFilePath)` if path non-null; (2) re-create `this.runner = new ProtocolRunner({ defaultSeparator: plugin.settings.textSeparator })`; (3) null out `graph`, `canvasFilePath`, `previewTextarea`; (4) `selector.setSelectedPath(null)` to reset the widget to its placeholder; (5) `render()`. The resulting view is visually identical to a fresh plugin open — selector shows "Select a protocol…" and the `idle` branch of `render()` runs.
   - **Source:** 53-CONTEXT.md D-14, D-16
   - **Signal:** after Close, `canvasFilePath === null`, `getState().status === 'idle'`, selector label matches the placeholder string `'Select a protocol\u2026'`.
 
@@ -137,23 +137,28 @@
 | RUNFIX-01 | Phase 47 | ✅ complete (2026-04-18) |
 | RUNFIX-02 | Phase 47 | ✅ complete (2026-04-18) |
 | RUNFIX-03 | Phase 47 | ✅ complete (2026-04-18) |
-| NODEUI-01 | Phase 48 | planned |
-| NODEUI-02 | Phase 48 | planned |
-| NODEUI-03 | Phase 48 | planned |
-| NODEUI-04 | Phase 48 | planned |
-| NODEUI-05 | Phase 48 | planned |
-| EDGE-01   | Phase 49 | ⚠ superseded by EDGE-03 (Phase 50.1) |
+| NODEUI-01 | Phase 48 | UAT PASS 2026-04-19 — verification artefact pending Phase 58 |
+| NODEUI-02 | Phase 48 | UAT PASS 2026-04-19 — verification artefact pending Phase 58 |
+| NODEUI-03 | Phase 48 | UAT PASS 2026-04-19 — verification artefact pending Phase 58 |
+| NODEUI-04 | Phase 48 | UAT PASS 2026-04-19 — verification artefact pending Phase 58 |
+| NODEUI-05 | Phase 48 | UAT PASS 2026-04-19 — verification artefact pending Phase 58 |
+| EDGE-01   | Phase 49 | ⚠ historical (Phase 49 UAT PASS 2026-04-19) — superseded by EDGE-03 (Phase 50.1) as active contract |
 | EDGE-02   | Phase 50 | ✅ complete (2026-04-19) |
 | EDGE-03   | Phase 50.1 | ✅ complete (2026-04-19) |
-| PICKER-01 | Phase 51 | planned |
-| PICKER-02 | Phase 51 | planned |
+| PICKER-01 | Phase 51 (+ Phase 56 reversal) | UAT PASS 2026-04-20 — traceability flip pending Phase 57; 56-VERIFICATION.md pending Phase 58 |
+| PICKER-02 | Phase 51 | UAT PASS 2026-04-20 — traceability flip pending Phase 57 |
 | PHLD-01   | Phase 52 | ✅ complete (2026-04-20) |
-| RUNNER-SKIP-01  | Phase 53 | planned |
-| RUNNER-SKIP-02  | Phase 53 | planned |
-| RUNNER-SKIP-03  | Phase 53 | planned |
-| RUNNER-CLOSE-01 | Phase 53 | ✅ complete (2026-04-21) |
-| RUNNER-CLOSE-02 | Phase 53 | ✅ complete (2026-04-21) |
-| RUNNER-CLOSE-03 | Phase 53 | ✅ complete (2026-04-21) |
-| BRAT-01   | Phase 55 | planned |
+| RUNNER-SKIP-01  | Phase 53 | UAT PASS 2026-04-21 — verification artefact pending Phase 58 |
+| RUNNER-SKIP-02  | Phase 53 | UAT PASS 2026-04-21 — verification artefact pending Phase 58 |
+| RUNNER-SKIP-03  | Phase 53 | UAT PASS 2026-04-21 — verification artefact pending Phase 58 |
+| RUNNER-CLOSE-01 | Phase 53 | UAT PASS 2026-04-21 — pre-checked without VERIFICATION.md backing; reset per audit, pending Phase 58 |
+| RUNNER-CLOSE-02 | Phase 53 | UAT PASS 2026-04-21 — pre-checked without VERIFICATION.md backing; reset per audit, pending Phase 58 |
+| RUNNER-CLOSE-03 | Phase 53 | UAT PASS 2026-04-21 — pre-checked without VERIFICATION.md backing; reset per audit, pending Phase 58 |
+| INLINE-01       | Phase 54 | pending — to be introduced by Phase 57 (Phase 54 SC 1: command + canvas picker) |
+| INLINE-02       | Phase 54 | pending — to be introduced by Phase 57 (Phase 54 SC 2: non-blocking floating modal + append) |
+| INLINE-03       | Phase 54 | pending — to be introduced by Phase 57 (Phase 54 SC 3: note-as-buffer, no staging) |
+| INLINE-04       | Phase 54 | pending — to be introduced by Phase 57 (Phase 54 SC 4: source-note binding) |
+| INLINE-05       | Phase 54 | pending — to be introduced by Phase 57 (Phase 54 SC 5: additive-only — sidebar/tab unchanged) |
+| BRAT-01   | Phase 55 | UAT PASS 2026-04-21 + Release published — verification artefact pending Phase 58 |
 
-*Phase assignments filled in by the roadmapper on 2026-04-18.*
+*Phase assignments filled in by the roadmapper on 2026-04-18. Gap-closure annotations added 2026-04-21 after `.planning/v1.8-MILESTONE-AUDIT.md`; Phase 57 introduces INLINE-01..05 and flips stale checkboxes, Phase 58 authors the missing VERIFICATION.md artefacts.*
