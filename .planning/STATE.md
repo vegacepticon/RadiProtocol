@@ -4,14 +4,14 @@ milestone: v1.8
 milestone_name: UX Polish & Snippet Picker Overhaul
 status: executing
 stopped_at: "Phase 53 complete (plan-level) — Plan 04 gate PASS (10/10 audits + 5/5 counter-checks; tests 648/1/0; tsc + esbuild exit 0; styles.css 37 211 B deployed to TEST-BASE) + human UAT PASS 3/3 (SC-1 Skip advances without text append + undo roundtrip; SC-2 Close confirmation modal + D-14 teardown = fresh open; SC-3 visibility gating). 8/8 detailed tests PASS, 0 issues, 0 gaps. Regression sniff clean (RUNFIX-02 scroll + Phase 51 snippet-branch unchanged). Commit chain: f2aec45 3803b5f f832ddd 8aa912f 2ceae8d 0bc9d5f 247a70a 6447ac5 f2c8761 631b2e6 f6bc1b4 5af519a 47fdb0d ca8d2d2 + rollup. Plan 03 context (preserved): Close button UI + handleClose() + D-14 teardown + Close CSS landed (commits 631b2e6, f6bc1b4). closeBtn field + onOpen Close attachment with runner-owned rp-selector-bar--has-close modifier; handleClose() mirrors handleSelectorSelect D-12/D-13 predicate byte-for-byte and runs D-14 5-step teardown (sessionService.clear → new ProtocolRunner → null graph/path/textarea → setSelectedPath(null) → render); render() toggles is-hidden on closeBtn per canvasFilePath. Phase 53 (cont.) CSS block appended to runner-view.css (+44 lines, .rp-close-btn base/hover/focus-visible/is-hidden + runner-owned .rp-selector-bar--has-close modifier). canvas-selector.css UNCHANGED (CSS ownership preserved per CLAUDE.md architecture table). styles.css regenerated via npm run build and deployed to TEST-BASE. Test baseline 648/1/0 preserved. Zero deviations."
-last_updated: "2026-04-21T00:30:00.000Z"
-last_activity: 2026-04-21 -- Phase 53 complete at plan level (4 plans shipped; UAT PASS 3/3; 648/1/0); phase-level gates pending orchestrator
+last_updated: "2026-04-21T13:10:00.000Z"
+last_activity: 2026-04-21 -- Phase 55 complete (4/4 plans — manifest/versions/package aligned on 1.8.0, styles.css untracked, build+tag+preflight script, release runbook); BRAT-01 evidenced locally; SC-2/SC-3 blocked on user web-UI Release
 progress:
   total_phases: 15
   completed_phases: 7
-  total_plans: 36
+  total_plans: 40
   completed_plans: 34
-  percent: 94
+  percent: 85
 ---
 
 # RadiProtocol — Project State

@@ -1,7 +1,7 @@
 # Roadmap: RadiProtocol
 
 **Project:** RadiProtocol
-**Last updated:** 2026-04-20 (Phase 52 complete)
+**Last updated:** 2026-04-21 (Phase 55 complete)
 
 ---
 
@@ -14,7 +14,7 @@
 - ✅ **v1.5 Snippet Editor Refactoring** — Phases 32-35 (shipped 2026-04-16)
 - ✅ **v1.6 Polish & Canvas Workflow** — Phases 36-42 (shipped 2026-04-17)
 - ✅ **v1.7 Loop Rework & Regression Cleanup** — Phases 43-46 (shipped 2026-04-18)
-- ⏳ **v1.8 UX Polish & Snippet Picker Overhaul** — Phases 47-55
+- ⏳ **v1.8 UX Polish & Snippet Picker Overhaul** — Phases 47-56 (Phase 55 complete)
 
 ---
 
@@ -111,7 +111,7 @@ Full details: `.planning/milestones/v1.7-ROADMAP.md`
 
 </details>
 
-### v1.8 UX Polish & Snippet Picker Overhaul (Phases 47-53)
+### v1.8 UX Polish & Snippet Picker Overhaul (Phases 47-56)
 
 - [x] **Phase 47: Runner Regressions** — ✅ Complete. RUNFIX-01/02/03 closed; code review (0 critical), verification, and live UAT all PASS (2026-04-19). RUNFIX-02 revised post-UAT to scroll-to-insertion-point (commit 95e7d0b).
 - [ ] **Phase 48: Node Editor UX Polish** — Remove obsolete Snippet ID field, re-anchor new nodes below last, reorder Answer fields, auto-grow Question textarea, relocate quick-create buttons to bottom vertical column
@@ -121,7 +121,8 @@ Full details: `.planning/milestones/v1.7-ROADMAP.md`
 - [x] **Phase 50.1: Loop Exit `+` Prefix Convention (INSERTED)** — ✅ Complete 2026-04-19. `isExitEdge` redefined to `label.trim().startsWith('+')`; `stripExitPrefix` added; LOOP-04 validator emits 5 locked Russian errors (D-04..D-08); RunnerView exit caption uses `stripExitPrefix`; 10 loop-canvas fixtures migrated/created. EDGE-03 added to REQUIREMENTS.md; EDGE-01 superseded. Tests: 506 passed / 1 skipped / 0 failed (+22 vs Phase 50 baseline). gsd-verifier: 37/37 must-haves verified, status `passed`. UAT PASS in TEST-BASE (3/3 scenarios).
 - [ ] **Phase 51: Snippet Picker Overhaul** — Add specific-snippet binding on Snippet nodes + replace flat folder list with unified hierarchical picker (tree drill-down, breadcrumb, tree-wide search)
 - [x] **Phase 52: JSON Placeholder Rework** — ✅ Complete 2026-04-20. PHLD-01 closed by UAT PASS 5/5 (D-08 options roundtrip, D-02 separator rename, D-05 unified choice multi-select, D-04 editor banner, D-04 runner error). Tests: 642/1/0. One mid-UAT gap closure applied to chip-editor click handler (latent bug since Phase 33).
-- [ ] **Phase 53: BRAT Distribution Readiness** — Align `manifest.json` / `versions.json` / git tags; publish first GitHub Release with `manifest.json` + `main.js` + `styles.css` assets; verify BRAT install end-to-end
+- [x] **Phase 53: Runner Skip & Close Buttons** — ✅ Complete 2026-04-21. RUNNER-SKIP-01..03 + RUNNER-CLOSE-01..03 closed. UAT PASS 3/3 in TEST-BASE (SC-1 Skip advances without text append + undo roundtrip; SC-2 Close confirmation modal + D-14 teardown; SC-3 visibility gating). Tests: 648/1/0 (+6 vs Phase 52 baseline).
+- [x] **Phase 55: BRAT Distribution Readiness** — ✅ Complete 2026-04-21. BRAT-01 evidenced locally: manifest/versions/package aligned on 1.8.0, author metadata set (D9), styles.css untracked (D5), annotated tag 1.8.0 created, preflight script authored + committed, release runbook with 5 sections + curated changelog + BRAT smoke test. SC-2/SC-3 blocked only on user web-UI Release action. Commits: 8bf64a8 (release-prep), 2390f21 (preflight script), 6ad3ca5 (runbook).
 - [ ] **Phase 56: Snippet Button UX Reversal** — Откат Phase 51 D-13/D-16: file-bound Snippet всегда рендерится как кнопка + клик даёт прямую вставку (без picker); UI indicators для folder selection в SnippetEditorModal (unsaved marker + button color feedback)
 
 ---
@@ -380,7 +381,13 @@ Plans:
   1. `manifest.json` `version`, `versions.json` mapping (min-Obsidian per version), and the git tag naming scheme all agree on the v1.8 release version; `npm run build` produces a clean `main.js` + `styles.css` against that manifest version (BRAT-01)
   2. `gh release list` shows at least one GitHub Release whose assets include `manifest.json`, `main.js`, and `styles.css` as individually downloadable files at the root of the release (not inside a zip) (BRAT-01)
   3. Installing the plugin in a fresh Obsidian vault via BRAT with identifier `vegacepticon/RadiProtocol` succeeds end-to-end — plugin appears in Community Plugins list, enables, and opens the Runner view (BRAT-01)
-**Plans**: TBD
+**Plans:** 4 plans
+
+Plans:
+- [ ] 55-01-PLAN.md — Align manifest.json (version 1.8.0 + D9 author metadata), rewrite versions.json to {1.8.0: 1.5.7}, sync package.json.version (BRAT-01)
+- [ ] 55-02-PLAN.md — Append styles.css to .gitignore and git rm --cached styles.css (BRAT-01)
+- [ ] 55-03-PLAN.md — npm run build, atomic release-prep commit, unprefixed git tag 1.8.0, author release-preflight.sh (BRAT-01)
+- [ ] 55-04-PLAN.md — Author 55-RELEASE-RUNBOOK.md with pre-flight, tag push, web-UI Release steps, curated D7 changelog, SC-3 BRAT smoke test (BRAT-01)
 
 ### Phase 56: Snippet Button UX Reversal
 **Goal**: Reverse Phase 51 D-13/D-16 design decisions so every file-bound Snippet node renders as a click-button (never auto-inserts, never leads through picker): clicking the button directly inserts the snippet content (or opens SnippetFillInModal for `.json` with placeholders). Directory-bound Snippet nodes keep the current button→picker flow. Additionally add visible indicators in SnippetEditorModal for folder-selection state (unsaved-change marker + «Выбрать эту папку» button colour feedback after click).
