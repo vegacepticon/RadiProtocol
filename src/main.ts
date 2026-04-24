@@ -18,6 +18,67 @@ import { GraphValidator } from './graph/graph-validator';
 // Phase 54: inline protocol display mode
 import { InlineRunnerModal } from './views/inline-runner-modal';
 
+/**
+ * Phase 59 INLINE-FIX-01 — Nested-path-safe protocol folder enumeration.
+ *
+ * Called by {@link RadiProtocolPlugin.handleRunProtocolInline} to resolve the
+ * configured `protocolFolderPath` setting to a flat list of `.canvas` files.
+ *
+ * Handles three known failure modes in the pre-Phase-59 implementation:
+ *   1. Trailing / leading slashes in the stored setting — stripped via regex.
+ *   2. Windows backslash path separators — replaced with forward slash.
+ *   3. Obsidian vault-index returning null for an otherwise-valid nested folder —
+ *      fallback to a `vault.getFiles()` prefix scan filtered to `.canvas` extension.
+ *
+ * Returns an empty array when the folder does not exist, has no canvases, or the
+ * path is blank. The caller is responsible for the D8 "No protocol canvases found"
+ * Notice when the result is empty.
+ *
+ * Exported (not a private method) so it can be unit-tested from
+ * `src/__tests__/main-inline-command.test.ts` without instrumenting the plugin class.
+ */
+export function resolveProtocolCanvasFiles(
+  vault: import('obsidian').Vault,
+  folderPath: string,
+): TFile[] {
+  const normalized = folderPath
+    .trim()
+    .replace(/\\/g, '/')          // Windows backslash → forward slash (Pitfall 5 / A1)
+    .replace(/^\/+|\/+$/g, '');   // strip leading/trailing slashes
+  if (normalized === '') {
+    console.debug('[RadiProtocol][INLINE-FIX-01] folderPath normalized to empty — skipping resolution.');
+    return [];
+  }
+
+  const folder = vault.getAbstractFileByPath(normalized);
+  const out: TFile[] = [];
+
+  if (folder instanceof TFolder) {
+    const walk = (f: TFolder): void => {
+      for (const child of f.children) {
+        if (child instanceof TFolder) walk(child);
+        else if (child instanceof TFile && child.extension === 'canvas') out.push(child);
+      }
+    };
+    walk(folder);
+    console.debug(
+      `[RadiProtocol][INLINE-FIX-01] Resolved '${folderPath}' → '${normalized}' via TFolder walk; ${out.length} canvas file(s).`,
+    );
+    return out;
+  }
+
+  // Fallback — getAbstractFileByPath returned null or non-folder. Scan all vault files.
+  const prefix = normalized + '/';
+  for (const f of vault.getFiles()) {
+    if (f.extension !== 'canvas') continue;
+    if (f.path === normalized || f.path.startsWith(prefix)) out.push(f);
+  }
+  console.debug(
+    `[RadiProtocol][INLINE-FIX-01] Resolved '${folderPath}' → '${normalized}' via getFiles() fallback; ${out.length} canvas file(s). (getAbstractFileByPath returned ${folder === null ? 'null' : typeof folder})`,
+  );
+  return out;
+}
+
 export default class RadiProtocolPlugin extends Plugin {
   settings!: RadiProtocolSettings;
   canvasParser!: CanvasParser;
@@ -442,24 +503,9 @@ export default class RadiProtocolPlugin extends Plugin {
       return;
     }
 
-    const folder = this.app.vault.getAbstractFileByPath(folderPath);
-    if (!(folder instanceof TFolder)) {
-      new Notice('Protocol folder not found.');
-      return;
-    }
-
-    // Recursively enumerate .canvas files
-    const canvasFiles: TFile[] = [];
-    const collectCanvases = (f: TFolder): void => {
-      for (const child of f.children) {
-        if (child instanceof TFolder) {
-          collectCanvases(child);
-        } else if (child instanceof TFile && child.extension === 'canvas') {
-          canvasFiles.push(child);
-        }
-      }
-    };
-    collectCanvases(folder);
+    // INLINE-FIX-01: delegate enumeration to resolveProtocolCanvasFiles. Handles
+    // trailing/leading slashes, Windows backslash, and vault-index null fallback.
+    const canvasFiles = resolveProtocolCanvasFiles(this.app.vault, folderPath);
 
     // D8 guard: empty list
     if (canvasFiles.length === 0) {

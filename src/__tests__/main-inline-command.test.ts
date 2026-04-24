@@ -4,6 +4,11 @@ import { describe, it, expect, vi } from 'vitest';
 import { TFile, TFolder } from 'obsidian';
 import { resolveProtocolCanvasFiles } from '../main';
 
+type TestTFileConstructor = new (path?: string) => TFile;
+type TestTFolderConstructor = new (path?: string, children?: Array<TFile | TFolder>) => TFolder;
+const TestTFile = TFile as unknown as TestTFileConstructor;
+const TestTFolder = TFolder as unknown as TestTFolderConstructor;
+
 // Build a fake vault whose getAbstractFileByPath reads from a path-keyed tree
 // and whose getFiles() returns every TFile in the tree flattened.
 function makeVault(tree: Record<string, TFile | TFolder>) {
@@ -17,11 +22,11 @@ function makeVault(tree: Record<string, TFile | TFolder>) {
 }
 
 function buildNestedTree() {
-  const nested = new TFile('templates/ALGO/nested.canvas');
-  const root = new TFile('templates/ALGO/root.canvas');
-  const mdNoise = new TFile('templates/ALGO/notes.md'); // must be excluded (not .canvas)
-  const algoFolder = new TFolder('templates/ALGO', [nested, root, mdNoise]);
-  const templatesFolder = new TFolder('templates', [algoFolder]);
+  const nested = new TestTFile('templates/ALGO/nested.canvas');
+  const root = new TestTFile('templates/ALGO/root.canvas');
+  const mdNoise = new TestTFile('templates/ALGO/notes.md'); // must be excluded (not .canvas)
+  const algoFolder = new TestTFolder('templates/ALGO', [nested, root, mdNoise]);
+  const templatesFolder = new TestTFolder('templates', [algoFolder]);
   const tree: Record<string, TFile | TFolder> = {
     'templates': templatesFolder,
     'templates/ALGO': algoFolder,
@@ -76,9 +81,9 @@ describe('resolveProtocolCanvasFiles (INLINE-FIX-01)', () => {
   it('(d) falls back to vault.getFiles() when getAbstractFileByPath returns null but canvases exist under the prefix', () => {
     // Tree has canvas files but NO TFolder entry for "templates/ALGO" — simulates
     // an indexing quirk where getAbstractFileByPath returns null.
-    const nested = new TFile('templates/ALGO/nested.canvas');
-    const root = new TFile('templates/ALGO/root.canvas');
-    const unrelated = new TFile('other/unrelated.canvas');
+    const nested = new TestTFile('templates/ALGO/nested.canvas');
+    const root = new TestTFile('templates/ALGO/root.canvas');
+    const unrelated = new TestTFile('other/unrelated.canvas');
     const tree: Record<string, TFile | TFolder> = {
       'templates/ALGO/nested.canvas': nested,
       'templates/ALGO/root.canvas': root,
@@ -96,7 +101,7 @@ describe('resolveProtocolCanvasFiles (INLINE-FIX-01)', () => {
   });
 
   it('(e) returns an empty array when the folder exists but contains no canvases — caller is responsible for the D8 Notice', () => {
-    const empty = new TFolder('templates/EMPTY', []);
+    const empty = new TestTFolder('templates/EMPTY', []);
     const tree: Record<string, TFile | TFolder> = {
       'templates/EMPTY': empty,
     };

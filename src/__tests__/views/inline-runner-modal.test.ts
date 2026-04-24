@@ -273,7 +273,7 @@ vi.mock('../../views/snippet-fill-in-modal', () => {
       instances.push({
         snippet,
         result: this.result,
-        __resolve: (v) => this.resolveFn(v),
+        __resolve: (v: string | null) => this.resolveFn(v),
         open: () => { self.opened = true; },
         close: () => { self.closed = true; },
         get opened() { return self.opened; },
@@ -287,13 +287,14 @@ vi.mock('../../views/snippet-fill-in-modal', () => {
 
 // Import after mocks are installed.
 import { InlineRunnerModal } from '../../views/inline-runner-modal';
+// @ts-ignore — mock factory export, not present in real module
 import { __fillModalInstances } from '../../views/snippet-fill-in-modal';
 import { TFile } from 'obsidian';
 
 // ───── Helpers ─────
 
 function makeTargetNote(): TFile {
-  return new TFile('notes/target.md');
+  return new (TFile as any)('notes/target.md');
 }
 
 function makePlugin(overrides?: Partial<{
@@ -370,7 +371,7 @@ describe('InlineRunnerModal — snippet insert separator (INLINE-FIX-04)', () =>
       accumulatedText,
     } as any));
     vi.spyOn((modal as any).runner, 'pickSnippet').mockImplementation(() => {});
-    vi.spyOn((modal as any).runner, 'completeSnippet').mockImplementation((text: string) => {
+    vi.spyOn((modal as any).runner, 'completeSnippet').mockImplementation((text: any) => {
       accumulatedText += '\n' + text;
     });
 
@@ -392,7 +393,7 @@ describe('InlineRunnerModal — snippet insert separator (INLINE-FIX-04)', () =>
       accumulatedText,
     } as any));
     vi.spyOn((modal as any).runner, 'pickSnippet').mockImplementation(() => {});
-    vi.spyOn((modal as any).runner, 'completeSnippet').mockImplementation((text: string) => {
+    vi.spyOn((modal as any).runner, 'completeSnippet').mockImplementation((text: any) => {
       accumulatedText += '\n' + text;
     });
 
@@ -413,7 +414,7 @@ describe('InlineRunnerModal — snippet insert separator (INLINE-FIX-04)', () =>
       accumulatedText,
     } as any));
     vi.spyOn((modal as any).runner, 'pickSnippet').mockImplementation(() => {});
-    vi.spyOn((modal as any).runner, 'completeSnippet').mockImplementation((text: string) => {
+    vi.spyOn((modal as any).runner, 'completeSnippet').mockImplementation((text: any) => {
       // Simulate space separator applied by runner
       accumulatedText += ' ' + text;
     });
@@ -435,7 +436,7 @@ describe('InlineRunnerModal — snippet insert separator (INLINE-FIX-04)', () =>
       accumulatedText,
     } as any));
     vi.spyOn((modal as any).runner, 'pickSnippet').mockImplementation(() => {});
-    vi.spyOn((modal as any).runner, 'completeSnippet').mockImplementation((text: string) => {
+    vi.spyOn((modal as any).runner, 'completeSnippet').mockImplementation((text: any) => {
       accumulatedText += text; // no separator on first chunk
     });
 
@@ -461,7 +462,7 @@ describe('InlineRunnerModal — JSON fill-in modal (INLINE-FIX-05)', () => {
       status: 'awaiting-snippet-fill',
       accumulatedText,
     } as any));
-    vi.spyOn((modal as any).runner, 'completeSnippet').mockImplementation((text: string) => {
+    vi.spyOn((modal as any).runner, 'completeSnippet').mockImplementation((text: any) => {
       accumulatedText += text;
     });
 
@@ -501,7 +502,7 @@ describe('InlineRunnerModal — JSON fill-in modal (INLINE-FIX-05)', () => {
       status: 'awaiting-snippet-fill',
       accumulatedText,
     } as any));
-    vi.spyOn((modal as any).runner, 'completeSnippet').mockImplementation((text: string) => {
+    vi.spyOn((modal as any).runner, 'completeSnippet').mockImplementation((text: any) => {
       accumulatedText += '\n' + text;
     });
 
@@ -538,7 +539,7 @@ describe('InlineRunnerModal — JSON fill-in modal (INLINE-FIX-05)', () => {
       status: 'awaiting-snippet-fill',
       accumulatedText,
     } as any));
-    vi.spyOn((modal as any).runner, 'completeSnippet').mockImplementation((text: string) => {
+    vi.spyOn((modal as any).runner, 'completeSnippet').mockImplementation((text: any) => {
       accumulatedText += text;
     });
 
@@ -617,10 +618,10 @@ describe('InlineRunnerModal — Phase 54 D1/D6/D7 regression guards', () => {
     (modal as any).isFillModalOpen = true;
 
     // Simulate active leaf change when a different file is active
-    (modal as any).app.workspace.getActiveFile = vi.fn(() => new TFile('other.md'));
+    (modal as any).app.workspace.getActiveFile = vi.fn(() => new (TFile as any)('other.md'));
     (modal as any).app.workspace.iterateAllLeaves = vi.fn((cb: any) => {
       // target note still has open leaves
-      cb({ view: { file: new TFile('notes/target.md') } });
+      cb({ view: { file: new (TFile as any)('notes/target.md') } });
     });
 
     (modal as any).handleActiveLeafChange();
@@ -645,7 +646,7 @@ describe('InlineRunnerModal — Phase 54 D1/D6/D7 regression guards', () => {
       accumulatedText,
     } as any));
     vi.spyOn((modal as any).runner, 'pickSnippet').mockImplementation(() => {});
-    vi.spyOn((modal as any).runner, 'completeSnippet').mockImplementation((text: string) => {
+    vi.spyOn((modal as any).runner, 'completeSnippet').mockImplementation((text: any) => {
       accumulatedText += '\n' + text;
     });
 
@@ -673,7 +674,7 @@ describe('InlineRunnerModal — INLINE-FIX-04 (c) JSON with-placeholder + separa
       status: 'awaiting-snippet-fill',
       accumulatedText,
     } as any));
-    vi.spyOn((modal as any).runner, 'completeSnippet').mockImplementation((text: string) => {
+    vi.spyOn((modal as any).runner, 'completeSnippet').mockImplementation((text: any) => {
       accumulatedText += '\n' + text;
     });
 
