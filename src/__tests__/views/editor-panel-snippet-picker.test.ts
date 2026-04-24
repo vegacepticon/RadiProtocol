@@ -352,13 +352,13 @@ describe('Phase 51 Plan 03 — SnippetTreePicker inline in Node Editor (D-05)', 
     expect(hostIdx).toBeGreaterThanOrEqual(0);
   });
 
-  it('Test 12 (preservation — Settings): Branch label + Separator override setNames still fire', () => {
+  it('Test 12 (preservation — Settings): Branch label remains visible and Separator override setName still fires', () => {
     const view = makeView();
     const container = makeFakeNode();
     // @ts-expect-error private access
     view['buildKindForm'](container, {}, 'snippet');
 
-    expect(settingCalls.setName).toContain('Branch label');
+    expect(createdRegistry).toContainEqual({ cls: 'rp-field-label', text: 'Branch label' });
     expect(settingCalls.setName).toContain('Separator override');
     // DOM-order invariant — picker ctor fired before the render completed, so the picker
     // host exists in the creation sequence preceding the Settings rows.

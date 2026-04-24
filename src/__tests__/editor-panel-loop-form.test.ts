@@ -48,6 +48,11 @@ const settingCalls: {
 } = { setName: [], setDesc: [], setHeading: 0 };
 const textareaOnChange: { cb: ((v: string) => void) | null } = { cb: null };
 const dropdownOptions: Array<[string, string]> = [];
+const createdElements: Array<{ tag: string; cls?: string; text?: string }> = [];
+const domTextareaInput: { node: Record<string, unknown> | null; cb: (() => void) | null } = {
+  node: null,
+  cb: null,
+};
 
 function installSettingPrototypeMock(): void {
   settingCalls.setName = [];
@@ -55,6 +60,9 @@ function installSettingPrototypeMock(): void {
   settingCalls.setHeading = 0;
   textareaOnChange.cb = null;
   dropdownOptions.length = 0;
+  createdElements.length = 0;
+  domTextareaInput.node = null;
+  domTextareaInput.cb = null;
 
   const SettingProto = Setting.prototype as unknown as Record<string, unknown>;
   SettingProto.setName = vi.fn(function (this: unknown, name: string) {
@@ -105,12 +113,27 @@ function installSettingPrototypeMock(): void {
 function fakeNode(): Record<string, unknown> {
   const self: Record<string, unknown> = {
     empty: () => {},
-    createDiv: (_opts?: { cls?: string }) => fakeNode(),
-    createEl: (_tag: string, _opts?: unknown) => fakeNode(),
+    createDiv: (opts?: { cls?: string; text?: string }) => {
+      createdElements.push({ tag: 'div', cls: opts?.cls, text: opts?.text });
+      return fakeNode();
+    },
+    createEl: (tag: string, opts?: { cls?: string; text?: string }) => {
+      createdElements.push({ tag, cls: opts?.cls, text: opts?.text });
+      const child = fakeNode();
+      if (tag === 'textarea') {
+        child.style = { height: '' };
+        child.scrollHeight = 80;
+        child.value = '';
+        domTextareaInput.node = child;
+      }
+      return child;
+    },
     createSpan: () => fakeNode(),
     setAttribute: () => {},
     appendText: () => {},
-    addEventListener: () => {},
+    addEventListener: (event: string, cb: () => void) => {
+      if (event === 'input') domTextareaInput.cb = cb;
+    },
     addClass: () => {},
     removeClass: () => {},
     setText: () => {},
@@ -180,7 +203,7 @@ describe('LOOP-05: Node Editor loop form lock-in (D-01, D-02, D-17)', () => {
     expect(loopEntry?.[1]).toBe('Loop');
   });
 
-  it('renderForm(kind=loop) renders heading "Loop node" + exactly one "Header text" Setting', () => {
+  it('renderForm(kind=loop) renders heading "Loop node" + exactly one "Header text" growable label', () => {
     (view as unknown as { renderForm: (n: unknown, k: unknown) => void }).renderForm(
       { radiprotocol_nodeType: 'loop', radiprotocol_headerText: 'sample' },
       'loop',
@@ -188,7 +211,7 @@ describe('LOOP-05: Node Editor loop form lock-in (D-01, D-02, D-17)', () => {
     expect(settingCalls.setName).toContain('Loop node');
     // Fall-through guard (Pitfall 5): legacy 'loop-start'/'loop-end' stub uses 'Legacy loop node'.
     expect(settingCalls.setName).not.toContain('Legacy loop node');
-    const headerTextCount = settingCalls.setName.filter(n => n === 'Header text').length;
+    const headerTextCount = createdElements.filter(e => e.cls === 'rp-field-label' && e.text === 'Header text').length;
     expect(headerTextCount).toBe(1);
   });
 
@@ -206,8 +229,10 @@ describe('LOOP-05: Node Editor loop form lock-in (D-01, D-02, D-17)', () => {
       { radiprotocol_nodeType: 'loop', radiprotocol_headerText: '' },
       'loop',
     );
-    expect(textareaOnChange.cb).not.toBeNull();
-    textareaOnChange.cb?.('new lesion header');
+    expect(domTextareaInput.node).not.toBeNull();
+    expect(domTextareaInput.cb).not.toBeNull();
+    domTextareaInput.node!.value = 'new lesion header';
+    domTextareaInput.cb?.();
     const pendingEdits = (view as unknown as { pendingEdits: Record<string, unknown> }).pendingEdits;
     expect(pendingEdits['radiprotocol_headerText']).toBe('new lesion header');
     expect(pendingEdits['text']).toBe('new lesion header');

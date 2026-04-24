@@ -462,6 +462,7 @@ export class EditorPanelView extends ItemView {
     textarea.value = options.value;
 
     const resize = () => {
+      if (!textarea.style) return;
       textarea.style.height = 'auto';
       textarea.style.height = textarea.scrollHeight + 'px';
     };
@@ -471,11 +472,17 @@ export class EditorPanelView extends ItemView {
     } else {
       resize();
     }
-    this.registerDomEvent(textarea, 'input', () => {
+    const onTextareaInput = () => {
       resize();
       options.onInput(textarea.value);
       this.scheduleAutoSave();
-    });
+    };
+
+    if (typeof this.registerDomEvent === 'function') {
+      this.registerDomEvent(textarea, 'input', onTextareaInput);
+    } else if (typeof textarea.addEventListener === 'function') {
+      textarea.addEventListener('input', onTextareaInput);
+    }
 
     return textarea;
   }
