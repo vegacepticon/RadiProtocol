@@ -17,21 +17,25 @@ export function getFolderSuggestions(app: App, query: string): string[] {
 
 export class FolderSuggest extends AbstractInputSuggest<string> {
   private readonly appRef: App;
+  private readonly inputEl: HTMLInputElement;
 
   constructor(app: App, inputEl: HTMLInputElement) {
     super(app, inputEl);
     this.appRef = app;
+    this.inputEl = inputEl;
   }
 
   protected getSuggestions(query: string): string[] {
     return getFolderSuggestions(this.appRef, query);
   }
 
-  renderSuggestion(_folderPath: string, _el: HTMLElement): void {
-    // Implemented in Task 2.
+  renderSuggestion(folderPath: string, el: HTMLElement): void {
+    el.createEl('div', { text: folderPath });
   }
 
-  selectSuggestion(_folderPath: string, _evt: MouseEvent | KeyboardEvent): void {
-    // Implemented in Task 2.
+  selectSuggestion(folderPath: string, evt: MouseEvent | KeyboardEvent): void {
+    this.setValue(folderPath);
+    this.inputEl.dispatchEvent(new Event('input', { bubbles: true }));
+    super.selectSuggestion(folderPath, evt);
   }
 }
