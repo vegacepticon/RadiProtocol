@@ -1,7 +1,8 @@
 ---
 phase: 60-inline-runner-layout-position-persistence
-status: automated_passed_pending_uat
+status: passed
 validated: 2026-04-24
+uat_approved: 2026-04-24
 requirements: [INLINE-FIX-02, INLINE-FIX-03]
 ---
 
@@ -30,6 +31,6 @@ requirements: [INLINE-FIX-02, INLINE-FIX-03]
 - Fixed a separator regression in `InlineRunnerModal` snippet insertion so note appends use the runner-produced delta instead of raw snippet text.
 - Pre-existing unrelated changes remain preserved: `.planning/v1.8-MILESTONE-AUDIT.md`, `src/main.ts`, and `.planning/phases/59-inline-runner-feature-parity/59-00-SUMMARY.md`.
 
-## UAT Readiness
+## UAT Result
 
-Human Obsidian UAT is ready and remains the only open Phase 60 gate. Do not promote Phase 60 to passed until compact footprint, drag persistence, reload restore, and viewport clamping are approved in the real Obsidian dev vault.
+Human Obsidian UAT approved 2026-04-24 (see `60-UAT.md`). All 6 tests passed in the real Obsidian dev vault: build/install, inline modal open, compact default placement (INLINE-FIX-03), drag persistence across tab switches (INLINE-FIX-02), position restore after reload (INLINE-FIX-02), and viewport clamping on small windows (INLINE-FIX-02). Phase 60 is promoted to passed.
