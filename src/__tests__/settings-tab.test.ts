@@ -106,4 +106,18 @@ describe('Settings folder autocomplete (SETTINGS-01)', () => {
     expect(plugin.settings.snippetFolderPath).toBe('.radiprotocol/snippets');
     expect(plugin.saveSettingsCalls).toBe(3);
   });
+
+  it('selecting suggestions reaches the same save-on-change pathway as typing', async () => {
+    const { plugin, suggesters } = renderSettings();
+
+    suggesters[0].selectSuggestion('Protocols/MR', {} as KeyboardEvent);
+    suggesters[1].selectSuggestion('Reports', {} as KeyboardEvent);
+    suggesters[2].selectSuggestion('.radiprotocol/snippets/CT', {} as KeyboardEvent);
+    await Promise.resolve();
+
+    expect(plugin.settings.protocolFolderPath).toBe('Protocols/MR');
+    expect(plugin.settings.outputFolderPath).toBe('Reports');
+    expect(plugin.settings.snippetFolderPath).toBe('.radiprotocol/snippets/CT');
+    expect(plugin.saveSettingsCalls).toBe(3);
+  });
 });
