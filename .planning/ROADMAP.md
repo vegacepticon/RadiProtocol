@@ -1,7 +1,7 @@
 # Roadmap: RadiProtocol
 
 **Project:** RadiProtocol
-**Last updated:** 2026-04-25 (Phase 62 execution complete — v1.9.0 prep + tag + runbook landed; awaiting user publish)
+**Last updated:** 2026-04-25 (v1.9 SHIPPED — GitHub Release v1.9.0 published with 3 loose assets)
 
 ---
 
@@ -15,7 +15,7 @@
 - ✅ **v1.6 Polish & Canvas Workflow** — Phases 36-42 (shipped 2026-04-17)
 - ✅ **v1.7 Loop Rework & Regression Cleanup** — Phases 43-46 (shipped 2026-04-18)
 - ✅ **v1.8 UX Polish & Snippet Picker Overhaul** — Phases 47-58 (shipped 2026-04-21)
-- 🚧 **v1.9 Inline Runner Polish & Settings UX** — Phases 59-62 (in progress)
+- ✅ **v1.9 Inline Runner Polish & Settings UX** — Phases 59-62 (shipped 2026-04-25)
 
 ---
 
@@ -141,7 +141,7 @@ Full details: `.planning/milestones/v1.8-ROADMAP.md`
 - [x] **Phase 59: Inline Runner Feature Parity** — Path resolution for nested protocol folders + separator on snippet insert + JSON fill-in modal (INLINE-FIX-01, INLINE-FIX-04, INLINE-FIX-05) — completed 2026-04-24
 - [x] **Phase 60: Inline Runner Layout & Position Persistence** — Compact default footprint + drag-position persisted in workspace state with viewport clamping (INLINE-FIX-02, INLINE-FIX-03) — completed 2026-04-24
 - [x] **Phase 61: Settings Folder Autocomplete** — FolderSuggest dropdown on every path field in settings (SETTINGS-01) — completed 2026-04-24
-- [ ] **Phase 62: BRAT Release v1.9.0** — GitHub Release v1.9.0 with aligned manifest/versions/package + verified BRAT install on clean vault (BRAT-02) — execution complete 2026-04-25, awaiting user publish per `62-RELEASE-RUNBOOK.md`
+- [x] **Phase 62: BRAT Release v1.9.0** — GitHub Release v1.9.0 with aligned manifest/versions/package + verified BRAT install on clean vault (BRAT-02) — shipped 2026-04-25
 
 ---
 
@@ -317,4 +317,4 @@ Phases execute in numeric order: 59 → 60 → 61 → 62. Phases 59, 60, 61 are 
 | 59. Inline Runner Feature Parity | v1.9 | 5/5 | Complete | 2026-04-24 |
 | 60. Inline Runner Layout & Position Persistence | v1.9 | 5/5 | Complete | 2026-04-24 |
 | 61. Settings Folder Autocomplete | v1.9 | 4/4 | Complete | 2026-04-24 |
-| 62. BRAT Release v1.9.0 | v1.9 | 3/3 | Awaiting user publish | - |
+| 62. BRAT Release v1.9.0 | v1.9 | 3/3 | Complete | 2026-04-25 |

@@ -2,34 +2,34 @@
 gsd_state_version: 1.0
 milestone: v1.9
 milestone_name: Inline Runner Polish & Settings UX
-status: awaiting_user_publish
-stopped_at: "Phase 62 execution complete — v1.9.0 prep commit + annotated tag 1.9.0 + runbook landed locally; awaiting user push + GitHub Release publish + BRAT smoke test per 62-RELEASE-RUNBOOK.md"
-last_updated: "2026-04-25T01:00:00.000Z"
-last_activity: 2026-04-25 — Phase 62 executed: chore(62) release-prep commit (39fa38f), tag 1.9.0 created, runbook committed (398f055); SC-1 verified locally
+status: shipped
+stopped_at: "v1.9.0 published to GitHub Releases — SC-1 (local) and SC-2 (Release) verified; SC-3 (fresh-vault BRAT smoke test) optional manual check"
+last_updated: "2026-04-25T02:00:00.000Z"
+last_activity: 2026-04-25 — v1.9.0 released: tag 1.9.0 pushed, GitHub Release v1.9.0 published with 3 loose assets (main.js, manifest.json, styles.css); API smoke check PASS
 progress:
   total_phases: 4
-  completed_phases: 3
+  completed_phases: 4
   total_plans: 17
   completed_plans: 17
-  percent: 95
+  percent: 100
 ---
 
 # RadiProtocol — Project State
 
 **Updated:** 2026-04-25
 **Milestone:** v1.9 — Inline Runner Polish & Settings UX
-**Status:** Phase 62 execution complete. SC-1 (local versioning + build) verified; SC-2 (GitHub Release) and SC-3 (BRAT smoke test) blocked on user action per `.planning/phases/62-brat-release-v1.9.0/62-RELEASE-RUNBOOK.md`.
+**Status:** SHIPPED. v1.9.0 published to GitHub Releases. SC-1 (local versioning + build) and SC-2 (Release with 3 loose assets, prerelease: false) verified. SC-3 (fresh-vault BRAT smoke test) is an optional manual confirmation.
 
 ---
 
 ## Current Position
 
-Phase: 62 of 62 (BRAT Release v1.9.0)
-Plan: 3/3 plans complete (62-01..62-03); all SUMMARY.md files written
-Status: Local execution complete — release-prep commit `39fa38f`, annotated tag `1.9.0`, runbook commit `398f055`, preflight passes `SC-1 local verification: PASS`. Awaiting user: D10 gate sign-off → `git push origin 1.9.0` → web-UI Release with 3 loose assets → fresh-vault BRAT smoke test.
-Last activity: 2026-04-25 — Phase 62 plans 01/02/03 executed; runbook authored
+Phase: 62 of 62 (BRAT Release v1.9.0) — SHIPPED
+Plan: 3/3 plans complete; v1.9.0 published
+Status: GitHub Release v1.9.0 live at https://github.com/vegacepticon/RadiProtocol/releases/tag/1.9.0 with 3 loose assets. API smoke check PASS (`tag_name=1.9.0`, `prerelease=false`, assets=main.js+manifest.json+styles.css). Tag `1.9.0` pushed. Local commits 9864c98..9c7bc8c synced to origin/main.
+Last activity: 2026-04-25 — v1.9.0 RELEASED
 
-Progress: [█████████▌] 95% (3/4 phases sealed, 17/17 plans complete; phase 62 awaits user publish for SC-2/SC-3)
+Progress: [██████████] 100% (4/4 phases complete, 17/17 plans complete, milestone shipped)
 
 ---
 
@@ -39,7 +39,7 @@ See: `.planning/PROJECT.md` (updated 2026-04-24).
 
 **Core value:** A radiologist can generate a structured, accurate protocol in seconds by answering a guided algorithm — without writing a single line of code.
 
-**Current focus:** Phase 62 execution complete. Next: user runs `62-RELEASE-RUNBOOK.md` to push tag, publish GitHub Release v1.9.0, and verify BRAT install on a fresh vault.
+**Current focus:** v1.9 milestone shipped — v1.9.0 GitHub Release live. Next: optional `/gsd-complete-milestone` to archive v1.9 and prepare for v2.0 / next milestone scope.
 
 ---
 
@@ -50,7 +50,7 @@ See: `.planning/PROJECT.md` (updated 2026-04-24).
 | 59 | Inline Runner Feature Parity | INLINE-FIX-01, INLINE-FIX-04, INLINE-FIX-05 | 5 | Complete 2026-04-24 |
 | 60 | Inline Runner Layout & Position Persistence | INLINE-FIX-02, INLINE-FIX-03 | 5 | Complete 2026-04-24 |
 | 61 | Settings Folder Autocomplete | SETTINGS-01 | 4 | Complete 2026-04-24 |
-| 62 | BRAT Release v1.9.0 | BRAT-02 | 3 | Awaiting user publish |
+| 62 | BRAT Release v1.9.0 | BRAT-02 | 3 | Shipped 2026-04-25 |
 
 **Coverage:** 7/7 v1.9 requirements mapped. No orphans. Phases 59–61 are independent; Phase 62 depends on all three.
 
@@ -129,7 +129,7 @@ See: `.planning/PROJECT.md` (updated 2026-04-24).
 ## Session Continuity
 
 Last session: 2026-04-25
-Stopped at: Phase 62 execution complete; awaiting user publish (push tag → web-UI Release → BRAT smoke test) per `62-RELEASE-RUNBOOK.md`
+Stopped at: v1.9.0 SHIPPED — GitHub Release v1.9.0 published; SC-1/SC-2 verified
 Resume file: None
 
 ---
@@ -138,5 +138,5 @@ Resume file: None
 
 - Branch: `main`
 - Main: `main`
-- Last shipped: v1.8 (2026-04-21; GitHub Release v1.8.0 published)
+- Last shipped: v1.9 (2026-04-25; GitHub Release v1.9.0 published)
 - Starting phase number for v1.9: 59 (continues from Phase 58)

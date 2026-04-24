@@ -1,9 +1,9 @@
 ---
 phase: 62-brat-release-v1.9.0
 type: release-runbook
-status: ready
-performed_on: <YYYY-MM-DD — user fills at publish time>
-final_verdict: pending
+status: complete
+performed_on: 2026-04-25
+final_verdict: success
 source:
   - 62-CONTEXT.md
   - 55-RELEASE-RUNBOOK.md (template)
