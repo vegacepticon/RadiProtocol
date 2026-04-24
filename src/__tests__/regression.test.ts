@@ -76,6 +76,29 @@ describe('CSS regression: snippet-manager.css', () => {
   });
 });
 
+describe('CSS regression: inline-runner.css — Phase 60 compact draggable layout', () => {
+  let css: string;
+  beforeAll(() => { css = cssFile('inline-runner'); });
+
+  it('has the Phase 60 compact draggable inline runner section', () => {
+    expect(css).toContain('/* Phase 60: compact draggable inline runner */');
+  });
+
+  it('guards against the old full note-width bottom bar as the final container shape', () => {
+    expect(css).toMatch(/\.rp-inline-runner-container\s*\{[\s\S]*?width:\s*min\(/);
+    expect(css).toMatch(/\.rp-inline-runner-container\s*\{[\s\S]*?max-width:\s*calc\(100vw/);
+    expect(css).toMatch(/\.rp-inline-runner-container\s*\{[\s\S]*?max-height:\s*min\(/);
+    expect(css).toMatch(/\.rp-inline-runner-container\s*\{[\s\S]*?border:\s*1px solid var\(--background-modifier-border\)/);
+  });
+
+  it('bounds content and tightens question/list/toolbar spacing', () => {
+    expect(css).toMatch(/\.rp-inline-runner-content\s*\{[\s\S]*?padding:\s*var\(--size-4-2\)/);
+    expect(css).toContain('.rp-inline-runner-content .rp-question-zone');
+    expect(css).toMatch(/\.rp-inline-runner-content \.rp-question-text\s*\{[\s\S]*?margin:\s*0 0 var\(--size-4-2\) 0/);
+    expect(css).toMatch(/\.rp-inline-runner-content \.rp-output-toolbar\s*\{[\s\S]*?gap:\s*var\(--size-2-3\)/);
+  });
+});
+
 // ── TypeScript regressions ────────────────────────────────────────────────────
 
 describe('TS regression: editor-panel-view.ts — auto-save', () => {
