@@ -2,34 +2,34 @@
 gsd_state_version: 1.0
 milestone: v1.9
 milestone_name: Inline Runner Polish & Settings UX
-status: in_progress
-stopped_at: "Phase 60 sealed (UAT approved, VALIDATION passed, SUMMARY written) — Phase 62 release ready to execute with all v1.9 code phases (59/60/61) complete"
-last_updated: "2026-04-25T00:00:00.000Z"
-last_activity: 2026-04-25 — Phase 60 sealed: 60-UAT.md committed (6/6 pass), 60-VALIDATION.md promoted to passed, 60-04-SUMMARY.md written
+status: awaiting_user_publish
+stopped_at: "Phase 62 execution complete — v1.9.0 prep commit + annotated tag 1.9.0 + runbook landed locally; awaiting user push + GitHub Release publish + BRAT smoke test per 62-RELEASE-RUNBOOK.md"
+last_updated: "2026-04-25T01:00:00.000Z"
+last_activity: 2026-04-25 — Phase 62 executed: chore(62) release-prep commit (39fa38f), tag 1.9.0 created, runbook committed (398f055); SC-1 verified locally
 progress:
   total_phases: 4
   completed_phases: 3
   total_plans: 17
-  completed_plans: 14
-  percent: 82
+  completed_plans: 17
+  percent: 95
 ---
 
 # RadiProtocol — Project State
 
 **Updated:** 2026-04-25
 **Milestone:** v1.9 — Inline Runner Polish & Settings UX
-**Status:** Phase 60 UAT approved and sealed. Phase 62 release ready to execute — all v1.9 code phases (59/60/61) complete; D10 Phase 60 UAT gate cleared.
+**Status:** Phase 62 execution complete. SC-1 (local versioning + build) verified; SC-2 (GitHub Release) and SC-3 (BRAT smoke test) blocked on user action per `.planning/phases/62-brat-release-v1.9.0/62-RELEASE-RUNBOOK.md`.
 
 ---
 
 ## Current Position
 
 Phase: 62 of 62 (BRAT Release v1.9.0)
-Plan: 3 plans (62-01..62-03) across 3 waves — mirror of Phase 55 with D10 Phase 60 UAT gate
-Status: Ready to execute — Phase 60 sealed; plan checker previously PASSED on first iteration
-Last activity: 2026-04-25 — Phase 60 sealed (UAT approved, VALIDATION → passed, SUMMARY written)
+Plan: 3/3 plans complete (62-01..62-03); all SUMMARY.md files written
+Status: Local execution complete — release-prep commit `39fa38f`, annotated tag `1.9.0`, runbook commit `398f055`, preflight passes `SC-1 local verification: PASS`. Awaiting user: D10 gate sign-off → `git push origin 1.9.0` → web-UI Release with 3 loose assets → fresh-vault BRAT smoke test.
+Last activity: 2026-04-25 — Phase 62 plans 01/02/03 executed; runbook authored
 
-Progress: [████████▏░] 82% (3/4 phases, 14/17 known plans — Phase 62 planned, all code phases complete)
+Progress: [█████████▌] 95% (3/4 phases sealed, 17/17 plans complete; phase 62 awaits user publish for SC-2/SC-3)
 
 ---
 
@@ -39,7 +39,7 @@ See: `.planning/PROJECT.md` (updated 2026-04-24).
 
 **Core value:** A radiologist can generate a structured, accurate protocol in seconds by answering a guided algorithm — without writing a single line of code.
 
-**Current focus:** All v1.9 code phases (59/60/61) complete and sealed. Next: execute Phase 62 BRAT release v1.9.0.
+**Current focus:** Phase 62 execution complete. Next: user runs `62-RELEASE-RUNBOOK.md` to push tag, publish GitHub Release v1.9.0, and verify BRAT install on a fresh vault.
 
 ---
 
@@ -50,7 +50,7 @@ See: `.planning/PROJECT.md` (updated 2026-04-24).
 | 59 | Inline Runner Feature Parity | INLINE-FIX-01, INLINE-FIX-04, INLINE-FIX-05 | 5 | Complete 2026-04-24 |
 | 60 | Inline Runner Layout & Position Persistence | INLINE-FIX-02, INLINE-FIX-03 | 5 | Complete 2026-04-24 |
 | 61 | Settings Folder Autocomplete | SETTINGS-01 | 4 | Complete 2026-04-24 |
-| 62 | BRAT Release v1.9.0 | BRAT-02 | 3 | Planned 2026-04-24 |
+| 62 | BRAT Release v1.9.0 | BRAT-02 | 3 | Awaiting user publish |
 
 **Coverage:** 7/7 v1.9 requirements mapped. No orphans. Phases 59–61 are independent; Phase 62 depends on all three.
 
@@ -129,7 +129,7 @@ See: `.planning/PROJECT.md` (updated 2026-04-24).
 ## Session Continuity
 
 Last session: 2026-04-25
-Stopped at: Phase 60 sealed; all v1.9 code phases complete; Phase 62 BRAT release ready to execute
+Stopped at: Phase 62 execution complete; awaiting user publish (push tag → web-UI Release → BRAT smoke test) per `62-RELEASE-RUNBOOK.md`
 Resume file: None
 
 ---

@@ -1,7 +1,7 @@
 # Roadmap: RadiProtocol
 
 **Project:** RadiProtocol
-**Last updated:** 2026-04-24 (Phase 60 complete — Inline Runner Layout & Position Persistence approved)
+**Last updated:** 2026-04-25 (Phase 62 execution complete — v1.9.0 prep + tag + runbook landed; awaiting user publish)
 
 ---
 
@@ -141,7 +141,7 @@ Full details: `.planning/milestones/v1.8-ROADMAP.md`
 - [x] **Phase 59: Inline Runner Feature Parity** — Path resolution for nested protocol folders + separator on snippet insert + JSON fill-in modal (INLINE-FIX-01, INLINE-FIX-04, INLINE-FIX-05) — completed 2026-04-24
 - [x] **Phase 60: Inline Runner Layout & Position Persistence** — Compact default footprint + drag-position persisted in workspace state with viewport clamping (INLINE-FIX-02, INLINE-FIX-03) — completed 2026-04-24
 - [x] **Phase 61: Settings Folder Autocomplete** — FolderSuggest dropdown on every path field in settings (SETTINGS-01) — completed 2026-04-24
-- [ ] **Phase 62: BRAT Release v1.9.0** — GitHub Release v1.9.0 with aligned manifest/versions/package + verified BRAT install on clean vault (BRAT-02)
+- [ ] **Phase 62: BRAT Release v1.9.0** — GitHub Release v1.9.0 with aligned manifest/versions/package + verified BRAT install on clean vault (BRAT-02) — execution complete 2026-04-25, awaiting user publish per `62-RELEASE-RUNBOOK.md`
 
 ---
 
@@ -293,9 +293,9 @@ Plans:
 **Plans:** 3 plans
 
 Plans:
-- [ ] 62-01-PLAN.md — Wave 1: version bump across manifest.json (+D1), versions.json (+D4 preserve 1.8.0, add 1.9.0), package.json
-- [ ] 62-02-PLAN.md — Wave 2: build + v1.9.0 preflight script + atomic release-prep commit + unprefixed annotated tag `1.9.0`
-- [ ] 62-03-PLAN.md — Wave 3: release runbook with D10 Phase 60 UAT gate + D6 web-UI instructions + D7 changelog + SC-3 post-publish verification
+- [x] 62-01-PLAN.md — Wave 1: version bump across manifest.json (+D1), versions.json (+D4 preserve 1.8.0, add 1.9.0), package.json
+- [x] 62-02-PLAN.md — Wave 2: build + v1.9.0 preflight script + atomic release-prep commit + unprefixed annotated tag `1.9.0`
+- [x] 62-03-PLAN.md — Wave 3: release runbook with D10 Phase 60 UAT gate + D6 web-UI instructions + D7 changelog + SC-3 post-publish verification
 
 ---
 
@@ -315,6 +315,6 @@ Phases execute in numeric order: 59 → 60 → 61 → 62. Phases 59, 60, 61 are 
 | 43-46 | v1.7 | 18/18 | Complete | 2026-04-18 |
 | 47-58 | v1.8 | 50/50 | Complete | 2026-04-21 |
 | 59. Inline Runner Feature Parity | v1.9 | 5/5 | Complete | 2026-04-24 |
-| 60. Inline Runner Layout & Position Persistence | v1.9 | 5/5 | Awaiting human UAT | - |
-| 61. Settings Folder Autocomplete | v1.9 | 0/4 | Planned | - |
-| 62. BRAT Release v1.9.0 | v1.9 | 0/3 | Planned | - |
+| 60. Inline Runner Layout & Position Persistence | v1.9 | 5/5 | Complete | 2026-04-24 |
+| 61. Settings Folder Autocomplete | v1.9 | 4/4 | Complete | 2026-04-24 |
+| 62. BRAT Release v1.9.0 | v1.9 | 3/3 | Awaiting user publish | - |
