@@ -1,7 +1,7 @@
 # Roadmap: RadiProtocol
 
 **Project:** RadiProtocol
-**Last updated:** 2026-04-24 (Phase 60 planned — 5 plans across 5 waves)
+**Last updated:** 2026-04-24 (Phase 61 planned — 4 plans across 4 waves)
 
 ---
 
@@ -273,8 +273,14 @@ Plans:
   1. Focusing any settings path field (Protocols folder, Snippets folder, Output folder) and typing one or more characters shows a dropdown listing existing vault folders whose paths match the typed prefix/substring — typing with zero matches shows an empty or closed dropdown, not an error (SETTINGS-01)
   2. Clicking (or Enter-selecting) an item in the dropdown fills the field with the full folder path and the Settings tab's existing save-on-change path persists the value — identical to the prior manual-typing behaviour, with no setting-save regression (SETTINGS-01)
   3. The autocomplete is implemented as a single reusable `FolderSuggest` component built on Obsidian's `AbstractInputSuggest` pattern (matching the Templater reference) and wired into all three settings fields — no custom popup DOM, no duplicated suggester logic per field (SETTINGS-01)
-**Plans**: TBD
+**Plans:** 4 plans
 **UI hint**: yes
+
+Plans:
+- [ ] 61-00-PLAN.md — RED tests and Obsidian mock support for FolderSuggest + settings attachment
+- [ ] 61-01-PLAN.md — Reusable `FolderSuggest` built on `AbstractInputSuggest`
+- [ ] 61-02-PLAN.md — Wire autocomplete into Protocols, Output, and Snippets settings fields
+- [ ] 61-03-PLAN.md — Automated validation and real Obsidian UAT sign-off
 
 ### Phase 62: BRAT Release v1.9.0
 **Goal**: The repository is shippable via BRAT at version 1.9.0 — `manifest.json`, `versions.json`, `package.json` all align on `1.9.0`, a GitHub Release v1.9.0 exists with the three required assets attached at the release root, and end-to-end BRAT install on a clean test vault succeeds.
@@ -305,5 +311,5 @@ Phases execute in numeric order: 59 → 60 → 61 → 62. Phases 59, 60, 61 are 
 | 47-58 | v1.8 | 50/50 | Complete | 2026-04-21 |
 | 59. Inline Runner Feature Parity | v1.9 | 5/5 | Complete | 2026-04-24 |
 | 60. Inline Runner Layout & Position Persistence | v1.9 | 5/5 | Awaiting human UAT | - |
-| 61. Settings Folder Autocomplete | v1.9 | 0/TBD | Not started | - |
+| 61. Settings Folder Autocomplete | v1.9 | 0/4 | Planned | - |
 | 62. BRAT Release v1.9.0 | v1.9 | 0/TBD | Not started | - |
