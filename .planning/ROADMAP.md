@@ -1,7 +1,7 @@
 # Roadmap: RadiProtocol
 
 **Project:** RadiProtocol
-**Last updated:** 2026-04-24 (Phase 59 planned — 5 plans across 4 waves)
+**Last updated:** 2026-04-24 (Phase 60 planned — 5 plans across 5 waves)
 
 ---
 
@@ -255,8 +255,15 @@ Plans:
   2. Dragging the Inline Runner to a new position, then switching to another Obsidian tab and switching back, restores the modal at the last user-set coordinates — not reset to default, not off-screen (INLINE-FIX-02)
   3. Dragging the Inline Runner, closing Obsidian, and reopening it restores the modal at the last user-set coordinates when the user re-invokes the Run-in-inline command — position survives plugin reload, persisted via workspace state (INLINE-FIX-02)
   4. If the last-saved coordinates would place the modal off-screen (e.g. after a monitor/resolution change), the restore path clamps the coordinates to the current viewport bounds so the modal is always visible and remains draggable — no "flies off-screen and cannot be dragged back" regression (INLINE-FIX-02)
-**Plans**: TBD
+**Plans:** 5 plans
 **UI hint**: yes
+
+Plans:
+- [ ] 60-00-PLAN.md — Wave 0 RED tests for drag persistence, viewport clamping, and compact layout regression guards
+- [ ] 60-01-PLAN.md — Durable inline runner position state contract + clamp helper
+- [ ] 60-02-PLAN.md — Header dragging, saved-position restore, and layout-change re-clamping
+- [ ] 60-03-PLAN.md — Compact draggable CSS overrides + generated CSS rebuild
+- [ ] 60-04-PLAN.md — Automated validation and live Obsidian UAT sign-off
 
 ### Phase 61: Settings Folder Autocomplete
 **Goal**: Every folder-path input field in the plugin's settings tab (Protocols folder, Snippets folder, Output folder) renders a Templater-style folder-autocomplete dropdown of existing vault folders as the user types, via Obsidian's `AbstractInputSuggest` pattern.
@@ -297,6 +304,6 @@ Phases execute in numeric order: 59 → 60 → 61 → 62. Phases 59, 60, 61 are 
 | 43-46 | v1.7 | 18/18 | Complete | 2026-04-18 |
 | 47-58 | v1.8 | 50/50 | Complete | 2026-04-21 |
 | 59. Inline Runner Feature Parity | v1.9 | 0/5 | Planned | - |
-| 60. Inline Runner Layout & Position Persistence | v1.9 | 0/TBD | Not started | - |
+| 60. Inline Runner Layout & Position Persistence | v1.9 | 0/5 | Planned | - |
 | 61. Settings Folder Autocomplete | v1.9 | 0/TBD | Not started | - |
 | 62. BRAT Release v1.9.0 | v1.9 | 0/TBD | Not started | - |

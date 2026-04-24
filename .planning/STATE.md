@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.9
 milestone_name: Inline Runner Polish & Settings UX
 status: ready_to_execute
-stopped_at: "Phase 59 planned 2026-04-24 — 5 plans across 4 waves, all 3 REQ-IDs covered, plan-checker gates cleared"
+stopped_at: "Phase 60 planned 2026-04-24 — 5 plans across 5 waves, INLINE-FIX-02/03 covered"
 last_updated: "2026-04-24T00:00:00.000Z"
-last_activity: 2026-04-24 -- Phase 59 planned; 5 plans (59-00..59-04) in 4 waves; ready for /gsd-execute-phase 59
+last_activity: 2026-04-24 -- Phase 60 planned; 5 plans (60-00..60-04) in 5 waves; ready for /gsd-execute-phase 60
 progress:
   total_phases: 4
   completed_phases: 0
-  total_plans: 5
+  total_plans: 10
   completed_plans: 0
   percent: 0
 ---
@@ -18,18 +18,18 @@ progress:
 
 **Updated:** 2026-04-24
 **Milestone:** v1.9 — Inline Runner Polish & Settings UX
-**Status:** Phase 59 planned; ready to execute.
+**Status:** Phase 60 planned; ready to execute.
 
 ---
 
 ## Current Position
 
-Phase: 59 of 62 (Inline Runner Feature Parity)
-Plan: 5 plans (59-00..59-04) across 4 waves
-Status: Ready to execute Phase 59
-Last activity: 2026-04-24 — Phase 59 planned; CONTEXT.md locks D6 reversal (user-confirmed); all 3 REQ-IDs covered
+Phase: 60 of 62 (Inline Runner Layout & Position Persistence)
+Plan: 5 plans (60-00..60-04) across 5 waves
+Status: Ready to execute Phase 60
+Last activity: 2026-04-24 — Phase 60 planned; CONTEXT.md locks position persistence, viewport clamping, compact footprint, and no resize/fade; both REQ-IDs covered
 
-Progress: [░░░░░░░░░░] 0% (0/4 phases, 0/5 plans — Phase 59 only)
+Progress: [░░░░░░░░░░] 0% (0/4 phases, 0/10 plans — Phases 59 and 60 planned)
 
 ---
 
@@ -39,7 +39,7 @@ See: `.planning/PROJECT.md` (updated 2026-04-24).
 
 **Core value:** A radiologist can generate a structured, accurate protocol in seconds by answering a guided algorithm — without writing a single line of code.
 
-**Current focus:** Phase 59 — Inline Runner Feature Parity (INLINE-FIX-01, INLINE-FIX-04, INLINE-FIX-05).
+**Current focus:** Phase 60 — Inline Runner Layout & Position Persistence (INLINE-FIX-02, INLINE-FIX-03).
 
 ---
 
@@ -47,8 +47,8 @@ See: `.planning/PROJECT.md` (updated 2026-04-24).
 
 | Phase | Name | Requirements | Plans | Status |
 |-------|------|--------------|-------|--------|
-| 59 | Inline Runner Feature Parity | INLINE-FIX-01, INLINE-FIX-04, INLINE-FIX-05 | TBD | Not started |
-| 60 | Inline Runner Layout & Position Persistence | INLINE-FIX-02, INLINE-FIX-03 | TBD | Not started |
+| 59 | Inline Runner Feature Parity | INLINE-FIX-01, INLINE-FIX-04, INLINE-FIX-05 | 5 | Planned |
+| 60 | Inline Runner Layout & Position Persistence | INLINE-FIX-02, INLINE-FIX-03 | 5 | Planned |
 | 61 | Settings Folder Autocomplete | SETTINGS-01 | TBD | Not started |
 | 62 | BRAT Release v1.9.0 | BRAT-02 | TBD | Not started |
 
