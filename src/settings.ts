@@ -2,6 +2,7 @@
 import type { App } from 'obsidian';
 import { PluginSettingTab, Setting } from 'obsidian';
 import type RadiProtocolPlugin from './main';
+import { FolderSuggest } from './views/folder-suggest';
 
 export interface InlineRunnerPosition {
   left: number;
@@ -91,14 +92,16 @@ export class RadiProtocolSettingsTab extends PluginSettingTab {
         'The canvas selector in the runner panel scans this folder. ' +
         'Leave empty to disable the selector.'
       )
-      .addText(text => text
-        .setPlaceholder('e.g. Protocols')
-        .setValue(this.plugin.settings.protocolFolderPath)
-        .onChange(async (value) => {
-          this.plugin.settings.protocolFolderPath = value.trim();
-          await this.plugin.saveSettings();
-        })
-      );
+      .addText(text => {
+        new FolderSuggest(this.app, text.inputEl);
+        text
+          .setPlaceholder('e.g. Protocols')
+          .setValue(this.plugin.settings.protocolFolderPath)
+          .onChange(async (value) => {
+            this.plugin.settings.protocolFolderPath = value.trim();
+            await this.plugin.saveSettings();
+          });
+      });
 
     // Group 3 — Output
     new Setting(containerEl).setName('Output').setHeading();
@@ -120,14 +123,16 @@ export class RadiProtocolSettingsTab extends PluginSettingTab {
     new Setting(containerEl)
       .setName('Output folder')
       .setDesc("Vault-relative folder for saved reports. Used when destination is 'Save to note' or 'Both'.")
-      .addText(text => text
-        .setPlaceholder('RadiProtocol Output')
-        .setValue(this.plugin.settings.outputFolderPath)
-        .onChange(async (value) => {
-          this.plugin.settings.outputFolderPath = value.trim() || 'RadiProtocol Output';
-          await this.plugin.saveSettings();
-        })
-      );
+      .addText(text => {
+        new FolderSuggest(this.app, text.inputEl);
+        text
+          .setPlaceholder('RadiProtocol Output')
+          .setValue(this.plugin.settings.outputFolderPath)
+          .onChange(async (value) => {
+            this.plugin.settings.outputFolderPath = value.trim() || 'RadiProtocol Output';
+            await this.plugin.saveSettings();
+          });
+      });
 
     // Group 5 — Storage
     new Setting(containerEl).setName('Storage').setHeading();
@@ -135,14 +140,16 @@ export class RadiProtocolSettingsTab extends PluginSettingTab {
     new Setting(containerEl)
       .setName('Snippet folder')
       .setDesc('Vault-relative path for snippet JSON files. Default: .radiprotocol/snippets')
-      .addText(text => text
-        .setPlaceholder('.radiprotocol/snippets')
-        .setValue(this.plugin.settings.snippetFolderPath)
-        .onChange(async (value) => {
-          this.plugin.settings.snippetFolderPath = value.trim() || '.radiprotocol/snippets';
-          await this.plugin.saveSettings();
-        })
-      );
+      .addText(text => {
+        new FolderSuggest(this.app, text.inputEl);
+        text
+          .setPlaceholder('.radiprotocol/snippets')
+          .setValue(this.plugin.settings.snippetFolderPath)
+          .onChange(async (value) => {
+            this.plugin.settings.snippetFolderPath = value.trim() || '.radiprotocol/snippets';
+            await this.plugin.saveSettings();
+          });
+      });
 
     new Setting(containerEl)
       .setName('Session folder')
