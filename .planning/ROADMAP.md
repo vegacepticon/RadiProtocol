@@ -1,7 +1,7 @@
 # Roadmap: RadiProtocol
 
 **Project:** RadiProtocol
-**Last updated:** 2026-04-24 (v1.9 roadmap authored; Phases 59–62 planned)
+**Last updated:** 2026-04-24 (Phase 59 planned — 5 plans across 4 waves)
 
 ---
 
@@ -237,7 +237,14 @@ All 14 phases shipped, 50/50 plans complete, 26/26 requirements satisfied.
   2. Selecting a snippet node in inline mode inserts the snippet content with the configured separator applied between prior accumulated text and the inserted snippet — no glued concatenation; separator resolution matches sidebar-runner (per-node override → protocol default → global default) (INLINE-FIX-04)
   3. Reaching a `.json` snippet with placeholders in inline mode opens `SnippetFillInModal` above the floating runner with working fill-in fields, live preview, and tab navigation identical to sidebar behaviour — submitting the modal appends the filled-in text to the active note (INLINE-FIX-05)
   4. All three fixes are regression-tested against the Phase 54 inline mode invariants: the floating modal still does not block note editing, answers still append to the end of the source note, and the existing sidebar and tab display modes remain unchanged (no cross-mode regressions)
-**Plans**: TBD
+**Plans:** 5 plans
+
+Plans:
+- [ ] 59-00-PLAN.md — Wave 0 test scaffolding: new unit test files + obsidian mock TFolder augmentation (RED baseline for INLINE-FIX-01/04/05)
+- [ ] 59-01-PLAN.md — Wave 1a: INLINE-FIX-01 path normalization + fallback scan via exported resolveProtocolCanvasFiles helper in src/main.ts
+- [ ] 59-02-PLAN.md — Wave 1b: INLINE-FIX-04 accumulator-diff delta append for MD + JSON-zero-placeholder snippet arms + new appendDeltaFromAccumulator helper
+- [ ] 59-03-PLAN.md — Wave 1c: INLINE-FIX-05 SnippetFillInModal rewrite + Phase 54 D6 reversal + isFillModalOpen D1 gate + fillModal disposal in close()
+- [ ] 59-04-PLAN.md — Wave 2: regression verification (full suite + tsc + build) + manual UAT on real Obsidian vault + VALIDATION.md/UAT.md sign-off
 
 ### Phase 60: Inline Runner Layout & Position Persistence
 **Goal**: Inline Runner ships with a compact default footprint that does not visually overlap the active note's editing area, and remembers the user's drag-position across tab switches and plugin reloads with viewport-clamping that prevents the modal from ever landing off-screen.
@@ -289,7 +296,7 @@ Phases execute in numeric order: 59 → 60 → 61 → 62. Phases 59, 60, 61 are 
 | 36-42 | v1.6 | 14/14 | Complete | 2026-04-17 |
 | 43-46 | v1.7 | 18/18 | Complete | 2026-04-18 |
 | 47-58 | v1.8 | 50/50 | Complete | 2026-04-21 |
-| 59. Inline Runner Feature Parity | v1.9 | 0/TBD | Not started | - |
+| 59. Inline Runner Feature Parity | v1.9 | 0/5 | Planned | - |
 | 60. Inline Runner Layout & Position Persistence | v1.9 | 0/TBD | Not started | - |
 | 61. Settings Folder Autocomplete | v1.9 | 0/TBD | Not started | - |
 | 62. BRAT Release v1.9.0 | v1.9 | 0/TBD | Not started | - |
