@@ -9,6 +9,46 @@ import type { ProtocolGraph, AnswerNode, SnippetNode } from '../graph/graph-mode
 import { SnippetTreePicker } from './snippet-tree-picker';
 import { isExitEdge, nodeLabel, stripExitPrefix } from '../graph/node-label';
 import { renderSnippet, type JsonSnippet } from '../snippets/snippet-model';
+import type { InlineRunnerPosition } from '../settings';
+
+interface InlineRunnerViewport {
+  width: number;
+  height: number;
+}
+
+interface InlineRunnerSize {
+  width: number;
+  height: number;
+}
+
+const INLINE_RUNNER_DEFAULT_WIDTH = 360;
+const INLINE_RUNNER_DEFAULT_HEIGHT = 240;
+const INLINE_RUNNER_DEFAULT_MARGIN = 16;
+const INLINE_RUNNER_MIN_VISIBLE_WIDTH = 160;
+const INLINE_RUNNER_MIN_VISIBLE_HEADER_HEIGHT = 40;
+
+function isFiniteInlineRunnerPosition(position: InlineRunnerPosition | null): position is InlineRunnerPosition {
+  return position !== null && Number.isFinite(position.left) && Number.isFinite(position.top);
+}
+
+/** Phase 60 D-02: never let persisted coordinates place the draggable header fully off-screen. */
+export function clampInlineRunnerPosition(
+  position: InlineRunnerPosition | null,
+  viewport: InlineRunnerViewport,
+  size: InlineRunnerSize,
+): InlineRunnerPosition | null {
+  if (!isFiniteInlineRunnerPosition(position)) return null;
+
+  const visibleWidth = Math.min(Math.max(size.width, INLINE_RUNNER_MIN_VISIBLE_WIDTH), viewport.width);
+  const visibleHeight = Math.min(Math.max(size.height, INLINE_RUNNER_MIN_VISIBLE_HEADER_HEIGHT), viewport.height);
+  const maxLeft = Math.max(0, viewport.width - Math.min(visibleWidth, INLINE_RUNNER_MIN_VISIBLE_WIDTH));
+  const maxTop = Math.max(0, viewport.height - Math.min(visibleHeight, INLINE_RUNNER_MIN_VISIBLE_HEADER_HEIGHT));
+
+  return {
+    left: Math.min(Math.max(0, position.left), maxLeft),
+    top: Math.min(Math.max(0, position.top), maxTop),
+  };
+}
 
 /**
  * InlineRunnerModal — floating panel that hosts the Runner UI over an active note.
@@ -40,6 +80,10 @@ export class InlineRunnerModal {
   private snippetTreePicker: SnippetTreePicker | null = null;
   private resizeObserver: ResizeObserver | null = null;
   private workspaceLayoutRef: import('obsidian').EventRef | null = null;
+  private windowResizeHandler: (() => void) | null = null;
+  private dragMoveHandler: ((event: PointerEvent) => void) | null = null;
+  private dragUpHandler: ((event: PointerEvent) => void) | null = null;
+  private isDragging = false;
 
   constructor(
     app: App,
@@ -125,13 +169,17 @@ export class InlineRunnerModal {
     // Initial visibility check
     this.handleActiveLeafChange();
 
-    // Position modal over the active note content area
-    this.updateModalPosition();
+    // Phase 60: restore saved compact position or apply compact default.
+    this.restoreOrDefaultPosition();
 
-    // Reposition on layout changes
+    // Re-clamp on layout changes without resetting to note-width anchoring.
     this.workspaceLayoutRef = this.app.workspace.on('layout-change', () => {
-      this.updateModalPosition();
+      void this.reclampCurrentPosition(true);
     });
+    this.windowResizeHandler = () => {
+      void this.reclampCurrentPosition(true);
+    };
+    window.addEventListener('resize', this.windowResizeHandler);
   }
 
   close(): void {
@@ -160,6 +208,11 @@ export class InlineRunnerModal {
       this.resizeObserver.disconnect();
       this.resizeObserver = null;
     }
+    if (this.windowResizeHandler !== null) {
+      window.removeEventListener('resize', this.windowResizeHandler);
+      this.windowResizeHandler = null;
+    }
+    this.removeDragListeners();
 
     // Remove from DOM
     if (this.containerEl !== null) {
@@ -181,6 +234,7 @@ export class InlineRunnerModal {
     // Header
     const header = container.createDiv({ cls: 'rp-inline-runner-header' });
     this.headerEl = header;
+    this.enableDragging(header);
 
     const titleEl = header.createDiv({ cls: 'rp-inline-runner-header-title' });
     const canvasName = this.canvasFilePath!.replace(/\.canvas$/, '').split('/').pop() ?? 'Protocol';
@@ -482,67 +536,116 @@ export class InlineRunnerModal {
     this.close();
   }
 
-  /** Position the modal to match the active note's width and position. */
-  private updateModalPosition(): void {
+  private getViewport(): InlineRunnerViewport {
+    return {
+      width: Math.max(0, window.innerWidth || document.documentElement.clientWidth || 0),
+      height: Math.max(0, window.innerHeight || document.documentElement.clientHeight || 0),
+    };
+  }
+
+  private getContainerSize(): InlineRunnerSize {
+    const rect = this.containerEl?.getBoundingClientRect();
+    return {
+      width: Math.max(INLINE_RUNNER_DEFAULT_WIDTH, rect?.width ?? 0),
+      height: Math.max(INLINE_RUNNER_DEFAULT_HEIGHT, rect?.height ?? 0),
+    };
+  }
+
+  private getDefaultPosition(): InlineRunnerPosition {
+    const viewport = this.getViewport();
+    const size = this.getContainerSize();
+    return {
+      left: Math.max(INLINE_RUNNER_DEFAULT_MARGIN, viewport.width - size.width - INLINE_RUNNER_DEFAULT_MARGIN),
+      top: Math.max(INLINE_RUNNER_DEFAULT_MARGIN, viewport.height - size.height - INLINE_RUNNER_DEFAULT_MARGIN),
+    };
+  }
+
+  private applyPosition(position: InlineRunnerPosition): void {
     if (this.containerEl === null) return;
-
-    // Find the visible CodeMirror editor element.
-    // Obsidian's markdown views use CodeMirror 6 with .cm-editor class.
-    // We need the one that belongs to the active (visible) tab.
-    const cmEditors = document.querySelectorAll('.cm-editor') as NodeListOf<HTMLElement>;
-    let editorEl: HTMLElement | null = null;
-
-    // Find the visible editor — the one whose parent leaf has the 'is-active' class
-    for (const editor of cmEditors) {
-      // Walk up to find if any ancestor has .is-active
-      let parent: HTMLElement | null = editor.parentElement;
-      while (parent !== null) {
-        if (parent.classList.contains('is-active') || parent.classList.contains('mod-active')) {
-          editorEl = editor;
-          break;
-        }
-        parent = parent.parentElement;
-      }
-      if (editorEl !== null) break;
-    }
-
-    // If no active editor found, use the first visible one
-    if (editorEl === null) {
-      for (const editor of cmEditors) {
-        const rect = editor.getBoundingClientRect();
-        if (rect.width > 0 && rect.height > 0) {
-          editorEl = editor;
-          break;
-        }
-      }
-    }
-
-    if (editorEl === null) {
-      // Fallback: fixed width, centered at bottom
-      this.containerEl.style.left = '50%';
-      this.containerEl.style.transform = 'translateX(-50%)';
-      this.containerEl.style.right = '';
-      this.containerEl.style.width = '600px';
-      this.containerEl.style.maxWidth = '80vw';
-      return;
-    }
-
-    const rect = editorEl.getBoundingClientRect();
-
-    this.containerEl.style.left = `${rect.left}px`;
-    this.containerEl.style.right = `${window.innerWidth - rect.right}px`;
-    this.containerEl.style.width = 'auto';
+    this.containerEl.style.left = `${Math.round(position.left)}px`;
+    this.containerEl.style.top = `${Math.round(position.top)}px`;
+    this.containerEl.style.right = '';
+    this.containerEl.style.bottom = '';
+    this.containerEl.style.width = '';
     this.containerEl.style.maxWidth = '';
     this.containerEl.style.transform = '';
+  }
 
-    // Set up ResizeObserver to reposition when note width changes
-    if (this.resizeObserver !== null) {
-      this.resizeObserver.disconnect();
+  private restoreOrDefaultPosition(): void {
+    const saved = this.plugin.getInlineRunnerPosition();
+    const viewport = this.getViewport();
+    const size = this.getContainerSize();
+    const restored = clampInlineRunnerPosition(saved, viewport, size);
+    const position = restored ?? clampInlineRunnerPosition(this.getDefaultPosition(), viewport, size) ?? { left: INLINE_RUNNER_DEFAULT_MARGIN, top: INLINE_RUNNER_DEFAULT_MARGIN };
+    this.applyPosition(position);
+  }
+
+  private getAppliedPosition(): InlineRunnerPosition | null {
+    if (this.containerEl === null) return null;
+    const left = Number.parseFloat(this.containerEl.style.left);
+    const top = Number.parseFloat(this.containerEl.style.top);
+    return isFiniteInlineRunnerPosition({ left, top }) ? { left, top } : null;
+  }
+
+  private async reclampCurrentPosition(persistIfChanged: boolean): Promise<void> {
+    const current = this.getAppliedPosition() ?? this.plugin.getInlineRunnerPosition() ?? this.getDefaultPosition();
+    const clamped = clampInlineRunnerPosition(current, this.getViewport(), this.getContainerSize());
+    if (clamped === null) return;
+    this.applyPosition(clamped);
+    if (persistIfChanged && (clamped.left !== current.left || clamped.top !== current.top)) {
+      await this.plugin.saveInlineRunnerPosition(clamped);
     }
-    this.resizeObserver = new ResizeObserver(() => {
-      this.updateModalPosition();
+  }
+
+  private enableDragging(header: HTMLElement): void {
+    header.addEventListener('pointerdown', (event: PointerEvent) => {
+      if (this.containerEl === null) return;
+      const start = this.getAppliedPosition() ?? this.getDefaultPosition();
+      const startX = event.clientX;
+      const startY = event.clientY;
+      this.isDragging = true;
+      this.containerEl.addClass('is-dragging');
+
+      this.dragMoveHandler = (moveEvent: PointerEvent) => {
+        const next = clampInlineRunnerPosition(
+          { left: start.left + moveEvent.clientX - startX, top: start.top + moveEvent.clientY - startY },
+          this.getViewport(),
+          this.getContainerSize(),
+        );
+        if (next !== null) this.applyPosition(next);
+      };
+
+      this.dragUpHandler = () => {
+        const finalPosition = this.getAppliedPosition();
+        this.removeDragListeners();
+        if (finalPosition !== null) {
+          void this.plugin.saveInlineRunnerPosition(finalPosition);
+        }
+      };
+
+      document.addEventListener('pointermove', this.dragMoveHandler);
+      document.addEventListener('pointerup', this.dragUpHandler);
     });
-    this.resizeObserver.observe(editorEl);
+  }
+
+  private removeDragListeners(): void {
+    if (this.dragMoveHandler !== null) {
+      document.removeEventListener('pointermove', this.dragMoveHandler);
+      this.dragMoveHandler = null;
+    }
+    if (this.dragUpHandler !== null) {
+      document.removeEventListener('pointerup', this.dragUpHandler);
+      this.dragUpHandler = null;
+    }
+    if (this.containerEl !== null) {
+      this.containerEl.removeClass('is-dragging');
+    }
+    this.isDragging = false;
+  }
+
+  /** Phase 60 compatibility shim: layout events now clamp, not note-width-anchor. */
+  private updateModalPosition(): void {
+    void this.reclampCurrentPosition(true);
   }
 
   /** Resolve the textSeparator enum to its actual string value. */

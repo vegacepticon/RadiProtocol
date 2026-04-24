@@ -136,6 +136,10 @@ function makePlugin(saved: InlineRunnerPosition | null = null): RadiProtocolPlug
   return plugin as unknown as RadiProtocolPlugin & { saved: InlineRunnerPosition | null; saveSpy: ReturnType<typeof vi.fn> };
 }
 
+function fakeTFile(path: string): TFile {
+  return Object.assign(new TFile(), { path, name: path.split('/').pop() ?? path, extension: path.split('.').pop() ?? '', basename: path.replace(/\.md$/, '') });
+}
+
 function mount(saved: InlineRunnerPosition | null = null): { modal: ModalInternals; plugin: ReturnType<typeof makePlugin>; doc: FakeDocument } {
   const doc = new FakeDocument();
   vi.stubGlobal('document', doc);
@@ -148,8 +152,8 @@ function mount(saved: InlineRunnerPosition | null = null): { modal: ModalInterna
   vi.stubGlobal('ResizeObserver', class { observe(): void {} disconnect(): void {} });
 
   const plugin = makePlugin(saved);
-  const app = { vault: { getAbstractFileByPath: vi.fn(), read: vi.fn(), modify: vi.fn(), on: vi.fn() }, workspace: { on: vi.fn(), offref: vi.fn(), getActiveFile: vi.fn(() => new TFile('note.md')), iterateAllLeaves: vi.fn() } };
-  const modal = new InlineRunnerModal(app as never, plugin, 'protocol.canvas', new TFile('note.md')) as unknown as ModalInternals;
+  const app = { vault: { getAbstractFileByPath: vi.fn(), read: vi.fn(), modify: vi.fn(), on: vi.fn() }, workspace: { on: vi.fn(), offref: vi.fn(), getActiveFile: vi.fn(() => fakeTFile('note.md')), iterateAllLeaves: vi.fn() } };
+  const modal = new InlineRunnerModal(app as never, plugin, 'protocol.canvas', fakeTFile('note.md')) as unknown as ModalInternals;
   modal.buildContainer();
   return { modal, plugin, doc };
 }

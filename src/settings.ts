@@ -3,6 +3,11 @@ import type { App } from 'obsidian';
 import { PluginSettingTab, Setting } from 'obsidian';
 import type RadiProtocolPlugin from './main';
 
+export interface InlineRunnerPosition {
+  left: number;
+  top: number;
+}
+
 export interface RadiProtocolSettings {
   outputDestination: 'clipboard' | 'new-note' | 'both';
   outputFolderPath: string;
@@ -18,6 +23,8 @@ export interface RadiProtocolSettings {
   protocolFolderPath: string;
   /** Separator inserted before each new text chunk in the runner (D-08, SEP-01). Default: 'newline'. */
   textSeparator: 'newline' | 'space';
+  /** Phase 60 (D-01): Last dragged inline runner position, persisted across reloads. */
+  inlineRunnerPosition?: InlineRunnerPosition | null;
 }
 
 export const DEFAULT_SETTINGS: RadiProtocolSettings = {
@@ -29,6 +36,7 @@ export const DEFAULT_SETTINGS: RadiProtocolSettings = {
   runnerViewMode: 'sidebar',
   protocolFolderPath: '',
   textSeparator: 'newline',
+  inlineRunnerPosition: null,
 };
 
 export class RadiProtocolSettingsTab extends PluginSettingTab {

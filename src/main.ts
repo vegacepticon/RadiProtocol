@@ -1,7 +1,7 @@
 // main.ts
 import { Plugin, Notice, Menu, TFile, TFolder, SuggestModal } from 'obsidian';
 import type { WorkspaceLeaf } from 'obsidian';
-import { RadiProtocolSettings, DEFAULT_SETTINGS, RadiProtocolSettingsTab } from './settings';
+import { RadiProtocolSettings, DEFAULT_SETTINGS, RadiProtocolSettingsTab, type InlineRunnerPosition } from './settings';
 import { CanvasParser } from './graph/canvas-parser';
 import { EditorPanelView, EDITOR_PANEL_VIEW_TYPE } from './views/editor-panel-view';
 import { RunnerView, RUNNER_VIEW_TYPE } from './views/runner-view';
@@ -163,6 +163,15 @@ export default class RadiProtocolPlugin extends Plugin {
 
   async saveSettings(): Promise<void> {
     await this.saveData(this.settings);
+  }
+
+  getInlineRunnerPosition(): InlineRunnerPosition | null {
+    return this.settings.inlineRunnerPosition ?? null;
+  }
+
+  async saveInlineRunnerPosition(position: InlineRunnerPosition | null): Promise<void> {
+    this.settings.inlineRunnerPosition = position;
+    await this.saveSettings();
   }
 
   async activateEditorPanelView(): Promise<void> {
