@@ -290,7 +290,12 @@ Plans:
   1. `manifest.json.version`, `versions.json` mapping (min-Obsidian for 1.9.0), and `package.json.version` all agree on `1.9.0`; `npm run build` produces a clean `main.js` + `styles.css` against that manifest version (BRAT-02)
   2. `gh release list` shows a GitHub Release `v1.9.0` (or equivalent tag convention, matching Phase 55 precedent) whose assets include `manifest.json`, `main.js`, and `styles.css` as individually downloadable files at the release root — not inside a zip (BRAT-02)
   3. Installing the plugin in a fresh Obsidian vault via BRAT with identifier `vegacepticon/RadiProtocol` succeeds end-to-end on the 1.9.0 release — plugin appears in Community Plugins, enables cleanly, and the Runner view opens without errors (BRAT-02)
-**Plans**: TBD
+**Plans:** 3 plans
+
+Plans:
+- [ ] 62-01-PLAN.md — Wave 1: version bump across manifest.json (+D1), versions.json (+D4 preserve 1.8.0, add 1.9.0), package.json
+- [ ] 62-02-PLAN.md — Wave 2: build + v1.9.0 preflight script + atomic release-prep commit + unprefixed annotated tag `1.9.0`
+- [ ] 62-03-PLAN.md — Wave 3: release runbook with D10 Phase 60 UAT gate + D6 web-UI instructions + D7 changelog + SC-3 post-publish verification
 
 ---
 
@@ -312,4 +317,4 @@ Phases execute in numeric order: 59 → 60 → 61 → 62. Phases 59, 60, 61 are 
 | 59. Inline Runner Feature Parity | v1.9 | 5/5 | Complete | 2026-04-24 |
 | 60. Inline Runner Layout & Position Persistence | v1.9 | 5/5 | Awaiting human UAT | - |
 | 61. Settings Folder Autocomplete | v1.9 | 0/4 | Planned | - |
-| 62. BRAT Release v1.9.0 | v1.9 | 0/TBD | Not started | - |
+| 62. BRAT Release v1.9.0 | v1.9 | 0/3 | Planned | - |
