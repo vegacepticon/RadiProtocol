@@ -1,7 +1,7 @@
 # Roadmap: RadiProtocol
 
 **Project:** RadiProtocol
-**Last updated:** 2026-04-24 (Phase 61 complete — Settings Folder Autocomplete approved)
+**Last updated:** 2026-04-24 (Phase 60 complete — Inline Runner Layout & Position Persistence approved)
 
 ---
 
@@ -139,7 +139,7 @@ Full details: `.planning/milestones/v1.8-ROADMAP.md`
 **Milestone Goal:** Close the 5 Inline Runner UX gaps uncovered in v1.8 production usage (path resolution, position persistence, compact layout, separator on snippet insert, JSON fill-in modal), add folder autocomplete to every settings path field, and ship BRAT release v1.9.0 as a single end-of-milestone distribution event.
 
 - [x] **Phase 59: Inline Runner Feature Parity** — Path resolution for nested protocol folders + separator on snippet insert + JSON fill-in modal (INLINE-FIX-01, INLINE-FIX-04, INLINE-FIX-05) — completed 2026-04-24
-- [ ] **Phase 60: Inline Runner Layout & Position Persistence** — Compact default footprint + drag-position persisted in workspace state with viewport clamping (INLINE-FIX-02, INLINE-FIX-03)
+- [x] **Phase 60: Inline Runner Layout & Position Persistence** — Compact default footprint + drag-position persisted in workspace state with viewport clamping (INLINE-FIX-02, INLINE-FIX-03) — completed 2026-04-24
 - [x] **Phase 61: Settings Folder Autocomplete** — FolderSuggest dropdown on every path field in settings (SETTINGS-01) — completed 2026-04-24
 - [ ] **Phase 62: BRAT Release v1.9.0** — GitHub Release v1.9.0 with aligned manifest/versions/package + verified BRAT install on clean vault (BRAT-02)
 
@@ -259,11 +259,11 @@ Plans:
 **UI hint**: yes
 
 Plans:
-- [ ] 60-00-PLAN.md — Wave 0 RED tests for drag persistence, viewport clamping, and compact layout regression guards
-- [ ] 60-01-PLAN.md — Durable inline runner position state contract + clamp helper
-- [ ] 60-02-PLAN.md — Header dragging, saved-position restore, and layout-change re-clamping
-- [ ] 60-03-PLAN.md — Compact draggable CSS overrides + generated CSS rebuild
-- [ ] 60-04-PLAN.md — Automated validation and live Obsidian UAT sign-off
+- [x] 60-00-PLAN.md — Wave 0 RED tests for drag persistence, viewport clamping, and compact layout regression guards
+- [x] 60-01-PLAN.md — Durable inline runner position state contract + clamp helper
+- [x] 60-02-PLAN.md — Header dragging, saved-position restore, and layout-change re-clamping
+- [x] 60-03-PLAN.md — Compact draggable CSS overrides + generated CSS rebuild
+- [x] 60-04-PLAN.md — Automated validation and live Obsidian UAT sign-off
 
 ### Phase 61: Settings Folder Autocomplete
 **Goal**: Every folder-path input field in the plugin's settings tab (Protocols folder, Snippets folder, Output folder) renders a Templater-style folder-autocomplete dropdown of existing vault folders as the user types, via Obsidian's `AbstractInputSuggest` pattern.

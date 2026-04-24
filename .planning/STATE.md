@@ -3,22 +3,22 @@ gsd_state_version: 1.0
 milestone: v1.9
 milestone_name: Inline Runner Polish & Settings UX
 status: in_progress
-stopped_at: "Phase 62 planned (3 plans, 3 waves) — ready to execute once Phase 60 UAT gate is cleared; Phase 61 complete"
-last_updated: "2026-04-24T23:59:00.000Z"
-last_activity: 2026-04-24 — Phase 62 planned (3 plans: version bump, build+preflight+tag, release runbook with D10 Phase 60 UAT gate)
+stopped_at: "Phase 60 sealed (UAT approved, VALIDATION passed, SUMMARY written) — Phase 62 release ready to execute with all v1.9 code phases (59/60/61) complete"
+last_updated: "2026-04-25T00:00:00.000Z"
+last_activity: 2026-04-25 — Phase 60 sealed: 60-UAT.md committed (6/6 pass), 60-VALIDATION.md promoted to passed, 60-04-SUMMARY.md written
 progress:
   total_phases: 4
-  completed_phases: 2
+  completed_phases: 3
   total_plans: 17
-  completed_plans: 13
-  percent: 76
+  completed_plans: 14
+  percent: 82
 ---
 
 # RadiProtocol — Project State
 
-**Updated:** 2026-04-24
+**Updated:** 2026-04-25
 **Milestone:** v1.9 — Inline Runner Polish & Settings UX
-**Status:** Phase 62 planned (3 plans, 3 waves) — ready to execute; release publish gated on Phase 60 UAT sign-off (D10 gate).
+**Status:** Phase 60 UAT approved and sealed. Phase 62 release ready to execute — all v1.9 code phases (59/60/61) complete; D10 Phase 60 UAT gate cleared.
 
 ---
 
@@ -26,10 +26,10 @@ progress:
 
 Phase: 62 of 62 (BRAT Release v1.9.0)
 Plan: 3 plans (62-01..62-03) across 3 waves — mirror of Phase 55 with D10 Phase 60 UAT gate
-Status: Ready to execute — plan checker VERIFICATION PASSED on first iteration
-Last activity: 2026-04-24 — Phase 62 planned (3 plans: version bump, build+preflight+tag, release runbook)
+Status: Ready to execute — Phase 60 sealed; plan checker previously PASSED on first iteration
+Last activity: 2026-04-25 — Phase 60 sealed (UAT approved, VALIDATION → passed, SUMMARY written)
 
-Progress: [███████▌░░] 76% (2/4 phases, 13/17 known plans — Phase 62 planned; Phase 60 UAT artifacts still pending)
+Progress: [████████▏░] 82% (3/4 phases, 14/17 known plans — Phase 62 planned, all code phases complete)
 
 ---
 
@@ -39,7 +39,7 @@ See: `.planning/PROJECT.md` (updated 2026-04-24).
 
 **Core value:** A radiologist can generate a structured, accurate protocol in seconds by answering a guided algorithm — without writing a single line of code.
 
-**Current focus:** Phase 61 complete — Settings Folder Autocomplete (SETTINGS-01). Next release work depends on settling remaining v1.9 prerequisites.
+**Current focus:** All v1.9 code phases (59/60/61) complete and sealed. Next: execute Phase 62 BRAT release v1.9.0.
 
 ---
 
@@ -48,7 +48,7 @@ See: `.planning/PROJECT.md` (updated 2026-04-24).
 | Phase | Name | Requirements | Plans | Status |
 |-------|------|--------------|-------|--------|
 | 59 | Inline Runner Feature Parity | INLINE-FIX-01, INLINE-FIX-04, INLINE-FIX-05 | 5 | Complete 2026-04-24 |
-| 60 | Inline Runner Layout & Position Persistence | INLINE-FIX-02, INLINE-FIX-03 | 5 | Awaiting human UAT |
+| 60 | Inline Runner Layout & Position Persistence | INLINE-FIX-02, INLINE-FIX-03 | 5 | Complete 2026-04-24 |
 | 61 | Settings Folder Autocomplete | SETTINGS-01 | 4 | Complete 2026-04-24 |
 | 62 | BRAT Release v1.9.0 | BRAT-02 | 3 | Planned 2026-04-24 |
 
@@ -128,8 +128,8 @@ See: `.planning/PROJECT.md` (updated 2026-04-24).
 
 ## Session Continuity
 
-Last session: 2026-04-24
-Stopped at: Phase 61 complete; SETTINGS-01 UAT approved; ready to resolve remaining v1.9 prerequisites before Phase 62 release
+Last session: 2026-04-25
+Stopped at: Phase 60 sealed; all v1.9 code phases complete; Phase 62 BRAT release ready to execute
 Resume file: None
 
 ---
