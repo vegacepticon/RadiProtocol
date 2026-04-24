@@ -31,14 +31,26 @@ function makeInputEl() {
 
 function makeRenderEl() {
   const calls: Array<{ tag: string; opts?: { text?: string } }> = [];
-  return {
+  let htmlWrites = 0;
+  const el = {
     calls,
-    innerHTML: '',
+    getHtmlWrites: () => htmlWrites,
     createEl: (tag: string, opts?: { text?: string }) => {
       calls.push({ tag, opts });
       return {};
     },
-  } as unknown as HTMLElement & { calls: Array<{ tag: string; opts?: { text?: string } }> };
+  };
+  Object.defineProperty(el, 'innerHTML', {
+    set: () => {
+      htmlWrites += 1;
+    },
+  });
+  return {
+    ...el,
+  } as unknown as HTMLElement & {
+    calls: Array<{ tag: string; opts?: { text?: string } }>;
+    getHtmlWrites: () => number;
+  };
 }
 
 describe('FolderSuggest', () => {
@@ -70,7 +82,7 @@ describe('FolderSuggest', () => {
     suggest.renderSuggestion('Protocols/CT', el);
 
     expect(el.calls).toEqual([{ tag: 'div', opts: { text: 'Protocols/CT' } }]);
-    expect(el.innerHTML).toBe('');
+    expect(el.getHtmlWrites()).toBe(0);
   });
 
   it('selecting a suggestion sets the input value and dispatches input', () => {

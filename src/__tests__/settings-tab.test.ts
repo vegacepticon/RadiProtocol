@@ -1,10 +1,10 @@
 import { beforeEach, describe, expect, it } from 'vitest';
+import { DEFAULT_SETTINGS, RadiProtocolSettingsTab, type RadiProtocolSettings } from '../settings';
 import {
   __getMockAbstractInputSuggestInstances,
   __getMockTextComponents,
   __resetObsidianMocks,
-} from 'obsidian';
-import { DEFAULT_SETTINGS, RadiProtocolSettingsTab, type RadiProtocolSettings } from '../settings';
+} from '../__mocks__/obsidian';
 
 describe('Settings defaults (UI-10, UI-11, RUN-07)', () => {
   it('UI-10: DEFAULT_SETTINGS.outputDestination is clipboard', () => {
@@ -77,12 +77,12 @@ describe('Settings folder autocomplete (SETTINGS-01)', () => {
 
     expect(textComponents).toHaveLength(4);
     expect(suggesters).toHaveLength(3);
-    expect(suggesters.map(suggester => suggester.textInputEl)).toEqual([
-      textComponents[0].inputEl,
-      textComponents[1].inputEl,
-      textComponents[2].inputEl,
+    expect(suggesters.map((suggester: { textInputEl: unknown }) => suggester.textInputEl)).toEqual([
+      textComponents[0]!.inputEl,
+      textComponents[1]!.inputEl,
+      textComponents[2]!.inputEl,
     ]);
-    expect(suggesters.map(suggester => suggester.textInputEl)).not.toContain(textComponents[3].inputEl);
+    expect(suggesters.map((suggester: { textInputEl: unknown }) => suggester.textInputEl)).not.toContain(textComponents[3]!.inputEl);
   });
 
   it('typing wired fields still persists through field-specific save handlers', async () => {
@@ -93,12 +93,12 @@ describe('Settings folder autocomplete (SETTINGS-01)', () => {
     });
     const [protocolText, outputText, snippetText] = textComponents;
 
-    protocolText.inputEl.value = ' Protocols/CT ';
-    protocolText.inputEl.dispatchEvent({ type: 'input', bubbles: true });
-    outputText.inputEl.value = '   ';
-    outputText.inputEl.dispatchEvent({ type: 'input', bubbles: true });
-    snippetText.inputEl.value = '';
-    snippetText.inputEl.dispatchEvent({ type: 'input', bubbles: true });
+    protocolText!.inputEl.value = ' Protocols/CT ';
+    protocolText!.inputEl.dispatchEvent({ type: 'input', bubbles: true });
+    outputText!.inputEl.value = '   ';
+    outputText!.inputEl.dispatchEvent({ type: 'input', bubbles: true });
+    snippetText!.inputEl.value = '';
+    snippetText!.inputEl.dispatchEvent({ type: 'input', bubbles: true });
     await Promise.resolve();
 
     expect(plugin.settings.protocolFolderPath).toBe('Protocols/CT');
@@ -110,9 +110,9 @@ describe('Settings folder autocomplete (SETTINGS-01)', () => {
   it('selecting suggestions reaches the same save-on-change pathway as typing', async () => {
     const { plugin, suggesters } = renderSettings();
 
-    suggesters[0].selectSuggestion('Protocols/MR', {} as KeyboardEvent);
-    suggesters[1].selectSuggestion('Reports', {} as KeyboardEvent);
-    suggesters[2].selectSuggestion('.radiprotocol/snippets/CT', {} as KeyboardEvent);
+    suggesters[0]!.selectSuggestion('Protocols/MR', {} as KeyboardEvent);
+    suggesters[1]!.selectSuggestion('Reports', {} as KeyboardEvent);
+    suggesters[2]!.selectSuggestion('.radiprotocol/snippets/CT', {} as KeyboardEvent);
     await Promise.resolve();
 
     expect(plugin.settings.protocolFolderPath).toBe('Protocols/MR');
