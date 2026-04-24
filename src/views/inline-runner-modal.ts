@@ -1009,7 +1009,23 @@ export class InlineRunnerModal {
         ? `${root}/${snippetId}`
         : `${root}/${snippetId}.json`;
 
-    const snippet = await this.plugin.snippetService.load(absPath);
+    let snippet = await this.plugin.snippetService.load(absPath);
+
+    // Phase 59 INLINE-FIX-05: fallback scan for JSON snippets in subdirectories.
+    // When a snippet was selected from a picker in a subdirectory, pickId is a
+    // basename, so the direct path misses the subdirectory. Scan vault files
+    // under the snippet root for a matching basename.
+    if (snippet === null && !isPhase51FullPath) {
+      const targetBasename = `${snippetId}.json`;
+      const candidates = this.app.vault.getFiles().filter((f) => {
+        if (!f.path.startsWith(root + '/')) return false;
+        const parts = f.path.split('/');
+        return parts[parts.length - 1]! === targetBasename;
+      });
+      if (candidates.length === 1) {
+        snippet = await this.plugin.snippetService.load(candidates[0]!.path);
+      }
+    }
 
     if (snippet === null) {
       questionZone.empty();
