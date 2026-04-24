@@ -242,3 +242,40 @@
 .rp-editor-panel {
   height: auto;
 }
+
+/* Phase 64: growable Node Editor textareas */
+.rp-question-block,
+.rp-answer-text-block,
+.rp-text-block-content-block,
+.rp-loop-header-block,
+.rp-snippet-branch-label-block {
+  padding: var(--size-4-2) 0;
+  border-top: 1px solid var(--background-modifier-border);
+}
+
+.rp-answer-text-block .rp-field-label,
+.rp-text-block-content-block .rp-field-label,
+.rp-loop-header-block .rp-field-label,
+.rp-snippet-branch-label-block .rp-field-label {
+  font-size: var(--font-ui-small);
+  font-weight: var(--font-semibold);
+  margin-bottom: var(--size-2-1);
+}
+
+.rp-answer-text-block .rp-field-desc,
+.rp-text-block-content-block .rp-field-desc,
+.rp-loop-header-block .rp-field-desc,
+.rp-snippet-branch-label-block .rp-field-desc {
+  color: var(--text-muted);
+  font-size: var(--font-ui-smaller);
+  margin: 0 0 var(--size-4-1) 0;
+}
+
+.rp-growable-textarea {
+  width: 100%;
+  min-height: 80px;
+  box-sizing: border-box;
+  resize: vertical;
+  overflow-x: hidden;
+  overflow-y: hidden;
+}
