@@ -251,16 +251,15 @@ vi.mock('obsidian', () => {
 });
 
 // ───── Mock SnippetFillInModal ─────
-const __fillModalInstances: Array<{
-  snippet: unknown;
-  result: Promise<string | null>;
-  __resolve: (v: string | null) => void;
-  open: () => void;
-  close: () => void;
-}> = [];
-
 vi.mock('../../views/snippet-fill-in-modal', () => {
-  const instances = __fillModalInstances;
+  const instances: Array<{
+    snippet: unknown;
+    result: Promise<string | null>;
+    __resolve: (v: string | null) => void;
+    open: () => void;
+    close: () => void;
+    opened: boolean;
+  }> = [];
   class SnippetFillInModal {
     result: Promise<string | null>;
     private resolveFn!: (v: string | null) => void;
@@ -270,13 +269,15 @@ vi.mock('../../views/snippet-fill-in-modal', () => {
     constructor(_app: unknown, snippet: unknown) {
       this.snippet = snippet;
       this.result = new Promise<string | null>(res => { this.resolveFn = res; });
+      const self = this;
       instances.push({
         snippet,
         result: this.result,
         __resolve: (v) => this.resolveFn(v),
-        open: () => { this.opened = true; },
-        close: () => { this.closed = true; },
-      });
+        open: () => { self.opened = true; },
+        close: () => { self.closed = true; },
+        get opened() { return self.opened; },
+      } as any);
     }
     open(): void { this.opened = true; }
     close(): void { this.closed = true; }
@@ -286,6 +287,7 @@ vi.mock('../../views/snippet-fill-in-modal', () => {
 
 // Import after mocks are installed.
 import { InlineRunnerModal } from '../../views/inline-runner-modal';
+import { __fillModalInstances } from '../../views/snippet-fill-in-modal';
 import { TFile } from 'obsidian';
 
 // ───── Helpers ─────

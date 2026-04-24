@@ -7,8 +7,8 @@ import { ProtocolRunner } from '../runner/protocol-runner';
 import { GraphValidator } from '../graph/graph-validator';
 import type { ProtocolGraph, AnswerNode, SnippetNode } from '../graph/graph-model';
 import { SnippetTreePicker } from './snippet-tree-picker';
+import { SnippetFillInModal } from './snippet-fill-in-modal';
 import { isExitEdge, nodeLabel, stripExitPrefix } from '../graph/node-label';
-import { renderSnippet, type JsonSnippet } from '../snippets/snippet-model';
 import type { InlineRunnerPosition } from '../settings';
 
 interface InlineRunnerViewport {
@@ -80,6 +80,14 @@ export class InlineRunnerModal {
   private snippetTreePicker: SnippetTreePicker | null = null;
   private resizeObserver: ResizeObserver | null = null;
   private workspaceLayoutRef: import('obsidian').EventRef | null = null;
+
+  /** Phase 59 INLINE-FIX-05: tracks the active fill-in modal so close() can dispose it. */
+  private fillModal: SnippetFillInModal | null = null;
+
+  /** Phase 59 INLINE-FIX-05: gate flag — when true, D1 handleActiveLeafChange skips hide/show
+   *  to prevent the inline container from disappearing while SnippetFillInModal is active. */
+  private isFillModalOpen = false;
+
   private windowResizeHandler: (() => void) | null = null;
   private dragMoveHandler: ((event: PointerEvent) => void) | null = null;
   private dragUpHandler: ((event: PointerEvent) => void) | null = null;
@@ -190,6 +198,16 @@ export class InlineRunnerModal {
       this.snippetTreePicker.unmount();
       this.snippetTreePicker = null;
     }
+
+    // Phase 59 INLINE-FIX-05: ensure fill-in modal is closed if inline closes first.
+    // Single .close() call here — handleSnippetFill's finally does NOT call .close()
+    // (modal self-closed when result resolved). This close() runs only when inline
+    // closes BEFORE the modal resolves (orphan scenario).
+    if (this.fillModal !== null) {
+      this.fillModal.close();
+      this.fillModal = null;
+    }
+    this.isFillModalOpen = false;
 
     // Unsubscribe event listeners
     if (this.activeFileEventRef !== null) {
@@ -496,6 +514,13 @@ export class InlineRunnerModal {
   /** D1: freeze/resume — hide modal when active note is not the target note. */
   private handleActiveLeafChange(): void {
     if (this.containerEl === null) return;
+
+    // Phase 59 INLINE-FIX-05 / Pitfall 3: while SnippetFillInModal is open, focus
+    // may transition to the stacked modal and fire active-leaf-change. Skipping the
+    // D1 hide/show logic here keeps the inline container visible under the modal
+    // so the user sees context while filling placeholders, and avoids a hide→show
+    // flicker when the modal closes.
+    if (this.isFillModalOpen) return;
 
     const activeFile = this.app.workspace.getActiveFile();
     const isTargetActive = activeFile !== null && activeFile.path === this.targetNote.path;
@@ -963,7 +988,14 @@ export class InlineRunnerModal {
     this.render();
   }
 
-  /** Load snippet and render fill-in form inline (D6). */
+  /**
+   * Phase 59 INLINE-FIX-05 — Load snippet and dispatch fill-in modal (parity with sidebar).
+   *
+   * Reverses Phase 54 D6: instead of rendering an in-panel form via the old fill-in method,
+   * this now instantiates the stacked SnippetFillInModal — same as runner-view.ts:997.
+   * The modal mounts to document.body (via Obsidian Modal); the inline container stays
+   * visible underneath (gated by isFillModalOpen in handleActiveLeafChange).
+   */
   private async handleSnippetFill(snippetId: string, questionZone: HTMLElement): Promise<void> {
     const isPhase51FullPath =
       snippetId.includes('/') ||
@@ -995,13 +1027,17 @@ export class InlineRunnerModal {
       return;
     }
 
+    // Capture accumulator baseline before any runner mutation, for separator-applied delta.
+    const beforeText = this.extractAccumulatedText(this.runner.getState());
+
     if (snippet.kind === 'md') {
       if (isPhase51FullPath) {
         this.runner.completeSnippet(snippet.content);
-        await this.appendAnswerToNote(snippet.content);
+        await this.appendDeltaFromAccumulator(beforeText);
         this.render();
         return;
       }
+      // Legacy path — MD snippet via non-full-path id; treat as not-found.
       questionZone.empty();
       questionZone.createEl('p', {
         text: `Snippet '${snippetId}' not found.`,
@@ -1012,98 +1048,35 @@ export class InlineRunnerModal {
 
     if (snippet.placeholders.length === 0) {
       this.runner.completeSnippet(snippet.template);
-      await this.appendAnswerToNote(snippet.template);
+      await this.appendDeltaFromAccumulator(beforeText);
       this.render();
       return;
     }
 
-    // Render inline fill-in form (D6 — no stacked Modal)
-    this.renderSnippetFillIn(snippet, questionZone);
-  }
-
-  /** D6: Render snippet fill-in form inside the inline modal. */
-  private renderSnippetFillIn(
-    snippet: import('../snippets/snippet-model').JsonSnippet,
-    questionZone: HTMLElement,
-  ): void {
-    questionZone.empty();
-
-    const form = questionZone.createDiv({ cls: 'rp-snippet-fill-form' });
-    form.createEl('p', {
-      text: `Fill in placeholders for "${snippet.path}"`,
-      cls: 'rp-snippet-fill-title',
-    });
-
-    const values: Record<string, string | string[]> = {};
-
-    for (const placeholder of snippet.placeholders) {
-      const row = form.createDiv({ cls: 'rp-snippet-fill-row' });
-      row.createEl('label', { text: placeholder.label, cls: 'rp-snippet-fill-label' });
-
-      if (placeholder.type === 'free-text') {
-        const input = row.createEl('input', {
-          cls: 'rp-snippet-fill-input',
-          attr: { type: 'text', placeholder: placeholder.id },
-        });
-        values[placeholder.id] = input.value;
-        input.addEventListener('input', () => {
-          values[placeholder.id] = input.value;
-        });
-      } else if (placeholder.type === 'choice') {
-        const choicesContainer = row.createDiv({ cls: 'rp-snippet-fill-choices' });
-        const selectedChoices: string[] = [];
-        values[placeholder.id] = selectedChoices;
-
-        const options = placeholder.options ?? [];
-        for (const option of options) {
-          const optLabel = choicesContainer.createEl('label', { cls: 'rp-snippet-fill-choice-label' });
-          const checkbox = optLabel.createEl('input', {
-            attr: { type: 'checkbox' },
-          });
-          optLabel.appendText(option);
-          checkbox.addEventListener('change', () => {
-            if (checkbox.checked) {
-              selectedChoices.push(option);
-            } else {
-              const idx = selectedChoices.indexOf(option);
-              if (idx >= 0) selectedChoices.splice(idx, 1);
-            }
-            values[placeholder.id] = selectedChoices;
-          });
-        }
-      }
+    // JSON with placeholders — open the stacked fill-in modal (parity with sidebar).
+    // Phase 54 D6 is reversed: the in-panel fill-in form is gone.
+    const modal = new SnippetFillInModal(this.app, snippet);
+    this.fillModal = modal;
+    this.isFillModalOpen = true;
+    modal.open();
+    let rendered: string | null;
+    try {
+      rendered = await modal.result;
+    } finally {
+      // Clear flags. DO NOT call modal.close() here — the modal self-closed when its
+      // result promise resolved (submit/cancel/escape all trigger close + resolve inside
+      // SnippetFillInModal). Double-closing would fire duplicate onClose handlers.
+      this.isFillModalOpen = false;
+      this.fillModal = null;
     }
-
-    const btnRow = form.createDiv({ cls: 'rp-snippet-fill-buttons' });
-
-    const cancelBtn = btnRow.createEl('button', { text: 'Cancel' });
-    cancelBtn.addEventListener('click', () => {
-      this.runner.stepBack();
-      this.render();
-    });
-
-    const submitBtn = btnRow.createEl('button', {
-      text: 'Insert',
-      cls: 'mod-cta',
-    });
-    submitBtn.addEventListener('click', () => {
-      // Convert values to string format for renderSnippet
-      // WR-04: copy array values before processing to avoid mutation-after-submit issues
-      const filledValues: Record<string, string> = {};
-      for (const [key, val] of Object.entries(values)) {
-        if (Array.isArray(val)) {
-          filledValues[key] = [...val].join(this.plugin.settings.textSeparator);
-        } else {
-          filledValues[key] = val as string;
-        }
-      }
-
-      const rendered = renderSnippet(snippet, filledValues);
+    if (rendered !== null) {
       this.runner.completeSnippet(rendered);
-      void this.appendAnswerToNote(rendered).then(() => {
-        this.render();
-      });
-    });
+    } else {
+      // D-11 parity with sidebar: cancel/escape → completeSnippet('') advances runner.
+      this.runner.completeSnippet('');
+    }
+    await this.appendDeltaFromAccumulator(beforeText);
+    this.render();
   }
 
   /** Render error state. */
