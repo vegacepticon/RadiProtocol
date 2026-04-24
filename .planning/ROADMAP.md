@@ -1,7 +1,7 @@
 # Roadmap: RadiProtocol
 
 **Project:** RadiProtocol
-**Last updated:** 2026-04-25 (v1.9 archived — milestone closed)
+**Last updated:** 2026-04-25 (v1.10 milestone roadmapped — Phases 63–67)
 
 ---
 
@@ -16,8 +16,9 @@
 - ✅ **v1.7 Loop Rework & Regression Cleanup** — Phases 43-46 (shipped 2026-04-18)
 - ✅ **v1.8 UX Polish & Snippet Picker Overhaul** — Phases 47-58 (shipped 2026-04-21)
 - ✅ **v1.9 Inline Runner Polish & Settings UX** — Phases 59-62 (shipped 2026-04-25)
+- 🔄 **v1.10 Editor Sync & Runner UX Polish** — Phases 63-67 (defining; started 2026-04-25)
 
-_Next milestone: define via `/gsd-new-milestone`._
+_Active milestone: v1.10. Next phase to plan: 63._
 
 ---
 
@@ -145,6 +146,17 @@ Full details: `.planning/milestones/v1.8-ROADMAP.md`
 - [x] Phase 62: BRAT Release v1.9.0 (3/3 plans) — shipped 2026-04-25
 
 Full details: `.planning/milestones/v1.9-ROADMAP.md`
+
+</details>
+
+<details>
+<summary>🔄 v1.10 Editor Sync & Runner UX Polish (Phases 63-67) — IN PROGRESS</summary>
+
+- [ ] Phase 63: Bidirectional Canvas ↔ Node Editor Sync (TBD plans)
+- [ ] Phase 64: Node Editor Polish — Auto-grow & Text Block Quick-Create (TBD plans)
+- [ ] Phase 65: Runner Footer Layout — Back/Skip Row (TBD plans)
+- [ ] Phase 66: Runner Step-Back Reliability & Scroll Pinning (TBD plans)
+- [ ] Phase 67: Inline Runner Resizable Modal & File-Bound Snippet Parity (TBD plans)
 
 </details>
 
@@ -304,7 +316,6 @@ Plans:
   1. `manifest.json.version`, `versions.json` mapping (min-Obsidian for 1.9.0), and `package.json.version` all agree on `1.9.0`; `npm run build` produces a clean `main.js` + `styles.css` against that manifest version (BRAT-02)
   2. `gh release list` shows a GitHub Release `v1.9.0` (or equivalent tag convention, matching Phase 55 precedent) whose assets include `manifest.json`, `main.js`, and `styles.css` as individually downloadable files at the release root — not inside a zip (BRAT-02)
   3. Installing the plugin in a fresh Obsidian vault via BRAT with identifier `vegacepticon/RadiProtocol` succeeds end-to-end on the 1.9.0 release — plugin appears in Community Plugins, enables cleanly, and the Runner view opens without errors (BRAT-02)
-**Plans:** 3 plans
 
 Plans:
 - [x] 62-01-PLAN.md — Wave 1: version bump across manifest.json (+D1), versions.json (+D4 preserve 1.8.0, add 1.9.0), package.json
@@ -317,10 +328,75 @@ Plans:
 
 ---
 
+## v1.10 Phase Details (Phases 63–67)
+
+### Phase 63: Bidirectional Canvas ↔ Node Editor Sync
+**Goal**: Edits made directly on a canvas node — both the node's text body and a Snippet node's outgoing edge label — propagate live into the open Node Editor form, and the Snippet branch-label field round-trips back out to the edge label, mirroring the Answer↔edge convention established in Phase 50.
+**Depends on**: Nothing (canvas event subscription + form re-render on the existing `EditorPanelView`; isolated from Runner UX work)
+**Requirements**: EDITOR-03, EDITOR-05
+**Success Criteria** (what must be TRUE):
+  1. With the Node Editor open on a Question, Answer, Text block, Snippet, or Loop node, editing that node's text directly on canvas updates the corresponding form field (Question text / Answer text / Text block text / Snippet branch label / Loop headerText) in real time — without the user clicking off the node and back on (EDITOR-05)
+  2. Setting the "branch label" field on a Snippet node in the Node Editor writes that label to the node's outgoing edge on canvas; the canvas Snippet node's own visible text continues to display the configured directory path or file name (EDITOR-03)
+  3. Editing the outgoing edge label of a Snippet node directly on canvas updates the "branch label" field in the open Node Editor form in real time, with the same bidirectional behaviour as Answer.displayLabel ↔ incoming edge label from Phase 50 (EDITOR-03)
+  4. Concurrent edits — typing on canvas while the form is open — never overwrite in-flight user input in the form's currently-focused field; sync direction is debounced and last-write-wins matches the Phase 50 precedent (EDITOR-03, EDITOR-05)
+**Plans:** TBD
+**UI hint**: yes
+
+### Phase 64: Node Editor Polish — Auto-grow & Text Block Quick-Create
+**Goal**: Every multi-line text input in the Node Editor grows with its content (no fixed-height boxes with inner scrollbars), and the toolbar exposes a fifth quick-create button for text-block nodes alongside the existing four.
+**Depends on**: Phase 63 (advisory — the auto-grow textarea wiring may share setup code with the canvas→form sync wiring; running Phase 64 after Phase 63 avoids re-touching the same textarea init code twice)
+**Requirements**: EDITOR-04, EDITOR-06
+**Success Criteria** (what must be TRUE):
+  1. Every multi-line text input in the Node Editor — Answer text, Text block text, Snippet branch label, Loop headerText, Question text — automatically grows in height as the author types past the initial visible row count, matching the Phase 48 (NODEUI-04) Question-textarea auto-grow behaviour; no inner scrollbar appears on a single multi-line field (EDITOR-04)
+  2. Auto-grow handles paste, programmatic field population (form load), and re-render without flickering or stuck heights; height collapses back when content is reduced (EDITOR-04)
+  3. The Node Editor toolbar shows a fifth quick-create button labelled "Create text block" (alongside Question / Answer / Snippet / Loop), and one click creates a text-block node on canvas with `radiprotocol_nodeType = "text-block"`, the correct `NODE_COLOR_MAP` colour, and default placement via the same `CanvasNodeFactory` path used by the existing four buttons (EDITOR-06)
+  4. The new text-block button respects the Phase 42 `flex-wrap: wrap` toolbar layout — narrowing the sidebar wraps all five buttons onto multiple rows without hiding any (EDITOR-06)
+**Plans:** TBD
+**UI hint**: yes
+
+### Phase 65: Runner Footer Layout — Back/Skip Row
+**Goal**: The Runner footer is rebuilt so "step back" reads "back", Skip renders as a labeled button to the right of Back on the same row, and Skip never visually intrudes between answer-branch buttons and snippet-branch buttons on a mixed-branch question — applied uniformly across sidebar, tab, and inline modes.
+**Depends on**: Nothing (pure presentation rework on the three runner views; isolated from step-back behavior in Phase 66)
+**Requirements**: RUNNER-02
+**Success Criteria** (what must be TRUE):
+  1. The runner footer's primary undo button reads "back" (renamed from "step back") in all three modes — sidebar, tab, inline (RUNNER-02)
+  2. The Skip button renders as a labeled button containing the text "skip" — never an icon-only variant — and is placed on the same horizontal row immediately to the right of the Back button in all three modes (RUNNER-02)
+  3. On a question node with mixed outgoing edges (both answer-branch and snippet-branch buttons), no Skip button is ever rendered between the answer buttons and the snippet buttons; Skip appears only in the footer row alongside Back (RUNNER-02)
+  4. The footer Back+Skip row remains accessible at narrow sidebar widths via the existing flex-wrap toolbar conventions, with no buttons clipped off-screen (RUNNER-02)
+**Plans:** TBD
+**UI hint**: yes
+
+### Phase 66: Runner Step-Back Reliability & Scroll Pinning
+**Goal**: Step-back is one click = one step in every state of every runner mode, never leaves the runner stuck on "Processing", never corrupts accumulated text inside a loop iteration, and the preview textarea stays scrolled to the bottom on file-bound snippet insert and on step-back — matching the existing correct behaviour for Answer insert and directory-bound snippet insert.
+**Depends on**: Nothing strictly (changes localised to runner state machine + RunnerView/InlineRunnerModal scroll-after-update hooks; advisory: schedule after Phase 63 so canvas-sync events don't muddy step-back debugging)
+**Requirements**: RUNNER-03, RUNNER-04
+**Success Criteria** (what must be TRUE):
+  1. A single click on Back advances the runner backwards by exactly one step in every state (at-node, awaiting-answer, awaiting-snippet-pick, awaiting-snippet-fill, awaiting-loop-pick, complete) across all three runner modes; double-click never produces double-step (RUNNER-03)
+  2. The runner UI never displays a "Processing" placeholder for longer than one natural re-render frame after a Back click; action buttons return immediately, no hang state persists (RUNNER-03)
+  3. Repeated Back clicks across loop boundaries — including loop-node entry, body-branch dead-end loop-back, and «выход» exit — never corrupt the accumulated protocol text or the loop context stack; the protocol preview matches the same content the user saw at that step on the way forward (RUNNER-03)
+  4. After a file-bound Snippet node inserts its content, the preview textarea is scrolled to the bottom so the most recently inserted line is visible — identical to existing Answer-insert and directory-bound-snippet-insert behaviour (RUNNER-04)
+  5. After a Back click in any state, the preview textarea is scrolled to the bottom so the line revealed by the step-back (or the new tail line after content was popped) is visible — no upward scroll jump (RUNNER-04)
+**Plans:** TBD
+
+### Phase 67: Inline Runner Resizable Modal & File-Bound Snippet Parity
+**Goal**: The Inline Runner modal is user-resizable via drag, with width and height persisted in workspace state alongside the Phase 60 position state and clamped to viewport on restore; and a file-bound Snippet node in inline mode appends the configured file's content rather than falling back to the snippets root folder, matching sidebar parity from Phase 56.
+**Depends on**: Nothing (Inline Runner-only work in `InlineRunnerModal` + `src/styles/inline-runner.css`; reuses Phase 60 workspace-state contract and Phase 56 file-binding logic; isolated from Node Editor and Runner UX phases)
+**Requirements**: INLINE-FIX-06, INLINE-FIX-07
+**Success Criteria** (what must be TRUE):
+  1. The Inline Runner modal can be resized by dragging its edges or corners; while dragging, the modal's width and height update smoothly without jumping or losing focus (INLINE-FIX-06)
+  2. Resizing the Inline Runner, switching tabs, and switching back restores the modal at the last user-set width and height — and closing/reopening Obsidian preserves those dimensions across plugin reload via the same workspace-state mechanism that persists position from Phase 60 (INLINE-FIX-06)
+  3. If the last-saved dimensions would exceed the current viewport (e.g. after a monitor or resolution change), the restore path clamps width and height to the current viewport bounds — mirroring the Phase 60 clamp-on-restore pattern; the modal is always visible and remains resizable (INLINE-FIX-06)
+  4. In Inline Runner mode, reaching a Snippet node bound to a specific file appends that file's content to the active note — identical to sidebar behaviour established in Phase 56; no fallback to the snippets root folder listing or directory picker (INLINE-FIX-07)
+  5. Both fixes are regression-safe against the Phase 54 inline-mode invariants and the Phase 60 position-persistence behaviour: the floating modal still does not block note editing, position still persists and clamps, and answers still append to the end of the source note (INLINE-FIX-06, INLINE-FIX-07)
+**Plans:** TBD
+**UI hint**: yes
+
+---
+
 ## Progress
 
 **Execution Order:**
-No active milestone. Next milestone to be defined via `/gsd-new-milestone`.
+v1.10 active. Phases 63 and 67 can run in parallel (Node Editor sync vs Inline Runner — separate files); Phases 65 and 66 can run in parallel with each other and with Phase 63 (different code paths). Phase 64 depends on Phase 63 (advisory, shared textarea init code). All v1.10 phases independent of Inline Runner Phase 67.
 
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
@@ -336,3 +412,8 @@ No active milestone. Next milestone to be defined via `/gsd-new-milestone`.
 | 60. Inline Runner Layout & Position Persistence | v1.9 | 5/5 | Complete | 2026-04-24 |
 | 61. Settings Folder Autocomplete | v1.9 | 4/4 | Complete | 2026-04-24 |
 | 62. BRAT Release v1.9.0 | v1.9 | 3/3 | Complete | 2026-04-25 |
+| 63. Bidirectional Canvas ↔ Node Editor Sync | v1.10 | 0/TBD | Not started | — |
+| 64. Node Editor Polish — Auto-grow & Text Block Quick-Create | v1.10 | 0/TBD | Not started | — |
+| 65. Runner Footer Layout — Back/Skip Row | v1.10 | 0/TBD | Not started | — |
+| 66. Runner Step-Back Reliability & Scroll Pinning | v1.10 | 0/TBD | Not started | — |
+| 67. Inline Runner Resizable Modal & File-Bound Snippet Parity | v1.10 | 0/TBD | Not started | — |

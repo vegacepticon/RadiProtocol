@@ -2,12 +2,12 @@
 gsd_state_version: 1.0
 milestone: v1.10
 milestone_name: Editor Sync & Runner UX Polish
-status: defining-requirements
-stopped_at: "v1.10 milestone started — defining requirements (scope locked; roadmap pending)"
-last_updated: "2026-04-25T12:00:00.000Z"
-last_activity: 2026-04-25 — Milestone v1.10 started (Editor Sync & Runner UX Polish)
+status: ready-to-plan
+stopped_at: "v1.10 roadmap complete — Phases 63–67 defined, 9/9 requirements mapped, ready to plan Phase 63"
+last_updated: "2026-04-25T13:00:00.000Z"
+last_activity: 2026-04-25 — v1.10 roadmap created (Phases 63–67); 100% requirement coverage; ready to plan Phase 63
 progress:
-  total_phases: 0
+  total_phases: 5
   completed_phases: 0
   total_plans: 0
   completed_plans: 0
@@ -18,26 +18,47 @@ progress:
 
 **Updated:** 2026-04-25
 **Milestone:** v1.10 Editor Sync & Runner UX Polish
-**Status:** Milestone scope locked via `/gsd-new-milestone`. Requirements and roadmap pending; phase numbering continues from 63.
+**Status:** Roadmap complete — 5 phases (63–67) defined with 100% requirement coverage. Ready to plan Phase 63 via `/gsd-plan-phase 63`.
 
 ---
 
 ## Current Position
 
-Phase: Not started (defining requirements)
+Phase: 63 (not started — next to plan)
 Plan: —
-Status: Defining requirements
-Last activity: 2026-04-25 — Milestone v1.10 started
+Status: Ready to plan
+Last activity: 2026-04-25 — v1.10 roadmap created (Phases 63–67)
 
 ---
 
 ## Project Reference
 
 See: `.planning/PROJECT.md` (updated 2026-04-25 — v1.10 milestone added).
+See: `.planning/ROADMAP.md` (updated 2026-04-25 — v1.10 phase details appended).
+See: `.planning/REQUIREMENTS.md` (updated 2026-04-25 — traceability populated, 9/9 mapped).
 
 **Core value:** A radiologist can generate a structured, accurate protocol in seconds by answering a guided algorithm — without writing a single line of code.
 
 **Current focus:** v1.10 — close accumulated UX regressions (step-back reliability, scroll preservation, Skip/Back layout, auto-grow textareas), introduce bidirectional canvas ↔ Node Editor sync, fix Snippet branch label sync to edge, and add Inline Runner resizable modal + file-bound snippet parity.
+
+---
+
+## v1.10 Phase Plan
+
+| Phase | Name | Requirements | Depends on |
+|-------|------|--------------|------------|
+| 63 | Bidirectional Canvas ↔ Node Editor Sync | EDITOR-03, EDITOR-05 | Nothing |
+| 64 | Node Editor Polish — Auto-grow & Text Block Quick-Create | EDITOR-04, EDITOR-06 | Phase 63 (advisory) |
+| 65 | Runner Footer Layout — Back/Skip Row | RUNNER-02 | Nothing |
+| 66 | Runner Step-Back Reliability & Scroll Pinning | RUNNER-03, RUNNER-04 | Nothing (advisory: after Phase 63) |
+| 67 | Inline Runner Resizable Modal & File-Bound Snippet Parity | INLINE-FIX-06, INLINE-FIX-07 | Nothing |
+
+**Parallelizability:**
+- Phase 63 (Node Editor sync) ‖ Phase 65 (Runner footer) ‖ Phase 67 (Inline Runner) — independent file scopes
+- Phase 64 follows Phase 63 (advisory — shared textarea init code)
+- Phase 66 advisory after Phase 63 (canvas-sync events would muddy step-back debugging if interleaved)
+
+**Coverage:** 9/9 v1.10 requirements mapped; 0 unmapped, 0 duplicates.
 
 ---
 
@@ -68,32 +89,17 @@ See: `.planning/PROJECT.md` (updated 2026-04-25 — v1.10 milestone added).
 9. Real-DOM vs mock-DOM parent lookup: `parentElement` first, `.parent` mock fallback second.
 10. v1.7 excised `maxIterations` — do not reintroduce a per-loop or global iteration cap.
 11. v1.8: preserve backward compatibility of stored canvas shape — directory-bound Snippet nodes must keep working unchanged.
-12. v1.9: Inline Runner position persistence uses clamp-on-restore (not clamp-on-save) — resize persistence in v1.10 must follow same pattern to survive monitor/resolution changes.
+12. v1.9: Inline Runner position persistence uses clamp-on-restore (not clamp-on-save) — resize persistence in v1.10 (Phase 67) must follow same pattern to survive monitor/resolution changes.
 
-### v1.9 validated patterns (prior milestone)
+### v1.10-relevant precedents
 
-- Inline modal position persistence — workspace-state storage + clamp-on-restore survives monitor/resolution changes between sessions (Phase 60).
-- FolderSuggest — Obsidian's `AbstractInputSuggest` via `app.vault.getAllFolders(false)`; single reusable class attached to multiple fields (Phase 61).
-- Path resolver parity — trailing-slash + backslash normalization + `vault.getFiles()` prefix-scan fallback when `getAbstractFileByPath` returns null (Phase 59).
-- Inline JSON fill-in — real `SnippetFillInModal` above floating inline modal with `isFillModalOpen` D1 gate + `close()` disposal (Phase 59 D6 reversal of Phase 54).
-- Accumulator-diff snippet append — `appendDeltaFromAccumulator(beforeText)` mirrors sidebar `handleAnswerClick` pattern; zero drift between modes (Phase 59).
-
-### v1.10 scope summary (this milestone)
-
-**Category A — Node Editor:**
-- Snippet custom branch label bidirectional sync with edge (mirror Answer's Phase 50 convention; canvas node continues to show directory/file)
-- Auto-grow textarea for every text field on every node kind (Question-style behavior everywhere)
-- Bidirectional live sync canvas ↔ Node Editor for all text fields (edits on canvas update form in real time)
-- Fifth quick-create button "Create text block" in Node Editor toolbar
-
-**Category B — Runner UX:**
-- Footer layout: "step back" → "back"; Skip as labeled button ("skip") right of Back on same row; Skip never between mixed answer/snippet branches
-- Step-back reliability: no "Processing" hang; single click = single step; loop-node step-back does not corrupt accumulated text
-- Scroll pinned to bottom on file-bound snippet insert and step-back (parity with Answer insert + directory-bound snippet)
-
-**Category C — Inline Runner:**
-- Modal resizable via drag; width+height persist in workspace state; survive tab switch + plugin reload
-- File-bound Snippet node in inline mode appends configured file's content, not snippets root folder (parity with sidebar)
+- **Phase 50 — Answer ↔ edge label sync**: bidirectional binding pattern for the EDITOR-03 Snippet branch-label ↔ outgoing edge label work in Phase 63.
+- **Phase 38/41 — Pattern B canvas live editor**: write-back on open canvases; canvas → form direction in Phase 63 (EDITOR-05) will subscribe to the same canvas-node-change event surface.
+- **Phase 48 (NODEUI-04) — Question textarea auto-grow**: reference behaviour to extend across all multi-line fields in Phase 64 (EDITOR-04).
+- **Phase 39 / 42 — quick-create button infrastructure**: `CanvasNodeFactory` + `flex-wrap: wrap` toolbar — Phase 64 (EDITOR-06) adds a fifth button using the established pattern.
+- **Phase 60 — Inline Runner position persistence**: workspace-state contract + clamp-on-restore — Phase 67 (INLINE-FIX-06) adds width/height persistence on the same contract.
+- **Phase 56 — file-bound Snippet button click → direct insert**: sidebar parity that Phase 67 (INLINE-FIX-07) replicates in inline mode.
+- **Phase 53 (RUNNER-SKIP-01..03) — Skip button**: existing Skip implementation that Phase 65 (RUNNER-02) repositions next to Back.
 
 ### Open Tech Debt (deferred to future)
 
@@ -109,8 +115,9 @@ See: `.planning/PROJECT.md` (updated 2026-04-25 — v1.10 milestone added).
 ## Session Continuity
 
 Last session: 2026-04-25
-Stopped at: v1.10 milestone started — defining requirements
+Stopped at: v1.10 roadmap complete — Phases 63–67 defined with full requirement coverage
 Resume file: None
+Next action: `/gsd-plan-phase 63`
 
 ---
 
@@ -119,7 +126,7 @@ Resume file: None
 - Branch: `main`
 - Main: `main`
 - Last shipped: v1.9 (2026-04-25; GitHub Release v1.9.0 published)
-- Starting phase number for v1.10: **63** (continues from Phase 62)
+- Active phase: 63 (next to plan)
 
 ---
 

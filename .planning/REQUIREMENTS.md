@@ -48,25 +48,32 @@ Explicitly excluded for this milestone. Can be reconsidered for a future milesto
 
 ## Traceability
 
-Populated by roadmapper during ROADMAP.md creation.
+Phase mappings established by roadmapper on 2026-04-25 during ROADMAP.md creation (Phases 63–67).
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| EDITOR-03 | TBD | Pending |
-| EDITOR-04 | TBD | Pending |
-| EDITOR-05 | TBD | Pending |
-| EDITOR-06 | TBD | Pending |
-| RUNNER-02 | TBD | Pending |
-| RUNNER-03 | TBD | Pending |
-| RUNNER-04 | TBD | Pending |
-| INLINE-FIX-06 | TBD | Pending |
-| INLINE-FIX-07 | TBD | Pending |
+| EDITOR-03 | Phase 63 | Pending |
+| EDITOR-04 | Phase 64 | Pending |
+| EDITOR-05 | Phase 63 | Pending |
+| EDITOR-06 | Phase 64 | Pending |
+| RUNNER-02 | Phase 65 | Pending |
+| RUNNER-03 | Phase 66 | Pending |
+| RUNNER-04 | Phase 66 | Pending |
+| INLINE-FIX-06 | Phase 67 | Pending |
+| INLINE-FIX-07 | Phase 67 | Pending |
 
 **Coverage:**
 - v1.10 requirements: 9 total
-- Mapped to phases: 0 (pending roadmap)
-- Unmapped: 9 ⏳
+- Mapped to phases: 9 ✅
+- Unmapped: 0 ✅
+
+**Phase distribution:**
+- Phase 63 (Bidirectional Canvas ↔ Node Editor Sync): EDITOR-03, EDITOR-05 (2)
+- Phase 64 (Node Editor Polish — Auto-grow & Text Block Quick-Create): EDITOR-04, EDITOR-06 (2)
+- Phase 65 (Runner Footer Layout — Back/Skip Row): RUNNER-02 (1)
+- Phase 66 (Runner Step-Back Reliability & Scroll Pinning): RUNNER-03, RUNNER-04 (2)
+- Phase 67 (Inline Runner Resizable Modal & File-Bound Snippet Parity): INLINE-FIX-06, INLINE-FIX-07 (2)
 
 ---
 *Requirements defined: 2026-04-25*
-*Last updated: 2026-04-25 after initial definition*
+*Last updated: 2026-04-25 — traceability populated by roadmapper (Phases 63–67 mapped)*
