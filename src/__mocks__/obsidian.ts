@@ -26,20 +26,100 @@ interface MockElement {
   min: string;
 }
 
+interface MockInputEvent {
+  type: string;
+  bubbles?: boolean;
+}
+
+interface MockInputEl {
+  type: string;
+  min: string;
+  value: string;
+  addEventListener: (type: string, cb: (evt: MockInputEvent) => void) => void;
+  dispatchEvent: (evt: MockInputEvent) => boolean;
+}
+
+const mockTextComponents: MockTextComponent[] = [];
+const mockAbstractInputSuggestInstances: AbstractInputSuggest<unknown>[] = [];
+
+function makeMockInputEl(): MockInputEl {
+  const listeners = new Map<string, Array<(evt: MockInputEvent) => void>>();
+  return {
+    type: '',
+    min: '',
+    value: '',
+    addEventListener: (type: string, cb: (evt: MockInputEvent) => void) => {
+      const existing = listeners.get(type) ?? [];
+      existing.push(cb);
+      listeners.set(type, existing);
+    },
+    dispatchEvent: (evt: MockInputEvent) => {
+      for (const cb of listeners.get(evt.type) ?? []) {
+        cb(evt);
+      }
+      return true;
+    },
+  };
+}
+
 /** Mock TextComponent / TextAreaComponent returned by addText / addTextArea */
 function makeMockTextComponent(): MockTextComponent {
+  const inputEl = makeMockInputEl();
   const tc: MockTextComponent = {
-    inputEl: { type: '', min: '' },
-    setValue: (_v: string) => tc,
-    onChange: (_cb: (v: string) => void) => tc,
+    inputEl,
+    setValue: (v: string) => {
+      inputEl.value = v;
+      return tc;
+    },
+    onChange: (cb: (v: string) => void) => {
+      inputEl.addEventListener('input', () => cb(inputEl.value));
+      return tc;
+    },
   };
+  mockTextComponents.push(tc);
   return tc;
 }
 
 interface MockTextComponent {
-  inputEl: { type: string; min: string };
+  inputEl: MockInputEl;
   setValue: (v: string) => MockTextComponent;
   onChange: (cb: (v: string) => void) => MockTextComponent;
+}
+
+export function __resetObsidianMocks(): void {
+  mockTextComponents.length = 0;
+  mockAbstractInputSuggestInstances.length = 0;
+}
+
+export function __getMockTextComponents(): MockTextComponent[] {
+  return mockTextComponents;
+}
+
+export function __getMockAbstractInputSuggestInstances(): AbstractInputSuggest<unknown>[] {
+  return mockAbstractInputSuggestInstances;
+}
+
+export class AbstractInputSuggest<T> {
+  app: unknown;
+  textInputEl: MockInputEl;
+  limit = 100;
+  selected: T | null = null;
+  constructor(app: unknown, textInputEl: MockInputEl) {
+    this.app = app;
+    this.textInputEl = textInputEl;
+    mockAbstractInputSuggestInstances.push(this as AbstractInputSuggest<unknown>);
+  }
+  setValue(value: string): void {
+    this.textInputEl.value = value;
+  }
+  getValue(): string {
+    return this.textInputEl.value;
+  }
+  protected getSuggestions(_query: string): T[] | Promise<T[]> { return []; }
+  selectSuggestion(value: T, _evt: MouseEvent | KeyboardEvent): void {
+    this.selected = value;
+  }
+  onSelect(_callback: (value: T, evt: MouseEvent | KeyboardEvent) => unknown): this { return this; }
 }
 
 /** Mock DropdownComponent — must support full addOption chaining (8 options) */
