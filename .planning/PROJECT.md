@@ -8,9 +8,21 @@ An Obsidian community plugin that turns Canvas files into interactive protocol g
 
 A radiologist can generate a structured, accurate protocol in seconds by answering a guided algorithm — without writing a single line of code to build that algorithm.
 
-## Current Milestone: v1.8 UX Polish & Snippet Picker Overhaul
+## Current Milestone: v1.9 Inline Runner Polish & Settings UX
 
-**Status:** ✅ SHIPPED 2026-04-21
+**Goal:** Довести Inline Runner до production-качества (позиционирование, компактность, фичи-паритет с сайдбар-режимом) и добавить folder autocomplete ко всем path-полям settings; опубликовать BRAT-релиз v1.9.0 в конце.
+
+**Target features:**
+
+- **Inline Runner path resolution bug** — nested пути (`templates/ALGO`) теряются в Inline Runner, хотя snippets nested-пути работают корректно
+- **Inline Runner position persistence** — после переключения вкладки модалка уезжает влево и становится нетаскаемой; запоминать последнюю позицию в workspace state
+- **Inline Runner compact layout** — компактный footprint по умолчанию, чтобы модалка не перекрывала вводимый текст заметки
+- **Inline Runner snippet separator** — вставка snippet через Inline Runner должна учитывать separator, как в сайдбар-режиме
+- **Inline Runner JSON snippet fill-in** — modal с placeholder-полями должен открываться в inline-режиме (паритет с сайдбар-режимом)
+- **Folder autocomplete в settings** — FolderSuggest-dropdown (как в Templater) на всех path-полях: Protocols folder, Snippets folder, Output folder
+- **BRAT release v1.9.0** — один итоговый релиз в конце milestone
+
+**Previous milestone:** v1.8 UX Polish & Snippet Picker Overhaul — ✅ SHIPPED 2026-04-21
 
 ## Requirements
 
@@ -226,7 +238,20 @@ A radiologist can generate a structured, accurate protocol in seconds by answeri
 **Distribution:**
 - ✓ BRAT-ready: manifest/versions aligned, GitHub Release v1.8.0 published (BRAT-01) — v1.8
 
-### Active (v1.9 — to be defined in next milestone)
+### Active (v1.9 — Inline Runner Polish & Settings UX)
+
+**Inline Runner Fixes:**
+- [ ] **INLINE-FIX-01**: Inline Runner корректно резолвит protocols folder с nested путями (`templates/ALGO`, etc.)
+- [ ] **INLINE-FIX-02**: Inline Runner сохраняет drag-позицию в workspace state и восстанавливает её при повторном открытии (в т.ч. после tab switch)
+- [ ] **INLINE-FIX-03**: Inline Runner использует компактный layout по умолчанию (не перекрывает текст заметки)
+- [ ] **INLINE-FIX-04**: Inline Runner применяет separator при вставке snippet (паритет с сайдбар-режимом)
+- [ ] **INLINE-FIX-05**: Inline Runner открывает SnippetFillInModal для JSON snippets с placeholder-полями
+
+**Settings UX:**
+- [ ] **SETTINGS-01**: FolderSuggest-компонент с autocomplete на всех path-полях settings (Protocols, Snippets, Output)
+
+**Distribution:**
+- [ ] **BRAT-02**: v1.9.0 GitHub Release опубликован, manifest/versions/package.json выровнены, BRAT-установка с чистым vault-ом верифицирована
 
 ### Deferred (Future Milestones)
 
@@ -253,7 +278,7 @@ A radiologist can generate a structured, accurate protocol in seconds by answeri
 ## Current State
 
 **Shipped:** v1.8 UX Polish & Snippet Picker Overhaul (2026-04-21)
-**Active milestone:** None — ready for next milestone planning
+**Active milestone:** v1.9 Inline Runner Polish & Settings UX — defining requirements
 **v1.8 shipped:** 14 phases (47–58), 50 plans, 26/26 requirements satisfied
 
 **Key v1.8 deliverables:**
@@ -362,4 +387,4 @@ A radiologist can generate a structured, accurate protocol in seconds by answeri
 4. Update Context with current state
 
 ---
-*Last updated: 2026-04-21 — v1.8 UX Polish & Snippet Picker Overhaul milestone shipped*
+*Last updated: 2026-04-24 — v1.9 Inline Runner Polish & Settings UX milestone started*
