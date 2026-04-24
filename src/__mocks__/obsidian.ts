@@ -164,11 +164,18 @@ export class Setting {
   }
 }
 
-/** TFile mock — instanceof checks use this */
+/** TFile mock — instanceof checks use this. Phase 59: added extension + basename for canvas-file filtering. */
 export class TFile {
   path: string;
+  extension: string;
+  basename: string;
   constructor(path = '') {
     this.path = path;
+    const parts = path.split('/');
+    const leaf = parts[parts.length - 1] ?? '';
+    const dot = leaf.lastIndexOf('.');
+    this.extension = dot >= 0 ? leaf.slice(dot + 1) : '';
+    this.basename = dot >= 0 ? leaf.slice(0, dot) : leaf;
   }
 }
 
@@ -176,4 +183,16 @@ export class TFile {
  * Real runtime injects an <svg> into the element; tests only verify call wiring. */
 export function setIcon(_el: unknown, _iconId: string): void {
   // no-op
+}
+
+/** TFolder mock — Phase 59: added for main.ts::resolveProtocolCanvasFiles tests. */
+export class TFolder {
+  path: string;
+  name: string;
+  children: Array<TFile | TFolder>;
+  constructor(path = '', children: Array<TFile | TFolder> = []) {
+    this.path = path;
+    this.name = path.split('/').pop() ?? '';
+    this.children = children;
+  }
 }
