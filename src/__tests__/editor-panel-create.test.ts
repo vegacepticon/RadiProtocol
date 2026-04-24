@@ -70,6 +70,13 @@ describe('EditorPanelView quick-create', () => {
       .toHaveBeenCalledWith('test.canvas', 'snippet', undefined);
   });
 
+  it('Phase 64 EDITOR-06: text-block quick-create calls factory with text-block kind', async () => {
+    await (view as unknown as { onQuickCreate(kind: 'text-block'): Promise<void> }).onQuickCreate('text-block');
+
+    expect((mockPlugin.canvasNodeFactory as { createNode: ReturnType<typeof vi.fn> }).createNode)
+      .toHaveBeenCalledWith('test.canvas', 'text-block', undefined);
+  });
+
   it('passes currentNodeId as anchor when a node is loaded', async () => {
     (view as unknown as { currentNodeId: string }).currentNodeId = 'existing-node-42';
     (view as unknown as { currentFilePath: string }).currentFilePath = 'test.canvas';
@@ -98,6 +105,91 @@ describe('EditorPanelView quick-create', () => {
     expect(renderFormSpy).toHaveBeenCalledWith(mockNodeData, 'question');
     expect((view as unknown as { currentNodeId: string }).currentNodeId).toBe('new-node-1');
     expect((view as unknown as { currentFilePath: string }).currentFilePath).toBe('test.canvas');
+  });
+
+  it('Phase 64 EDITOR-06: text-block creation renders Text-block form from in-memory node data', async () => {
+    const mockNodeData = {
+      id: 'new-text-block-1',
+      radiprotocol_nodeType: 'text-block',
+      radiprotocol_content: 'Created text block',
+      text: 'Created text block',
+    };
+    const mockCanvasNode = { getData: vi.fn().mockReturnValue(mockNodeData) };
+
+    (mockPlugin.canvasNodeFactory as { createNode: ReturnType<typeof vi.fn> }).createNode
+      .mockReturnValue({ nodeId: 'new-text-block-1', canvasNode: mockCanvasNode });
+
+    const renderFormSpy = vi.spyOn(
+      view as unknown as { renderForm: (nodeRecord: Record<string, unknown>, kind: string | null) => void },
+      'renderForm'
+    ).mockImplementation(() => {});
+
+    await (view as unknown as { onQuickCreate(kind: 'text-block'): Promise<void> }).onQuickCreate('text-block');
+
+    expect(mockCanvasNode.getData).toHaveBeenCalled();
+    expect(renderFormSpy).toHaveBeenCalledWith(mockNodeData, 'text-block');
+    expect((view as unknown as { currentNodeId: string }).currentNodeId).toBe('new-text-block-1');
+    expect((view as unknown as { currentFilePath: string }).currentFilePath).toBe('test.canvas');
+  });
+
+  it('Phase 64 EDITOR-06: toolbar renders an accessible Create text block button wired to quick-create', () => {
+    const buttons: Array<{
+      cls?: string;
+      text: string;
+      attrs: Record<string, string>;
+      events: Record<string, () => void>;
+      disabled?: boolean;
+      createSpan: () => Record<string, unknown>;
+      appendText: (text: string) => void;
+      setAttribute: (name: string, value: string) => void;
+    }> = [];
+
+    const toolbar = {
+      createEl: (tag: string, opts?: { cls?: string }) => {
+        expect(tag).toBe('button');
+        const button = {
+          cls: opts?.cls,
+          text: '',
+          attrs: {} as Record<string, string>,
+          events: {} as Record<string, () => void>,
+          createSpan: () => ({}),
+          appendText: (text: string) => { button.text += text; },
+          setAttribute: (name: string, value: string) => { button.attrs[name] = value; },
+          disabled: false,
+        };
+        buttons.push(button);
+        return button;
+      },
+    };
+    const container = {
+      createDiv: (opts?: { cls?: string }) => {
+        expect(opts?.cls).toBe('rp-editor-create-toolbar');
+        return toolbar;
+      },
+    };
+
+    Object.defineProperty(view, 'registerDomEvent', {
+      value: (target: { events: Record<string, () => void> }, event: string, handler: () => void) => {
+        target.events[event] = handler;
+      },
+      configurable: true,
+      writable: true,
+    });
+    const quickCreateSpy = vi.spyOn(
+      view as unknown as { onQuickCreate: (kind: 'text-block') => Promise<void> },
+      'onQuickCreate'
+    ).mockResolvedValue(undefined);
+
+    (view as unknown as { renderToolbar(container: unknown): void }).renderToolbar(container);
+
+    const textBlockButton = buttons.find(button => button.text === 'Create text block');
+    expect(textBlockButton).toBeDefined();
+    expect(textBlockButton?.attrs['aria-label']).toBe('Create text block');
+    expect(textBlockButton?.attrs['title']).toBe('Create text block');
+    expect(textBlockButton?.events['click']).toBeDefined();
+
+    textBlockButton?.events['click']?.();
+    expect(quickCreateSpy).toHaveBeenCalledWith('text-block');
   });
 
   it('does not render form when factory returns null', async () => {
