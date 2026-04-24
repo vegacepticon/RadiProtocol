@@ -267,7 +267,7 @@ describe('NODEUI-04: question form custom DOM + auto-grow textarea', () => {
     const container = fakeNode();
     // @ts-expect-error accessing private for test
     view['buildKindForm'](container, {}, 'question');
-    const ta = createdElements.find(e => e.tag === 'textarea' && e.cls === 'rp-question-textarea');
+    const ta = createdElements.find(e => e.tag === 'textarea' && e.cls?.includes('rp-question-textarea'));
     expect(ta).toBeDefined();
     // addTextArea (which would wrap inside Setting) should NOT have been the one that created the question textarea:
     const taAddedViaSetting = settingCalls.setName.some(n => n === 'Question text');
@@ -281,7 +281,7 @@ describe('NODEUI-04: question form custom DOM + auto-grow textarea', () => {
     view['buildKindForm'](container, {}, 'question');
     const labelIdx = createdElements.findIndex(e => e.cls === 'rp-field-label');
     const descIdx = createdElements.findIndex(e => e.cls === 'rp-field-desc');
-    const taIdx = createdElements.findIndex(e => e.tag === 'textarea' && e.cls === 'rp-question-textarea');
+    const taIdx = createdElements.findIndex(e => e.tag === 'textarea' && e.cls?.includes('rp-question-textarea'));
     expect(labelIdx).toBeGreaterThanOrEqual(0);
     expect(descIdx).toBeGreaterThanOrEqual(0);
     expect(taIdx).toBeGreaterThanOrEqual(0);

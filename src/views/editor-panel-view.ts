@@ -440,6 +440,42 @@ export class EditorPanelView extends ItemView {
     this.renderToolbar(this.contentEl);
   }
 
+  private renderGrowableTextarea(
+    container: HTMLElement,
+    options: {
+      blockClass: string;
+      textareaClass?: string;
+      label: string;
+      desc: string;
+      value: string;
+      onInput: (value: string) => void;
+    }
+  ): HTMLTextAreaElement {
+    const block = container.createDiv({ cls: options.blockClass });
+    block.createDiv({ cls: 'rp-field-label', text: options.label });
+    block.createEl('p', { cls: 'rp-field-desc', text: options.desc });
+
+    const textareaClasses = options.textareaClass
+      ? `rp-growable-textarea ${options.textareaClass}`
+      : 'rp-growable-textarea';
+    const textarea = block.createEl('textarea', { cls: textareaClasses });
+    textarea.value = options.value;
+
+    const resize = () => {
+      textarea.style.height = 'auto';
+      textarea.style.height = textarea.scrollHeight + 'px';
+    };
+
+    requestAnimationFrame(resize);
+    this.registerDomEvent(textarea, 'input', () => {
+      resize();
+      options.onInput(textarea.value);
+      this.scheduleAutoSave();
+    });
+
+    return textarea;
+  }
+
   private buildKindForm(
     container: HTMLElement,
     nodeRecord: Record<string, unknown>,
@@ -467,31 +503,21 @@ export class EditorPanelView extends ItemView {
 
       case 'question': {
         new Setting(container).setHeading().setName('Question node');
-        // Phase 48 NODEUI-04: custom-DOM textarea with label-above + auto-grow.
-        // Setting API forces label-left/control-right layout and caps textarea width;
-        // here we emit the three DOM nodes directly so the textarea can be full-width
-        // and auto-grow via the runner-view.ts:816-840 scrollHeight pattern.
-        const qBlock = container.createDiv({ cls: 'rp-question-block' });
-        qBlock.createDiv({ cls: 'rp-field-label', text: 'Question text' });
-        qBlock.createEl('p', {
-          cls: 'rp-field-desc',
-          text: 'Displayed to the user during the protocol session.',
-        });
-        const qTextarea = qBlock.createEl('textarea', { cls: 'rp-question-textarea' });
-        qTextarea.value =
-          (nodeRecord['radiprotocol_questionText'] as string | undefined) ??
-          (nodeRecord['text'] as string | undefined) ??
-          '';
-        requestAnimationFrame(() => {
-          qTextarea.style.height = 'auto';
-          qTextarea.style.height = qTextarea.scrollHeight + 'px';
-        });
-        this.registerDomEvent(qTextarea, 'input', () => {
-          qTextarea.style.height = 'auto';
-          qTextarea.style.height = qTextarea.scrollHeight + 'px';
-          this.pendingEdits['radiprotocol_questionText'] = qTextarea.value;
-          this.pendingEdits['text'] = qTextarea.value;
-          this.scheduleAutoSave();
+        // Phase 64: shared growable textarea helper preserves the Phase 48
+        // custom-DOM Question behavior while exposing common managed classes.
+        this.renderGrowableTextarea(container, {
+          blockClass: 'rp-question-block',
+          textareaClass: 'rp-question-textarea',
+          label: 'Question text',
+          desc: 'Displayed to the user during the protocol session.',
+          value:
+            (nodeRecord['radiprotocol_questionText'] as string | undefined) ??
+            (nodeRecord['text'] as string | undefined) ??
+            '',
+          onInput: (value) => {
+            this.pendingEdits['radiprotocol_questionText'] = value;
+            this.pendingEdits['text'] = value;
+          },
         });
         break;
       }
