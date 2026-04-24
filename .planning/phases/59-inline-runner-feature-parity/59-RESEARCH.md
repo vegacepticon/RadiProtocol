@@ -545,22 +545,25 @@ No new security surface introduced by Phase 59.
 | A4 | Inline `SnippetFillInModal` open does NOT trigger D1 hide in practice | Regression Risk Map, Pitfall 3 | Medium — if it does, we need the `isFillModalOpen` gate. Unit test this during Wave 1c. |
 | A5 | The reported "nested path" bug is real in current code (not a caching/stale-install issue) | INLINE-FIX-01 | Low — verified against user report (PROJECT.md:17, STATE.md:62, REQUIREMENTS.md:13). |
 
-## Open Questions
+## Open Questions (RESOLVED)
 
 1. **What is the exact trigger for INLINE-FIX-01 on the user's vault?**
    - What we know: The recursive `collectCanvases` function in `main.ts:444-453` is algorithmically correct. `getAbstractFileByPath("templates/ALGO")` SHOULD return a TFolder in Obsidian 1.12.3.
    - What's unclear: Whether the user has a trailing slash in the setting, whether their OS path uses backslash, or whether the plugin reads settings before the vault is fully indexed on launch.
    - Recommendation: Plan includes a Wave 0 UAT step that asks user to share their `data.json` value for `protocolFolderPath`. Executor adds console.debug logging during the fix task to confirm which guard trips.
+   - **RESOLVED (2026-04-24):** Deferred to execute-phase — 59-CONTEXT.md §D-03 locks `console.debug` instrumentation as shipped-build policy; 59-01-PLAN.md Task 01.1 adds the instrumentation to `resolveProtocolCanvasFiles`; 59-04-PLAN.md UAT-01 uses it to diagnose the actual trigger on the user's vault. Fix is defensive (normalization + fallback scan) so it resolves the bug regardless of which guard trips. See Assumption A1.
 
 2. **Will `SnippetFillInModal.open()` trigger an `active-leaf-change` event that hides the inline container?**
    - What we know: Obsidian Modals are not registered as workspace leaves, so in principle no active-leaf-change should fire.
    - What's unclear: In practice, focus transitions may cause transient events. Requires empirical check.
    - Recommendation: Wave 1c includes a focused test case + manual UAT step: "open JSON-with-placeholder snippet in inline, verify inline container remains visible while modal is active."
+   - **RESOLVED (2026-04-24):** Proactive guard chosen over empirical verification — 59-CONTEXT.md §D-02 locks the `isFillModalOpen` flag approach; 59-03-PLAN.md Task 03.1 adds the flag + gates the D1 hide path; 59-00-PLAN.md Task 00.3 adds the RED regression test (inline container does NOT receive `is-hidden` class while fill-in modal is open). See Assumption A4.
 
 3. **Is Phase 54 D6 reversal a locked decision for Phase 59, or should discuss-phase raise it?**
    - What we know: Without reversing D6, INLINE-FIX-05 cannot match sidebar parity (live preview, Custom override, full separator-per-placeholder semantics).
    - What's unclear: User may have a reason to prefer in-panel (e.g., visual continuity).
    - Recommendation: Discuss-phase should make D6 reversal an explicit locked decision. Research recommends reversal.
+   - **RESOLVED (2026-04-24):** User explicitly confirmed D6 reversal during plan-phase clarification. Locked as 59-CONTEXT.md §D-01. 59-03-PLAN.md §Objective cites the reversal with rationale; Tasks 03.1/03.2/03.3 implement it. See Assumption A2.
 
 ## Project Constraints (from CLAUDE.md)
 
