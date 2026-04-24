@@ -817,7 +817,7 @@ export class EditorPanelView extends ItemView {
     return (leaf.view as unknown as { canvas?: CanvasInternal })?.canvas;
   }
 
-  private async onQuickCreate(kind: 'question' | 'answer' | 'snippet' | 'loop'): Promise<void> {
+  private async onQuickCreate(kind: 'question' | 'answer' | 'snippet' | 'loop' | 'text-block'): Promise<void> {
     const canvasPath = this.getActiveCanvasPath();
     if (!canvasPath) {
       new Notice('Open a canvas first to create nodes.');
@@ -956,6 +956,15 @@ export class EditorPanelView extends ItemView {
     setIcon(lIcon, 'repeat');
     lBtn.appendText('Create loop node');
     this.registerDomEvent(lBtn, 'click', () => { void this.onQuickCreate('loop'); });
+
+    // Phase 64: Create text block button (EDITOR-06)
+    const tbBtn = toolbar.createEl('button', { cls: 'rp-create-text-block-btn' });
+    tbBtn.setAttribute('aria-label', 'Create text block');
+    tbBtn.setAttribute('title', 'Create text block');
+    const tbIcon = tbBtn.createSpan();
+    setIcon(tbIcon, 'file-text');
+    tbBtn.appendText('Create text block');
+    this.registerDomEvent(tbBtn, 'click', () => { void this.onQuickCreate('text-block'); });
 
     // Phase 40: Duplicate node button
     const dupBtn = toolbar.createEl('button', { cls: 'rp-duplicate-btn' });
