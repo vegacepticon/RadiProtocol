@@ -138,7 +138,7 @@ Full details: `.planning/milestones/v1.8-ROADMAP.md`
 
 **Milestone Goal:** Close the 5 Inline Runner UX gaps uncovered in v1.8 production usage (path resolution, position persistence, compact layout, separator on snippet insert, JSON fill-in modal), add folder autocomplete to every settings path field, and ship BRAT release v1.9.0 as a single end-of-milestone distribution event.
 
-- [ ] **Phase 59: Inline Runner Feature Parity** — Path resolution for nested protocol folders + separator on snippet insert + JSON fill-in modal (INLINE-FIX-01, INLINE-FIX-04, INLINE-FIX-05)
+- [x] **Phase 59: Inline Runner Feature Parity** — Path resolution for nested protocol folders + separator on snippet insert + JSON fill-in modal (INLINE-FIX-01, INLINE-FIX-04, INLINE-FIX-05) — completed 2026-04-24
 - [ ] **Phase 60: Inline Runner Layout & Position Persistence** — Compact default footprint + drag-position persisted in workspace state with viewport clamping (INLINE-FIX-02, INLINE-FIX-03)
 - [ ] **Phase 61: Settings Folder Autocomplete** — FolderSuggest dropdown on every path field in settings (SETTINGS-01)
 - [ ] **Phase 62: BRAT Release v1.9.0** — GitHub Release v1.9.0 with aligned manifest/versions/package + verified BRAT install on clean vault (BRAT-02)
@@ -303,7 +303,7 @@ Phases execute in numeric order: 59 → 60 → 61 → 62. Phases 59, 60, 61 are 
 | 36-42 | v1.6 | 14/14 | Complete | 2026-04-17 |
 | 43-46 | v1.7 | 18/18 | Complete | 2026-04-18 |
 | 47-58 | v1.8 | 50/50 | Complete | 2026-04-21 |
-| 59. Inline Runner Feature Parity | v1.9 | 0/5 | Planned | - |
-| 60. Inline Runner Layout & Position Persistence | v1.9 | 0/5 | Planned | - |
+| 59. Inline Runner Feature Parity | v1.9 | 5/5 | Complete | 2026-04-24 |
+| 60. Inline Runner Layout & Position Persistence | v1.9 | 5/5 | Awaiting human UAT | - |
 | 61. Settings Folder Autocomplete | v1.9 | 0/TBD | Not started | - |
 | 62. BRAT Release v1.9.0 | v1.9 | 0/TBD | Not started | - |

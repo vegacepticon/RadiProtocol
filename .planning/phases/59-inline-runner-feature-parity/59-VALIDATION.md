@@ -1,10 +1,11 @@
 ---
 phase: 59
 slug: inline-runner-feature-parity
-status: draft
-nyquist_compliant: false
-wave_0_complete: false
+status: approved
+nyquist_compliant: true
+wave_0_complete: true
 created: 2026-04-24
+last_updated: 2026-04-24
 ---
 
 # Phase 59 — Validation Strategy
@@ -41,26 +42,26 @@ created: 2026-04-24
 
 | Req ID | Behavior | Test Type | Target Test File | File Exists | Status |
 |--------|----------|-----------|------------------|-------------|--------|
-| INLINE-FIX-01 (a) | `handleRunProtocolInline` accepts `protocolFolderPath = "templates/ALGO"` with no trailing slash | unit | `src/__tests__/main-inline-command.test.ts` | ❌ W0 | ⬜ pending |
-| INLINE-FIX-01 (b) | Trailing-slash variant `"templates/ALGO/"` is normalized and resolves | unit | same | ❌ W0 | ⬜ pending |
-| INLINE-FIX-01 (c) | Windows backslash variant normalizes | unit | same | ❌ W0 | ⬜ pending |
-| INLINE-FIX-01 (d) | Fallback `vault.getFiles()` path when `getAbstractFileByPath` returns null but canvases exist under prefix | unit | same | ❌ W0 | ⬜ pending |
-| INLINE-FIX-01 (e) | Empty folder still emits the D8 Notice (preserve Phase 54 invariant) | unit | same | ❌ W0 | ⬜ pending |
-| INLINE-FIX-04 (a) | MD snippet insert appends with configured `\n` separator between prior text and snippet content | unit | `src/__tests__/views/inline-runner-modal.test.ts` | ❌ W0 | ⬜ pending |
-| INLINE-FIX-04 (b) | JSON zero-placeholder snippet insert applies separator | unit | same | ❌ W0 | ⬜ pending |
-| INLINE-FIX-04 (c) | JSON with-placeholder snippet insert applies separator after modal submit | unit | same | ❌ W0 | ⬜ pending |
-| INLINE-FIX-04 (d) | Per-node `radiprotocol_snippetSeparator: 'space'` overrides global | unit | same | ❌ W0 | ⬜ pending |
-| INLINE-FIX-04 (e) | First-chunk invariant preserved (no leading separator when accumulator empty) | unit | same | ❌ W0 | ⬜ pending |
-| INLINE-FIX-05 (a) | JSON snippet with placeholders triggers `new SnippetFillInModal(...)` call | unit (spy) | same | ❌ W0 | ⬜ pending |
-| INLINE-FIX-05 (b) | Modal resolves with rendered string → `completeSnippet(rendered)` → note append via separator | unit | same | ❌ W0 | ⬜ pending |
-| INLINE-FIX-05 (c) | Modal cancel (null) → `completeSnippet('')` → no note append (first-chunk invariant holds) | unit | same | ❌ W0 | ⬜ pending |
-| INLINE-FIX-05 (d) | In-panel `renderSnippetFillIn` is no longer reachable (deleted/branch removed) | unit (source-string grep) | same | ❌ W0 | ⬜ pending |
-| INLINE-FIX-05 (e) | Z-index sanity — `SnippetFillInModal` DOM appended to `document.body` after `.rp-inline-runner-container` | unit | same | ❌ W0 | ⬜ pending |
-| Phase 54 D1 regression | Answer-click append path untouched (still uses `handleAnswerClick`) | integration | existing `__tests__` | ✅ | ⬜ pending |
-| Phase 54 D1 regression | Inline container does NOT get `is-hidden` while `SnippetFillInModal` is open | unit (gate) | `src/__tests__/views/inline-runner-modal.test.ts` | ❌ W0 | ⬜ pending |
-| Phase 54 D6 reversal | In-panel fill-in form path deleted; stacked Modal is the only fill-in surface | unit (grep) | same | ❌ W0 | ⬜ pending |
-| Phase 54 D7 parity | Inline output snapshot matches sidebar output on identical snippet fixture | unit | same | ❌ W0 | ⬜ pending |
-| Sidebar/tab unchanged | Existing `runner-view.test.ts` + `RunnerView.test.ts` remain green | regression | existing suite | ✅ | ⬜ pending |
+| INLINE-FIX-01 (a) | `handleRunProtocolInline` accepts `protocolFolderPath = "templates/ALGO"` with no trailing slash | unit | `src/__tests__/main-inline-command.test.ts` | ✅ | ✅ green |
+| INLINE-FIX-01 (b) | Trailing-slash variant `"templates/ALGO/"` is normalized and resolves | unit | same | ✅ | ✅ green |
+| INLINE-FIX-01 (c) | Windows backslash variant normalizes | unit | same | ✅ | ✅ green |
+| INLINE-FIX-01 (d) | Fallback `vault.getFiles()` path when `getAbstractFileByPath` returns null but canvases exist under prefix | unit | same | ✅ | ✅ green |
+| INLINE-FIX-01 (e) | Empty folder still emits the D8 Notice (preserve Phase 54 invariant) | unit | same | ✅ | ✅ green |
+| INLINE-FIX-04 (a) | MD snippet insert appends with configured `\n` separator between prior text and snippet content | unit | `src/__tests__/views/inline-runner-modal.test.ts` | ✅ | ✅ green |
+| INLINE-FIX-04 (b) | JSON zero-placeholder snippet insert applies separator | unit | same | ✅ | ✅ green |
+| INLINE-FIX-04 (c) | JSON with-placeholder snippet insert applies separator after modal submit | unit | same | ✅ | ✅ green |
+| INLINE-FIX-04 (d) | Per-node `radiprotocol_snippetSeparator: 'space'` overrides global | unit | same | ✅ | ✅ green |
+| INLINE-FIX-04 (e) | First-chunk invariant preserved (no leading separator when accumulator empty) | unit | same | ✅ | ✅ green |
+| INLINE-FIX-05 (a) | JSON snippet with placeholders triggers `new SnippetFillInModal(...)` call | unit (spy) | same | ✅ | ✅ green |
+| INLINE-FIX-05 (b) | Modal resolves with rendered string → `completeSnippet(rendered)` → note append via separator | unit | same | ✅ | ✅ green |
+| INLINE-FIX-05 (c) | Modal cancel (null) → `completeSnippet('')` → no note append (first-chunk invariant holds) | unit | same | ✅ | ✅ green |
+| INLINE-FIX-05 (d) | In-panel `renderSnippetFillIn` is no longer reachable (deleted/branch removed) | unit (source-string grep) | same | ✅ | ✅ green |
+| INLINE-FIX-05 (e) | Z-index sanity — `SnippetFillInModal` DOM appended to `document.body` after `.rp-inline-runner-container` | unit | same | ✅ | ✅ green |
+| Phase 54 D1 regression | Answer-click append path untouched (still uses `handleAnswerClick`) | integration | existing `__tests__` | ✅ | ✅ green |
+| Phase 54 D1 regression | Inline container does NOT get `is-hidden` while `SnippetFillInModal` is open | unit (gate) | `src/__tests__/views/inline-runner-modal.test.ts` | ✅ | ✅ green |
+| Phase 54 D6 reversal | In-panel fill-in form path deleted; stacked Modal is the only fill-in surface | unit (grep) | same | ✅ | ✅ green |
+| Phase 54 D7 parity | Inline output snapshot matches sidebar output on identical snippet fixture | unit | same | ✅ | ✅ green |
+| Sidebar/tab unchanged | Existing `runner-view.test.ts` + `RunnerView.test.ts` remain green | regression | existing suite | ✅ | ✅ green |
 
 *Status: ⬜ pending · ✅ green · ❌ red · ⚠️ flaky*
 
@@ -68,10 +69,10 @@ created: 2026-04-24
 
 ## Wave 0 Requirements
 
-- [ ] `src/__tests__/views/inline-runner-modal.test.ts` — **NEW FILE** — stubs for INLINE-FIX-04 (a–e), INLINE-FIX-05 (a–e), D1 regression gate, D6 reversal check, D7 parity.
-- [ ] `src/__tests__/main-inline-command.test.ts` — **NEW FILE** — stubs for INLINE-FIX-01 (a–e). Requires extracting pure helper `resolveProtocolCanvasFiles(vault, folderPath): TFile[]` from `handleRunProtocolInline` so the folder-resolution logic is testable.
-- [ ] `src/__mocks__/obsidian.ts` — **AUGMENT** — add minimal `TFolder`, `Modal`, `SuggestModal` exports so new tests can `instanceof`-check.
-- [ ] No binary fixtures required — synthesize canvases inline as JSON strings.
+- [x] `src/__tests__/views/inline-runner-modal.test.ts` — **NEW FILE** — stubs for INLINE-FIX-04 (a–e), INLINE-FIX-05 (a–e), D1 regression gate, D6 reversal check, D7 parity.
+- [x] `src/__tests__/main-inline-command.test.ts` — **NEW FILE** — stubs for INLINE-FIX-01 (a–e). Requires extracting pure helper `resolveProtocolCanvasFiles(vault, folderPath): TFile[]` from `handleRunProtocolInline` so the folder-resolution logic is testable.
+- [x] `src/__mocks__/obsidian.ts` — **AUGMENT** — add minimal `TFolder`, `Modal`, `SuggestModal` exports so new tests can `instanceof`-check.
+- [x] No binary fixtures required — synthesize canvases inline as JSON strings.
 
 ---
 
@@ -88,11 +89,11 @@ created: 2026-04-24
 
 ## Validation Sign-Off
 
-- [ ] All tasks have `<automated>` verify or Wave 0 dependencies
-- [ ] Sampling continuity: no 3 consecutive tasks without automated verify
-- [ ] Wave 0 covers all MISSING references (new test files + mock augmentation)
-- [ ] No watch-mode flags
-- [ ] Feedback latency < 45s
-- [ ] `nyquist_compliant: true` set in frontmatter after all tests green
+- [x] All tasks have `<automated>` verify or Wave 0 dependencies
+- [x] Sampling continuity: no 3 consecutive tasks without automated verify
+- [x] Wave 0 covers all MISSING references (new test files + mock augmentation)
+- [x] No watch-mode flags
+- [x] Feedback latency < 45s
+- [x] `nyquist_compliant: true` set in frontmatter after all tests green
 
-**Approval:** pending
+**Approval:** approved 2026-04-24
