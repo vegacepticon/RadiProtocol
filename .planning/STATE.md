@@ -3,33 +3,33 @@ gsd_state_version: 1.0
 milestone: v1.9
 milestone_name: Inline Runner Polish & Settings UX
 status: in_progress
-stopped_at: "Phase 59 complete — all UAT passed; proceeding to Phase 60 human UAT"
-last_updated: "2026-04-24T22:30:00.000Z"
-last_activity: 2026-04-24 — Phase 59 execution complete (5/5 plans); all UAT passed; 698 tests green
+stopped_at: "Phase 61 complete — SETTINGS-01 UAT approved; Phase 60 UAT artifacts still pending in working tree"
+last_updated: "2026-04-24T23:59:00.000Z"
+last_activity: 2026-04-24 — Phase 61 execution complete (4/4 plans); human Obsidian UAT approved; focused tests/build green
 progress:
   total_phases: 4
-  completed_phases: 1
-  total_plans: 10
-  completed_plans: 9
-  percent: 50
+  completed_phases: 2
+  total_plans: 14
+  completed_plans: 13
+  percent: 75
 ---
 
 # RadiProtocol — Project State
 
 **Updated:** 2026-04-24
 **Milestone:** v1.9 — Inline Runner Polish & Settings UX
-**Status:** Phase 60 automated validation passed; awaiting human Obsidian UAT.
+**Status:** Phase 61 complete; Phase 60 has pre-existing UAT artifacts pending, and Phase 62 release remains next after prerequisites are settled.
 
 ---
 
 ## Current Position
 
-Phase: 60 of 62 (Inline Runner Layout & Position Persistence)
-Plan: 5 plans (60-00..60-04) across 5 waves
-Status: Automated validation passed; human UAT pending for Phase 60
-Last activity: 2026-04-24 — Phase 59 complete (5/5 plans, 698 tests green, all UAT passed)
+Phase: 61 of 62 (Settings Folder Autocomplete)
+Plan: 4 plans (61-00..61-03) across 4 waves
+Status: Complete — automated validation passed and human Obsidian UAT approved
+Last activity: 2026-04-24 — Phase 61 complete (4/4 plans; 707 tests green, focused build green)
 
-Progress: [█████░░░░░] 50% (1/4 phases, 9/10 plans — Phase 60 awaiting human UAT)
+Progress: [███████░░░] 75% (2/4 phases, 13/14 known plans — Phase 62 release remains; Phase 60 UAT artifacts still pending in working tree)
 
 ---
 
@@ -39,7 +39,7 @@ See: `.planning/PROJECT.md` (updated 2026-04-24).
 
 **Core value:** A radiologist can generate a structured, accurate protocol in seconds by answering a guided algorithm — without writing a single line of code.
 
-**Current focus:** Phase 60 — Inline Runner Layout & Position Persistence (INLINE-FIX-02, INLINE-FIX-03).
+**Current focus:** Phase 61 complete — Settings Folder Autocomplete (SETTINGS-01). Next release work depends on settling remaining v1.9 prerequisites.
 
 ---
 
@@ -49,7 +49,7 @@ See: `.planning/PROJECT.md` (updated 2026-04-24).
 |-------|------|--------------|-------|--------|
 | 59 | Inline Runner Feature Parity | INLINE-FIX-01, INLINE-FIX-04, INLINE-FIX-05 | 5 | Complete 2026-04-24 |
 | 60 | Inline Runner Layout & Position Persistence | INLINE-FIX-02, INLINE-FIX-03 | 5 | Awaiting human UAT |
-| 61 | Settings Folder Autocomplete | SETTINGS-01 | TBD | Not started |
+| 61 | Settings Folder Autocomplete | SETTINGS-01 | 4 | Complete 2026-04-24 |
 | 62 | BRAT Release v1.9.0 | BRAT-02 | TBD | Not started |
 
 **Coverage:** 7/7 v1.9 requirements mapped. No orphans. Phases 59–61 are independent; Phase 62 depends on all three.
@@ -129,7 +129,7 @@ See: `.planning/PROJECT.md` (updated 2026-04-24).
 ## Session Continuity
 
 Last session: 2026-04-24
-Stopped at: v1.9 roadmap authored (.planning/ROADMAP.md + .planning/REQUIREMENTS.md traceability filled); ready to run `/gsd-plan-phase 59`
+Stopped at: Phase 61 complete; SETTINGS-01 UAT approved; ready to resolve remaining v1.9 prerequisites before Phase 62 release
 Resume file: None
 
 ---

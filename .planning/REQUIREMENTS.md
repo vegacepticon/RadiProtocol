@@ -18,7 +18,7 @@ Requirements for milestone v1.9 — close the Inline Runner UX gaps uncovered in
 
 ### Settings UX
 
-- [ ] **SETTINGS-01**: All path input fields in plugin settings (Protocols folder, Snippets folder, Output folder) render a folder autocomplete dropdown of existing vault folders as the user types — Templater-style via Obsidian `AbstractInputSuggest` pattern
+- [x] **SETTINGS-01**: All path input fields in plugin settings (Protocols folder, Snippets folder, Output folder) render a folder autocomplete dropdown of existing vault folders as the user types — Templater-style via Obsidian `AbstractInputSuggest` pattern
 
 ### Distribution
 
@@ -60,7 +60,7 @@ Deferred to future milestones. Tracked but not in current roadmap.
 | INLINE-FIX-03 | Phase 60 | Planned |
 | INLINE-FIX-04 | Phase 59 | Planned |
 | INLINE-FIX-05 | Phase 59 | Planned |
-| SETTINGS-01 | Phase 61 | Planned |
+| SETTINGS-01 | Phase 61 | Complete |
 | BRAT-02 | Phase 62 | Planned |
 
 ## Coverage Summary

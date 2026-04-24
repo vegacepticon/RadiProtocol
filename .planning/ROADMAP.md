@@ -1,7 +1,7 @@
 # Roadmap: RadiProtocol
 
 **Project:** RadiProtocol
-**Last updated:** 2026-04-24 (Phase 61 planned — 4 plans across 4 waves)
+**Last updated:** 2026-04-24 (Phase 61 complete — Settings Folder Autocomplete approved)
 
 ---
 
@@ -140,7 +140,7 @@ Full details: `.planning/milestones/v1.8-ROADMAP.md`
 
 - [x] **Phase 59: Inline Runner Feature Parity** — Path resolution for nested protocol folders + separator on snippet insert + JSON fill-in modal (INLINE-FIX-01, INLINE-FIX-04, INLINE-FIX-05) — completed 2026-04-24
 - [ ] **Phase 60: Inline Runner Layout & Position Persistence** — Compact default footprint + drag-position persisted in workspace state with viewport clamping (INLINE-FIX-02, INLINE-FIX-03)
-- [ ] **Phase 61: Settings Folder Autocomplete** — FolderSuggest dropdown on every path field in settings (SETTINGS-01)
+- [x] **Phase 61: Settings Folder Autocomplete** — FolderSuggest dropdown on every path field in settings (SETTINGS-01) — completed 2026-04-24
 - [ ] **Phase 62: BRAT Release v1.9.0** — GitHub Release v1.9.0 with aligned manifest/versions/package + verified BRAT install on clean vault (BRAT-02)
 
 ---
