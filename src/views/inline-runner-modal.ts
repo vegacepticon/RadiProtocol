@@ -698,6 +698,31 @@ export class InlineRunnerModal {
     });
   }
 
+  /**
+   * Phase 59 INLINE-FIX-04 — Accumulator-diff helper for snippet insert paths.
+   *
+   * Mirrors {@link handleAnswerClick}'s diff logic so snippet dispatch
+   * sites can append the separator-applied delta (not raw snippet content) to the note.
+   *
+   * Contract: caller captures `beforeText` BEFORE calling `runner.completeSnippet(...)`.
+   * After completeSnippet mutates the accumulator (applying the per-node or global
+   * separator), this helper reads `afterText`, computes the delta, and pipes it through
+   * the same `appendAnswerToNote` sink that the answer path uses — preserving the
+   * `TextAccumulator.appendWithSeparator` first-chunk invariant.
+   *
+   * Non-monotonic accumulator growth (afterText does not start with beforeText) is
+   * treated as a bug and logged via console.warn, mirroring WR-01 in handleAnswerClick.
+   */
+  private async appendDeltaFromAccumulator(beforeText: string): Promise<void> {
+    const afterText = this.extractAccumulatedText(this.runner.getState());
+    if (afterText.length <= beforeText.length) return;
+    if (!afterText.startsWith(beforeText)) {
+      console.warn('[RadiProtocol] Text changed non-monotonically, skipping append');
+      return;
+    }
+    await this.appendAnswerToNote(afterText.slice(beforeText.length));
+  }
+
   /** Handle loop branch click — append any traversed answer text to note. */
   private async handleLoopBranchClick(edge: import('../graph/graph-model').RPEdge, isExit: boolean): Promise<void> {
     // Capture accumulated text before the branch choice
@@ -911,8 +936,12 @@ export class InlineRunnerModal {
     this.runner.pickSnippet(pickId);
 
     if (snippet.kind === 'md') {
+      // Phase 59 INLINE-FIX-04: capture baseline BEFORE completeSnippet so the
+      // accumulator delta includes the resolved separator applied by
+      // runner → TextAccumulator.appendWithSeparator. Raw snippet.content bypasses it.
+      const beforeText = this.extractAccumulatedText(this.runner.getState());
       this.runner.completeSnippet(snippet.content);
-      await this.appendAnswerToNote(snippet.content);
+      await this.appendDeltaFromAccumulator(beforeText);
       this.snippetTreePicker?.unmount();
       this.snippetTreePicker = null;
       this.render();
@@ -920,8 +949,10 @@ export class InlineRunnerModal {
     }
 
     if (snippet.placeholders.length === 0) {
+      // Phase 59 INLINE-FIX-04: same accumulator-diff pattern as MD arm above.
+      const beforeText = this.extractAccumulatedText(this.runner.getState());
       this.runner.completeSnippet(snippet.template);
-      await this.appendAnswerToNote(snippet.template);
+      await this.appendDeltaFromAccumulator(beforeText);
       this.snippetTreePicker?.unmount();
       this.snippetTreePicker = null;
       this.render();
