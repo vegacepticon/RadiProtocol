@@ -3,33 +3,33 @@ gsd_state_version: 1.0
 milestone: v1.9
 milestone_name: Inline Runner Polish & Settings UX
 status: in_progress
-stopped_at: "Phase 61 complete — SETTINGS-01 UAT approved; Phase 60 UAT artifacts still pending in working tree"
+stopped_at: "Phase 62 planned (3 plans, 3 waves) — ready to execute once Phase 60 UAT gate is cleared; Phase 61 complete"
 last_updated: "2026-04-24T23:59:00.000Z"
-last_activity: 2026-04-24 — Phase 61 execution complete (4/4 plans); human Obsidian UAT approved; focused tests/build green
+last_activity: 2026-04-24 — Phase 62 planned (3 plans: version bump, build+preflight+tag, release runbook with D10 Phase 60 UAT gate)
 progress:
   total_phases: 4
   completed_phases: 2
-  total_plans: 14
+  total_plans: 17
   completed_plans: 13
-  percent: 75
+  percent: 76
 ---
 
 # RadiProtocol — Project State
 
 **Updated:** 2026-04-24
 **Milestone:** v1.9 — Inline Runner Polish & Settings UX
-**Status:** Phase 61 complete; Phase 60 has pre-existing UAT artifacts pending, and Phase 62 release remains next after prerequisites are settled.
+**Status:** Phase 62 planned (3 plans, 3 waves) — ready to execute; release publish gated on Phase 60 UAT sign-off (D10 gate).
 
 ---
 
 ## Current Position
 
-Phase: 61 of 62 (Settings Folder Autocomplete)
-Plan: 4 plans (61-00..61-03) across 4 waves
-Status: Complete — automated validation passed and human Obsidian UAT approved
-Last activity: 2026-04-24 — Phase 61 complete (4/4 plans; 707 tests green, focused build green)
+Phase: 62 of 62 (BRAT Release v1.9.0)
+Plan: 3 plans (62-01..62-03) across 3 waves — mirror of Phase 55 with D10 Phase 60 UAT gate
+Status: Ready to execute — plan checker VERIFICATION PASSED on first iteration
+Last activity: 2026-04-24 — Phase 62 planned (3 plans: version bump, build+preflight+tag, release runbook)
 
-Progress: [███████░░░] 75% (2/4 phases, 13/14 known plans — Phase 62 release remains; Phase 60 UAT artifacts still pending in working tree)
+Progress: [███████▌░░] 76% (2/4 phases, 13/17 known plans — Phase 62 planned; Phase 60 UAT artifacts still pending)
 
 ---
 
@@ -50,7 +50,7 @@ See: `.planning/PROJECT.md` (updated 2026-04-24).
 | 59 | Inline Runner Feature Parity | INLINE-FIX-01, INLINE-FIX-04, INLINE-FIX-05 | 5 | Complete 2026-04-24 |
 | 60 | Inline Runner Layout & Position Persistence | INLINE-FIX-02, INLINE-FIX-03 | 5 | Awaiting human UAT |
 | 61 | Settings Folder Autocomplete | SETTINGS-01 | 4 | Complete 2026-04-24 |
-| 62 | BRAT Release v1.9.0 | BRAT-02 | TBD | Not started |
+| 62 | BRAT Release v1.9.0 | BRAT-02 | 3 | Planned 2026-04-24 |
 
 **Coverage:** 7/7 v1.9 requirements mapped. No orphans. Phases 59–61 are independent; Phase 62 depends on all three.
 
