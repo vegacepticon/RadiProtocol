@@ -1,5 +1,25 @@
 # Milestones
 
+## v1.9 Inline Runner Polish & Settings UX (Shipped: 2026-04-25)
+
+**Phases completed:** 4 phases (59–62), 17 plans
+**Timeline:** 2026-04-24 → 2026-04-25 (2 days)
+**Git:** 41 commits, 13 source files touched, +1968/−198 LOC (src/ only)
+**Release:** GitHub Release v1.9.0 (tag `1.9.0`) — 3 loose assets attached, prerelease=false
+
+**Key accomplishments:**
+
+- Phase 59: Inline Runner feature parity with sidebar — nested protocol-folder path resolution via exported `resolveProtocolCanvasFiles` helper with trailing-slash/backslash normalization and `vault.getFiles()` fallback scan (INLINE-FIX-01); separator parity on snippet insert via `appendDeltaFromAccumulator(beforeText)` accumulator-diff helper wired into MD and JSON-zero-placeholder arms (INLINE-FIX-04); JSON fill-in modal parity via real `SnippetFillInModal` above the floating runner with `isFillModalOpen` D1 gate + defensive `close()` disposal, reversing the Phase 54 D6 inline-render decision (INLINE-FIX-05)
+- Phase 60: Inline Runner layout & position persistence — durable drag-position state in workspace with finite-coordinate guards + viewport-bounds clamp-on-restore (survives tab switch AND plugin reload; never lands off-screen after monitor/resolution change) (INLINE-FIX-02); compact default CSS overrides reducing padding/preview-height so modal no longer overlaps the line the user is typing on (INLINE-FIX-03)
+- Phase 61: Settings folder autocomplete — reusable `FolderSuggest` class on Obsidian's `AbstractInputSuggest` backed by `app.vault.getAllFolders(false)` with case-insensitive sorted matching, attached to Protocols/Snippets/Output settings fields (Session folder deliberately excluded as scope boundary) (SETTINGS-01)
+- Phase 62: BRAT release v1.9.0 — `manifest.json`/`versions.json`/`package.json` aligned on 1.9.0, atomic release-prep commit with clean `main.js`+`styles.css` build, unprefixed annotated tag `1.9.0` pushed (BRAT convention continuing v1.8.0), release runbook with D10 Phase 60 UAT gate as first operational section + A3 guardrail against incomplete-phase bullet inclusion, GitHub Release v1.9.0 published with 3 loose assets (BRAT-02)
+
+**Known deferred items at close:** 8 items (see STATE.md `## Deferred Items`) — 1 v1.7 carryover debug session, 2 UAT status-field oversights (Phase 59 passed / Phase 61 unknown — both with 0 pending scenarios), 14 pending todos (most are stale files for v1.6–v1.8-delivered work)
+
+**Archive:** `.planning/milestones/v1.9-ROADMAP.md`, `.planning/milestones/v1.9-REQUIREMENTS.md`, `.planning/milestones/v1.9-phases/`
+
+---
+
 ## v1.8 UX Polish & Snippet Picker Overhaul (Shipped: 2026-04-21)
 
 **Phases completed:** 14 phases (47–58), 50 plans

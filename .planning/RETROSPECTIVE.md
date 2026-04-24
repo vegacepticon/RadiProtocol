@@ -4,6 +4,66 @@
 
 ---
 
+## Milestone: v1.9 — Inline Runner Polish & Settings UX
+
+**Shipped:** 2026-04-25
+**Phases:** 4 (59–62) | **Plans:** 17 | **Timeline:** 2 days (2026-04-24 → 2026-04-25) | **Commits:** 41
+**Release:** GitHub Release v1.9.0, 3 loose assets (main.js, manifest.json, styles.css), prerelease=false
+
+### What Was Built
+
+- Inline Runner feature parity with sidebar — `resolveProtocolCanvasFiles` helper handles nested protocol-folder paths via normalization + `vault.getFiles()` prefix-scan fallback (INLINE-FIX-01); `appendDeltaFromAccumulator(beforeText)` accumulator-diff helper applies configured separator on snippet insert (INLINE-FIX-04); real `SnippetFillInModal` opens above floating inline modal with `isFillModalOpen` D1 gate and defensive `close()` disposal, reversing the Phase 54 D6 inline-render decision (INLINE-FIX-05)
+- Inline Runner layout & position persistence — workspace-state drag-position with finite-coordinate guards + viewport-bounds clamp-on-restore survives tab switch AND plugin reload; compact default CSS overrides so modal no longer overlaps the line being typed (INLINE-FIX-02/03)
+- Settings folder autocomplete — reusable `FolderSuggest` on Obsidian's `AbstractInputSuggest`, attached to Protocols/Snippets/Output fields (Session folder excluded as scope boundary) (SETTINGS-01)
+- BRAT Release v1.9.0 — `manifest.json`+`versions.json`+`package.json` aligned on 1.9.0, unprefixed annotated tag `1.9.0` pushed (BRAT convention), 8-section release runbook with D10 Phase 60 UAT gate as first operational step + A3 guardrail against incomplete-phase bullet inclusion (BRAT-02)
+
+### What Worked
+
+- **Accumulator-diff helper reused, not duplicated** (Phase 59 INLINE-FIX-04) — `appendDeltaFromAccumulator(beforeText)` mirrors the sidebar `handleAnswerClick` before/after snapshot approach; single pattern, zero drift between modes
+- **D6 reversal as a first-class plan decision** (Phase 59 INLINE-FIX-05) — explicitly reverting a v1.8 Phase 54 decision (inline-render fill-in UI) to a real modal was cleaner than bolting fill-in fields into the floating modal; parity with sidebar + tab modes turned out to be the stronger UX contract
+- **Plan 60-01 + 60-02 merged in one commit** (`e73d829`) — shipping position state contract + drag wiring together avoided a half-wired modal state where drag events would fire against non-persistent storage
+- **Clamp-on-restore, not clamp-on-save** (Phase 60 INLINE-FIX-02) — monitor/resolution changes happen between sessions; clamping at restore time handles the geometry that actually exists, not the geometry at save time
+- **Single reusable FolderSuggest class** (Phase 61) — one class attached to 3 settings fields beats per-field custom suggesters; matches Templater reference pattern with zero duplication
+- **Release runbook structural divergence from Phase 55** (Phase 62 D10) — placing the Phase 60 UAT gate as the first runbook section ensured release notes couldn't claim phases that hadn't passed UAT yet; A3 guardrail paragraph at top of Release Notes defence-in-depth
+- **Fast cycle time** — 41 commits and 4 phases shipped in 2 days; single 1.9.0 release at end of milestone matched v1.8 cadence cleanly
+
+### What Was Inefficient
+
+- **REQUIREMENTS.md traceability stale at close** — only `SETTINGS-01` was checked `[x]` going into milestone close; the other 6 requirements (INLINE-FIX-01..05, BRAT-02) remained `[ ]` despite their phases being complete and shipped. Same repeat offense called out in Top Lessons #7 from prior milestones; needs a phase-completion gate that flips checkboxes automatically
+- **Phase 61 UAT frontmatter left at `status: unknown`** with 0 pending scenarios — status-field oversight; audit-open flagged it as a gap even though phase shipped
+- **Phase 59 UAT frontmatter showed `status: passed` but audit-open still listed it** — auditor noise rather than a real gap; signal:noise ratio of `audit-open` at milestone close could be higher
+- **v1.8 retrospective section missing from this file** — when v1.8 closed on 2026-04-21, the retrospective append step was skipped (top of file still shows v1.7 as most recent). Discovered at v1.9 close; close workflow needs a guard to refuse if the previous milestone's section is absent
+- **Stale v1.8-MILESTONE-AUDIT.md at `.planning/` root** — should have been deleted when v1.8 was archived to `milestones/`; the root file had newer content than the archive, so the archive was overwritten from the root version at close rather than the other way around. Shows the archive workflow didn't promote the final audit revision
+- **Phase 62 directory move hit Windows file-lock** — `scripts/release-preflight.sh` was held by an external watcher process during milestone archival; had to fall back to per-file moves and leave the empty source directory behind (git-invisible, but visually noisy)
+
+### Patterns Established
+
+- **Exported helper + fallback scan for vault path resolution** — `resolveProtocolCanvasFiles(vault, folderPath)` pattern: normalize trailing slashes / backslashes, try `getAbstractFileByPath`, fall back to `vault.getFiles().filter(f => f.path.startsWith(...))` when null. Apply anywhere Obsidian's path-lookup API returns null for valid-looking paths.
+- **Accumulator-diff delta append** (`appendDeltaFromAccumulator(beforeText)`) — snapshot accumulator text before calling a state-advancing method, then append only the diff to external buffers (active-note / custom output target). Avoids duplicating separator-resolution logic per call site.
+- **D1 gate pattern for floating modals over modals** — when a secondary modal opens over a primary floating modal, set a boolean flag (`isFillModalOpen`) and early-return from leaf-change / tab-switch handlers while the flag is set. Defensive `close()` disposal of the secondary modal is mandatory in the primary's teardown path.
+- **Clamp-on-restore for persisted window positions** — save raw user coordinates; clamp to viewport bounds only when restoring, not when saving. Handles resolution changes between sessions without dropping user intent.
+- **Reusable Obsidian-native suggesters** — one `AbstractInputSuggest` subclass, attached to N fields, each constructing a fresh instance. Matches Templater's reference pattern; avoids per-field custom popup DOM.
+- **UAT gate as first runbook section** — when release runbook depends on phase UAT sign-off, make that gate the first actionable section so operator can't skip ahead. A3 guardrail reinforces with "trim bullets for not-yet-Complete phases" instruction.
+- **Unprefixed semver tag for BRAT releases** — `1.9.0` not `v1.9.0`; continuation of v1.8.0 precedent. Previous milestones (v1.0..v1.7) used v-prefixed tags; BRAT convention diverges starting v1.8.0.
+
+### Key Lessons
+
+1. **REQUIREMENTS.md traceability needs a phase-completion gate**, not a milestone-close sweep — repeat offense across v1.0, v1.2, v1.5, and now v1.9. Either the phase verify step or the phase-complete commit should auto-flip the `[ ]` boxes for requirements tied to that phase.
+2. **When reversing a prior milestone's decision, say so explicitly in the plan and summary** — Phase 59's INLINE-FIX-05 reverted Phase 54 D6; making the reversal a named decision (not a silent refactor) keeps the decision log honest for future readers.
+3. **Single-release-at-end-of-milestone is the right cadence for this project** — v1.8 established it, v1.9 confirmed it works well for 2–4 phase milestones with BRAT distribution. Don't introduce patch releases along the way unless a critical bug forces it.
+4. **Retrospective skipping is a quiet failure** — v1.8 retrospective never got written; no automation caught it at the time. Treat retrospective presence as a close-workflow precondition.
+5. **Milestone-audit files at `.planning/` root are orphans after archive** — the archive workflow moves to `milestones/` but doesn't delete the original (or fails to promote the latest revision to the archive). Archive step needs: (a) ensure archive gets the freshest version, (b) `git rm` the original.
+6. **Position persistence is a 2-layer problem** — (1) durable storage contract with finite-coordinate guards, (2) restore-time clamping. Splitting into 60-01 (contract) + 60-02 (wiring) matched the concern split cleanly, even though the commits merged to avoid intermediate broken state.
+7. **Parity bugs compound** — each of INLINE-FIX-01/04/05 was a separate parity gap between inline and sidebar modes shipped in v1.8. Suggests the inline mode was under-tested at v1.8 close; next time a major new mode ships, include a "parity matrix" test document in its VALIDATION.md.
+
+### Cost Observations
+
+- Model mix: Opus for planning/research/verify; Sonnet for execute-phase subagents; haiku for lightweight lookups
+- Sessions: ~3 sessions across 2 days (phase 59+60 day 1, phase 61+62 day 2)
+- Notable: Phase 62 release runbook authored in a single 3-plan phase; v1.9.0 release tag push → GitHub Release publish → API smoke check all completed same-session, zero rework
+
+---
+
 ## Milestone: v1.7 — Loop Rework & Regression Cleanup
 
 **Shipped:** 2026-04-18
@@ -386,6 +446,9 @@
 | v1.4 | 4 | 12 | Formal `/gsd-new-milestone` used; mid-milestone scope extension (Phase 31 added); re-audit recovery pattern proven |
 | v1.5 | 4 | 18 | Largest plan count; rewriteCanvasRefs cross-phase reuse validated; post-UAT fix pattern established; 34 requirements — most requirement-dense milestone |
 | v1.6 | 7 | 14 | Most phases in a single milestone; first Pattern B internal-API probing (CanvasNodeFactory); UAT gap-closure as same-phase plans (42-03, 42-04); live+disk hybrid pattern for canvas rewrites (Phase 41) |
+| v1.7 | 4 | 18 | TypeScript-exhaustiveness excision pattern (Phase 46); Migration Check first-check in validator; unified loop node collapses 2→1 kind |
+| v1.8 | 14 | 50 | Largest milestone by phase count; decimal phase insertions (48.1, 50.1); first BRAT release cadence (v1.8.0); first Inline Protocol Display Mode (Phase 54); gap-closure phases (57, 58) via `/gsd-plan-milestone-gaps` |
+| v1.9 | 4 | 17 | Inline Runner maturation (parity + persistence + compact layout); first use of accumulator-diff delta append pattern; second BRAT release confirms single-release-at-end cadence; Phase 54 D6 reversal documented as explicit decision |
 
 ### Cumulative Quality
 
@@ -396,6 +459,9 @@
 | v1.3 | 53+ passing + 5/5 UAT | same; +25 DnD/splice/UUID tests |
 | v1.4 | 53+ passing + 12/12 UAT (7+5) | same; +snippet node fixtures + canvas-parser/validator/runner coverage for 8th kind |
 | v1.5 | 356 passing + 44+31+11 UAT | +snippet-service, canvas-ref-sync, snippet-tree, snippet-editor-modal, snippet-dnd, inline-rename, runner-extensions (MD) |
+| v1.7 | 419 passing + UAT all phases | +unified-loop tests, loop-runtime, migration-check, node-picker-modal, free-text-excision coverage |
+| v1.8 | 648+ passing + UAT all phases | +inline-runner-modal, edge-label-sync, snippet-tree-picker, snippet-fill-in rework, skip/close buttons, BRAT readiness |
+| v1.9 | 707 passing + UAT all phases | +resolve-protocol-canvas-files, inline-runner position/drag/clamp, folder-suggest, settings-tab wiring |
 
 ### Top Lessons (Verified Across Milestones)
 
@@ -407,3 +473,6 @@
 6. Code review before UAT catches subtle defects that slip past both automated tests and human testers (stale closures, cycle guards, race conditions) — v1.3 and v1.4 both prove this
 7. Update REQUIREMENTS.md traceability checkboxes as phases complete — stale checkboxes found at audit in v1.0, v1.2, and v1.5; must become a phase-completion gate
 8. Cross-phase utility design (rewriteCanvasRefs) pays compound dividends — designed once in Phase 32, consumed unmodified by Phases 33 and 34
+9. Retrospective appends must be a close-workflow precondition — v1.8 retrospective section was silently skipped at its milestone close (discovered at v1.9 close); treat retrospective presence as a blocker, not a nice-to-have
+10. Milestone-audit archive workflow must promote the freshest revision AND delete the root original — v1.8 audit stale file sat at `.planning/` root for 4 days after archive; close workflow needs an explicit "promote + git rm" step
+11. When introducing a major new mode (Inline in v1.8), include a parity-matrix document in VALIDATION.md — v1.9's 5 INLINE-FIX requirements were all parity bugs between inline and sidebar that would have been caught pre-ship with explicit parity testing

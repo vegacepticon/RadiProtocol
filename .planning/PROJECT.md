@@ -8,19 +8,11 @@ An Obsidian community plugin that turns Canvas files into interactive protocol g
 
 A radiologist can generate a structured, accurate protocol in seconds by answering a guided algorithm — without writing a single line of code to build that algorithm.
 
-## Current Milestone: v1.9 Inline Runner Polish & Settings UX
+## Current State
 
-**Goal:** Довести Inline Runner до production-качества (позиционирование, компактность, фичи-паритет с сайдбар-режимом) и добавить folder autocomplete ко всем path-полям settings; опубликовать BRAT-релиз v1.9.0 в конце.
+**Last shipped:** v1.9 Inline Runner Polish & Settings UX — ✅ SHIPPED 2026-04-25 (GitHub Release v1.9.0, 3 loose assets, BRAT-installable)
 
-**Target features:**
-
-- **Inline Runner path resolution bug** — nested пути (`templates/ALGO`) теряются в Inline Runner, хотя snippets nested-пути работают корректно
-- **Inline Runner position persistence** — после переключения вкладки модалка уезжает влево и становится нетаскаемой; запоминать последнюю позицию в workspace state
-- **Inline Runner compact layout** — компактный footprint по умолчанию, чтобы модалка не перекрывала вводимый текст заметки
-- **Inline Runner snippet separator** — вставка snippet через Inline Runner должна учитывать separator, как в сайдбар-режиме
-- **Inline Runner JSON snippet fill-in** — modal с placeholder-полями должен открываться в inline-режиме (паритет с сайдбар-режимом)
-- **Folder autocomplete в settings** — FolderSuggest-dropdown (как в Templater) на всех path-полях: Protocols folder, Snippets folder, Output folder
-- **BRAT release v1.9.0** — один итоговый релиз в конце milestone
+**Active milestone:** None — next milestone to be defined via `/gsd-new-milestone`.
 
 **Previous milestone:** v1.8 UX Polish & Snippet Picker Overhaul — ✅ SHIPPED 2026-04-21
 
@@ -238,20 +230,26 @@ A radiologist can generate a structured, accurate protocol in seconds by answeri
 **Distribution:**
 - ✓ BRAT-ready: manifest/versions aligned, GitHub Release v1.8.0 published (BRAT-01) — v1.8
 
-### Active (v1.9 — Inline Runner Polish & Settings UX)
+### Validated (v1.9)
 
-**Inline Runner Fixes:**
-- [ ] **INLINE-FIX-01**: Inline Runner корректно резолвит protocols folder с nested путями (`templates/ALGO`, etc.)
-- [ ] **INLINE-FIX-02**: Inline Runner сохраняет drag-позицию в workspace state и восстанавливает её при повторном открытии (в т.ч. после tab switch)
-- [ ] **INLINE-FIX-03**: Inline Runner использует компактный layout по умолчанию (не перекрывает текст заметки)
-- [ ] **INLINE-FIX-04**: Inline Runner применяет separator при вставке snippet (паритет с сайдбар-режимом)
-- [ ] **INLINE-FIX-05**: Inline Runner открывает SnippetFillInModal для JSON snippets с placeholder-полями
+**Inline Runner Feature Parity (Phase 59):**
+- ✓ Nested protocol-folder path resolution via `resolveProtocolCanvasFiles` helper with trailing-slash/backslash normalization + `vault.getFiles()` fallback scan (INLINE-FIX-01) — v1.9
+- ✓ Snippet separator parity on insert via `appendDeltaFromAccumulator(beforeText)` accumulator-diff helper in MD + JSON-zero-placeholder arms (INLINE-FIX-04) — v1.9
+- ✓ JSON fill-in modal parity via real `SnippetFillInModal` above floating runner with `isFillModalOpen` D1 gate + `close()` disposal; Phase 54 D6 reversal (INLINE-FIX-05) — v1.9
 
-**Settings UX:**
-- [ ] **SETTINGS-01**: FolderSuggest-компонент с autocomplete на всех path-полях settings (Protocols, Snippets, Output)
+**Inline Runner Layout & Position Persistence (Phase 60):**
+- ✓ Durable drag-position state in workspace with finite-coordinate guards + viewport-bounds clamp-on-restore — survives tab switch AND plugin reload; never lands off-screen (INLINE-FIX-02) — v1.9
+- ✓ Compact default CSS overrides — reduced padding/preview-height so modal no longer overlaps the line being typed (INLINE-FIX-03) — v1.9
 
-**Distribution:**
-- [ ] **BRAT-02**: v1.9.0 GitHub Release опубликован, manifest/versions/package.json выровнены, BRAT-установка с чистым vault-ом верифицирована
+**Settings UX (Phase 61):**
+- ✓ Reusable `FolderSuggest` on Obsidian's `AbstractInputSuggest` backed by `app.vault.getAllFolders(false)` — case-insensitive sorted matching; attached to Protocols/Snippets/Output fields (Session folder excluded as scope boundary) (SETTINGS-01) — v1.9
+
+**Distribution (Phase 62):**
+- ✓ v1.9.0 GitHub Release shipped — `manifest.json`+`versions.json`+`package.json` aligned on 1.9.0; unprefixed annotated tag `1.9.0` pushed; 3 loose assets at release root; prerelease=false (BRAT-02) — v1.9
+
+### Active
+
+_No active milestone. Define next milestone's requirements via `/gsd-new-milestone`._
 
 ### Deferred (Future Milestones)
 
@@ -275,31 +273,29 @@ A radiologist can generate a structured, accurate protocol in seconds by answeri
 - Optional sections in snippets — deferred to v2
 - Automatic impression generation — requires NLP/AI
 
-## Current State
+## Current State (post v1.9)
 
-**Shipped:** v1.8 UX Polish & Snippet Picker Overhaul (2026-04-21)
-**Active milestone:** v1.9 Inline Runner Polish & Settings UX — defining requirements
-**v1.8 shipped:** 14 phases (47–58), 50 plans, 26/26 requirements satisfied
+**Shipped:** v1.9 Inline Runner Polish & Settings UX (2026-04-25)
+**Active milestone:** None — next to be defined via `/gsd-new-milestone`
+**v1.9 shipped:** 4 phases (59–62), 17 plans, 7/7 requirements satisfied, GitHub Release v1.9.0 live
 
-**Key v1.8 deliverables:**
-- Runner regressions closed (textarea preservation, scroll, button typography)
-- Node Editor UX polish (form layout, auto-grow, bottom-stacked buttons)
-- Edge semantics: loop exit "+"-prefix convention, Answer↔edge label sync
-- Snippet picker overhaul: hierarchical tree + specific-file binding + button UX
-- JSON placeholders collapsed to 2 types with working options editor
-- Inline protocol display mode (floating modal over active note)
-- BRAT distribution readiness (GitHub Release v1.8.0)
+**Key v1.9 deliverables:**
+- Inline Runner full feature parity with sidebar — nested path resolution, separator on snippet insert, JSON fill-in modal (Phase 59)
+- Inline Runner position persistence + compact default layout — drag-position survives tab switch and plugin reload with viewport clamping (Phase 60)
+- Settings folder autocomplete via reusable `FolderSuggest` on `AbstractInputSuggest` — Protocols/Snippets/Output fields (Phase 61)
+- BRAT Release v1.9.0 — tag `1.9.0` pushed, 3 loose assets, prerelease=false (Phase 62)
 
 ## Context
 
-- Shipped v1.0 (7 phases) + v1.2 (8 phases) + v1.3 (1 phase) + v1.4 (4 phases) + v1.5 (4 phases) + v1.6 (7 phases) + v1.7 (4 phases) + v1.8 (14 phases); ~18K+ LOC TypeScript in src/
+- Shipped v1.0 (7 phases) + v1.2 (8 phases) + v1.3 (1 phase) + v1.4 (4 phases) + v1.5 (4 phases) + v1.6 (7 phases) + v1.7 (4 phases) + v1.8 (14 phases) + v1.9 (4 phases); ~19K+ LOC TypeScript in src/
 - Tech stack: TypeScript + Obsidian Plugin API + esbuild + Vitest
-- Target: public release on Obsidian Community Plugins (BRAT-ready)
+- Distribution: BRAT-installable since v1.8.0; community plugin submission deferred (its own future milestone)
 - Primary author: radiologist (CT focus), designed for all imaging modalities
-- All v1.8 phases human-UAT approved; milestone audit passed — 26/26 requirements, 14/14 phases, 5/5 E2E flows verified
+- All v1.9 phases human-UAT approved; 7/7 requirements satisfied; 17/17 plans complete
 - All engine code (parser, runner, snippets, sessions) has zero Obsidian imports and is fully unit-testable
-- 648+ tests passing + 1 skipped, build green, `npx tsc --noEmit --skipLibCheck` exit 0
-- Known tech debt: Nyquist VALIDATION.md gaps for older phases, 1 legacy debug session (phase-27-regressions), stale todo files for delivered work, `@deprecated` LoopStartNode/LoopEndNode retained for Migration Check
+- 707+ tests passing + 1 skipped, build green, `npx tsc --noEmit --skipLibCheck` exit 0
+- v1.9 accomplishments: Inline Runner now at production quality (parity, persistence, compact layout); every settings path field has folder autocomplete
+- Known tech debt: Nyquist VALIDATION.md gaps for older phases, 1 legacy debug session (phase-27-regressions), ~14 stale todo files for v1.6–v1.8-delivered work, `@deprecated` LoopStartNode/LoopEndNode retained for Migration Check
 
 ## Constraints
 
@@ -377,6 +373,16 @@ A radiologist can generate a structured, accurate protocol in seconds by answeri
 | Loop exit "+"-prefix convention (Phase 50.1) | `+` prefix distinguishes exit from labeled body edges; resolves Phase 49↔50 conflict | ✓ Good — clean separation from `isLabeledEdge` |
 | Inline mode = floating modal over active note (Phase 54) | Command-palette only; note-as-buffer; append to end; source-note binding | ✓ Good — additive to sidebar/tab modes |
 | File-bound Snippet = button click → direct insert (Phase 56) | Reversed Phase 51 D-13 auto-insert; directory-bound = button→picker | ✓ Good — user UAT preference |
+| `resolveProtocolCanvasFiles` as exported helper with fallback scan (Phase 59 INLINE-FIX-01) | Inline path resolution must match sidebar's nested-path behaviour; trailing-slash + backslash normalization + `vault.getFiles()` prefix-scan fallback when `getAbstractFileByPath` returns null | ✓ Good — 7/7 tests green, UAT approved |
+| `appendDeltaFromAccumulator(beforeText)` helper reuses sidebar pattern (Phase 59 INLINE-FIX-04) | Zero drift between sidebar and inline snippet-append logic; accumulator-diff mirrors `handleAnswerClick` snapshot approach | ✓ Good — D7 parity check green |
+| Phase 54 D6 reversal: real SnippetFillInModal over floating Inline modal (Phase 59 INLINE-FIX-05) | Parity with sidebar + tab modes was the stronger UX contract; `isFillModalOpen` D1 gate blocks leaf-change during modal; defensive `fillModal.close()` disposal in `close()` | ✓ Good — 13/13 tests green |
+| Position state: clamp-on-restore, not clamp-on-save (Phase 60 INLINE-FIX-02) | Monitor/resolution changes happen between sessions; clamp at restore handles the geometry that actually exists | ✓ Good — no "flies off-screen" regression |
+| Plan 60-01 + 60-02 shipped in one commit `e73d829` | Intermediate commit would leave drag-events firing against non-persistent state | ✓ Good — avoids half-wired modal state |
+| Compact default layout, no resize handle (Phase 60 INLINE-FIX-03) | Overlap problem solved by tighter padding/preview-height; resize is additive polish deferred | ✓ Good — UAT approved |
+| Single reusable `FolderSuggest` on `AbstractInputSuggest` (Phase 61 SETTINGS-01) | Matches Templater reference; one class attached to 3 fields, not per-field custom suggesters | ✓ Good — zero duplication |
+| Session folder excluded from autocomplete (Phase 61) | Explicit scope boundary; Session path rarely changed | ✓ Good — no user friction reported |
+| Unprefixed tag `1.9.0` (Phase 62 BRAT-02) | BRAT convention continuing from v1.8.0 precedent; `manifest.json`/`versions.json` tooling expects unprefixed | ✓ Good — `gh release` surface clean |
+| D10 Phase 60 UAT gate as first runbook section (Phase 62) | A3 guardrail — release notes cannot claim phases that hadn't passed UAT yet; structural divergence from Phase 55 | ✓ Good — runbook executed cleanly |
 
 ## Evolution
 
@@ -387,4 +393,4 @@ A radiologist can generate a structured, accurate protocol in seconds by answeri
 4. Update Context with current state
 
 ---
-*Last updated: 2026-04-24 — v1.9 Inline Runner Polish & Settings UX milestone started*
+*Last updated: 2026-04-25 after v1.9 milestone (Inline Runner Polish & Settings UX) — SHIPPED*

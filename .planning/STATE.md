@@ -1,89 +1,53 @@
 ---
 gsd_state_version: 1.0
-milestone: v1.9
-milestone_name: Inline Runner Polish & Settings UX
-status: shipped
-stopped_at: "v1.9.0 published to GitHub Releases — SC-1 (local) and SC-2 (Release) verified; SC-3 (fresh-vault BRAT smoke test) optional manual check"
-last_updated: "2026-04-25T02:00:00.000Z"
-last_activity: 2026-04-25 — v1.9.0 released: tag 1.9.0 pushed, GitHub Release v1.9.0 published with 3 loose assets (main.js, manifest.json, styles.css); API smoke check PASS
+milestone: none
+milestone_name: null
+status: between-milestones
+stopped_at: "v1.9 milestone archived — ROADMAP/REQUIREMENTS/phases moved to milestones/v1.9-*. Next milestone TBD via /gsd-new-milestone."
+last_updated: "2026-04-25T03:00:00.000Z"
+last_activity: 2026-04-25 — v1.9 archived (milestone close); v1.9.0 GitHub Release live
 progress:
-  total_phases: 4
-  completed_phases: 4
-  total_plans: 17
-  completed_plans: 17
-  percent: 100
+  total_phases: 0
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
+  percent: 0
 ---
 
 # RadiProtocol — Project State
 
 **Updated:** 2026-04-25
-**Milestone:** v1.9 — Inline Runner Polish & Settings UX
-**Status:** SHIPPED. v1.9.0 published to GitHub Releases. SC-1 (local versioning + build) and SC-2 (Release with 3 loose assets, prerelease: false) verified. SC-3 (fresh-vault BRAT smoke test) is an optional manual confirmation.
+**Milestone:** None — between milestones after v1.9 close
+**Status:** v1.9 (Inline Runner Polish & Settings UX) shipped and archived. GitHub Release v1.9.0 live with 3 loose assets. Ready for next milestone definition via `/gsd-new-milestone`.
 
 ---
 
 ## Current Position
 
-Phase: 62 of 62 (BRAT Release v1.9.0) — SHIPPED
-Plan: 3/3 plans complete; v1.9.0 published
-Status: GitHub Release v1.9.0 live at https://github.com/vegacepticon/RadiProtocol/releases/tag/1.9.0 with 3 loose assets. API smoke check PASS (`tag_name=1.9.0`, `prerelease=false`, assets=main.js+manifest.json+styles.css). Tag `1.9.0` pushed. Local commits 9864c98..9c7bc8c synced to origin/main.
-Last activity: 2026-04-25 — v1.9.0 RELEASED
+No active milestone. v1.9 archived to `.planning/milestones/`:
+- `v1.9-ROADMAP.md` — full phase details (59–62)
+- `v1.9-REQUIREMENTS.md` — 7/7 requirements satisfied with outcomes
+- `v1.9-phases/` — all phase directories (17 plans, summaries, verification artifacts)
 
-Progress: [██████████] 100% (4/4 phases complete, 17/17 plans complete, milestone shipped)
+Last activity: 2026-04-25 — milestone close performed (archive + ROADMAP reorg + PROJECT evolution)
+
+Progress: N/A — no active milestone
 
 ---
 
 ## Project Reference
 
-See: `.planning/PROJECT.md` (updated 2026-04-24).
+See: `.planning/PROJECT.md` (updated 2026-04-25 after v1.9 milestone).
 
 **Core value:** A radiologist can generate a structured, accurate protocol in seconds by answering a guided algorithm — without writing a single line of code.
 
-**Current focus:** v1.9 milestone shipped — v1.9.0 GitHub Release live. Next: optional `/gsd-complete-milestone` to archive v1.9 and prepare for v2.0 / next milestone scope.
-
----
-
-## v1.9 Phase Map
-
-| Phase | Name | Requirements | Plans | Status |
-|-------|------|--------------|-------|--------|
-| 59 | Inline Runner Feature Parity | INLINE-FIX-01, INLINE-FIX-04, INLINE-FIX-05 | 5 | Complete 2026-04-24 |
-| 60 | Inline Runner Layout & Position Persistence | INLINE-FIX-02, INLINE-FIX-03 | 5 | Complete 2026-04-24 |
-| 61 | Settings Folder Autocomplete | SETTINGS-01 | 4 | Complete 2026-04-24 |
-| 62 | BRAT Release v1.9.0 | BRAT-02 | 3 | Shipped 2026-04-25 |
-
-**Coverage:** 7/7 v1.9 requirements mapped. No orphans. Phases 59–61 are independent; Phase 62 depends on all three.
-
----
-
-## v1.9 Scope Summary (confirmed 2026-04-24)
-
-**Inline Runner fixes (5):**
-1. Path resolution: nested `templates/ALGO`-style paths not found (but snippets nested paths work)
-2. Position persistence: modal flies off-screen after tab switch, becomes un-draggable
-3. Compact layout: modal overlaps note text — reduce default footprint
-4. Snippet separator: ignored on insert (no space/newline between text and inserted snippet)
-5. JSON snippet fill-in: modal with placeholder fields doesn't appear in inline mode
-
-**Settings UX (1):**
-6. Folder autocomplete: FolderSuggest dropdown (Templater-style) on all path fields (Protocols, Snippets, Output)
-
-**Distribution (1):**
-7. BRAT release v1.9.0 at end of milestone (single release, pattern repeats v1.8)
-
-**Decisions locked during /gsd-new-milestone discuss:**
-- Position persistence → save last drag-coords in workspace state (not always-default, not session-only)
-- Overlap fix → compact layout by default (no resize handle, no auto-fade this iteration)
-- Autocomplete → apply to ALL path fields in settings (not just Protocols)
-- Release cadence → single 1.9.0 at end of milestone (no patch releases along the way)
-- Seeds `duplicate-node.md` + `quick-node-creation.md` → stale (delivered in v1.6), excluded from v1.9
-- Community plugin submission (deferred item in PROJECT.md) → NOT in v1.9; BRAT-only distribution
+**Current focus:** Planning next milestone. Use `/gsd-new-milestone` to define scope, requirements, and roadmap for v2.0 (or v1.10).
 
 ---
 
 ## Accumulated Context
 
-### v1.0–v1.8 Shipped
+### v1.0–v1.9 Shipped
 
 - v1.0 (7 phases): foundation — parser, runner, UI, editor panel, snippets, loops, sessions.
 - v1.2 (8 phases): runner UX and bug fixes (layout, selectors, separators, read-back).
@@ -93,8 +57,9 @@ See: `.planning/PROJECT.md` (updated 2026-04-24).
 - v1.6 (7 phases): dead-code audit, canvas node creation, node duplication, live canvas update.
 - v1.7 (4 phases): unified loop node, runtime picker, editor form + picker-modal + start-from-node command, free-text-input removal.
 - v1.8 (14 phases, 47–58): runner regressions closed, Node Editor UX polish, edge semantics (`+`-prefix exit, Answer↔edge sync), snippet picker overhaul + file-binding + button UX reversal, JSON placeholders → 2 types, Skip/Close buttons, Inline Protocol Display Mode, BRAT distribution (GitHub Release v1.8.0).
+- v1.9 (4 phases, 59–62): Inline Runner feature parity (nested path resolution, separator on snippet insert, JSON fill-in modal), position persistence + compact layout, folder autocomplete on settings path fields, BRAT Release v1.9.0.
 
-### Standing Pitfalls (carry-over from v1.8)
+### Standing Pitfalls (carry-over from v1.9)
 
 1. Never modify `.canvas` while open in Canvas view (Strategy A) unless Pattern B live-editor is used.
 2. `vault.modify()` race conditions — use `WriteMutex` (async-mutex) per file path.
@@ -108,12 +73,13 @@ See: `.planning/PROJECT.md` (updated 2026-04-24).
 10. v1.7 excised `maxIterations` — do not reintroduce a per-loop or global iteration cap.
 11. v1.8: preserve backward compatibility of stored canvas shape — directory-bound Snippet nodes must keep working unchanged.
 
-### v1.9-specific pitfalls (to validate during research/planning)
+### v1.9 validated patterns (learned this milestone)
 
-- **Inline modal position persistence** — must survive tab switch AND plugin reload; clamp to viewport bounds to avoid "flies off-screen" regression.
-- **FolderSuggest** — Obsidian's `AbstractInputSuggest` is the standard pattern (used by Templater); avoid custom popup DOM.
-- **Path resolver parity** — snippet resolver handles nested paths correctly; mirror its behavior in canvas/protocol folder lookup.
-- **JSON fill-in in inline mode** — SnippetFillInModal must work over floating inline modal without z-index conflicts.
+- **Inline modal position persistence** — workspace-state storage + clamp-on-restore (not clamp-on-save) survives monitor/resolution changes between sessions (Phase 60).
+- **FolderSuggest** — Obsidian's `AbstractInputSuggest` via `app.vault.getAllFolders(false)`; single reusable class attached to multiple fields (Phase 61).
+- **Path resolver parity** — trailing-slash + backslash normalization + `vault.getFiles()` prefix-scan fallback when `getAbstractFileByPath` returns null (Phase 59).
+- **Inline JSON fill-in** — real `SnippetFillInModal` above floating inline modal with `isFillModalOpen` D1 gate + `close()` disposal (Phase 59 D6 reversal of Phase 54).
+- **Accumulator-diff snippet append** — `appendDeltaFromAccumulator(beforeText)` mirrors sidebar `handleAnswerClick` pattern; zero drift between modes (Phase 59).
 
 ### Open Tech Debt (deferred to future)
 
@@ -129,7 +95,7 @@ See: `.planning/PROJECT.md` (updated 2026-04-24).
 ## Session Continuity
 
 Last session: 2026-04-25
-Stopped at: v1.9.0 SHIPPED — GitHub Release v1.9.0 published; SC-1/SC-2 verified
+Stopped at: v1.9 milestone archived — between milestones
 Resume file: None
 
 ---
@@ -139,4 +105,24 @@ Resume file: None
 - Branch: `main`
 - Main: `main`
 - Last shipped: v1.9 (2026-04-25; GitHub Release v1.9.0 published)
-- Starting phase number for v1.9: 59 (continues from Phase 58)
+- Starting phase number for next milestone: 63 (continues from Phase 62)
+
+---
+
+## Deferred Items
+
+Items acknowledged and deferred at v1.9 milestone close on 2026-04-25:
+
+| Category | Item | Status | Notes |
+|----------|------|--------|-------|
+| debug | phase-27-regressions | awaiting_human_verify | v1.7 carryover — color regression root cause found in canvas-live-editor.ts PROTECTED_FIELDS; not blocking |
+| uat | Phase 59 UAT status field | passed / 0 open | Auditor noise — 0 pending scenarios, phase verified green |
+| uat | Phase 61 UAT status field | unknown / 0 open | Status-field oversight — 0 pending scenarios, phase shipped |
+| todo | bug-runner-textarea-edits-lost-on-loop-transition.md | high | Delivered in v1.8 Phase 47 (RUNFIX-01); stale file |
+| todo | hierarchical-snippet-picker.md | high | Delivered in v1.8 Phase 51 (PICKER-01/02); stale file |
+| todo | json-snippet-placeholder-rework.md | high | Delivered in v1.8 Phase 52 (PHLD-01); stale file |
+| todo | loop-node-exit-from-edge-label.md | high | Delivered in v1.8 Phase 49/50.1 (EDGE-01/03); stale file |
+| todo | new-nodes-placed-below-last.md | medium | Delivered in v1.8 Phase 48 (NODEUI-02); stale file |
+| todo | 9 additional pending todos | mixed | Most reference already-delivered v1.6–v1.8 work; opportunistic cleanup |
+
+**Triage outcome:** All 8 items non-blocking. Most pending todos are stale (work already shipped but file not deleted). Cleanup opportunity for next housekeeping pass; not a v2.0 prerequisite.

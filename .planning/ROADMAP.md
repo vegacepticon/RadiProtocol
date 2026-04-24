@@ -1,7 +1,7 @@
 # Roadmap: RadiProtocol
 
 **Project:** RadiProtocol
-**Last updated:** 2026-04-25 (v1.9 SHIPPED — GitHub Release v1.9.0 published with 3 loose assets)
+**Last updated:** 2026-04-25 (v1.9 archived — milestone closed)
 
 ---
 
@@ -16,6 +16,8 @@
 - ✅ **v1.7 Loop Rework & Regression Cleanup** — Phases 43-46 (shipped 2026-04-18)
 - ✅ **v1.8 UX Polish & Snippet Picker Overhaul** — Phases 47-58 (shipped 2026-04-21)
 - ✅ **v1.9 Inline Runner Polish & Settings UX** — Phases 59-62 (shipped 2026-04-25)
+
+_Next milestone: define via `/gsd-new-milestone`._
 
 ---
 
@@ -134,14 +136,17 @@ Full details: `.planning/milestones/v1.8-ROADMAP.md`
 
 </details>
 
-### 🚧 v1.9 Inline Runner Polish & Settings UX (In Progress)
+<details>
+<summary>✅ v1.9 Inline Runner Polish & Settings UX (Phases 59-62) — SHIPPED 2026-04-25</summary>
 
-**Milestone Goal:** Close the 5 Inline Runner UX gaps uncovered in v1.8 production usage (path resolution, position persistence, compact layout, separator on snippet insert, JSON fill-in modal), add folder autocomplete to every settings path field, and ship BRAT release v1.9.0 as a single end-of-milestone distribution event.
+- [x] Phase 59: Inline Runner Feature Parity (5/5 plans) — completed 2026-04-24
+- [x] Phase 60: Inline Runner Layout & Position Persistence (5/5 plans) — completed 2026-04-24
+- [x] Phase 61: Settings Folder Autocomplete (4/4 plans) — completed 2026-04-24
+- [x] Phase 62: BRAT Release v1.9.0 (3/3 plans) — shipped 2026-04-25
 
-- [x] **Phase 59: Inline Runner Feature Parity** — Path resolution for nested protocol folders + separator on snippet insert + JSON fill-in modal (INLINE-FIX-01, INLINE-FIX-04, INLINE-FIX-05) — completed 2026-04-24
-- [x] **Phase 60: Inline Runner Layout & Position Persistence** — Compact default footprint + drag-position persisted in workspace state with viewport clamping (INLINE-FIX-02, INLINE-FIX-03) — completed 2026-04-24
-- [x] **Phase 61: Settings Folder Autocomplete** — FolderSuggest dropdown on every path field in settings (SETTINGS-01) — completed 2026-04-24
-- [x] **Phase 62: BRAT Release v1.9.0** — GitHub Release v1.9.0 with aligned manifest/versions/package + verified BRAT install on clean vault (BRAT-02) — shipped 2026-04-25
+Full details: `.planning/milestones/v1.9-ROADMAP.md`
+
+</details>
 
 ---
 
@@ -228,6 +233,15 @@ All 14 phases shipped, 50/50 plans complete, 26/26 requirements satisfied.
 
 ---
 
+<details>
+<summary>✅ v1.9 Phase Details (Phases 59–62) — see .planning/milestones/v1.9-ROADMAP.md for full context</summary>
+
+v1.9 phases (59–62) were archived to `.planning/milestones/v1.9-ROADMAP.md` when the milestone closed on 2026-04-25.
+All 4 phases shipped, 17/17 plans complete, 7/7 requirements satisfied. GitHub Release v1.9.0 published with 3 loose assets.
+
+<details>
+<summary>Legacy v1.9 phase detail (pre-archive) — see archive for canonical version</summary>
+
 ### Phase 59: Inline Runner Feature Parity
 **Goal**: Inline Runner behaves identically to the sidebar Runner for three correctness-class parity gaps — nested protocol-folder path resolution, configured-separator on snippet insert, and JSON snippet fill-in modal with placeholders.
 **Depends on**: Nothing (pure Inline Runner fixes in `InlineRunnerModal` + shared render paths; parallel to Phase 60 which is presentation/state work on the same modal)
@@ -297,12 +311,16 @@ Plans:
 - [x] 62-02-PLAN.md — Wave 2: build + v1.9.0 preflight script + atomic release-prep commit + unprefixed annotated tag `1.9.0`
 - [x] 62-03-PLAN.md — Wave 3: release runbook with D10 Phase 60 UAT gate + D6 web-UI instructions + D7 changelog + SC-3 post-publish verification
 
+</details>
+
+</details>
+
 ---
 
 ## Progress
 
 **Execution Order:**
-Phases execute in numeric order: 59 → 60 → 61 → 62. Phases 59, 60, 61 are independent and can be scheduled in any order; Phase 62 depends on all three landing first.
+No active milestone. Next milestone to be defined via `/gsd-new-milestone`.
 
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
