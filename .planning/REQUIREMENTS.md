@@ -53,17 +53,15 @@ Deferred to future milestones. Tracked but not in current roadmap.
 
 ## Traceability
 
-To be filled by roadmap.
-
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| INLINE-FIX-01 | — | Planned |
-| INLINE-FIX-02 | — | Planned |
-| INLINE-FIX-03 | — | Planned |
-| INLINE-FIX-04 | — | Planned |
-| INLINE-FIX-05 | — | Planned |
-| SETTINGS-01 | — | Planned |
-| BRAT-02 | — | Planned |
+| INLINE-FIX-01 | Phase 59 | Planned |
+| INLINE-FIX-02 | Phase 60 | Planned |
+| INLINE-FIX-03 | Phase 60 | Planned |
+| INLINE-FIX-04 | Phase 59 | Planned |
+| INLINE-FIX-05 | Phase 59 | Planned |
+| SETTINGS-01 | Phase 61 | Planned |
+| BRAT-02 | Phase 62 | Planned |
 
 ## Coverage Summary
 
@@ -71,4 +69,4 @@ To be filled by roadmap.
 - **Inline Runner Fixes:** 5 (INLINE-FIX-01..05)
 - **Settings UX:** 1 (SETTINGS-01)
 - **Distribution:** 1 (BRAT-02)
-- **Mapped to phases:** 0 / 7 (pending roadmap)
+- **Mapped to phases:** 7 / 7 (roadmap complete — Phases 59–62)

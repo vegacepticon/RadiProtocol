@@ -2,12 +2,12 @@
 gsd_state_version: 1.0
 milestone: v1.9
 milestone_name: Inline Runner Polish & Settings UX
-status: defining_requirements
-stopped_at: "v1.9 started 2026-04-24 — gathering requirements"
+status: ready_to_plan
+stopped_at: "v1.9 roadmap authored 2026-04-24 — Phases 59-62 mapped, all 7 requirements covered"
 last_updated: "2026-04-24T00:00:00.000Z"
-last_activity: 2026-04-24 -- v1.9 milestone started; gathering requirements for Inline Runner fixes + Settings UX
+last_activity: 2026-04-24 -- v1.9 roadmap authored; 4 phases (59-62) cover all 7 requirements; ready for /gsd-plan-phase 59
 progress:
-  total_phases: 0
+  total_phases: 4
   completed_phases: 0
   total_plans: 0
   completed_plans: 0
@@ -18,16 +18,18 @@ progress:
 
 **Updated:** 2026-04-24
 **Milestone:** v1.9 — Inline Runner Polish & Settings UX
-**Status:** Defining requirements (post-discuss).
+**Status:** Roadmap authored; ready to plan Phase 59.
 
 ---
 
 ## Current Position
 
-Phase: Not started (defining requirements)
-Plan: —
-Status: Defining requirements
-Last activity: 2026-04-24 — Milestone v1.9 started; scope confirmed via /gsd-new-milestone
+Phase: 59 of 62 (Inline Runner Feature Parity)
+Plan: — (not yet planned)
+Status: Ready to plan Phase 59
+Last activity: 2026-04-24 — v1.9 roadmap authored; Phases 59-62 mapped; all 7 requirements covered
+
+Progress: [░░░░░░░░░░] 0% (0/4 phases, 0/TBD plans)
 
 ---
 
@@ -36,6 +38,21 @@ Last activity: 2026-04-24 — Milestone v1.9 started; scope confirmed via /gsd-n
 See: `.planning/PROJECT.md` (updated 2026-04-24).
 
 **Core value:** A radiologist can generate a structured, accurate protocol in seconds by answering a guided algorithm — without writing a single line of code.
+
+**Current focus:** Phase 59 — Inline Runner Feature Parity (INLINE-FIX-01, INLINE-FIX-04, INLINE-FIX-05).
+
+---
+
+## v1.9 Phase Map
+
+| Phase | Name | Requirements | Plans | Status |
+|-------|------|--------------|-------|--------|
+| 59 | Inline Runner Feature Parity | INLINE-FIX-01, INLINE-FIX-04, INLINE-FIX-05 | TBD | Not started |
+| 60 | Inline Runner Layout & Position Persistence | INLINE-FIX-02, INLINE-FIX-03 | TBD | Not started |
+| 61 | Settings Folder Autocomplete | SETTINGS-01 | TBD | Not started |
+| 62 | BRAT Release v1.9.0 | BRAT-02 | TBD | Not started |
+
+**Coverage:** 7/7 v1.9 requirements mapped. No orphans. Phases 59–61 are independent; Phase 62 depends on all three.
 
 ---
 
@@ -106,6 +123,14 @@ See: `.planning/PROJECT.md` (updated 2026-04-24).
 - `@deprecated` `LoopStartNode` / `LoopEndNode` retained for Migration Check enumeration.
 - 5 stale todo files for v1.8-delivered work in `.planning/todos/pending/` — cleanup opportunistically.
 - 2 stale seeds (`duplicate-node.md`, `quick-node-creation.md`) for v1.6-delivered work in `.planning/seeds/`.
+
+---
+
+## Session Continuity
+
+Last session: 2026-04-24
+Stopped at: v1.9 roadmap authored (.planning/ROADMAP.md + .planning/REQUIREMENTS.md traceability filled); ready to run `/gsd-plan-phase 59`
+Resume file: None
 
 ---
 
