@@ -160,3 +160,85 @@
   margin: 0;
   padding-left: var(--size-4-4);
 }
+
+/* Phase 60: compact draggable inline runner */
+.rp-inline-runner-container {
+  width: min(360px, calc(100vw - var(--size-4-8)));
+  max-width: calc(100vw - var(--size-4-8));
+  max-height: min(52vh, calc(100vh - var(--size-4-8)));
+  bottom: auto;
+  right: auto;
+  border: 1px solid var(--background-modifier-border);
+  border-radius: var(--radius-m);
+  box-shadow: var(--shadow-l);
+  overflow: hidden;
+  transition: box-shadow 0.12s ease;
+}
+
+.rp-inline-runner-container.is-dragging {
+  box-shadow: var(--shadow-xl);
+}
+
+.rp-inline-runner-header {
+  padding: var(--size-2-3) var(--size-4-2);
+  cursor: grab;
+  user-select: none;
+}
+
+.rp-inline-runner-container.is-dragging .rp-inline-runner-header {
+  cursor: grabbing;
+}
+
+.rp-inline-runner-header-title {
+  font-size: var(--font-ui-smaller);
+}
+
+.rp-inline-runner-close-btn {
+  padding: var(--size-2-1);
+}
+
+.rp-inline-runner-content {
+  padding: var(--size-4-2);
+}
+
+.rp-inline-runner-content .rp-question-zone {
+  display: flex;
+  flex-direction: column;
+  gap: var(--size-2-3);
+}
+
+.rp-inline-runner-content .rp-question-text {
+  margin: 0 0 var(--size-4-2) 0;
+  font-size: var(--font-ui-small);
+  line-height: var(--line-height-tight);
+}
+
+.rp-inline-runner-content .rp-answer-list,
+.rp-inline-runner-content .rp-snippet-branch-list,
+.rp-inline-runner-content .rp-loop-picker-list,
+.rp-inline-runner-content .rp-snippet-fill-form {
+  gap: var(--size-2-3);
+  margin-bottom: var(--size-4-2);
+}
+
+.rp-inline-runner-content .rp-answer-btn,
+.rp-inline-runner-content .rp-snippet-branch-btn,
+.rp-inline-runner-content .rp-loop-body-btn,
+.rp-inline-runner-content .rp-loop-exit-btn,
+.rp-inline-runner-content .rp-step-back-btn,
+.rp-inline-runner-content .rp-skip-btn {
+  padding: var(--size-2-3) var(--size-4-2);
+  min-height: 28px;
+}
+
+.rp-inline-runner-content .rp-output-toolbar {
+  gap: var(--size-2-3);
+  margin-top: var(--size-4-2);
+  padding-top: var(--size-2-3);
+  flex-wrap: wrap;
+}
+
+.rp-inline-runner-content .rp-output-toolbar button {
+  padding: var(--size-2-2) var(--size-4-2);
+  min-height: 26px;
+}
