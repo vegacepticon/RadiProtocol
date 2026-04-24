@@ -13,6 +13,12 @@ import * as fs from 'fs';
 import * as path from 'path';
 
 vi.mock('obsidian');
+vi.mock('../views/snippet-tree-picker', () => ({
+  SnippetTreePicker: class {
+    mount = vi.fn().mockResolvedValue(undefined);
+    unmount = vi.fn();
+  },
+}));
 
 // ── Shared capture state ──────────────────────────────────────────────────
 
@@ -87,7 +93,24 @@ function installSettingPrototypeMock(): void {
 
 const createdElements: Array<{ tag: string; cls?: string; text?: string; parentCls?: string }> = [];
 const textareaInputCb: { cb: (() => void) | null } = { cb: null };
+const textareaInputCallbacks = new Map<Record<string, unknown>, () => void>();
+const allTextareas: Array<Record<string, unknown>> = [];
 let lastTextarea: Record<string, unknown> | null = null;
+
+function makeTrackedStyle(): { style: { height: string; width: string }; history: string[] } {
+  const history: string[] = [];
+  let height = '';
+  const style = { width: '' } as { height: string; width: string };
+  Object.defineProperty(style, 'height', {
+    get: () => height,
+    set: (value: string) => {
+      height = value;
+      history.push(value);
+    },
+    configurable: true,
+  });
+  return { style, history };
+}
 
 const fakeNode = (parentCls?: string): Record<string, unknown> => {
   const self: Record<string, unknown> = {
@@ -100,10 +123,13 @@ const fakeNode = (parentCls?: string): Record<string, unknown> => {
       createdElements.push({ tag, cls: opts?.cls, text: opts?.text, parentCls });
       const child = fakeNode(opts?.cls);
       if (tag === 'textarea') {
-        (child as Record<string, unknown>).style = { width: '', height: '' };
+        const tracked = makeTrackedStyle();
+        (child as Record<string, unknown>).style = tracked.style;
+        (child as Record<string, unknown>).__heightHistory = tracked.history;
         (child as Record<string, unknown>).scrollHeight = 123;
         (child as Record<string, unknown>).value = '';
         lastTextarea = child;
+        allTextareas.push(child);
       }
       return child;
     },
@@ -122,20 +148,48 @@ const fakeNode = (parentCls?: string): Record<string, unknown> => {
 
 function makeView(): EditorPanelView {
   const leaf = {} as unknown as import('obsidian').WorkspaceLeaf;
-  const plugin = {} as unknown as RadiProtocolPlugin;
+  const plugin = {
+    app: { vault: { adapter: { list: vi.fn(), exists: vi.fn() } } },
+    settings: { snippetFolderPath: '.radiprotocol/snippets' },
+    snippetService: {},
+  } as unknown as RadiProtocolPlugin;
   const view = new EditorPanelView(leaf, plugin);
   (view as unknown as { contentEl: unknown }).contentEl = fakeNode();
   (view as unknown as { registerDomEvent: (el: unknown, ev: string, cb: () => void) => void })
     .registerDomEvent = (el, ev, cb) => {
-      if (ev === 'input' && el === lastTextarea) textareaInputCb.cb = cb;
+      if (ev === 'input') {
+        if (el === lastTextarea) textareaInputCb.cb = cb;
+        textareaInputCallbacks.set(el as Record<string, unknown>, cb);
+      }
     };
   return view;
+}
+
+function resetDomCaptures(): void {
+  createdElements.length = 0;
+  textareaInputCb.cb = null;
+  textareaInputCallbacks.clear();
+  allTextareas.length = 0;
+  lastTextarea = null;
+}
+
+function findTextareaAfterLabel(label: string): Record<string, unknown> | undefined {
+  const labelIdx = createdElements.findIndex(e => e.text === label);
+  if (labelIdx < 0) return undefined;
+  let textareaOrdinal = 0;
+  for (let i = 0; i < createdElements.length; i += 1) {
+    const element = createdElements[i]!;
+    if (element.tag !== 'textarea') continue;
+    if (i > labelIdx) return allTextareas[textareaOrdinal];
+    textareaOrdinal += 1;
+  }
+  return undefined;
 }
 
 // ── NODEUI-01: text-block form has no Snippet ID row ─────────────────────
 
 describe('NODEUI-01: text-block form has no Snippet ID row', () => {
-  beforeEach(() => { installSettingPrototypeMock(); createdElements.length = 0; });
+  beforeEach(() => { installSettingPrototypeMock(); resetDomCaptures(); });
 
   it('does not render a Setting row named "Snippet ID (optional)"', () => {
     const view = makeView();
@@ -159,7 +213,7 @@ describe('NODEUI-01: text-block form has no Snippet ID row', () => {
 // ── NODEUI-03: answer form renders Display label before Answer text ────────
 
 describe('NODEUI-03: answer form renders Display label before Answer text', () => {
-  beforeEach(() => { installSettingPrototypeMock(); createdElements.length = 0; });
+  beforeEach(() => { installSettingPrototypeMock(); resetDomCaptures(); });
 
   it('setName order has "Display label (optional)" before "Answer text"', () => {
     const view = makeView();
@@ -194,9 +248,7 @@ describe('NODEUI-04: question form custom DOM + auto-grow textarea', () => {
 
   beforeEach(() => {
     installSettingPrototypeMock();
-    createdElements.length = 0;
-    textareaInputCb.cb = null;
-    lastTextarea = null;
+    resetDomCaptures();
     originalRaf = (globalThis as unknown as { requestAnimationFrame?: typeof requestAnimationFrame }).requestAnimationFrame;
     (globalThis as unknown as { requestAnimationFrame: (cb: FrameRequestCallback) => number }).requestAnimationFrame =
       (cb: FrameRequestCallback) => { cb(0); return 0; };
@@ -250,6 +302,120 @@ describe('NODEUI-04: question form custom DOM + auto-grow textarea', () => {
   });
 });
 
+// ── Phase 64 EDITOR-04: all authored multiline fields auto-grow ───────────
+
+describe('Phase 64 EDITOR-04: shared auto-grow textarea coverage', () => {
+  let originalRaf: typeof globalThis.requestAnimationFrame | undefined;
+
+  beforeEach(() => {
+    installSettingPrototypeMock();
+    resetDomCaptures();
+    originalRaf = (globalThis as unknown as { requestAnimationFrame?: typeof requestAnimationFrame }).requestAnimationFrame;
+    (globalThis as unknown as { requestAnimationFrame: (cb: FrameRequestCallback) => number }).requestAnimationFrame =
+      (cb: FrameRequestCallback) => { cb(0); return 0; };
+  });
+
+  afterEach(() => {
+    if (originalRaf === undefined) {
+      delete (globalThis as unknown as { requestAnimationFrame?: unknown }).requestAnimationFrame;
+    } else {
+      (globalThis as unknown as { requestAnimationFrame: typeof requestAnimationFrame }).requestAnimationFrame = originalRaf;
+    }
+  });
+
+  const cases: Array<{
+    kind: 'question' | 'answer' | 'text-block' | 'loop' | 'snippet';
+    label: string;
+    record: Record<string, unknown>;
+    newValue: string;
+    expectedEdits: Record<string, unknown>;
+  }> = [
+    {
+      kind: 'question',
+      label: 'Question text',
+      record: { radiprotocol_questionText: 'Initial question' },
+      newValue: 'Updated question',
+      expectedEdits: { radiprotocol_questionText: 'Updated question', text: 'Updated question' },
+    },
+    {
+      kind: 'answer',
+      label: 'Answer text',
+      record: { radiprotocol_answerText: 'Initial answer' },
+      newValue: 'Updated answer',
+      expectedEdits: { radiprotocol_answerText: 'Updated answer', text: 'Updated answer' },
+    },
+    {
+      kind: 'text-block',
+      label: 'Content',
+      record: { radiprotocol_content: 'Initial text block' },
+      newValue: 'Updated text block',
+      expectedEdits: { radiprotocol_content: 'Updated text block', text: 'Updated text block' },
+    },
+    {
+      kind: 'loop',
+      label: 'Header text',
+      record: { radiprotocol_headerText: 'Initial loop header' },
+      newValue: 'Updated loop header',
+      expectedEdits: { radiprotocol_headerText: 'Updated loop header', text: 'Updated loop header' },
+    },
+    {
+      kind: 'snippet',
+      label: 'Branch label',
+      record: { radiprotocol_snippetLabel: 'Initial snippet label' },
+      newValue: 'Updated snippet label',
+      expectedEdits: { radiprotocol_snippetLabel: 'Updated snippet label' },
+    },
+  ];
+
+  it.each(cases)('Phase 64: $kind $label field renders as a managed growable textarea and sizes on load', ({ kind, label, record }) => {
+    const view = makeView();
+    const container = fakeNode();
+
+    // @ts-expect-error accessing private for test
+    view['buildKindForm'](container, record, kind);
+
+    const textarea = findTextareaAfterLabel(label);
+    expect(textarea, `${label} should render as a real textarea after its visible label`).toBeDefined();
+    const element = createdElements.find(e => e.tag === 'textarea');
+    expect(element?.cls, `${label} textarea should opt into shared growable styling`).toContain('rp-growable-textarea');
+    expect(textarea?.value).toBe(Object.values(record)[0]);
+    expect(textarea?.__heightHistory).toEqual(['auto', '123px']);
+  });
+
+  it.each(cases)('Phase 64: $kind $label input grows/shrinks and preserves pending edit keys', ({ kind, record, newValue, expectedEdits }) => {
+    const view = makeView();
+    const container = fakeNode();
+
+    // @ts-expect-error accessing private for test
+    view['buildKindForm'](container, record, kind);
+
+    const textarea = allTextareas[0];
+    expect(textarea, `${kind} should register a managed textarea`).toBeDefined();
+    const inputCb = textareaInputCallbacks.get(textarea!);
+    expect(inputCb, `${kind} textarea should register an input callback`).toBeDefined();
+
+    (textarea as { value: string }).value = newValue;
+    (textarea as { scrollHeight: number }).scrollHeight = 240;
+    (textarea as { __heightHistory: string[] }).__heightHistory.length = 0;
+    inputCb?.();
+
+    expect((textarea as { __heightHistory: string[] }).__heightHistory).toEqual(['auto', '240px']);
+    for (const [key, value] of Object.entries(expectedEdits)) {
+      expect(view['pendingEdits'][key]).toBe(value);
+    }
+
+    (textarea as { value: string }).value = '';
+    (textarea as { scrollHeight: number }).scrollHeight = 18;
+    (textarea as { __heightHistory: string[] }).__heightHistory.length = 0;
+    inputCb?.();
+
+    expect((textarea as { __heightHistory: string[] }).__heightHistory).toEqual(['auto', '18px']);
+    if (kind === 'snippet') {
+      expect(view['pendingEdits']['radiprotocol_snippetLabel']).toBeUndefined();
+    }
+  });
+});
+
 // ── NODEUI-05: toolbar renders at the bottom of contentEl ────────────────
 
 describe('NODEUI-05: toolbar renders at the bottom of contentEl', () => {
@@ -257,7 +423,7 @@ describe('NODEUI-05: toolbar renders at the bottom of contentEl', () => {
 
   beforeEach(() => {
     installSettingPrototypeMock();
-    createdElements.length = 0;
+    resetDomCaptures();
     originalRaf = (globalThis as unknown as { requestAnimationFrame?: typeof requestAnimationFrame }).requestAnimationFrame;
     (globalThis as unknown as { requestAnimationFrame: (cb: FrameRequestCallback) => number }).requestAnimationFrame =
       (cb: FrameRequestCallback) => { cb(0); return 0; };
