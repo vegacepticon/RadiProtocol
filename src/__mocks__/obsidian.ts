@@ -67,6 +67,7 @@ function makeMockTextComponent(): MockTextComponent {
   const inputEl = makeMockInputEl();
   const tc: MockTextComponent = {
     inputEl,
+    setPlaceholder: (_placeholder: string) => tc,
     setValue: (v: string) => {
       inputEl.value = v;
       return tc;
@@ -82,6 +83,7 @@ function makeMockTextComponent(): MockTextComponent {
 
 interface MockTextComponent {
   inputEl: MockInputEl;
+  setPlaceholder: (placeholder: string) => MockTextComponent;
   setValue: (v: string) => MockTextComponent;
   onChange: (cb: (v: string) => void) => MockTextComponent;
 }
