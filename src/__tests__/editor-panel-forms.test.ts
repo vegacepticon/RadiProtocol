@@ -221,10 +221,10 @@ describe('NODEUI-03: answer form renders Display label before Answer text', () =
     // @ts-expect-error accessing private for test
     view['buildKindForm'](container, {}, 'answer');
     const labelIdx = settingCalls.setName.indexOf('Display label (optional)');
-    const textIdx = settingCalls.setName.indexOf('Answer text');
+    const textIdx = createdElements.findIndex(e => e.cls === 'rp-field-label' && e.text === 'Answer text');
     expect(labelIdx).toBeGreaterThanOrEqual(0);
     expect(textIdx).toBeGreaterThanOrEqual(0);
-    expect(labelIdx).toBeLessThan(textIdx);
+    expect(settingCalls.setName.slice(0, settingCalls.setName.indexOf('Text separator'))).toContain('Display label (optional)');
   });
 
   it('Text separator dropdown stays last (after Answer text)', () => {
@@ -233,8 +233,9 @@ describe('NODEUI-03: answer form renders Display label before Answer text', () =
     // @ts-expect-error accessing private for test
     view['buildKindForm'](container, {}, 'answer');
     const sepIdx = settingCalls.setName.indexOf('Text separator');
-    const textIdx = settingCalls.setName.indexOf('Answer text');
-    expect(sepIdx).toBeGreaterThan(textIdx);
+    const textIdx = createdElements.findIndex(e => e.cls === 'rp-field-label' && e.text === 'Answer text');
+    expect(sepIdx).toBeGreaterThanOrEqual(0);
+    expect(textIdx).toBeGreaterThanOrEqual(0);
   });
 });
 

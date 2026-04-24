@@ -466,7 +466,11 @@ export class EditorPanelView extends ItemView {
       textarea.style.height = textarea.scrollHeight + 'px';
     };
 
-    requestAnimationFrame(resize);
+    if (typeof requestAnimationFrame === 'function') {
+      requestAnimationFrame(resize);
+    } else {
+      resize();
+    }
     this.registerDomEvent(textarea, 'input', () => {
       resize();
       options.onInput(textarea.value);
@@ -543,17 +547,19 @@ export class EditorPanelView extends ItemView {
                 this.scheduleAutoSave();
               });
           });
-        new Setting(container)
-          .setName('Answer text')
-          .setDesc('Appended to the accumulated report text when this answer is chosen.')
-          .addTextArea(ta => {
-            ta.setValue((nodeRecord['radiprotocol_answerText'] as string | undefined) ?? (nodeRecord['text'] as string | undefined) ?? '')
-              .onChange(v => {
-                this.pendingEdits['radiprotocol_answerText'] = v;
-                this.pendingEdits['text'] = v;
-                this.scheduleAutoSave();
-              });
-          });
+        this.renderGrowableTextarea(container, {
+          blockClass: 'rp-answer-text-block',
+          label: 'Answer text',
+          desc: 'Appended to the accumulated report text when this answer is chosen.',
+          value:
+            (nodeRecord['radiprotocol_answerText'] as string | undefined) ??
+            (nodeRecord['text'] as string | undefined) ??
+            '',
+          onInput: (value) => {
+            this.pendingEdits['radiprotocol_answerText'] = value;
+            this.pendingEdits['text'] = value;
+          },
+        });
         // Separator override dropdown (D-05, D-06, SEP-02)
         new Setting(container)
           .setName('Text separator')
@@ -575,17 +581,19 @@ export class EditorPanelView extends ItemView {
 
       case 'text-block': {
         new Setting(container).setHeading().setName('Text-block node');
-        new Setting(container)
-          .setName('Content')
-          .setDesc('Auto-appended to the accumulated text when this node is reached.')
-          .addTextArea(ta => {
-            ta.setValue((nodeRecord['radiprotocol_content'] as string | undefined) ?? (nodeRecord['text'] as string | undefined) ?? '')
-              .onChange(v => {
-                this.pendingEdits['radiprotocol_content'] = v;
-                this.pendingEdits['text'] = v;
-                this.scheduleAutoSave();
-              });
-          });
+        this.renderGrowableTextarea(container, {
+          blockClass: 'rp-text-block-content-block',
+          label: 'Content',
+          desc: 'Auto-appended to the accumulated text when this node is reached.',
+          value:
+            (nodeRecord['radiprotocol_content'] as string | undefined) ??
+            (nodeRecord['text'] as string | undefined) ??
+            '',
+          onInput: (value) => {
+            this.pendingEdits['radiprotocol_content'] = value;
+            this.pendingEdits['text'] = value;
+          },
+        });
         // Separator override dropdown (D-05, D-06, SEP-02)
         new Setting(container)
           .setName('Text separator')
@@ -622,17 +630,19 @@ export class EditorPanelView extends ItemView {
         // so the header is visible on the canvas node AND picked up by the runner — same pattern
         // as question/answer.
         new Setting(container).setHeading().setName('Loop node');
-        new Setting(container)
-          .setName('Header text')
-          .setDesc('Displayed above the branch picker when the runner halts at this loop, and also shown as the canvas node label. Leave blank for no header.')
-          .addTextArea(ta => {
-            ta.setValue((nodeRecord['radiprotocol_headerText'] as string | undefined) ?? (nodeRecord['text'] as string | undefined) ?? '')
-              .onChange(v => {
-                this.pendingEdits['radiprotocol_headerText'] = v;
-                this.pendingEdits['text'] = v;
-                this.scheduleAutoSave();
-              });
-          });
+        this.renderGrowableTextarea(container, {
+          blockClass: 'rp-loop-header-block',
+          label: 'Header text',
+          desc: 'Displayed above the branch picker when the runner halts at this loop, and also shown as the canvas node label. Leave blank for no header.',
+          value:
+            (nodeRecord['radiprotocol_headerText'] as string | undefined) ??
+            (nodeRecord['text'] as string | undefined) ??
+            '',
+          onInput: (value) => {
+            this.pendingEdits['radiprotocol_headerText'] = value;
+            this.pendingEdits['text'] = value;
+          },
+        });
         break;
       }
 
@@ -700,16 +710,15 @@ export class EditorPanelView extends ItemView {
 
         // Phase 31 D-01: optional label shown on branch-list button when this snippet node
         // is reached as a variant of a question. Empty fallback = "📁 Snippet".
-        new Setting(container)
-          .setName('Branch label')
-          .setDesc('Shown on the branch-list button when a question has outgoing edges to this snippet. Leave empty to use "📁 Snippet".')
-          .addText(text => {
-            text.setValue((nodeRecord['radiprotocol_snippetLabel'] as string | undefined) ?? '');
-            text.onChange(v => {
-              this.pendingEdits['radiprotocol_snippetLabel'] = v || undefined;
-              this.scheduleAutoSave();
-            });
-          });
+        this.renderGrowableTextarea(container, {
+          blockClass: 'rp-snippet-branch-label-block',
+          label: 'Branch label',
+          desc: 'Shown on the branch-list button when a question has outgoing edges to this snippet. Leave empty to use "📁 Snippet".',
+          value: (nodeRecord['radiprotocol_snippetLabel'] as string | undefined) ?? '',
+          onInput: (value) => {
+            this.pendingEdits['radiprotocol_snippetLabel'] = value || undefined;
+          },
+        });
 
         // Phase 31 D-04: per-node separator override. '' = use global default from settings.
         new Setting(container)
