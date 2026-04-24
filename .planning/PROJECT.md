@@ -12,9 +12,30 @@ A radiologist can generate a structured, accurate protocol in seconds by answeri
 
 **Last shipped:** v1.9 Inline Runner Polish & Settings UX — ✅ SHIPPED 2026-04-25 (GitHub Release v1.9.0, 3 loose assets, BRAT-installable)
 
-**Active milestone:** None — next milestone to be defined via `/gsd-new-milestone`.
+**Active milestone:** v1.10 Editor Sync & Runner UX Polish — DEFINING REQUIREMENTS (started 2026-04-25)
 
-**Previous milestone:** v1.8 UX Polish & Snippet Picker Overhaul — ✅ SHIPPED 2026-04-21
+**Previous milestone:** v1.9 Inline Runner Polish & Settings UX — ✅ SHIPPED 2026-04-25
+
+## Current Milestone: v1.10 Editor Sync & Runner UX Polish
+
+**Goal:** Close accumulated UX regressions and rough edges across all three runner modes, and introduce bidirectional synchronization between Canvas and Node Editor.
+
+**Target features:**
+
+Node Editor
+- Custom branch label on Snippet nodes writes to its outgoing edge label (bidirectional sync, mirroring Answer node's Phase 50 convention); canvas node text continues to show the selected directory/file
+- Auto-grow textarea applied to every text field on every node kind (Question-style behavior everywhere)
+- Bidirectional live sync between canvas node text and Node Editor form fields (edits on canvas update the form in real time, not only form → canvas)
+- Fifth quick-create button "Create text block" in the Node Editor toolbar
+
+Runner UX
+- Footer layout: "step back" → "back"; Skip renders as labeled button ("skip") to the right of Back on the same horizontal row; Skip never renders between mixed answer/snippet branches
+- Step-back works reliably: no "Processing" hang, single click = single step, loop-node step-back does not corrupt accumulated text
+- Scroll stays pinned to the bottom when file-bound snippet inserts or step-back runs (parity with Answer insert and directory-bound snippet)
+
+Inline Runner
+- Modal is user-resizable via drag; width+height persist in workspace state, survive tab switch and plugin reload (mirroring v1.9 position persistence)
+- File-bound Snippet node in inline mode appends the configured file's content, not the snippets root folder (parity with sidebar runner)
 
 ## Requirements
 
@@ -247,9 +268,9 @@ A radiologist can generate a structured, accurate protocol in seconds by answeri
 **Distribution (Phase 62):**
 - ✓ v1.9.0 GitHub Release shipped — `manifest.json`+`versions.json`+`package.json` aligned on 1.9.0; unprefixed annotated tag `1.9.0` pushed; 3 loose assets at release root; prerelease=false (BRAT-02) — v1.9
 
-### Active
+### Active (v1.10)
 
-_No active milestone. Define next milestone's requirements via `/gsd-new-milestone`._
+_Requirements populated by roadmapper after scope is defined. Scope: Editor Sync (canvas↔Node Editor bidirectional sync, auto-grow textareas, Snippet branch label↔edge bidirectional sync, Text block quick-create), Runner UX (skip/back footer layout, step-back reliability, scroll preservation on snippet insert and step-back), Inline Runner (resizable modal with persistence, file-bound snippet parity)._
 
 ### Deferred (Future Milestones)
 
@@ -273,10 +294,10 @@ _No active milestone. Define next milestone's requirements via `/gsd-new-milesto
 - Optional sections in snippets — deferred to v2
 - Automatic impression generation — requires NLP/AI
 
-## Current State (post v1.9)
+## Current State (v1.10 in progress)
 
 **Shipped:** v1.9 Inline Runner Polish & Settings UX (2026-04-25)
-**Active milestone:** None — next to be defined via `/gsd-new-milestone`
+**Active milestone:** v1.10 Editor Sync & Runner UX Polish — defining requirements (started 2026-04-25; next phase number 63)
 **v1.9 shipped:** 4 phases (59–62), 17 plans, 7/7 requirements satisfied, GitHub Release v1.9.0 live
 
 **Key v1.9 deliverables:**
@@ -393,4 +414,4 @@ _No active milestone. Define next milestone's requirements via `/gsd-new-milesto
 4. Update Context with current state
 
 ---
-*Last updated: 2026-04-25 after v1.9 milestone (Inline Runner Polish & Settings UX) — SHIPPED*
+*Last updated: 2026-04-25 — v1.10 milestone started (Editor Sync & Runner UX Polish) — defining requirements*

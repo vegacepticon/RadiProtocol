@@ -1,11 +1,11 @@
 ---
 gsd_state_version: 1.0
-milestone: none
-milestone_name: null
-status: between-milestones
-stopped_at: "v1.9 milestone archived — ROADMAP/REQUIREMENTS/phases moved to milestones/v1.9-*. Next milestone TBD via /gsd-new-milestone."
-last_updated: "2026-04-25T03:00:00.000Z"
-last_activity: 2026-04-25 — v1.9 archived (milestone close); v1.9.0 GitHub Release live
+milestone: v1.10
+milestone_name: Editor Sync & Runner UX Polish
+status: defining-requirements
+stopped_at: "v1.10 milestone started — defining requirements (scope locked; roadmap pending)"
+last_updated: "2026-04-25T12:00:00.000Z"
+last_activity: 2026-04-25 — Milestone v1.10 started (Editor Sync & Runner UX Polish)
 progress:
   total_phases: 0
   completed_phases: 0
@@ -17,31 +17,27 @@ progress:
 # RadiProtocol — Project State
 
 **Updated:** 2026-04-25
-**Milestone:** None — between milestones after v1.9 close
-**Status:** v1.9 (Inline Runner Polish & Settings UX) shipped and archived. GitHub Release v1.9.0 live with 3 loose assets. Ready for next milestone definition via `/gsd-new-milestone`.
+**Milestone:** v1.10 Editor Sync & Runner UX Polish
+**Status:** Milestone scope locked via `/gsd-new-milestone`. Requirements and roadmap pending; phase numbering continues from 63.
 
 ---
 
 ## Current Position
 
-No active milestone. v1.9 archived to `.planning/milestones/`:
-- `v1.9-ROADMAP.md` — full phase details (59–62)
-- `v1.9-REQUIREMENTS.md` — 7/7 requirements satisfied with outcomes
-- `v1.9-phases/` — all phase directories (17 plans, summaries, verification artifacts)
-
-Last activity: 2026-04-25 — milestone close performed (archive + ROADMAP reorg + PROJECT evolution)
-
-Progress: N/A — no active milestone
+Phase: Not started (defining requirements)
+Plan: —
+Status: Defining requirements
+Last activity: 2026-04-25 — Milestone v1.10 started
 
 ---
 
 ## Project Reference
 
-See: `.planning/PROJECT.md` (updated 2026-04-25 after v1.9 milestone).
+See: `.planning/PROJECT.md` (updated 2026-04-25 — v1.10 milestone added).
 
 **Core value:** A radiologist can generate a structured, accurate protocol in seconds by answering a guided algorithm — without writing a single line of code.
 
-**Current focus:** Planning next milestone. Use `/gsd-new-milestone` to define scope, requirements, and roadmap for v2.0 (or v1.10).
+**Current focus:** v1.10 — close accumulated UX regressions (step-back reliability, scroll preservation, Skip/Back layout, auto-grow textareas), introduce bidirectional canvas ↔ Node Editor sync, fix Snippet branch label sync to edge, and add Inline Runner resizable modal + file-bound snippet parity.
 
 ---
 
@@ -72,14 +68,32 @@ See: `.planning/PROJECT.md` (updated 2026-04-25 after v1.9 milestone).
 9. Real-DOM vs mock-DOM parent lookup: `parentElement` first, `.parent` mock fallback second.
 10. v1.7 excised `maxIterations` — do not reintroduce a per-loop or global iteration cap.
 11. v1.8: preserve backward compatibility of stored canvas shape — directory-bound Snippet nodes must keep working unchanged.
+12. v1.9: Inline Runner position persistence uses clamp-on-restore (not clamp-on-save) — resize persistence in v1.10 must follow same pattern to survive monitor/resolution changes.
 
-### v1.9 validated patterns (learned this milestone)
+### v1.9 validated patterns (prior milestone)
 
-- **Inline modal position persistence** — workspace-state storage + clamp-on-restore (not clamp-on-save) survives monitor/resolution changes between sessions (Phase 60).
-- **FolderSuggest** — Obsidian's `AbstractInputSuggest` via `app.vault.getAllFolders(false)`; single reusable class attached to multiple fields (Phase 61).
-- **Path resolver parity** — trailing-slash + backslash normalization + `vault.getFiles()` prefix-scan fallback when `getAbstractFileByPath` returns null (Phase 59).
-- **Inline JSON fill-in** — real `SnippetFillInModal` above floating inline modal with `isFillModalOpen` D1 gate + `close()` disposal (Phase 59 D6 reversal of Phase 54).
-- **Accumulator-diff snippet append** — `appendDeltaFromAccumulator(beforeText)` mirrors sidebar `handleAnswerClick` pattern; zero drift between modes (Phase 59).
+- Inline modal position persistence — workspace-state storage + clamp-on-restore survives monitor/resolution changes between sessions (Phase 60).
+- FolderSuggest — Obsidian's `AbstractInputSuggest` via `app.vault.getAllFolders(false)`; single reusable class attached to multiple fields (Phase 61).
+- Path resolver parity — trailing-slash + backslash normalization + `vault.getFiles()` prefix-scan fallback when `getAbstractFileByPath` returns null (Phase 59).
+- Inline JSON fill-in — real `SnippetFillInModal` above floating inline modal with `isFillModalOpen` D1 gate + `close()` disposal (Phase 59 D6 reversal of Phase 54).
+- Accumulator-diff snippet append — `appendDeltaFromAccumulator(beforeText)` mirrors sidebar `handleAnswerClick` pattern; zero drift between modes (Phase 59).
+
+### v1.10 scope summary (this milestone)
+
+**Category A — Node Editor:**
+- Snippet custom branch label bidirectional sync with edge (mirror Answer's Phase 50 convention; canvas node continues to show directory/file)
+- Auto-grow textarea for every text field on every node kind (Question-style behavior everywhere)
+- Bidirectional live sync canvas ↔ Node Editor for all text fields (edits on canvas update form in real time)
+- Fifth quick-create button "Create text block" in Node Editor toolbar
+
+**Category B — Runner UX:**
+- Footer layout: "step back" → "back"; Skip as labeled button ("skip") right of Back on same row; Skip never between mixed answer/snippet branches
+- Step-back reliability: no "Processing" hang; single click = single step; loop-node step-back does not corrupt accumulated text
+- Scroll pinned to bottom on file-bound snippet insert and step-back (parity with Answer insert + directory-bound snippet)
+
+**Category C — Inline Runner:**
+- Modal resizable via drag; width+height persist in workspace state; survive tab switch + plugin reload
+- File-bound Snippet node in inline mode appends configured file's content, not snippets root folder (parity with sidebar)
 
 ### Open Tech Debt (deferred to future)
 
@@ -87,7 +101,7 @@ See: `.planning/PROJECT.md` (updated 2026-04-25 after v1.9 milestone).
 - Nyquist VALIDATION.md draft for phases 12–19, 28–31, 32–35, 36–42.
 - 1 legacy debug session (phase-27-regressions — `awaiting_human_verify`) — carried from v1.7.
 - `@deprecated` `LoopStartNode` / `LoopEndNode` retained for Migration Check enumeration.
-- 5 stale todo files for v1.8-delivered work in `.planning/todos/pending/` — cleanup opportunistically.
+- 14+ stale todo files for v1.6–v1.9-delivered work in `.planning/todos/pending/` — cleanup opportunistically.
 - 2 stale seeds (`duplicate-node.md`, `quick-node-creation.md`) for v1.6-delivered work in `.planning/seeds/`.
 
 ---
@@ -95,7 +109,7 @@ See: `.planning/PROJECT.md` (updated 2026-04-25 after v1.9 milestone).
 ## Session Continuity
 
 Last session: 2026-04-25
-Stopped at: v1.9 milestone archived — between milestones
+Stopped at: v1.10 milestone started — defining requirements
 Resume file: None
 
 ---
@@ -105,24 +119,20 @@ Resume file: None
 - Branch: `main`
 - Main: `main`
 - Last shipped: v1.9 (2026-04-25; GitHub Release v1.9.0 published)
-- Starting phase number for next milestone: 63 (continues from Phase 62)
+- Starting phase number for v1.10: **63** (continues from Phase 62)
 
 ---
 
 ## Deferred Items
 
-Items acknowledged and deferred at v1.9 milestone close on 2026-04-25:
+Carried from v1.9 close on 2026-04-25 — non-blocking for v1.10:
 
 | Category | Item | Status | Notes |
 |----------|------|--------|-------|
 | debug | phase-27-regressions | awaiting_human_verify | v1.7 carryover — color regression root cause found in canvas-live-editor.ts PROTECTED_FIELDS; not blocking |
 | uat | Phase 59 UAT status field | passed / 0 open | Auditor noise — 0 pending scenarios, phase verified green |
 | uat | Phase 61 UAT status field | unknown / 0 open | Status-field oversight — 0 pending scenarios, phase shipped |
-| todo | bug-runner-textarea-edits-lost-on-loop-transition.md | high | Delivered in v1.8 Phase 47 (RUNFIX-01); stale file |
-| todo | hierarchical-snippet-picker.md | high | Delivered in v1.8 Phase 51 (PICKER-01/02); stale file |
-| todo | json-snippet-placeholder-rework.md | high | Delivered in v1.8 Phase 52 (PHLD-01); stale file |
-| todo | loop-node-exit-from-edge-label.md | high | Delivered in v1.8 Phase 49/50.1 (EDGE-01/03); stale file |
-| todo | new-nodes-placed-below-last.md | medium | Delivered in v1.8 Phase 48 (NODEUI-02); stale file |
-| todo | 9 additional pending todos | mixed | Most reference already-delivered v1.6–v1.8 work; opportunistic cleanup |
+| todo | 14+ stale todo files (mixed) | mixed | Most reference already-delivered v1.6–v1.9 work; opportunistic cleanup |
+| seeds | duplicate-node.md, quick-node-creation.md | stale | v1.6-delivered; triage or delete on next pass |
 
-**Triage outcome:** All 8 items non-blocking. Most pending todos are stale (work already shipped but file not deleted). Cleanup opportunity for next housekeeping pass; not a v2.0 prerequisite.
+**Triage outcome:** All non-blocking for v1.10. No hard prerequisites.
