@@ -3,9 +3,9 @@ gsd_state_version: 1.0
 milestone: v1.10
 milestone_name: Editor Sync & Runner UX Polish
 status: in-progress
-stopped_at: "Phase 67 Plan 67-02 complete (FIX-07 runner-core file-bound parity); ready for 67-03 UAT"
-last_updated: "2026-04-25T17:56:30.000Z"
-last_activity: 2026-04-25 — Phase 67 Plan 67-02 executed: protocol-runner.ts case 'snippet' replaced (D-14) with radiprotocol_snippetPath branch; node-label.ts snippet arm extended for 📄/📁 caption parity (D-15); 3 test layers added (pure-runner + sidebar + inline); ROADMAP/STATE amended for D-13 shared-scope acknowledgement; Standing Pitfall #13 documents root-cause finding. 805 tests pass, tsc clean, build green. INLINE-FIX-07 implementation complete; awaiting 67-03 UAT.
+stopped_at: "Phase 67 Gap closure complete (67-GAPS); 67-03 UAT re-run required to verify fixed gaps"
+last_updated: "2026-04-25T19:15:00.000Z"
+last_activity: 2026-04-25 — Phase 67 gap closure executed: getAppliedPosition() → getAppliedLayout() preserves width/height on drag; reclampCurrentPosition guards hidden element (is-hidden early return) and reads size from inline styles; default modal size increased 360×240 → 420×320. 806 tests pass, tsc clean, build green. Ready for 67-03 UAT re-run.
 progress:
   total_phases: 5
   completed_phases: 3
@@ -24,10 +24,10 @@ progress:
 
 ## Current Position
 
-Phase: 67 (in progress — Wave 1 of 2)
-Plan: 67-01 complete (commit f65451d); 67-02 complete (commits c8e731b + e7e3175); 67-03 remaining (UAT). Phase 66 still has 66-05 UAT pending in parallel.
-Status: Phase 67 implementation waves complete. INLINE-FIX-06 (resize + persistence) shipped via 67-01; INLINE-FIX-07 (file-bound Snippet parity in shared runner-core) shipped via 67-02 with 2 atomic commits. Next: 67-03 UAT — real-Obsidian verification of resize persistence + clamp + loop-body file-bound snippet parity in both runner modes.
-Last activity: 2026-04-25 — 67-02 SUMMARY.md created; ROADMAP plan checkbox flipped to [x]; 805 tests pass, tsc clean, build green.
+Phase: 67 (in progress — Wave 1 of 2; gap closure complete, awaiting UAT re-run)
+Plan: 67-01 complete (commit f65451d); 67-02 complete (commits c8e731b + e7e3175); 67-GAPS complete (commit 4d221a3); 67-03 remaining (UAT re-run). Phase 66 still has 66-05 UAT pending in parallel.
+Status: Phase 67 implementation + gap closure complete. INLINE-FIX-06 (resize + persistence) shipped via 67-01; INLINE-FIX-07 (file-bound Snippet parity) shipped via 67-02; 2 major UAT gaps (drag-resets-size, tab-switch-resets-size) fixed in 67-GAPS. Next: 67-03 UAT re-run in real Obsidian to verify the fixed gaps.
+Last activity: 2026-04-25 — 67-GAPS SUMMARY.md created; 806 tests pass, tsc clean, build green.
 
 ---
 
@@ -116,9 +116,9 @@ See: `.planning/REQUIREMENTS.md` (updated 2026-04-25 — traceability populated,
 ## Session Continuity
 
 Last session: 2026-04-25
-Stopped at: Completed 67-02 (FIX-07 runner-core file-bound parity); ready for 67-03 (UAT)
-Resume file: .planning/phases/67-inline-runner-resizable-modal-file-bound-snippet-parity/67-02-SUMMARY.md
-Next action: Execute 67-03 — Human UAT runbook for INLINE-FIX-06 (resize persistence + clamp) and INLINE-FIX-07 (loop-body file-bound snippet parity in both runner modes); OR run 66-05 UAT in parallel.
+Stopped at: Completed 67-GAPS (gap closure for drag/size persistence + default size); ready for 67-03 UAT re-run
+Resume file: .planning/phases/67-inline-runner-resizable-modal-file-bound-snippet-parity/67-GAPS-SUMMARY.md
+Next action: Re-run 67-03 UAT in real Obsidian to verify the 2 fixed gaps (scenarios 1 and 2) and complete Phase 67; OR run 66-05 UAT in parallel.
 
 ---
 
