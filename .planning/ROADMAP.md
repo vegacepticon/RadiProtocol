@@ -157,7 +157,7 @@ Full details: `.planning/milestones/v1.9-ROADMAP.md`
 - [x] Phase 65: Runner Footer Layout — Back/Skip Row (2/2 plans) — completed 2026-04-25, UAT approved
 - [ ] Phase 66: Runner Step-Back Reliability & Scroll Pinning (TBD plans)
 - [ ] Phase 67: Inline Runner Resizable Modal & File-Bound Snippet Parity (3 plans)
-- [ ] Phase 68: GitHub Release v1.10.0 (TBD plans)
+- [ ] Phase 68: GitHub Release v1.10.0 (3/4 plans complete; release runbook created; awaiting publish + BRAT verification checkpoint)
 
 </details>
 
@@ -431,10 +431,10 @@ Plans:
 **Plans:** 4 plans
 
 Plans:
-- [ ] 68-01-PLAN.md — Align manifest.json, versions.json, and package.json on v1.10.0 while preserving prior BRAT mappings
-- [ ] 68-02-PLAN.md — Build production assets and create the v1.10.0 preflight script
-- [ ] 68-03-PLAN.md — Commit release prep atomically and create unprefixed tag 1.10.0
-- [ ] 68-04-PLAN.md — Create v1.10.0 release runbook, gate on Phase 66 UAT, publish via GitHub web UI, and verify BRAT install
+- [x] 68-01-PLAN.md — Align manifest.json, versions.json, and package.json on v1.10.0 while preserving prior BRAT mappings — completed 2026-04-26
+- [x] 68-02-PLAN.md — Build production assets and create the v1.10.0 preflight script — completed 2026-04-26
+- [x] 68-03-PLAN.md — Commit release prep and create unprefixed tag 1.10.0 — completed 2026-04-26 (tag points at preflighted release HEAD)
+- [ ] 68-04-PLAN.md — Create v1.10.0 release runbook, gate on Phase 66 UAT, publish via GitHub web UI, and verify BRAT install — checkpoint awaiting human publish/BRAT verification
 
 ---
 
@@ -461,4 +461,4 @@ v1.10 active. Phases 63 and 67 can run in parallel (Node Editor sync vs Inline R
 | 65. Runner Footer Layout — Back/Skip Row | v1.10 | 2/2 | Complete | 2026-04-25 |
 | 66. Runner Step-Back Reliability & Scroll Pinning | v1.10 | 0/TBD | Not started | — |
 | 67. Inline Runner Resizable Modal & File-Bound Snippet Parity | v1.10 | 3/3 | Complete | 2026-04-25 |
-| 68. GitHub Release v1.10.0 | v1.10 | 0/TBD | Not started | — |
+| 68. GitHub Release v1.10.0 | v1.10 | 3/4 | Awaiting human release checkpoint | — |

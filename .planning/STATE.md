@@ -2,10 +2,10 @@
 gsd_state_version: 1.0
 milestone: v1.10
 milestone_name: Editor Sync & Runner UX Polish
-status: ready-to-execute
-stopped_at: "Phase 68 planned with 4 release plans. Execute after confirming Phase 66 UAT remains accepted."
+status: awaiting-human-release-action
+stopped_at: "Phase 68 Plan 04 checkpoint: publish GitHub Release 1.10.0 and complete BRAT smoke verification using 68-RELEASE-RUNBOOK.md."
 last_updated: "2026-04-26T00:45:00.000Z"
-last_activity: 2026-04-26 — Planned Phase 68 GitHub Release v1.10.0 with BRAT-compatible release workflow.
+last_activity: 2026-04-26 — Executed Phase 68 waves 1-4 through release runbook; local tag 1.10.0 created; awaiting human publish + BRAT verification.
 progress:
   total_phases: 6
   completed_phases: 4
@@ -18,16 +18,16 @@ progress:
 
 **Updated:** 2026-04-26
 **Milestone:** v1.10 Editor Sync & Runner UX Polish
-**Status:** Phase 68 planned for GitHub Release v1.10.0. Phase 66 UAT evidence currently shows complete/pass; Phase 68 runbook still gates publication on confirming that acceptance before push/publish.
+**Status:** Phase 68 executed through the release runbook checkpoint. Local version metadata, preflight script, build artifacts, and annotated tag `1.10.0` are ready; publishing and BRAT smoke verification are awaiting human action.
 
 ---
 
 ## Current Position
 
-Phase: 68 planned
-Plan: 4 plans created for GitHub Release v1.10.0: version alignment, build/preflight, commit/tag, and release runbook + BRAT verification checkpoint.
-Status: Ready to execute. Phase 66 UAT file shows complete/pass; release runbook still gates publication on Phase 66 UAT acceptance before push/publish.
-Last activity: 2026-04-26 — Phase 68 PLAN.md files created and ROADMAP/STATE updated.
+Phase: 68 executing
+Plan: 68-04 checkpoint reached after creating the v1.10.0 release runbook.
+Status: Awaiting human action: confirm Phase 66 UAT/ROADMAP gate, run preflight, push main and tag `1.10.0`, publish GitHub Release with loose assets, perform BRAT smoke verification, then update/commit the runbook verdict.
+Last activity: 2026-04-26 — Phase 68 waves 1-4 executed through checkpoint; local tag `1.10.0` points at release-prep HEAD `a1992e1`.
 
 ---
 
@@ -122,9 +122,9 @@ See: `.planning/REQUIREMENTS.md` (updated 2026-04-25 — traceability populated,
 ## Session Continuity
 
 Last session: 2026-04-25
-Stopped at: Phase 68 planned for GitHub Release v1.10.0. Confirm Phase 66 UAT acceptance before executing publish steps.
+Stopped at: Phase 68 Plan 04 human-action checkpoint. Use `.planning/phases/68-github-release-v1-10-0/68-RELEASE-RUNBOOK.md` to publish and verify.
 Resume file: .planning/phases/68-github-release-v1-10-0/
-Next action: Execute Phase 68 release plans after confirming Phase 66 UAT acceptance remains valid.
+Next action: Complete the human release action in `68-RELEASE-RUNBOOK.md`, then resume with the publish/BRAT verification result.
 
 ---
 
@@ -133,7 +133,7 @@ Next action: Execute Phase 68 release plans after confirming Phase 66 UAT accept
 - Branch: `main`
 - Main: `main`
 - Last shipped: v1.9 (2026-04-25; GitHub Release v1.9.0 published)
-- Active phase: 68 (planned — ready to execute)
+- Active phase: 68 (awaiting human release checkpoint)
 
 ---
 
