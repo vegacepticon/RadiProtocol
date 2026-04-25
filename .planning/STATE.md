@@ -3,9 +3,9 @@ gsd_state_version: 1.0
 milestone: v1.10
 milestone_name: Editor Sync & Runner UX Polish
 status: in-progress
-stopped_at: "Phase 67 context gathered; ready for plan-phase"
-last_updated: "2026-04-25T15:00:00.000Z"
-last_activity: 2026-04-25 — Phase 67 discuss-phase complete (67-CONTEXT.md + 67-DISCUSSION-LOG.md). FIX-07 root-cause located in protocol-runner.ts:736 — scope expanded to runner-core + node-label.ts. Ready for /gsd-plan-phase 67
+stopped_at: "Phase 66 Plan 66-03 complete; ready for 66-05 UAT checklist"
+last_updated: "2026-04-25T15:30:00.000Z"
+last_activity: 2026-04-25 — Phase 66 Plan 66-03 complete. Back disable-on-click guard committed in RunnerView + InlineRunnerModal with footer regression tests; targeted tests, full suite, and production build passed. Ready for 66-05 UAT checklist.
 progress:
   total_phases: 5
   completed_phases: 3
@@ -25,9 +25,9 @@ progress:
 ## Current Position
 
 Phase: 66 (in progress — executing Wave 3)
-Plan: 66-01 complete; 66-02 complete; 66-04 complete; 66-03 and 66-05 remaining
-Status: Phase 66 Wave 2 complete. Moving to Wave 3 (66-03 — Back disable-on-click guard).
-Last activity: 2026-04-25 — Wave 2 complete (66-02 + 66-04 committed).
+Plan: 66-01 complete; 66-02 complete; 66-03 complete; 66-04 complete; 66-05 remaining
+Status: Phase 66 Wave 3 complete. Moving to Wave 4 (66-05 — manual UAT checklist and human verification).
+Last activity: 2026-04-25 — 66-03 Back disable-on-click guard committed; tests and build passed.
 
 ---
 
@@ -115,9 +115,9 @@ See: `.planning/REQUIREMENTS.md` (updated 2026-04-25 — traceability populated,
 ## Session Continuity
 
 Last session: 2026-04-25
-Stopped at: Completed 65-02-PLAN.md — RUNNER-02 footer layout implementation is committed and human-approved
-Resume file: None
-Next action: plan/execute Phase 66 Runner Step-Back Reliability & Scroll Pinning
+Stopped at: Completed 66-03 Back disable-on-click guard; ready for 66-05
+Resume file: .planning/phases/66-runner-step-back-reliability-scroll-pinning/.continue-here.md
+Next action: Execute 66-05 — create 66-UAT.md scripted checklist, then pause for human Obsidian verification
 
 ---
 
