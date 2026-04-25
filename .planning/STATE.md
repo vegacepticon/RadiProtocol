@@ -24,10 +24,10 @@ progress:
 
 ## Current Position
 
-Phase: 66 (in progress — executing Wave 1)
-Plan: 66-01..66-05 PLAN.md across 4 waves; execution started
-Status: Phase 66 execution in progress. Wave 1 (66-01) beginning.
-Last activity: 2026-04-25 — /gsd-execute-phase 66 started.
+Phase: 66 (in progress — executing Wave 2)
+Plan: 66-01 complete; 66-02..66-05 remaining across waves 2-4
+Status: Phase 66 execution in progress. Wave 1 (66-01) complete — state-machine surgery, in-flight guard, and Processing-text removal committed. Moving to Wave 2 (66-02 + 66-04).
+Last activity: 2026-04-25 — Wave 1 complete, beginning Wave 2.
 
 ---
 
