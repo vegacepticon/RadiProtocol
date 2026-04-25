@@ -2,39 +2,39 @@
 gsd_state_version: 1.0
 milestone: v1.10
 milestone_name: Editor Sync & Runner UX Polish
-status: in-progress
-stopped_at: "Phase 67 complete — all 3 plans + gap closure + UAT re-run passed (8/8). Phase 66-05 UAT pending."
-last_updated: "2026-04-26T00:20:00.000Z"
-last_activity: 2026-04-26 — Cleaned up 14 stale todo files from .planning/todos/pending/ to completed/.
+status: ready-to-execute
+stopped_at: "Phase 68 planned with 4 release plans. Execute after confirming Phase 66 UAT remains accepted."
+last_updated: "2026-04-26T00:45:00.000Z"
+last_activity: 2026-04-26 — Planned Phase 68 GitHub Release v1.10.0 with BRAT-compatible release workflow.
 progress:
-  total_phases: 5
+  total_phases: 6
   completed_phases: 4
-  total_plans: 14
+  total_plans: 18
   completed_plans: 12
-  percent: 85
+  percent: 66
 ---
 
 # RadiProtocol — Project State
 
-**Updated:** 2026-04-25
+**Updated:** 2026-04-26
 **Milestone:** v1.10 Editor Sync & Runner UX Polish
-**Status:** Phase 65 complete — RUNNER-02 footer row placement and visible Back/Skip labels are implemented across RunnerView and InlineRunnerModal. Focused tests, full suite, build, and human visual verification passed.
+**Status:** Phase 68 planned for GitHub Release v1.10.0. Phase 66 UAT evidence currently shows complete/pass; Phase 68 runbook still gates publication on confirming that acceptance before push/publish.
 
 ---
 
 ## Current Position
 
-Phase: 67 complete
-Plan: 67-01 complete (commit f65451d); 67-02 complete (commits c8e731b + e7e3175); 67-GAPS complete (commit 4d221a3); 67-03 complete (UAT re-run 8/8 PASS, gap fix commit 92a1269). Phase 66 still has 66-05 UAT pending in parallel.
-Status: Phase 67 fully complete. INLINE-FIX-06 (resize + persistence) shipped via 67-01; INLINE-FIX-07 (file-bound Snippet parity) shipped via 67-02; 2 major UAT gaps fixed and verified in 67-03 UAT re-run.
-Last activity: 2026-04-25 — 67-03 UAT re-run passed 8/8; 67-03-SUMMARY.md created; 806 tests pass, tsc clean, build green.
+Phase: 68 planned
+Plan: 4 plans created for GitHub Release v1.10.0: version alignment, build/preflight, commit/tag, and release runbook + BRAT verification checkpoint.
+Status: Ready to execute. Phase 66 UAT file shows complete/pass; release runbook still gates publication on Phase 66 UAT acceptance before push/publish.
+Last activity: 2026-04-26 — Phase 68 PLAN.md files created and ROADMAP/STATE updated.
 
 ---
 
 ## Project Reference
 
 See: `.planning/PROJECT.md` (updated 2026-04-25 — v1.10 milestone added).
-See: `.planning/ROADMAP.md` (updated 2026-04-25 — v1.10 phase details appended).
+See: `.planning/ROADMAP.md` (updated 2026-04-26 — Phase 68 GitHub Release v1.10.0 added).
 See: `.planning/REQUIREMENTS.md` (updated 2026-04-25 — traceability populated, 9/9 mapped).
 
 **Core value:** A radiologist can generate a structured, accurate protocol in seconds by answering a guided algorithm — without writing a single line of code.
@@ -52,13 +52,15 @@ See: `.planning/REQUIREMENTS.md` (updated 2026-04-25 — traceability populated,
 | 65 | Runner Footer Layout — Back/Skip Row | RUNNER-02 | Nothing |
 | 66 | Runner Step-Back Reliability & Scroll Pinning | RUNNER-03, RUNNER-04 | Nothing (advisory: after Phase 63) |
 | 67 | Inline Runner Resizable Modal & File-Bound Snippet Parity | INLINE-FIX-06, INLINE-FIX-07 | Nothing |
+| 68 | GitHub Release v1.10.0 | Release readiness for v1.10 | Phases 63-67 complete and Phase 66 UAT accepted |
 
 **Parallelizability:**
 - Phase 63 (Node Editor sync) ‖ Phase 65 (Runner footer) ‖ Phase 67 (Inline Runner) — independent file scopes
 - Phase 64 follows Phase 63 (advisory — shared textarea init code)
 - Phase 66 advisory after Phase 63 (canvas-sync events would muddy step-back debugging if interleaved)
+- Phase 68 runs last as the release phase after Phase 66 UAT is accepted
 
-**Coverage:** 9/9 v1.10 requirements mapped; 0 unmapped, 0 duplicates.
+**Coverage:** 9/9 v1.10 product requirements mapped; Phase 68 adds release-readiness work.
 
 ---
 
@@ -75,6 +77,10 @@ See: `.planning/REQUIREMENTS.md` (updated 2026-04-25 — traceability populated,
 - v1.7 (4 phases): unified loop node, runtime picker, editor form + picker-modal + start-from-node command, free-text-input removal.
 - v1.8 (14 phases, 47–58): runner regressions closed, Node Editor UX polish, edge semantics (`+`-prefix exit, Answer↔edge sync), snippet picker overhaul + file-binding + button UX reversal, JSON placeholders → 2 types, Skip/Close buttons, Inline Protocol Display Mode, BRAT distribution (GitHub Release v1.8.0).
 - v1.9 (4 phases, 59–62): Inline Runner feature parity (nested path resolution, separator on snippet insert, JSON fill-in modal), position persistence + compact layout, folder autocomplete on settings path fields, BRAT Release v1.9.0.
+
+### Roadmap Evolution
+
+- Phase 68 added: GitHub Release v1.10.0
 
 ### Standing Pitfalls (carry-over from v1.9)
 
@@ -116,9 +122,9 @@ See: `.planning/REQUIREMENTS.md` (updated 2026-04-25 — traceability populated,
 ## Session Continuity
 
 Last session: 2026-04-25
-Stopped at: Phase 67 complete — all plans and UAT passed. Phase 66-05 UAT remains pending.
-Resume file: .planning/phases/67-inline-runner-resizable-modal-file-bound-snippet-parity/67-03-SUMMARY.md
-Next action: Run 66-05 UAT in real Obsidian to complete Phase 66; OR proceed to v1.10 milestone close.
+Stopped at: Phase 68 planned for GitHub Release v1.10.0. Confirm Phase 66 UAT acceptance before executing publish steps.
+Resume file: .planning/phases/68-github-release-v1-10-0/
+Next action: Execute Phase 68 release plans after confirming Phase 66 UAT acceptance remains valid.
 
 ---
 
@@ -127,7 +133,7 @@ Next action: Run 66-05 UAT in real Obsidian to complete Phase 66; OR proceed to 
 - Branch: `main`
 - Main: `main`
 - Last shipped: v1.9 (2026-04-25; GitHub Release v1.9.0 published)
-- Active phase: 65 (complete — 2/2 plans complete)
+- Active phase: 68 (planned — ready to execute)
 
 ---
 

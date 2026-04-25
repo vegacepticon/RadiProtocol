@@ -1,7 +1,7 @@
 # Roadmap: RadiProtocol
 
 **Project:** RadiProtocol
-**Last updated:** 2026-04-25 (v1.10 milestone roadmapped — Phases 63–67)
+**Last updated:** 2026-04-26 (v1.10 milestone updated — Phase 68 release phase added)
 
 ---
 
@@ -16,9 +16,9 @@
 - ✅ **v1.7 Loop Rework & Regression Cleanup** — Phases 43-46 (shipped 2026-04-18)
 - ✅ **v1.8 UX Polish & Snippet Picker Overhaul** — Phases 47-58 (shipped 2026-04-21)
 - ✅ **v1.9 Inline Runner Polish & Settings UX** — Phases 59-62 (shipped 2026-04-25)
-- 🔄 **v1.10 Editor Sync & Runner UX Polish** — Phases 63-67 (defining; started 2026-04-25)
+- 🔄 **v1.10 Editor Sync & Runner UX Polish** — Phases 63-68 (defining; started 2026-04-25)
 
-_Active milestone: v1.10. Phases 63-65 complete; next phase to plan/execute: 66._
+_Active milestone: v1.10. Phases 63-65 and 67 complete; Phase 66 UAT pending; Phase 68 release phase added._
 
 ---
 
@@ -150,13 +150,14 @@ Full details: `.planning/milestones/v1.9-ROADMAP.md`
 </details>
 
 <details>
-<summary>🔄 v1.10 Editor Sync & Runner UX Polish (Phases 63-67) — IN PROGRESS</summary>
+<summary>🔄 v1.10 Editor Sync & Runner UX Polish (Phases 63-68) — IN PROGRESS</summary>
 
 - [x] Phase 63: Bidirectional Canvas ↔ Node Editor Sync (4/4 plans + gap closure) — executed 2026-04-25, all plans complete, manual UAT pending
 - [x] Phase 64: Node Editor Polish — Auto-grow & Text Block Quick-Create (3/3 plans) — executed 2026-04-25, UAT passed 7/7
 - [x] Phase 65: Runner Footer Layout — Back/Skip Row (2/2 plans) — completed 2026-04-25, UAT approved
 - [ ] Phase 66: Runner Step-Back Reliability & Scroll Pinning (TBD plans)
 - [ ] Phase 67: Inline Runner Resizable Modal & File-Bound Snippet Parity (3 plans)
+- [ ] Phase 68: GitHub Release v1.10.0 (TBD plans)
 
 </details>
 
@@ -328,7 +329,7 @@ Plans:
 
 ---
 
-## v1.10 Phase Details (Phases 63–67)
+## v1.10 Phase Details (Phases 63–68)
 
 ### Phase 63: Bidirectional Canvas ↔ Node Editor Sync
 **Goal**: Edits made directly on a canvas node — both the node's text body and a Snippet node's outgoing edge label — propagate live into the open Node Editor form, and the Snippet branch-label field round-trips back out to the edge label, mirroring the Answer↔edge convention established in Phase 50.
@@ -418,12 +419,29 @@ Plans:
 - [x] 67-02-PLAN.md — INLINE-FIX-07 file-bound parity: protocol-runner case snippet branch (D-14), node-label arm (D-15), 3 test layers, ROADMAP/STATE amendment (D-13) — completed 2026-04-25
 - [x] 67-03-PLAN.md — Human UAT checkpoint: real-Obsidian verification of resize persistence + clamp + loop-body file-bound snippet parity in both runner modes — completed 2026-04-25, 8/8 PASS
 
+### Phase 68: GitHub Release v1.10.0
+**Goal**: Ship a fresh GitHub Release for the current milestone using the same BRAT-compatible release pattern as prior shipped milestones: version files aligned, production build artifacts generated, release assets attached at the GitHub release root, and the release process documented clearly enough to run manually when needed.
+**Depends on**: Phases 63-67 complete and Phase 66 UAT accepted (release asset must represent the full v1.10 milestone)
+**Requirements**: Release readiness for v1.10
+**Success Criteria** (what must be TRUE):
+  1. `manifest.json`, `versions.json`, and `package.json` agree on the intended v1.10 release version, preserving prior version mappings.
+  2. `npm run build` produces production `main.js` and `styles.css` for the release version with tests/build checks passing before publication.
+  3. A GitHub Release exists for the v1.10 tag with `manifest.json`, `main.js`, and `styles.css` attached as loose root-level assets, matching the BRAT pattern from Phases 55 and 62.
+  4. The release procedure documents what can be done manually, which files to edit, and the safe ordering for version bump, build, tag/release creation, asset upload, and post-publish verification.
+**Plans:** 4 plans
+
+Plans:
+- [ ] 68-01-PLAN.md — Align manifest.json, versions.json, and package.json on v1.10.0 while preserving prior BRAT mappings
+- [ ] 68-02-PLAN.md — Build production assets and create the v1.10.0 preflight script
+- [ ] 68-03-PLAN.md — Commit release prep atomically and create unprefixed tag 1.10.0
+- [ ] 68-04-PLAN.md — Create v1.10.0 release runbook, gate on Phase 66 UAT, publish via GitHub web UI, and verify BRAT install
+
 ---
 
 ## Progress
 
 **Execution Order:**
-v1.10 active. Phases 63 and 67 can run in parallel (Node Editor sync vs Inline Runner — separate files); Phases 65 and 66 can run in parallel with each other and with Phase 63 (different code paths). Phase 64 depends on Phase 63 (advisory, shared textarea init code). All v1.10 phases independent of Inline Runner Phase 67.
+v1.10 active. Phases 63 and 67 can run in parallel (Node Editor sync vs Inline Runner — separate files); Phases 65 and 66 can run in parallel with each other and with Phase 63 (different code paths). Phase 64 depends on Phase 63 (advisory, shared textarea init code). Phase 68 is the release phase and should run after Phases 63-67 are complete and Phase 66 UAT is accepted.
 
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
@@ -443,3 +461,4 @@ v1.10 active. Phases 63 and 67 can run in parallel (Node Editor sync vs Inline R
 | 65. Runner Footer Layout — Back/Skip Row | v1.10 | 2/2 | Complete | 2026-04-25 |
 | 66. Runner Step-Back Reliability & Scroll Pinning | v1.10 | 0/TBD | Not started | — |
 | 67. Inline Runner Resizable Modal & File-Bound Snippet Parity | v1.10 | 3/3 | Complete | 2026-04-25 |
+| 68. GitHub Release v1.10.0 | v1.10 | 0/TBD | Not started | — |
