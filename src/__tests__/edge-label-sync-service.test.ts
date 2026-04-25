@@ -373,3 +373,222 @@ describe('EdgeLabelSyncService — snapshot cleanup (Phase 63 T-02 leak preventi
     expect((service as any).debounceTimers.size).toBe(0);
   });
 });
+
+describe('Gap 2 — inbound text diff dispatch', () => {
+  it('Question text diff: dispatches radiprotocol_questionText when only text changes', async () => {
+    const pass1 = makeCanvas({
+      nodes: [
+        {
+          id: 'n-q1', type: 'text', text: 'Old',
+          x: 0, y: 0, width: 200, height: 60,
+          radiprotocol_nodeType: 'question',
+          radiprotocol_questionText: 'Old',
+        },
+      ],
+    });
+    const { service, setCanvas } = buildService(pass1);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    await (service as any).reconcile('test.canvas');
+
+    const calls: CanvasChangedForNodeDetail[] = [];
+    service.subscribe((detail) => calls.push(detail));
+
+    setCanvas(makeCanvas({
+      nodes: [
+        {
+          id: 'n-q1', type: 'text', text: 'New',
+          x: 0, y: 0, width: 200, height: 60,
+          radiprotocol_nodeType: 'question',
+          radiprotocol_questionText: 'Old',
+        },
+      ],
+    }));
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    await (service as any).reconcile('test.canvas');
+
+    const fieldDispatch = calls.find((c) => c.changeKind === 'fields' && c.nodeId === 'n-q1');
+    expect(fieldDispatch).toBeDefined();
+    expect(fieldDispatch!.fieldUpdates!['radiprotocol_questionText']).toBe('New');
+  });
+
+  it('No duplicate dispatch when both text and radiprotocol_questionText change', async () => {
+    const pass1 = makeCanvas({
+      nodes: [
+        {
+          id: 'n-q1', type: 'text', text: 'Old',
+          x: 0, y: 0, width: 200, height: 60,
+          radiprotocol_nodeType: 'question',
+          radiprotocol_questionText: 'Old',
+        },
+      ],
+    });
+    const { service, setCanvas } = buildService(pass1);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    await (service as any).reconcile('test.canvas');
+
+    const calls: CanvasChangedForNodeDetail[] = [];
+    service.subscribe((detail) => calls.push(detail));
+
+    setCanvas(makeCanvas({
+      nodes: [
+        {
+          id: 'n-q1', type: 'text', text: 'New',
+          x: 0, y: 0, width: 200, height: 60,
+          radiprotocol_nodeType: 'question',
+          radiprotocol_questionText: 'New',
+        },
+      ],
+    }));
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    await (service as any).reconcile('test.canvas');
+
+    const fieldDispatch = calls.find((c) => c.changeKind === 'fields' && c.nodeId === 'n-q1');
+    expect(fieldDispatch).toBeDefined();
+    expect(fieldDispatch!.fieldUpdates!['radiprotocol_questionText']).toBe('New');
+    // Only one fields dispatch — not duplicated.
+    expect(calls.filter((c) => c.changeKind === 'fields' && c.nodeId === 'n-q1').length).toBe(1);
+  });
+
+  it('Snippet text changes are ignored (no dispatch)', async () => {
+    const pass1 = makeCanvas({
+      nodes: [
+        {
+          id: 'n-snip', type: 'text', text: 'abdomen',
+          x: 0, y: 0, width: 200, height: 60,
+          radiprotocol_nodeType: 'snippet',
+          radiprotocol_subfolderPath: 'abdomen',
+        },
+      ],
+    });
+    const { service, setCanvas } = buildService(pass1);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    await (service as any).reconcile('test.canvas');
+
+    const calls: CanvasChangedForNodeDetail[] = [];
+    service.subscribe((detail) => calls.push(detail));
+
+    setCanvas(makeCanvas({
+      nodes: [
+        {
+          id: 'n-snip', type: 'text', text: 'chest',
+          x: 0, y: 0, width: 200, height: 60,
+          radiprotocol_nodeType: 'snippet',
+          radiprotocol_subfolderPath: 'abdomen',
+        },
+      ],
+    }));
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    await (service as any).reconcile('test.canvas');
+
+    const fieldDispatch = calls.find((c) => c.changeKind === 'fields' && c.nodeId === 'n-snip');
+    expect(fieldDispatch).toBeUndefined();
+  });
+
+  it('Answer text diff: dispatches radiprotocol_answerText when only text changes', async () => {
+    const pass1 = makeCanvas({
+      nodes: [
+        {
+          id: 'n-a1', type: 'text', text: 'Old',
+          x: 0, y: 0, width: 200, height: 60,
+          radiprotocol_nodeType: 'answer',
+          radiprotocol_answerText: 'Old',
+        },
+      ],
+    });
+    const { service, setCanvas } = buildService(pass1);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    await (service as any).reconcile('test.canvas');
+
+    const calls: CanvasChangedForNodeDetail[] = [];
+    service.subscribe((detail) => calls.push(detail));
+
+    setCanvas(makeCanvas({
+      nodes: [
+        {
+          id: 'n-a1', type: 'text', text: 'New',
+          x: 0, y: 0, width: 200, height: 60,
+          radiprotocol_nodeType: 'answer',
+          radiprotocol_answerText: 'Old',
+        },
+      ],
+    }));
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    await (service as any).reconcile('test.canvas');
+
+    const fieldDispatch = calls.find((c) => c.changeKind === 'fields' && c.nodeId === 'n-a1');
+    expect(fieldDispatch).toBeDefined();
+    expect(fieldDispatch!.fieldUpdates!['radiprotocol_answerText']).toBe('New');
+  });
+
+  it('Text-block content diff: dispatches radiprotocol_content when only text changes', async () => {
+    const pass1 = makeCanvas({
+      nodes: [
+        {
+          id: 'n-tb', type: 'text', text: 'Old',
+          x: 0, y: 0, width: 200, height: 60,
+          radiprotocol_nodeType: 'text-block',
+          radiprotocol_content: 'Old',
+        },
+      ],
+    });
+    const { service, setCanvas } = buildService(pass1);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    await (service as any).reconcile('test.canvas');
+
+    const calls: CanvasChangedForNodeDetail[] = [];
+    service.subscribe((detail) => calls.push(detail));
+
+    setCanvas(makeCanvas({
+      nodes: [
+        {
+          id: 'n-tb', type: 'text', text: 'New',
+          x: 0, y: 0, width: 200, height: 60,
+          radiprotocol_nodeType: 'text-block',
+          radiprotocol_content: 'Old',
+        },
+      ],
+    }));
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    await (service as any).reconcile('test.canvas');
+
+    const fieldDispatch = calls.find((c) => c.changeKind === 'fields' && c.nodeId === 'n-tb');
+    expect(fieldDispatch).toBeDefined();
+    expect(fieldDispatch!.fieldUpdates!['radiprotocol_content']).toBe('New');
+  });
+
+  it('Loop headerText diff: dispatches radiprotocol_headerText when only text changes', async () => {
+    const pass1 = makeCanvas({
+      nodes: [
+        {
+          id: 'n-loop', type: 'text', text: 'Old',
+          x: 0, y: 0, width: 200, height: 60,
+          radiprotocol_nodeType: 'loop',
+          radiprotocol_headerText: 'Old',
+        },
+      ],
+    });
+    const { service, setCanvas } = buildService(pass1);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    await (service as any).reconcile('test.canvas');
+
+    const calls: CanvasChangedForNodeDetail[] = [];
+    service.subscribe((detail) => calls.push(detail));
+
+    setCanvas(makeCanvas({
+      nodes: [
+        {
+          id: 'n-loop', type: 'text', text: 'New',
+          x: 0, y: 0, width: 200, height: 60,
+          radiprotocol_nodeType: 'loop',
+          radiprotocol_headerText: 'Old',
+        },
+      ],
+    }));
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    await (service as any).reconcile('test.canvas');
+
+    const fieldDispatch = calls.find((c) => c.changeKind === 'fields' && c.nodeId === 'n-loop');
+    expect(fieldDispatch).toBeDefined();
+    expect(fieldDispatch!.fieldUpdates!['radiprotocol_headerText']).toBe('New');
+  });
+});

@@ -41,6 +41,7 @@ export interface NodeFieldsSnapshot {
   content?: string;
   headerText?: string;
   snippetLabel?: string;
+  text?: string;
   kind: RPNodeKind | null;
 }
 
@@ -174,6 +175,7 @@ export class EdgeLabelSyncService {
         content: n.content,
         headerText: n.headerText,
         snippetLabel: n.snippetLabel,
+        text: n.text,
         kind: node.kind,
       };
       currentSnapshot.set(node.id, snap);
@@ -202,6 +204,21 @@ export class EdgeLabelSyncService {
       if (prev.content !== snap.content)           fieldUpdates['radiprotocol_content']     = snap.content;
       if (prev.headerText !== snap.headerText)     fieldUpdates['radiprotocol_headerText']  = snap.headerText;
       if (prev.snippetLabel !== snap.snippetLabel) fieldUpdates['radiprotocol_snippetLabel'] = snap.snippetLabel;
+
+      // Phase 63 Gap 2 (EDITOR-05): Obsidian canvas edits update the generic 'text'
+      // property while leaving radiprotocol_* unchanged. Synthesize the correct
+      // canonical field key based on node type so the form patch hits the right field.
+      if (prev.text !== snap.text) {
+        const canonicalKey =
+          snap.kind === 'question'  ? 'radiprotocol_questionText' :
+          snap.kind === 'answer'    ? 'radiprotocol_answerText' :
+          snap.kind === 'text-block'? 'radiprotocol_content' :
+          snap.kind === 'loop'      ? 'radiprotocol_headerText' :
+          undefined;
+        if (canonicalKey && !(canonicalKey in fieldUpdates)) {
+          fieldUpdates[canonicalKey] = snap.text;
+        }
+      }
 
       if (Object.keys(fieldUpdates).length > 0) {
         dispatches.push({ filePath, nodeId: node.id, changeKind: 'fields', fieldUpdates });
