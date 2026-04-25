@@ -152,7 +152,7 @@ Full details: `.planning/milestones/v1.9-ROADMAP.md`
 <details>
 <summary>🔄 v1.10 Editor Sync & Runner UX Polish (Phases 63-67) — IN PROGRESS</summary>
 
-- [ ] Phase 63: Bidirectional Canvas ↔ Node Editor Sync (3 plans)
+- [x] Phase 63: Bidirectional Canvas ↔ Node Editor Sync (3/3 plans) — executed 2026-04-25, manual UAT pending (see 63-VALIDATION.md "Manual-Only Verifications")
 - [ ] Phase 64: Node Editor Polish — Auto-grow & Text Block Quick-Create (TBD plans)
 - [ ] Phase 65: Runner Footer Layout — Back/Skip Row (TBD plans)
 - [ ] Phase 66: Runner Step-Back Reliability & Scroll Pinning (TBD plans)
@@ -344,7 +344,7 @@ Plans:
 Plans:
 - [x] 63-01-PLAN.md — Pure reconciler: snippet edge-wins arm + discriminated EdgeLabelDiff/ReconcileResult shape + 2 fixtures + extended unit tests (2026-04-25)
 - [x] 63-02-PLAN.md — Service: discriminated writer + lastSnapshotByFilePath baseline + canvas-changed-for-node dispatch bus + rename/delete cleanup + new edge-label-sync-service.test.ts (2026-04-25)
-- [ ] 63-03-PLAN.md — View: formFieldRefs Map + applyCanvasPatch + per-field blur handlers + onOpen subscription + new editor-panel-canvas-sync.test.ts
+- [x] 63-03-PLAN.md — View: formFieldRefs Map + applyCanvasPatch + per-field blur handlers + onOpen subscription + new editor-panel-canvas-sync.test.ts (2026-04-25 — executed via shared registerFieldRef helper; manual UAT pending)
 **UI hint**: yes
 
 ### Phase 64: Node Editor Polish — Auto-grow & Text Block Quick-Create

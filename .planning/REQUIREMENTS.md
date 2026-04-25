@@ -52,9 +52,9 @@ Phase mappings established by roadmapper on 2026-04-25 during ROADMAP.md creatio
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| EDITOR-03 | Phase 63 | Pending |
+| EDITOR-03 | Phase 63 | Implemented 2026-04-25 — UAT pending |
 | EDITOR-04 | Phase 64 | Pending |
-| EDITOR-05 | Phase 63 | Pending |
+| EDITOR-05 | Phase 63 | Implemented 2026-04-25 — UAT pending |
 | EDITOR-06 | Phase 64 | Pending |
 | RUNNER-02 | Phase 65 | Pending |
 | RUNNER-03 | Phase 66 | Pending |
