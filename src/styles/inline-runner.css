@@ -242,3 +242,17 @@
   padding: var(--size-2-2) var(--size-4-2);
   min-height: 26px;
 }
+
+/* Phase 67: resizable inline runner */
+.rp-inline-runner-container {
+  resize: both;                                       /* D-01: native CSS resize, SE-corner grip */
+  overflow: auto;                                     /* D-01: overrides Phase 60 line 174 `overflow: hidden` so the resizer is paintable */
+  min-width: 240px;                                   /* D-09: fits Phase 65 Back/Skip footer row */
+  min-height: 120px;                                  /* D-09: header (~32px) + ≥1 button row + footer */
+  max-width: calc(100vw - var(--size-4-8));           /* D-10: ≤ viewport - 32px */
+  max-height: calc(100vh - var(--size-4-8));          /* D-10: ≤ viewport - 32px */
+}
+
+.rp-inline-runner-container.is-resizing {
+  box-shadow: var(--shadow-xl);                       /* D-02: exact mirror of Phase 60 `.is-dragging` */
+}
