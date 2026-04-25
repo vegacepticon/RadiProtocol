@@ -182,6 +182,7 @@ export class CanvasParser {
       width: raw.width,
       height: raw.height,
       color: typeof raw.color === 'string' ? raw.color : undefined,
+      text: typeof raw.text === 'string' ? raw.text : undefined,
     };
 
     const props = raw as Record<string, unknown>;

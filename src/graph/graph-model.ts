@@ -24,6 +24,8 @@ export interface RPNodeBase {
   width: number;
   height: number;
   color?: string;
+  /** Phase 63 EDITOR-05: raw Obsidian canvas text property preserved for inbound sync. */
+  text?: string;
 }
 
 export interface StartNode extends RPNodeBase {
