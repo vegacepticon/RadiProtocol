@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { TFile } from 'obsidian';
 import type RadiProtocolPlugin from '../../main';
 import { clampInlineRunnerPosition, InlineRunnerModal } from '../../views/inline-runner-modal';
-import type { InlineRunnerPosition } from '../../settings';
+import type { InlineRunnerLayout } from '../../settings';
 
 vi.mock('obsidian');
 
@@ -115,32 +115,32 @@ interface ModalInternals {
   headerEl: FakeElement | null;
 }
 
-function makePlugin(saved: InlineRunnerPosition | null = null): RadiProtocolPlugin & {
-  saved: InlineRunnerPosition | null;
+function makePlugin(saved: InlineRunnerLayout | null = null): RadiProtocolPlugin & {
+  saved: InlineRunnerLayout | null;
   saveSpy: ReturnType<typeof vi.fn>;
 } {
   const plugin = {
     saved,
-    saveSpy: vi.fn(async (position: InlineRunnerPosition | null) => {
+    saveSpy: vi.fn(async (position: InlineRunnerLayout | null) => {
       plugin.saved = position;
     }),
     settings: { textSeparator: 'newline', snippetFolderPath: '.radiprotocol/snippets' },
     getInlineRunnerPosition: () => plugin.saved,
-    saveInlineRunnerPosition: (position: InlineRunnerPosition | null) => plugin.saveSpy(position),
+    saveInlineRunnerPosition: (position: InlineRunnerLayout | null) => plugin.saveSpy(position),
     canvasLiveEditor: { getCanvasJSON: () => null },
     canvasParser: { parse: vi.fn() },
     snippetService: { load: vi.fn() },
     saveOutputToNote: vi.fn(),
     insertIntoCurrentNote: vi.fn(),
   };
-  return plugin as unknown as RadiProtocolPlugin & { saved: InlineRunnerPosition | null; saveSpy: ReturnType<typeof vi.fn> };
+  return plugin as unknown as RadiProtocolPlugin & { saved: InlineRunnerLayout | null; saveSpy: ReturnType<typeof vi.fn> };
 }
 
 function fakeTFile(path: string): TFile {
   return Object.assign(new TFile(), { path, name: path.split('/').pop() ?? path, extension: path.split('.').pop() ?? '', basename: path.replace(/\.md$/, '') });
 }
 
-function mount(saved: InlineRunnerPosition | null = null): { modal: ModalInternals; plugin: ReturnType<typeof makePlugin>; doc: FakeDocument } {
+function mount(saved: InlineRunnerLayout | null = null): { modal: ModalInternals; plugin: ReturnType<typeof makePlugin>; doc: FakeDocument } {
   const doc = new FakeDocument();
   vi.stubGlobal('document', doc);
   vi.stubGlobal('window', {

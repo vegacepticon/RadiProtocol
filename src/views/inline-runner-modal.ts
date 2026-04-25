@@ -9,7 +9,7 @@ import type { ProtocolGraph, AnswerNode, SnippetNode } from '../graph/graph-mode
 import { SnippetTreePicker } from './snippet-tree-picker';
 import { SnippetFillInModal } from './snippet-fill-in-modal';
 import { isExitEdge, nodeLabel, stripExitPrefix } from '../graph/node-label';
-import type { InlineRunnerPosition } from '../settings';
+import type { InlineRunnerLayout } from '../settings';
 
 interface InlineRunnerViewport {
   width: number;
@@ -27,16 +27,16 @@ const INLINE_RUNNER_DEFAULT_MARGIN = 16;
 const INLINE_RUNNER_MIN_VISIBLE_WIDTH = 160;
 const INLINE_RUNNER_MIN_VISIBLE_HEADER_HEIGHT = 40;
 
-function isFiniteInlineRunnerPosition(position: InlineRunnerPosition | null): position is InlineRunnerPosition {
+function isFiniteInlineRunnerPosition(position: InlineRunnerLayout | null): position is InlineRunnerLayout {
   return position !== null && Number.isFinite(position.left) && Number.isFinite(position.top);
 }
 
 /** Phase 60 D-02: never let persisted coordinates place the draggable header fully off-screen. */
 export function clampInlineRunnerPosition(
-  position: InlineRunnerPosition | null,
+  position: InlineRunnerLayout | null,
   viewport: InlineRunnerViewport,
   size: InlineRunnerSize,
-): InlineRunnerPosition | null {
+): InlineRunnerLayout | null {
   if (!isFiniteInlineRunnerPosition(position)) return null;
 
   const visibleWidth = Math.min(Math.max(size.width, INLINE_RUNNER_MIN_VISIBLE_WIDTH), viewport.width);
@@ -48,6 +48,32 @@ export function clampInlineRunnerPosition(
     left: Math.min(Math.max(0, position.left), maxLeft),
     top: Math.min(Math.max(0, position.top), maxTop),
   };
+}
+
+/** Phase 67 D-10: extends Phase 60 D-02 clamp-on-restore to width/height.
+ *  Position arm reuses the existing clampInlineRunnerPosition (preserves
+ *  INLINE_RUNNER_MIN_VISIBLE_WIDTH gating). Size arm clamps to viewport - 32px
+ *  (matches the CSS `max-width: calc(100vw - var(--size-4-8))` rule). Missing
+ *  or non-finite width/height fall back to defaults (D-06). */
+export function clampInlineRunnerLayout(
+  layout: InlineRunnerLayout | null,
+  viewport: InlineRunnerViewport,
+): InlineRunnerLayout | null {
+  if (layout === null) return null;
+  const positionOnly = clampInlineRunnerPosition(
+    { left: layout.left, top: layout.top },
+    viewport,
+    { width: INLINE_RUNNER_DEFAULT_WIDTH, height: INLINE_RUNNER_DEFAULT_HEIGHT },
+  );
+  if (positionOnly === null) return null;
+  const VIEWPORT_MARGIN_PX = 32;
+  const widthIn = (typeof layout.width === 'number' && Number.isFinite(layout.width) && layout.width > 0)
+    ? layout.width : INLINE_RUNNER_DEFAULT_WIDTH;
+  const heightIn = (typeof layout.height === 'number' && Number.isFinite(layout.height) && layout.height > 0)
+    ? layout.height : INLINE_RUNNER_DEFAULT_HEIGHT;
+  const width = Math.min(widthIn, Math.max(0, viewport.width - VIEWPORT_MARGIN_PX));
+  const height = Math.min(heightIn, Math.max(0, viewport.height - VIEWPORT_MARGIN_PX));
+  return { left: positionOnly.left, top: positionOnly.top, width, height };
 }
 
 /**
@@ -605,7 +631,7 @@ export class InlineRunnerModal {
     };
   }
 
-  private getDefaultPosition(): InlineRunnerPosition {
+  private getDefaultPosition(): InlineRunnerLayout {
     const viewport = this.getViewport();
     const size = this.getContainerSize();
     return {
@@ -614,7 +640,7 @@ export class InlineRunnerModal {
     };
   }
 
-  private applyPosition(position: InlineRunnerPosition): void {
+  private applyPosition(position: InlineRunnerLayout): void {
     if (this.containerEl === null) return;
     this.containerEl.style.left = `${Math.round(position.left)}px`;
     this.containerEl.style.top = `${Math.round(position.top)}px`;
@@ -634,7 +660,7 @@ export class InlineRunnerModal {
     this.applyPosition(position);
   }
 
-  private getAppliedPosition(): InlineRunnerPosition | null {
+  private getAppliedPosition(): InlineRunnerLayout | null {
     if (this.containerEl === null) return null;
     const left = Number.parseFloat(this.containerEl.style.left);
     const top = Number.parseFloat(this.containerEl.style.top);

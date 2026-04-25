@@ -4,9 +4,16 @@ import { PluginSettingTab, Setting } from 'obsidian';
 import type RadiProtocolPlugin from './main';
 import { FolderSuggest } from './views/folder-suggest';
 
-export interface InlineRunnerPosition {
+/** Phase 67 (D-05): renamed from InlineRunnerPosition; width/height optional for back-compat (D-06).
+ *  Existing on-disk records have only {left, top}; missing width/height fall back to
+ *  INLINE_RUNNER_DEFAULT_WIDTH (360) / INLINE_RUNNER_DEFAULT_HEIGHT (240) in the modal layer.
+ *  Settings field name `inlineRunnerPosition` is intentionally NOT renamed — preserves
+ *  on-disk back-compat per Standing Pitfall #11. */
+export interface InlineRunnerLayout {
   left: number;
   top: number;
+  width?: number;
+  height?: number;
 }
 
 export interface RadiProtocolSettings {
@@ -24,8 +31,8 @@ export interface RadiProtocolSettings {
   protocolFolderPath: string;
   /** Separator inserted before each new text chunk in the runner (D-08, SEP-01). Default: 'newline'. */
   textSeparator: 'newline' | 'space';
-  /** Phase 60 (D-01): Last dragged inline runner position, persisted across reloads. */
-  inlineRunnerPosition?: InlineRunnerPosition | null;
+  /** Phase 60 (D-01): Last dragged inline runner position; Phase 67 (D-05/D-06) extended with optional width/height. */
+  inlineRunnerPosition?: InlineRunnerLayout | null;
 }
 
 export const DEFAULT_SETTINGS: RadiProtocolSettings = {
