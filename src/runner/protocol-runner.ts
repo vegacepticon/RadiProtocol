@@ -93,7 +93,7 @@ export class ProtocolRunner {
     this.undoStack.push({
       nodeId: this.currentNodeId,
       textSnapshot: this.accumulator.snapshot(),
-      loopContextStack: [...this.loopContextStack],
+      loopContextStack: this.loopContextStack.map(f => ({ ...f })),
     });
 
     // Append the answer text
@@ -142,7 +142,7 @@ export class ProtocolRunner {
     this.undoStack.push({
       nodeId: this.currentNodeId,
       textSnapshot: this.accumulator.snapshot(),
-      loopContextStack: [...this.loopContextStack],
+      loopContextStack: this.loopContextStack.map(f => ({ ...f })),
     });
 
     // D-08: advance through the answer's first neighbor (same dead-end / loop-return
@@ -198,7 +198,7 @@ export class ProtocolRunner {
     this.undoStack.push({
       nodeId: this.currentNodeId, // question id
       textSnapshot: this.accumulator.snapshot(),
-      loopContextStack: [...this.loopContextStack],
+      loopContextStack: this.loopContextStack.map(f => ({ ...f })),
       returnToBranchList: true,
     });
 
@@ -238,7 +238,7 @@ export class ProtocolRunner {
     this.undoStack.push({
       nodeId: this.currentNodeId,
       textSnapshot: this.accumulator.snapshot(),
-      loopContextStack: [...this.loopContextStack],
+      loopContextStack: this.loopContextStack.map(f => ({ ...f })),
       restoreStatus: 'awaiting-loop-pick',
     });
 
@@ -313,11 +313,11 @@ export class ProtocolRunner {
     if (this.runnerStatus !== 'awaiting-snippet-pick') return;
     if (this.currentNodeId === null) return;
 
-    // Pattern A: undo-before-mutate. Spread loopContextStack (LOOP-05).
+    // Pattern A: undo-before-mutate. Deep-copy loopContextStack frames (LOOP-05).
     this.undoStack.push({
       nodeId: this.currentNodeId,
       textSnapshot: this.accumulator.snapshot(),
-      loopContextStack: [...this.loopContextStack],
+      loopContextStack: this.loopContextStack.map(f => ({ ...f })),
       restoreStatus: 'awaiting-snippet-pick',
     });
 
@@ -358,7 +358,7 @@ export class ProtocolRunner {
     this.undoStack.push({
       nodeId: questionNodeId,
       textSnapshot: this.accumulator.snapshot(),
-      loopContextStack: [...this.loopContextStack],
+      loopContextStack: this.loopContextStack.map(f => ({ ...f })),
     });
 
     this.snippetId = snippetPath;
@@ -711,7 +711,7 @@ export class ProtocolRunner {
           this.undoStack.push({
             nodeId: previousCursor !== null ? previousCursor : cursor,
             textSnapshot: this.accumulator.snapshot(),
-            loopContextStack: [...this.loopContextStack],  // shallow spread — frames are primitive-only
+            loopContextStack: this.loopContextStack.map(f => ({ ...f })),
             restoreStatus: 'awaiting-loop-pick',
           });
           this.loopContextStack.push({

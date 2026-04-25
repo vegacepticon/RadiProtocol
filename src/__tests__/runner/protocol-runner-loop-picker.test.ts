@@ -274,6 +274,155 @@ describe('ProtocolRunner loop picker (RUN-01..RUN-05)', () => {
   });
 });
 
+// Phase 66 D-13 — four scripted loop-boundary scenarios for stepBack correctness.
+describe('Phase 66 D-13 — scripted loop-boundary scenarios for stepBack', () => {
+  /** Flush microtask between sync stepBack calls so _stepBackInFlight resets. */
+  async function backOnce(runner: ProtocolRunner): Promise<void> {
+    runner.stepBack();
+    await Promise.resolve();
+  }
+
+  // D-13 Scenario 1 — Back from inside loop body iteration N
+  it('D-13 Scenario 1: back from inside loop body iteration N restores awaiting-loop-pick with iteration preserved', async () => {
+    const runner = new ProtocolRunner();
+    runner.start(loadGraph('unified-loop-valid.canvas'));
+    // Iteration 1: enter body, answer, back-edge re-entry → iter=2 picker
+    runner.chooseLoopBranch('e2');
+    runner.chooseAnswer('n-a1');
+    let state = runner.getState();
+    expect(state.status).toBe('awaiting-loop-pick');
+    if (state.status !== 'awaiting-loop-pick') return;
+    expect(state.nodeId).toBe('n-loop');
+    // Iteration 2: enter body again
+    runner.chooseLoopBranch('e2');
+    state = runner.getState();
+    expect(state.status).toBe('at-node');
+    if (state.status !== 'at-node') return;
+    expect(state.currentNodeId).toBe('n-q1');
+    // Back should restore the iter=2 picker state
+    await backOnce(runner);
+    state = runner.getState();
+    expect(state.status).toBe('awaiting-loop-pick');
+    if (state.status !== 'awaiting-loop-pick') return;
+    expect(state.nodeId).toBe('n-loop');
+    expect(state.accumulatedText).toBe('1 cm');
+    const serialized = runner.getSerializableState();
+    expect(serialized).not.toBeNull();
+    if (serialized === null) return;
+    expect(serialized.loopContextStack.length).toBe(1);
+    expect(serialized.loopContextStack[0]?.iteration).toBe(2);
+  });
+
+  // D-13 Scenario 2 — Back through +exit edge
+  it('D-13 Scenario 2: back through +exit edge restores awaiting-loop-pick with frame restored', async () => {
+    const runner = new ProtocolRunner();
+    runner.start(loadGraph('unified-loop-valid.canvas'));
+    runner.chooseLoopBranch('e3'); // +exit → complete
+    expect(runner.getState().status).toBe('complete');
+    // Back restores the loop picker with the popped frame back on the stack
+    await backOnce(runner);
+    const state = runner.getState();
+    expect(state.status).toBe('awaiting-loop-pick');
+    if (state.status !== 'awaiting-loop-pick') return;
+    expect(state.nodeId).toBe('n-loop');
+    expect(state.accumulatedText).toBe('');
+    const serialized = runner.getSerializableState();
+    expect(serialized).not.toBeNull();
+    if (serialized === null) return;
+    expect(serialized.loopContextStack.length).toBe(1);
+    expect(serialized.loopContextStack[0]?.loopNodeId).toBe('n-loop');
+    expect(serialized.loopContextStack[0]?.iteration).toBe(1);
+  });
+
+  // D-13 Scenario 3 — Dead-end body auto-loop-back undone by Back
+  it('D-13 Scenario 3: back undoes a dead-end body auto-loop-back', async () => {
+    // Inline graph: start → loop → dead-end text-block (no outgoing edges)
+    const graph: ProtocolGraph = {
+      canvasFilePath: 'test:dead-end-loop.canvas',
+      nodes: new Map<string, RPNode>([
+        ['n-start', { id: 'n-start', kind: 'start', x: 0, y: 0, width: 100, height: 60 }],
+        ['n-loop', { id: 'n-loop', kind: 'loop', x: 0, y: 100, width: 100, height: 60, headerText: 'Loop' }],
+        ['n-dead', { id: 'n-dead', kind: 'text-block', x: 0, y: 200, width: 100, height: 60, content: 'dead' }],
+      ]),
+      edges: [
+        { id: 'e1', fromNodeId: 'n-start', toNodeId: 'n-loop' },
+        { id: 'e2', fromNodeId: 'n-loop', toNodeId: 'n-dead' },
+      ],
+      adjacency: new Map<string, string[]>([
+        ['n-start', ['n-loop']],
+        ['n-loop', ['n-dead']],
+        ['n-dead', []],
+      ]),
+      reverseAdjacency: new Map<string, string[]>([
+        ['n-start', []],
+        ['n-loop', ['n-start']],
+        ['n-dead', ['n-loop']],
+      ]),
+      startNodeId: 'n-start',
+    };
+    const runner = new ProtocolRunner();
+    runner.start(graph);
+    let state = runner.getState();
+    expect(state.status).toBe('awaiting-loop-pick');
+    if (state.status !== 'awaiting-loop-pick') return;
+    expect(state.nodeId).toBe('n-loop');
+    // Enter body — walks to dead-end text-block, auto-returns to picker with iter=2
+    runner.chooseLoopBranch('e2');
+    state = runner.getState();
+    expect(state.status).toBe('awaiting-loop-pick');
+    if (state.status !== 'awaiting-loop-pick') return;
+    expect(state.nodeId).toBe('n-loop');
+    expect(state.accumulatedText).toBe('dead');
+    let serialized = runner.getSerializableState();
+    expect(serialized?.loopContextStack[0]?.iteration).toBe(2);
+    // Back undoes the body-branch click (including the auto-return cascade)
+    await backOnce(runner);
+    state = runner.getState();
+    expect(state.status).toBe('awaiting-loop-pick');
+    if (state.status !== 'awaiting-loop-pick') return;
+    expect(state.nodeId).toBe('n-loop');
+    expect(state.accumulatedText).toBe('');
+    serialized = runner.getSerializableState();
+    expect(serialized?.loopContextStack[0]?.iteration).toBe(1);
+  });
+
+  // D-13 Scenario 4 — Nested loops: back from inner picker stays in inner
+  it('D-13 Scenario 4: back from nested-inner picker returns to inner, not outer', async () => {
+    const runner = new ProtocolRunner();
+    runner.start(loadGraph('unified-loop-nested.canvas'));
+    let state = runner.getState();
+    expect(state.status).toBe('awaiting-loop-pick');
+    if (state.status !== 'awaiting-loop-pick') return;
+    expect(state.nodeId).toBe('n-outer');
+    // Enter outer body → inner loop picker
+    runner.chooseLoopBranch('e2');
+    state = runner.getState();
+    expect(state.status).toBe('awaiting-loop-pick');
+    if (state.status !== 'awaiting-loop-pick') return;
+    expect(state.nodeId).toBe('n-inner');
+    // Enter inner body → at-node on n-inner-q
+    runner.chooseLoopBranch('e4');
+    state = runner.getState();
+    expect(state.status).toBe('at-node');
+    if (state.status !== 'at-node') return;
+    expect(state.currentNodeId).toBe('n-inner-q');
+    // Back restores inner picker, both frames intact, outer unchanged
+    await backOnce(runner);
+    state = runner.getState();
+    expect(state.status).toBe('awaiting-loop-pick');
+    if (state.status !== 'awaiting-loop-pick') return;
+    expect(state.nodeId).toBe('n-inner');
+    const serialized = runner.getSerializableState();
+    expect(serialized).not.toBeNull();
+    if (serialized === null) return;
+    expect(serialized.loopContextStack.length).toBe(2);
+    expect(serialized.loopContextStack[0]?.loopNodeId).toBe('n-outer');
+    expect(serialized.loopContextStack[0]?.iteration).toBe(1);
+    expect(serialized.loopContextStack[1]?.loopNodeId).toBe('n-inner');
+    expect(serialized.loopContextStack[1]?.iteration).toBe(1);
+  });
+});
+
 // Phase 47 RUNFIX-01 — manual textarea edits made while the runner is halted at an
 // `awaiting-loop-pick` state must survive every loop-node transition (body-branch entry,
 // «выход» exit, dead-end return via back-edge to picker, undo snapshot capture).
