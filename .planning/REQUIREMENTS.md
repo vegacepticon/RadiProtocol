@@ -18,7 +18,7 @@
 
 ### Runner UX
 
-- [ ] **RUNNER-02**: Runner footer layout — the "step back" button is renamed to "back"; the Skip button is rendered as a labeled button reading "skip" (no icon-only variant) placed to the right of Back on the same horizontal row; Skip is never rendered between answer-branch buttons and snippet-branch buttons when a question node has mixed outgoing edges. Applies to all three runner modes (sidebar, tab, inline).
+- [x] **RUNNER-02**: Runner footer layout — the "step back" button is renamed to "back"; the Skip button is rendered as a labeled button reading "skip" (no icon-only variant) placed to the right of Back on the same horizontal row; Skip is never rendered between answer-branch buttons and snippet-branch buttons when a question node has mixed outgoing edges. Applies to all three runner modes (sidebar, tab, inline). Implemented 2026-04-25 in Phase 65; focused/full tests, build, and human visual verification passed.
 
 - [ ] **RUNNER-03**: Step-back operates reliably under all conditions — a single click advances the runner back exactly one step; no "Processing" text is ever shown in place of the action buttons longer than the natural re-render; repeated step-back clicks inside a loop never corrupt the accumulated protocol text or leave the runner in an inconsistent state. Applies to all three runner modes.
 
@@ -56,7 +56,7 @@ Phase mappings established by roadmapper on 2026-04-25 during ROADMAP.md creatio
 | EDITOR-04 | Phase 64 | Pending |
 | EDITOR-05 | Phase 63 | Implemented 2026-04-25 — gap closure Plan 04 verified GREEN |
 | EDITOR-06 | Phase 64 | Pending |
-| RUNNER-02 | Phase 65 | Pending |
+| RUNNER-02 | Phase 65 | Implemented 2026-04-25 — Plan 65-02 verified GREEN and human-approved |
 | RUNNER-03 | Phase 66 | Pending |
 | RUNNER-04 | Phase 66 | Pending |
 | INLINE-FIX-06 | Phase 67 | Pending |
@@ -76,4 +76,4 @@ Phase mappings established by roadmapper on 2026-04-25 during ROADMAP.md creatio
 
 ---
 *Requirements defined: 2026-04-25*
-*Last updated: 2026-04-25 — traceability populated by roadmapper (Phases 63–67 mapped)*
+*Last updated: 2026-04-25 — RUNNER-02 completed by Phase 65 Plan 02*

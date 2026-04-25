@@ -154,7 +154,7 @@ Full details: `.planning/milestones/v1.9-ROADMAP.md`
 
 - [x] Phase 63: Bidirectional Canvas ↔ Node Editor Sync (4/4 plans + gap closure) — executed 2026-04-25, all plans complete, manual UAT pending
 - [x] Phase 64: Node Editor Polish — Auto-grow & Text Block Quick-Create (3/3 plans) — executed 2026-04-25, UAT passed 7/7
-- [ ] Phase 65: Runner Footer Layout — Back/Skip Row (1/2 plans) — in progress
+- [x] Phase 65: Runner Footer Layout — Back/Skip Row (2/2 plans) — completed 2026-04-25, UAT approved
 - [ ] Phase 66: Runner Step-Back Reliability & Scroll Pinning (TBD plans)
 - [ ] Phase 67: Inline Runner Resizable Modal & File-Bound Snippet Parity (TBD plans)
 
@@ -379,7 +379,7 @@ Plans:
 
 Plans:
 - [x] 65-01-PLAN.md — RED regression tests for Back/Skip footer labels, ordering, and inline parity — completed 2026-04-25
-- [ ] 65-02-PLAN.md — Implement shared footer row in RunnerView + InlineRunnerModal, append CSS, rebuild, and visually verify
+- [x] 65-02-PLAN.md — Implement shared footer row in RunnerView + InlineRunnerModal, append CSS, rebuild, and visually verify — completed 2026-04-25; human-approved
 
 ### Phase 66: Runner Step-Back Reliability & Scroll Pinning
 **Goal**: Step-back is one click = one step in every state of every runner mode, never leaves the runner stuck on "Processing", never corrupts accumulated text inside a loop iteration, and the preview textarea stays scrolled to the bottom on file-bound snippet insert and on step-back — matching the existing correct behaviour for Answer insert and directory-bound snippet insert.
@@ -428,6 +428,6 @@ v1.10 active. Phases 63 and 67 can run in parallel (Node Editor sync vs Inline R
 | 61. Settings Folder Autocomplete | v1.9 | 4/4 | Complete | 2026-04-24 |
 | 62. BRAT Release v1.9.0 | v1.9 | 3/3 | Complete | 2026-04-25 |
 | 63. Bidirectional Canvas ↔ Node Editor Sync | v1.10 | 4/4 + gap closure | Complete | 2026-04-25 |
-| 65. Runner Footer Layout — Back/Skip Row | v1.10 | 1/2 | In Progress | — |
+| 65. Runner Footer Layout — Back/Skip Row | v1.10 | 2/2 | Complete | 2026-04-25 |
 | 66. Runner Step-Back Reliability & Scroll Pinning | v1.10 | 0/TBD | Not started | — |
 | 67. Inline Runner Resizable Modal & File-Bound Snippet Parity | v1.10 | 0/TBD | Not started | — |
