@@ -665,7 +665,8 @@ export class InlineRunnerModal {
     this.containerEl.style.top = `${Math.round(position.top)}px`;
     this.containerEl.style.right = '';
     this.containerEl.style.bottom = '';
-    this.containerEl.style.width = '';
+    // Phase 67: do NOT clear style.width — the modal is resizable and width must persist across drags
+    // this.containerEl.style.width = '';
     this.containerEl.style.maxWidth = '';
     this.containerEl.style.transform = '';
   }
