@@ -152,7 +152,7 @@ Full details: `.planning/milestones/v1.9-ROADMAP.md`
 <details>
 <summary>🔄 v1.10 Editor Sync & Runner UX Polish (Phases 63-67) — IN PROGRESS</summary>
 
-- [ ] Phase 63: Bidirectional Canvas ↔ Node Editor Sync (TBD plans)
+- [ ] Phase 63: Bidirectional Canvas ↔ Node Editor Sync (3 plans)
 - [ ] Phase 64: Node Editor Polish — Auto-grow & Text Block Quick-Create (TBD plans)
 - [ ] Phase 65: Runner Footer Layout — Back/Skip Row (TBD plans)
 - [ ] Phase 66: Runner Step-Back Reliability & Scroll Pinning (TBD plans)
@@ -339,7 +339,12 @@ Plans:
   2. Setting the "branch label" field on a Snippet node in the Node Editor writes that label to the node's outgoing edge on canvas; the canvas Snippet node's own visible text continues to display the configured directory path or file name (EDITOR-03)
   3. Editing the outgoing edge label of a Snippet node directly on canvas updates the "branch label" field in the open Node Editor form in real time, with the same bidirectional behaviour as Answer.displayLabel ↔ incoming edge label from Phase 50 (EDITOR-03)
   4. Concurrent edits — typing on canvas while the form is open — never overwrite in-flight user input in the form's currently-focused field; sync direction is debounced and last-write-wins matches the Phase 50 precedent (EDITOR-03, EDITOR-05)
-**Plans:** TBD
+**Plans:** 3 plans
+
+Plans:
+- [ ] 63-01-PLAN.md — Pure reconciler: snippet edge-wins arm + discriminated EdgeLabelDiff/ReconcileResult shape + 2 fixtures + extended unit tests
+- [ ] 63-02-PLAN.md — Service: discriminated writer + lastSnapshotByFilePath baseline + canvas-changed-for-node dispatch bus + rename/delete cleanup + new edge-label-sync-service.test.ts
+- [ ] 63-03-PLAN.md — View: formFieldRefs Map + applyCanvasPatch + per-field blur handlers + onOpen subscription + new editor-panel-canvas-sync.test.ts
 **UI hint**: yes
 
 ### Phase 64: Node Editor Polish — Auto-grow & Text Block Quick-Create
@@ -351,8 +356,13 @@ Plans:
   2. Auto-grow handles paste, programmatic field population (form load), and re-render without flickering or stuck heights; height collapses back when content is reduced (EDITOR-04)
   3. The Node Editor toolbar shows a fifth quick-create button labelled "Create text block" (alongside Question / Answer / Snippet / Loop), and one click creates a text-block node on canvas with `radiprotocol_nodeType = "text-block"`, the correct `NODE_COLOR_MAP` colour, and default placement via the same `CanvasNodeFactory` path used by the existing four buttons (EDITOR-06)
   4. The new text-block button respects the Phase 42 `flex-wrap: wrap` toolbar layout — narrowing the sidebar wraps all five buttons onto multiple rows without hiding any (EDITOR-06)
-**Plans:** TBD
+**Plans:** 3 plans
 **UI hint**: yes
+
+Plans:
+- [ ] 64-01-PLAN.md — RED regression tests for all growable Node Editor fields and Text block quick-create
+- [ ] 64-02-PLAN.md — Shared growable textarea helper, field conversion, append-only CSS, and generated CSS rebuild
+- [ ] 64-03-PLAN.md — Text block quick-create toolbar button, automated verification, and human UI sign-off
 
 ### Phase 65: Runner Footer Layout — Back/Skip Row
 **Goal**: The Runner footer is rebuilt so "step back" reads "back", Skip renders as a labeled button to the right of Back on the same row, and Skip never visually intrudes between answer-branch buttons and snippet-branch buttons on a mixed-branch question — applied uniformly across sidebar, tab, and inline modes.
@@ -412,8 +422,7 @@ v1.10 active. Phases 63 and 67 can run in parallel (Node Editor sync vs Inline R
 | 60. Inline Runner Layout & Position Persistence | v1.9 | 5/5 | Complete | 2026-04-24 |
 | 61. Settings Folder Autocomplete | v1.9 | 4/4 | Complete | 2026-04-24 |
 | 62. BRAT Release v1.9.0 | v1.9 | 3/3 | Complete | 2026-04-25 |
-| 63. Bidirectional Canvas ↔ Node Editor Sync | v1.10 | 0/TBD | Not started | — |
-| 64. Node Editor Polish — Auto-grow & Text Block Quick-Create | v1.10 | 0/TBD | Not started | — |
+| 63. Bidirectional Canvas ↔ Node Editor Sync | v1.10 | 0/3 | Not started | — |
 | 65. Runner Footer Layout — Back/Skip Row | v1.10 | 0/TBD | Not started | — |
 | 66. Runner Step-Back Reliability & Scroll Pinning | v1.10 | 0/TBD | Not started | — |
 | 67. Inline Runner Resizable Modal & File-Bound Snippet Parity | v1.10 | 0/TBD | Not started | — |
