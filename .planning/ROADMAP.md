@@ -374,8 +374,12 @@ Plans:
   2. The Skip button renders as a labeled button containing the text "skip" — never an icon-only variant — and is placed on the same horizontal row immediately to the right of the Back button in all three modes (RUNNER-02)
   3. On a question node with mixed outgoing edges (both answer-branch and snippet-branch buttons), no Skip button is ever rendered between the answer buttons and the snippet buttons; Skip appears only in the footer row alongside Back (RUNNER-02)
   4. The footer Back+Skip row remains accessible at narrow sidebar widths via the existing flex-wrap toolbar conventions, with no buttons clipped off-screen (RUNNER-02)
-**Plans:** TBD
+**Plans:** 2 plans
 **UI hint**: yes
+
+Plans:
+- [ ] 65-01-PLAN.md — RED regression tests for Back/Skip footer labels, ordering, and inline parity
+- [ ] 65-02-PLAN.md — Implement shared footer row in RunnerView + InlineRunnerModal, append CSS, rebuild, and visually verify
 
 ### Phase 66: Runner Step-Back Reliability & Scroll Pinning
 **Goal**: Step-back is one click = one step in every state of every runner mode, never leaves the runner stuck on "Processing", never corrupts accumulated text inside a loop iteration, and the preview textarea stays scrolled to the bottom on file-bound snippet insert and on step-back — matching the existing correct behaviour for Answer insert and directory-bound snippet insert.
