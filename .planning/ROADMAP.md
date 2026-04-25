@@ -391,7 +391,14 @@ Plans:
   3. Repeated Back clicks across loop boundaries — including loop-node entry, body-branch dead-end loop-back, and «выход» exit — never corrupt the accumulated protocol text or the loop context stack; the protocol preview matches the same content the user saw at that step on the way forward (RUNNER-03)
   4. After a file-bound Snippet node inserts its content, the preview textarea is scrolled to the bottom so the most recently inserted line is visible — identical to existing Answer-insert and directory-bound-snippet-insert behaviour (RUNNER-04)
   5. After a Back click in any state, the preview textarea is scrolled to the bottom so the line revealed by the step-back (or the new tail line after content was popped) is visible — no upward scroll jump (RUNNER-04)
-**Plans:** TBD
+**Plans:** 5 plans
+
+Plans:
+- [ ] 66-01-PLAN.md — ProtocolRunner state-machine surgery: UndoEntry.restoreStatus, _stepBackInFlight guard, RunnerView Processing-text removal
+- [ ] 66-02-PLAN.md — RunnerView scroll-pinning unification: renderPreviewZone scroll-to-bottom default, removal of pendingTextareaScrollTop mechanism
+- [ ] 66-03-PLAN.md — Shared Back-disable-on-click prologue in renderRunnerFooter (RunnerView + InlineRunnerModal)
+- [ ] 66-04-PLAN.md — Loop-boundary correctness suite: D-08 property roundtrip + D-13 four scripted scenarios
+- [ ] 66-05-PLAN.md — 66-UAT.md scripted RUNNER-03/RUNNER-04 visual checklist + human-verify checkpoint
 
 ### Phase 67: Inline Runner Resizable Modal & File-Bound Snippet Parity
 **Goal**: The Inline Runner modal is user-resizable via drag, with width and height persisted in workspace state alongside the Phase 60 position state and clamped to viewport on restore; and a file-bound Snippet node in inline mode appends the configured file's content rather than falling back to the snippets root folder, matching sidebar parity from Phase 56.
