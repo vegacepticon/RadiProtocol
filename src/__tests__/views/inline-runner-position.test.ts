@@ -220,6 +220,8 @@ describe('Phase 60 D-01/D-02 inline runner position persistence', () => {
 
     expect(modal.containerEl?.style.left).toBe('864px');
     expect(modal.containerEl?.style.top).toBe('728px');
-    expect(plugin.saveSpy).toHaveBeenCalledWith({ left: 864, top: 728 });
+    // Phase 67 D-11: reclamp now persists full layout (position + size).
+    // Width/height in the persisted payload come from getBoundingClientRect; FakeElement returns 360x240.
+    expect(plugin.saveSpy).toHaveBeenCalledWith({ left: 864, top: 728, width: 360, height: 240 });
   });
 });

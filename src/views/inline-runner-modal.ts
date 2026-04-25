@@ -118,6 +118,10 @@ export class InlineRunnerModal {
   private dragMoveHandler: ((event: PointerEvent) => void) | null = null;
   private dragUpHandler: ((event: PointerEvent) => void) | null = null;
   private isDragging = false;
+  /** Phase 67 D-04: tracks active resize gesture so .is-resizing class lifecycle is one-shot. */
+  private isResizing = false;
+  /** Phase 67 D-04: handle for the 400ms debounce timer between ResizeObserver ticks. */
+  private resizeDebounceTimer: number | null = null;
 
   constructor(
     app: App,
@@ -214,6 +218,12 @@ export class InlineRunnerModal {
       void this.reclampCurrentPosition(true);
     };
     window.addEventListener('resize', this.windowResizeHandler);
+
+    // Phase 67 D-04 / D-07: debounced save on resize-end + .is-resizing lifecycle.
+    if (this.containerEl !== null) {
+      this.resizeObserver = new ResizeObserver(() => this.handleResizeTick());
+      this.resizeObserver.observe(this.containerEl);
+    }
   }
 
   close(): void {
@@ -256,6 +266,15 @@ export class InlineRunnerModal {
       window.removeEventListener('resize', this.windowResizeHandler);
       this.windowResizeHandler = null;
     }
+    // Phase 67: defensive resize-state cleanup (timer + .is-resizing class).
+    if (this.resizeDebounceTimer !== null) {
+      window.clearTimeout(this.resizeDebounceTimer);
+      this.resizeDebounceTimer = null;
+    }
+    if (this.containerEl !== null) {
+      this.containerEl.removeClass('is-resizing');
+    }
+    this.isResizing = false;
     this.removeDragListeners();
 
     // Remove from DOM
@@ -651,13 +670,36 @@ export class InlineRunnerModal {
     this.containerEl.style.transform = '';
   }
 
+  /** Phase 67 D-10: applyPosition + size. Missing width/height ⇒ default fallback. */
+  private applyLayout(layout: InlineRunnerLayout): void {
+    if (this.containerEl === null) return;
+    this.applyPosition({ left: layout.left, top: layout.top });
+    const width = (typeof layout.width === 'number' && Number.isFinite(layout.width) && layout.width > 0)
+      ? layout.width : INLINE_RUNNER_DEFAULT_WIDTH;
+    const height = (typeof layout.height === 'number' && Number.isFinite(layout.height) && layout.height > 0)
+      ? layout.height : INLINE_RUNNER_DEFAULT_HEIGHT;
+    this.containerEl.style.width = `${Math.round(width)}px`;
+    this.containerEl.style.height = `${Math.round(height)}px`;
+    this.containerEl.style.maxWidth = '';   // CSS rules at file bottom enforce max
+  }
+
+  /** Phase 67 D-06/D-10: restore saved layout (clamped) or apply default. */
   private restoreOrDefaultPosition(): void {
     const saved = this.plugin.getInlineRunnerPosition();
     const viewport = this.getViewport();
-    const size = this.getContainerSize();
-    const restored = clampInlineRunnerPosition(saved, viewport, size);
-    const position = restored ?? clampInlineRunnerPosition(this.getDefaultPosition(), viewport, size) ?? { left: INLINE_RUNNER_DEFAULT_MARGIN, top: INLINE_RUNNER_DEFAULT_MARGIN };
-    this.applyPosition(position);
+    const restored = clampInlineRunnerLayout(saved, viewport);
+    if (restored !== null) {
+      this.applyLayout(restored);
+      return;
+    }
+    const defaultLayout: InlineRunnerLayout = {
+      ...this.getDefaultPosition(),
+      width: INLINE_RUNNER_DEFAULT_WIDTH,
+      height: INLINE_RUNNER_DEFAULT_HEIGHT,
+    };
+    const clamped = clampInlineRunnerLayout(defaultLayout, viewport)
+      ?? { left: INLINE_RUNNER_DEFAULT_MARGIN, top: INLINE_RUNNER_DEFAULT_MARGIN, width: INLINE_RUNNER_DEFAULT_WIDTH, height: INLINE_RUNNER_DEFAULT_HEIGHT };
+    this.applyLayout(clamped);
   }
 
   private getAppliedPosition(): InlineRunnerLayout | null {
@@ -667,12 +709,23 @@ export class InlineRunnerModal {
     return isFiniteInlineRunnerPosition({ left, top }) ? { left, top } : null;
   }
 
+  /** Phase 67 D-11: re-clamp position AND size on viewport change; persist if anything changed. */
   private async reclampCurrentPosition(persistIfChanged: boolean): Promise<void> {
-    const current = this.getAppliedPosition() ?? this.plugin.getInlineRunnerPosition() ?? this.getDefaultPosition();
-    const clamped = clampInlineRunnerPosition(current, this.getViewport(), this.getContainerSize());
+    if (this.containerEl === null) return;
+    const rect = this.containerEl.getBoundingClientRect();
+    const currentPosition = this.getAppliedPosition() ?? this.plugin.getInlineRunnerPosition() ?? this.getDefaultPosition();
+    const current: InlineRunnerLayout = {
+      left: currentPosition.left,
+      top: currentPosition.top,
+      width: rect.width > 0 ? rect.width : INLINE_RUNNER_DEFAULT_WIDTH,
+      height: rect.height > 0 ? rect.height : INLINE_RUNNER_DEFAULT_HEIGHT,
+    };
+    const clamped = clampInlineRunnerLayout(current, this.getViewport());
     if (clamped === null) return;
-    this.applyPosition(clamped);
-    if (persistIfChanged && (clamped.left !== current.left || clamped.top !== current.top)) {
+    this.applyLayout(clamped);
+    const positionChanged = clamped.left !== current.left || clamped.top !== current.top;
+    const sizeChanged = clamped.width !== current.width || clamped.height !== current.height;
+    if (persistIfChanged && (positionChanged || sizeChanged)) {
       await this.plugin.saveInlineRunnerPosition(clamped);
     }
   }
@@ -721,6 +774,40 @@ export class InlineRunnerModal {
       this.containerEl.removeClass('is-dragging');
     }
     this.isDragging = false;
+  }
+
+  /** Phase 67 D-04: ResizeObserver tick handler — toggles .is-resizing class and resets the debounce timer.
+   *  Saves only on debounce expiry (D-07). Native CSS `resize: both` owns pointer events (D-01). */
+  private handleResizeTick(): void {
+    if (this.containerEl === null) return;
+    if (!this.isResizing) {
+      this.isResizing = true;
+      this.containerEl.addClass('is-resizing');
+    }
+    if (this.resizeDebounceTimer !== null) {
+      window.clearTimeout(this.resizeDebounceTimer);
+    }
+    this.resizeDebounceTimer = window.setTimeout(() => this.handleResizeDebounceExpire(), 400);
+  }
+
+  /** Phase 67 D-07: debounce expiry — read final size, clamp, persist once, clear .is-resizing. */
+  private handleResizeDebounceExpire(): void {
+    this.resizeDebounceTimer = null;
+    if (this.containerEl === null) return;
+    const rect = this.containerEl.getBoundingClientRect();
+    const appliedPosition = this.getAppliedPosition() ?? this.getDefaultPosition();
+    const layout: InlineRunnerLayout = {
+      left: appliedPosition.left,
+      top: appliedPosition.top,
+      width: Math.round(rect.width),
+      height: Math.round(rect.height),
+    };
+    const clamped = clampInlineRunnerLayout(layout, this.getViewport());
+    if (clamped !== null) {
+      void this.plugin.saveInlineRunnerPosition(clamped);
+    }
+    this.containerEl.removeClass('is-resizing');
+    this.isResizing = false;
   }
 
   /** Phase 60 compatibility shim: layout events now clamp, not note-width-anchor. */
