@@ -416,7 +416,7 @@ Plans:
 Plans:
 - [x] 67-01-PLAN.md — INLINE-FIX-06 resize: type rename, ResizeObserver wiring, debounced save, append-only CSS, build verification — completed 2026-04-25
 - [x] 67-02-PLAN.md — INLINE-FIX-07 file-bound parity: protocol-runner case snippet branch (D-14), node-label arm (D-15), 3 test layers, ROADMAP/STATE amendment (D-13) — completed 2026-04-25
-- [ ] 67-03-PLAN.md — Human UAT checkpoint: real-Obsidian verification of resize persistence + clamp + loop-body file-bound snippet parity in both runner modes
+- [x] 67-03-PLAN.md — Human UAT checkpoint: real-Obsidian verification of resize persistence + clamp + loop-body file-bound snippet parity in both runner modes — completed 2026-04-25, 8/8 PASS
 
 ---
 
@@ -442,4 +442,4 @@ v1.10 active. Phases 63 and 67 can run in parallel (Node Editor sync vs Inline R
 | 63. Bidirectional Canvas ↔ Node Editor Sync | v1.10 | 4/4 + gap closure | Complete | 2026-04-25 |
 | 65. Runner Footer Layout — Back/Skip Row | v1.10 | 2/2 | Complete | 2026-04-25 |
 | 66. Runner Step-Back Reliability & Scroll Pinning | v1.10 | 0/TBD | Not started | — |
-| 67. Inline Runner Resizable Modal & File-Bound Snippet Parity | v1.10 | 2/3 | In progress | — |
+| 67. Inline Runner Resizable Modal & File-Bound Snippet Parity | v1.10 | 3/3 | Complete | 2026-04-25 |

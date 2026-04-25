@@ -2,115 +2,74 @@
 
 ## Context
 
-UAT found 2 major issues + 1 enhancement request after Phase 67 execution:
+UAT found 2 major issues after Phase 67 execution. Diagnosis reveals both share a single root cause in the current codebase.
 
 | Gap | Severity | Root Cause |
 |-----|----------|------------|
-| Drag resets size after resize | major | `getAppliedPosition()` reads only `left`/`top`; `dragUpHandler` saves position-only, overwriting saved width/height |
-| Tab switch resets size | major | `reclampCurrentPosition()` uses `getBoundingClientRect()` on hidden element (`is-hidden` → `display:none` → 0×0), falls back to defaults, and persists them |
-| Default size too small | minor | `INLINE_RUNNER_DEFAULT_WIDTH=360, HEIGHT=240` causes scrollbar with typical content |
+| Drag resets size after resize | major | `applyPosition()` clears `style.width` during drag. `getAppliedLayout()` reads `NaN`, falls back to default width, and `dragUpHandler` persists the corrupted layout. |
+| Tab switch resets size | major | Downstream effect: after drag corrupts saved width to default, `reclampCurrentPosition()` / `restoreOrDefaultPosition()` read the corrupted saved state and apply it. |
 
 ## Files to Modify
 
-- `src/views/inline-runner-modal.ts` — all fixes
-- `src/__tests__/views/inline-runner-position.test.ts` — update drag-save assertion for layout payload
-- `src/__tests__/inline-runner-layout.test.ts` — add test for hidden-element reclamp guard
+- `src/views/inline-runner-modal.ts` — fix drag handler
+
+## Diagnosis Summary
+
+### Current code state (already partially refactored from earlier plan)
+
+- `getAppliedLayout()` exists and correctly reads `width`/`height` from inline styles.
+- `dragUpHandler` already calls `getAppliedLayout()` and saves the full layout.
+- `reclampCurrentPosition()` already reads from inline styles (not `getBoundingClientRect`) and has the `is-hidden` guard.
+
+### The remaining bug
+
+In `enableDragging()` (`inline-runner-modal.ts:744`), `dragMoveHandler` calls:
+
+```typescript
+if (next !== null) this.applyPosition(next);
+```
+
+`applyPosition()` (`inline-runner-modal.ts:662`) sets `left`/`top` and **clears** `style.width` (and `style.maxWidth`):
+
+```typescript
+this.containerEl.style.width = '';
+```
+
+This was correct in Phase 60 (bottom-bar panel, width controlled by CSS), but in Phase 67 the modal is explicitly sized via `resize: both`. Clearing `style.width` strips the user's resized width.
+
+On drag end, `getAppliedLayout()` reads the now-empty `style.width`, gets `NaN`, and falls back to `INLINE_RUNNER_DEFAULT_WIDTH` (360px). `dragUpHandler` saves this corrupted default width.
+
+Once saved state is corrupted, any subsequent `reclampCurrentPosition()` or `restoreOrDefaultPosition()` applies the default width, making tab switches appear to reset the size.
 
 ## Tasks
 
-### Task 1: Replace `getAppliedPosition` with `getAppliedLayout`
+### Task 1: Fix `applyPosition()` to not clear explicit width
 
 **In `src/views/inline-runner-modal.ts`:**
 
-1. Rename `getAppliedPosition()` → `getAppliedLayout()`.
-2. Read `width` and `height` from `containerEl.style.width` / `containerEl.style.height` (parseFloat, fallback to defaults if not finite).
-3. Return `InlineRunnerLayout | null` instead of `InlineRunnerLayout | null` with only `left`/`top`.
-4. Update all callers:
-   - `dragUpHandler` → use `getAppliedLayout()`
-   - `reclampCurrentPosition` → use `getAppliedLayout()` for `currentPosition`
-   - `handleResizeDebounceExpire` → use `getAppliedLayout()` for `appliedPosition`
-   - `restoreOrDefaultPosition` — no change (reads from plugin settings)
+In `applyPosition()` (`inline-runner-modal.ts:662`), remove the `style.width` reset:
 
-### Task 2: Fix `dragUpHandler` to save full layout
-
-**In `src/views/inline-runner-modal.ts`:**
-
-Replace:
-```ts
-const finalPosition = this.getAppliedPosition();
-this.removeDragListeners();
-if (finalPosition !== null) {
-  void this.plugin.saveInlineRunnerPosition(finalPosition);
+```typescript
+private applyPosition(position: InlineRunnerLayout): void {
+  if (this.containerEl === null) return;
+  this.containerEl.style.left = `${Math.round(position.left)}px`;
+  this.containerEl.style.top = `${Math.round(position.top)}px`;
+  this.containerEl.style.right = '';
+  this.containerEl.style.bottom = '';
+  // Phase 67: do NOT clear style.width — the modal is resizable and width must persist
+  // this.containerEl.style.width = '';
+  this.containerEl.style.maxWidth = '';
+  this.containerEl.style.transform = '';
 }
 ```
 
-With:
-```ts
-const finalLayout = this.getAppliedLayout();
-this.removeDragListeners();
-if (finalLayout !== null) {
-  void this.plugin.saveInlineRunnerPosition(finalLayout);
-}
-```
+**Rationale:**
+- `applyPosition()` was written in Phase 60 when the Inline Runner was a bottom-bar panel whose width was controlled by CSS. Clearing `style.width` allowed CSS rules to own the width.
+- In Phase 67, the modal uses `resize: both` and `style.width`/`style.height` are explicitly managed. Clearing `style.width` during drag strips the user's resized width.
+- The only other caller is `applyLayout()`, which immediately sets `style.width` after calling `applyPosition()`. Removing the clear is therefore harmless for that path.
+- This is the minimal, highest-performance fix: the drag handler continues to call `applyPosition(next)` on every pointermove, but now the resized dimensions are preserved.
 
-### Task 3: Fix `reclampCurrentPosition` to avoid reading from hidden element
-
-**In `src/views/inline-runner-modal.ts`:**
-
-Change size reading from:
-```ts
-const rect = this.containerEl.getBoundingClientRect();
-const current: InlineRunnerLayout = {
-  left: currentPosition.left,
-  top: currentPosition.top,
-  width: rect.width > 0 ? rect.width : INLINE_RUNNER_DEFAULT_WIDTH,
-  height: rect.height > 0 ? rect.height : INLINE_RUNNER_DEFAULT_HEIGHT,
-};
-```
-
-To read width/height from **inline styles** (or saved layout) instead of `getBoundingClientRect`:
-```ts
-const saved = this.plugin.getInlineRunnerPosition();
-const styleWidth = Number.parseFloat(this.containerEl.style.width);
-const styleHeight = Number.parseFloat(this.containerEl.style.height);
-const current: InlineRunnerLayout = {
-  left: currentPosition.left,
-  top: currentPosition.top,
-  width: Number.isFinite(styleWidth) && styleWidth > 0 ? styleWidth : (saved?.width ?? INLINE_RUNNER_DEFAULT_WIDTH),
-  height: Number.isFinite(styleHeight) && styleHeight > 0 ? styleHeight : (saved?.height ?? INLINE_RUNNER_DEFAULT_HEIGHT),
-};
-```
-
-Also add early return if element is hidden:
-```ts
-if (this.containerEl.hasClass('is-hidden')) return;
-```
-
-### Task 4: Increase default size
-
-**In `src/views/inline-runner-modal.ts`:**
-
-Change:
-```ts
-const INLINE_RUNNER_DEFAULT_WIDTH = 360;
-const INLINE_RUNNER_DEFAULT_HEIGHT = 240;
-```
-
-To:
-```ts
-const INLINE_RUNNER_DEFAULT_WIDTH = 420;
-const INLINE_RUNNER_DEFAULT_HEIGHT = 320;
-```
-
-### Task 5: Update tests
-
-**In `src/__tests__/views/inline-runner-position.test.ts`:**
-- Update drag-save assertion: expect `{ left, top, width, height }` payload instead of `{ left, top }`.
-
-**In `src/__tests__/inline-runner-layout.test.ts`:**
-- Add test: when container is hidden (`display:none`), `reclampCurrentPosition` must NOT fallback to defaults and must NOT call save.
-
-### Task 6: Build & verify
+### Task 2: Build & verify
 
 Run:
 ```bash
@@ -120,13 +79,12 @@ npm test
 
 ## Verification Criteria
 
-- [ ] Resize modal, drag it — size stays as resized (not reset to default).
-- [ ] Resize modal, switch to new note tab, switch back — size persists.
-- [ ] Default size for new users is 420×320 (no scrollbar for typical question + 3 answers).
-- [ ] All existing tests pass (805+).
+- [ ] Resize modal to non-default size, drag header — modal moves without changing size.
+- [ ] After dragging, switch Obsidian tabs and back — size persists.
+- [ ] Close modal and reopen via "Run protocol in inline" — size restores.
+- [ ] All existing tests pass.
 - [ ] `npm run build` succeeds.
 
 ## Commits
 
-1. `fix(inline-runner): drag and tab-switch preserve resized dimensions`
-2. `style(inline-runner): increase default modal size to 420x320`
+1. `fix(inline-runner): drag preserves resized dimensions`

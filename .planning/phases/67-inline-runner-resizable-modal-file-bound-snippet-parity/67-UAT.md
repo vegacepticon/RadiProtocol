@@ -4,8 +4,9 @@ phase: 67-inline-runner-resizable-modal-file-bound-snippet-parity
 source:
   - 67-01-SUMMARY.md
   - 67-02-SUMMARY.md
+  - 67-03-SUMMARY.md
 started: 2026-04-25T18:15:00Z
-updated: 2026-04-25T18:30:00Z
+updated: 2026-04-25T23:50:00Z
 ---
 
 ## Current Test
@@ -22,9 +23,8 @@ expected: |
   It enforces max bounds of viewport - 32px — cannot grow beyond that.
   During active resize, an elevated shadow is visible (is-resizing class).
   Resize is smooth with no jumps or focus loss.
-result: issue
-reported: "Этот тест pass, но вижу сопутствующие нежелательные изменения - когда после resize пытаюсь переместить модалку, то ее размеры сразу же откатываются к изначальным, они не сохраняются"
-severity: major
+result: pass
+notes: "Gap fixed in commit 92a1269 — applyPosition() no longer clears style.width during drag."
 
 ### 2. Size persists across tab switch and restart
 expected: |
@@ -32,9 +32,8 @@ expected: |
   Switch to another Obsidian tab, then switch back — size restores exactly.
   Close the modal and reopen via "Run protocol in inline" — size restores.
   Restart Obsidian, reopen the note, run inline runner — size restores from disk.
-result: issue
-reported: "Нет, почему-то после resize если ухожу на другие вкладки то измененный размер не сохраняется, вновь возвращается к изначальному, но не всегда, если я просто перехожу по уже открытым вкладкам - размер сохраняется, но если я перехожу на другую вкладку, открываю новую - перехожу на нее, то размер возвращается к изначальному. Ну и сохраняется сброс выставленных размеров после перетаскивания в таргетной заметке"
-severity: major
+result: pass
+notes: "Downstream effect of Gap 1; fixed once drag preservation was resolved (commit 92a1269)."
 
 ### 3. Clamp size on viewport shrink
 expected: |
@@ -86,30 +85,14 @@ notes: "User clarified: in Inline Runner, step-back returns state but does NOT r
 ## Summary
 
 total: 8
-passed: 6
-issues: 2
+passed: 8
+issues: 0
 pending: 0
 skipped: 0
 blocked: 0
 
 ## Gaps
 
-- truth: "Inline Runner modal size should persist after resize and not reset when dragging the modal"
-  status: failed
-  reason: "User reported: Этот тест pass, но вижу сопутствующие нежелательные изменения - когда после resize пытаюсь переместить модалку, то ее размеры сразу же откатываются к изначальным, они не сохраняются"
-  severity: major
-  test: 1
-  root_cause: ""
-  artifacts: []
-  missing: []
-  debug_session: ""
-
-- truth: "Inline Runner modal size should persist across tab switches and new note opens"
-  status: failed
-  reason: "User reported: Нет, почему-то после resize если ухожу на другие вкладки то измененный размер не сохраняется, вновь возвращается к изначальному, но не всегда, если я просто перехожу по уже открытым вкладкам - размер сохраняется, но если я перехожу на другую вкладку, открываю новую - перехожу на нее, то размер возвращается к изначальному. Ну и сохраняется сброс выставленных размеров после перетаскивания в таргетной заметке"
-  severity: major
-  test: 2
-  root_cause: ""
-  artifacts: []
-  missing: []
-  debug_session: ""
+All gaps resolved via gap-closure commit 92a1269 (applyPosition no longer clears style.width during drag).
+- Gap 1 (drag resets size) — FIXED
+- Gap 2 (tab switch resets size) — FIXED (downstream effect of Gap 1)
