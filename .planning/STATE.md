@@ -3,31 +3,31 @@ gsd_state_version: 1.0
 milestone: v1.10
 milestone_name: Editor Sync & Runner UX Polish
 status: in-progress
-stopped_at: "Phase 63 complete (4/4 plans shipped including gap closure Plan 04); manual UAT pending per 63-VALIDATION.md"
-last_updated: "2026-04-25T10:01:00.000Z"
-last_activity: 2026-04-25 — Phase 63 Plan 04 gap closure shipped (collectIncomingSnippetEdgeEdits + text-aware snapshot baseline + canonical key synthesis; 10 new tests; full suite 764/765 GREEN; build GREEN); Phase 63 closed pending manual UAT
+stopped_at: "Completed 65-01-PLAN.md (RED regression tests for RUNNER-02); ready for 65-02 implementation"
+last_updated: "2026-04-25T09:40:46.000Z"
+last_activity: 2026-04-25 — Phase 65 Plan 01 shipped RED footer layout tests for RunnerView + InlineRunnerModal; focused Vitest command fails 6/6 for intended RUNNER-02 gaps; ready for 65-02 GREEN implementation
 progress:
   total_phases: 5
-  completed_phases: 1
-  total_plans: 4
-  completed_plans: 4
-  percent: 100
+  completed_phases: 2
+  total_plans: 9
+  completed_plans: 8
+  percent: 89
 ---
 
 # RadiProtocol — Project State
 
 **Updated:** 2026-04-25
 **Milestone:** v1.10 Editor Sync & Runner UX Polish
-**Status:** Phase 63 ✓ — Plan 01 (Wave 1, pure reconciler) shipped 2026-04-25 with 32/32 tests GREEN; Plan 02 (Wave 2, EdgeLabelSyncService writer + dispatch bus) shipped 2026-04-25 with 42/42 GREEN + build GREEN; Plan 03 (Wave 3, EditorPanelView subscription) shipped 2026-04-25 with 17/17 GREEN + full suite 754/755 GREEN + build GREEN. Phase 63 executed; manual UAT pending per 63-VALIDATION.md "Manual-Only Verifications". Next: `/gsd-verify-work 63` against the manual UAT checklist, then plan Phase 64.
+**Status:** Phase 65 Plan 01 complete — RED Vitest coverage now locks RUNNER-02 footer row placement and visible Back/Skip labels across RunnerView and InlineRunnerModal. Focused command intentionally fails against current implementation; next action is 65-02 implementation to turn these tests GREEN.
 
 ---
 
 ## Current Position
 
-Phase: 63 (executed — 4/4 plans complete including gap closure; manual UAT pending)
-Plan: 63-01 → 63-02 → 63-03 → 63-04 — **Phase 63 complete**
-Status: Phase 63 closed pending UAT. Plan 04 — **Phase 63 complete** (4/4 plans, requires manual UAT). Gap 1 (EDITOR-03): outbound Snippet branch label → incoming edge sync via collectIncomingSnippetEdgeEdits. Gap 2 (EDITOR-05): inbound canvas text → form field sync via text-aware snapshot baseline + canonical key synthesis. Next action: manual UAT checklist (3 items in 63-VALIDATION.md) then plan Phase 64.
-Last activity: 2026-04-25 — Plan 63-04 shipped (2 atomic commits: 841d26a feat, 624aad6 feat) + 63-04-SUMMARY.md
+Phase: 65 (in progress — 1/2 plans complete)
+Plan: 65-01 complete → next 65-02
+Status: RED coverage complete. `src/__tests__/views/runner-footer-layout.test.ts` asserts mixed answer/snippet DOM order, footer row class, visible `Back`/`Skip`, RunnerView click prologue, and inline parity. Next action: execute 65-02 implementation.
+Last activity: 2026-04-25 — Plan 65-01 shipped (commits 3c16e4e, 75db900) + 65-01-SUMMARY.md
 
 ---
 
@@ -115,9 +115,9 @@ See: `.planning/REQUIREMENTS.md` (updated 2026-04-25 — traceability populated,
 ## Session Continuity
 
 Last session: 2026-04-25
-Stopped at: Phase 63 complete (3/3 plans, executed) — Plan 03 EditorPanelView subscribes to Plan 02 dispatch bus; full suite 754/755 GREEN + build GREEN; manual UAT pending
-Resume file: .planning/phases/63-bidirectional-canvas-node-editor-sync/63-03-SUMMARY.md
-Next action: manual UAT (3 items in 63-VALIDATION.md "Manual-Only Verifications") → `/gsd-verify-work 63` → plan Phase 64 via `/gsd-plan-phase 64`
+Stopped at: Completed 65-01-PLAN.md — RED footer layout tests are committed; focused command fails 6/6 for intended current implementation gaps
+Resume file: .planning/phases/65-runner-footer-layout-back-skip-row/65-01-SUMMARY.md
+Next action: execute 65-02 implementation and turn `src/__tests__/views/runner-footer-layout.test.ts` GREEN
 
 ---
 
@@ -126,7 +126,7 @@ Next action: manual UAT (3 items in 63-VALIDATION.md "Manual-Only Verifications"
 - Branch: `main`
 - Main: `main`
 - Last shipped: v1.9 (2026-04-25; GitHub Release v1.9.0 published)
-- Active phase: 63 (next to plan)
+- Active phase: 65 (1/2 plans complete)
 
 ---
 
