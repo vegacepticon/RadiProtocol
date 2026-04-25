@@ -14,7 +14,7 @@ vi.mock('../../views/snippet-tree-picker', () => {
 import { RunnerView } from '../../views/runner-view';
 import { InlineRunnerModal } from '../../views/inline-runner-modal';
 import type RadiProtocolPlugin from '../../main';
-import type { AnswerNode, ProtocolGraph, RPEdge, SnippetNode } from '../../graph/graph-model';
+import type { AnswerNode, ProtocolGraph, RPEdge, RPNode, SnippetNode } from '../../graph/graph-model';
 
 interface FakeNode {
   tag: string;
@@ -155,11 +155,11 @@ function buildMixedGraph(): ProtocolGraph {
 
   return {
     canvasFilePath: 'test.canvas',
-    nodes: new Map([
+    nodes: new Map<string, RPNode>([
       ['q1', { kind: 'question', id: 'q1', questionText: 'Pick one?', x: 0, y: 0, width: 200, height: 80 }],
       ['a1', answerNode],
       ['s1', snippetNode],
-    ]) as ProtocolGraph['nodes'],
+    ]),
     edges: [
       { id: 'e-q1-a1', fromNodeId: 'q1', toNodeId: 'a1' },
       { id: 'e-q1-s1', fromNodeId: 'q1', toNodeId: 's1' },
@@ -173,11 +173,11 @@ function buildMixedGraph(): ProtocolGraph {
 function buildLoopGraph(): ProtocolGraph {
   return {
     canvasFilePath: 'loop.canvas',
-    nodes: new Map([
+    nodes: new Map<string, RPNode>([
       ['loop1', { kind: 'loop', id: 'loop1', headerText: 'Loop header', x: 0, y: 0, width: 200, height: 80 }],
       ['a1', { kind: 'answer', id: 'a1', answerText: 'Body answer', x: 0, y: 0, width: 100, height: 40 }],
       ['done', { kind: 'text-block', id: 'done', content: 'Done', x: 0, y: 0, width: 100, height: 40 }],
-    ]) as ProtocolGraph['nodes'],
+    ]),
     edges: [
       { id: 'e-body', fromNodeId: 'loop1', toNodeId: 'a1' },
       { id: 'e-exit', fromNodeId: 'loop1', toNodeId: 'done', label: '+ exit' },

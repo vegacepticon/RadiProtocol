@@ -521,7 +521,7 @@ export class InlineRunnerModal {
         cls: 'rp-step-back-btn',
         text: 'Back',
       });
-      backBtn.setAttribute('aria-label', 'Go back one step');
+      if ('setAttribute' in backBtn) backBtn.setAttribute('aria-label', 'Go back one step');
       backBtn.title = 'Go back one step';
       backBtn.addEventListener('click', options.onBack);
     }
@@ -530,7 +530,7 @@ export class InlineRunnerModal {
         cls: 'rp-skip-btn',
         text: 'Skip',
       });
-      skipBtn.setAttribute('aria-label', 'Skip this question');
+      if ('setAttribute' in skipBtn) skipBtn.setAttribute('aria-label', 'Skip this question');
       skipBtn.title = 'Skip this question';
       skipBtn.addEventListener('click', options.onSkip);
     }

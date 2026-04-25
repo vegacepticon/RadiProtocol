@@ -319,6 +319,46 @@
   display: none;
 }
 
+/* Phase 65: Runner footer Back/Skip row */
+.rp-runner-footer-row {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--size-2-2);
+  margin-top: var(--size-4-2);
+}
+
+.rp-runner-footer-row .rp-step-back-btn,
+.rp-runner-footer-row .rp-skip-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 1 auto;
+  min-width: max-content;
+  min-height: 32px;
+  margin-top: 0;
+  padding: var(--size-2-2) var(--size-4-2);
+  white-space: nowrap;
+  background: transparent;
+  border: 1px solid var(--background-modifier-border);
+  border-radius: var(--radius-s);
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
+.rp-runner-footer-row .rp-step-back-btn:hover,
+.rp-runner-footer-row .rp-skip-btn:hover {
+  background: var(--background-modifier-hover);
+  color: var(--text-normal);
+}
+
+.rp-runner-footer-row .rp-step-back-btn:focus-visible,
+.rp-runner-footer-row .rp-skip-btn:focus-visible {
+  outline: 2px solid var(--interactive-accent);
+  outline-offset: 1px;
+}
+
 /* Phase 13: CanvasSelectorWidget ─────────────────────────────────────────── */
 
 .rp-selector-bar {

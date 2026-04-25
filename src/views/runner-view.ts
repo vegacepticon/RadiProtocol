@@ -752,7 +752,7 @@ export class RunnerView extends ItemView {
         cls: 'rp-step-back-btn',
         text: 'Back',
       });
-      backBtn.setAttribute('aria-label', 'Go back one step');
+      if ('setAttribute' in backBtn) backBtn.setAttribute('aria-label', 'Go back one step');
       backBtn.title = 'Go back one step';
       this.registerDomEvent(backBtn, 'click', options.onBack);
     }
@@ -761,7 +761,7 @@ export class RunnerView extends ItemView {
         cls: 'rp-skip-btn',
         text: 'Skip',
       });
-      skipBtn.setAttribute('aria-label', 'Skip this question');
+      if ('setAttribute' in skipBtn) skipBtn.setAttribute('aria-label', 'Skip this question');
       skipBtn.title = 'Skip this question';
       this.registerDomEvent(skipBtn, 'click', options.onSkip);
     }
