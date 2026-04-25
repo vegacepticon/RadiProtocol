@@ -341,7 +341,13 @@ describe('Phase 51 Plan 06 — ProtocolRunner D-13/D-14/D-15 auto-insert dispatc
     expect(s.accumulatedText).toBe('preceding text');
   });
 
-  it('Test 9: D-13 exclusion — Snippet-as-start (start edge directly to file-bound Snippet, no Question) does NOT auto-insert', () => {
+  it('Test 9 (Phase 67 D-14): Snippet-as-start (start edge directly to file-bound Snippet, no Question) routes to awaiting-snippet-fill', () => {
+    // Phase 67 D-14 update: the unconditional `awaiting-snippet-pick` halt at
+    // protocol-runner.ts:736-741 was the FIX-07 root cause. With D-14 in place,
+    // `advanceThrough` `case 'snippet'` now branches on `radiprotocol_snippetPath`:
+    // file-bound → `awaiting-snippet-fill` direct dispatch. This applies to ANY
+    // traversal path — direct start edge, loop body, sibling-button click —
+    // matching the must_haves "ANY edge" contract from 67-02-PLAN.md.
     const graph = buildGraph(
       [
         makeStart('n-start'),
@@ -356,12 +362,17 @@ describe('Phase 51 Plan 06 — ProtocolRunner D-13/D-14/D-15 auto-insert dispatc
     const runner = new ProtocolRunner();
     runner.start(graph);
     const state = runner.getState();
-    // existing case 'snippet' arm halts at awaiting-snippet-pick
-    expect(state.status).toBe('awaiting-snippet-pick');
+    // Phase 67 D-14: file-bound dispatch via direct edge — runner is in awaiting-snippet-fill.
+    expect(state.status).toBe('awaiting-snippet-fill');
+    if (state.status !== 'awaiting-snippet-fill') return;
+    expect(state.snippetId).toBe('abdomen/ct.md');
+    expect(state.nodeId).toBe('sn');
   });
 
-  it('Test 10: D-13 exclusion — linear chain Answer → file-bound Snippet does NOT auto-insert', () => {
-    // start → q1 (question) → a1 (answer, terminal-before-snippet) → sn (file-bound)
+  it('Test 10 (Phase 67 D-14): linear chain Answer → file-bound Snippet routes to awaiting-snippet-fill', () => {
+    // start → q1 (question) → a1 (answer) → sn (file-bound)
+    // Phase 67 D-14 update: the runner-core fix routes file-bound snippet
+    // traversal via answer edge to `awaiting-snippet-fill` (not the picker).
     const graph = buildGraph(
       [
         makeStart('n-start'),
@@ -385,11 +396,14 @@ describe('Phase 51 Plan 06 — ProtocolRunner D-13/D-14/D-15 auto-insert dispatc
     if (state.status !== 'at-node') return;
     expect(state.currentNodeId).toBe('q1');
 
-    // Now pick a1 — runner should advance through answer → snippet, halts at awaiting-snippet-pick
-    // (NOT auto-insert; D-13 trigger is Question-rooted only)
+    // Now pick a1 — runner advances through answer → snippet; D-14 routes file-bound
+    // to awaiting-snippet-fill regardless of upstream traversal kind.
     runner.chooseAnswer('a1');
     const after = runner.getState();
-    expect(after.status).toBe('awaiting-snippet-pick');
+    expect(after.status).toBe('awaiting-snippet-fill');
+    if (after.status !== 'awaiting-snippet-fill') return;
+    expect(after.snippetId).toBe('abdomen/ct.md');
+    expect(after.nodeId).toBe('sn');
   });
 
   it('Test 11 (Phase 56 D-02): loop integration — Question inside loop body halts at-node; pickFileBoundSnippet drives awaiting-snippet-fill; stepBack returns to Question with loop context restored', () => {

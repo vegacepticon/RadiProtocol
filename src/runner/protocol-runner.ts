@@ -734,9 +734,26 @@ export class ProtocolRunner {
           return;
         }
         case 'snippet': {
-          // Phase 30 D-07: halt at snippet node, RunnerView renders the picker.
+          // Phase 67 D-14 — file-bound snippet bypass picker; directory-bound preserves Phase 30 D-07 picker path.
+          // Mandate exception to CLAUDE.md "never remove existing code you didn't add": the original 4-line block
+          // at this location (Phase 30 D-07) was the bug — it unconditionally halted at 'awaiting-snippet-pick'
+          // regardless of radiprotocol_snippetPath, breaking loop-body and direct-edge traversals to file-bound
+          // snippets. Phase 56 fixed only the sibling-button dispatch (pickFileBoundSnippet); the runner-core
+          // traversal arm was the root cause of FIX-07 and is replaced here.
+          //
+          // No undo push here — advanceThrough never pushes (Pitfall 1). The caller has already pushed the
+          // appropriate undo entry (e.g. chooseLoopBranch line ~238 pushes the loop-picker undo before invoking
+          // advanceThrough(edge.toNodeId)). Mirroring pickFileBoundSnippet (line 349) with its undo push removed.
           this.currentNodeId = cursor;
-          this.runnerStatus = 'awaiting-snippet-pick';
+          if (typeof node.radiprotocol_snippetPath === 'string' && node.radiprotocol_snippetPath !== '') {
+            // File-bound: direct dispatch — view's existing 'awaiting-snippet-fill' arm handles handleSnippetFill.
+            this.snippetId = node.radiprotocol_snippetPath;
+            this.snippetNodeId = cursor;
+            this.runnerStatus = 'awaiting-snippet-fill';
+          } else {
+            // Directory-bound (or unbound) — Phase 30 D-07 picker path preserved.
+            this.runnerStatus = 'awaiting-snippet-pick';
+          }
           return;
         }
         default: {
