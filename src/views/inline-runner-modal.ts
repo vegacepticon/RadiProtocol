@@ -523,7 +523,11 @@ export class InlineRunnerModal {
       });
       if ('setAttribute' in backBtn) backBtn.setAttribute('aria-label', 'Go back one step');
       backBtn.title = 'Go back one step';
-      backBtn.addEventListener('click', options.onBack);
+      // Phase 66 D-01 + D-02 + D-03: visual half of the double-click guard.
+      backBtn.addEventListener('click', () => {
+        backBtn.disabled = true;
+        options.onBack();
+      });
     }
     if (options.showSkip === true && options.onSkip !== undefined) {
       const skipBtn = footerRow.createEl('button', {

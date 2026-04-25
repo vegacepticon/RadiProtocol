@@ -334,8 +334,46 @@ describe('Phase 65 Plan 01 — RUNNER-02 RunnerView footer layout RED tests', ()
   });
 });
 
+describe('Phase 66 D-01/D-02/D-03 — Back disable-on-click guard', () => {
+  it('Phase 66 disables RunnerView Back synchronously before invoking the handler', () => {
+    const h = mountRunnerViewAtMixedQuestion();
+    const footerRow = findByClass(h.contentEl, 'rp-runner-footer-row')[0]!;
+    const backBtn = findByClass(footerRow, 'rp-step-back-btn')[0]!;
+
+    expect(backBtn.disabled).toBe(false);
+    backBtn._clickHandler?.();
+    expect(backBtn.disabled).toBe(true);
+    expect(h.stepBackSpy).toHaveBeenCalledTimes(1);
+
+    backBtn._clickHandler?.();
+    expect(backBtn.disabled).toBe(true);
+    expect(h.stepBackSpy.mock.calls.length).toBeLessThanOrEqual(2);
+  });
+
+  it('Phase 66 keeps the Back guard scoped away from RunnerView Skip', () => {
+    const h = mountRunnerViewAtMixedQuestion();
+    const footerRow = findByClass(h.contentEl, 'rp-runner-footer-row')[0]!;
+    const backBtn = findByClass(footerRow, 'rp-step-back-btn')[0]!;
+    const skipBtn = findByClass(footerRow, 'rp-skip-btn')[0]!;
+
+    backBtn._clickHandler?.();
+    expect(backBtn.disabled).toBe(true);
+    expect(skipBtn.disabled).toBe(false);
+
+    const fresh = mountRunnerViewAtMixedQuestion();
+    const freshFooterRow = findByClass(fresh.contentEl, 'rp-runner-footer-row')[0]!;
+    const freshBackBtn = findByClass(freshFooterRow, 'rp-step-back-btn')[0]!;
+    const freshSkipBtn = findByClass(freshFooterRow, 'rp-skip-btn')[0]!;
+    freshSkipBtn._clickHandler?.();
+    expect(freshSkipBtn.disabled).toBe(false);
+    expect(freshBackBtn.disabled).toBe(false);
+  });
+});
+
 interface InlineHarness {
   contentEl: FakeNode;
+  stepBackSpy: ReturnType<typeof vi.fn>;
+  skipSpy: ReturnType<typeof vi.fn>;
 }
 
 function makeInlineApp(): import('obsidian').App {
@@ -374,6 +412,8 @@ function mountInlineModalWithState(
     { path: 'target.md' } as import('obsidian').TFile,
   );
   const contentEl = makeFakeNode();
+  const stepBackSpy = vi.fn();
+  const skipSpy = vi.fn();
   (modal as unknown as { contentEl: FakeNode }).contentEl = contentEl;
   (modal as unknown as { graph: ProtocolGraph }).graph = graph;
   (modal as unknown as { runner: unknown }).runner = {
@@ -381,13 +421,13 @@ function mountInlineModalWithState(
     chooseAnswer: vi.fn(),
     chooseSnippetBranch: vi.fn(),
     pickFileBoundSnippet: vi.fn(),
-    skip: vi.fn(),
-    stepBack: vi.fn(),
+    skip: skipSpy,
+    stepBack: stepBackSpy,
     chooseLoopBranch: vi.fn(),
   };
 
   (modal as unknown as { render: () => void }).render();
-  return { contentEl };
+  return { contentEl, stepBackSpy, skipSpy };
 }
 
 describe('Phase 65 Plan 01 — RUNNER-02 InlineRunnerModal footer layout RED tests', () => {
@@ -447,5 +487,30 @@ describe('Phase 65 Plan 01 — RUNNER-02 InlineRunnerModal footer layout RED tes
     expect(snippetFooter).toBeDefined();
     expect(textOf(findByClass(snippetFooter, 'rp-step-back-btn')[0])).toBe('Back');
     expect(textOf(snippetHarness.contentEl)).not.toContain('Step back');
+  });
+});
+
+describe('Phase 66 D-01/D-02/D-03 — InlineRunnerModal Back disable-on-click guard', () => {
+  it('Phase 66 disables InlineRunnerModal Back synchronously before invoking the handler', () => {
+    const h = mountInlineModalWithState(
+      {
+        status: 'at-node',
+        currentNodeId: 'q1',
+        accumulatedText: 'Initial inline text',
+        canStepBack: true,
+      },
+      buildMixedGraph(),
+    );
+    const footerRow = findByClass(h.contentEl, 'rp-runner-footer-row')[0]!;
+    const backBtn = findByClass(footerRow, 'rp-step-back-btn')[0]!;
+
+    expect(backBtn.disabled).toBe(false);
+    backBtn._clickHandler?.();
+    expect(backBtn.disabled).toBe(true);
+    expect(h.stepBackSpy).toHaveBeenCalledTimes(1);
+
+    backBtn._clickHandler?.();
+    expect(backBtn.disabled).toBe(true);
+    expect(h.stepBackSpy.mock.calls.length).toBeLessThanOrEqual(2);
   });
 });

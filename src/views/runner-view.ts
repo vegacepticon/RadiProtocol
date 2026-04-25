@@ -743,7 +743,13 @@ export class RunnerView extends ItemView {
       });
       if ('setAttribute' in backBtn) backBtn.setAttribute('aria-label', 'Go back one step');
       backBtn.title = 'Go back one step';
-      this.registerDomEvent(backBtn, 'click', options.onBack);
+      // Phase 66 D-01 + D-02 + D-03: visual half of the double-click guard.
+      // Disable Back synchronously on first click; the runner-side `_stepBackInFlight`
+      // (Plan 01) silences any second invocation that slipped through. No new CSS — D-02.
+      this.registerDomEvent(backBtn, 'click', () => {
+        backBtn.disabled = true;
+        options.onBack();
+      });
     }
     if (options.showSkip === true && options.onSkip !== undefined) {
       const skipBtn = footerRow.createEl('button', {
