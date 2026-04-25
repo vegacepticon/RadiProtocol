@@ -11,6 +11,7 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
+import { TFile } from 'obsidian';
 import { EdgeLabelSyncService } from '../canvas/edge-label-sync-service';
 import type { CanvasChangedForNodeDetail } from '../canvas/edge-label-sync-service';
 
@@ -40,7 +41,12 @@ function buildService(initialCanvasContent: string): BuildServiceResult {
         vaultHandlers.set(event, handler);
         return { event };
       },
-      getAbstractFileByPath: (_p: string) => ({ path: 'test.canvas' }), // not actually used (live JSON path wins)
+      getAbstractFileByPath: (_p: string) => {
+        // Return a TFile-like object so Strategy A (vault.modify) path can proceed.
+        const f = Object.create(TFile.prototype);
+        f.path = 'test.canvas';
+        return f;
+      },
       read: vi.fn().mockImplementation(() => Promise.resolve(currentContent)),
       modify: vaultModifySpy,
     },
@@ -590,5 +596,217 @@ describe('Gap 2 — inbound text diff dispatch', () => {
     const fieldDispatch = calls.find((c) => c.changeKind === 'fields' && c.nodeId === 'n-loop');
     expect(fieldDispatch).toBeDefined();
     expect(fieldDispatch!.fieldUpdates!['radiprotocol_headerText']).toBe('New');
+  });
+});
+
+describe('Gap 3 — text → canonical field persistence', () => {
+  it('Question text change persists radiprotocol_questionText via saveLiveBatch', async () => {
+    const pass1 = makeCanvas({
+      nodes: [
+        {
+          id: 'n-q1', type: 'text', text: 'Old',
+          x: 0, y: 0, width: 200, height: 60,
+          radiprotocol_nodeType: 'question',
+          radiprotocol_questionText: 'Old',
+        },
+      ],
+    });
+    const { service, setCanvas, saveLiveBatchSpy } = buildService(pass1);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    await (service as any).reconcile('test.canvas');
+
+    setCanvas(makeCanvas({
+      nodes: [
+        {
+          id: 'n-q1', type: 'text', text: 'New',
+          x: 0, y: 0, width: 200, height: 60,
+          radiprotocol_nodeType: 'question',
+          radiprotocol_questionText: 'Old',
+        },
+      ],
+    }));
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    await (service as any).reconcile('test.canvas');
+
+    expect(saveLiveBatchSpy).toHaveBeenCalled();
+    const batchArgs = saveLiveBatchSpy.mock.calls[0]!;
+    const nodeEdits = batchArgs[1] as Array<{ nodeId: string; edits: Record<string, unknown> }>;
+    const qEdit = nodeEdits.find((e) => e.nodeId === 'n-q1');
+    expect(qEdit).toBeDefined();
+    expect(qEdit!.edits['radiprotocol_questionText']).toBe('New');
+  });
+
+  it('Answer text change persists radiprotocol_answerText via vault.modify when canvas is closed', async () => {
+    const pass1 = makeCanvas({
+      nodes: [
+        {
+          id: 'n-a1', type: 'text', text: 'Old',
+          x: 0, y: 0, width: 200, height: 60,
+          radiprotocol_nodeType: 'answer',
+          radiprotocol_answerText: 'Old',
+        },
+      ],
+    });
+    const { service, setCanvas, saveLiveBatchSpy, vaultModifySpy } = buildService(pass1);
+    saveLiveBatchSpy.mockResolvedValue(false); // simulate closed canvas
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    await (service as any).reconcile('test.canvas');
+
+    setCanvas(makeCanvas({
+      nodes: [
+        {
+          id: 'n-a1', type: 'text', text: 'New',
+          x: 0, y: 0, width: 200, height: 60,
+          radiprotocol_nodeType: 'answer',
+          radiprotocol_answerText: 'Old',
+        },
+      ],
+    }));
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    await (service as any).reconcile('test.canvas');
+
+    expect(vaultModifySpy).toHaveBeenCalled();
+    const modifiedJson = JSON.parse(vaultModifySpy.mock.calls[0]![1] as string);
+    const aNode = modifiedJson.nodes.find((n: Record<string, unknown>) => n.id === 'n-a1');
+    expect(aNode['radiprotocol_answerText']).toBe('New');
+  });
+
+  it('Text-block text change persists radiprotocol_content via saveLiveBatch', async () => {
+    const pass1 = makeCanvas({
+      nodes: [
+        {
+          id: 'n-tb', type: 'text', text: 'Old',
+          x: 0, y: 0, width: 200, height: 60,
+          radiprotocol_nodeType: 'text-block',
+          radiprotocol_content: 'Old',
+        },
+      ],
+    });
+    const { service, setCanvas, saveLiveBatchSpy } = buildService(pass1);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    await (service as any).reconcile('test.canvas');
+
+    setCanvas(makeCanvas({
+      nodes: [
+        {
+          id: 'n-tb', type: 'text', text: 'New',
+          x: 0, y: 0, width: 200, height: 60,
+          radiprotocol_nodeType: 'text-block',
+          radiprotocol_content: 'Old',
+        },
+      ],
+    }));
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    await (service as any).reconcile('test.canvas');
+
+    const batchArgs = saveLiveBatchSpy.mock.calls[0]!;
+    const nodeEdits = batchArgs[1] as Array<{ nodeId: string; edits: Record<string, unknown> }>;
+    const tbEdit = nodeEdits.find((e) => e.nodeId === 'n-tb');
+    expect(tbEdit).toBeDefined();
+    expect(tbEdit!.edits['radiprotocol_content']).toBe('New');
+  });
+
+  it('Loop text change persists radiprotocol_headerText via saveLiveBatch', async () => {
+    const pass1 = makeCanvas({
+      nodes: [
+        {
+          id: 'n-loop', type: 'text', text: 'Old',
+          x: 0, y: 0, width: 200, height: 60,
+          radiprotocol_nodeType: 'loop',
+          radiprotocol_headerText: 'Old',
+        },
+      ],
+    });
+    const { service, setCanvas, saveLiveBatchSpy } = buildService(pass1);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    await (service as any).reconcile('test.canvas');
+
+    setCanvas(makeCanvas({
+      nodes: [
+        {
+          id: 'n-loop', type: 'text', text: 'New',
+          x: 0, y: 0, width: 200, height: 60,
+          radiprotocol_nodeType: 'loop',
+          radiprotocol_headerText: 'Old',
+        },
+      ],
+    }));
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    await (service as any).reconcile('test.canvas');
+
+    const batchArgs = saveLiveBatchSpy.mock.calls[0]!;
+    const nodeEdits = batchArgs[1] as Array<{ nodeId: string; edits: Record<string, unknown> }>;
+    const loopEdit = nodeEdits.find((e) => e.nodeId === 'n-loop');
+    expect(loopEdit).toBeDefined();
+    expect(loopEdit!.edits['radiprotocol_headerText']).toBe('New');
+  });
+
+  it('No duplicate nodeEdit when both text and radiprotocol_questionText change', async () => {
+    const pass1 = makeCanvas({
+      nodes: [
+        {
+          id: 'n-q1', type: 'text', text: 'Old',
+          x: 0, y: 0, width: 200, height: 60,
+          radiprotocol_nodeType: 'question',
+          radiprotocol_questionText: 'Old',
+        },
+      ],
+    });
+    const { service, setCanvas, saveLiveBatchSpy } = buildService(pass1);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    await (service as any).reconcile('test.canvas');
+
+    setCanvas(makeCanvas({
+      nodes: [
+        {
+          id: 'n-q1', type: 'text', text: 'New',
+          x: 0, y: 0, width: 200, height: 60,
+          radiprotocol_nodeType: 'question',
+          radiprotocol_questionText: 'New',
+        },
+      ],
+    }));
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    await (service as any).reconcile('test.canvas');
+
+    const batchArgs = saveLiveBatchSpy.mock.calls[0]!;
+    const nodeEdits = batchArgs[1] as Array<{ nodeId: string; edits: Record<string, unknown> }>;
+    const qEdits = nodeEdits.filter((e) => e.nodeId === 'n-q1');
+    // No duplicate nodeEdit: either 0 (canonical field already changed by form)
+    // or 1, but never 2.
+    expect(qEdits.length).toBeLessThanOrEqual(1);
+  });
+
+  it('Snippet text change does NOT produce a nodeEdit', async () => {
+    const pass1 = makeCanvas({
+      nodes: [
+        {
+          id: 'n-snip', type: 'text', text: 'abdomen',
+          x: 0, y: 0, width: 200, height: 60,
+          radiprotocol_nodeType: 'snippet',
+          radiprotocol_subfolderPath: 'abdomen',
+        },
+      ],
+    });
+    const { service, setCanvas, saveLiveBatchSpy } = buildService(pass1);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    await (service as any).reconcile('test.canvas');
+
+    setCanvas(makeCanvas({
+      nodes: [
+        {
+          id: 'n-snip', type: 'text', text: 'chest',
+          x: 0, y: 0, width: 200, height: 60,
+          radiprotocol_nodeType: 'snippet',
+          radiprotocol_subfolderPath: 'abdomen',
+        },
+      ],
+    }));
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    await (service as any).reconcile('test.canvas');
+
+    // Snippet text changes produce no dispatches and no nodeEdits → saveLiveBatch
+    // should not be called at all (D-07 short-circuit).
+    expect(saveLiveBatchSpy).not.toHaveBeenCalled();
   });
 });

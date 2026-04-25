@@ -161,6 +161,11 @@ export class EdgeLabelSyncService {
     const isFirstPass = previousSnapshot === undefined;
     const currentSnapshot = new Map<string, NodeFieldsSnapshot>();
     const dispatches: CanvasChangedForNodeDetail[] = [];
+    // Phase 63 Gap 3 (EDITOR-05 persistence): collect snapshot-derived node edits
+    // so that canvas 'text' changes are written back to the canonical radiprotocol_*
+    // field. Without this, the form shows the new value (dispatch) but the canvas JSON
+    // still holds the old canonical value → regression on close/reopen and runner.
+    const snapshotNodeEdits = new Map<string, Record<string, unknown>>();
 
     for (const node of graph.nodes.values()) {
       // Phase 63: read text fields from the resolved RPNode (parser has already
@@ -208,6 +213,8 @@ export class EdgeLabelSyncService {
       // Phase 63 Gap 2 (EDITOR-05): Obsidian canvas edits update the generic 'text'
       // property while leaving radiprotocol_* unchanged. Synthesize the correct
       // canonical field key based on node type so the form patch hits the right field.
+      // Phase 63 Gap 3: additionally produce a nodeEdit so the canonical field is
+      // persisted to canvas JSON (not just dispatched to the form).
       if (prev.text !== snap.text) {
         const canonicalKey =
           snap.kind === 'question'  ? 'radiprotocol_questionText' :
@@ -217,6 +224,10 @@ export class EdgeLabelSyncService {
           undefined;
         if (canonicalKey && !(canonicalKey in fieldUpdates)) {
           fieldUpdates[canonicalKey] = snap.text;
+          snapshotNodeEdits.set(node.id, {
+            ...(snapshotNodeEdits.get(node.id) ?? {}),
+            [canonicalKey]: snap.text,
+          });
         }
       }
 
@@ -258,6 +269,17 @@ export class EdgeLabelSyncService {
           ? { radiprotocol_displayLabel: c.newLabel }   // Phase 50 path preserved
           : { radiprotocol_snippetLabel: c.newLabel },  // Phase 63 D-04 snippet routing
       }));
+
+    // Phase 63 Gap 3: merge snapshot-derived edits into nodeEdits by nodeId.
+    for (const [nodeId, edits] of snapshotNodeEdits) {
+      const existing = nodeEdits.find((e) => e.nodeId === nodeId);
+      if (existing) {
+        Object.assign(existing.edits, edits);
+      } else {
+        nodeEdits.push({ nodeId, edits });
+      }
+    }
+
     const edgeEdits = diffs.map((d: EdgeLabelDiff) => ({
       edgeId: d.edgeId,
       label: d.targetLabel, // undefined → strip-key
