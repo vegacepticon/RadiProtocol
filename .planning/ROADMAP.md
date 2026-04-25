@@ -153,7 +153,7 @@ Full details: `.planning/milestones/v1.9-ROADMAP.md`
 <summary>🔄 v1.10 Editor Sync & Runner UX Polish (Phases 63-67) — IN PROGRESS</summary>
 
 - [x] Phase 63: Bidirectional Canvas ↔ Node Editor Sync (4/4 plans + gap closure) — executed 2026-04-25, all plans complete, manual UAT pending
-- [ ] Phase 64: Node Editor Polish — Auto-grow & Text Block Quick-Create (TBD plans)
+- [x] Phase 64: Node Editor Polish — Auto-grow & Text Block Quick-Create (3/3 plans) — executed 2026-04-25, UAT passed 7/7
 - [ ] Phase 65: Runner Footer Layout — Back/Skip Row (TBD plans)
 - [ ] Phase 66: Runner Step-Back Reliability & Scroll Pinning (TBD plans)
 - [ ] Phase 67: Inline Runner Resizable Modal & File-Bound Snippet Parity (TBD plans)
@@ -361,9 +361,9 @@ Plans:
 **UI hint**: yes
 
 Plans:
-- [ ] 64-01-PLAN.md — RED regression tests for all growable Node Editor fields and Text block quick-create
-- [ ] 64-02-PLAN.md — Shared growable textarea helper, field conversion, append-only CSS, and generated CSS rebuild
-- [ ] 64-03-PLAN.md — Text block quick-create toolbar button, automated verification, and human UI sign-off
+- [x] 64-01-PLAN.md — RED regression tests for all growable Node Editor fields and Text block quick-create (2026-04-25)
+- [x] 64-02-PLAN.md — Shared growable textarea helper, field conversion, append-only CSS, and generated CSS rebuild (2026-04-25)
+- [x] 64-03-PLAN.md — Text block quick-create toolbar button, automated verification, and human UI sign-off (2026-04-25; UAT 7/7 passed)
 
 ### Phase 65: Runner Footer Layout — Back/Skip Row
 **Goal**: The Runner footer is rebuilt so "step back" reads "back", Skip renders as a labeled button to the right of Back on the same row, and Skip never visually intrudes between answer-branch buttons and snippet-branch buttons on a mixed-branch question — applied uniformly across sidebar, tab, and inline modes.
