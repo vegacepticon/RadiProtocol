@@ -214,7 +214,15 @@ function makeView(): ViewHarness {
   const registerSpy = vi.fn();
   const domEventLog: Array<{ el: unknown; type: string; handler: () => void }> = [];
   const plugin = {
-    app: { vault: { adapter: { list: vi.fn(), exists: vi.fn() } } },
+    app: {
+      vault: {
+        adapter: { list: vi.fn(), exists: vi.fn() },
+        // Stubbed so loadNode → renderNodeForm doesn't hit "not a function" on
+        // the unhandled-promise path (renderNodeForm short-circuits on the
+        // file-not-found check we return null for).
+        getAbstractFileByPath: vi.fn().mockReturnValue(null),
+      },
+    },
     settings: { snippetFolderPath: '.radiprotocol/snippets' },
     snippetService: {},
     edgeLabelSyncService: { subscribe: subscribeSpy },
@@ -275,7 +283,7 @@ describe("EditorPanelView.applyCanvasPatch — formFieldRefs lifecycle (D-08)", 
   it('renderForm populates formFieldRefs for question textarea', () => {
     const { view } = makeView();
     // Drive the question form via the private renderForm + buildKindForm.
-    // @ts-expect-error accessing private for test
+    // bracket-syntax access into private members for test (no TS error suppression needed)
     view['renderForm']({ id: 'n1', radiprotocol_nodeType: 'question', radiprotocol_questionText: 'Q1' }, 'question');
 
     const refs = (view as unknown as {
@@ -289,7 +297,7 @@ describe("EditorPanelView.applyCanvasPatch — formFieldRefs lifecycle (D-08)", 
 
   it('formFieldRefs cleared on loadNode (node switch)', () => {
     const { view } = makeView();
-    // @ts-expect-error accessing private for test
+    // bracket-syntax access into private members for test (no TS error suppression needed)
     view['renderForm']({ id: 'n1', radiprotocol_nodeType: 'question', radiprotocol_questionText: 'Q1' }, 'question');
     const refs = (view as unknown as {
       formFieldRefs: Map<string, unknown>;
@@ -302,7 +310,7 @@ describe("EditorPanelView.applyCanvasPatch — formFieldRefs lifecycle (D-08)", 
 
   it('formFieldRefs cleared on onClose', async () => {
     const { view } = makeView();
-    // @ts-expect-error accessing private for test
+    // bracket-syntax access into private members for test (no TS error suppression needed)
     view['renderForm']({ id: 'n1', radiprotocol_nodeType: 'question', radiprotocol_questionText: 'Q1' }, 'question');
     const refs = (view as unknown as {
       formFieldRefs: Map<string, unknown>;
@@ -321,7 +329,7 @@ describe("EditorPanelView.applyCanvasPatch — formFieldRefs lifecycle (D-08)", 
 describe("EditorPanelView.applyCanvasPatch — D-08 patch non-focused field", () => {
   it('writes value to .value of unfocused textarea', async () => {
     const { view } = makeView();
-    // @ts-expect-error accessing private for test
+    // bracket-syntax access into private members for test (no TS error suppression needed)
     view['renderForm']({ id: 'n1', radiprotocol_nodeType: 'question', radiprotocol_questionText: 'Q1' }, 'question');
     (view as unknown as { currentFilePath: string | null }).currentFilePath = 'test.canvas';
     (view as unknown as { currentNodeId: string | null }).currentNodeId = 'n1';
@@ -332,7 +340,7 @@ describe("EditorPanelView.applyCanvasPatch — D-08 patch non-focused field", ()
       changeKind: 'fields',
       fieldUpdates: { radiprotocol_questionText: 'patched' },
     };
-    // @ts-expect-error accessing private for test
+    // bracket-syntax access into private members for test (no TS error suppression needed)
     view['applyCanvasPatch'](detail);
     await drainMicrotasks();
 
@@ -346,7 +354,7 @@ describe("EditorPanelView.applyCanvasPatch — D-08 patch non-focused field", ()
 
   it('does NOT push patched value into pendingEdits (RESEARCH Pitfall 6)', async () => {
     const { view } = makeView();
-    // @ts-expect-error accessing private for test
+    // bracket-syntax access into private members for test (no TS error suppression needed)
     view['renderForm']({ id: 'n1', radiprotocol_nodeType: 'question', radiprotocol_questionText: 'Q1' }, 'question');
     (view as unknown as { currentFilePath: string | null }).currentFilePath = 'test.canvas';
     (view as unknown as { currentNodeId: string | null }).currentNodeId = 'n1';
@@ -357,7 +365,7 @@ describe("EditorPanelView.applyCanvasPatch — D-08 patch non-focused field", ()
       changeKind: 'fields',
       fieldUpdates: { radiprotocol_questionText: 'patched' },
     };
-    // @ts-expect-error accessing private for test
+    // bracket-syntax access into private members for test (no TS error suppression needed)
     view['applyCanvasPatch'](detail);
     await drainMicrotasks();
 
@@ -369,7 +377,7 @@ describe("EditorPanelView.applyCanvasPatch — D-08 patch non-focused field", ()
 
   it('does NOT invoke the registered input handler (RESEARCH Pitfall 1)', async () => {
     const { view } = makeView();
-    // @ts-expect-error accessing private for test
+    // bracket-syntax access into private members for test (no TS error suppression needed)
     view['renderForm']({ id: 'n1', radiprotocol_nodeType: 'question', radiprotocol_questionText: 'Q1' }, 'question');
     (view as unknown as { currentFilePath: string | null }).currentFilePath = 'test.canvas';
     (view as unknown as { currentNodeId: string | null }).currentNodeId = 'n1';
@@ -398,7 +406,7 @@ describe("EditorPanelView.applyCanvasPatch — D-08 patch non-focused field", ()
       changeKind: 'fields',
       fieldUpdates: { radiprotocol_questionText: 'patched' },
     };
-    // @ts-expect-error accessing private for test
+    // bracket-syntax access into private members for test (no TS error suppression needed)
     view['applyCanvasPatch'](detail);
     await drainMicrotasks();
 
@@ -413,7 +421,7 @@ describe("EditorPanelView.applyCanvasPatch — D-08 patch non-focused field", ()
 describe("EditorPanelView.applyCanvasPatch — D-05 in-flight protection", () => {
   it('skips patch when target el === ownerDocument.activeElement', async () => {
     const { view } = makeView();
-    // @ts-expect-error accessing private for test
+    // bracket-syntax access into private members for test (no TS error suppression needed)
     view['renderForm']({ id: 'n1', radiprotocol_nodeType: 'question', radiprotocol_questionText: 'Q1' }, 'question');
     (view as unknown as { currentFilePath: string | null }).currentFilePath = 'test.canvas';
     (view as unknown as { currentNodeId: string | null }).currentNodeId = 'n1';
@@ -431,7 +439,7 @@ describe("EditorPanelView.applyCanvasPatch — D-05 in-flight protection", () =>
       changeKind: 'fields',
       fieldUpdates: { radiprotocol_questionText: 'skip-me' },
     };
-    // @ts-expect-error accessing private for test
+    // bracket-syntax access into private members for test (no TS error suppression needed)
     view['applyCanvasPatch'](detail);
     await drainMicrotasks();
 
@@ -440,7 +448,7 @@ describe("EditorPanelView.applyCanvasPatch — D-05 in-flight protection", () =>
 
   it('stashes value in pendingCanvasUpdate slot when skipped', async () => {
     const { view } = makeView();
-    // @ts-expect-error accessing private for test
+    // bracket-syntax access into private members for test (no TS error suppression needed)
     view['renderForm']({ id: 'n1', radiprotocol_nodeType: 'question', radiprotocol_questionText: 'Q1' }, 'question');
     (view as unknown as { currentFilePath: string | null }).currentFilePath = 'test.canvas';
     (view as unknown as { currentNodeId: string | null }).currentNodeId = 'n1';
@@ -457,7 +465,7 @@ describe("EditorPanelView.applyCanvasPatch — D-05 in-flight protection", () =>
       changeKind: 'fields',
       fieldUpdates: { radiprotocol_questionText: 'skip-me' },
     };
-    // @ts-expect-error accessing private for test
+    // bracket-syntax access into private members for test (no TS error suppression needed)
     view['applyCanvasPatch'](detail);
     await drainMicrotasks();
 
@@ -472,7 +480,7 @@ describe("EditorPanelView.applyCanvasPatch — D-05 in-flight protection", () =>
     // Drive the Answer kind which renders BOTH a displayLabel addText input AND
     // an answerText growable textarea — gives us two distinct fields to patch
     // independently.
-    // @ts-expect-error accessing private for test
+    // bracket-syntax access into private members for test (no TS error suppression needed)
     view['renderForm'](
       { id: 'n1', radiprotocol_nodeType: 'answer', radiprotocol_answerText: 'A1', radiprotocol_displayLabel: 'L1' },
       'answer',
@@ -501,7 +509,7 @@ describe("EditorPanelView.applyCanvasPatch — D-05 in-flight protection", () =>
         radiprotocol_displayLabel: 'apply-lbl',
       },
     };
-    // @ts-expect-error accessing private for test
+    // bracket-syntax access into private members for test (no TS error suppression needed)
     view['applyCanvasPatch'](detail);
     await drainMicrotasks();
 
@@ -525,7 +533,7 @@ describe("EditorPanelView.applyCanvasPatch — D-05 in-flight protection", () =>
 describe("EditorPanelView.applyCanvasPatch — D-07 apply post-blur", () => {
   it('blur handler flushes pendingCanvasUpdate to .value', async () => {
     const { view } = makeView();
-    // @ts-expect-error accessing private for test
+    // bracket-syntax access into private members for test (no TS error suppression needed)
     view['renderForm']({ id: 'n1', radiprotocol_nodeType: 'question', radiprotocol_questionText: 'Q1' }, 'question');
     (view as unknown as { currentFilePath: string | null }).currentFilePath = 'test.canvas';
     (view as unknown as { currentNodeId: string | null }).currentNodeId = 'n1';
@@ -543,7 +551,7 @@ describe("EditorPanelView.applyCanvasPatch — D-07 apply post-blur", () => {
       changeKind: 'fields',
       fieldUpdates: { radiprotocol_questionText: 'flush-me' },
     };
-    // @ts-expect-error accessing private for test
+    // bracket-syntax access into private members for test (no TS error suppression needed)
     view['applyCanvasPatch'](detail);
     await drainMicrotasks();
     expect(ta.value).toBe('Q1');
@@ -559,7 +567,7 @@ describe("EditorPanelView.applyCanvasPatch — D-07 apply post-blur", () => {
 
   it('blur handler clears its slot after flushing', async () => {
     const { view } = makeView();
-    // @ts-expect-error accessing private for test
+    // bracket-syntax access into private members for test (no TS error suppression needed)
     view['renderForm']({ id: 'n1', radiprotocol_nodeType: 'question', radiprotocol_questionText: 'Q1' }, 'question');
     (view as unknown as { currentFilePath: string | null }).currentFilePath = 'test.canvas';
     (view as unknown as { currentNodeId: string | null }).currentNodeId = 'n1';
@@ -576,7 +584,7 @@ describe("EditorPanelView.applyCanvasPatch — D-07 apply post-blur", () => {
       changeKind: 'fields',
       fieldUpdates: { radiprotocol_questionText: 'flush-me' },
     };
-    // @ts-expect-error accessing private for test
+    // bracket-syntax access into private members for test (no TS error suppression needed)
     view['applyCanvasPatch'](detail);
     await drainMicrotasks();
 
@@ -593,7 +601,7 @@ describe("EditorPanelView.applyCanvasPatch — D-07 apply post-blur", () => {
 
   it('blur handler with no pending value is a no-op (RESEARCH Pitfall 4 — queueMicrotask defer)', async () => {
     const { view } = makeView();
-    // @ts-expect-error accessing private for test
+    // bracket-syntax access into private members for test (no TS error suppression needed)
     view['renderForm']({ id: 'n1', radiprotocol_nodeType: 'question', radiprotocol_questionText: 'Q1' }, 'question');
     const refs = (view as unknown as {
       formFieldRefs: Map<string, Record<string, unknown>>;
@@ -617,7 +625,7 @@ describe("EditorPanelView.applyCanvasPatch — D-07 apply post-blur", () => {
 describe("EditorPanelView.applyCanvasPatch — D-09 nodeType change", () => {
   it('changeKind:"nodeType" triggers full renderNodeForm', async () => {
     const { view } = makeView();
-    // @ts-expect-error accessing private for test
+    // bracket-syntax access into private members for test (no TS error suppression needed)
     view['renderForm']({ id: 'n1', radiprotocol_nodeType: 'question', radiprotocol_questionText: 'Q1' }, 'question');
     (view as unknown as { currentFilePath: string | null }).currentFilePath = 'test.canvas';
     (view as unknown as { currentNodeId: string | null }).currentNodeId = 'n1';
@@ -631,7 +639,7 @@ describe("EditorPanelView.applyCanvasPatch — D-09 nodeType change", () => {
       changeKind: 'nodeType',
       newKind: 'answer',
     };
-    // @ts-expect-error accessing private for test
+    // bracket-syntax access into private members for test (no TS error suppression needed)
     view['applyCanvasPatch'](detail);
     await drainMicrotasks();
 
@@ -641,7 +649,7 @@ describe("EditorPanelView.applyCanvasPatch — D-09 nodeType change", () => {
 
   it('clears formFieldRefs and pendingCanvasUpdate before re-render (D-09)', async () => {
     const { view } = makeView();
-    // @ts-expect-error accessing private for test
+    // bracket-syntax access into private members for test (no TS error suppression needed)
     view['renderForm']({ id: 'n1', radiprotocol_nodeType: 'question', radiprotocol_questionText: 'Q1' }, 'question');
     (view as unknown as { currentFilePath: string | null }).currentFilePath = 'test.canvas';
     (view as unknown as { currentNodeId: string | null }).currentNodeId = 'n1';
@@ -661,7 +669,7 @@ describe("EditorPanelView.applyCanvasPatch — D-09 nodeType change", () => {
       changeKind: 'nodeType',
       newKind: 'answer',
     };
-    // @ts-expect-error accessing private for test
+    // bracket-syntax access into private members for test (no TS error suppression needed)
     view['applyCanvasPatch'](detail);
     await drainMicrotasks();
 
@@ -683,7 +691,7 @@ describe("EditorPanelView.applyCanvasPatch — D-09 nodeType change", () => {
 describe("EditorPanelView.applyCanvasPatch — D-10 node deleted", () => {
   it('changeKind:"deleted" triggers renderIdle', async () => {
     const { view } = makeView();
-    // @ts-expect-error accessing private for test
+    // bracket-syntax access into private members for test (no TS error suppression needed)
     view['renderForm']({ id: 'n1', radiprotocol_nodeType: 'question', radiprotocol_questionText: 'Q1' }, 'question');
     (view as unknown as { currentFilePath: string | null }).currentFilePath = 'test.canvas';
     (view as unknown as { currentNodeId: string | null }).currentNodeId = 'n1';
@@ -696,7 +704,7 @@ describe("EditorPanelView.applyCanvasPatch — D-10 node deleted", () => {
       nodeId: 'n1',
       changeKind: 'deleted',
     };
-    // @ts-expect-error accessing private for test
+    // bracket-syntax access into private members for test (no TS error suppression needed)
     view['applyCanvasPatch'](detail);
     await drainMicrotasks();
 
@@ -705,7 +713,7 @@ describe("EditorPanelView.applyCanvasPatch — D-10 node deleted", () => {
 
   it('nullifies currentNodeId / currentFilePath and clears pendingEdits + both maps', async () => {
     const { view } = makeView();
-    // @ts-expect-error accessing private for test
+    // bracket-syntax access into private members for test (no TS error suppression needed)
     view['renderForm']({ id: 'n1', radiprotocol_nodeType: 'question', radiprotocol_questionText: 'Q1' }, 'question');
     (view as unknown as { currentFilePath: string | null }).currentFilePath = 'test.canvas';
     (view as unknown as { currentNodeId: string | null }).currentNodeId = 'n1';
@@ -721,7 +729,7 @@ describe("EditorPanelView.applyCanvasPatch — D-10 node deleted", () => {
       nodeId: 'n1',
       changeKind: 'deleted',
     };
-    // @ts-expect-error accessing private for test
+    // bracket-syntax access into private members for test (no TS error suppression needed)
     view['applyCanvasPatch'](detail);
     await drainMicrotasks();
 
@@ -745,7 +753,7 @@ describe("EditorPanelView.applyCanvasPatch — D-10 node deleted", () => {
 describe("EditorPanelView.applyCanvasPatch — Phase 42 WR-01 re-entrancy", () => {
   it('patch dispatched synchronously inside renderForm flush is deferred via queueMicrotask and lands cleanly', async () => {
     const { view } = makeView();
-    // @ts-expect-error accessing private for test
+    // bracket-syntax access into private members for test (no TS error suppression needed)
     view['renderForm']({ id: 'n1', radiprotocol_nodeType: 'question', radiprotocol_questionText: 'Q1' }, 'question');
     (view as unknown as { currentFilePath: string | null }).currentFilePath = 'test.canvas';
     (view as unknown as { currentNodeId: string | null }).currentNodeId = 'n1';
@@ -765,7 +773,7 @@ describe("EditorPanelView.applyCanvasPatch — Phase 42 WR-01 re-entrancy", () =
       changeKind: 'fields',
       fieldUpdates: { radiprotocol_questionText: 'patched' },
     };
-    // @ts-expect-error accessing private for test
+    // bracket-syntax access into private members for test (no TS error suppression needed)
     view['applyCanvasPatch'](detail);
     // Synchronously, no patch has landed yet (it's deferred via queueMicrotask).
     expect(ta.value).toBe('Q1');

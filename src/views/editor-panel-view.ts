@@ -5,6 +5,8 @@ import type { CanvasInternal } from '../types/canvas-internal';
 import { NODE_COLOR_MAP } from '../canvas/node-color-map';
 // Phase 50 D-14: enumerates incoming Question→Answer edges for atomic Node Editor write
 import { collectIncomingEdgeEdits } from '../canvas/edge-label-sync-service';
+// Phase 63 D-12: typed payload from EdgeLabelSyncService dispatch bus consumed by applyCanvasPatch
+import type { CanvasChangedForNodeDetail } from '../canvas/edge-label-sync-service';
 import { CanvasParser } from '../graph/canvas-parser';
 // Phase 51 Plan 03 (PICKER-02 D-05): inline hierarchical snippet/folder picker for Snippet nodes.
 // See `.planning/notes/snippet-node-binding-and-picker.md` (Shared Pattern H).
@@ -17,6 +19,19 @@ export class EditorPanelView extends ItemView {
   private currentNodeId: string | null = null;
   private currentFilePath: string | null = null;
   private pendingEdits: Record<string, unknown> = {};
+  // Phase 63 D-08 — DOM ref per pendingEdits-key for inbound canvas → form patching.
+  // Populated in renderGrowableTextarea call sites + the Answer displayLabel addText
+  // site; cleared on node switch (loadNode), form re-render (renderNodeForm),
+  // applyCanvasPatch nodeType change / deletion, and view unmount (onClose). The
+  // Map is the single source of truth for "which DOM element corresponds to which
+  // form key" — applyCanvasPatch consults it to decide what to .value-write.
+  private formFieldRefs = new Map<string, HTMLInputElement | HTMLTextAreaElement>();
+  // Phase 63 D-07 — patch values stashed during in-flight focus (D-05). When a
+  // canvas-driven patch arrives for a field that is currently focused, the value
+  // lands here instead of overwriting the user's caret/selection. The blur
+  // handler attached at the same site as formFieldRefs.set(...) flushes the
+  // slot via patchTextareaValue once focus leaves the field.
+  private pendingCanvasUpdate = new Map<string, string | undefined>();
   // kindFormSection holds the container for kind-specific fields
   // so onChange can call kindFormSection.empty() + rebuild without
   // clearing the node-type dropdown
@@ -55,10 +70,26 @@ export class EditorPanelView extends ItemView {
         this.attachCanvasListener();
       })
     );
+
+    // Phase 63 D-12 — subscribe to canvas-changed-for-node from EdgeLabelSyncService
+    // (Plan 02 dispatch bus). The returned unsubscribe is wired through
+    // Component.register(...) so it auto-detaches when the view unmounts (T-04
+    // multi-instance subscription leak guard). Inbound patches reach
+    // applyCanvasPatch which decides per-field whether to write .value, stash
+    // for blur, kick a full re-render (D-09), or return to renderIdle (D-10).
+    const unsubscribeCanvas = this.plugin.edgeLabelSyncService.subscribe(
+      (detail) => this.applyCanvasPatch(detail),
+    );
+    this.register(unsubscribeCanvas);
   }
 
   async onClose(): Promise<void> {
     this.contentEl.empty();
+    // Phase 63 — release DOM refs and stashed patches on view unmount (T-04
+    // leak prevention). The subscribe()-returned unsubscribe is auto-invoked by
+    // Component.register from onOpen so the bus-side listener is detached too.
+    this.formFieldRefs.clear();
+    this.pendingCanvasUpdate.clear();
   }
 
   private attachCanvasListener(): void {
@@ -169,6 +200,12 @@ export class EditorPanelView extends ItemView {
     this.currentFilePath = canvasFilePath;
     this.currentNodeId = nodeId;
     this.pendingEdits = {};
+    // Phase 63 — clear DOM refs and stashed canvas patches on node switch.
+    // Adjacent to the existing pendingEdits reset for symmetry; without this
+    // the formFieldRefs Map would retain pointers to the previous node's
+    // detached textareas (RESEARCH T-04 use-after-free variant).
+    this.formFieldRefs.clear();
+    this.pendingCanvasUpdate.clear();
     void this.renderNodeForm(canvasFilePath, nodeId);
   }
 
@@ -330,6 +367,12 @@ export class EditorPanelView extends ItemView {
     if (!this.contentEl) return;
     this.contentEl.empty();
     this.pendingEdits = {};
+    // Phase 63 — clear DOM refs before re-rendering the form. renderForm /
+    // buildKindForm rebuilds the textarea DOM; the previous render's refs are
+    // about to be detached. Pending canvas patches are also dropped since they
+    // targeted the now-stale field set.
+    this.formFieldRefs.clear();
+    this.pendingCanvasUpdate.clear();
 
     const file = this.plugin.app.vault.getAbstractFileByPath(filePath);
     if (!(file instanceof TFile)) {
@@ -487,6 +530,116 @@ export class EditorPanelView extends ItemView {
     return textarea;
   }
 
+  // Phase 63 D-12 — entry point for canvas-changed-for-node events from
+  // EdgeLabelSyncService. Routed via the subscribe(...) wire in onOpen. Branches
+  // by changeKind: 'fields' patches per-field via patchTextareaValue (D-08) with
+  // an in-flight focus skip + stash for blur (D-05/D-07); 'nodeType' triggers a
+  // full renderNodeForm re-render (D-09); 'deleted' returns to renderIdle (D-10).
+  // The body is wrapped in queueMicrotask to coexist with the Phase 42 WR-01/WR-02
+  // re-entrancy guard at line 415 (re-renderForm via dropdown onChange).
+  private applyCanvasPatch(detail: CanvasChangedForNodeDetail): void {
+    if (detail.filePath !== this.currentFilePath) return;
+    if (detail.nodeId !== this.currentNodeId) return;
+
+    queueMicrotask(() => {
+      // Re-check after defer — currentFilePath/currentNodeId may have changed
+      // while the microtask was queued (Phase 42 WR-01 race window).
+      if (detail.filePath !== this.currentFilePath) return;
+      if (detail.nodeId !== this.currentNodeId) return;
+
+      if (detail.changeKind === 'deleted') {
+        // D-10 — node removed from canvas; return to idle.
+        this.pendingEdits = {};
+        this.currentNodeId = null;
+        this.currentFilePath = null;
+        this.formFieldRefs.clear();
+        this.pendingCanvasUpdate.clear();
+        this.renderIdle();
+        return;
+      }
+      if (detail.changeKind === 'nodeType') {
+        // D-09 — kind changed; full re-render via renderNodeForm path. Capture
+        // file/node refs into locals BEFORE clearing state so the re-render
+        // targets the correct node even if subsequent dispatches mutate
+        // currentFilePath/currentNodeId.
+        const fp = this.currentFilePath;
+        const nid = this.currentNodeId;
+        this.pendingEdits = {};
+        this.formFieldRefs.clear();
+        this.pendingCanvasUpdate.clear();
+        if (fp !== null && nid !== null) void this.renderNodeForm(fp, nid);
+        return;
+      }
+      // changeKind === 'fields' — D-08 per-field patch.
+      for (const [key, value] of Object.entries(detail.fieldUpdates ?? {})) {
+        const el = this.formFieldRefs.get(key);
+        if (!el) continue;
+        // Defensive: skip detached DOM (Pitfall 2 — formFieldRefs may briefly
+        // hold a ref to an element whose parent was contentEl.empty()'d during
+        // a concurrent re-render). isConnected is undefined on FakeNode stubs
+        // unless explicitly set, so accept undefined as "treat as connected".
+        if ((el as { isConnected?: boolean }).isConnected === false) continue;
+        const focused = el.ownerDocument?.activeElement === el;
+        if (focused) {
+          // D-05 / D-07 — stash for blur-driven flush; D-06 field-level lock
+          // — other non-focused fields in the same payload still patch.
+          this.pendingCanvasUpdate.set(key, value);
+          continue;
+        }
+        this.patchTextareaValue(el, value ?? '');
+      }
+    });
+  }
+
+  // Phase 63 — shared helper for the 6 field capture sites (5 textareas +
+  // displayLabel addText). Wires (a) the formFieldRefs Map entry, (b) the
+  // blur handler that flushes pendingCanvasUpdate via queueMicrotask
+  // (Pitfall 4 — defer DOM mutation until after the browser blur event
+  // fully unwinds). The registerDomEvent typeof guard mirrors the pattern in
+  // renderGrowableTextarea (line 524-528) so test harnesses that don't patch
+  // registerDomEvent (e.g. editor-panel-loop-form.test.ts,
+  // views/editor-panel-snippet-picker.test.ts) keep working unchanged.
+  private registerFieldRef(
+    key: string,
+    el: HTMLInputElement | HTMLTextAreaElement,
+  ): void {
+    this.formFieldRefs.set(key, el);
+    const onBlur = (): void => {
+      queueMicrotask(() => {
+        const pending = this.pendingCanvasUpdate.get(key);
+        if (pending !== undefined) {
+          this.patchTextareaValue(el, pending);
+          this.pendingCanvasUpdate.delete(key);
+        }
+      });
+    };
+    if (typeof this.registerDomEvent === 'function') {
+      this.registerDomEvent(el, 'blur', onBlur);
+    } else if (typeof (el as { addEventListener?: unknown }).addEventListener === 'function') {
+      el.addEventListener('blur', onBlur);
+    }
+  }
+
+  // Phase 63 — DOM-only patch. Two hard invariants enforced by Task 1 tests
+  // under describe block 63-03-02:
+  //   1. NEVER dispatch synthetic input events (Pitfall 1) — that would re-enter
+  //      the registered onInput handler, write to pendingEdits, and trigger an
+  //      autosave loop (saveNodeEdits → modify → reconciler → dispatch → here).
+  //   2. NEVER write to this.pendingEdits (Pitfall 6) — outbound autosave only
+  //      flushes user-typed values; canvas patches are DOM-only by design.
+  // The auto-grow resize that the registered input handler would have done is
+  // mirrored manually so the textarea visually matches the new content.
+  private patchTextareaValue(
+    el: HTMLInputElement | HTMLTextAreaElement,
+    value: string,
+  ): void {
+    el.value = value;
+    if (typeof HTMLTextAreaElement !== 'undefined' && el instanceof HTMLTextAreaElement && el.style) {
+      el.style.height = 'auto';
+      el.style.height = el.scrollHeight + 'px';
+    }
+  }
+
   private buildKindForm(
     container: HTMLElement,
     nodeRecord: Record<string, unknown>,
@@ -516,7 +669,7 @@ export class EditorPanelView extends ItemView {
         new Setting(container).setHeading().setName('Question node');
         // Phase 64: shared growable textarea helper preserves the Phase 48
         // custom-DOM Question behavior while exposing common managed classes.
-        this.renderGrowableTextarea(container, {
+        const ta_questionText = this.renderGrowableTextarea(container, {
           blockClass: 'rp-question-block',
           textareaClass: 'rp-question-textarea',
           label: 'Question text',
@@ -530,6 +683,11 @@ export class EditorPanelView extends ItemView {
             this.pendingEdits['text'] = value;
           },
         });
+        // Phase 63 — capture for inbound canvas patches + blur-driven flush of
+        // pendingCanvasUpdate. Field key = pendingEdits-key (RESEARCH §"Field
+        // key vocabulary"). registerFieldRef wires both formFieldRefs.set and
+        // the queueMicrotask-deferred blur handler in one call.
+        this.registerFieldRef('radiprotocol_questionText', ta_questionText);
         break;
       }
 
@@ -553,8 +711,13 @@ export class EditorPanelView extends ItemView {
                 this.pendingEdits['radiprotocol_displayLabel'] = v || undefined;
                 this.scheduleAutoSave();
               });
+            // Phase 63 — capture displayLabel inputEl for inbound canvas patches
+            // (Phase 50 surface — reconciler-driven displayLabel updates ride on
+            // the same dispatch bus). registerFieldRef applies the same blur
+            // flush + formFieldRefs.set semantics as the textarea sites.
+            this.registerFieldRef('radiprotocol_displayLabel', t.inputEl);
           });
-        this.renderGrowableTextarea(container, {
+        const ta_answerText = this.renderGrowableTextarea(container, {
           blockClass: 'rp-answer-text-block',
           label: 'Answer text',
           desc: 'Appended to the accumulated report text when this answer is chosen.',
@@ -567,6 +730,8 @@ export class EditorPanelView extends ItemView {
             this.pendingEdits['text'] = value;
           },
         });
+        // Phase 63 — capture for inbound canvas patches + blur-driven flush.
+        this.registerFieldRef('radiprotocol_answerText', ta_answerText);
         // Separator override dropdown (D-05, D-06, SEP-02)
         new Setting(container)
           .setName('Text separator')
@@ -588,7 +753,7 @@ export class EditorPanelView extends ItemView {
 
       case 'text-block': {
         new Setting(container).setHeading().setName('Text-block node');
-        this.renderGrowableTextarea(container, {
+        const ta_content = this.renderGrowableTextarea(container, {
           blockClass: 'rp-text-block-content-block',
           label: 'Content',
           desc: 'Auto-appended to the accumulated text when this node is reached.',
@@ -601,6 +766,10 @@ export class EditorPanelView extends ItemView {
             this.pendingEdits['text'] = value;
           },
         });
+        // Phase 63 — capture for inbound canvas patches + blur-driven flush.
+        // Field key is `radiprotocol_content` (NOT `radiprotocol_text`) per
+        // RESEARCH §"Field key vocabulary" + canvas-parser.ts:220.
+        this.registerFieldRef('radiprotocol_content', ta_content);
         // Separator override dropdown (D-05, D-06, SEP-02)
         new Setting(container)
           .setName('Text separator')
@@ -637,7 +806,7 @@ export class EditorPanelView extends ItemView {
         // so the header is visible on the canvas node AND picked up by the runner — same pattern
         // as question/answer.
         new Setting(container).setHeading().setName('Loop node');
-        this.renderGrowableTextarea(container, {
+        const ta_headerText = this.renderGrowableTextarea(container, {
           blockClass: 'rp-loop-header-block',
           label: 'Header text',
           desc: 'Displayed above the branch picker when the runner halts at this loop, and also shown as the canvas node label. Leave blank for no header.',
@@ -650,6 +819,8 @@ export class EditorPanelView extends ItemView {
             this.pendingEdits['text'] = value;
           },
         });
+        // Phase 63 — capture for inbound canvas patches + blur-driven flush.
+        this.registerFieldRef('radiprotocol_headerText', ta_headerText);
         break;
       }
 
@@ -717,7 +888,7 @@ export class EditorPanelView extends ItemView {
 
         // Phase 31 D-01: optional label shown on branch-list button when this snippet node
         // is reached as a variant of a question. Empty fallback = "📁 Snippet".
-        this.renderGrowableTextarea(container, {
+        const ta_snippetLabel = this.renderGrowableTextarea(container, {
           blockClass: 'rp-snippet-branch-label-block',
           label: 'Branch label',
           desc: 'Shown on the branch-list button when a question has outgoing edges to this snippet. Leave empty to use "📁 Snippet".',
@@ -726,6 +897,12 @@ export class EditorPanelView extends ItemView {
             this.pendingEdits['radiprotocol_snippetLabel'] = value || undefined;
           },
         });
+        // Phase 63 — capture for inbound canvas patches + blur-driven flush.
+        // The Phase 50-mirror snippetLabel ↔ incoming-edge sync (Plan 01 + Plan 02
+        // reconciler arm) writes the canonical edge-wins value back through the
+        // same dispatch bus, so this site receives both author edits on canvas
+        // AND reconciler-driven mirror updates.
+        this.registerFieldRef('radiprotocol_snippetLabel', ta_snippetLabel);
 
         // Phase 31 D-04: per-node separator override. '' = use global default from settings.
         new Setting(container)
