@@ -90,6 +90,7 @@ See: `.planning/REQUIREMENTS.md` (updated 2026-04-25 — traceability populated,
 10. v1.7 excised `maxIterations` — do not reintroduce a per-loop or global iteration cap.
 11. v1.8: preserve backward compatibility of stored canvas shape — directory-bound Snippet nodes must keep working unchanged.
 12. v1.9: Inline Runner position persistence uses clamp-on-restore (not clamp-on-save) — resize persistence in v1.10 (Phase 67) must follow same pattern to survive monitor/resolution changes.
+13. v1.10 / Phase 67: file-bound Snippet parity (INLINE-FIX-07) root-cause was in shared `src/runner/protocol-runner.ts` `advanceThrough` case `'snippet'` (lines 736-741), NOT inline-only. Phase 56 fixed only the sibling-button click path; loop-body and direct-edge traversals remained broken until Phase 67 D-14 + D-15 replaced the unconditional `awaiting-snippet-pick` dispatch with a `radiprotocol_snippetPath` branch. The 4-line block at 736-741 is the documented CLAUDE.md "never remove existing code you didn't add" mandate exception — D-14 explicitly REPLACES that block. Going forward, runner-core dispatch for any new node-kind extension MUST consider all traversal paths (sibling-button click, loop-body edge, direct edge) — not just the click path.
 
 ### v1.10-relevant precedents
 

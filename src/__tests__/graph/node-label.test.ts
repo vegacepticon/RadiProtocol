@@ -47,6 +47,47 @@ describe('nodeLabel', () => {
     expect(nodeLabel({ id: 's2', kind: 'snippet', ...baseRect } as RPNode)).toBe('snippet (root)');
   });
 
+  it('snippet file-bound → 📄 caption variants (Phase 67 D-15)', () => {
+    const baseSnippet = { id: 'sn', kind: 'snippet' as const, ...baseRect };
+
+    // snippetLabel set → 📄 ${label}
+    expect(nodeLabel({
+      ...baseSnippet,
+      radiprotocol_snippetPath: 'abdomen/ct.md',
+      snippetLabel: 'Abd CT',
+    } as RPNode)).toBe('📄 Abd CT');
+
+    // snippetLabel empty + path with extension → 📄 ${stem of basename}
+    expect(nodeLabel({
+      ...baseSnippet,
+      radiprotocol_snippetPath: 'abdomen/ct.md',
+    } as RPNode)).toBe('📄 ct');
+
+    // snippetLabel empty + path with no slash + no dot → 📄 ${path}
+    expect(nodeLabel({
+      ...baseSnippet,
+      radiprotocol_snippetPath: 'plain',
+    } as RPNode)).toBe('📄 plain');
+
+    // snippetLabel empty + nested path with extension → 📄 ${stem}
+    expect(nodeLabel({
+      ...baseSnippet,
+      radiprotocol_snippetPath: 'a/b/c/report.json',
+    } as RPNode)).toBe('📄 report');
+
+    // Empty radiprotocol_snippetPath ('' — gate is !== '') falls through to directory-bound arm → 'snippet (root)'
+    expect(nodeLabel({
+      ...baseSnippet,
+      radiprotocol_snippetPath: '',
+    } as RPNode)).toBe('snippet (root)');
+
+    // snippetLabel set on directory-bound snippet (no path, snippetLabel present) → 📁 ${label}
+    expect(nodeLabel({
+      ...baseSnippet,
+      snippetLabel: 'My Folder',
+    } as RPNode)).toBe('📁 My Folder');
+  });
+
   it('loop → headerText || id (Phase 43 D-11)', () => {
     expect(nodeLabel({ id: 'lp1', kind: 'loop', headerText: 'Lesion loop', ...baseRect })).toBe('Lesion loop');
     expect(nodeLabel({ id: 'lp2', kind: 'loop', headerText: '', ...baseRect })).toBe('lp2');

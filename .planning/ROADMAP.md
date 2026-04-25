@@ -402,7 +402,7 @@ Plans:
 
 ### Phase 67: Inline Runner Resizable Modal & File-Bound Snippet Parity
 **Goal**: The Inline Runner modal is user-resizable via drag, with width and height persisted in workspace state alongside the Phase 60 position state and clamped to viewport on restore; and a file-bound Snippet node in inline mode appends the configured file's content rather than falling back to the snippets root folder, matching sidebar parity from Phase 56.
-**Depends on**: Nothing (Inline Runner-only work in `InlineRunnerModal` + `src/styles/inline-runner.css`; reuses Phase 60 workspace-state contract and Phase 56 file-binding logic; isolated from Node Editor and Runner UX phases)
+**Depends on**: Nothing (FIX-06 confined to `InlineRunnerModal` + `src/styles/inline-runner.css`; reuses Phase 60 workspace-state contract. **FIX-07 root cause is in shared runner-core (`src/runner/protocol-runner.ts:736-741`) — fix touches `protocol-runner.ts` + `src/graph/node-label.ts` per Phase 67 D-13 + D-14 + D-15; the existing `case 'awaiting-snippet-fill'` arms in `runner-view.ts` and `inline-runner-modal.ts` consume the corrected dispatch unchanged.** Reuses Phase 56 file-binding logic.)
 **Requirements**: INLINE-FIX-06, INLINE-FIX-07
 **Success Criteria** (what must be TRUE):
   1. The Inline Runner modal can be resized by dragging its edges or corners; while dragging, the modal's width and height update smoothly without jumping or losing focus (INLINE-FIX-06)
