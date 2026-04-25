@@ -152,7 +152,7 @@ Full details: `.planning/milestones/v1.9-ROADMAP.md`
 <details>
 <summary>🔄 v1.10 Editor Sync & Runner UX Polish (Phases 63-67) — IN PROGRESS</summary>
 
-- [x] Phase 63: Bidirectional Canvas ↔ Node Editor Sync (3/3 plans + 1 gap closure) — executed 2026-04-25, gap closure Plan 04 pending
+- [x] Phase 63: Bidirectional Canvas ↔ Node Editor Sync (4/4 plans + gap closure) — executed 2026-04-25, all plans complete, manual UAT pending
 - [ ] Phase 64: Node Editor Polish — Auto-grow & Text Block Quick-Create (TBD plans)
 - [ ] Phase 65: Runner Footer Layout — Back/Skip Row (TBD plans)
 - [ ] Phase 66: Runner Step-Back Reliability & Scroll Pinning (TBD plans)
@@ -345,7 +345,7 @@ Plans:
 - [x] 63-01-PLAN.md — Pure reconciler: snippet edge-wins arm + discriminated EdgeLabelDiff/ReconcileResult shape + 2 fixtures + extended unit tests (2026-04-25)
 - [x] 63-02-PLAN.md — Service: discriminated writer + lastSnapshotByFilePath baseline + canvas-changed-for-node dispatch bus + rename/delete cleanup + new edge-label-sync-service.test.ts (2026-04-25)
 - [x] 63-03-PLAN.md — View: formFieldRefs Map + applyCanvasPatch + per-field blur handlers + onOpen subscription + new editor-panel-canvas-sync.test.ts (2026-04-25 — executed via shared registerFieldRef helper; manual UAT pending)
-- [ ] 63-04-PLAN.md — Gap Closure: outbound Snippet branch label → incoming edge sync + inbound canvas text → form field sync (closes 2 verified gaps from 63-UAT.md)
+- [x] 63-04-PLAN.md — Gap Closure: outbound Snippet branch label → incoming edge sync + inbound canvas text → form field sync (closes 2 verified gaps from 63-UAT.md) — completed 2026-04-25
 **UI hint**: yes
 
 ### Phase 64: Node Editor Polish — Auto-grow & Text Block Quick-Create
@@ -423,7 +423,7 @@ v1.10 active. Phases 63 and 67 can run in parallel (Node Editor sync vs Inline R
 | 60. Inline Runner Layout & Position Persistence | v1.9 | 5/5 | Complete | 2026-04-24 |
 | 61. Settings Folder Autocomplete | v1.9 | 4/4 | Complete | 2026-04-24 |
 | 62. BRAT Release v1.9.0 | v1.9 | 3/3 | Complete | 2026-04-25 |
-| 63. Bidirectional Canvas ↔ Node Editor Sync | v1.10 | 3/3 + 1 gap closure | In progress | 2026-04-25 |
+| 63. Bidirectional Canvas ↔ Node Editor Sync | v1.10 | 4/4 + gap closure | Complete | 2026-04-25 |
 | 65. Runner Footer Layout — Back/Skip Row | v1.10 | 0/TBD | Not started | — |
 | 66. Runner Step-Back Reliability & Scroll Pinning | v1.10 | 0/TBD | Not started | — |
 | 67. Inline Runner Resizable Modal & File-Bound Snippet Parity | v1.10 | 0/TBD | Not started | — |

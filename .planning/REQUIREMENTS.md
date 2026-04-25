@@ -8,11 +8,11 @@
 
 ### Node Editor
 
-- [ ] **EDITOR-03**: Snippet node's Node Editor "branch label" field drives the outgoing edge label on canvas — when author sets a custom branch label, the edge displays that label (mirroring the Answer↔edge bidirectional sync established in Phase 50). The canvas node's own text continues to display the selected directory or file path, unchanged. Editing the edge label directly on canvas updates the branch label field in Node Editor in real time.
+- [x] **EDITOR-03**: Snippet node's Node Editor "branch label" field drives the outgoing edge label on canvas — when author sets a custom branch label, the edge displays that label (mirroring the Answer↔edge bidirectional sync established in Phase 50). The canvas node's own text continues to display the selected directory or file path, unchanged. Editing the edge label directly on canvas updates the branch label field in Node Editor in real time.
 
 - [ ] **EDITOR-04**: Every text input field on every node kind uses the Question-node's auto-grow textarea behavior — Answer text, Text block text, Snippet node branch label, Loop headerText, and any other multi-line text fields grow with content instead of showing a fixed-height box with an inner scrollbar.
 
-- [ ] **EDITOR-05**: Bidirectional live synchronization between canvas node text and Node Editor form fields — when the author edits text directly on a canvas node, the corresponding field in the open Node Editor form updates in real time (current behavior: form → canvas only). Applies to Question text, Answer text, Text block text, Snippet node label, Loop headerText.
+- [x] **EDITOR-05**: Bidirectional live synchronization between canvas node text and Node Editor form fields — when the author edits text directly on a canvas node, the corresponding field in the open Node Editor form updates in real time (current behavior: form → canvas only). Applies to Question text, Answer text, Text block text, Snippet node label, Loop headerText.
 
 - [ ] **EDITOR-06**: Node Editor toolbar exposes a fifth quick-create button "Create text block" alongside the existing four (Question, Answer, Snippet, Loop) — one click creates a text-block node on canvas with correct `radiprotocol_nodeType`, color, and default placement using the same `CanvasNodeFactory` pattern as the other quick-create buttons.
 
@@ -52,9 +52,9 @@ Phase mappings established by roadmapper on 2026-04-25 during ROADMAP.md creatio
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| EDITOR-03 | Phase 63 | Implemented 2026-04-25 — UAT pending |
+| EDITOR-03 | Phase 63 | Implemented 2026-04-25 — gap closure Plan 04 verified GREEN |
 | EDITOR-04 | Phase 64 | Pending |
-| EDITOR-05 | Phase 63 | Implemented 2026-04-25 — UAT pending |
+| EDITOR-05 | Phase 63 | Implemented 2026-04-25 — gap closure Plan 04 verified GREEN |
 | EDITOR-06 | Phase 64 | Pending |
 | RUNNER-02 | Phase 65 | Pending |
 | RUNNER-03 | Phase 66 | Pending |
