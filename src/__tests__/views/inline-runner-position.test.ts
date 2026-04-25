@@ -58,6 +58,7 @@ class FakeElement {
   setAttribute(_name: string, _value: string): void {}
   addClass(cls: string): void { this.classList.add(cls); }
   removeClass(cls: string): void { this.classList.remove(cls); }
+  hasClass(cls: string): boolean { return this.classList.contains(cls); }
   remove(): void {
     if (this.parentElement !== null) {
       this.parentElement.children = this.parentElement.children.filter(child => child !== this);
@@ -167,8 +168,8 @@ describe('Phase 60 D-01/D-02 inline runner position persistence', () => {
     const { modal } = mount(null);
     modal.restoreOrDefaultPosition();
 
-    expect(modal.containerEl?.style.left).toBe('648px');
-    expect(modal.containerEl?.style.top).toBe('512px');
+    expect(modal.containerEl?.style.left).toBe('588px');
+    expect(modal.containerEl?.style.top).toBe('432px');
     expect(modal.containerEl?.style.right).toBe('');
     expect(modal.containerEl?.style.bottom).toBe('');
     expect(modal.containerEl?.style.transform).toBe('');
@@ -182,11 +183,11 @@ describe('Phase 60 D-01/D-02 inline runner position persistence', () => {
     doc.dispatch('pointermove', { clientX: 140, clientY: 125 });
     doc.dispatch('pointerup', { clientX: 140, clientY: 125 });
 
-    expect(modal.containerEl?.style.left).toBe('688px');
-    expect(modal.containerEl?.style.top).toBe('537px');
+    expect(modal.containerEl?.style.left).toBe('628px');
+    expect(modal.containerEl?.style.top).toBe('457px');
     expect(modal.containerEl?.style.right).toBe('');
     expect(modal.containerEl?.style.bottom).toBe('');
-    expect(plugin.saveSpy).toHaveBeenCalledWith({ left: 688, top: 537 });
+    expect(plugin.saveSpy).toHaveBeenCalledWith({ left: 628, top: 457, width: 420, height: 320 });
     expect(doc.listeners.get('pointermove')).toHaveLength(0);
   });
 
@@ -221,7 +222,7 @@ describe('Phase 60 D-01/D-02 inline runner position persistence', () => {
     expect(modal.containerEl?.style.left).toBe('864px');
     expect(modal.containerEl?.style.top).toBe('728px');
     // Phase 67 D-11: reclamp now persists full layout (position + size).
-    // Width/height in the persisted payload come from getBoundingClientRect; FakeElement returns 360x240.
-    expect(plugin.saveSpy).toHaveBeenCalledWith({ left: 864, top: 728, width: 360, height: 240 });
+    // Width/height in the persisted payload come from inline styles; defaults are 420x320.
+    expect(plugin.saveSpy).toHaveBeenCalledWith({ left: 864, top: 728, width: 420, height: 320 });
   });
 });

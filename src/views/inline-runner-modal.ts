@@ -21,8 +21,8 @@ interface InlineRunnerSize {
   height: number;
 }
 
-const INLINE_RUNNER_DEFAULT_WIDTH = 360;
-const INLINE_RUNNER_DEFAULT_HEIGHT = 240;
+const INLINE_RUNNER_DEFAULT_WIDTH = 420;
+const INLINE_RUNNER_DEFAULT_HEIGHT = 320;
 const INLINE_RUNNER_DEFAULT_MARGIN = 16;
 const INLINE_RUNNER_MIN_VISIBLE_WIDTH = 160;
 const INLINE_RUNNER_MIN_VISIBLE_HEADER_HEIGHT = 40;
@@ -702,23 +702,34 @@ export class InlineRunnerModal {
     this.applyLayout(clamped);
   }
 
-  private getAppliedPosition(): InlineRunnerLayout | null {
+  private getAppliedLayout(): InlineRunnerLayout | null {
     if (this.containerEl === null) return null;
     const left = Number.parseFloat(this.containerEl.style.left);
     const top = Number.parseFloat(this.containerEl.style.top);
-    return isFiniteInlineRunnerPosition({ left, top }) ? { left, top } : null;
+    if (!isFiniteInlineRunnerPosition({ left, top })) return null;
+    const width = Number.parseFloat(this.containerEl.style.width);
+    const height = Number.parseFloat(this.containerEl.style.height);
+    return {
+      left,
+      top,
+      width: Number.isFinite(width) && width > 0 ? width : INLINE_RUNNER_DEFAULT_WIDTH,
+      height: Number.isFinite(height) && height > 0 ? height : INLINE_RUNNER_DEFAULT_HEIGHT,
+    };
   }
 
   /** Phase 67 D-11: re-clamp position AND size on viewport change; persist if anything changed. */
   private async reclampCurrentPosition(persistIfChanged: boolean): Promise<void> {
     if (this.containerEl === null) return;
-    const rect = this.containerEl.getBoundingClientRect();
-    const currentPosition = this.getAppliedPosition() ?? this.plugin.getInlineRunnerPosition() ?? this.getDefaultPosition();
+    if (this.containerEl.hasClass('is-hidden')) return;
+    const currentPosition = this.getAppliedLayout() ?? this.plugin.getInlineRunnerPosition() ?? this.getDefaultPosition();
+    const saved = this.plugin.getInlineRunnerPosition();
+    const styleWidth = Number.parseFloat(this.containerEl.style.width);
+    const styleHeight = Number.parseFloat(this.containerEl.style.height);
     const current: InlineRunnerLayout = {
       left: currentPosition.left,
       top: currentPosition.top,
-      width: rect.width > 0 ? rect.width : INLINE_RUNNER_DEFAULT_WIDTH,
-      height: rect.height > 0 ? rect.height : INLINE_RUNNER_DEFAULT_HEIGHT,
+      width: Number.isFinite(styleWidth) && styleWidth > 0 ? styleWidth : (saved?.width ?? INLINE_RUNNER_DEFAULT_WIDTH),
+      height: Number.isFinite(styleHeight) && styleHeight > 0 ? styleHeight : (saved?.height ?? INLINE_RUNNER_DEFAULT_HEIGHT),
     };
     const clamped = clampInlineRunnerLayout(current, this.getViewport());
     if (clamped === null) return;
@@ -733,7 +744,7 @@ export class InlineRunnerModal {
   private enableDragging(header: HTMLElement): void {
     header.addEventListener('pointerdown', (event: PointerEvent) => {
       if (this.containerEl === null) return;
-      const start = this.getAppliedPosition() ?? this.getDefaultPosition();
+      const start = this.getAppliedLayout() ?? this.getDefaultPosition();
       const startX = event.clientX;
       const startY = event.clientY;
       this.isDragging = true;
@@ -749,10 +760,10 @@ export class InlineRunnerModal {
       };
 
       this.dragUpHandler = () => {
-        const finalPosition = this.getAppliedPosition();
+        const finalLayout = this.getAppliedLayout();
         this.removeDragListeners();
-        if (finalPosition !== null) {
-          void this.plugin.saveInlineRunnerPosition(finalPosition);
+        if (finalLayout !== null) {
+          void this.plugin.saveInlineRunnerPosition(finalLayout);
         }
       };
 
@@ -794,13 +805,12 @@ export class InlineRunnerModal {
   private handleResizeDebounceExpire(): void {
     this.resizeDebounceTimer = null;
     if (this.containerEl === null) return;
-    const rect = this.containerEl.getBoundingClientRect();
-    const appliedPosition = this.getAppliedPosition() ?? this.getDefaultPosition();
+    const appliedLayout = this.getAppliedLayout() ?? this.getDefaultPosition();
     const layout: InlineRunnerLayout = {
-      left: appliedPosition.left,
-      top: appliedPosition.top,
-      width: Math.round(rect.width),
-      height: Math.round(rect.height),
+      left: appliedLayout.left,
+      top: appliedLayout.top,
+      width: appliedLayout.width,
+      height: appliedLayout.height,
     };
     const clamped = clampInlineRunnerLayout(layout, this.getViewport());
     if (clamped !== null) {

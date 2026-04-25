@@ -25,7 +25,7 @@ describe('clampInlineRunnerLayout (Phase 67 D-10)', () => {
 
   it('falls back to INLINE_RUNNER_DEFAULT_WIDTH/HEIGHT when width/height are missing (D-06)', () => {
     const result = clampInlineRunnerLayout({ left: 0, top: 0 }, viewport);
-    expect(result).toEqual({ left: 0, top: 0, width: 360, height: 240 });
+    expect(result).toEqual({ left: 0, top: 0, width: 420, height: 320 });
   });
 
   it('preserves width/height already within bounds', () => {
@@ -35,9 +35,9 @@ describe('clampInlineRunnerLayout (Phase 67 D-10)', () => {
 
   it('falls back to defaults for non-finite width/height (NaN, negative, zero)', () => {
     const r1 = clampInlineRunnerLayout({ left: 0, top: 0, width: NaN, height: -5 }, viewport);
-    expect(r1).toEqual({ left: 0, top: 0, width: 360, height: 240 });
+    expect(r1).toEqual({ left: 0, top: 0, width: 420, height: 320 });
     const r2 = clampInlineRunnerLayout({ left: 0, top: 0, width: 0, height: 0 }, viewport);
-    expect(r2).toEqual({ left: 0, top: 0, width: 360, height: 240 });
+    expect(r2).toEqual({ left: 0, top: 0, width: 420, height: 320 });
   });
 
   it('returns null when layout is null (no recovery)', () => {
@@ -92,6 +92,7 @@ class FakeElement {
   setAttribute(_name: string, _value: string): void {}
   addClass(cls: string): void { this.classList.add(cls); }
   removeClass(cls: string): void { this.classList.remove(cls); }
+  hasClass(cls: string): boolean { return this.classList.contains(cls); }
   remove(): void {
     if (this.parentElement !== null) {
       this.parentElement.children = this.parentElement.children.filter(child => child !== this);
@@ -291,8 +292,8 @@ describe('Phase 67 ResizeObserver lifecycle', () => {
 
     expect(modal.containerEl?.style.left).toBe('100px');
     expect(modal.containerEl?.style.top).toBe('50px');
-    expect(modal.containerEl?.style.width).toBe('360px');
-    expect(modal.containerEl?.style.height).toBe('240px');
+    expect(modal.containerEl?.style.width).toBe('420px');
+    expect(modal.containerEl?.style.height).toBe('320px');
   });
 
   it('window-resize re-clamp on a shrunk viewport applies clamped layout and persists once', async () => {
@@ -338,5 +339,22 @@ describe('Phase 67 ResizeObserver lifecycle', () => {
     // Pending timer was cleared — advancing timers MUST NOT invoke save.
     vi.advanceTimersByTime(1000);
     expect(plugin.saveSpy).not.toHaveBeenCalled();
+  });
+
+  it('does NOT fallback to defaults or call save when container is hidden (display:none)', async () => {
+    const { modal, plugin } = mount({ left: 100, top: 50, width: 500, height: 400 });
+    modal.restoreOrDefaultPosition();
+    plugin.saveSpy.mockClear();
+
+    // Simulate hidden state (as when tab switch hides the modal via is-hidden)
+    modal.containerEl?.addClass('is-hidden');
+
+    await modal.reclampCurrentPosition(true);
+
+    // saveSpy must NOT have been called because reclamp bailed early.
+    expect(plugin.saveSpy).not.toHaveBeenCalled();
+    // Style must remain unchanged — no default fallback injected.
+    expect(modal.containerEl?.style.width).toBe('500px');
+    expect(modal.containerEl?.style.height).toBe('400px');
   });
 });
