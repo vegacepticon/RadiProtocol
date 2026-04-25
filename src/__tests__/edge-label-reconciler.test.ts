@@ -15,6 +15,8 @@ const loadFixture = (n: string) => fs.readFileSync(path.join(fixturesDir, n), 'u
 type MakeGraphParams = {
   answers: Array<{ id: string; displayLabel?: string; answerText?: string }>;
   questions?: Array<{ id: string; text?: string }>;
+  // Phase 63: snippet nodes for the snippet edge-wins arm.
+  snippets?: Array<{ id: string; snippetLabel?: string; subfolderPath?: string }>;
   edges: RPEdge[];
 };
 
@@ -51,6 +53,19 @@ function makeGraph(params: MakeGraphParams): ProtocolGraph {
       height: 60,
     });
   }
+  // Phase 63: emit SnippetNode entries when params.snippets is provided.
+  for (const s of params.snippets ?? []) {
+    nodes.set(s.id, {
+      id: s.id,
+      kind: 'snippet',
+      snippetLabel: s.snippetLabel,
+      subfolderPath: s.subfolderPath,
+      x: 0,
+      y: 0,
+      width: 100,
+      height: 60,
+    });
+  }
   const adjacency = new Map<string, string[]>();
   const reverseAdjacency = new Map<string, string[]>();
   for (const e of params.edges) {
@@ -78,8 +93,9 @@ describe('reconcileEdgeLabels — D-04 edge-wins', () => {
         { id: 'e1', fromNodeId: 'q1', toNodeId: 'a1', label: 'Y' },
       ],
     });
-    const { diffs, newDisplayLabelByAnswerId } = reconcileEdgeLabels(graph);
-    expect(newDisplayLabelByAnswerId.get('a1')).toBe('Y');
+    const { diffs, nodeChanges } = reconcileEdgeLabels(graph); // Phase 63: kind discriminator
+    // Phase 63: kind discriminator
+    expect(nodeChanges.find(c => c.nodeId === 'a1' && c.kind === 'answer')?.newLabel).toBe('Y');
     // Edge already has "Y" — no edge diff needed
     expect(diffs).toHaveLength(0);
   });
@@ -91,13 +107,15 @@ describe('reconcileEdgeLabels — D-04 edge-wins', () => {
     );
     expect(parseResult.success).toBe(true);
     if (!parseResult.success) return;
-    const { diffs, newDisplayLabelByAnswerId } = reconcileEdgeLabels(parseResult.graph);
+    const { diffs, nodeChanges } = reconcileEdgeLabels(parseResult.graph); // Phase 63: kind discriminator
     // First labeled incoming wins — e1 carries "Вариант X"
-    expect(newDisplayLabelByAnswerId.get('n-a-shared')).toBe('Вариант X');
+    // Phase 63: kind discriminator
+    expect(nodeChanges.find(c => c.nodeId === 'n-a-shared' && c.kind === 'answer')?.newLabel).toBe('Вариант X');
     // Only e2 ("Вариант Y") needs to be re-synced to "Вариант X"
     expect(diffs).toHaveLength(1);
     expect(diffs[0]!.edgeId).toBe('e2');
     expect(diffs[0]!.targetLabel).toBe('Вариант X');
+    expect(diffs[0]!.kind).toBe('answer'); // Phase 63: kind discriminator
   });
 
   it('displayLabel wins when no incoming edge is labeled', () => {
@@ -108,13 +126,15 @@ describe('reconcileEdgeLabels — D-04 edge-wins', () => {
         { id: 'e1', fromNodeId: 'q1', toNodeId: 'a1' }, // no label
       ],
     });
-    const { diffs, newDisplayLabelByAnswerId } = reconcileEdgeLabels(graph);
+    const { diffs, nodeChanges } = reconcileEdgeLabels(graph); // Phase 63: kind discriminator
     // displayLabel already 'A' → no newDisplayLabel entry
-    expect(newDisplayLabelByAnswerId.size).toBe(0);
+    // Phase 63: kind discriminator
+    expect(nodeChanges.filter(c => c.kind === 'answer').length).toBe(0);
     // Edge must be propagated to 'A'
     expect(diffs).toHaveLength(1);
     expect(diffs[0]!.edgeId).toBe('e1');
     expect(diffs[0]!.targetLabel).toBe('A');
+    expect(diffs[0]!.kind).toBe('answer'); // Phase 63: kind discriminator
   });
 });
 
@@ -135,9 +155,10 @@ describe('reconcileEdgeLabels — D-07 idempotency', () => {
         { id: 'e2', fromNodeId: 'q2', toNodeId: 'a2', label: 'Two' },
       ],
     });
-    const { diffs, newDisplayLabelByAnswerId } = reconcileEdgeLabels(graph);
+    const { diffs, nodeChanges } = reconcileEdgeLabels(graph); // Phase 63: kind discriminator
     expect(diffs).toHaveLength(0);
-    expect(newDisplayLabelByAnswerId.size).toBe(0);
+    // Phase 63: kind discriminator
+    expect(nodeChanges.filter(c => c.kind === 'answer').length).toBe(0);
   });
 });
 
@@ -150,9 +171,10 @@ describe('reconcileEdgeLabels — D-08 / D-09 clearing', () => {
         { id: 'e1', fromNodeId: 'q1', toNodeId: 'a1' }, // no label
       ],
     });
-    const { diffs, newDisplayLabelByAnswerId } = reconcileEdgeLabels(graph);
+    const { diffs, nodeChanges } = reconcileEdgeLabels(graph); // Phase 63: kind discriminator
     expect(diffs).toHaveLength(0);
-    expect(newDisplayLabelByAnswerId.size).toBe(0);
+    // Phase 63: kind discriminator
+    expect(nodeChanges.filter(c => c.kind === 'answer').length).toBe(0);
   });
 
   it('all incoming edges empty + displayLabel present → diff propagates displayLabel onto edges', () => {
@@ -163,12 +185,14 @@ describe('reconcileEdgeLabels — D-08 / D-09 clearing', () => {
         { id: 'e1', fromNodeId: 'q1', toNodeId: 'a1' },
       ],
     });
-    const { diffs, newDisplayLabelByAnswerId } = reconcileEdgeLabels(graph);
+    const { diffs, nodeChanges } = reconcileEdgeLabels(graph); // Phase 63: kind discriminator
     // displayLabel already 'A' — no change entry
-    expect(newDisplayLabelByAnswerId.size).toBe(0);
+    // Phase 63: kind discriminator
+    expect(nodeChanges.filter(c => c.kind === 'answer').length).toBe(0);
     expect(diffs).toHaveLength(1);
     expect(diffs[0]!.edgeId).toBe('e1');
     expect(diffs[0]!.targetLabel).toBe('A');
+    expect(diffs[0]!.kind).toBe('answer'); // Phase 63: kind discriminator
   });
 
   it('all incoming edges whitespace-only label → treated as unlabeled (Phase 49 D-05 reuse)', () => {
@@ -179,12 +203,14 @@ describe('reconcileEdgeLabels — D-08 / D-09 clearing', () => {
         { id: 'e1', fromNodeId: 'q1', toNodeId: 'a1', label: '   ' },
       ],
     });
-    const { diffs, newDisplayLabelByAnswerId } = reconcileEdgeLabels(graph);
+    const { diffs, nodeChanges } = reconcileEdgeLabels(graph); // Phase 63: kind discriminator
     // Whitespace ≡ unlabeled → fallback to displayLabel "A"
-    expect(newDisplayLabelByAnswerId.size).toBe(0);
+    // Phase 63: kind discriminator
+    expect(nodeChanges.filter(c => c.kind === 'answer').length).toBe(0);
     expect(diffs).toHaveLength(1);
     expect(diffs[0]!.edgeId).toBe('e1');
     expect(diffs[0]!.targetLabel).toBe('A');
+    expect(diffs[0]!.kind).toBe('answer'); // Phase 63: kind discriminator
   });
 });
 
@@ -196,8 +222,9 @@ describe('reconcileEdgeLabels — fixture: displayLabel-edge-mismatch', () => {
     );
     expect(parseResult.success).toBe(true);
     if (!parseResult.success) return;
-    const { diffs, newDisplayLabelByAnswerId } = reconcileEdgeLabels(parseResult.graph);
-    expect(newDisplayLabelByAnswerId.get('n-a1')).toBe('Y');
+    const { diffs, nodeChanges } = reconcileEdgeLabels(parseResult.graph); // Phase 63: kind discriminator
+    // Phase 63: kind discriminator
+    expect(nodeChanges.find(c => c.nodeId === 'n-a1' && c.kind === 'answer')?.newLabel).toBe('Y');
     // Edge already "Y" → no edge diff
     expect(diffs).toHaveLength(0);
   });
@@ -211,11 +238,13 @@ describe('reconcileEdgeLabels — fixture: branching-multi-incoming', () => {
     );
     expect(parseResult.success).toBe(true);
     if (!parseResult.success) return;
-    const { diffs, newDisplayLabelByAnswerId } = reconcileEdgeLabels(parseResult.graph);
-    expect(newDisplayLabelByAnswerId.get('n-a-shared')).toBe('Вариант X');
+    const { diffs, nodeChanges } = reconcileEdgeLabels(parseResult.graph); // Phase 63: kind discriminator
+    // Phase 63: kind discriminator
+    expect(nodeChanges.find(c => c.nodeId === 'n-a-shared' && c.kind === 'answer')?.newLabel).toBe('Вариант X');
     expect(diffs).toHaveLength(1);
     expect(diffs[0]!.edgeId).toBe('e2');
     expect(diffs[0]!.targetLabel).toBe('Вариант X');
+    expect(diffs[0]!.kind).toBe('answer'); // Phase 63: kind discriminator
   });
 });
 
@@ -237,10 +266,12 @@ describe('reconcileEdgeLabels — deterministic iteration order', () => {
       ],
     });
     const resultA = reconcileEdgeLabels(graphA);
-    expect(resultA.newDisplayLabelByAnswerId.get('a')).toBe('FIRST');
+    // Phase 63: kind discriminator
+    expect(resultA.nodeChanges.find(c => c.nodeId === 'a' && c.kind === 'answer')?.newLabel).toBe('FIRST');
     expect(resultA.diffs).toHaveLength(1);
     expect(resultA.diffs[0]!.edgeId).toBe('eB');
     expect(resultA.diffs[0]!.targetLabel).toBe('FIRST');
+    expect(resultA.diffs[0]!.kind).toBe('answer'); // Phase 63: kind discriminator
 
     const graphB = makeGraph({
       questions: [{ id: 'q1' }, { id: 'q2' }],
@@ -251,9 +282,109 @@ describe('reconcileEdgeLabels — deterministic iteration order', () => {
       ],
     });
     const resultB = reconcileEdgeLabels(graphB);
-    expect(resultB.newDisplayLabelByAnswerId.get('a')).toBe('SECOND');
+    // Phase 63: kind discriminator
+    expect(resultB.nodeChanges.find(c => c.nodeId === 'a' && c.kind === 'answer')?.newLabel).toBe('SECOND');
     expect(resultB.diffs).toHaveLength(1);
     expect(resultB.diffs[0]!.edgeId).toBe('eA');
     expect(resultB.diffs[0]!.targetLabel).toBe('SECOND');
+    expect(resultB.diffs[0]!.kind).toBe('answer'); // Phase 63: kind discriminator
+  });
+});
+
+// Phase 63: snippet edge-wins arm (mirror of Phase 50 Answer arm).
+describe('reconcileEdgeLabels — snippet edge-wins (Phase 63)', () => {
+  it('picks first non-empty incoming label when snippetLabel differs', () => {
+    const graph = makeGraph({
+      questions: [{ id: 'q1' }],
+      answers: [],
+      snippets: [{ id: 's1', snippetLabel: 'Старое' }],
+      edges: [
+        { id: 'e1', fromNodeId: 'q1', toNodeId: 's1', label: 'Новое' },
+      ],
+    });
+    const { diffs, nodeChanges } = reconcileEdgeLabels(graph);
+    // Edge label "Новое" wins — snippetLabel must be propagated to "Новое".
+    expect(nodeChanges).toContainEqual(expect.objectContaining({ nodeId: 's1', kind: 'snippet', newLabel: 'Новое' }));
+    expect(nodeChanges.find(c => c.nodeId === 's1' && c.kind === 'snippet')?.newLabel).toBe('Новое');
+    // Edge already has "Новое" — no edge diff.
+    expect(diffs.filter(d => d.kind === 'snippet')).toHaveLength(0);
+  });
+
+  it('cold-open: snippetLabel="Брюшной отдел" + edge.label=undefined → diff propagates label onto edge (D-03)', () => {
+    const parseResult = new CanvasParser().parse(
+      loadFixture('snippet-cold-open-migration.canvas'),
+      'snippet-cold-open-migration.canvas',
+    );
+    expect(parseResult.success).toBe(true);
+    if (!parseResult.success) return;
+    const { diffs, nodeChanges } = reconcileEdgeLabels(parseResult.graph);
+    const snippetDiffs = diffs.filter(d => d.kind === 'snippet');
+    // Edge "e1" has no label, snippetLabel "Брюшной отдел" wins as fallback.
+    expect(snippetDiffs).toHaveLength(1);
+    expect(snippetDiffs[0]!).toMatchObject({ edgeId: 'e1', targetLabel: 'Брюшной отдел', kind: 'snippet' });
+    expect(snippetDiffs[0]!.edgeId).toBe('e1');
+    expect(snippetDiffs[0]!.targetLabel).toBe('Брюшной отдел');
+    expect(snippetDiffs[0]!.kind).toBe('snippet');
+    // snippetLabel already matches the picked value → no nodeChange entry for the snippet.
+    expect(nodeChanges.filter(c => c.nodeId === 'n-snip1' && c.kind === 'snippet').length).toBe(0);
+  });
+
+  it('multi-incoming: edge-wins picks first labeled, resyncs sibling edges + node (Вариант X wins)', () => {
+    const parseResult = new CanvasParser().parse(
+      loadFixture('branching-snippet-multi-incoming.canvas'),
+      'branching-snippet-multi-incoming.canvas',
+    );
+    expect(parseResult.success).toBe(true);
+    if (!parseResult.success) return;
+    const { diffs, nodeChanges } = reconcileEdgeLabels(parseResult.graph);
+    const snippetDiffs = diffs.filter(d => d.kind === 'snippet');
+    // First labeled incoming wins — e1 carries "Вариант X".
+    // Only e2 ("Вариант Y") needs to be re-synced to "Вариант X".
+    expect(snippetDiffs).toHaveLength(1);
+    expect(snippetDiffs[0]!).toMatchObject({ edgeId: 'e2', targetLabel: 'Вариант X', kind: 'snippet' });
+    expect(snippetDiffs[0]!.edgeId).toBe('e2');
+    expect(snippetDiffs[0]!.targetLabel).toBe('Вариант X');
+    expect(snippetDiffs[0]!.kind).toBe('snippet');
+    // snippetLabel "Старое" diverges → must be set to "Вариант X".
+    expect(nodeChanges).toContainEqual(expect.objectContaining({ nodeId: 'n-snip-shared', kind: 'snippet', newLabel: 'Вариант X' }));
+    expect(nodeChanges.find(c => c.nodeId === 'n-snip-shared' && c.kind === 'snippet')?.newLabel).toBe('Вариант X');
+  });
+
+  it('mixed Answer+Snippet incoming: both kinds reconcile in one pass with correct discriminator', () => {
+    // One Question fans out to one Answer + one Snippet, both with diverging incoming labels.
+    const graph = makeGraph({
+      questions: [{ id: 'q1' }],
+      answers: [{ id: 'a1', displayLabel: 'OldAnswer' }],
+      snippets: [{ id: 's1', snippetLabel: 'OldSnippet' }],
+      edges: [
+        { id: 'eA', fromNodeId: 'q1', toNodeId: 'a1', label: 'NewAnswer' },
+        { id: 'eS', fromNodeId: 'q1', toNodeId: 's1', label: 'NewSnippet' },
+      ],
+    });
+    const { diffs, nodeChanges } = reconcileEdgeLabels(graph);
+    // Each arm produces its own kinded nodeChange.
+    expect(nodeChanges).toContainEqual(expect.objectContaining({ nodeId: 'a1', kind: 'answer', newLabel: 'NewAnswer' }));
+    expect(nodeChanges).toContainEqual(expect.objectContaining({ nodeId: 's1', kind: 'snippet', newLabel: 'NewSnippet' }));
+    expect(nodeChanges.find(c => c.nodeId === 'a1' && c.kind === 'answer')?.newLabel).toBe('NewAnswer');
+    expect(nodeChanges.find(c => c.nodeId === 's1' && c.kind === 'snippet')?.newLabel).toBe('NewSnippet');
+    // Edges already match the picked labels → no edge diffs (only node-side updates needed).
+    expect(diffs).toHaveLength(0);
+  });
+
+  it('idempotency: snippet kind contributes to D-07 short-circuit', () => {
+    // Every snippet edge already matches its snippetLabel → reconciler returns
+    // structurally empty result for both arms.
+    const graph = makeGraph({
+      questions: [{ id: 'q1' }, { id: 'q2' }],
+      answers: [{ id: 'a1', displayLabel: 'AnswerOK' }],
+      snippets: [{ id: 's1', snippetLabel: 'SnippetOK' }],
+      edges: [
+        { id: 'eA', fromNodeId: 'q1', toNodeId: 'a1', label: 'AnswerOK' },
+        { id: 'eS', fromNodeId: 'q2', toNodeId: 's1', label: 'SnippetOK' },
+      ],
+    });
+    const { diffs, nodeChanges } = reconcileEdgeLabels(graph);
+    expect(diffs.length).toBe(0);
+    expect(nodeChanges.length).toBe(0);
   });
 });
