@@ -342,7 +342,7 @@ Plans:
 **Plans:** 3 plans
 
 Plans:
-- [ ] 63-01-PLAN.md — Pure reconciler: snippet edge-wins arm + discriminated EdgeLabelDiff/ReconcileResult shape + 2 fixtures + extended unit tests
+- [x] 63-01-PLAN.md — Pure reconciler: snippet edge-wins arm + discriminated EdgeLabelDiff/ReconcileResult shape + 2 fixtures + extended unit tests (2026-04-25)
 - [ ] 63-02-PLAN.md — Service: discriminated writer + lastSnapshotByFilePath baseline + canvas-changed-for-node dispatch bus + rename/delete cleanup + new edge-label-sync-service.test.ts
 - [ ] 63-03-PLAN.md — View: formFieldRefs Map + applyCanvasPatch + per-field blur handlers + onOpen subscription + new editor-panel-canvas-sync.test.ts
 **UI hint**: yes
