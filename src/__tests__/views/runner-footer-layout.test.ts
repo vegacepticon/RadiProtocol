@@ -207,7 +207,6 @@ function makePlugin(): RadiProtocolPlugin {
 
 interface RunnerHarness {
   contentEl: FakeNode;
-  capturePendingTextareaScrollSpy: ReturnType<typeof vi.fn>;
   syncManualEditSpy: ReturnType<typeof vi.fn>;
   skipSpy: ReturnType<typeof vi.fn>;
   stepBackSpy: ReturnType<typeof vi.fn>;
@@ -218,7 +217,6 @@ interface RunnerHarness {
 function mountRunnerViewAtMixedQuestion(): RunnerHarness {
   const view = new RunnerView({} as import('obsidian').WorkspaceLeaf, makePlugin());
   const contentEl = makeFakeNode();
-  const capturePendingTextareaScrollSpy = vi.fn();
   const syncManualEditSpy = vi.fn();
   const skipSpy = vi.fn();
   const stepBackSpy = vi.fn();
@@ -248,7 +246,6 @@ function mountRunnerViewAtMixedQuestion(): RunnerHarness {
   ) => {
     if (type === 'click') el._clickHandler = handler;
   };
-  (view as unknown as { capturePendingTextareaScroll: () => void }).capturePendingTextareaScroll = capturePendingTextareaScrollSpy;
   (view as unknown as { autoSaveSession: () => Promise<void> }).autoSaveSession = autoSaveSessionSpy;
   (view as unknown as { renderAsync: () => Promise<void> }).renderAsync = renderAsyncSpy;
   (view as unknown as { renderPreviewZone: () => void }).renderPreviewZone = () => {};
@@ -258,7 +255,6 @@ function mountRunnerViewAtMixedQuestion(): RunnerHarness {
 
   return {
     contentEl,
-    capturePendingTextareaScrollSpy,
     syncManualEditSpy,
     skipSpy,
     stepBackSpy,
@@ -312,7 +308,6 @@ describe('Phase 65 Plan 01 — RUNNER-02 RunnerView footer layout RED tests', ()
   it('RUNNER-02 footer Skip and Back preserve the RunnerView click prologue', async () => {
     const h = mountRunnerViewAtMixedQuestion();
     const callOrder: string[] = [];
-    h.capturePendingTextareaScrollSpy.mockImplementation(() => callOrder.push('capturePendingTextareaScroll'));
     h.syncManualEditSpy.mockImplementation(() => callOrder.push('syncManualEdit'));
     h.skipSpy.mockImplementation(() => callOrder.push('skip'));
     h.stepBackSpy.mockImplementation(() => callOrder.push('stepBack'));
@@ -324,8 +319,7 @@ describe('Phase 65 Plan 01 — RUNNER-02 RunnerView footer layout RED tests', ()
     findByClass(footerRow, 'rp-skip-btn')[0]!._clickHandler?.();
     await Promise.resolve();
 
-    expect(callOrder.slice(0, 5)).toEqual([
-      'capturePendingTextareaScroll',
+    expect(callOrder.slice(0, 4)).toEqual([
       'syncManualEdit',
       'skip',
       'autoSaveSession',

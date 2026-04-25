@@ -187,7 +187,6 @@ interface Harness {
   chooseSnippetBranchSpy: ReturnType<typeof vi.fn>;
   pickFileBoundSnippetSpy: ReturnType<typeof vi.fn>;
   syncManualEditSpy: ReturnType<typeof vi.fn>;
-  capturePendingTextareaScrollSpy: ReturnType<typeof vi.fn>;
   contentEl: FakeNode;
 }
 
@@ -227,17 +226,13 @@ function mountAtQuestion(graph: ProtocolGraph): Harness {
     async () => {};
   (view as unknown as { renderAsync: () => Promise<void> }).renderAsync = async () => {};
 
-  const capturePendingTextareaScrollSpy = vi.fn();
-  (view as unknown as { capturePendingTextareaScroll: () => void })
-    .capturePendingTextareaScroll = capturePendingTextareaScrollSpy;
-
   // Neutralise renderPreviewZone / renderOutputToolbar so we don't DOM-render them.
   (view as unknown as { renderPreviewZone: () => void }).renderPreviewZone = () => {};
   (view as unknown as { renderOutputToolbar: () => void }).renderOutputToolbar = () => {};
 
   (view as unknown as { render: () => void }).render();
 
-  return { view, chooseSnippetBranchSpy, pickFileBoundSnippetSpy, syncManualEditSpy, capturePendingTextareaScrollSpy, contentEl };
+  return { view, chooseSnippetBranchSpy, pickFileBoundSnippetSpy, syncManualEditSpy, contentEl };
 }
 
 function makeSnippetNode(partial: Partial<SnippetNode> & { id: string }): SnippetNode {
@@ -349,7 +344,7 @@ describe('Phase 51 Plan 05 — Specific-bound Snippet sibling button (D-16)', ()
     expect(btns[0]!.text).toBe(`${GLYPH_FILE} .md`);
   });
 
-  it('Test 7 (RUNFIX-02): file-bound click handler invokes capturePendingTextareaScroll FIRST, then syncManualEdit, then pickFileBoundSnippet', () => {
+  it('Test 7: file-bound click handler invokes syncManualEdit, then pickFileBoundSnippet', () => {
     // Phase 56 D-04: file-bound click now routes through pickFileBoundSnippet,
     // not chooseSnippetBranch (Phase 51 D-16 routing reversed).
     const sn = makeSnippetNode({
@@ -359,9 +354,6 @@ describe('Phase 51 Plan 05 — Specific-bound Snippet sibling button (D-16)', ()
     const h = mountAtQuestion(buildGraph({ snippetNodes: [sn] }));
 
     const callOrder: string[] = [];
-    h.capturePendingTextareaScrollSpy.mockImplementation(() => {
-      callOrder.push('capturePendingTextareaScroll');
-    });
     h.syncManualEditSpy.mockImplementation(() => {
       callOrder.push('syncManualEdit');
     });
@@ -372,9 +364,8 @@ describe('Phase 51 Plan 05 — Specific-bound Snippet sibling button (D-16)', ()
     const btns = findByClass(h.contentEl, 'rp-snippet-branch-btn');
     btns[0]!._clickHandler?.();
 
-    expect(callOrder[0]).toBe('capturePendingTextareaScroll');
-    expect(callOrder[1]).toBe('syncManualEdit');
-    expect(callOrder[2]).toBe('pickFileBoundSnippet');
+    expect(callOrder[0]).toBe('syncManualEdit');
+    expect(callOrder[1]).toBe('pickFileBoundSnippet');
     // Phase 56 D-04: dispatch is direct — chooseSnippetBranch must NOT be called.
     expect(h.chooseSnippetBranchSpy).not.toHaveBeenCalled();
     expect(h.pickFileBoundSnippetSpy).toHaveBeenCalledWith('q1', 's1', 'abdomen/ct.md');
@@ -465,7 +456,7 @@ describe('Phase 51 Plan 05 — Specific-bound Snippet sibling button (D-16)', ()
     expect(h.chooseSnippetBranchSpy).toHaveBeenCalledTimes(1);
   });
 
-  it('Test 12 (D-04 + RUNFIX-02): file-bound click — capturePendingTextareaScroll fires before pickFileBoundSnippet (5-step prologue parity)', () => {
+  it('Test 12 (D-04): file-bound click — syncManualEdit fires before pickFileBoundSnippet (4-step prologue parity)', () => {
     const sn = makeSnippetNode({
       id: 'sFile',
       radiprotocol_snippetPath: 'abdomen/ct.md',
@@ -475,7 +466,6 @@ describe('Phase 51 Plan 05 — Specific-bound Snippet sibling button (D-16)', ()
     const btns = findByClass(h.contentEl, 'rp-snippet-branch-btn');
     btns[0]!._clickHandler?.();
 
-    expect(h.capturePendingTextareaScrollSpy).toHaveBeenCalledTimes(1);
     expect(h.syncManualEditSpy).toHaveBeenCalledTimes(1);
     expect(h.pickFileBoundSnippetSpy).toHaveBeenCalledTimes(1);
   });

@@ -26,18 +26,7 @@ describe('RunnerView (UI-01, UI-07, UI-12)', () => {
   });
 });
 
-// Phase 47 Plan 02 — RUNFIX-02: preserving textarea scroll through the choice-click re-render.
-//
-// The bug: clicking a choice button calls renderAsync → render → contentEl.empty() → renderPreviewZone,
-// which creates a BRAND-NEW <textarea> whose scrollTop defaults to 0 — so long reports snap to the top
-// on every click. Fix (in runner-view.ts):
-//   1. New private field `pendingTextareaScrollTop: number | null = null`.
-//   2. New private helper `capturePendingTextareaScroll()` reads previewTextarea.scrollTop into it.
-//   3. Each choice click handler calls capturePendingTextareaScroll() as its FIRST line (before
-//      the existing syncManualEdit call) so the value is stashed on `this` BEFORE render() nulls
-//      out previewTextarea.
-//   4. renderPreviewZone's existing rAF callback, after recomputing height, restores the scrollTop
-//      onto the new textarea and nulls the pending field (consume exactly once).
+// Phase 66 D-09: renderPreviewZone unconditionally scrolls to bottom on every render.
 //
 // The tests below drive renderPreviewZone directly against a fake zone+textarea fixture because
 // the vitest environment is node (no jsdom) — we cannot instantiate RunnerView normally, so we
@@ -83,8 +72,6 @@ function makeFakeZone(): FakeZone {
  */
 function makePartialView(): {
   view: RunnerView;
-  getField: <T>(name: string) => T;
-  setField: (name: string, value: unknown) => void;
   callMethod: (name: string, ...args: unknown[]) => unknown;
 } {
   const view = Object.create(RunnerView.prototype) as RunnerView;
@@ -92,13 +79,7 @@ function makePartialView(): {
   (view as unknown as { registerDomEvent: (...args: unknown[]) => void }).registerDomEvent = () => {};
   // Initialize the private fields renderPreviewZone depends on.
   (view as unknown as Record<string, unknown>)['previewTextarea'] = null;
-  (view as unknown as Record<string, unknown>)['pendingTextareaScrollTop'] = null;
 
-  const getField = <T,>(name: string): T =>
-    (view as unknown as Record<string, unknown>)[name] as T;
-  const setField = (name: string, value: unknown): void => {
-    (view as unknown as Record<string, unknown>)[name] = value;
-  };
   const callMethod = (name: string, ...args: unknown[]): unknown => {
     const fn = (view as unknown as Record<string, (...a: unknown[]) => unknown> | undefined)?.[name];
     if (typeof fn !== 'function') {
@@ -107,10 +88,10 @@ function makePartialView(): {
     return (fn as (this: RunnerView, ...a: unknown[]) => unknown).call(view, ...args);
   };
 
-  return { view, getField, setField, callMethod };
+  return { view, callMethod };
 }
 
-describe('RunnerView RUNFIX-02 — choice click preserves textarea scroll', () => {
+describe('RunnerView D-09 — unconditional scroll-to-bottom on every render', () => {
   // vitest node environment does not define requestAnimationFrame — install a
   // synchronous polyfill so renderPreviewZone's deferred height+scroll block
   // runs inside the same tick, then tear it down to keep other suites clean.
@@ -133,85 +114,16 @@ describe('RunnerView RUNFIX-02 — choice click preserves textarea scroll', () =
     }
   });
 
-  it('RUNFIX-02: pendingTextareaScrollTop field exists and defaults to null', () => {
-    const { getField } = makePartialView();
-    expect(getField('pendingTextareaScrollTop')).toBeNull();
-  });
-
-  it('RUNFIX-02: capturePendingTextareaScroll helper copies previewTextarea.scrollTop into the pending field', () => {
-    const { setField, getField, callMethod } = makePartialView();
-    // Simulate a user having scrolled the current textarea to 500.
-    setField('previewTextarea', { scrollTop: 500, value: 'anything' } as unknown as HTMLTextAreaElement);
-    callMethod('capturePendingTextareaScroll');
-    expect(getField('pendingTextareaScrollTop')).toBe(500);
-  });
-
-  it('RUNFIX-02: renderPreviewZone scrolls new textarea to BOTTOM when pending flag is set (scroll to insertion point) and consumes the flag', () => {
-    const { getField, setField, callMethod } = makePartialView();
-
-    // Pretend a choice handler already flagged pending — captured value is ignored;
-    // only non-null presence gates the scroll-to-bottom.
-    setField('pendingTextareaScrollTop', 500);
+  it('Phase 66 D-09: renderPreviewZone schedules an unconditional scroll-to-bottom on requestAnimationFrame', () => {
+    const { callMethod } = makePartialView();
 
     const zone = makeFakeZone();
     callMethod('renderPreviewZone', zone as unknown as HTMLElement, 'NEW LINE\n'.repeat(200));
 
     const created = zone.lastCreated;
     expect(created).not.toBeNull();
-    // After RUNFIX-02 revision (2026-04-19 UAT): the new textarea scrolls to BOTTOM
-    // so the freshly inserted content is visible — matches scrollHeight exactly.
+    // After D-09: the new textarea ALWAYS scrolls to BOTTOM so the freshly
+    // inserted content is visible — matches scrollHeight exactly.
     expect(created!.scrollTop).toBe(created!.scrollHeight);
-    // Consumed once — stale pending flag must not leak into a later unrelated render.
-    expect(getField('pendingTextareaScrollTop')).toBeNull();
-  });
-
-  it('RUNFIX-02: renderPreviewZone leaves scrollTop=0 on the new textarea when no capture occurred (no leak)', () => {
-    const { callMethod } = makePartialView();
-
-    const zone = makeFakeZone();
-    callMethod('renderPreviewZone', zone as unknown as HTMLElement, 'text\n'.repeat(10));
-
-    const created = zone.lastCreated;
-    expect(created).not.toBeNull();
-    // No pending capture → textarea keeps its default scrollTop (0).
-    expect(created!.scrollTop).toBe(0);
-  });
-
-  it('RUNFIX-02: end-to-end capture → re-render → restore flow keeps scroll across a simulated choice click', () => {
-    const { view, getField, setField, callMethod } = makePartialView();
-
-    // First render: build initial textarea.
-    const zone1 = makeFakeZone();
-    callMethod('renderPreviewZone', zone1 as unknown as HTMLElement, 'LINE\n'.repeat(200));
-    const first = zone1.lastCreated;
-    expect(first).not.toBeNull();
-    // After first render, previewTextarea points at the first fake element.
-    expect(getField<FakeTextareaEl | null>('previewTextarea')).toBe(first);
-
-    // User scrolls it.
-    first!.scrollTop = 500;
-
-    // Simulate a choice-button click: FIRST line of handler captures pending scroll.
-    callMethod('capturePendingTextareaScroll');
-    expect(getField('pendingTextareaScrollTop')).toBe(500);
-
-    // render() would null previewTextarea before rebuilding — mirror that.
-    setField('previewTextarea', null);
-
-    // Second render: fresh textarea from renderPreviewZone.
-    const zone2 = makeFakeZone();
-    callMethod('renderPreviewZone', zone2 as unknown as HTMLElement, 'NEW\n'.repeat(200));
-    const second = zone2.lastCreated;
-    expect(second).not.toBeNull();
-    expect(second).not.toBe(first);
-
-    // Load-bearing invariant (RUNFIX-02 revision): after a choice click, the new
-    // textarea scrolls to its BOTTOM so freshly inserted content is visible.
-    expect(second!.scrollTop).toBe(second!.scrollHeight);
-    // Pending field consumed.
-    expect(getField('pendingTextareaScrollTop')).toBeNull();
-
-    // Silence unused-var lint on `view`.
-    void view;
   });
 });

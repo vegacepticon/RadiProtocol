@@ -15,8 +15,8 @@
 //           callback suppresses handleSnippetPickerSelection
 //   Test 6: Step-back button still rendered when canStepBack; click calls runner.stepBack
 //           and re-renders
-//   Test 7 (RUNFIX-02): file-row click handler's FIRST statement is
-//           capturePendingTextareaScroll() (verified via call-order spy)
+//   Test 7: file-row click handler calls snippetService.load then
+//           handleSnippetPickerSelection (call-order verified via spy)
 //   Test 8 (lifecycle): render() unmounts the previous picker when state has left
 //           awaiting-snippet-pick
 
@@ -462,8 +462,8 @@ describe('Phase 51 Plan 05 — RunnerView renderSnippetPicker on SnippetTreePick
     expect(renderSpy).toHaveBeenCalled();
   });
 
-  it('Test 7 (RUNFIX-02): file-row click handler invokes capturePendingTextareaScroll BEFORE snippetService.load', async () => {
-    const { view, plugin } = makeView({
+  it('Test 7: file-row click handler invokes snippetService.load before handleSnippetPickerSelection', async () => {
+    const { view, plugin, handleSnippetPickerSelectionSpy } = makeView({
       status: 'awaiting-snippet-pick',
       nodeId: 'n1',
       subfolderPath: 'abdomen',
@@ -480,13 +480,12 @@ describe('Phase 51 Plan 05 — RunnerView renderSnippetPicker on SnippetTreePick
 
     // Spy call order via a shared array
     const callOrder: string[] = [];
-    (view as unknown as { capturePendingTextareaScroll: () => void }).capturePendingTextareaScroll =
-      () => {
-        callOrder.push('capturePendingTextareaScroll');
-      };
     (plugin.snippetService.load as ReturnType<typeof vi.fn>).mockImplementation(async () => {
       callOrder.push('snippetService.load');
       return fakeSnippet;
+    });
+    handleSnippetPickerSelectionSpy.mockImplementation(async () => {
+      callOrder.push('handleSnippetPickerSelection');
     });
 
     const questionZone = makeFakeNode();
@@ -510,9 +509,8 @@ describe('Phase 51 Plan 05 — RunnerView renderSnippetPicker on SnippetTreePick
     await new Promise((r) => setTimeout(r, 0));
     await new Promise((r) => setTimeout(r, 0));
 
-    expect(callOrder[0]).toBe('capturePendingTextareaScroll');
-    expect(callOrder.indexOf('capturePendingTextareaScroll')).toBeLessThan(
-      callOrder.indexOf('snippetService.load'),
+    expect(callOrder.indexOf('snippetService.load')).toBeLessThan(
+      callOrder.indexOf('handleSnippetPickerSelection'),
     );
   });
 
@@ -871,7 +869,6 @@ interface AtQuestionHarness {
   chooseSnippetBranchSpy: ReturnType<typeof vi.fn>;
   pickFileBoundSnippetSpy: ReturnType<typeof vi.fn>;
   syncManualEditSpy: ReturnType<typeof vi.fn>;
-  capturePendingTextareaScrollSpy: ReturnType<typeof vi.fn>;
 }
 
 function mountAtQuestion56(graph: PG): AtQuestionHarness {
@@ -910,10 +907,6 @@ function mountAtQuestion56(graph: PG): AtQuestionHarness {
     async () => {};
   (view as unknown as { renderAsync: () => Promise<void> }).renderAsync = async () => {};
 
-  const capturePendingTextareaScrollSpy = vi.fn();
-  (view as unknown as { capturePendingTextareaScroll: () => void })
-    .capturePendingTextareaScroll = capturePendingTextareaScrollSpy;
-
   (view as unknown as { renderPreviewZone: () => void }).renderPreviewZone = () => {};
   (view as unknown as { renderOutputToolbar: () => void }).renderOutputToolbar = () => {};
 
@@ -925,7 +918,6 @@ function mountAtQuestion56(graph: PG): AtQuestionHarness {
     chooseSnippetBranchSpy,
     pickFileBoundSnippetSpy,
     syncManualEditSpy,
-    capturePendingTextareaScrollSpy,
   };
 }
 
@@ -947,8 +939,6 @@ describe('Phase 56 Plan 04 — Directory-bound dispatch regression (D-04 / SC 3)
     expect(h.chooseSnippetBranchSpy).toHaveBeenCalledWith('sDirOnly');
     // pickFileBoundSnippet must NOT fire — directory-bound never routes through it.
     expect(h.pickFileBoundSnippetSpy).not.toHaveBeenCalled();
-    // RUNFIX-02 prologue intact.
-    expect(h.capturePendingTextareaScrollSpy).toHaveBeenCalledTimes(1);
     expect(h.syncManualEditSpy).toHaveBeenCalledTimes(1);
   });
 
