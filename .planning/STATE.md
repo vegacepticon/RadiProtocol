@@ -3,9 +3,9 @@ gsd_state_version: 1.0
 milestone: v1.10
 milestone_name: Editor Sync & Runner UX Polish
 status: in-progress
-stopped_at: "Phase 66 planned (5 plans across 4 waves); ready to execute"
-last_updated: "2026-04-25T13:30:00.000Z"
-last_activity: 2026-04-25 — Phase 66 plan-phase complete (66-01..66-05 PLAN.md + plan-checker VERIFICATION PASSED on iteration 2). Ready for /gsd-execute-phase 66
+stopped_at: "Phase 67 context gathered; ready for plan-phase"
+last_updated: "2026-04-25T15:00:00.000Z"
+last_activity: 2026-04-25 — Phase 67 discuss-phase complete (67-CONTEXT.md + 67-DISCUSSION-LOG.md). FIX-07 root-cause located in protocol-runner.ts:736 — scope expanded to runner-core + node-label.ts. Ready for /gsd-plan-phase 67
 progress:
   total_phases: 5
   completed_phases: 3
@@ -24,10 +24,10 @@ progress:
 
 ## Current Position
 
-Phase: 66 (in progress — executing Wave 2)
-Plan: 66-01 complete; 66-02..66-05 remaining across waves 2-4
-Status: Phase 66 execution in progress. Wave 1 (66-01) complete — state-machine surgery, in-flight guard, and Processing-text removal committed. Moving to Wave 2 (66-02 + 66-04).
-Last activity: 2026-04-25 — Wave 1 complete, beginning Wave 2.
+Phase: 66 (in progress — executing Wave 2) + Phase 67 (context gathered, ready for plan)
+Plan: Phase 66 — 66-01 complete; 66-02..66-05 remaining across waves 2-4. Phase 67 — 67-CONTEXT.md + 67-DISCUSSION-LOG.md committed; PLAN.md not yet created.
+Status: Phase 66 execution in progress (Wave 2 next). Phase 67 discuss-phase complete — 17 decisions captured (D-01..D-18). Notable scope expansion: INLINE-FIX-07 root-cause located in `src/runner/protocol-runner.ts:736-741` (advanceThrough case 'snippet' unconditionally halts at awaiting-snippet-pick), so fix touches runner-core + `src/graph/node-label.ts` — outside the inline-only scope ROADMAP.md §Phase 67 originally described. PLAN.md must amend ROADMAP/STATE in its first plan.
+Last activity: 2026-04-25 — Phase 67 /gsd-discuss-phase complete; Phase 66 Wave 2 still pending.
 
 ---
 
