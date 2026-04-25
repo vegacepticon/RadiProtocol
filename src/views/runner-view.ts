@@ -464,6 +464,7 @@ export class RunnerView extends ItemView {
           this.renderError([`Node "${state.currentNodeId}" not found in graph.`]);
           return;
         }
+        let showSkipFooterControl = false;
 
         switch (node.kind) {
           case 'question': {
@@ -497,28 +498,6 @@ export class RunnerView extends ItemView {
                   void this.renderAsync();
                 });
               }
-            }
-
-            // Phase 53 RUNNER-SKIP-01 / D-07 / D-08: Skip button visible only when the runner
-            // is at-node + question + has ≥ 1 answer-kind neighbor. Icon-only per D-04/D-05.
-            // Click handler mirrors the answer-btn canonical 5-step prologue:
-            //   capturePendingTextareaScroll → syncManualEdit → runner.skip → autoSaveSession → renderAsync
-            // BUG-01 / D-11: syncManualEdit captures the live textarea value BEFORE skip() so
-            // manual edits survive the undo snapshot.
-            if (answerNeighbors.length > 0) {
-              const skipBtn = questionZone.createEl('button', {
-                cls: 'rp-skip-btn',
-              });
-              setIcon(skipBtn, 'skip-forward');
-              skipBtn.setAttribute('aria-label', 'Skip this question');
-              skipBtn.title = 'Skip this question';
-              this.registerDomEvent(skipBtn, 'click', () => {
-                this.capturePendingTextareaScroll();  // RUNFIX-02: preserve scroll across re-render
-                this.runner.syncManualEdit(this.previewTextarea?.value ?? '');  // BUG-01 / D-11
-                this.runner.skip();
-                void this.autoSaveSession();   // SESSION-01 — save after skip (D-10: recordable step)
-                void this.renderAsync();
-              });
             }
 
             if (snippetNeighbors.length > 0) {
@@ -576,6 +555,9 @@ export class RunnerView extends ItemView {
                 });
               }
             }
+            // Phase 65 RUNNER-02: Skip is rendered in the shared footer row after all
+            // answer and snippet branch lists, never between mixed branch groups.
+            showSkipFooterControl = answerNeighbors.length > 0;
             break;
           }
 
@@ -594,17 +576,22 @@ export class RunnerView extends ItemView {
           }
         }
 
-        if (state.canStepBack) {
-          const stepBackBtn = questionZone.createEl('button', {
-            cls: 'rp-step-back-btn',
-            text: 'Step back',
-          });
-          this.registerDomEvent(stepBackBtn, 'click', () => {
+        this.renderRunnerFooter(questionZone, {
+          showBack: state.canStepBack,
+          onBack: () => {
             this.runner.stepBack();
             void this.autoSaveSession();   // SESSION-01 — save the reverted state
             this.render();
-          });
-        }
+          },
+          showSkip: showSkipFooterControl,
+          onSkip: () => {
+            this.capturePendingTextareaScroll();  // RUNFIX-02: preserve scroll across re-render
+            this.runner.syncManualEdit(this.previewTextarea?.value ?? '');  // BUG-01 / D-11
+            this.runner.skip();
+            void this.autoSaveSession();   // SESSION-01 — save after skip (D-10: recordable step)
+            void this.renderAsync();
+          },
+        });
 
         this.renderPreviewZone(previewZone, state.accumulatedText);
         this.renderOutputToolbar(outputToolbar, state.accumulatedText, false);
@@ -680,18 +667,15 @@ export class RunnerView extends ItemView {
           });
         }
 
-        // RUN-05: step-back button (same pattern as at-node arm).
-        if (state.canStepBack) {
-          const stepBackBtn = questionZone.createEl('button', {
-            cls: 'rp-step-back-btn',
-            text: 'Step back',
-          });
-          this.registerDomEvent(stepBackBtn, 'click', () => {
+        // RUN-05: step-back footer row (same handler pattern as at-node arm).
+        this.renderRunnerFooter(questionZone, {
+          showBack: state.canStepBack,
+          onBack: () => {
             this.runner.stepBack();
             void this.autoSaveSession();
             this.render();
-          });
-        }
+          },
+        });
 
         this.renderPreviewZone(previewZone, state.accumulatedText);
         this.renderOutputToolbar(outputToolbar, state.accumulatedText, false);
@@ -748,6 +732,39 @@ export class RunnerView extends ItemView {
   /** Wrapper so click handlers can call `void this.renderAsync()` */
   private async renderAsync(): Promise<void> {
     this.render();
+  }
+
+  /** Phase 65 RUNNER-02: shared Back/Skip footer row below branch/picker controls. */
+  private renderRunnerFooter(
+    zone: HTMLElement,
+    options: {
+      showBack: boolean;
+      onBack: () => void;
+      showSkip?: boolean;
+      onSkip?: () => void;
+    },
+  ): void {
+    if (!options.showBack && options.showSkip !== true) return;
+
+    const footerRow = zone.createDiv({ cls: 'rp-runner-footer-row' });
+    if (options.showBack) {
+      const backBtn = footerRow.createEl('button', {
+        cls: 'rp-step-back-btn',
+        text: 'Back',
+      });
+      backBtn.setAttribute('aria-label', 'Go back one step');
+      backBtn.title = 'Go back one step';
+      this.registerDomEvent(backBtn, 'click', options.onBack);
+    }
+    if (options.showSkip === true && options.onSkip !== undefined) {
+      const skipBtn = footerRow.createEl('button', {
+        cls: 'rp-skip-btn',
+        text: 'Skip',
+      });
+      skipBtn.setAttribute('aria-label', 'Skip this question');
+      skipBtn.title = 'Skip this question';
+      this.registerDomEvent(skipBtn, 'click', options.onSkip);
+    }
   }
 
   /**
@@ -835,13 +852,10 @@ export class RunnerView extends ItemView {
     });
     void this.snippetTreePicker.mount();
 
-    // Step-back (Phase 30 D-11) — preserved
-    if (state.canStepBack) {
-      const stepBackBtn = questionZone.createEl('button', {
-        cls: 'rp-step-back-btn',
-        text: 'Step back',
-      });
-      this.registerDomEvent(stepBackBtn, 'click', () => {
+    // Step-back (Phase 30 D-11) — preserved through Phase 65 footer row.
+    this.renderRunnerFooter(questionZone, {
+      showBack: state.canStepBack,
+      onBack: () => {
         if (this.snippetTreePicker !== null) {
           this.snippetTreePicker.unmount();
           this.snippetTreePicker = null;
@@ -849,8 +863,8 @@ export class RunnerView extends ItemView {
         this.runner.stepBack();
         void this.autoSaveSession();
         this.render();
-      });
-    }
+      },
+    });
   }
 
   /**
