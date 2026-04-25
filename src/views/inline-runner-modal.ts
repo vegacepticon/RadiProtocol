@@ -308,6 +308,7 @@ export class InlineRunnerModal {
           this.renderError(questionZone, [`Node "${state.currentNodeId}" not found in graph.`]);
           return;
         }
+        let showSkipFooterControl = false;
 
         switch (node.kind) {
           case 'question': {
@@ -378,17 +379,9 @@ export class InlineRunnerModal {
               }
             }
 
-            // Skip button (Phase 53 parity)
-            if (answerNeighbors.length > 0 && typeof this.runner.skip === 'function') {
-              const skipBtn = questionZone.createEl('button', { cls: 'rp-skip-btn' });
-              setIcon(skipBtn, 'skip-forward');
-              skipBtn.setAttribute('aria-label', 'Skip this question');
-              skipBtn.title = 'Skip this question';
-              skipBtn.addEventListener('click', () => {
-                this.runner.skip();
-                this.render();
-              });
-            }
+            // Phase 65 RUNNER-02: Skip is rendered in the shared footer row after all
+            // answer and snippet branch lists, never between mixed branch groups.
+            showSkipFooterControl = answerNeighbors.length > 0 && typeof this.runner.skip === 'function';
             break;
           }
 
@@ -401,16 +394,18 @@ export class InlineRunnerModal {
           }
         }
 
-        if (state.canStepBack) {
-          const stepBackBtn = questionZone.createEl('button', {
-            cls: 'rp-step-back-btn',
-            text: 'Step back',
-          });
-          stepBackBtn.addEventListener('click', () => {
+        this.renderRunnerFooter(questionZone, {
+          showBack: state.canStepBack,
+          onBack: () => {
             this.runner.stepBack();
             this.render();
-          });
-        }
+          },
+          showSkip: showSkipFooterControl,
+          onSkip: () => {
+            this.runner.skip();
+            this.render();
+          },
+        });
 
         this.renderOutputToolbar(outputToolbar, state.accumulatedText, false);
         break;
@@ -465,16 +460,13 @@ export class InlineRunnerModal {
           });
         }
 
-        if (state.canStepBack) {
-          const stepBackBtn = questionZone.createEl('button', {
-            cls: 'rp-step-back-btn',
-            text: 'Step back',
-          });
-          stepBackBtn.addEventListener('click', () => {
+        this.renderRunnerFooter(questionZone, {
+          showBack: state.canStepBack,
+          onBack: () => {
             this.runner.stepBack();
             this.render();
-          });
-        }
+          },
+        });
 
         this.renderOutputToolbar(outputToolbar, state.accumulatedText, false);
         break;
@@ -510,6 +502,39 @@ export class InlineRunnerModal {
   }
 
   // ── Event Handlers ────────────────────────────────────────────────────────
+
+  /** Phase 65 RUNNER-02: shared Back/Skip footer row below branch/picker controls. */
+  private renderRunnerFooter(
+    zone: HTMLElement,
+    options: {
+      showBack: boolean;
+      onBack: () => void;
+      showSkip?: boolean;
+      onSkip?: () => void;
+    },
+  ): void {
+    if (!options.showBack && options.showSkip !== true) return;
+
+    const footerRow = zone.createDiv({ cls: 'rp-runner-footer-row' });
+    if (options.showBack) {
+      const backBtn = footerRow.createEl('button', {
+        cls: 'rp-step-back-btn',
+        text: 'Back',
+      });
+      backBtn.setAttribute('aria-label', 'Go back one step');
+      backBtn.title = 'Go back one step';
+      backBtn.addEventListener('click', options.onBack);
+    }
+    if (options.showSkip === true && options.onSkip !== undefined) {
+      const skipBtn = footerRow.createEl('button', {
+        cls: 'rp-skip-btn',
+        text: 'Skip',
+      });
+      skipBtn.setAttribute('aria-label', 'Skip this question');
+      skipBtn.title = 'Skip this question';
+      skipBtn.addEventListener('click', options.onSkip);
+    }
+  }
 
   /** D1: freeze/resume — hide modal when active note is not the target note. */
   private handleActiveLeafChange(): void {
@@ -934,20 +959,17 @@ export class InlineRunnerModal {
     });
     void this.snippetTreePicker.mount();
 
-    if (state.canStepBack) {
-      const stepBackBtn = questionZone.createEl('button', {
-        cls: 'rp-step-back-btn',
-        text: 'Step back',
-      });
-      stepBackBtn.addEventListener('click', () => {
+    this.renderRunnerFooter(questionZone, {
+      showBack: state.canStepBack,
+      onBack: () => {
         if (this.snippetTreePicker !== null) {
           this.snippetTreePicker.unmount();
           this.snippetTreePicker = null;
         }
         this.runner.stepBack();
         this.render();
-      });
-    }
+      },
+    });
   }
 
   /** Handle snippet picker selection — append to note and advance. */
