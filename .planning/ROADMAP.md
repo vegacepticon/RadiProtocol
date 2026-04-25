@@ -18,7 +18,7 @@
 - ✅ **v1.9 Inline Runner Polish & Settings UX** — Phases 59-62 (shipped 2026-04-25)
 - 🔄 **v1.10 Editor Sync & Runner UX Polish** — Phases 63-67 (defining; started 2026-04-25)
 
-_Active milestone: v1.10. Next phase to plan: 63._
+_Active milestone: v1.10. Phases 63-65 complete; next phase to plan/execute: 66._
 
 ---
 

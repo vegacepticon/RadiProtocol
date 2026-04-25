@@ -12,7 +12,7 @@ A radiologist can generate a structured, accurate protocol in seconds by answeri
 
 **Last shipped:** v1.9 Inline Runner Polish & Settings UX — ✅ SHIPPED 2026-04-25 (GitHub Release v1.9.0, 3 loose assets, BRAT-installable)
 
-**Active milestone:** v1.10 Editor Sync & Runner UX Polish — DEFINING REQUIREMENTS (started 2026-04-25)
+**Active milestone:** v1.10 Editor Sync & Runner UX Polish — IN PROGRESS (Phases 63-65 complete; started 2026-04-25)
 
 **Previous milestone:** v1.9 Inline Runner Polish & Settings UX — ✅ SHIPPED 2026-04-25
 
@@ -29,7 +29,7 @@ Node Editor
 - Fifth quick-create button "Create text block" in the Node Editor toolbar
 
 Runner UX
-- Footer layout: "step back" → "back"; Skip renders as labeled button ("skip") to the right of Back on the same horizontal row; Skip never renders between mixed answer/snippet branches
+- Footer layout: "step back" → "back"; Skip renders as labeled button ("skip") to the right of Back on the same horizontal row; Skip never renders between mixed answer/snippet branches — validated in Phase 65
 - Step-back works reliably: no "Processing" hang, single click = single step, loop-node step-back does not corrupt accumulated text
 - Scroll stays pinned to the bottom when file-bound snippet inserts or step-back runs (parity with Answer insert and directory-bound snippet)
 
