@@ -158,9 +158,9 @@ describe('Phase 35 — MD snippets in Runner picker', () => {
     // Undo BEFORE completing the snippet — exactly mirrors Phase 30 D-06 flow.
     runner.stepBack();
     const back = runner.getState();
-    // After stepBack, runner is back at the snippet node (awaiting-snippet-pick).
-    expect(back.status).toBe('at-node');
-    if (back.status === 'at-node') {
+    // Phase 66 D-05: pickSnippet pushes restoreStatus: 'awaiting-snippet-pick'
+    expect(back.status).toBe('awaiting-snippet-pick');
+    if (back.status === 'awaiting-snippet-pick') {
       expect(back.accumulatedText).toBe(prePickText);
     }
   });
