@@ -156,7 +156,7 @@ Full details: `.planning/milestones/v1.9-ROADMAP.md`
 - [x] Phase 64: Node Editor Polish — Auto-grow & Text Block Quick-Create (3/3 plans) — executed 2026-04-25, UAT passed 7/7
 - [x] Phase 65: Runner Footer Layout — Back/Skip Row (2/2 plans) — completed 2026-04-25, UAT approved
 - [ ] Phase 66: Runner Step-Back Reliability & Scroll Pinning (TBD plans)
-- [ ] Phase 67: Inline Runner Resizable Modal & File-Bound Snippet Parity (TBD plans)
+- [ ] Phase 67: Inline Runner Resizable Modal & File-Bound Snippet Parity (3 plans)
 
 </details>
 
@@ -410,8 +410,13 @@ Plans:
   3. If the last-saved dimensions would exceed the current viewport (e.g. after a monitor or resolution change), the restore path clamps width and height to the current viewport bounds — mirroring the Phase 60 clamp-on-restore pattern; the modal is always visible and remains resizable (INLINE-FIX-06)
   4. In Inline Runner mode, reaching a Snippet node bound to a specific file appends that file's content to the active note — identical to sidebar behaviour established in Phase 56; no fallback to the snippets root folder listing or directory picker (INLINE-FIX-07)
   5. Both fixes are regression-safe against the Phase 54 inline-mode invariants and the Phase 60 position-persistence behaviour: the floating modal still does not block note editing, position still persists and clamps, and answers still append to the end of the source note (INLINE-FIX-06, INLINE-FIX-07)
-**Plans:** TBD
+**Plans:** 3 plans
 **UI hint**: yes
+
+Plans:
+- [ ] 67-01-PLAN.md — INLINE-FIX-06 resize: type rename, ResizeObserver wiring, debounced save, append-only CSS, build verification
+- [ ] 67-02-PLAN.md — INLINE-FIX-07 file-bound parity: protocol-runner case snippet branch (D-14), node-label arm (D-15), 3 test layers, ROADMAP/STATE amendment (D-13)
+- [ ] 67-03-PLAN.md — Human UAT checkpoint: real-Obsidian verification of resize persistence + clamp + loop-body file-bound snippet parity in both runner modes
 
 ---
 
@@ -437,4 +442,4 @@ v1.10 active. Phases 63 and 67 can run in parallel (Node Editor sync vs Inline R
 | 63. Bidirectional Canvas ↔ Node Editor Sync | v1.10 | 4/4 + gap closure | Complete | 2026-04-25 |
 | 65. Runner Footer Layout — Back/Skip Row | v1.10 | 2/2 | Complete | 2026-04-25 |
 | 66. Runner Step-Back Reliability & Scroll Pinning | v1.10 | 0/TBD | Not started | — |
-| 67. Inline Runner Resizable Modal & File-Bound Snippet Parity | v1.10 | 0/TBD | Not started | — |
+| 67. Inline Runner Resizable Modal & File-Bound Snippet Parity | v1.10 | 0/3 | Not started | — |
