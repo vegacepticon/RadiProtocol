@@ -28,7 +28,7 @@
 
 - [ ] **INLINE-FIX-06**: Inline Runner modal is user-resizable via drag on its edges/corners; chosen width and height persist in workspace state alongside position (established in Phase 60) and survive tab switch + plugin reload. If saved dimensions would exceed current viewport, clamp-on-restore applies (mirroring the Phase 60 position clamp pattern).
 
-- [ ] **INLINE-FIX-07**: A Snippet node bound to a specific file (as opposed to a directory) correctly appends the configured file's content when triggered in Inline Runner — matching sidebar runner behavior for file-bound Snippet nodes established in Phase 56. No fallback to the snippets root folder listing; the file-binding is honoured in all three runner modes.
+- [x] **INLINE-FIX-07**: A Snippet node bound to a specific file (as opposed to a directory) correctly appends the configured file's content when triggered in Inline Runner — matching sidebar runner behavior for file-bound Snippet nodes established in Phase 56. No fallback to the snippets root folder listing; the file-binding is honoured in all three runner modes.
 
 ## Out of Scope (v1.10)
 
@@ -60,7 +60,7 @@ Phase mappings established by roadmapper on 2026-04-25 during ROADMAP.md creatio
 | RUNNER-03 | Phase 66 | Pending |
 | RUNNER-04 | Phase 66 | Pending |
 | INLINE-FIX-06 | Phase 67 | Pending |
-| INLINE-FIX-07 | Phase 67 | Pending |
+| INLINE-FIX-07 | Phase 67 | Implemented 2026-04-25 — Plan 67-02 verified GREEN (D-14 root-cause fix in shared runner-core); awaiting 67-03 UAT |
 
 **Coverage:**
 - v1.10 requirements: 9 total

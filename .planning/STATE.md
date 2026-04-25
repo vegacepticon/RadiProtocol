@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.10
 milestone_name: Editor Sync & Runner UX Polish
 status: in-progress
-stopped_at: "Phase 67 Plan 67-01 complete (resize+persistence); ready for 67-02 file-bound parity"
-last_updated: "2026-04-25T14:43:51.000Z"
-last_activity: 2026-04-25 — Phase 67 Plan 67-01 executed: InlineRunnerPosition→InlineRunnerLayout rename, clampInlineRunnerLayout helper, ResizeObserver wiring with 400ms debounced save, .is-resizing CSS class mirror of .is-dragging. 797 tests pass, tsc clean, build green. INLINE-FIX-06 implementation complete; awaiting 67-02 (FIX-07 runner-core file-bound parity) and 67-03 (UAT).
+stopped_at: "Phase 67 Plan 67-02 complete (FIX-07 runner-core file-bound parity); ready for 67-03 UAT"
+last_updated: "2026-04-25T17:56:30.000Z"
+last_activity: 2026-04-25 — Phase 67 Plan 67-02 executed: protocol-runner.ts case 'snippet' replaced (D-14) with radiprotocol_snippetPath branch; node-label.ts snippet arm extended for 📄/📁 caption parity (D-15); 3 test layers added (pure-runner + sidebar + inline); ROADMAP/STATE amended for D-13 shared-scope acknowledgement; Standing Pitfall #13 documents root-cause finding. 805 tests pass, tsc clean, build green. INLINE-FIX-07 implementation complete; awaiting 67-03 UAT.
 progress:
   total_phases: 5
   completed_phases: 3
   total_plans: 14
-  completed_plans: 10
-  percent: 71
+  completed_plans: 11
+  percent: 78
 ---
 
 # RadiProtocol — Project State
@@ -25,9 +25,9 @@ progress:
 ## Current Position
 
 Phase: 67 (in progress — Wave 1 of 2)
-Plan: 67-01 complete (commit f65451d); 67-02 remaining; 67-03 remaining (UAT). Phase 66 still has 66-05 UAT pending in parallel.
-Status: Phase 67 Wave 1 complete. INLINE-FIX-06 (resize + persistence) shipped via 3 atomic commits (c3c985b, 3e5d2f4, f65451d). Next: 67-02 (INLINE-FIX-07 file-bound Snippet parity in protocol-runner advanceThrough).
-Last activity: 2026-04-25 — 67-01 SUMMARY.md created; ROADMAP plan checkbox flipped to [x]; 797 tests pass, tsc clean, build green.
+Plan: 67-01 complete (commit f65451d); 67-02 complete (commits c8e731b + e7e3175); 67-03 remaining (UAT). Phase 66 still has 66-05 UAT pending in parallel.
+Status: Phase 67 implementation waves complete. INLINE-FIX-06 (resize + persistence) shipped via 67-01; INLINE-FIX-07 (file-bound Snippet parity in shared runner-core) shipped via 67-02 with 2 atomic commits. Next: 67-03 UAT — real-Obsidian verification of resize persistence + clamp + loop-body file-bound snippet parity in both runner modes.
+Last activity: 2026-04-25 — 67-02 SUMMARY.md created; ROADMAP plan checkbox flipped to [x]; 805 tests pass, tsc clean, build green.
 
 ---
 
@@ -116,9 +116,9 @@ See: `.planning/REQUIREMENTS.md` (updated 2026-04-25 — traceability populated,
 ## Session Continuity
 
 Last session: 2026-04-25
-Stopped at: Completed 67-01 (resize + persistence); ready for 67-02 (file-bound parity in runner-core)
-Resume file: .planning/phases/67-inline-runner-resizable-modal-file-bound-snippet-parity/67-01-SUMMARY.md
-Next action: Execute 67-02 — protocol-runner.ts case 'snippet' file-bound branch (D-14) + node-label.ts snippet arm (D-15) + 3 test layers; OR run 66-05 UAT in parallel.
+Stopped at: Completed 67-02 (FIX-07 runner-core file-bound parity); ready for 67-03 (UAT)
+Resume file: .planning/phases/67-inline-runner-resizable-modal-file-bound-snippet-parity/67-02-SUMMARY.md
+Next action: Execute 67-03 — Human UAT runbook for INLINE-FIX-06 (resize persistence + clamp) and INLINE-FIX-07 (loop-body file-bound snippet parity in both runner modes); OR run 66-05 UAT in parallel.
 
 ---
 
