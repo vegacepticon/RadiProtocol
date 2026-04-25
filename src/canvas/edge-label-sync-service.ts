@@ -377,3 +377,22 @@ export function collectIncomingEdgeEdits(
   const incoming = graph.edges.filter(e => e.toNodeId === answerId);
   return incoming.map(e => ({ edgeId: e.id, label: newLabel }));
 }
+
+// Phase 63 Gap 1 (EDITOR-03): symmetric helper for Snippet branch label outbound sync.
+// Enumerates every incoming edge targeting a Snippet node so saveLiveBatch can update
+// edge labels atomically with the node property change.
+export function collectIncomingSnippetEdgeEdits(
+  parser: CanvasParser,
+  canvasContent: string,
+  canvasFilePath: string,
+  snippetNodeId: string,
+  newLabel: string | undefined,
+): Array<{ edgeId: string; label: string | undefined }> {
+  const parsed = parser.parse(canvasContent, canvasFilePath);
+  if (!parsed.success) return [];
+  const { graph } = parsed;
+  const snippetNode = graph.nodes.get(snippetNodeId);
+  if (!snippetNode || snippetNode.kind !== 'snippet') return [];
+  const incoming = graph.edges.filter(e => e.toNodeId === snippetNodeId);
+  return incoming.map(e => ({ edgeId: e.id, label: newLabel }));
+}

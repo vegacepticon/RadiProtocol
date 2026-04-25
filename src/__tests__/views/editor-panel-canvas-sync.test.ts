@@ -782,3 +782,135 @@ describe("EditorPanelView.applyCanvasPatch — Phase 42 WR-01 re-entrancy", () =
     expect(ta.value).toBe('patched');
   });
 });
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 63-04-01 — Gap 1: outbound snippet label → incoming edge sync
+// ─────────────────────────────────────────────────────────────────────────────
+
+function makeSnippetCanvasJson(snippetLabel?: string, edgeLabel?: string): string {
+  return JSON.stringify({
+    nodes: [
+      {
+        id: 'n-q', type: 'text', text: 'Q1', x: 0, y: 0, width: 200, height: 60,
+        radiprotocol_nodeType: 'question', radiprotocol_questionText: 'Q1',
+      },
+      {
+        id: 'n-snip', type: 'text', text: 'abdomen', x: 0, y: 120, width: 200, height: 60,
+        radiprotocol_nodeType: 'snippet', radiprotocol_subfolderPath: 'abdomen',
+        ...(snippetLabel !== undefined ? { radiprotocol_snippetLabel: snippetLabel } : {}),
+      },
+    ],
+    edges: [
+      { id: 'e0', fromNode: 'n-q', toNode: 'n-snip', ...(edgeLabel !== undefined ? { label: edgeLabel } : {}) },
+    ],
+  });
+}
+
+function makeSaveView(params: {
+  saveLiveBatchReturn?: boolean;
+  saveLiveReturn?: boolean;
+  vaultReadContent?: string;
+}): {
+  view: EditorPanelView;
+  saveLiveBatchSpy: ReturnType<typeof vi.fn>;
+  saveLiveSpy: ReturnType<typeof vi.fn>;
+  vaultModifySpy: ReturnType<typeof vi.fn>;
+} {
+  const saveLiveBatchSpy = vi.fn().mockResolvedValue(params.saveLiveBatchReturn ?? true);
+  const saveLiveSpy = vi.fn().mockResolvedValue(params.saveLiveReturn ?? false);
+  const vaultModifySpy = vi.fn().mockResolvedValue(undefined);
+  const plugin = {
+    app: {
+      vault: {
+        read: vi.fn().mockResolvedValue(params.vaultReadContent ?? makeSnippetCanvasJson()),
+        modify: vaultModifySpy,
+        getAbstractFileByPath: vi.fn().mockReturnValue({ path: 'test.canvas' }),
+      },
+      workspace: {
+        getLeavesOfType: vi.fn().mockReturnValue([]),
+        getMostRecentLeaf: vi.fn().mockReturnValue(null),
+      },
+    },
+    settings: { snippetFolderPath: '.radiprotocol/snippets' },
+    snippetService: {},
+    edgeLabelSyncService: { subscribe: vi.fn().mockReturnValue(() => {}) },
+    canvasLiveEditor: {
+      saveLiveBatch: saveLiveBatchSpy,
+      saveLive: saveLiveSpy,
+      getCanvasJSON: vi.fn().mockReturnValue(params.vaultReadContent ?? makeSnippetCanvasJson()),
+    },
+  } as unknown as RadiProtocolPlugin;
+  const leaf = {} as unknown as import('obsidian').WorkspaceLeaf;
+  const view = new EditorPanelView(leaf, plugin);
+  return { view, saveLiveBatchSpy, saveLiveSpy, vaultModifySpy };
+}
+
+describe('Gap 1 — outbound snippet label edge update', () => {
+  it('Pattern B outbound: saveLiveBatch receives edgeEdits for incoming Question→Snippet edge', async () => {
+    const { view, saveLiveBatchSpy } = makeSaveView({
+      saveLiveBatchReturn: true,
+      vaultReadContent: makeSnippetCanvasJson('Old Label', 'Old Label'),
+    });
+    await view.saveNodeEdits('test.canvas', 'n-snip', { radiprotocol_snippetLabel: 'New Label' });
+    expect(saveLiveBatchSpy).toHaveBeenCalledTimes(1);
+    const [, nodeEdits, edgeEdits] = saveLiveBatchSpy.mock.calls[0]!;
+    expect(nodeEdits).toEqual([{ nodeId: 'n-snip', edits: { radiprotocol_snippetLabel: 'New Label' } }]);
+    expect(edgeEdits).toContainEqual({ edgeId: 'e0', label: 'New Label' });
+  });
+
+  it('Strategy A outbound: vault.modify receives canvas JSON with updated edge label', async () => {
+    const { view, vaultModifySpy } = makeSaveView({
+      saveLiveBatchReturn: false,
+      vaultReadContent: makeSnippetCanvasJson('Old Label', 'Old Label'),
+    });
+    await view.saveNodeEdits('test.canvas', 'n-snip', { radiprotocol_snippetLabel: 'New Label' });
+    expect(vaultModifySpy).toHaveBeenCalledTimes(1);
+    const written = JSON.parse(vaultModifySpy.mock.calls[0]![1] as string) as {
+      edges: Array<Record<string, unknown>>;
+    };
+    const edge = written.edges.find((e) => e['id'] === 'e0');
+    expect(edge).toBeDefined();
+    expect(edge!['label']).toBe('New Label');
+  });
+
+  it('undefined snippetLabel deletes the edge label key in Strategy A (D-08 symmetry)', async () => {
+    const { view, vaultModifySpy } = makeSaveView({
+      saveLiveBatchReturn: false,
+      vaultReadContent: makeSnippetCanvasJson('Old Label', 'Old Label'),
+    });
+    await view.saveNodeEdits('test.canvas', 'n-snip', { radiprotocol_snippetLabel: undefined });
+    expect(vaultModifySpy).toHaveBeenCalledTimes(1);
+    const written = JSON.parse(vaultModifySpy.mock.calls[0]![1] as string) as {
+      edges: Array<Record<string, unknown>>;
+    };
+    const edge = written.edges.find((e) => e['id'] === 'e0');
+    expect(edge).toBeDefined();
+    expect(edge).not.toHaveProperty('label');
+  });
+
+  it('existing Answer displayLabel outbound path remains untouched (regression guard)', async () => {
+    const answerCanvas = JSON.stringify({
+      nodes: [
+        {
+          id: 'n-q', type: 'text', text: 'Q1', x: 0, y: 0, width: 200, height: 60,
+          radiprotocol_nodeType: 'question', radiprotocol_questionText: 'Q1',
+        },
+        {
+          id: 'n-a', type: 'text', text: 'A1', x: 0, y: 120, width: 200, height: 60,
+          radiprotocol_nodeType: 'answer', radiprotocol_answerText: 'A1',
+        },
+      ],
+      edges: [
+        { id: 'e0', fromNode: 'n-q', toNode: 'n-a', label: 'Old' },
+      ],
+    });
+    const { view, saveLiveBatchSpy } = makeSaveView({
+      saveLiveBatchReturn: true,
+      vaultReadContent: answerCanvas,
+    });
+    await view.saveNodeEdits('test.canvas', 'n-a', { radiprotocol_displayLabel: 'New' });
+    expect(saveLiveBatchSpy).toHaveBeenCalledTimes(1);
+    const [, , edgeEdits] = saveLiveBatchSpy.mock.calls[0]!;
+    expect(edgeEdits).toContainEqual({ edgeId: 'e0', label: 'New' });
+  });
+});

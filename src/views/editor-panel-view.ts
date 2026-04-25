@@ -4,7 +4,7 @@ import type RadiProtocolPlugin from '../main';
 import type { CanvasInternal } from '../types/canvas-internal';
 import { NODE_COLOR_MAP } from '../canvas/node-color-map';
 // Phase 50 D-14: enumerates incoming Question→Answer edges for atomic Node Editor write
-import { collectIncomingEdgeEdits } from '../canvas/edge-label-sync-service';
+import { collectIncomingEdgeEdits, collectIncomingSnippetEdgeEdits } from '../canvas/edge-label-sync-service';
 // Phase 63 D-12: typed payload from EdgeLabelSyncService dispatch bus consumed by applyCanvasPatch
 import type { CanvasChangedForNodeDetail } from '../canvas/edge-label-sync-service';
 import { CanvasParser } from '../graph/canvas-parser';
@@ -235,10 +235,14 @@ export class EditorPanelView extends ItemView {
       // Phase 50 D-14: when displayLabel is in edits, read live-or-disk canvas JSON
       // to enumerate incoming Question→Answer edges, then commit node + edges in
       // ONE saveLiveBatch call. Otherwise fall back to the Phase 28 saveLive path.
+      // Phase 63 Gap 1 (EDITOR-03): extended symmetrically for snippetLabel.
       const isDisplayLabelEdit = 'radiprotocol_displayLabel' in enrichedEdits;
+      const isSnippetLabelEdit = 'radiprotocol_snippetLabel' in enrichedEdits;
       let savedLive: boolean;
-      if (isDisplayLabelEdit) {
-        const newLabel = enrichedEdits['radiprotocol_displayLabel'] as string | undefined;
+      if (isDisplayLabelEdit || isSnippetLabelEdit) {
+        const newLabel = isDisplayLabelEdit
+          ? enrichedEdits['radiprotocol_displayLabel'] as string | undefined
+          : enrichedEdits['radiprotocol_snippetLabel'] as string | undefined;
         const liveJson = this.plugin.canvasLiveEditor.getCanvasJSON(filePath);
         const canvasContent = liveJson ?? await (async () => {
           const f = this.plugin.app.vault.getAbstractFileByPath(filePath);
@@ -246,7 +250,9 @@ export class EditorPanelView extends ItemView {
           try { return await this.plugin.app.vault.read(f); } catch { return ''; }
         })();
         const parser = new CanvasParser();
-        const edgeEdits = collectIncomingEdgeEdits(parser, canvasContent, filePath, nodeId, newLabel);
+        const edgeEdits = isDisplayLabelEdit
+          ? collectIncomingEdgeEdits(parser, canvasContent, filePath, nodeId, newLabel)
+          : collectIncomingSnippetEdgeEdits(parser, canvasContent, filePath, nodeId, newLabel);
         savedLive = await this.plugin.canvasLiveEditor.saveLiveBatch(
           filePath,
           [{ nodeId, edits: enrichedEdits }],
@@ -339,10 +345,26 @@ export class EditorPanelView extends ItemView {
     // Question→Answer edge label in the SAME canvasData payload — one vault.modify
     // writes node + edges atomically (avoids WR-01 race). Symmetric to the node
     // mutation above: undefined ≡ delete 'label' key (D-08, canvas-parser.ts:207-209).
+    // Phase 63 Gap 1 (EDITOR-03): extended symmetrically for snippetLabel.
     if ('radiprotocol_displayLabel' in enrichedEdits) {
       const newLabel = enrichedEdits['radiprotocol_displayLabel'] as string | undefined;
       const parser = new CanvasParser();
       const edgeEdits = collectIncomingEdgeEdits(parser, raw, filePath, nodeId, newLabel);
+      const incomingIds = new Set(edgeEdits.map(e => e.edgeId));
+      for (const edge of canvasData.edges) {
+        const edgeObj = edge as Record<string, unknown>;
+        if (!incomingIds.has(edgeObj['id'] as string)) continue;
+        if (newLabel === undefined) {
+          delete edgeObj['label']; // D-08 strip-key
+        } else {
+          edgeObj['label'] = newLabel;
+        }
+      }
+    }
+    if ('radiprotocol_snippetLabel' in enrichedEdits) {
+      const newLabel = enrichedEdits['radiprotocol_snippetLabel'] as string | undefined;
+      const parser = new CanvasParser();
+      const edgeEdits = collectIncomingSnippetEdgeEdits(parser, raw, filePath, nodeId, newLabel);
       const incomingIds = new Set(edgeEdits.map(e => e.edgeId));
       for (const edge of canvasData.edges) {
         const edgeObj = edge as Record<string, unknown>;
