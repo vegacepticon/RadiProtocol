@@ -26,15 +26,6 @@ export class RunnerView extends ItemView {
   private readonly validator: GraphValidator;
   private canvasFilePath: string | null = null;
   private previewTextarea: HTMLTextAreaElement | null = null;
-  /**
-   * Phase 47 RUNFIX-02: pending scrollTop stashed on the *old* textarea immediately
-   * before a choice-click triggers renderAsync(). renderPreviewZone consumes it once
-   * inside its requestAnimationFrame callback (after height recompute, otherwise
-   * scrollTop has no effect on an auto-sized element) and then clears the field.
-   * Survives render() — render() nulls previewTextarea but MUST leave this field
-   * alone so the consume inside the new textarea's rAF can still run.
-   */
-  private pendingTextareaScrollTop: number | null = null;
   private insertBtn: HTMLButtonElement | null = null;
   private lastActiveMarkdownFile: TFile | null = null;
   private graph: ProtocolGraph | null = null;
@@ -491,7 +482,6 @@ export class RunnerView extends ItemView {
                   text: answerNode.displayLabel ?? answerNode.answerText,
                 });
                 this.registerDomEvent(btn, 'click', () => {
-                  this.capturePendingTextareaScroll();  // RUNFIX-02: preserve scroll across re-render
                   this.runner.syncManualEdit(this.previewTextarea?.value ?? '');  // BUG-01: capture manual edit (D-01)
                   this.runner.chooseAnswer(answerNode.id);
                   void this.autoSaveSession();   // SESSION-01 — save after answer
@@ -535,7 +525,6 @@ export class RunnerView extends ItemView {
                   text: label,
                 });
                 this.registerDomEvent(btn, 'click', () => {
-                  this.capturePendingTextareaScroll();  // RUNFIX-02: preserve scroll across re-render — MUST be first (SC 5)
                   this.runner.syncManualEdit(this.previewTextarea?.value ?? '');  // BUG-01: capture manual edit (D-01)
 
                   if (isFileBound) {
@@ -587,7 +576,6 @@ export class RunnerView extends ItemView {
           },
           showSkip: showSkipFooterControl,
           onSkip: () => {
-            this.capturePendingTextareaScroll();  // RUNFIX-02: preserve scroll across re-render
             this.runner.syncManualEdit(this.previewTextarea?.value ?? '');  // BUG-01 / D-11
             this.runner.skip();
             void this.autoSaveSession();   // SESSION-01 — save after skip (D-10: recordable step)
@@ -661,7 +649,6 @@ export class RunnerView extends ItemView {
             text: caption,
           });
           this.registerDomEvent(btn, 'click', () => {
-            this.capturePendingTextareaScroll();  // RUNFIX-02: preserve scroll across re-render
             this.runner.syncManualEdit(this.previewTextarea?.value ?? '');  // Pitfall 7
             this.runner.chooseLoopBranch(edge.id);                          // per locked decision: edge.id
             void this.autoSaveSession();
@@ -812,9 +799,6 @@ export class RunnerView extends ItemView {
       mode: 'file-only',
       rootPath: nodeRootAbs,
       onSelect: (result) => {
-        // RUNFIX-02 (Phase 47) — capture textarea scroll BEFORE any state mutation.
-        // MUST be the FIRST line of any forward-advance click handler in RunnerView.
-        this.capturePendingTextareaScroll();
         void (async () => {
           const absPath = result.relativePath === ''
             ? nodeRootAbs
@@ -888,7 +872,6 @@ export class RunnerView extends ItemView {
       );
       return;
     }
-    this.capturePendingTextareaScroll();  // RUNFIX-02: preserve scroll across re-render
     // BUG-01: capture any manual edit before advancing
     this.runner.syncManualEdit(this.previewTextarea?.value ?? '');
     // Phase 35: MD snippets have no `id`; use `path` for identity. JSON keeps
@@ -1060,16 +1043,6 @@ export class RunnerView extends ItemView {
 
   // ── Sub-renders ───────────────────────────────────────────────────────────
 
-  /**
-   * Phase 47 RUNFIX-02: stash the current textarea's scrollTop on `this` so the
-   * next renderPreviewZone can restore it onto the fresh textarea. MUST be called
-   * before `renderAsync()` / `render()`, because render() nulls previewTextarea
-   * before the new <textarea> exists.
-   */
-  private capturePendingTextareaScroll(): void {
-    this.pendingTextareaScrollTop = this.previewTextarea?.scrollTop ?? null;
-  }
-
   private renderPreviewZone(zone: HTMLElement, text: string): void {
     const textarea = zone.createEl('textarea', { cls: 'rp-preview-textarea' });
     textarea.value = text;
@@ -1079,17 +1052,8 @@ export class RunnerView extends ItemView {
     requestAnimationFrame(() => {
       textarea.style.height = 'auto';
       textarea.style.height = textarea.scrollHeight + 'px';
-      // Phase 47 RUNFIX-02: after a choice click, scroll the fresh textarea to its
-      // BOTTOM so the newly inserted content is visible (the todo's "scroll to the
-      // insertion point" option — user-preferred over scroll-preservation). The
-      // pending field now acts as a non-null FLAG: its captured scrollTop value is
-      // not used for the target position, only its presence gates the restore so
-      // unrelated renders (initial load, step-back, window resize) keep default
-      // scrollTop=0. Consume the flag exactly once per render.
-      if (this.pendingTextareaScrollTop !== null) {
-        textarea.scrollTop = textarea.scrollHeight;
-        this.pendingTextareaScrollTop = null;
-      }
+      // Phase 66 D-09: pin to bottom on every render — last inserted line is visible.
+      textarea.scrollTop = textarea.scrollHeight;
     });
     this.registerDomEvent(textarea, 'input', () => {
       textarea.style.height = 'auto';
