@@ -374,13 +374,13 @@ describe('ProtocolRunner RUNFIX-01 — manual edits survive loop transitions', (
 
     runner.stepBack();
     state = runner.getState();
-    // stepBack restores currentNodeId=n-loop via the undo entry pushed inside
-    // chooseLoopBranch and sets runnerStatus='at-node' (generic undo contract — see
-    // ProtocolRunner.stepBack). What matters for RUNFIX-01 is the restored
-    // accumulatedText: it must equal 'PRE_EXIT_EDIT' (the value written by
-    // syncManualEdit right before chooseLoopBranch took the snapshot).
-    expect(state.status).toBe('at-node');
-    if (state.status !== 'at-node') return;
+    // Phase 66 D-05: chooseLoopBranch pushes restoreStatus: 'awaiting-loop-pick',
+    // so stepBack restores to the loop picker (not 'at-node').
+    // What matters for RUNFIX-01 is the restored accumulatedText: it must equal
+    // 'PRE_EXIT_EDIT' (the value written by syncManualEdit right before
+    // chooseLoopBranch took the snapshot).
+    expect(state.status).toBe('awaiting-loop-pick');
+    if (state.status !== 'awaiting-loop-pick') return;
     // The undo entry's restored snapshot must equal the post-edit accumulator — proving the
     // snapshot in chooseLoopBranch captured the manual edit, not the pre-edit value.
     expect(state.accumulatedText).toBe('PRE_EXIT_EDIT');

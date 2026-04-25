@@ -102,4 +102,8 @@ export interface UndoEntry {
    *  restores currentNodeId (the question) and runnerStatus='at-node' — so the
    *  user returns to the branch list, not the question's predecessor. */
   returnToBranchList?: boolean;
+  /** Phase 66 D-05: desired runnerStatus after stepBack consumes this entry.
+   *  Undefined → 'at-node' (existing default). returnToBranchList=true takes
+   *  priority and still produces 'at-node' at the question. */
+  restoreStatus?: RunnerState['status'];
 }

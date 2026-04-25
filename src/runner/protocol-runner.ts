@@ -32,6 +32,8 @@ export class ProtocolRunner {
   private currentNodeId: string | null = null;
   private accumulator = new TextAccumulator();
   private undoStack: UndoEntry[] = [];
+  /** Phase 66 D-01: silently no-ops a second stepBack call in the same synchronous tick. */
+  private _stepBackInFlight = false;
   private runnerStatus: RunnerState['status'] = 'idle';
 
   // Extra fields for non-at-node states
@@ -237,6 +239,7 @@ export class ProtocolRunner {
       nodeId: this.currentNodeId,
       textSnapshot: this.accumulator.snapshot(),
       loopContextStack: [...this.loopContextStack],
+      restoreStatus: 'awaiting-loop-pick',
     });
 
     if (isExitEdge(edge)) {
@@ -269,6 +272,10 @@ export class ProtocolRunner {
    * No-op if canStepBack is false.
    */
   stepBack(): void {
+    if (this._stepBackInFlight) return;
+    this._stepBackInFlight = true;
+    queueMicrotask(() => { this._stepBackInFlight = false; });
+
     const entry = this.undoStack.pop();
     if (entry === undefined) return; // Nothing to undo
 
@@ -288,7 +295,7 @@ export class ProtocolRunner {
     this.currentNodeId = entry.nodeId;
     this.accumulator.restoreTo(entry.textSnapshot);
     this.loopContextStack = [...entry.loopContextStack]; // restore from snapshot (LOOP-05)
-    this.runnerStatus = 'at-node';
+    this.runnerStatus = entry.restoreStatus ?? 'at-node';
     this.errorMessage = null;
     this.snippetId = null;
     this.snippetNodeId = null;
@@ -311,6 +318,7 @@ export class ProtocolRunner {
       nodeId: this.currentNodeId,
       textSnapshot: this.accumulator.snapshot(),
       loopContextStack: [...this.loopContextStack],
+      restoreStatus: 'awaiting-snippet-pick',
     });
 
     this.snippetId = snippetId;
@@ -704,6 +712,7 @@ export class ProtocolRunner {
             nodeId: previousCursor !== null ? previousCursor : cursor,
             textSnapshot: this.accumulator.snapshot(),
             loopContextStack: [...this.loopContextStack],  // shallow spread — frames are primitive-only
+            restoreStatus: 'awaiting-loop-pick',
           });
           this.loopContextStack.push({
             loopNodeId: cursor,

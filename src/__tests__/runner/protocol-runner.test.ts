@@ -117,7 +117,7 @@ describe('ProtocolRunner', () => {
       expect(state.accumulatedText).toBe('');
     });
 
-    it('reverts both navigation state and text on multi-step protocol (RUN-06 3-step)', () => {
+    it('reverts both navigation state and text on multi-step protocol (RUN-06 3-step)', async () => {
       // Build a 3-answer chain: start → q1 → a1 → q2 → a2 → q3 → a3 (terminal)
       // This exercises the 3-step protocol requirement from RUN-06 success criteria
       const graph: ProtocolGraph = {
@@ -160,6 +160,8 @@ describe('ProtocolRunner', () => {
       expect(s1.currentNodeId).toBe('q3');
       expect(s1.accumulatedText).toBe('ans1\nans2');
 
+      // Phase 66 D-01: yield one microtask so the in-flight guard resets
+      await Promise.resolve();
       runner.stepBack(); // reverts ans2 → at q2, text = 'ans1'
       const s2 = runner.getState();
       expect(s2.status).toBe('at-node');
@@ -508,11 +510,12 @@ describe('ProtocolRunner', () => {
       runner.pickSnippet('x');
       runner.stepBack();
       const state = runner.getState();
-      expect(state.status).toBe('at-node');
-      if (state.status !== 'at-node') return;
+      // Phase 66 D-05: pickSnippet pushes restoreStatus: 'awaiting-snippet-pick'
+      expect(state.status).toBe('awaiting-snippet-pick');
+      if (state.status !== 'awaiting-snippet-pick') return;
       // pickSnippet snapshotted currentNodeId=n-snippet1 BEFORE mutating, so stepBack
       // restores to the snippet node itself (not n-a1 / n-q1). snippetId is cleared.
-      expect(state.currentNodeId).toBe('n-snippet1');
+      expect(state.nodeId).toBe('n-snippet1');
     });
 
     it('pickSnippet is a no-op outside awaiting-snippet-pick', () => {
@@ -779,20 +782,22 @@ describe('ProtocolRunner', () => {
       expect(state.currentNodeId).toBe('n-q1');
     });
 
-    it('Test 10: chain chooseSnippetBranch → pickSnippet → stepBack twice returns through picker → branch list', () => {
+    it('Test 10: chain chooseSnippetBranch → pickSnippet → stepBack twice returns through picker → branch list', async () => {
       const runner = startAtQuestion();
       runner.chooseSnippetBranch('n-s1');
       runner.pickSnippet('sid');
       expect(runner.getState().status).toBe('awaiting-snippet-fill');
 
       // First stepBack: pickSnippet undo → back to awaiting-snippet-pick at n-s1
+      // Phase 66 D-05: pickSnippet pushes restoreStatus: 'awaiting-snippet-pick'
       runner.stepBack();
       let state = runner.getState();
-      expect(state.status).toBe('at-node');
-      if (state.status !== 'at-node') return;
-      // pickSnippet uses the default stepBack path (not returnToBranchList), so
-      // we land at n-s1 as a regular at-node restore.
-      expect(state.currentNodeId).toBe('n-s1');
+      expect(state.status).toBe('awaiting-snippet-pick');
+      if (state.status !== 'awaiting-snippet-pick') return;
+      expect(state.nodeId).toBe('n-s1');
+
+      // Phase 66 D-01: yield one microtask so the in-flight guard resets
+      await Promise.resolve();
 
       // Second stepBack: chooseSnippetBranch undo with returnToBranchList → question
       runner.stepBack();
@@ -807,6 +812,191 @@ describe('ProtocolRunner', () => {
       expect(state.status).toBe('at-node');
       if (state.status !== 'at-node') return;
       expect(state.currentNodeId).toBe('n-q1');
+    });
+  });
+
+  describe('stepBack() — restoreStatus (D-05, D-06) + in-flight guard (D-01)', () => {
+    it('Test A (D-05): loop-entry undo restores awaiting-loop-pick after chooseLoopBranch', () => {
+      const runner = new ProtocolRunner();
+      runner.start(loadGraph('unified-loop-valid.canvas'));
+      expect(runner.getState().status).toBe('awaiting-loop-pick');
+
+      runner.chooseLoopBranch('e2');
+      let state = runner.getState();
+      expect(state.status).toBe('at-node');
+      if (state.status !== 'at-node') return;
+      expect(state.currentNodeId).toBe('n-q1');
+
+      runner.stepBack();
+      state = runner.getState();
+      expect(state.status).toBe('awaiting-loop-pick');
+      if (state.status !== 'awaiting-loop-pick') return;
+      expect(state.nodeId).toBe('n-loop');
+      expect(state.accumulatedText).toBe('');
+    });
+
+    it('Test B (D-05): directory-bound snippet pick undo restores awaiting-snippet-pick', () => {
+      // snippet-node-with-exit.canvas: start → n-q1 → n-a1 → n-snippet1
+      const runner = new ProtocolRunner();
+      runner.start(loadGraph('snippet-node-with-exit.canvas'));
+      runner.chooseAnswer('n-a1');
+      let state = runner.getState();
+      expect(state.status).toBe('awaiting-snippet-pick');
+      if (state.status !== 'awaiting-snippet-pick') return;
+      const prePickText = state.accumulatedText;
+
+      runner.pickSnippet('some-id');
+      state = runner.getState();
+      expect(state.status).toBe('awaiting-snippet-fill');
+
+      runner.stepBack();
+      state = runner.getState();
+      expect(state.status).toBe('awaiting-snippet-pick');
+      if (state.status !== 'awaiting-snippet-pick') return;
+      expect(state.nodeId).toBe('n-snippet1');
+      expect(state.accumulatedText).toBe(prePickText);
+    });
+
+    it('Test C (D-06): file-bound snippet undo still restores at-node on the question', () => {
+      // Inline graph: start → q1 (question) → sn (file-bound snippet)
+      const graph: ProtocolGraph = {
+        canvasFilePath: 'file-bound.canvas',
+        nodes: new Map([
+          ['s', { id: 's', kind: 'start', x: 0, y: 0, width: 100, height: 60 }],
+          ['q1', { id: 'q1', kind: 'question', questionText: 'Q?', x: 0, y: 60, width: 100, height: 60 }],
+          ['sn', { id: 'sn', kind: 'snippet', x: 0, y: 120, width: 100, height: 60, radiprotocol_snippetPath: 'foo.md' }],
+        ]),
+        edges: [
+          { id: 'e1', fromNodeId: 's', toNodeId: 'q1' },
+          { id: 'e2', fromNodeId: 'q1', toNodeId: 'sn' },
+        ],
+        adjacency: new Map([
+          ['s', ['q1']],
+          ['q1', ['sn']],
+        ]),
+        reverseAdjacency: new Map([
+          ['q1', ['s']],
+          ['sn', ['q1']],
+        ]),
+        startNodeId: 's',
+      };
+      const runner = new ProtocolRunner();
+      runner.start(graph);
+      let state = runner.getState();
+      expect(state.status).toBe('at-node');
+      if (state.status !== 'at-node') return;
+      expect(state.currentNodeId).toBe('q1');
+      const prePickText = state.accumulatedText;
+
+      runner.pickFileBoundSnippet('q1', 'sn', 'foo.md');
+      state = runner.getState();
+      expect(state.status).toBe('awaiting-snippet-fill');
+
+      runner.stepBack();
+      state = runner.getState();
+      expect(state.status).toBe('at-node');
+      if (state.status !== 'at-node') return;
+      expect(state.currentNodeId).toBe('q1');
+      expect(state.accumulatedText).toBe(prePickText);
+    });
+
+    it('Test D (D-01): second synchronous stepBack is a silent no-op', async () => {
+      // Build a graph with two answer steps so we have two undo entries
+      const graph: ProtocolGraph = {
+        canvasFilePath: 'in-flight.canvas',
+        nodes: new Map([
+          ['s', { id: 's', kind: 'start', x: 0, y: 0, width: 100, height: 60 }],
+          ['q1', { id: 'q1', kind: 'question', questionText: 'Q1', x: 0, y: 60, width: 100, height: 60 }],
+          ['a1', { id: 'a1', kind: 'answer', answerText: 'A1', x: 0, y: 120, width: 100, height: 60 }],
+          ['q2', { id: 'q2', kind: 'question', questionText: 'Q2', x: 0, y: 180, width: 100, height: 60 }],
+          ['a2', { id: 'a2', kind: 'answer', answerText: 'A2', x: 0, y: 240, width: 100, height: 60 }],
+        ]),
+        edges: [
+          { id: 'e1', fromNodeId: 's', toNodeId: 'q1' },
+          { id: 'e2', fromNodeId: 'q1', toNodeId: 'a1' },
+          { id: 'e3', fromNodeId: 'a1', toNodeId: 'q2' },
+          { id: 'e4', fromNodeId: 'q2', toNodeId: 'a2' },
+        ],
+        adjacency: new Map([
+          ['s', ['q1']],
+          ['q1', ['a1']],
+          ['a1', ['q2']],
+          ['q2', ['a2']],
+        ]),
+        reverseAdjacency: new Map([
+          ['q1', ['s']],
+          ['a1', ['q1']],
+          ['q2', ['a1']],
+          ['a2', ['q2']],
+        ]),
+        startNodeId: 's',
+      };
+      const runner = new ProtocolRunner();
+      runner.start(graph);
+      runner.chooseAnswer('a1');
+      runner.chooseAnswer('a2');
+      expect(runner.getState().status).toBe('complete');
+
+      // Two synchronous stepBack calls — only the first should execute
+      runner.stepBack();
+      runner.stepBack();
+      let state = runner.getState();
+      expect(state.status).toBe('at-node');
+      if (state.status !== 'at-node') return;
+      // Only one entry consumed → back to q2, not q1
+      expect(state.currentNodeId).toBe('q2');
+
+      // After a microtask the guard resets
+      await Promise.resolve();
+      runner.stepBack();
+      state = runner.getState();
+      expect(state.status).toBe('at-node');
+      if (state.status !== 'at-node') return;
+      expect(state.currentNodeId).toBe('q1');
+    });
+
+    it('Test E (D-05 precedence): returnToBranchList still wins over restoreStatus', () => {
+      // Inline graph: start → q1 → sn (snippet, direct neighbor)
+      const graph: ProtocolGraph = {
+        canvasFilePath: 'branch-precedence.canvas',
+        nodes: new Map([
+          ['s', { id: 's', kind: 'start', x: 0, y: 0, width: 100, height: 60 }],
+          ['q1', { id: 'q1', kind: 'question', questionText: 'Q?', x: 0, y: 60, width: 100, height: 60 }],
+          ['sn', { id: 'sn', kind: 'snippet', x: 0, y: 120, width: 100, height: 60, subfolderPath: 'CT' }],
+        ]),
+        edges: [
+          { id: 'e1', fromNodeId: 's', toNodeId: 'q1' },
+          { id: 'e2', fromNodeId: 'q1', toNodeId: 'sn' },
+        ],
+        adjacency: new Map([
+          ['s', ['q1']],
+          ['q1', ['sn']],
+        ]),
+        reverseAdjacency: new Map([
+          ['q1', ['s']],
+          ['sn', ['q1']],
+        ]),
+        startNodeId: 's',
+      };
+      const runner = new ProtocolRunner();
+      runner.start(graph);
+      // At q1 at-node
+      let state = runner.getState();
+      expect(state.status).toBe('at-node');
+      if (state.status !== 'at-node') return;
+      expect(state.currentNodeId).toBe('q1');
+
+      // chooseSnippetBranch pushes returnToBranchList: true (no restoreStatus)
+      runner.chooseSnippetBranch('sn');
+      state = runner.getState();
+      expect(state.status).toBe('awaiting-snippet-pick');
+
+      runner.stepBack();
+      state = runner.getState();
+      // returnToBranchList path restores 'at-node' at the question
+      expect(state.status).toBe('at-node');
+      if (state.status !== 'at-node') return;
+      expect(state.currentNodeId).toBe('q1');
     });
   });
 });
