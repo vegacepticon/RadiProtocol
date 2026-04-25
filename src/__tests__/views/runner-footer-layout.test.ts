@@ -12,8 +12,9 @@ vi.mock('../../views/snippet-tree-picker', () => {
 });
 
 import { RunnerView } from '../../views/runner-view';
+import { InlineRunnerModal } from '../../views/inline-runner-modal';
 import type RadiProtocolPlugin from '../../main';
-import type { AnswerNode, ProtocolGraph, SnippetNode } from '../../graph/graph-model';
+import type { AnswerNode, ProtocolGraph, RPEdge, SnippetNode } from '../../graph/graph-model';
 
 interface FakeNode {
   tag: string;
@@ -28,6 +29,7 @@ interface FakeNode {
   empty: () => void;
   setText: (t: string) => void;
   setAttribute: (name: string, value: string) => void;
+  addEventListener: (type: string, handler: () => void) => void;
   prepend: (el: FakeNode) => void;
   addClass: (cls: string) => void;
   removeClass: (cls: string) => void;
@@ -77,6 +79,9 @@ function makeFakeNode(tag = 'div', cls?: string, text?: string): FakeNode {
     setAttribute(name: string, value: string): void {
       if (node._attrs === undefined) node._attrs = {};
       node._attrs[name] = value;
+    },
+    addEventListener(type: string, handler: () => void): void {
+      if (type === 'click') node._clickHandler = handler;
     },
     prepend(el: FakeNode): void {
       node.children.unshift(el);
@@ -162,6 +167,24 @@ function buildMixedGraph(): ProtocolGraph {
     adjacency: new Map([['q1', ['a1', 's1']]]),
     reverseAdjacency: new Map(),
     startNodeId: 'q1',
+  };
+}
+
+function buildLoopGraph(): ProtocolGraph {
+  return {
+    canvasFilePath: 'loop.canvas',
+    nodes: new Map([
+      ['loop1', { kind: 'loop', id: 'loop1', headerText: 'Loop header', x: 0, y: 0, width: 200, height: 80 }],
+      ['a1', { kind: 'answer', id: 'a1', answerText: 'Body answer', x: 0, y: 0, width: 100, height: 40 }],
+      ['done', { kind: 'text-block', id: 'done', content: 'Done', x: 0, y: 0, width: 100, height: 40 }],
+    ]) as ProtocolGraph['nodes'],
+    edges: [
+      { id: 'e-body', fromNodeId: 'loop1', toNodeId: 'a1' },
+      { id: 'e-exit', fromNodeId: 'loop1', toNodeId: 'done', label: '+ exit' },
+    ] as RPEdge[],
+    adjacency: new Map([['loop1', ['a1', 'done']]]),
+    reverseAdjacency: new Map(),
+    startNodeId: 'loop1',
   };
 }
 
@@ -314,5 +337,121 @@ describe('Phase 65 Plan 01 — RUNNER-02 RunnerView footer layout RED tests', ()
     await Promise.resolve();
 
     expect(callOrder).toEqual(['stepBack', 'autoSaveSession']);
+  });
+});
+
+interface InlineHarness {
+  contentEl: FakeNode;
+}
+
+function makeInlineApp(): import('obsidian').App {
+  return {
+    vault: {
+      getAbstractFileByPath: vi.fn(() => null),
+      read: vi.fn(),
+      modify: vi.fn(),
+      getFiles: vi.fn(() => []),
+      on: vi.fn(),
+      offref: vi.fn(),
+    },
+    workspace: {
+      on: vi.fn(),
+      offref: vi.fn(),
+      getActiveFile: vi.fn(() => null),
+      iterateAllLeaves: vi.fn(),
+    },
+  } as unknown as import('obsidian').App;
+}
+
+function mountInlineModalWithState(
+  state: Record<string, unknown>,
+  graph: ProtocolGraph,
+): InlineHarness {
+  const modal = new InlineRunnerModal(
+    makeInlineApp(),
+    {
+      ...makePlugin(),
+      settings: { snippetFolderPath: '.radiprotocol/snippets', textSeparator: 'newline' },
+      getInlineRunnerPosition: vi.fn(() => null),
+      saveInlineRunnerPosition: vi.fn(async () => {}),
+      insertMutex: { runExclusive: vi.fn(async (_path: string, fn: () => Promise<void>) => fn()) },
+    } as unknown as RadiProtocolPlugin,
+    'test.canvas',
+    { path: 'target.md' } as import('obsidian').TFile,
+  );
+  const contentEl = makeFakeNode();
+  (modal as unknown as { contentEl: FakeNode }).contentEl = contentEl;
+  (modal as unknown as { graph: ProtocolGraph }).graph = graph;
+  (modal as unknown as { runner: unknown }).runner = {
+    getState: () => state,
+    chooseAnswer: vi.fn(),
+    chooseSnippetBranch: vi.fn(),
+    pickFileBoundSnippet: vi.fn(),
+    skip: vi.fn(),
+    stepBack: vi.fn(),
+    chooseLoopBranch: vi.fn(),
+  };
+
+  (modal as unknown as { render: () => void }).render();
+  return { contentEl };
+}
+
+describe('Phase 65 Plan 01 — RUNNER-02 InlineRunnerModal footer layout RED tests', () => {
+  it('RUNNER-02 places InlineRunnerModal Skip in a footer row after Back with visible text', () => {
+    const { contentEl } = mountInlineModalWithState(
+      {
+        status: 'at-node',
+        currentNodeId: 'q1',
+        accumulatedText: 'Initial inline text',
+        canStepBack: true,
+      },
+      buildMixedGraph(),
+    );
+
+    const questionZone = findByClass(contentEl, 'rp-question-zone')[0]!;
+    const answerListIndex = questionZone.children.findIndex(child => hasClass(child, 'rp-answer-list'));
+    const snippetListIndex = questionZone.children.findIndex(child => hasClass(child, 'rp-snippet-branch-list'));
+    const footerRowIndex = questionZone.children.findIndex(child => hasClass(child, 'rp-runner-footer-row'));
+    const footerRow = findByClass(questionZone, 'rp-runner-footer-row')[0];
+
+    expect(footerRowIndex).toBeGreaterThan(snippetListIndex);
+    expect(answerListIndex).toBeGreaterThan(-1);
+    expect(snippetListIndex).toBeGreaterThan(answerListIndex);
+    expect(footerRow).toBeDefined();
+    expect(textOf(findByClass(footerRow, 'rp-step-back-btn')[0])).toBe('Back');
+    expect(textOf(findByClass(footerRow, 'rp-skip-btn')[0])).toBe('Skip');
+    expect(footerRow!.children.indexOf(findByClass(footerRow, 'rp-step-back-btn')[0]!))
+      .toBeLessThan(footerRow!.children.indexOf(findByClass(footerRow, 'rp-skip-btn')[0]!));
+  });
+
+  it('RUNNER-02 uses visible Back copy in InlineRunnerModal loop and snippet picker footer rows', () => {
+    const loopHarness = mountInlineModalWithState(
+      {
+        status: 'awaiting-loop-pick',
+        nodeId: 'loop1',
+        accumulatedText: 'Loop text',
+        canStepBack: true,
+      },
+      buildLoopGraph(),
+    );
+    const loopFooter = findByClass(loopHarness.contentEl, 'rp-runner-footer-row')[0];
+    expect(loopFooter).toBeDefined();
+    expect(textOf(findByClass(loopFooter, 'rp-step-back-btn')[0])).toBe('Back');
+    expect(textOf(loopHarness.contentEl)).not.toContain('Step back');
+
+    const snippetHarness = mountInlineModalWithState(
+      {
+        status: 'awaiting-snippet-pick',
+        nodeId: 's1',
+        subfolderPath: 'abdomen',
+        accumulatedText: 'Snippet text',
+        canStepBack: true,
+      },
+      buildMixedGraph(),
+    );
+    const snippetFooter = findByClass(snippetHarness.contentEl, 'rp-runner-footer-row')[0];
+    expect(snippetFooter).toBeDefined();
+    expect(textOf(findByClass(snippetFooter, 'rp-step-back-btn')[0])).toBe('Back');
+    expect(textOf(snippetHarness.contentEl)).not.toContain('Step back');
   });
 });
