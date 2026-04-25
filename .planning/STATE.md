@@ -24,10 +24,10 @@ progress:
 
 ## Current Position
 
-Phase: 66 (planned — 0/5 plans executed)
-Plan: 66-01..66-05 PLAN.md ready (4 waves) → next /gsd-execute-phase 66
-Status: Phase 66 planning complete. 5 plans across 4 waves cover RUNNER-03 (state-machine reliability) and RUNNER-04 (scroll pinning). Plan-checker iteration 2 returned VERIFICATION PASSED — 11 prior warnings resolved, no regressions. UAT.md will be created during Plan 66-05 execution per D-16.
-Last activity: 2026-04-25 — /gsd-plan-phase 66 complete (commits 24c9cef + 3b543f4). Ready for /gsd-execute-phase 66.
+Phase: 66 (in progress — executing Wave 1)
+Plan: 66-01..66-05 PLAN.md across 4 waves; execution started
+Status: Phase 66 execution in progress. Wave 1 (66-01) beginning.
+Last activity: 2026-04-25 — /gsd-execute-phase 66 started.
 
 ---
 
