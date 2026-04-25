@@ -566,13 +566,15 @@ export class RunnerView extends ItemView {
           // runtime просто transitionToError'ит на loop-узле (см. ProtocolRunner.advanceThrough).
 
           default: {
-            // text-block, answer, start — auto-advance nodes should not halt here,
-            // but handle gracefully in case they do
-            questionZone.createEl('p', {
-              text: 'Processing...',
-              cls: 'rp-empty-state-body',
-            });
-            break;
+            // Phase 66 D-07: at-node only halts on `question`. Snippet → 'awaiting-snippet-pick',
+            // loop → 'awaiting-loop-pick', text-block w/ snippetId → 'awaiting-snippet-fill',
+            // others auto-advance. Reaching this default is a runtime invariant violation.
+            const _exhaustiveAtNode: never = node as never;
+            void _exhaustiveAtNode;
+            this.renderError([
+              `Internal bug: RunnerView.renderState reached at-node default branch for kind='${(node as { kind: string }).kind}'. Step back and report.`,
+            ]);
+            return;
           }
         }
 
