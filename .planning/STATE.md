@@ -4,8 +4,8 @@ milestone: v1.10
 milestone_name: Editor Sync & Runner UX Polish
 status: in-progress
 stopped_at: "Phase 67 complete — all 3 plans + gap closure + UAT re-run passed (8/8). Phase 66-05 UAT pending."
-last_updated: "2026-04-25T23:55:00.000Z"
-last_activity: 2026-04-25 — Phase 67 completed: UAT re-run verified drag/size persistence fix (commit 92a1269); all 8 scenarios PASS. INLINE-FIX-06 and INLINE-FIX-07 closed.
+last_updated: "2026-04-26T00:20:00.000Z"
+last_activity: 2026-04-26 — Cleaned up 14 stale todo files from .planning/todos/pending/ to completed/.
 progress:
   total_phases: 5
   completed_phases: 4
@@ -108,7 +108,7 @@ See: `.planning/REQUIREMENTS.md` (updated 2026-04-25 — traceability populated,
 - Nyquist VALIDATION.md draft for phases 12–19, 28–31, 32–35, 36–42.
 - 1 legacy debug session (phase-27-regressions — `awaiting_human_verify`) — carried from v1.7.
 - `@deprecated` `LoopStartNode` / `LoopEndNode` retained for Migration Check enumeration.
-- 14+ stale todo files for v1.6–v1.9-delivered work in `.planning/todos/pending/` — cleanup opportunistically.
+- Stale todo files cleaned up on 2026-04-26 — all 14 moved to `.planning/todos/completed/`.
 - 2 stale seeds (`duplicate-node.md`, `quick-node-creation.md`) for v1.6-delivered work in `.planning/seeds/`.
 
 ---
@@ -140,7 +140,7 @@ Carried from v1.9 close on 2026-04-25 — non-blocking for v1.10:
 | debug | phase-27-regressions | awaiting_human_verify | v1.7 carryover — color regression root cause found in canvas-live-editor.ts PROTECTED_FIELDS; not blocking |
 | uat | Phase 59 UAT status field | passed / 0 open | Auditor noise — 0 pending scenarios, phase verified green |
 | uat | Phase 61 UAT status field | unknown / 0 open | Status-field oversight — 0 pending scenarios, phase shipped |
-| todo | 14+ stale todo files (mixed) | mixed | Most reference already-delivered v1.6–v1.9 work; opportunistic cleanup |
+| todo | 14 stale todo files | done | Cleaned up 2026-04-26 — all moved to completed/ |
 | seeds | duplicate-node.md, quick-node-creation.md | stale | v1.6-delivered; triage or delete on next pass |
 
 **Triage outcome:** All non-blocking for v1.10. No hard prerequisites.
