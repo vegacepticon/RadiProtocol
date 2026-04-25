@@ -1,7 +1,7 @@
 # Roadmap: RadiProtocol
 
 **Project:** RadiProtocol
-**Last updated:** 2026-04-26 (v1.10 milestone updated — Phase 68 release phase added)
+**Last updated:** 2026-04-26 (v1.10 milestone updated — Phase 66 UAT accepted; Phase 68 release checkpoint active)
 
 ---
 
@@ -18,7 +18,7 @@
 - ✅ **v1.9 Inline Runner Polish & Settings UX** — Phases 59-62 (shipped 2026-04-25)
 - 🔄 **v1.10 Editor Sync & Runner UX Polish** — Phases 63-68 (defining; started 2026-04-25)
 
-_Active milestone: v1.10. Phases 63-65 and 67 complete; Phase 66 UAT pending; Phase 68 release phase added._
+_Active milestone: v1.10. Phases 63-67 complete; Phase 66 UAT accepted 9/9 with 0 open issues; Phase 68 release checkpoint active._
 
 ---
 
@@ -155,8 +155,8 @@ Full details: `.planning/milestones/v1.9-ROADMAP.md`
 - [x] Phase 63: Bidirectional Canvas ↔ Node Editor Sync (4/4 plans + gap closure) — executed 2026-04-25, all plans complete, manual UAT pending
 - [x] Phase 64: Node Editor Polish — Auto-grow & Text Block Quick-Create (3/3 plans) — executed 2026-04-25, UAT passed 7/7
 - [x] Phase 65: Runner Footer Layout — Back/Skip Row (2/2 plans) — completed 2026-04-25, UAT approved
-- [ ] Phase 66: Runner Step-Back Reliability & Scroll Pinning (TBD plans)
-- [ ] Phase 67: Inline Runner Resizable Modal & File-Bound Snippet Parity (3 plans)
+- [x] Phase 66: Runner Step-Back Reliability & Scroll Pinning (5/5 plans) — completed 2026-04-25, UAT accepted 9/9
+- [x] Phase 67: Inline Runner Resizable Modal & File-Bound Snippet Parity (3/3 plans) — completed 2026-04-25, UAT passed 8/8
 - [ ] Phase 68: GitHub Release v1.10.0 (3/4 plans complete; release runbook created; awaiting publish + BRAT verification checkpoint)
 
 </details>
@@ -395,11 +395,11 @@ Plans:
 **Plans:** 5 plans
 
 Plans:
-- [ ] 66-01-PLAN.md — ProtocolRunner state-machine surgery: UndoEntry.restoreStatus, _stepBackInFlight guard, RunnerView Processing-text removal
-- [ ] 66-02-PLAN.md — RunnerView scroll-pinning unification: renderPreviewZone scroll-to-bottom default, removal of pendingTextareaScrollTop mechanism
-- [ ] 66-03-PLAN.md — Shared Back-disable-on-click prologue in renderRunnerFooter (RunnerView + InlineRunnerModal)
-- [ ] 66-04-PLAN.md — Loop-boundary correctness suite: D-08 property roundtrip + D-13 four scripted scenarios
-- [ ] 66-05-PLAN.md — 66-UAT.md scripted RUNNER-03/RUNNER-04 visual checklist + human-verify checkpoint
+- [x] 66-01-PLAN.md — ProtocolRunner state-machine surgery: UndoEntry.restoreStatus, _stepBackInFlight guard, RunnerView Processing-text removal — completed 2026-04-25
+- [x] 66-02-PLAN.md — RunnerView scroll-pinning unification: renderPreviewZone scroll-to-bottom default, removal of pendingTextareaScrollTop mechanism — completed 2026-04-25
+- [x] 66-03-PLAN.md — Shared Back-disable-on-click prologue in renderRunnerFooter (RunnerView + InlineRunnerModal) — completed 2026-04-25
+- [x] 66-04-PLAN.md — Loop-boundary correctness suite: D-08 property roundtrip + D-13 four scripted scenarios — completed 2026-04-25
+- [x] 66-05-PLAN.md — 66-UAT.md scripted RUNNER-03/RUNNER-04 visual checklist + human-verify checkpoint — completed 2026-04-25; UAT accepted 9/9, 0 issues, 0 pending
 
 ### Phase 67: Inline Runner Resizable Modal & File-Bound Snippet Parity
 **Goal**: The Inline Runner modal is user-resizable via drag, with width and height persisted in workspace state alongside the Phase 60 position state and clamped to viewport on restore; and a file-bound Snippet node in inline mode appends the configured file's content rather than falling back to the snippets root folder, matching sidebar parity from Phase 56.
@@ -459,6 +459,6 @@ v1.10 active. Phases 63 and 67 can run in parallel (Node Editor sync vs Inline R
 | 62. BRAT Release v1.9.0 | v1.9 | 3/3 | Complete | 2026-04-25 |
 | 63. Bidirectional Canvas ↔ Node Editor Sync | v1.10 | 4/4 + gap closure | Complete | 2026-04-25 |
 | 65. Runner Footer Layout — Back/Skip Row | v1.10 | 2/2 | Complete | 2026-04-25 |
-| 66. Runner Step-Back Reliability & Scroll Pinning | v1.10 | 0/TBD | Not started | — |
+| 66. Runner Step-Back Reliability & Scroll Pinning | v1.10 | 5/5 | Complete | 2026-04-25 |
 | 67. Inline Runner Resizable Modal & File-Bound Snippet Parity | v1.10 | 3/3 | Complete | 2026-04-25 |
 | 68. GitHub Release v1.10.0 | v1.10 | 3/4 | Awaiting human release checkpoint | — |
