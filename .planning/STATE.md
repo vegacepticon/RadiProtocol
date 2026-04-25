@@ -24,10 +24,10 @@ progress:
 
 ## Current Position
 
-Phase: 66 (in progress — executing Wave 2) + Phase 67 (context gathered, ready for plan)
-Plan: Phase 66 — 66-01 complete; 66-02..66-05 remaining across waves 2-4. Phase 67 — 67-CONTEXT.md + 67-DISCUSSION-LOG.md committed; PLAN.md not yet created.
-Status: Phase 66 execution in progress (Wave 2 next). Phase 67 discuss-phase complete — 17 decisions captured (D-01..D-18). Notable scope expansion: INLINE-FIX-07 root-cause located in `src/runner/protocol-runner.ts:736-741` (advanceThrough case 'snippet' unconditionally halts at awaiting-snippet-pick), so fix touches runner-core + `src/graph/node-label.ts` — outside the inline-only scope ROADMAP.md §Phase 67 originally described. PLAN.md must amend ROADMAP/STATE in its first plan.
-Last activity: 2026-04-25 — Phase 67 /gsd-discuss-phase complete; Phase 66 Wave 2 still pending.
+Phase: 66 (in progress — executing Wave 3)
+Plan: 66-01 complete; 66-02 complete; 66-04 complete; 66-03 and 66-05 remaining
+Status: Phase 66 Wave 2 complete. Moving to Wave 3 (66-03 — Back disable-on-click guard).
+Last activity: 2026-04-25 — Wave 2 complete (66-02 + 66-04 committed).
 
 ---
 
