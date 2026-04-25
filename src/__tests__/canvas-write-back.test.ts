@@ -324,4 +324,51 @@ describe('PHASE-50 CanvasLiveEditor edge writes (D-08 / D-12 / D-14)', () => {
     const written = setDataSpy.mock.calls[0]![0] as { nodes: Array<Record<string, unknown>> };
     expect(written.nodes[0]!['radiprotocol_displayLabel']).toBe('X');
   });
+
+  // Phase 63: snippet-kind nodeEdits routing
+  it('saveLiveBatch routes snippet-kind nodeChanges to radiprotocol_snippetLabel (Phase 63 D-04)', async () => {
+    const { editor, setDataSpy } = buildMockLiveEditor({
+      filePath: 'test.canvas',
+      nodes: [
+        { id: 'n-q', radiprotocol_nodeType: 'question' },
+        { id: 'n-snip', radiprotocol_nodeType: 'snippet', radiprotocol_snippetLabel: 'Старое' },
+      ],
+      edges: [{ id: 'e1', fromNode: 'n-q', toNode: 'n-snip', label: 'Старое' }],
+    });
+    const ok = await editor.saveLiveBatch(
+      'test.canvas',
+      [{ nodeId: 'n-snip', edits: { radiprotocol_snippetLabel: 'Новое' } }],
+      [{ edgeId: 'e1', label: 'Новое' }],
+    );
+    expect(ok).toBe(true);
+    expect(setDataSpy).toHaveBeenCalledTimes(1); // D-14: atomic single write — never two setData
+    const written = setDataSpy.mock.calls[0]![0] as {
+      nodes: Array<Record<string, unknown>>;
+      edges: Array<Record<string, unknown>>;
+    };
+    const snippet = written.nodes.find((n) => n['id'] === 'n-snip');
+    const edge = written.edges.find((e) => e['id'] === 'e1');
+    expect(snippet!['radiprotocol_snippetLabel']).toBe('Новое');
+    expect(edge!['label']).toBe('Новое');
+  });
+
+  // Phase 63: snippet-kind nodeEdits routing
+  it('saveLiveBatch strips radiprotocol_snippetLabel when value is undefined (D-08 symmetry)', async () => {
+    const { editor, setDataSpy } = buildMockLiveEditor({
+      filePath: 'test.canvas',
+      nodes: [
+        { id: 'n-snip', radiprotocol_nodeType: 'snippet', radiprotocol_snippetLabel: 'old-snippet-label' },
+      ],
+      edges: [],
+    });
+    const ok = await editor.saveLiveBatch(
+      'test.canvas',
+      [{ nodeId: 'n-snip', edits: { radiprotocol_snippetLabel: undefined } }],
+    );
+    expect(ok).toBe(true);
+    expect(setDataSpy).toHaveBeenCalledTimes(1);
+    const written = setDataSpy.mock.calls[0]![0] as { nodes: Array<Record<string, unknown>> };
+    const snippet = written.nodes.find((n) => n['id'] === 'n-snip');
+    expect(snippet).not.toHaveProperty('radiprotocol_snippetLabel');
+  });
 });
