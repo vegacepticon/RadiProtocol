@@ -4,6 +4,75 @@
 
 ---
 
+## Milestone: v1.10 — Editor Sync & Runner UX Polish
+
+**Shipped:** 2026-04-26
+**Phases:** 6 (63–68) | **Plans:** 18 | **Timeline:** 2 days (2026-04-25 → 2026-04-26) | **Commits:** 96
+**Source delta:** 41 src/ files, +6015/−508 LOC
+**Release:** GitHub Release `1.10.0`, 3 loose assets (main.js, manifest.json, styles.css), prerelease=false, BRAT-installable via `vegacepticon/RadiProtocol`
+
+### What Was Built
+
+- Bidirectional Canvas ↔ Node Editor sync — pure reconciler with discriminated `EdgeLabelDiff`/`NodeLabelChange` (Plan 01); `EdgeLabelSyncService` broadcasts `canvas-changed-for-node` events on a public `EventTarget` bus with per-filePath snapshot baseline (Plan 02); `EditorPanelView` patches its open form's DOM in real time via shared `registerFieldRef` + focus-aware skip+stash + `queueMicrotask` re-entrancy guards (Plan 03); gap-closure Plan 04 added outbound Snippet branch-label → incoming edge sync and inbound canvas-text → form-field sync (EDITOR-03, EDITOR-05)
+- Node Editor polish — every multiline field shares the Phase 48 auto-grow behavior via a shared growable-textarea helper; fifth quick-create button "Create text block" added to the toolbar using the existing `CanvasNodeFactory` path with `flex-wrap: wrap` parity (EDITOR-04, EDITOR-06)
+- Runner footer rebuilt with shared `.rp-runner-footer-row` in both `RunnerView` and `InlineRunnerModal` — "step back" → "back", Skip as labeled button to the right, never interleaved between answer/snippet branches (RUNNER-02)
+- Step-back reliability — `UndoEntry.restoreStatus`, `_stepBackInFlight` double-click guard, removal of "Processing…" dead branch via TS-exhaustiveness, synchronous Back-disable-on-click prologue, loop-boundary correctness suite (D-08 property roundtrip + D-13 four scripted scenarios) (RUNNER-03)
+- Scroll-pinning unification — unconditional scroll-to-bottom in `renderPreviewZone` with complete removal of Phase 47 RUNFIX-02 one-shot flag mechanism (RUNNER-04, inline NA-by-design per D-12)
+- Inline Runner resizable modal — native CSS `resize: both` + `ResizeObserver`-driven 400ms debounced save persists user-set width/height alongside the Phase 60 position state with viewport-32px clamp-on-restore (INLINE-FIX-06; gap-closure 92a1269 fixed drag/tab-switch reset)
+- File-bound Snippet parity in inline + loop-body + direct-edge — replaced unconditional `awaiting-snippet-pick` dispatch in `protocol-runner.ts advanceThrough` case `'snippet'` with a `radiprotocol_snippetPath` branch (D-14), extending Phase 56's sibling-button-click fix to ALL traversal paths in BOTH runner modes (INLINE-FIX-07)
+- BRAT Release `1.10.0` — `manifest.json`/`versions.json`/`package.json` aligned, fresh build, unprefixed annotated tag pushed, runbook with Phase 66 UAT gate as first operational section, GitHub Release with 3 loose root assets, BRAT smoke install on clean vault PASS
+
+### What Worked
+
+- **Reconciler / service / view split for Phase 63** — Plan 01's pure reconciler with discriminated diff shape, Plan 02's writer + dispatch bus, Plan 03's view subscriber + DOM patcher composed cleanly without re-architecture. The pattern is reusable for any future "canvas-pushes-to-form" feature.
+- **`registerFieldRef` shared helper** — every text-field capture goes through one helper; future fields will receive inbound canvas patches automatically by registering. Standing pitfall #14 in STATE.md documents this so it doesn't get accidentally bypassed.
+- **Focus-aware skip+stash on inbound patches** — never overwrites the in-flight focused field; `queueMicrotask` re-entrancy guard defers re-render off the event stack. Concurrent-edit invariants from Phase 50 carried forward correctly.
+- **Phase 67 D-14 root-cause hunt** — surfaced that file-bound Snippet parity was broken at three traversal paths (sibling-button click, loop-body edge, direct edge), and Phase 56 had only fixed the click path. The 4-line block at `protocol-runner.ts:736-741` was load-bearing wrong code; replacing it with a `radiprotocol_snippetPath` branch fixed all three at once.
+- **Loop-boundary correctness suite (Phase 66 D-08 + D-13)** — property roundtrip + four scripted scenarios (entry, body-branch dead-end, «выход» exit, nested-loop interleave) lock down text-accumulation invariants that mid-loop step-back regressed against. UAT 9/9 PASS reflects this hard contract.
+- **Removed Phase 47 RUNFIX-02 one-shot flag instead of layering** — the one-shot was load-bearing for one regression class but caused upward jumps after file-bound snippet insert. Removing it + always-pin-to-bottom subsumed both behaviours.
+- **Phase 65 → 67 ordering let inline-mode parity land last** — sidebar/tab footer fixes shipped before inline resize work; cross-mode tests caught the runtime drift early.
+- **Gap-closure mid-phase, not deferred to next milestone** — Phase 63 Plan 04 (UAT gap closure) and Phase 67 commit 92a1269 (drag/tab-switch reset fix) both happened inside the originating phase rather than being kicked to a v1.10.x patch. Tighter feedback loop.
+- **Phase 68 release runbook reused Phase 62 D10 pattern** — Phase 66 UAT gate as the first operational section ensured the release didn't claim phases that hadn't passed UAT. Runbook executed cleanly, BRAT smoke PASS on first try.
+
+### What Was Inefficient
+
+- **REQUIREMENTS.md traceability stale at close — again** — only EDITOR-03 / EDITOR-05 / RUNNER-02 / INLINE-FIX-07 were `[x]` going into milestone close; the other 5 (EDITOR-04, EDITOR-06, RUNNER-03, RUNNER-04, INLINE-FIX-06) sat at `[ ]` despite their phases shipping with UAT-PASS evidence. **Same repeat offense identified in v1.9 retrospective Lesson 1**, still unfixed. The milestone-close skill flipped them this time, but it's a recurring patch over a missing phase-completion gate.
+- **VERIFICATION.md gap on Phases 64, 66, 67** — UAT-PASS evidence + SUMMARY frontmatter list completed requirements, but no formal `gsd-verifier` report. Mirrors the exact gap v1.8 closed via Phase 58 backfill. Open tech-debt item for next milestone (or v1.10.x).
+- **Nyquist VALIDATION.md missing on 5/6 v1.10 phases** — Phase 63 in draft (`nyquist_compliant: false`); 64/65/66/67/68 absent entirely. Project-wide carry-over tech debt; not a v1.10 regression but it didn't shrink either.
+- **STATE.md regex regression in `milestone.complete` CLI** — the CLI's auto-write set `milestone_name: "Phase Details"` (parsed from a `## Phase Details` heading instead of the milestone title); had to be hand-corrected. Tooling bug to file.
+- **MILESTONES.md auto-generated entry pulled cruft** — accumulating "1. [Rule 3 - Blocking]…" and "1. [Process Deviation]…" lines (deviation log entries from per-plan SUMMARY) into accomplishments. Hand-rewrote to v1.9-style curation; the CLI's bullet extractor needs better filtering.
+- **Two open debug sessions never formally closed** — `inline-runner-drag-resets-size` and `inline-runner-tab-switch-resets-size` were resolved by gap-closure commit `92a1269` but not closed in `audit-open`. Surfaced again at milestone close as `[unknown]` status. Phase-complete should also close debug sessions tied to the phase.
+- **gh CLI not installed on the dev machine** — could not verify the GitHub Release programmatically; relied on user confirmation. Adding `gh` to dev-environment setup would let `release-preflight.sh` auto-verify the release post-publish.
+
+### Patterns Established
+
+- **Reconciler → service-bus → view-patcher triad** for two-way DOM-canvas sync — discriminated diff shape passes through three layers without re-shaping; each layer is unit-testable in isolation. Reuse for any future "external state pushes into open form" feature.
+- **`registerFieldRef` helper for participatory field registration** — every text-field DOM ref gets registered through one helper; new fields opt in by registering or they don't receive inbound patches. Standing pitfall locks this in.
+- **Focus-aware inbound patching with stash semantics** — never overwrite the user's in-flight focus; re-entrancy guards via `queueMicrotask` to defer re-render off the event stack.
+- **Loop-boundary correctness suite** — for any state-machine work that touches loop entry/body/exit, ship a property roundtrip + four scripted scenarios (entry, body-branch dead-end, «выход» exit, nested-loop interleave). Locks down text-accumulation invariants.
+- **Three-traversal-paths invariant for runner-core dispatch** — when extending the runner state machine for a new node-kind branch (or fixing one), check ALL three paths: sibling-button click, loop-body edge, direct edge. Phase 67 D-14 / D-15 documented this; runner-core extensions must cover all three or carry tests proving NA.
+- **Plan-level CLAUDE.md "never delete code you didn't add" exception, named explicitly** — when a load-bearing wrong block must be replaced (Phase 67 D-14 protocol-runner.ts:736-741), document the exception in STATE.md so future executors don't reflexively restore it.
+- **Mid-phase gap-closure plan, not next-milestone deferral** — when UAT surfaces a verified gap (Phase 63 Plan 04, Phase 67 commit 92a1269), close it inside the originating phase rather than splitting into a v1.10.x phase.
+- **Per-filePath snapshot baseline** for canvas-state diffing — `EdgeLabelSyncService` keeps `lastSnapshotByFilePath` to detect node-text deltas without re-parsing the canvas; pattern reuses for any "diff against last seen" engine.
+
+### Key Lessons
+
+1. **REQUIREMENTS.md traceability flip needs to happen at phase-complete, not milestone-close — repeat offense from v1.0, v1.2, v1.5, v1.9, and now v1.10.** The fix is mechanical: phase-complete commit should auto-flip the `[ ]` boxes for requirements listed in the phase's SUMMARY frontmatter. Until that lands, every milestone close eats the cleanup tax.
+2. **VERIFICATION.md gaps are systemic, not per-milestone.** v1.8 closed the v1.7 gap via Phase 58 backfill; v1.10 carries the same gap forward on Phases 64/66/67. The phase-complete checklist should require either a `VERIFICATION.md` or an explicit "verification waived because UAT covers it" note in STATE.md tech-debt.
+3. **Cross-mode parity bugs hide in dispatch layers.** Phase 67 INLINE-FIX-07's root cause was in shared `protocol-runner.ts`, not inline-only. Phase 56 had fixed only one of three traversal paths. Standing pitfall #13 in STATE.md captures this; runner-core dispatch must consider all traversal paths going forward.
+4. **One-shot flags are usually wrong.** Phase 47 RUNFIX-02's "preserve scroll on choice insert" one-shot solved one regression but caused another. Replacing it with an unconditional always-pin-to-bottom in `renderPreviewZone` subsumed both. When you find a one-shot in a render path, ask whether the unconditional version is just correct.
+5. **Mid-phase gap-closure beats v1.x.y patch deferral.** Phase 63 Plan 04 and Phase 67 commit 92a1269 closed UAT-surfaced gaps inside the originating phase. The alternative — kicking gaps to a v1.10.1 backlog — accumulates audit tech debt and slows the next milestone's discuss-phase.
+6. **`gh` CLI on the dev machine would close the release-verify loop.** Currently the BRAT smoke test is the only post-publish verification, and it's manual. Adding `gh` lets `release-preflight.sh` (or a sibling `release-postcheck.sh`) verify tag/title/asset list automatically.
+7. **Auto-generated milestone-close artifacts need linting.** The `milestone.complete` CLI's MILESTONES.md entry pulled "Process Deviation" lines into accomplishments; the STATE.md frontmatter regex picked up `## Phase Details` as `milestone_name`. Both required hand-correction. Either fix the CLI or run a post-CLI normalization pass.
+
+### Cost Observations
+
+- Model mix: Opus for planning/research/verify/discuss; Sonnet for execute-phase subagents; haiku for lightweight lookups
+- Sessions: ~5 sessions across 2 days (Phases 63 + 64 day 1; Phases 65/66/67/68 + close day 2)
+- Notable: Phase 67 D-14 root-cause hunt closed three traversal-path bugs with one 4-line replacement — the right level of analysis paid off; the wrong level (treating it as inline-only) had cost a UAT cycle in Phase 56
+
+---
+
 ## Milestone: v1.9 — Inline Runner Polish & Settings UX
 
 **Shipped:** 2026-04-25

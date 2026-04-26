@@ -1,5 +1,32 @@
 # Milestones
 
+## v1.10 Editor Sync & Runner UX Polish (Shipped: 2026-04-26)
+
+**Phases completed:** 6 phases (63–68), 18 plans, 9/9 requirements satisfied
+**Timeline:** 2026-04-25 → 2026-04-26 (2 days)
+**Git:** 96 commits, 41 source files touched, +6015/−508 LOC (src/ only)
+**Release:** GitHub Release `1.10.0` (unprefixed tag) — 3 loose assets attached at release root, prerelease=false, BRAT-installable via `vegacepticon/RadiProtocol`
+
+**Key accomplishments:**
+
+- Phase 63: Bidirectional Canvas ↔ Node Editor sync — pure reconciler with discriminated `EdgeLabelDiff`/`NodeLabelChange` (Plan 01); `EdgeLabelSyncService` broadcasts `canvas-changed-for-node` events on a public `EventTarget` bus with per-filePath snapshot baseline (Plan 02); `EditorPanelView` patches its open form's DOM in real time via shared `registerFieldRef` + focus-aware skip+stash + `queueMicrotask` re-entrancy guards (Plan 03); gap-closure Plan 04 added outbound Snippet branch-label → incoming edge sync and inbound canvas-text → form-field sync via canonical key synthesis (EDITOR-03, EDITOR-05)
+- Phase 64: Node Editor polish — every multiline field (Question, Answer, Text block, Snippet branch label, Loop headerText) now shares the Phase 48 auto-grow behavior via a shared growable-textarea helper with managed CSS that removes inner scrollbars (EDITOR-04); fifth quick-create button "Create text block" added to the toolbar using the existing `CanvasNodeFactory` path with `flex-wrap: wrap` parity (EDITOR-06); UAT 7/7 PASS
+- Phase 65: Runner footer rebuilt with shared `.rp-runner-footer-row` in both `RunnerView` and `InlineRunnerModal` — "step back" renamed to "back", Skip rendered as a labeled button to the right of Back, never interleaved between answer/snippet branches; consistent across sidebar, tab, and inline modes (RUNNER-02)
+- Phase 66: Step-back reliability and scroll pinning — `UndoEntry.restoreStatus` for correct post-`stepBack` state restoration, `_stepBackInFlight` double-click guard, removal of the "Processing…" dead branch via typed exhaustiveness narrowing, synchronous Back-disable-on-click prologue in both runner footers, loop-boundary correctness suite (D-08 property roundtrip + D-13 four scripted scenarios) (RUNNER-03); unconditional scroll-to-bottom in `RunnerView.renderPreviewZone` with complete removal of the Phase 47 RUNFIX-02 one-shot flag mechanism (RUNNER-04, inline NA-by-design per D-12); UAT 9/9 PASS
+- Phase 67: Inline Runner resizable modal and file-bound snippet parity — native CSS `resize: both` + `ResizeObserver`-driven 400ms debounced save persists user-set width/height alongside the Phase 60 position state with viewport-32px clamp-on-restore for monitor/resolution changes (INLINE-FIX-06, gap-closure 92a1269 fixed drag/tab-switch resets); replaced the unconditional `awaiting-snippet-pick` dispatch in `protocol-runner.ts advanceThrough` case `'snippet'` with a `radiprotocol_snippetPath` branch (D-14), extending file-bound parity from the Phase 56 sibling-button click path to ALL traversal paths (loop body, direct edge) in BOTH sidebar and inline runners (INLINE-FIX-07); UAT 8/8 PASS
+- Phase 68: GitHub Release `1.10.0` shipped — `manifest.json`/`versions.json`/`package.json` aligned on `1.10.0` while preserving `1.8.0` + `1.9.0` mappings, fresh `npm run build`, release-preflight script (`SC-1 local verification: PASS`), unprefixed annotated tag `1.10.0` pushed, release runbook with Phase 66 UAT gate as first operational section, GitHub Release published with 3 loose root assets (`manifest.json`, `main.js`, `styles.css`), BRAT smoke install on a clean Obsidian vault confirmed plugin enables at version `1.10.0` with all post-publish smoke checks green (Runner / Editor / Inline)
+
+**Known deferred items at close:**
+
+- Verification documentation backfill — Phases 64, 66, 67 ship with UAT-PASS evidence and SUMMARY frontmatter listing implemented requirements but no formal `gsd-verifier` `VERIFICATION.md` (mirrors v1.8 Phase 58 backfill pattern). Phase 63 `VERIFICATION.md` exists but was marked `human_needed`; resolved by 63-UAT 9/9.
+- Nyquist `VALIDATION.md` — Phase 63 in draft (`nyquist_compliant: false`, tests GREEN end-to-end); Phases 64, 65, 66, 67, 68 missing entirely (carry-over project-wide tech debt from v1.7).
+- Three open debug sessions — `inline-runner-drag-resets-size` and `inline-runner-tab-switch-resets-size` both resolved by gap-closure `92a1269` but not formally closed; `phase-27-regressions` carryover from v1.7 — color regression root cause documented.
+- Audit at close: `tech_debt` (no blockers); accepted per audit Path A (publish first, close with documented tech debt).
+
+**Archive:** `.planning/milestones/v1.10-ROADMAP.md`, `.planning/milestones/v1.10-REQUIREMENTS.md`, `.planning/milestones/v1.10-MILESTONE-AUDIT.md`, `.planning/milestones/v1.10-phases/` (includes `v1.10-INTEGRATION-CHECK.md`)
+
+---
+
 ## v1.9 Inline Runner Polish & Settings UX (Shipped: 2026-04-25)
 
 **Phases completed:** 4 phases (59–62), 17 plans

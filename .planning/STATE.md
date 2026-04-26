@@ -2,10 +2,10 @@
 gsd_state_version: 1.0
 milestone: v1.10
 milestone_name: Editor Sync & Runner UX Polish
-status: milestone-ready-to-close
-stopped_at: "Phase 68 published; running /gsd-complete-milestone 1.10."
-last_updated: "2026-04-26T12:00:00.000Z"
-last_activity: 2026-04-26 — Phase 68 published: GitHub Release 1.10.0 live with three loose assets, BRAT smoke verified on clean vault, runbook final_verdict=success.
+status: shipped
+stopped_at: "v1.10 milestone closed; ready for /gsd-new-milestone."
+last_updated: "2026-04-26T12:30:00.000Z"
+last_activity: 2026-04-26 — v1.10 milestone closed, archived to milestones/v1.10-*; GitHub Release 1.10.0 live; ready for next milestone.
 progress:
   total_phases: 6
   completed_phases: 6
@@ -17,56 +17,35 @@ progress:
 # RadiProtocol — Project State
 
 **Updated:** 2026-04-26
-**Milestone:** v1.10 Editor Sync & Runner UX Polish — ✅ shipped
-**Status:** All 6 phases (63–68) complete; 18/18 plans complete. GitHub Release `1.10.0` published as Latest with loose assets `manifest.json`, `main.js`, `styles.css`; BRAT smoke install on clean vault passed; runbook `final_verdict: success`. Running `/gsd-complete-milestone 1.10` to archive.
+**Milestone:** v1.10 Editor Sync & Runner UX Polish — ✅ SHIPPED 2026-04-26
+**Status:** Milestone closed and archived. GitHub Release `1.10.0` live with three loose BRAT assets; clean-vault BRAT smoke verified. Awaiting next milestone (run `/gsd-new-milestone`).
 
 ---
 
 ## Current Position
 
-Phase: 68 complete (2026-04-26)
-Plan: 68-04 complete — runbook executed, Release published, BRAT smoke PASS.
-Status: Milestone close in progress. Next: REQUIREMENTS checkbox flip → milestone archive → ROADMAP collapse → PROJECT.md evolution → RETROSPECTIVE.md append → tag `v1.10`.
-Last activity: 2026-04-26 — Release 1.10.0 published, BRAT smoke green, runbook frontmatter updated.
+Phase: none active
+Plan: none
+Status: Between milestones. Run `/gsd-new-milestone` to define the next milestone (questioning → research → requirements → roadmap).
+Last activity: 2026-04-26 — `/gsd-complete-milestone 1.10` archived ROADMAP, REQUIREMENTS, AUDIT, and phase directories under `.planning/milestones/v1.10-*`; tag `v1.10` created.
 
 ---
 
 ## Project Reference
 
-See: `.planning/PROJECT.md` (updated 2026-04-25 — v1.10 milestone added).
-See: `.planning/ROADMAP.md` (updated 2026-04-26 — Phase 68 GitHub Release v1.10.0 added).
-See: `.planning/REQUIREMENTS.md` (updated 2026-04-25 — traceability populated, 9/9 mapped).
+See: `.planning/PROJECT.md` (updated 2026-04-26 — v1.10 milestone closed, requirements moved to Validated, Key Decisions extended).
+See: `.planning/ROADMAP.md` (updated 2026-04-26 — v1.10 collapsed under details, Backlog preserved).
+See: `.planning/MILESTONES.md` (updated 2026-04-26 — v1.10 entry added).
 
 **Core value:** A radiologist can generate a structured, accurate protocol in seconds by answering a guided algorithm — without writing a single line of code.
 
-**Current focus:** v1.10 — close accumulated UX regressions (step-back reliability, scroll preservation, Skip/Back layout, auto-grow textareas), introduce bidirectional canvas ↔ Node Editor sync, fix Snippet branch label sync to edge, and add Inline Runner resizable modal + file-bound snippet parity.
-
----
-
-## v1.10 Phase Plan
-
-| Phase | Name | Requirements | Depends on |
-|-------|------|--------------|------------|
-| 63 | Bidirectional Canvas ↔ Node Editor Sync | EDITOR-03, EDITOR-05 | Nothing |
-| 64 | Node Editor Polish — Auto-grow & Text Block Quick-Create | EDITOR-04, EDITOR-06 | Phase 63 (advisory) |
-| 65 | Runner Footer Layout — Back/Skip Row | RUNNER-02 | Nothing |
-| 66 | Runner Step-Back Reliability & Scroll Pinning | RUNNER-03, RUNNER-04 | Nothing (advisory: after Phase 63) |
-| 67 | Inline Runner Resizable Modal & File-Bound Snippet Parity | INLINE-FIX-06, INLINE-FIX-07 | Nothing |
-| 68 | GitHub Release v1.10.0 | Release readiness for v1.10 | Phases 63-67 complete and Phase 66 UAT accepted |
-
-**Parallelizability:**
-- Phase 63 (Node Editor sync) ‖ Phase 65 (Runner footer) ‖ Phase 67 (Inline Runner) — independent file scopes
-- Phase 64 follows Phase 63 (advisory — shared textarea init code)
-- Phase 66 advisory after Phase 63 (canvas-sync events would muddy step-back debugging if interleaved)
-- Phase 68 runs last as the release phase after Phase 66 UAT is accepted
-
-**Coverage:** 9/9 v1.10 product requirements mapped; Phase 68 adds release-readiness work.
+**Current focus:** Awaiting next milestone definition.
 
 ---
 
 ## Accumulated Context
 
-### v1.0–v1.9 Shipped
+### v1.0–v1.10 Shipped
 
 - v1.0 (7 phases): foundation — parser, runner, UI, editor panel, snippets, loops, sessions.
 - v1.2 (8 phases): runner UX and bug fixes (layout, selectors, separators, read-back).
@@ -76,13 +55,10 @@ See: `.planning/REQUIREMENTS.md` (updated 2026-04-25 — traceability populated,
 - v1.6 (7 phases): dead-code audit, canvas node creation, node duplication, live canvas update.
 - v1.7 (4 phases): unified loop node, runtime picker, editor form + picker-modal + start-from-node command, free-text-input removal.
 - v1.8 (14 phases, 47–58): runner regressions closed, Node Editor UX polish, edge semantics (`+`-prefix exit, Answer↔edge sync), snippet picker overhaul + file-binding + button UX reversal, JSON placeholders → 2 types, Skip/Close buttons, Inline Protocol Display Mode, BRAT distribution (GitHub Release v1.8.0).
-- v1.9 (4 phases, 59–62): Inline Runner feature parity (nested path resolution, separator on snippet insert, JSON fill-in modal), position persistence + compact layout, folder autocomplete on settings path fields, BRAT Release v1.9.0.
+- v1.9 (4 phases, 59–62): Inline Runner feature parity, position persistence + compact layout, folder autocomplete on settings path fields, BRAT Release v1.9.0.
+- v1.10 (6 phases, 63–68): bidirectional Canvas ↔ Node Editor sync, auto-grow textareas + Text block quick-create, Back/Skip footer layout, step-back reliability + scroll pinning, Inline Runner resizable modal + file-bound Snippet parity, BRAT Release `1.10.0`.
 
-### Roadmap Evolution
-
-- Phase 68 added: GitHub Release v1.10.0
-
-### Standing Pitfalls (carry-over from v1.9)
+### Standing Pitfalls (carry-over from v1.10)
 
 1. Never modify `.canvas` while open in Canvas view (Strategy A) unless Pattern B live-editor is used.
 2. `vault.modify()` race conditions — use `WriteMutex` (async-mutex) per file path.
@@ -95,36 +71,26 @@ See: `.planning/REQUIREMENTS.md` (updated 2026-04-25 — traceability populated,
 9. Real-DOM vs mock-DOM parent lookup: `parentElement` first, `.parent` mock fallback second.
 10. v1.7 excised `maxIterations` — do not reintroduce a per-loop or global iteration cap.
 11. v1.8: preserve backward compatibility of stored canvas shape — directory-bound Snippet nodes must keep working unchanged.
-12. v1.9: Inline Runner position persistence uses clamp-on-restore (not clamp-on-save) — resize persistence in v1.10 (Phase 67) must follow same pattern to survive monitor/resolution changes.
-13. v1.10 / Phase 67: file-bound Snippet parity (INLINE-FIX-07) root-cause was in shared `src/runner/protocol-runner.ts` `advanceThrough` case `'snippet'` (lines 736-741), NOT inline-only. Phase 56 fixed only the sibling-button click path; loop-body and direct-edge traversals remained broken until Phase 67 D-14 + D-15 replaced the unconditional `awaiting-snippet-pick` dispatch with a `radiprotocol_snippetPath` branch. The 4-line block at 736-741 is the documented CLAUDE.md "never remove existing code you didn't add" mandate exception — D-14 explicitly REPLACES that block. Going forward, runner-core dispatch for any new node-kind extension MUST consider all traversal paths (sibling-button click, loop-body edge, direct edge) — not just the click path.
+12. v1.9: Inline Runner position persistence uses clamp-on-restore (not clamp-on-save) — survives monitor/resolution changes.
+13. v1.10 / Phase 67: file-bound Snippet parity (INLINE-FIX-07) root-cause was in shared `src/runner/protocol-runner.ts` `advanceThrough` case `'snippet'`, NOT inline-only. Phase 56 fixed only the sibling-button click path; loop-body and direct-edge traversals remained broken until Phase 67 D-14 + D-15. Going forward, runner-core dispatch for any new node-kind extension MUST consider all traversal paths (sibling-button click, loop-body edge, direct edge) — not just the click path.
+14. v1.10 / Phase 63: Node Editor canvas → form sync subscribes to `EdgeLabelSyncService`'s `canvas-changed-for-node` event bus and patches DOM via `registerFieldRef`; future Node-Editor work that adds new fields MUST register them through this helper or they will not receive inbound canvas patches.
 
-### v1.10-relevant precedents
+### Open Tech Debt (carried from v1.10 close)
 
-- **Phase 50 — Answer ↔ edge label sync**: bidirectional binding pattern for the EDITOR-03 Snippet branch-label ↔ outgoing edge label work in Phase 63.
-- **Phase 38/41 — Pattern B canvas live editor**: write-back on open canvases; canvas → form direction in Phase 63 (EDITOR-05) will subscribe to the same canvas-node-change event surface.
-- **Phase 48 (NODEUI-04) — Question textarea auto-grow**: reference behaviour to extend across all multi-line fields in Phase 64 (EDITOR-04).
-- **Phase 39 / 42 — quick-create button infrastructure**: `CanvasNodeFactory` + `flex-wrap: wrap` toolbar — Phase 64 (EDITOR-06) adds a fifth button using the established pattern.
-- **Phase 60 — Inline Runner position persistence**: workspace-state contract + clamp-on-restore — Phase 67 (INLINE-FIX-06) adds width/height persistence on the same contract.
-- **Phase 56 — file-bound Snippet button click → direct insert**: sidebar parity that Phase 67 (INLINE-FIX-07) replicates in inline mode.
-- **Phase 53 (RUNNER-SKIP-01..03) — Skip button**: existing Skip implementation that Phase 65 (RUNNER-02) repositions next to Back.
-
-### Open Tech Debt (deferred to future)
-
-- 3 Nyquist VALIDATION.md gaps (Phase 43/44/46 — tests green, frontmatter not promoted) — carried from v1.7.
-- Nyquist VALIDATION.md draft for phases 12–19, 28–31, 32–35, 36–42.
-- 1 legacy debug session (phase-27-regressions — `awaiting_human_verify`) — carried from v1.7.
-- `@deprecated` `LoopStartNode` / `LoopEndNode` retained for Migration Check enumeration.
-- Stale todo files cleaned up on 2026-04-26 — all 14 moved to `.planning/todos/completed/`.
+- Verification documentation backfill — Phases 64, 66, 67 lack formal `gsd-verifier` VERIFICATION.md (UAT-PASS evidence exists). Pattern: v1.8 Phase 58 backfill.
+- Nyquist `VALIDATION.md` — Phase 63 draft, Phases 64–68 missing entirely; project-wide tech debt also covers Phases 12–19, 28–31, 32–35, 36–42, 43, 44, 46.
+- 3 open debug sessions — `inline-runner-drag-resets-size` and `inline-runner-tab-switch-resets-size` both resolved by gap-closure `92a1269` but not formally closed; `phase-27-regressions` carryover from v1.7.
 - 2 stale seeds (`duplicate-node.md`, `quick-node-creation.md`) for v1.6-delivered work in `.planning/seeds/`.
+- `@deprecated` `LoopStartNode` / `LoopEndNode` retained for Migration Check enumeration (carry-over from v1.7).
 
 ---
 
 ## Session Continuity
 
-Last session: 2026-04-25
-Stopped at: Phase 68 Plan 04 human-action checkpoint. Use `.planning/phases/68-github-release-v1-10-0/68-RELEASE-RUNBOOK.md` to publish and verify.
-Resume file: .planning/phases/68-github-release-v1-10-0/
-Next action: Complete the human release action in `68-RELEASE-RUNBOOK.md`, then resume with the publish/BRAT verification result.
+Last session: 2026-04-26
+Stopped at: `/gsd-complete-milestone 1.10` finished; ready for next milestone.
+Resume file: none
+Next action: `/clear` then `/gsd-new-milestone` to define the next milestone.
 
 ---
 
@@ -132,21 +98,5 @@ Next action: Complete the human release action in `68-RELEASE-RUNBOOK.md`, then 
 
 - Branch: `main`
 - Main: `main`
-- Last shipped: v1.9 (2026-04-25; GitHub Release v1.9.0 published)
-- Active phase: 68 (awaiting human release checkpoint)
-
----
-
-## Deferred Items
-
-Carried from v1.9 close on 2026-04-25 — non-blocking for v1.10:
-
-| Category | Item | Status | Notes |
-|----------|------|--------|-------|
-| debug | phase-27-regressions | awaiting_human_verify | v1.7 carryover — color regression root cause found in canvas-live-editor.ts PROTECTED_FIELDS; not blocking |
-| uat | Phase 59 UAT status field | passed / 0 open | Auditor noise — 0 pending scenarios, phase verified green |
-| uat | Phase 61 UAT status field | unknown / 0 open | Status-field oversight — 0 pending scenarios, phase shipped |
-| todo | 14 stale todo files | done | Cleaned up 2026-04-26 — all moved to completed/ |
-| seeds | duplicate-node.md, quick-node-creation.md | stale | v1.6-delivered; triage or delete on next pass |
-
-**Triage outcome:** All non-blocking for v1.10. No hard prerequisites.
+- Last shipped: v1.10 (2026-04-26; GitHub Release `1.10.0` published)
+- Active phase: none

@@ -10,32 +10,11 @@ A radiologist can generate a structured, accurate protocol in seconds by answeri
 
 ## Current State
 
-**Last shipped:** v1.9 Inline Runner Polish & Settings UX — ✅ SHIPPED 2026-04-25 (GitHub Release v1.9.0, 3 loose assets, BRAT-installable)
+**Last shipped:** v1.10 Editor Sync & Runner UX Polish — ✅ SHIPPED 2026-04-26 (GitHub Release `1.10.0`, 3 loose assets, BRAT-installable via `vegacepticon/RadiProtocol`)
 
-**Active milestone:** v1.10 Editor Sync & Runner UX Polish — IN PROGRESS (Phases 63-65 complete; started 2026-04-25)
+**Active milestone:** none — between milestones; awaiting `/gsd-new-milestone`
 
 **Previous milestone:** v1.9 Inline Runner Polish & Settings UX — ✅ SHIPPED 2026-04-25
-
-## Current Milestone: v1.10 Editor Sync & Runner UX Polish
-
-**Goal:** Close accumulated UX regressions and rough edges across all three runner modes, and introduce bidirectional synchronization between Canvas and Node Editor.
-
-**Target features:**
-
-Node Editor
-- Custom branch label on Snippet nodes writes to its outgoing edge label (bidirectional sync, mirroring Answer node's Phase 50 convention); canvas node text continues to show the selected directory/file
-- Auto-grow textarea applied to every text field on every node kind (Question-style behavior everywhere)
-- Bidirectional live sync between canvas node text and Node Editor form fields (edits on canvas update the form in real time, not only form → canvas)
-- Fifth quick-create button "Create text block" in the Node Editor toolbar
-
-Runner UX
-- Footer layout: "step back" → "back"; Skip renders as labeled button ("skip") to the right of Back on the same horizontal row; Skip never renders between mixed answer/snippet branches — validated in Phase 65
-- Step-back works reliably: no "Processing" hang, single click = single step, loop-node step-back does not corrupt accumulated text
-- Scroll stays pinned to the bottom when file-bound snippet inserts or step-back runs (parity with Answer insert and directory-bound snippet)
-
-Inline Runner
-- Modal is user-resizable via drag; width+height persist in workspace state, survive tab switch and plugin reload (mirroring v1.9 position persistence)
-- File-bound Snippet node in inline mode appends the configured file's content, not the snippets root folder (parity with sidebar runner)
 
 ## Requirements
 
@@ -268,9 +247,29 @@ Inline Runner
 **Distribution (Phase 62):**
 - ✓ v1.9.0 GitHub Release shipped — `manifest.json`+`versions.json`+`package.json` aligned on 1.9.0; unprefixed annotated tag `1.9.0` pushed; 3 loose assets at release root; prerelease=false (BRAT-02) — v1.9
 
-### Active (v1.10)
+### Validated (v1.10)
 
-_Requirements populated by roadmapper after scope is defined. Scope: Editor Sync (canvas↔Node Editor bidirectional sync, auto-grow textareas, Snippet branch label↔edge bidirectional sync, Text block quick-create), Runner UX (skip/back footer layout, step-back reliability, scroll preservation on snippet insert and step-back), Inline Runner (resizable modal with persistence, file-bound snippet parity)._
+**Node Editor:**
+
+- ✓ Snippet branch-label ↔ outgoing edge bidirectional sync (Phase 63 EDITOR-03) — v1.10
+- ✓ Auto-grow textarea applied to every multi-line Node Editor field (Phase 64 EDITOR-04) — v1.10
+- ✓ Bidirectional live sync between canvas node text and Node Editor form fields (Phase 63 EDITOR-05) — v1.10
+- ✓ Fifth quick-create button "Create text block" in Node Editor toolbar (Phase 64 EDITOR-06) — v1.10
+
+**Runner UX:**
+
+- ✓ Back/Skip footer row layout — "step back" → "back", Skip as labeled button to the right of Back, never between mixed branches; uniform across sidebar/tab/inline (Phase 65 RUNNER-02) — v1.10
+- ✓ Step-back reliability: single click = single step, no "Processing" placeholder hang, loop-boundary text-corruption fixes (Phase 66 RUNNER-03) — v1.10
+- ✓ Scroll-to-bottom pinning on file-bound snippet insert and on Back (Phase 66 RUNNER-04; inline NA-by-design per D-12) — v1.10
+
+**Inline Runner:**
+
+- ✓ Resizable modal — width+height persist in workspace state, viewport-clamp on restore (Phase 67 INLINE-FIX-06) — v1.10
+- ✓ File-bound Snippet parity in inline mode — root-cause fix in shared runner-core dispatch (Phase 67 INLINE-FIX-07 D-14) — v1.10
+
+**Distribution:**
+
+- ✓ GitHub Release `1.10.0` — unprefixed tag, three loose root assets, BRAT-installable on clean vault (Phase 68) — v1.10
 
 ### Deferred (Future Milestones)
 
@@ -294,29 +293,32 @@ _Requirements populated by roadmapper after scope is defined. Scope: Editor Sync
 - Optional sections in snippets — deferred to v2
 - Automatic impression generation — requires NLP/AI
 
-## Current State (v1.10 in progress)
+## Current State (between milestones)
 
-**Shipped:** v1.9 Inline Runner Polish & Settings UX (2026-04-25)
-**Active milestone:** v1.10 Editor Sync & Runner UX Polish — defining requirements (started 2026-04-25; next phase number 63)
-**v1.9 shipped:** 4 phases (59–62), 17 plans, 7/7 requirements satisfied, GitHub Release v1.9.0 live
+**Shipped:** v1.10 Editor Sync & Runner UX Polish (2026-04-26)
+**Active milestone:** none — awaiting `/gsd-new-milestone`
+**v1.10 shipped:** 6 phases (63–68), 18 plans, 9/9 requirements satisfied, GitHub Release `1.10.0` live
 
-**Key v1.9 deliverables:**
-- Inline Runner full feature parity with sidebar — nested path resolution, separator on snippet insert, JSON fill-in modal (Phase 59)
-- Inline Runner position persistence + compact default layout — drag-position survives tab switch and plugin reload with viewport clamping (Phase 60)
-- Settings folder autocomplete via reusable `FolderSuggest` on `AbstractInputSuggest` — Protocols/Snippets/Output fields (Phase 61)
-- BRAT Release v1.9.0 — tag `1.9.0` pushed, 3 loose assets, prerelease=false (Phase 62)
+**Key v1.10 deliverables:**
+
+- Bidirectional Canvas ↔ Node Editor sync — canvas-text edits patch the open form's DOM in real time via `EdgeLabelSyncService` event bus + `registerFieldRef`; Snippet branch label round-trips to outgoing edge (Phase 63)
+- Node Editor polish — auto-grow on every multi-line field via shared helper; "Create text block" toolbar button (Phase 64)
+- Runner footer row — "back" + labeled "skip" on same row, uniform across sidebar/tab/inline (Phase 65)
+- Step-back reliability + scroll pinning — `UndoEntry.restoreStatus`, `_stepBackInFlight` guard, removal of dead "Processing…" branch, unconditional scroll-to-bottom in `renderPreviewZone` (Phase 66)
+- Inline Runner resizable modal + file-bound Snippet parity — native CSS `resize: both` + `ResizeObserver` debounced save with viewport clamp; root-cause fix in shared runner-core for ALL traversal paths (loop body, direct edge), not just sibling-button (Phase 67)
+- GitHub Release `1.10.0` — three loose BRAT assets, BRAT smoke verified on clean vault (Phase 68)
 
 ## Context
 
-- Shipped v1.0 (7 phases) + v1.2 (8 phases) + v1.3 (1 phase) + v1.4 (4 phases) + v1.5 (4 phases) + v1.6 (7 phases) + v1.7 (4 phases) + v1.8 (14 phases) + v1.9 (4 phases); ~19K+ LOC TypeScript in src/
+- Shipped v1.0 (7 phases) + v1.2 (8 phases) + v1.3 (1 phase) + v1.4 (4 phases) + v1.5 (4 phases) + v1.6 (7 phases) + v1.7 (4 phases) + v1.8 (14 phases) + v1.9 (4 phases) + v1.10 (6 phases); ~25K+ LOC TypeScript in src/
 - Tech stack: TypeScript + Obsidian Plugin API + esbuild + Vitest
 - Distribution: BRAT-installable since v1.8.0; community plugin submission deferred (its own future milestone)
 - Primary author: radiologist (CT focus), designed for all imaging modalities
-- All v1.9 phases human-UAT approved; 7/7 requirements satisfied; 17/17 plans complete
+- All v1.10 phases human-UAT approved; 9/9 requirements satisfied; 18/18 plans complete
 - All engine code (parser, runner, snippets, sessions) has zero Obsidian imports and is fully unit-testable
-- 707+ tests passing + 1 skipped, build green, `npx tsc --noEmit --skipLibCheck` exit 0
-- v1.9 accomplishments: Inline Runner now at production quality (parity, persistence, compact layout); every settings path field has folder autocomplete
-- Known tech debt: Nyquist VALIDATION.md gaps for older phases, 1 legacy debug session (phase-27-regressions), ~14 stale todo files for v1.6–v1.8-delivered work, `@deprecated` LoopStartNode/LoopEndNode retained for Migration Check
+- 754/754 tests passing in vitest; build green; `npx tsc --noEmit --skipLibCheck` exit 0
+- v1.10 accomplishments: bidirectional Canvas ↔ Node Editor sync makes the editor feel live; Runner step-back is one-click reliable across all states and runner modes; Inline Runner is resizable with persistent dimensions; file-bound Snippet works in every traversal path
+- Known tech debt: Phases 64/66/67 missing formal `gsd-verifier` VERIFICATION.md (UAT-PASS evidence exists, mirrors v1.8 Phase 58 backfill pattern); Phase 63 VALIDATION.md draft + Phases 64–68 missing entirely (project-wide Nyquist tech debt); 3 open debug sessions (2 resolved by gap-closure 92a1269 but not formally closed; phase-27-regressions carryover from v1.7); `@deprecated` LoopStartNode/LoopEndNode retained for Migration Check
 
 ## Constraints
 
@@ -404,6 +406,22 @@ _Requirements populated by roadmapper after scope is defined. Scope: Editor Sync
 | Session folder excluded from autocomplete (Phase 61) | Explicit scope boundary; Session path rarely changed | ✓ Good — no user friction reported |
 | Unprefixed tag `1.9.0` (Phase 62 BRAT-02) | BRAT convention continuing from v1.8.0 precedent; `manifest.json`/`versions.json` tooling expects unprefixed | ✓ Good — `gh release` surface clean |
 | D10 Phase 60 UAT gate as first runbook section (Phase 62) | A3 guardrail — release notes cannot claim phases that hadn't passed UAT yet; structural divergence from Phase 55 | ✓ Good — runbook executed cleanly |
+| Pure reconciler with discriminated `EdgeLabelDiff`/`NodeLabelChange` shape (Phase 63 Plan 01) | Service writer (Plan 02) and view subscriber (Plan 03) consume the same shape; reconciler is testable in isolation without Obsidian imports | ✓ Good — symmetric to Phase 50's Question→Answer arm |
+| `EdgeLabelSyncService` broadcasts `canvas-changed-for-node` events on a public `EventTarget` bus (Phase 63 Plan 02) | Per-filePath snapshot baseline detects node-text deltas; subscriber pattern decouples the writer from the form-DOM patcher | ✓ Good — clean event surface, repaired Plan 01's intentionally-broken build |
+| Shared `registerFieldRef` helper + focus-aware skip+stash + `queueMicrotask` re-entrancy guards (Phase 63 Plan 03) | Inbound canvas patches must never overwrite the in-flight focused field or re-enter autosave; deferred re-render off the event stack | ✓ Good — concurrent-edit invariants from Phase 50 preserved |
+| Phase 63 Plan 04 gap-closure (outbound Snippet branch-label + inbound canvas-text → form-field) | Manual UAT surfaced two missing arms; reusing Plan 02's writer + Plan 03's `applyCanvasPatch` was cheaper than redesigning | ✓ Good — UAT 9/9 PASS post-closure |
+| Shared growable-textarea helper across all multi-line Node Editor fields (Phase 64 EDITOR-04) | Single source of truth — every field (Answer, Text block, Snippet label, Loop headerText, Question) participates by registering the same helper | ✓ Good — managed CSS removes inner scrollbars uniformly |
+| Fifth quick-create button "Create text block" in Node Editor toolbar (Phase 64 EDITOR-06) | Reuses existing `CanvasNodeFactory` path + `flex-wrap: wrap` toolbar from Phase 42; consistent with the other four quick-create buttons | ✓ Good |
+| Shared `.rp-runner-footer-row` in `RunnerView` + `InlineRunnerModal` (Phase 65 RUNNER-02) | Single render method emits the row in both modes; "step back" → "back" rename + labeled Skip placement validated in one location | ✓ Good — uniform across sidebar/tab/inline |
+| `UndoEntry.restoreStatus` + `_stepBackInFlight` guard + dead-`Processing…`-branch removal via TS-exhaustiveness (Phase 66 Plan 01) | Status restoration via the undo entry is the only correct way to round-trip back through `awaiting-snippet-pick` / `awaiting-snippet-fill` / `awaiting-loop-pick`; the in-flight guard makes single-click = single-step a hard invariant | ✓ Good — UAT 9/9 PASS, double-click can't double-step |
+| Unconditional scroll-to-bottom in `RunnerView.renderPreviewZone` with removal of Phase 47 RUNFIX-02 one-shot flag (Phase 66 Plan 02) | Phase 47's one-shot was load-bearing for one regression class but caused upward jumps after file-bound snippet insert; removing it + always-pin-to-bottom subsumes both behaviours | ✓ Good — fixes RUNNER-04 without reintroducing the Phase 47 regression |
+| Synchronous Back-disable-on-click prologue in `renderRunnerFooter` (Phase 66 Plan 03) | Backed by the regression test "Skip boundary" — the visual disable is what makes single-click feel reliable | ✓ Good |
+| Phase 66 D-08 + D-13 loop-boundary correctness suite | Property roundtrip + four scripted scenarios (entry, body-branch dead-end, «выход» exit, nested-loop interleave) lock down the text-accumulation invariants that mid-loop step-back regressed against | ✓ Good — never-corrupt-loop-text proven by tests |
+| Native CSS `resize: both` + `ResizeObserver`-driven 400ms debounced save (Phase 67 INLINE-FIX-06) | OS-native resize handle is more discoverable than custom drag-edges; debounced save avoids workspace-state thrash; viewport-32px clamp-on-restore mirrors Phase 60 position pattern | ✓ Good — UAT 8/8 PASS after gap-closure 92a1269 fixed drag/tab-switch reset bug |
+| Replaced `protocol-runner.ts` `advanceThrough` case `'snippet'` block with `radiprotocol_snippetPath` branch (Phase 67 D-14) | INLINE-FIX-07 root-cause was in shared runner-core, NOT inline-only; Phase 56 had only fixed the sibling-button click path. Loop-body and direct-edge traversals stayed broken until D-14 | ✓ Good — extends file-bound parity to ALL traversal paths in BOTH runner modes |
+| CLAUDE.md "never delete code you didn't add" exception explicitly carved out for Phase 67 D-14 | The 4-line block at lines 736-741 was load-bearing wrong code; the exception is documented in STATE.md so future executors don't reflexively restore it | ⚠️ Revisit on next runner-core extension — exception is plan-specific, not a blanket rule |
+| Phase 68 release runbook reuses Phase 62 D10 pattern with Phase 66 UAT as the first operational gate | Release notes cannot honestly claim Phase 66 ships if its UAT hasn't passed; gate is the same A3 guardrail | ✓ Good — runbook executed cleanly, BRAT smoke PASS on clean vault |
+| File-bound Snippet inline-mode parity must be tested in loop body (Phase 67 D-15) | Sibling-button click is one of three traversal paths; loop-body edge and direct edge are the others — UAT scenarios must cover all three | ✓ Good — generalizes to any future node-kind extension on the runner state machine |
 
 ## Evolution
 
@@ -414,4 +432,4 @@ _Requirements populated by roadmapper after scope is defined. Scope: Editor Sync
 4. Update Context with current state
 
 ---
-*Last updated: 2026-04-25 — v1.10 milestone started (Editor Sync & Runner UX Polish) — defining requirements*
+*Last updated: 2026-04-26 after v1.10 milestone (Editor Sync & Runner UX Polish) shipped — GitHub Release `1.10.0` live, BRAT smoke verified*
