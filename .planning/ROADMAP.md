@@ -1,7 +1,7 @@
 # Roadmap: RadiProtocol
 
 **Project:** RadiProtocol
-**Last updated:** 2026-04-26 (v1.10 milestone updated — Phase 66 UAT accepted; Phase 68 release checkpoint active)
+**Last updated:** 2026-04-26 (v1.10 milestone shipped — GitHub Release 1.10.0 published, BRAT smoke verified)
 
 ---
 
@@ -16,9 +16,9 @@
 - ✅ **v1.7 Loop Rework & Regression Cleanup** — Phases 43-46 (shipped 2026-04-18)
 - ✅ **v1.8 UX Polish & Snippet Picker Overhaul** — Phases 47-58 (shipped 2026-04-21)
 - ✅ **v1.9 Inline Runner Polish & Settings UX** — Phases 59-62 (shipped 2026-04-25)
-- 🔄 **v1.10 Editor Sync & Runner UX Polish** — Phases 63-68 (defining; started 2026-04-25)
+- ✅ **v1.10 Editor Sync & Runner UX Polish** — Phases 63-68 (shipped 2026-04-26)
 
-_Active milestone: v1.10. Phases 63-67 complete; Phase 66 UAT accepted 9/9 with 0 open issues; Phase 68 release checkpoint active._
+_v1.10 shipped. GitHub Release 1.10.0 live with three loose BRAT assets; clean-vault BRAT smoke verified._
 
 ---
 
@@ -157,7 +157,7 @@ Full details: `.planning/milestones/v1.9-ROADMAP.md`
 - [x] Phase 65: Runner Footer Layout — Back/Skip Row (2/2 plans) — completed 2026-04-25, UAT approved
 - [x] Phase 66: Runner Step-Back Reliability & Scroll Pinning (5/5 plans) — completed 2026-04-25, UAT accepted 9/9
 - [x] Phase 67: Inline Runner Resizable Modal & File-Bound Snippet Parity (3/3 plans) — completed 2026-04-25, UAT passed 8/8
-- [ ] Phase 68: GitHub Release v1.10.0 (3/4 plans complete; release runbook created; awaiting publish + BRAT verification checkpoint)
+- [x] Phase 68: GitHub Release v1.10.0 (4/4 plans) — completed 2026-04-26 (Release 1.10.0 published, BRAT smoke verified)
 
 </details>
 
@@ -434,7 +434,7 @@ Plans:
 - [x] 68-01-PLAN.md — Align manifest.json, versions.json, and package.json on v1.10.0 while preserving prior BRAT mappings — completed 2026-04-26
 - [x] 68-02-PLAN.md — Build production assets and create the v1.10.0 preflight script — completed 2026-04-26
 - [x] 68-03-PLAN.md — Commit release prep and create unprefixed tag 1.10.0 — completed 2026-04-26 (tag points at preflighted release HEAD)
-- [ ] 68-04-PLAN.md — Create v1.10.0 release runbook, gate on Phase 66 UAT, publish via GitHub web UI, and verify BRAT install — checkpoint awaiting human publish/BRAT verification
+- [x] 68-04-PLAN.md — Create v1.10.0 release runbook, gate on Phase 66 UAT, publish via GitHub web UI, and verify BRAT install — completed 2026-04-26 (Release 1.10.0 live, BRAT smoke PASS)
 
 ---
 
@@ -461,4 +461,4 @@ v1.10 active. Phases 63 and 67 can run in parallel (Node Editor sync vs Inline R
 | 65. Runner Footer Layout — Back/Skip Row | v1.10 | 2/2 | Complete | 2026-04-25 |
 | 66. Runner Step-Back Reliability & Scroll Pinning | v1.10 | 5/5 | Complete | 2026-04-25 |
 | 67. Inline Runner Resizable Modal & File-Bound Snippet Parity | v1.10 | 3/3 | Complete | 2026-04-25 |
-| 68. GitHub Release v1.10.0 | v1.10 | 3/4 | Awaiting human release checkpoint | — |
+| 68. GitHub Release v1.10.0 | v1.10 | 4/4 | Complete | 2026-04-26 |

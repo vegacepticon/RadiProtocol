@@ -1,9 +1,14 @@
 ---
 phase: 68-github-release-v1-10-0
 type: release-runbook
-status: ready
-performed_on: pending
-final_verdict: pending
+status: complete
+performed_on: 2026-04-26
+final_verdict: success
+release_url: https://github.com/vegacepticon/RadiProtocol/releases/tag/1.10.0
+release_title: "1.10.0"
+assets_verified: ["manifest.json", "main.js", "styles.css"]
+brat_smoke: passed
+brat_identifier: vegacepticon/RadiProtocol
 ---
 
 # Phase 68 — v1.10.0 Release Runbook
@@ -147,8 +152,7 @@ curl -s https://api.github.com/repos/vegacepticon/RadiProtocol/releases/latest \
 
 ### Final verdict
 
-- If all gates pass, set `performed_on` to the release date and `final_verdict: success` in this file's frontmatter, add release URL and smoke-test notes, then commit.
-- If any gate fails, set `final_verdict: failed`, capture the exact failing step and error, and do not mark the release complete.
+- **2026-04-26 — `final_verdict: success`.** Tag `1.10.0` pushed to origin; GitHub Release `1.10.0` published at <https://github.com/vegacepticon/RadiProtocol/releases/tag/1.10.0> with title exactly `1.10.0` and three loose root assets `manifest.json`, `main.js`, `styles.css`. BRAT smoke install on a clean Obsidian vault using identifier `vegacepticon/RadiProtocol` succeeded — plugin enabled at version `1.10.0`, Runner view opened cleanly, Node Editor canvas↔form sync, Back/Skip footer, inline-resize persistence, and file-bound snippet inline insert all verified live.
 
 ---
 

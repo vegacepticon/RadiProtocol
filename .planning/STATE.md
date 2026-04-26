@@ -2,32 +2,32 @@
 gsd_state_version: 1.0
 milestone: v1.10
 milestone_name: Editor Sync & Runner UX Polish
-status: awaiting-human-release-action
-stopped_at: "Phase 68 Plan 04 checkpoint: publish GitHub Release 1.10.0 and complete BRAT smoke verification using 68-RELEASE-RUNBOOK.md."
-last_updated: "2026-04-26T00:55:00.000Z"
-last_activity: 2026-04-26 — Confirmed Phase 66 UAT accepted 9/9 with 0 issues pending; Phase 68 remains at publish + BRAT verification checkpoint.
+status: milestone-ready-to-close
+stopped_at: "Phase 68 published; running /gsd-complete-milestone 1.10."
+last_updated: "2026-04-26T12:00:00.000Z"
+last_activity: 2026-04-26 — Phase 68 published: GitHub Release 1.10.0 live with three loose assets, BRAT smoke verified on clean vault, runbook final_verdict=success.
 progress:
   total_phases: 6
-  completed_phases: 5
+  completed_phases: 6
   total_plans: 18
-  completed_plans: 17
-  percent: 94
+  completed_plans: 18
+  percent: 100
 ---
 
 # RadiProtocol — Project State
 
 **Updated:** 2026-04-26
-**Milestone:** v1.10 Editor Sync & Runner UX Polish
-**Status:** Phase 66 UAT gate accepted (9/9 passed, 0 issues, 0 pending). Phase 68 executed through the release runbook checkpoint; local version metadata, preflight script, build artifacts, and annotated tag `1.10.0` are ready; publishing and BRAT smoke verification are awaiting human action.
+**Milestone:** v1.10 Editor Sync & Runner UX Polish — ✅ shipped
+**Status:** All 6 phases (63–68) complete; 18/18 plans complete. GitHub Release `1.10.0` published as Latest with loose assets `manifest.json`, `main.js`, `styles.css`; BRAT smoke install on clean vault passed; runbook `final_verdict: success`. Running `/gsd-complete-milestone 1.10` to archive.
 
 ---
 
 ## Current Position
 
-Phase: 68 executing
-Plan: 68-04 checkpoint reached after creating the v1.10.0 release runbook.
-Status: Awaiting human action: run preflight, push main and tag `1.10.0`, publish GitHub Release with loose assets, perform BRAT smoke verification, then update/commit the runbook verdict.
-Last activity: 2026-04-26 — Phase 66 UAT/ROADMAP gate confirmed closed; local tag `1.10.0` points at release-prep HEAD `a1992e1`.
+Phase: 68 complete (2026-04-26)
+Plan: 68-04 complete — runbook executed, Release published, BRAT smoke PASS.
+Status: Milestone close in progress. Next: REQUIREMENTS checkbox flip → milestone archive → ROADMAP collapse → PROJECT.md evolution → RETROSPECTIVE.md append → tag `v1.10`.
+Last activity: 2026-04-26 — Release 1.10.0 published, BRAT smoke green, runbook frontmatter updated.
 
 ---
 
