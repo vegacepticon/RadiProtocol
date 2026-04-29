@@ -47,6 +47,12 @@ Five hand-authored algorithmic `.canvas` files (ГМ, ОБП full, ОЗП, ОМ�
 - **D-24:** Snippets with fill-in placeholders considered filled after user completes fill-in
 - **D-25:** Author verification = visual comparison of output structure vs `.md` template (all sections present, no missing parts)
 
+### Variant fan-out (resolved 2026-04-29 during plan-phase, post-research)
+- **D-26:** ОМТ full = ONE canvas with sex × contrast fan-out (жен/муж × КУ/безКУ = 4 internal paths). Initial questions «Пол?» and «Контраст вводился?» branch to 4 sub-flows. Mirrors ОГК 1.10.0 «Контраст вводился?» pattern. Keeps ROADMAP scope at 5 canvases.
+- **D-27:** ОБП full = ONE canvas, ОЗП = ONE canvas; each starts with «Контраст вводился?» question fanning out into КУ / безКУ branches inside the same file. Keeps ROADMAP scope at 5 canvases.
+- **D-28:** ПКОП межпозвонковые диски = ONE loop iterating L1-L2 → L2-L3 → L3-L4 → L4-L5 → L5-S1 (5 iterations). Loop body re-used per level. Aligns with D-10.
+- **D-29:** Templater placeholders `<% tp.file.cursor() %>` from .md templates map to Phase-27 `==fill-in==` chips inside answer / text-block / snippet text. Filled by user via the Phase-27 fill-in modal at runtime, not as separate question/answer nodes.
+
 ### agent's Discretion
 - Exact node positions in canvas (x/y coordinates) — author arranges visually
 - Specific answer text wording for each branch (author can adjust to match clinical language)
