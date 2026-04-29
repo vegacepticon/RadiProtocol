@@ -1,8 +1,14 @@
 // settings.ts
 import type { App } from 'obsidian';
-import { PluginSettingTab, Setting } from 'obsidian';
+import { PluginSettingTab, Setting, Notice } from 'obsidian';
 import type RadiProtocolPlugin from './main';
 import { FolderSuggest } from './views/folder-suggest';
+import {
+  DONATE_WALLETS,
+  DONATE_INVITATION_TEXT,
+  DONATE_NOTICE_TEXT,
+  DONATE_TOOLTIP_TEXT,
+} from './donate/wallets';
 
 /** Phase 67 (D-05): renamed from InlineRunnerPosition; width/height optional for back-compat (D-06).
  *  Existing on-disk records have only {left, top}; missing width/height fall back to
@@ -58,6 +64,36 @@ export class RadiProtocolSettingsTab extends PluginSettingTab {
   display(): void {
     const { containerEl } = this;
     containerEl.empty();
+
+    // Phase 71 (DONATE-01) — "Помочь разработке" section. Top-most per ROADMAP SC#1.
+    // Stateless: addresses are hard-coded constants in ./donate/wallets, no settings persistence.
+    new Setting(containerEl).setName('Помочь разработке').setHeading();
+
+    containerEl.createEl('p', {
+      text: DONATE_INVITATION_TEXT,
+      cls: 'rp-donate-intro',
+    });
+
+    for (const wallet of DONATE_WALLETS) {
+      const desc = wallet.networks ? wallet.networks.join(' · ') : '';
+      const { address } = wallet;
+      const setting = new Setting(containerEl)
+        .setName(wallet.name)
+        .setDesc(desc);
+      setting.descEl.createEl('code', {
+        text: address,
+        cls: 'rp-donate-address',
+      });
+      setting.addExtraButton(btn => btn
+        .setIcon('copy')
+        .setTooltip(DONATE_TOOLTIP_TEXT)
+        .onClick(() => {
+          void navigator.clipboard.writeText(address).then(() => {
+            new Notice(DONATE_NOTICE_TEXT);
+          });
+        })
+      );
+    }
 
     // Group 1 — Runner
     new Setting(containerEl).setName('Runner').setHeading();

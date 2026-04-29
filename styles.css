@@ -1883,3 +1883,24 @@
 .rp-inline-runner-container.is-resizing {
   box-shadow: var(--shadow-xl);                       /* D-02: exact mirror of Phase 60 `.is-dragging` */
 }
+
+/* Phase 71: Donate section (DONATE-01) ─────────────────────────────────────── */
+
+/* Wallet-address `<code>` element inside each donate row's setting-item-description.
+ * - display: block         → place the address on its own line under the network list
+ * - word-break: break-all  → long crypto addresses must wrap inside narrow setting columns
+ * - margin-top             → small breathing room beneath the EVM network list / row name
+ * Obsidian's default <code> styling (theme-aware monospace font, tinted background,
+ * 4px radius) is intentionally inherited — see VIS-D-03. */
+.rp-donate-address {
+  display: block;
+  word-break: break-all;
+  margin-top: var(--size-2-1);
+}
+
+/* Invitation paragraph rendered between the section heading and the first wallet row.
+ * No custom font-size or color — inherits Obsidian's body text styling. The small
+ * bottom margin keeps the paragraph from sitting flush against the first Setting row. */
+.rp-donate-intro {
+  margin-bottom: var(--size-4-2);
+}

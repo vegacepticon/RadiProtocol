@@ -156,6 +156,21 @@ interface MockButton {
   onClick: (cb: () => void) => MockButton;
 }
 
+function makeMockExtraButton(): MockExtraButton {
+  const btn: MockExtraButton = {
+    setIcon: (_iconId: string) => btn,
+    setTooltip: (_tooltip: string) => btn,
+    onClick: (_cb: () => void) => btn,
+  };
+  return btn;
+}
+
+interface MockExtraButton {
+  setIcon: (iconId: string) => MockExtraButton;
+  setTooltip: (tooltip: string) => MockExtraButton;
+  onClick: (cb: () => void) => MockExtraButton;
+}
+
 export class ItemView {
   leaf: unknown;
   contentEl: ReturnType<typeof makeMockEl>;
@@ -224,6 +239,7 @@ export class Setting {
   setName(_name: string): this { return this; }
   setDesc(_desc: string): this { return this; }
   setHeading(): this { return this; }
+  descEl: MockElement = makeMockEl();
   addText(_cb: (text: MockTextComponent) => void): this {
     _cb(makeMockTextComponent());
     return this;
@@ -242,6 +258,10 @@ export class Setting {
   }
   addButton(_cb: (btn: MockButton) => void): this {
     _cb(makeMockButton());
+    return this;
+  }
+  addExtraButton(_cb: (btn: MockExtraButton) => void): this {
+    _cb(makeMockExtraButton());
     return this;
   }
 }
