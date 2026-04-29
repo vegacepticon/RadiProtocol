@@ -37,6 +37,7 @@ const CSS_FILES = [
   'loop-support',
   'snippet-tree-picker',
   'inline-runner',
+  'donate-section',
 ];
 
 /**
