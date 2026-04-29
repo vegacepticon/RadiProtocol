@@ -27,7 +27,7 @@ _v1.10 shipped. v1.11 milestone opened 2026-04-29 — 12 requirements (INLINE-CL
 
 ### v1.11 (active)
 
-- [ ] **Phase 69: Inline Runner — Hide Result-Export Buttons in Complete State** — At protocol-complete state, Inline Runner stops rendering Insert / Copy to clipboard / Save to note buttons; sidebar and tab Runner views unchanged
+- [x] **Phase 69: Inline Runner — Hide Result-Export Buttons in Complete State** — At protocol-complete state, Inline Runner stops rendering Insert / Copy to clipboard / Save to note buttons; sidebar and tab Runner views unchanged
 - [ ] **Phase 70: Loop-Exit Picker Visual Hint** — `+`-prefix loop-exit button gets a subtle accent treatment using existing Obsidian CSS variables, applied uniformly across sidebar / tab / inline runner modes
 - [ ] **Phase 71: Settings — Donate Section** — "Помочь разработке" section at the top of the Settings tab with nine crypto-wallet rows and copy-to-clipboard controls
 - [ ] **Phase 72: Canvas Library — Full Algorithmic Canvases** — Five author-vault canvases (ГМ, ОБП, ОЗП, ОМТ, ПКОП) hand-built and verified end-to-end against `Z:\projects\references\` `.md` templates
@@ -269,7 +269,7 @@ v1.11 in progress — Phase 69 is next. Phases 69, 70, 71 are independent and co
 | 47-58 | v1.8 | 50/50 | Complete | 2026-04-21 |
 | 59-62 | v1.9 | 17/17 | Complete | 2026-04-25 |
 | 63-68 | v1.10 | 18/18 | Complete | 2026-04-26 |
-| 69 | v1.11 | 0/? | Not started | — |
+| 69 | v1.11 | 2/2 | Complete | 2026-04-29 |
 | 70 | v1.11 | 0/? | Not started | — |
 | 71 | v1.11 | 0/? | Not started | — |
 | 72 | v1.11 | 0/? | Not started | — |
