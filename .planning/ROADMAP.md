@@ -215,10 +215,10 @@ Full details: `.planning/milestones/v1.10-ROADMAP.md`
   2. The section renders a brief invitation line followed by nine wallet rows: one row labeled with the six EVM networks (Ethereum / Linea / Base / Arbitrum / BNB Chain / Polygon) sharing the address `0x0B528dAF919516899617C536ec26D2d5ab7fB02A`, one row for Bitcoin (`bc1qqexgw3dfv6hgu682syufm02d7rfs6myllfmhh7`), one row for Solana (`HenUEuxAADZqAb7AT6GXL5mz9VNqx6akzwf9w84wNpUA`), and one row for Tron (`TPBbBauXk56obAiQMSKzMQgsnUiea12hAB`) (DONATE-01)
   3. Each row shows the network name, the wallet address (truncated/wrapped for readability), and a copy-to-clipboard control; clicking the control copies the full untruncated address to the system clipboard via `navigator.clipboard.writeText` and surfaces a transient Obsidian Notice confirming the copy (DONATE-01)
   4. The section persists no settings — wallet addresses are hard-coded constants in source — and contains no external links, no analytics, no network requests (DONATE-01)
-**Plans:** 3 plans
-- [ ] 71-01-PLAN.md — Constants module `src/donate/wallets.ts` + unit test (NTC-D-03, NTC-D-04)
-- [ ] 71-02-PLAN.md — New `src/styles/donate-section.css` + register in `esbuild.config.mjs` CSS_FILES (VIS-D-02, VIS-D-03)
-- [ ] 71-03-PLAN.md — Insert «Помочь разработке» section into `src/settings.ts.display()` + dev-vault UAT (Row-D, EVM-D, NTC-D-01..02)
+**Plans:** 3/3 plans complete
+- [x] 71-01-PLAN.md — Constants module `src/donate/wallets.ts` + unit test (NTC-D-03, NTC-D-04)
+- [x] 71-02-PLAN.md — New `src/styles/donate-section.css` + register in `esbuild.config.mjs` CSS_FILES (VIS-D-02, VIS-D-03)
+- [x] 71-03-PLAN.md — Insert «Помочь разработке» section into `src/settings.ts.display()` + dev-vault UAT (Row-D, EVM-D, NTC-D-01..02)
 **UI hint**: yes
 
 ### Phase 72: Canvas Library — Full Algorithmic Canvases
@@ -232,9 +232,9 @@ Full details: `.planning/milestones/v1.10-ROADMAP.md`
   4. An ОМТ (органы малого таза — full version) canvas exists and runs end-to-end with output matching the full ОМТ `.md` text template (CANVAS-LIB-04)
   5. A ПКОП (пояснично-крестцовый отдел позвоночника) canvas exists and runs end-to-end with output matching the ПКОП `.md` text template (CANVAS-LIB-05)
 **Plans:** 3 plans
-- [ ] 71-01-PLAN.md — Constants module `src/donate/wallets.ts` + unit test (NTC-D-03, NTC-D-04)
-- [ ] 71-02-PLAN.md — New `src/styles/donate-section.css` + register in `esbuild.config.mjs` CSS_FILES (VIS-D-02, VIS-D-03)
-- [ ] 71-03-PLAN.md — Insert «Помочь разработке» section into `src/settings.ts.display()` + dev-vault UAT (Row-D, EVM-D, NTC-D-01..02)
+- [x] 71-01-PLAN.md — Constants module `src/donate/wallets.ts` + unit test (NTC-D-03, NTC-D-04)
+- [x] 71-02-PLAN.md — New `src/styles/donate-section.css` + register in `esbuild.config.mjs` CSS_FILES (VIS-D-02, VIS-D-03)
+- [x] 71-03-PLAN.md — Insert «Помочь разработке» section into `src/settings.ts.display()` + dev-vault UAT (Row-D, EVM-D, NTC-D-01..02)
 
 ### Phase 73: Canvas Library — Short Algorithmic Canvases
 **Goal**: Three hand-authored short-version `.canvas` files (ОГК short, ОБП short, ОМТ short) exist alongside the existing ОГК 1.10.0 reference canvas and the full versions of ОБП and ОМТ from Phase 72, each modeled on the corresponding short `.md` text template at `Z:\projects\references\`, and each runs end-to-end in the Protocol Runner producing a structurally complete shortened report. None of these canvases are bundled with the plugin distribution or committed to this repository.
@@ -245,9 +245,9 @@ Full details: `.planning/milestones/v1.10-ROADMAP.md`
   2. A short-version ОБП canvas exists alongside the full ОБП canvas (CANVAS-LIB-02 from Phase 72), runs end-to-end, and produces a shortened ОБП report matching the short-ОБП `.md` text template (CANVAS-LIB-07)
   3. A short-version ОМТ canvas exists alongside the full ОМТ canvas (CANVAS-LIB-04 from Phase 72), runs end-to-end, and produces a shortened ОМТ report matching the short-ОМТ `.md` text template (CANVAS-LIB-08)
 **Plans:** 3 plans
-- [ ] 71-01-PLAN.md — Constants module `src/donate/wallets.ts` + unit test (NTC-D-03, NTC-D-04)
-- [ ] 71-02-PLAN.md — New `src/styles/donate-section.css` + register in `esbuild.config.mjs` CSS_FILES (VIS-D-02, VIS-D-03)
-- [ ] 71-03-PLAN.md — Insert «Помочь разработке» section into `src/settings.ts.display()` + dev-vault UAT (Row-D, EVM-D, NTC-D-01..02)
+- [x] 71-01-PLAN.md — Constants module `src/donate/wallets.ts` + unit test (NTC-D-03, NTC-D-04)
+- [x] 71-02-PLAN.md — New `src/styles/donate-section.css` + register in `esbuild.config.mjs` CSS_FILES (VIS-D-02, VIS-D-03)
+- [x] 71-03-PLAN.md — Insert «Помочь разработке» section into `src/settings.ts.display()` + dev-vault UAT (Row-D, EVM-D, NTC-D-01..02)
 
 ### Phase 74: GitHub Release v1.11.0
 **Goal**: Ship a fresh GitHub Release `1.11.0` following the BRAT-installable pattern established by Phases 55 (v1.8.0), 62 (v1.9.0), and 68 (v1.10.0): version files aligned, production build artifacts generated, three loose root assets attached at the GitHub release, unprefixed annotated tag pushed, and end-to-end BRAT install on a clean Obsidian vault verified.
@@ -284,7 +284,7 @@ v1.11 in progress — Phase 69 is next. Phases 69, 70, 71 are independent and co
 | 63-68 | v1.10 | 18/18 | Complete | 2026-04-26 |
 | 69 | v1.11 | 2/2 | Complete | 2026-04-29 |
 | 70 | v1.11 | 1/1 | Complete    | 2026-04-29 |
-| 71 | v1.11 | 0/3 | Planned | — |
+| 71 | v1.11 | 3/3 | Complete   | 2026-04-29 |
 | 72 | v1.11 | 0/? | Not started | — |
 | 73 | v1.11 | 0/? | Not started | — |
 | 74 | v1.11 | 0/? | Not started | — |
