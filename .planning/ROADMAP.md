@@ -259,9 +259,9 @@ Full details: `.planning/milestones/v1.10-ROADMAP.md`
   3. A GitHub Release `1.11.0` is published with `manifest.json`, `main.js`, and `styles.css` attached as three individually downloadable loose assets at the release root (no zip), `prerelease=false`, release runbook executed with the D10 UAT-gate-as-first-section pattern (BRAT-03)
   4. Installing the plugin in a fresh Obsidian vault via BRAT with identifier `vegacepticon/RadiProtocol` succeeds end-to-end on the `1.11.0` release — plugin appears in Community Plugins, enables cleanly at version `1.11.0`, and the Runner view opens without errors (BRAT-03)
 **Plans:** 3 plans
-- [ ] 71-01-PLAN.md — Constants module `src/donate/wallets.ts` + unit test (NTC-D-03, NTC-D-04)
-- [ ] 71-02-PLAN.md — New `src/styles/donate-section.css` + register in `esbuild.config.mjs` CSS_FILES (VIS-D-02, VIS-D-03)
-- [ ] 71-03-PLAN.md — Insert «Помочь разработке» section into `src/settings.ts.display()` + dev-vault UAT (Row-D, EVM-D, NTC-D-01..02)
+- [x] 71-01-PLAN.md — Constants module `src/donate/wallets.ts` + unit test (NTC-D-03, NTC-D-04)
+- [x] 71-02-PLAN.md — New `src/styles/donate-section.css` + register in `esbuild.config.mjs` CSS_FILES (VIS-D-02, VIS-D-03)
+- [x] 71-03-PLAN.md — Insert «Помочь разработке» section into `src/settings.ts.display()` + dev-vault UAT (Row-D, EVM-D, NTC-D-01..02)
 
 ---
 
@@ -284,7 +284,7 @@ v1.11 in progress — Phase 69 is next. Phases 69, 70, 71 are independent and co
 | 63-68 | v1.10 | 18/18 | Complete | 2026-04-26 |
 | 69 | v1.11 | 2/2 | Complete | 2026-04-29 |
 | 70 | v1.11 | 1/1 | Complete    | 2026-04-29 |
-| 71 | v1.11 | 3/3 | Complete   | 2026-04-29 |
+| 71 | v1.11 | 3/3 | Complete    | 2026-04-29 |
 | 72 | v1.11 | 0/? | Not started | — |
 | 73 | v1.11 | 0/? | Not started | — |
 | 74 | v1.11 | 0/? | Not started | — |

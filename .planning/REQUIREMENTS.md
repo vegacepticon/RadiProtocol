@@ -16,7 +16,7 @@
 
 ### Settings — Donate
 
-- [ ] **DONATE-01**: A "Помочь разработке" section is rendered at the very top of the plugin's Settings tab (above all existing sections), containing a brief invitation line and a list of nine crypto-wallet rows. Each row shows the network name, the wallet address (truncated/wrapped for readability), and a copy-to-clipboard control that copies the full address; clicking it surfaces a transient Obsidian Notice confirming the copy. Wallet rows:
+- [x] **DONATE-01**: A "Помочь разработке" section is rendered at the very top of the plugin's Settings tab (above all existing sections), containing a brief invitation line and a list of nine crypto-wallet rows. Each row shows the network name, the wallet address (truncated/wrapped for readability), and a copy-to-clipboard control that copies the full address; clicking it surfaces a transient Obsidian Notice confirming the copy. Wallet rows:
   - **Ethereum / Linea / Base / Arbitrum / BNB Chain / Polygon (single EVM address)** — `0x0B528dAF919516899617C536ec26D2d5ab7fB02A`
   - **Bitcoin** — `bc1qqexgw3dfv6hgu682syufm02d7rfs6myllfmhh7`
   - **Solana** — `HenUEuxAADZqAb7AT6GXL5mz9VNqx6akzwf9w84wNpUA`
