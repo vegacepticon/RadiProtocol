@@ -1507,12 +1507,13 @@
  *   inline runner modes — DOM is identical across the three. Phase 60
  *   inline padding override (`inline-runner.css:218-224`) is orthogonal
  *   and remains untouched. */
-.rp-loop-exit-btn {
+.rp-loop-exit-btn.rp-loop-exit-btn {
   background: var(--color-green);
   color: var(--text-on-accent);
 }
 
-.rp-loop-exit-btn:hover {
+.rp-loop-exit-btn.rp-loop-exit-btn:hover {
+  background: var(--color-green);
   filter: brightness(0.92);
 }
 
