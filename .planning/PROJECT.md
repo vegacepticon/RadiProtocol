@@ -12,9 +12,20 @@ A radiologist can generate a structured, accurate protocol in seconds by answeri
 
 **Last shipped:** v1.10 Editor Sync & Runner UX Polish — ✅ SHIPPED 2026-04-26 (GitHub Release `1.10.0`, 3 loose assets, BRAT-installable via `vegacepticon/RadiProtocol`)
 
-**Active milestone:** none — between milestones; awaiting `/gsd-new-milestone`
+**Active milestone:** v1.11 Inline Polish, Loop Hint, Donate & Canvas Library — defining requirements
 
 **Previous milestone:** v1.9 Inline Runner Polish & Settings UX — ✅ SHIPPED 2026-04-25
+
+## Current Milestone: v1.11 Inline Polish, Loop Hint, Donate & Canvas Library
+
+**Goal:** Close redundancy in Inline Runner, make loop-exit visually obvious, open a path for crypto-donation support of development, and produce a set of algorithmic canvases for primary radiology areas (full ГМ, ОБП, ОЗП, ОМТ, ПКОП and short ОГК, ОБП, ОМТ) using the existing ОГК 1.10.0 canvas + Z:\projects\references SNIPPETS structure as reference.
+
+**Target features:**
+- Inline Runner — remove redundant Insert / Copy to clipboard / Save to note buttons (sidebar+tab keep them)
+- Loop-exit picker button visual hint — `+`-prefix label gets a subtle background/accent distinct from body-branch buttons (sidebar/tab/inline)
+- Donate section at the top of Settings tab — copy-to-clipboard rows for 9 crypto wallet addresses (1 EVM address shared across ETH/Linea/Base/Arbitrum/BNB/Polygon, plus BTC, Solana, Tron)
+- Authoring 8 algorithmic `.canvas` files (ГМ / ОБП / ОЗП / ОМТ / ПКОП full + short ОГК / ОБП / ОМТ) in author's vault, modeled on ОГК 1.10.0 structure — local-only library, not bundled with the plugin
+- GitHub Release `1.11.0` — BRAT-installable per Phases 55/62/68 pattern
 
 ## Requirements
 
@@ -293,10 +304,10 @@ A radiologist can generate a structured, accurate protocol in seconds by answeri
 - Optional sections in snippets — deferred to v2
 - Automatic impression generation — requires NLP/AI
 
-## Current State (between milestones)
+## Current State (active milestone)
 
 **Shipped:** v1.10 Editor Sync & Runner UX Polish (2026-04-26)
-**Active milestone:** none — awaiting `/gsd-new-milestone`
+**Active milestone:** v1.11 Inline Polish, Loop Hint, Donate & Canvas Library — defining requirements
 **v1.10 shipped:** 6 phases (63–68), 18 plans, 9/9 requirements satisfied, GitHub Release `1.10.0` live
 
 **Key v1.10 deliverables:**
@@ -432,4 +443,4 @@ A radiologist can generate a structured, accurate protocol in seconds by answeri
 4. Update Context with current state
 
 ---
-*Last updated: 2026-04-26 after v1.10 milestone (Editor Sync & Runner UX Polish) shipped — GitHub Release `1.10.0` live, BRAT smoke verified*
+*Last updated: 2026-04-29 — v1.11 milestone (Inline Polish, Loop Hint, Donate & Canvas Library) opened; defining requirements.*
