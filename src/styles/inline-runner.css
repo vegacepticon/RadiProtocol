@@ -71,14 +71,6 @@
   margin-bottom: var(--size-4-3);
 }
 
-.rp-inline-runner-content .rp-output-toolbar {
-  display: flex;
-  gap: var(--size-4-2);
-  margin-top: var(--size-4-3);
-  padding-top: var(--size-4-2);
-  border-top: 1px solid var(--background-modifier-border);
-}
-
 /* Snippet picker inline host */
 .rp-stp-inline-host {
   width: 100%;
@@ -229,18 +221,6 @@
 .rp-inline-runner-content .rp-skip-btn {
   padding: var(--size-2-3) var(--size-4-2);
   min-height: 28px;
-}
-
-.rp-inline-runner-content .rp-output-toolbar {
-  gap: var(--size-2-3);
-  margin-top: var(--size-4-2);
-  padding-top: var(--size-2-3);
-  flex-wrap: wrap;
-}
-
-.rp-inline-runner-content .rp-output-toolbar button {
-  padding: var(--size-2-2) var(--size-4-2);
-  min-height: 26px;
 }
 
 /* Phase 67: resizable inline runner */

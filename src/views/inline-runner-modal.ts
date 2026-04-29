@@ -331,7 +331,6 @@ export class InlineRunnerModal {
     this.contentEl.empty();
 
     const questionZone = this.contentEl.createDiv({ cls: 'rp-question-zone' });
-    const outputToolbar = this.contentEl.createDiv({ cls: 'rp-output-toolbar' });
 
     switch (state.status) {
       case 'idle': {
@@ -339,7 +338,6 @@ export class InlineRunnerModal {
           text: 'Starting protocol…',
           cls: 'rp-empty-state-body',
         });
-        this.renderOutputToolbar(outputToolbar, null, false);
         break;
       }
 
@@ -452,13 +450,10 @@ export class InlineRunnerModal {
           },
         });
 
-        this.renderOutputToolbar(outputToolbar, state.accumulatedText, false);
         break;
       }
 
       case 'awaiting-snippet-pick': {
-        this.renderOutputToolbar(outputToolbar, state.accumulatedText, false);
-
         questionZone.createEl('p', {
           text: 'Loading snippets...',
           cls: 'rp-empty-state-body',
@@ -513,7 +508,6 @@ export class InlineRunnerModal {
           },
         });
 
-        this.renderOutputToolbar(outputToolbar, state.accumulatedText, false);
         break;
       }
 
@@ -522,14 +516,12 @@ export class InlineRunnerModal {
           text: 'Loading snippet...',
           cls: 'rp-empty-state-body',
         });
-        this.renderOutputToolbar(outputToolbar, state.accumulatedText, false);
         void this.handleSnippetFill(state.snippetId, questionZone);
         break;
       }
 
       case 'complete': {
         questionZone.createEl('h2', { text: 'Protocol complete', cls: 'rp-complete-heading' });
-        this.renderOutputToolbar(outputToolbar, state.finalText, true);
         break;
       }
 
@@ -954,52 +946,7 @@ export class InlineRunnerModal {
     }
   }
 
-  // ── Sub-renders ───────────────────────────────────────────────────────────
 
-  /** Render the output toolbar for complete state. */
-  private renderOutputToolbar(
-    toolbar: HTMLElement,
-    text: string | null,
-    enabled: boolean,
-  ): void {
-    const copyBtn = toolbar.createEl('button', {
-      cls: 'rp-copy-btn',
-      text: 'Copy to clipboard',
-    });
-    const saveBtn = toolbar.createEl('button', {
-      cls: 'rp-save-btn',
-      text: 'Save to note',
-    });
-    const insertBtn = toolbar.createEl('button', {
-      cls: 'rp-insert-btn',
-      text: 'Insert into note',
-    });
-
-    if (!enabled || text === null) {
-      copyBtn.disabled = true;
-      saveBtn.disabled = true;
-      insertBtn.disabled = true;
-      return;
-    }
-
-    const capturedText = text;
-
-    copyBtn.addEventListener('click', () => {
-      void navigator.clipboard.writeText(capturedText).then(() => {
-        new Notice('Copied to clipboard.');
-      });
-    });
-
-    saveBtn.addEventListener('click', () => {
-      void this.plugin.saveOutputToNote(capturedText).then(() => {
-        new Notice('Report saved to note.');
-      });
-    });
-
-    insertBtn.addEventListener('click', () => {
-      void this.plugin.insertIntoCurrentNote(capturedText, this.targetNote);
-    });
-  }
 
   /** Render snippet picker inline (Phase 51 D-06 pattern). */
   private async renderSnippetPicker(

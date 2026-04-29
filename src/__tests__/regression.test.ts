@@ -95,7 +95,7 @@ describe('CSS regression: inline-runner.css — Phase 60 compact draggable layou
     expect(css).toMatch(/\.rp-inline-runner-content\s*\{[\s\S]*?padding:\s*var\(--size-4-2\)/);
     expect(css).toContain('.rp-inline-runner-content .rp-question-zone');
     expect(css).toMatch(/\.rp-inline-runner-content \.rp-question-text\s*\{[\s\S]*?margin:\s*0 0 var\(--size-4-2\) 0/);
-    expect(css).toMatch(/\.rp-inline-runner-content \.rp-output-toolbar\s*\{[\s\S]*?gap:\s*var\(--size-2-3\)/);
+    expect(css).not.toContain('.rp-inline-runner-content .rp-output-toolbar');
   });
 });
 
