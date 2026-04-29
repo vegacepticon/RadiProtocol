@@ -1510,11 +1510,12 @@
 .rp-loop-exit-btn.rp-loop-exit-btn {
   background: var(--color-green);
   color: var(--text-on-accent);
+  filter: saturate(0.65);
 }
 
 .rp-loop-exit-btn.rp-loop-exit-btn:hover {
   background: var(--color-green);
-  filter: brightness(0.92);
+  filter: saturate(0.65) brightness(0.92);
 }
 
 /* Phase 51 PICKER-02 — SnippetTreePicker styles. */
