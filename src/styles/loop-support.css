@@ -109,3 +109,25 @@
   overflow-wrap: anywhere;
   max-width: 100%;
 }
+
+/* Phase 70: Loop-exit picker visual hint (LOOP-EXIT-01) ─────────────────── *
+ * D-01/D-03: solid `--color-green` background marks the '+'-prefix exit
+ *   button as the «finish/выход» control, distinct from body-branch
+ *   buttons which keep the Phase 44 `--interactive-accent` blue.
+ * D-04: `--text-on-accent` reused for text colour (no `--text-on-color-green`
+ *   token exists in Obsidian; pragmatic re-use, contrast covered by UAT).
+ * D-05: hover = `filter: brightness(0.92)` — no `--color-green-hover` token.
+ * D-06/D-07: focus-visible relies on Obsidian default ring; no `:disabled`
+ *   rule (loop picker always renders enabled buttons).
+ * D-08: selector `.rp-loop-exit-btn` (unprefixed) covers sidebar / tab /
+ *   inline runner modes — DOM is identical across the three. Phase 60
+ *   inline padding override (`inline-runner.css:218-224`) is orthogonal
+ *   and remains untouched. */
+.rp-loop-exit-btn {
+  background: var(--color-green);
+  color: var(--text-on-accent);
+}
+
+.rp-loop-exit-btn:hover {
+  filter: brightness(0.92);
+}
