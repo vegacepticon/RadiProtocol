@@ -202,7 +202,8 @@ Full details: `.planning/milestones/v1.10-ROADMAP.md`
   2. The loop-exit button retains its original shape, label text (with `+` prefix stripped per existing convention), and position in the picker — only the background/accent changes (LOOP-EXIT-01)
   3. Body-branch buttons in the same picker render with the same styling they had before this phase — no visual regression on the non-exit entries (LOOP-EXIT-01)
   4. The visual hint applies in all three runner modes: sidebar Runner View, tab Runner View, and Inline Runner — verified by reaching a loop picker state in each mode (LOOP-EXIT-01)
-**Plans**: TBD
+**Plans:** 1 plan
+- [ ] 70-01-PLAN.md — CSS-only Phase 70 visual-hint append + build + UAT
 **UI hint**: yes
 
 ### Phase 71: Settings — Donate Section
