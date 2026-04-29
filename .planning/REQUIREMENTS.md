@@ -12,7 +12,7 @@
 
 ### Runner UX
 
-- [ ] **LOOP-EXIT-01**: When the runner reaches a `loop` node and the picker is rendered, the button representing the loop-exit edge (the edge whose label starts with the `+` prefix per Phase 50.1 convention) is visually distinguishable from the body-branch buttons next to it — a subtle background or accent treatment using existing Obsidian CSS variables (no new colour tokens), without changing button shape, label, or position. The author/user can tell at a glance which button continues the protocol past the loop. Applies uniformly in all three runner modes (sidebar, tab, inline). The body-branch buttons remain styled exactly as today.
+- [x] **LOOP-EXIT-01**: When the runner reaches a `loop` node and the picker is rendered, the button representing the loop-exit edge (the edge whose label starts with the `+` prefix per Phase 50.1 convention) is visually distinguishable from the body-branch buttons next to it — a subtle background or accent treatment using existing Obsidian CSS variables (no new colour tokens), without changing button shape, label, or position. The author/user can tell at a glance which button continues the protocol past the loop. Applies uniformly in all three runner modes (sidebar, tab, inline). The body-branch buttons remain styled exactly as today.
 
 ### Settings — Donate
 
