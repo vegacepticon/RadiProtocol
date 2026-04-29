@@ -79,27 +79,27 @@ Explicitly excluded for this milestone. Can be reconsidered later.
 
 ## Traceability
 
-Phase mappings will be established by `gsd-roadmapper` during ROADMAP.md creation. Phase numbering continues from v1.10 (last phase = 68) — v1.11 starts at **Phase 69**.
+Phase mappings established by `gsd-roadmapper` 2026-04-29. Phase numbering continues from v1.10 (last phase = 68) — v1.11 starts at **Phase 69**.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| INLINE-CLEAN-01 | TBD | Open |
-| LOOP-EXIT-01 | TBD | Open |
-| DONATE-01 | TBD | Open |
-| CANVAS-LIB-01 | TBD | Open |
-| CANVAS-LIB-02 | TBD | Open |
-| CANVAS-LIB-03 | TBD | Open |
-| CANVAS-LIB-04 | TBD | Open |
-| CANVAS-LIB-05 | TBD | Open |
-| CANVAS-LIB-06 | TBD | Open |
-| CANVAS-LIB-07 | TBD | Open |
-| CANVAS-LIB-08 | TBD | Open |
-| BRAT-03 | TBD | Open |
+| INLINE-CLEAN-01 | Phase 69 | Open |
+| LOOP-EXIT-01 | Phase 70 | Open |
+| DONATE-01 | Phase 71 | Open |
+| CANVAS-LIB-01 | Phase 72 | Open |
+| CANVAS-LIB-02 | Phase 72 | Open |
+| CANVAS-LIB-03 | Phase 72 | Open |
+| CANVAS-LIB-04 | Phase 72 | Open |
+| CANVAS-LIB-05 | Phase 72 | Open |
+| CANVAS-LIB-06 | Phase 73 | Open |
+| CANVAS-LIB-07 | Phase 73 | Open |
+| CANVAS-LIB-08 | Phase 73 | Open |
+| BRAT-03 | Phase 74 | Open |
 
 **Coverage:**
 - v1.11 requirements: 12 total
-- Mapped to phases: 0 (pending roadmap)
-- Unmapped: 12
+- Mapped to phases: 12 (Phases 69–74)
+- Unmapped: 0
 
 ---
-*Requirements defined: 2026-04-29*
+*Requirements defined: 2026-04-29 — traceability filled by gsd-roadmapper 2026-04-29.*

@@ -2,11 +2,11 @@
 gsd_state_version: 1.0
 milestone: v1.11
 milestone_name: Inline Polish, Loop Hint, Donate & Canvas Library
-status: planning
-last_updated: "2026-04-29T09:58:01.899Z"
+status: in_progress
+last_updated: "2026-04-29T10:30:00.000Z"
 last_activity: 2026-04-29
 progress:
-  total_phases: 0
+  total_phases: 6
   completed_phases: 0
   total_plans: 0
   completed_plans: 0
@@ -15,28 +15,42 @@ progress:
 
 # RadiProtocol — Project State
 
-**Updated:** 2026-04-26
-**Milestone:** v1.10 Editor Sync & Runner UX Polish — ✅ SHIPPED 2026-04-26
-**Status:** Milestone closed and archived. GitHub Release `1.10.0` live with three loose BRAT assets; clean-vault BRAT smoke verified. Awaiting next milestone (run `/gsd-new-milestone`).
+**Updated:** 2026-04-29
+**Milestone:** v1.11 Inline Polish, Loop Hint, Donate & Canvas Library — 🚧 IN PROGRESS
+**Status:** Roadmap created. 12 requirements (INLINE-CLEAN-01, LOOP-EXIT-01, DONATE-01, CANVAS-LIB-01..08, BRAT-03) mapped to 6 phases (69–74). Phase 69 (Inline Runner — Hide Result-Export Buttons in Complete State) is the next phase to plan.
 
 ---
 
 ## Current Position
 
-Phase: Not started (defining requirements)
-Plan: —
-Status: Defining requirements
-Last activity: 2026-04-29 — Milestone v1.11 started
+Phase: 69 — Inline Runner — Hide Result-Export Buttons in Complete State
+Plan: — (planning not yet started)
+Status: Roadmap accepted; awaiting `/gsd-plan-phase 69`
+Last activity: 2026-04-29 — v1.11 ROADMAP.md written, traceability filled, STATE.md flipped to in_progress
 
 ## Project Reference
 
-See: `.planning/PROJECT.md` (updated 2026-04-26 — v1.10 milestone closed, requirements moved to Validated, Key Decisions extended).
-See: `.planning/ROADMAP.md` (updated 2026-04-26 — v1.10 collapsed under details, Backlog preserved).
-See: `.planning/MILESTONES.md` (updated 2026-04-26 — v1.10 entry added).
+See: `.planning/PROJECT.md` (updated 2026-04-29 — v1.11 milestone opened, current state section refreshed).
+See: `.planning/REQUIREMENTS.md` (updated 2026-04-29 — traceability table filled with phase mappings 69–74).
+See: `.planning/ROADMAP.md` (updated 2026-04-29 — v1.10 details collapsed into archive, v1.11 phases 69–74 added with full success criteria).
+See: `.planning/MILESTONES.md` (updated 2026-04-26 — v1.10 entry; v1.11 entry will be appended at milestone close).
 
 **Core value:** A radiologist can generate a structured, accurate protocol in seconds by answering a guided algorithm — without writing a single line of code.
 
-**Current focus:** Awaiting next milestone definition.
+**Current focus:** v1.11 Phase 69 — Inline Runner result-export button cleanup. Pure-CSS / pure-cleanup phases first (69, 70), then Settings UI (71), then content-authoring tracks (72, 73), then release (74).
+
+---
+
+## v1.11 Phase Map
+
+| Phase | Goal (one-line) | Requirements | Depends on |
+|-------|-----------------|--------------|------------|
+| 69 | Inline Runner — Hide Result-Export Buttons in Complete State | INLINE-CLEAN-01 | Nothing |
+| 70 | Loop-Exit Picker Visual Hint | LOOP-EXIT-01 | Nothing |
+| 71 | Settings — Donate Section | DONATE-01 | Nothing |
+| 72 | Canvas Library — Full Algorithmic Canvases (ГМ, ОБП, ОЗП, ОМТ, ПКОП) | CANVAS-LIB-01..05 | Nothing (content-authoring track in author's vault; not bundled, not committed) |
+| 73 | Canvas Library — Short Algorithmic Canvases (ОГК, ОБП, ОМТ short) | CANVAS-LIB-06..08 | Phase 72 (short ОБП and short ОМТ pair with full versions) |
+| 74 | GitHub Release v1.11.0 | BRAT-03 | Phases 69, 70, 71 UAT-accepted (72/73 are not release-blocking) |
 
 ---
 
@@ -72,6 +86,14 @@ See: `.planning/MILESTONES.md` (updated 2026-04-26 — v1.10 entry added).
 13. v1.10 / Phase 67: file-bound Snippet parity (INLINE-FIX-07) root-cause was in shared `src/runner/protocol-runner.ts` `advanceThrough` case `'snippet'`, NOT inline-only. Phase 56 fixed only the sibling-button click path; loop-body and direct-edge traversals remained broken until Phase 67 D-14 + D-15. Going forward, runner-core dispatch for any new node-kind extension MUST consider all traversal paths (sibling-button click, loop-body edge, direct edge) — not just the click path.
 14. v1.10 / Phase 63: Node Editor canvas → form sync subscribes to `EdgeLabelSyncService`'s `canvas-changed-for-node` event bus and patches DOM via `registerFieldRef`; future Node-Editor work that adds new fields MUST register them through this helper or they will not receive inbound canvas patches.
 
+### v1.11 Phase-Specific Domain Notes
+
+- **Phase 69 (INLINE-CLEAN-01)** is Inline-mode-only. The buttons live in `InlineRunnerModal` (the same file Phase 65 RUNNER-02 modified for the shared `.rp-runner-footer-row`). Sidebar `RunnerView` and tab Runner View are unaffected — guard against accidental cross-mode regression. Confirm Inline mode appends every answer/snippet directly to the active note as the protocol runs (the existing Phase 54 contract) — that's why the result-export buttons are redundant in Inline only.
+- **Phase 70 (LOOP-EXIT-01)** is purely CSS — the `+`-prefix loop-exit edge label convention is from Phase 50.1; the picker rendering is in `RunnerView.renderLoopPicker` and the inline equivalent. Tag the exit button with a CSS hook (e.g. a class like `is-loop-exit`) and add a rule in the appropriate `src/styles/*.css` file using existing Obsidian theme variables — no new colour tokens. Per CLAUDE.md, append-only per phase, do not edit existing rules.
+- **Phase 71 (DONATE-01)** is a Settings-tab UI feature. Closest existing analog is Phase 61 (Settings folder autocomplete on `AbstractInputSuggest`) — same file (`src/main.ts` settings tab class), same DOM patterns (`createEl`/`createDiv`, `registerDomEvent`). Wallet addresses are hard-coded constants — no persistence, no user input. Copy-to-clipboard control is `navigator.clipboard.writeText` + `new Notice(...)`.
+- **Phase 72 / 73 (CANVAS-LIB-01..08)** are content-authoring deliverables — eight `.canvas` files hand-built by the author in a local vault. They do NOT modify `src/`, do NOT change build output, do NOT need vitest tests. Each canvas is verified by running it end-to-end in the live Runner against the corresponding `.md` text template at `Z:\projects\references\` (and the SNIPPETS folder structure there). NOT bundled with the plugin. NOT committed to this repository.
+- **Phase 74 (BRAT-03)** is the standard release phase — must depend on all preceding code-side phases (69, 70, 71) being complete and UAT-accepted. Mirror Phase 68's runbook structure (D10 UAT-gate-as-first-section pattern, three loose-asset GitHub Release, unprefixed annotated tag `1.11.0`, BRAT smoke install on clean vault). Phases 72/73 ship via author's local vault and are NOT release-blocking.
+
 ### Open Tech Debt (carried from v1.10 close)
 
 - Verification documentation backfill — Phases 64, 66, 67 lack formal `gsd-verifier` VERIFICATION.md (UAT-PASS evidence exists). Pattern: v1.8 Phase 58 backfill.
@@ -84,10 +106,10 @@ See: `.planning/MILESTONES.md` (updated 2026-04-26 — v1.10 entry added).
 
 ## Session Continuity
 
-Last session: 2026-04-26
-Stopped at: `/gsd-complete-milestone 1.10` finished; ready for next milestone.
+Last session: 2026-04-29
+Stopped at: Roadmap created for v1.11; Phase 69 is next.
 Resume file: none
-Next action: `/clear` then `/gsd-new-milestone` to define the next milestone.
+Next action: `/gsd-plan-phase 69` to start planning Phase 69 (Inline Runner — Hide Result-Export Buttons in Complete State).
 
 ---
 
@@ -96,4 +118,4 @@ Next action: `/clear` then `/gsd-new-milestone` to define the next milestone.
 - Branch: `main`
 - Main: `main`
 - Last shipped: v1.10 (2026-04-26; GitHub Release `1.10.0` published)
-- Active phase: none
+- Active phase: 69 (planning not yet started)

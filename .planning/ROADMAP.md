@@ -1,7 +1,7 @@
 # Roadmap: RadiProtocol
 
 **Project:** RadiProtocol
-**Last updated:** 2026-04-26 (v1.10 milestone shipped — GitHub Release 1.10.0 published, BRAT smoke verified)
+**Last updated:** 2026-04-29 (v1.11 milestone opened — phases 69–74 derived from 12 requirements; v1.10 details collapsed into archive)
 
 ---
 
@@ -17,12 +17,24 @@
 - ✅ **v1.8 UX Polish & Snippet Picker Overhaul** — Phases 47-58 (shipped 2026-04-21)
 - ✅ **v1.9 Inline Runner Polish & Settings UX** — Phases 59-62 (shipped 2026-04-25)
 - ✅ **v1.10 Editor Sync & Runner UX Polish** — Phases 63-68 (shipped 2026-04-26)
+- 🚧 **v1.11 Inline Polish, Loop Hint, Donate & Canvas Library** — Phases 69-74 (in progress)
 
-_v1.10 shipped. GitHub Release 1.10.0 live with three loose BRAT assets; clean-vault BRAT smoke verified._
+_v1.10 shipped. v1.11 milestone opened 2026-04-29 — 12 requirements (INLINE-CLEAN-01, LOOP-EXIT-01, DONATE-01, CANVAS-LIB-01..08, BRAT-03) mapped to 6 phases._
 
 ---
 
 ## Phases
+
+### v1.11 (active)
+
+- [ ] **Phase 69: Inline Runner — Hide Result-Export Buttons in Complete State** — At protocol-complete state, Inline Runner stops rendering Insert / Copy to clipboard / Save to note buttons; sidebar and tab Runner views unchanged
+- [ ] **Phase 70: Loop-Exit Picker Visual Hint** — `+`-prefix loop-exit button gets a subtle accent treatment using existing Obsidian CSS variables, applied uniformly across sidebar / tab / inline runner modes
+- [ ] **Phase 71: Settings — Donate Section** — "Помочь разработке" section at the top of the Settings tab with nine crypto-wallet rows and copy-to-clipboard controls
+- [ ] **Phase 72: Canvas Library — Full Algorithmic Canvases** — Five author-vault canvases (ГМ, ОБП, ОЗП, ОМТ, ПКОП) hand-built and verified end-to-end against `Z:\projects\references\` `.md` templates
+- [ ] **Phase 73: Canvas Library — Short Algorithmic Canvases** — Three author-vault short-version canvases (ОГК, ОБП, ОМТ) hand-built alongside the full versions and verified end-to-end against the short `.md` templates
+- [ ] **Phase 74: GitHub Release v1.11.0** — `manifest.json` / `versions.json` / `package.json` aligned on `1.11.0`, unprefixed annotated tag pushed, GitHub Release with three loose root assets, BRAT smoke install on a clean vault verified
+
+### Archived milestones
 
 <details>
 <summary>✅ v1.0 Community Plugin Release (Phases 1-7) — SHIPPED 2026-04-07</summary>
@@ -167,294 +179,81 @@ Full details: `.planning/milestones/v1.10-ROADMAP.md`
 
 ## Phase Details
 
-<details>
-<summary>Archived phase details (v1.0–v1.7) — see milestone archives for full context</summary>
-
-### Phase 43: Unified Loop — Graph Model, Parser, Validator & Migration Errors
-**Goal**: The canvas format, graph model, parser, and validator all speak the new unified `loop` node — and any canvas that still uses the old `loop-start`/`loop-end` pair is clearly rejected with rebuild instructions before the runner is touched.
-**Depends on**: Nothing (foundation for all later v1.7 phases)
-**Requirements**: LOOP-01, LOOP-02, LOOP-03, LOOP-04, MIGRATE-01, MIGRATE-02
+### Phase 69: Inline Runner — Hide Result-Export Buttons in Complete State
+**Goal**: When the Inline Runner reaches the protocol-complete state, the user no longer sees the redundant Insert / Copy to clipboard / Save to note buttons — only Close (and Run Again, where applicable) remains. Sidebar Runner View and tab Runner View are unaffected.
+**Depends on**: Nothing (Inline-mode-only render-time conditional in `InlineRunnerModal`; isolated from sidebar/tab runner code paths)
+**Requirements**: INLINE-CLEAN-01
 **Success Criteria** (what must be TRUE):
-  1. Parsing a canvas whose `radiprotocol_nodeType = "loop"` yields a `LoopNode` in the graph with its `headerText` populated from the canvas JSON (LOOP-01, LOOP-02, LOOP-03)
-  2. Validator surfaces a clear error when a `loop` node is missing its «выход» edge or has no body-branch outgoing edges (LOOP-04)
-  3. Opening a canvas that still contains a `loop-start` or `loop-end` node produces a plain-language validator error naming the obsolete node type and instructing the author to rebuild the loop with the unified `loop` node (MIGRATE-01)
-  4. The migration error appears in the existing RunnerView error panel using the same layout used for other `GraphValidator` error classes — not in a Notice or console (MIGRATE-02)
-**Plans:** 3 plans
-
-Plans:
-- [ ] 45-01-node-picker-modal-rewrite-PLAN.md — Extend NodePickerModal to 4 kinds with Russian badges + exhaustive unit tests
-- [ ] 45-02-editor-panel-loop-button-and-lockin-PLAN.md — Loop quick-create button + CSS + Phase 44 UAT-fix form lock-in tests
-- [ ] 45-03-start-from-node-command-PLAN.md — Register start-from-node command; plumb optional startNodeId through RunnerView + ProtocolRunner
-
-### Phase 44: Unified Loop Runtime
-**Goal**: Running a protocol that contains a unified `loop` node produces the agreed single-step picker UX, walks branches correctly, returns to the loop on dead-ends, follows «выход» to leave, preserves nested-loop behaviour, and survives step-back and session restart — all without any iteration cap.
-**Depends on**: Phase 43 (needs the `LoopNode` model and validator rules in place)
-**Requirements**: RUN-01, RUN-02, RUN-03, RUN-04, RUN-05, RUN-06, RUN-07
-**Success Criteria** (what must be TRUE):
-  1. When the runner reaches a `loop` node the user sees a single picker listing every body-branch edge label plus «выход», rendered underneath the node's `headerText` (RUN-01)
-  2. Choosing a body branch walks that branch and — when the branch dead-ends (no outgoing edges) — automatically returns the user to the same loop's picker for another iteration (RUN-02)
-  3. Choosing «выход» advances along the «выход» edge and the loop frame is removed from the internal context stack; a nested-loop protocol ends with each outer loop's «выход» still reachable in order (RUN-03, RUN-04)
-  4. Step-back from the loop picker restores the node and accumulated text that existed immediately before the loop was entered (RUN-05); closing and reopening Obsidian mid-loop resumes the session at the same picker with the same accumulated text (RUN-06)
-  5. No loop run in any canvas is capped by `maxIterations`; the settings tab no longer exposes a "max loop iterations" control and the `LoopStartNode.maxIterations` field no longer exists in the model (RUN-07)
-**Plans:** 5/5 plans complete
-
-Plans:
-- [x] 44-01-PLAN.md — Wave 0 test scaffolding: nested-loop fixture + protocol-runner-loop-picker.test.ts skeleton
-- [x] 44-02a-PLAN.md — Runtime state machine: AwaitingLoopPickState, chooseLoopBranch, dead-end return, B1 re-entry guard, B2 previousCursor threading, session union widening, remove chooseLoopAction stub
-- [x] 44-02b-PLAN.md — Test rewrites for the runtime: rewrite 7 skipped loop-support tests, fill protocol-runner-loop-picker.test.ts with RUN-01..05 + W4 long-body integration test
-- [x] 44-03-PLAN.md — RunnerView picker UI + Phase 44 CSS + regenerate styles.css + rewrite 7 skipped session round-trip tests
-- [x] 44-04-PLAN.md — RUN-07 excision: delete settings.maxLoopIterations, LoopStartNode.maxIterations, parser site, legacy editor-panel forms; keep ProtocolRunner.maxIterations (RUN-09) intact
-
-### Phase 45: Loop Editor Form, Picker & Color Map
-**Goal**: Authors can create and edit unified `loop` nodes with the Node Editor and the Start-From-Node picker, and those nodes are coloured consistently on the canvas.
-**Depends on**: Phase 43 (needs the `LoopNode` kind in the graph model and parser)
-**Requirements**: LOOP-05, LOOP-06
-**Success Criteria** (what must be TRUE):
-  1. Selecting a `loop` node in the Node Editor shows a form where the author can edit `headerText`; the form contains no `maxIterations` control (LOOP-05)
-  2. Saving the Node Editor form writes the updated `headerText` back to the canvas JSON and colours the node with the `loop`-kind colour from `NODE_COLOR_MAP` (LOOP-06)
-  3. `NodePickerModal` (Start-From-Node) lists `loop` as a first-class node kind alongside question, answer, snippet, and text-block (LOOP-06)
-**Plans:** 3/3 plans complete
-
-Plans:
-- [x] 45-01-node-picker-modal-rewrite-PLAN.md — Extend NodePickerModal to 4 kinds with Russian badges + exhaustive unit tests
-- [x] 45-02-editor-panel-loop-button-and-lockin-PLAN.md — Loop quick-create button + CSS + Phase 44 UAT-fix form lock-in tests
-- [x] 45-03-start-from-node-command-PLAN.md — Register start-from-node command; plumb optional startNodeId through RunnerView + ProtocolRunner
-
-### Phase 46: Free-Text-Input Removal
-**Goal**: The `free-text-input` node kind is gone from every layer of the plugin — model, parser, validator, runner, editor, picker, colour map, and test fixtures — restoring the original v1.0 decision after the v1.2 regression.
-**Depends on**: Nothing (independent of the loop rework; can run in parallel with Phases 43-45 but scheduled last to keep loop work isolated)
-**Requirements**: CLEAN-01, CLEAN-02, CLEAN-03, CLEAN-04
-**Success Criteria** (what must be TRUE):
-  1. The TypeScript graph model no longer exports `FreeTextInputNode` and `free-text-input` is absent from `RPNodeKind`; build is green with no broken imports (CLEAN-01)
-  2. Parsing a canvas node whose `radiprotocol_nodeType = "free-text-input"` produces a validator error — it is no longer silently accepted as a runnable node kind (CLEAN-02)
-  3. `EditorPanelView`, `NodePickerModal`, `NODE_COLOR_MAP`, and the runner state machine contain no remaining references to `free-text-input`; the Node Editor type dropdown no longer offers it (CLEAN-03)
-  4. `src/__tests__/fixtures/free-text.canvas` and every free-text-input-specific test case are removed or rewritten; `npm test` is green with no skipped or orphaned free-text-input tests (CLEAN-04)
-**Plans:** 3 plans
-
-Plans:
-- [x] 46-01-graph-model-parser-validator-PLAN.md — Excise FreeTextInputNode + RPNodeKind member + parser case arm; parser emits Russian rejection for legacy canvases (CLEAN-01, CLEAN-02)
-- [x] 46-02-runner-views-color-map-PLAN.md — TS-exhaustiveness-driven cleanup of runner, views, color map, CSS; deletes enterFreeText method + runner-view render arm + editor-panel form branch (CLEAN-03)
-- [x] 46-03-test-cleanup-PLAN.md — Delete free-text-input test scenarios in protocol-runner.test.ts + rewrite picker exclusion test (CLEAN-04)
-
-</details>
-
-<details>
-<summary>✅ v1.8 Phase Details (Phases 47–58) — see .planning/milestones/v1.8-ROADMAP.md for full context</summary>
-
-v1.8 phases (47–58) were archived to `.planning/milestones/v1.8-ROADMAP.md` when the milestone closed on 2026-04-21.
-All 14 phases shipped, 50/50 plans complete, 26/26 requirements satisfied.
-
-</details>
-
----
-
-<details>
-<summary>✅ v1.9 Phase Details (Phases 59–62) — see .planning/milestones/v1.9-ROADMAP.md for full context</summary>
-
-v1.9 phases (59–62) were archived to `.planning/milestones/v1.9-ROADMAP.md` when the milestone closed on 2026-04-25.
-All 4 phases shipped, 17/17 plans complete, 7/7 requirements satisfied. GitHub Release v1.9.0 published with 3 loose assets.
-
-<details>
-<summary>Legacy v1.9 phase detail (pre-archive) — see archive for canonical version</summary>
-
-### Phase 59: Inline Runner Feature Parity
-**Goal**: Inline Runner behaves identically to the sidebar Runner for three correctness-class parity gaps — nested protocol-folder path resolution, configured-separator on snippet insert, and JSON snippet fill-in modal with placeholders.
-**Depends on**: Nothing (pure Inline Runner fixes in `InlineRunnerModal` + shared render paths; parallel to Phase 60 which is presentation/state work on the same modal)
-**Requirements**: INLINE-FIX-01, INLINE-FIX-04, INLINE-FIX-05
-**Success Criteria** (what must be TRUE):
-  1. Running `Run protocol in inline` against a vault whose Protocols folder is a nested path (e.g. `templates/ALGO` or any multi-segment path) lists every `.canvas` file under that folder in the picker and opens the chosen canvas correctly — identical behaviour to a root-level Protocols folder setting (INLINE-FIX-01)
-  2. Selecting a snippet node in inline mode inserts the snippet content with the configured separator applied between prior accumulated text and the inserted snippet — no glued concatenation; separator resolution matches sidebar-runner (per-node override → protocol default → global default) (INLINE-FIX-04)
-  3. Reaching a `.json` snippet with placeholders in inline mode opens `SnippetFillInModal` above the floating runner with working fill-in fields, live preview, and tab navigation identical to sidebar behaviour — submitting the modal appends the filled-in text to the active note (INLINE-FIX-05)
-  4. All three fixes are regression-tested against the Phase 54 inline mode invariants: the floating modal still does not block note editing, answers still append to the end of the source note, and the existing sidebar and tab display modes remain unchanged (no cross-mode regressions)
-**Plans:** 5 plans
-
-Plans:
-- [ ] 59-00-PLAN.md — Wave 0 test scaffolding: new unit test files + obsidian mock TFolder augmentation (RED baseline for INLINE-FIX-01/04/05)
-- [ ] 59-01-PLAN.md — Wave 1a: INLINE-FIX-01 path normalization + fallback scan via exported resolveProtocolCanvasFiles helper in src/main.ts
-- [ ] 59-02-PLAN.md — Wave 1b: INLINE-FIX-04 accumulator-diff delta append for MD + JSON-zero-placeholder snippet arms + new appendDeltaFromAccumulator helper
-- [ ] 59-03-PLAN.md — Wave 1c: INLINE-FIX-05 SnippetFillInModal rewrite + Phase 54 D6 reversal + isFillModalOpen D1 gate + fillModal disposal in close()
-- [ ] 59-04-PLAN.md — Wave 2: regression verification (full suite + tsc + build) + manual UAT on real Obsidian vault + VALIDATION.md/UAT.md sign-off
-
-### Phase 60: Inline Runner Layout & Position Persistence
-**Goal**: Inline Runner ships with a compact default footprint that does not visually overlap the active note's editing area, and remembers the user's drag-position across tab switches and plugin reloads with viewport-clamping that prevents the modal from ever landing off-screen.
-**Depends on**: Nothing strictly (touches `InlineRunnerModal` + `src/styles/inline-runner.css`; schedulable in parallel with Phase 59 which modifies dispatch/resolution paths on the same modal — phase boundaries drawn along "presentation/state" vs "correctness/parity" to minimize merge conflicts)
-**Requirements**: INLINE-FIX-02, INLINE-FIX-03
-**Success Criteria** (what must be TRUE):
-  1. Opening the Inline Runner on a default Obsidian window renders the modal with a visibly tighter footprint than the v1.8 default — reduced padding, reduced preview/question-zone height — such that the modal does not cover the line the user is typing on for a note of typical length (INLINE-FIX-03)
-  2. Dragging the Inline Runner to a new position, then switching to another Obsidian tab and switching back, restores the modal at the last user-set coordinates — not reset to default, not off-screen (INLINE-FIX-02)
-  3. Dragging the Inline Runner, closing Obsidian, and reopening it restores the modal at the last user-set coordinates when the user re-invokes the Run-in-inline command — position survives plugin reload, persisted via workspace state (INLINE-FIX-02)
-  4. If the last-saved coordinates would place the modal off-screen (e.g. after a monitor/resolution change), the restore path clamps the coordinates to the current viewport bounds so the modal is always visible and remains draggable — no "flies off-screen and cannot be dragged back" regression (INLINE-FIX-02)
-**Plans:** 5 plans
+  1. Running a protocol to completion in Inline mode renders a footer/toolbar with Close (and Run Again where applicable) — Insert, Copy to clipboard, and Save to note buttons are absent from the DOM (INLINE-CLEAN-01)
+  2. Running the same protocol to completion in sidebar Runner View shows all three result-export buttons exactly as before — no cross-mode regression (INLINE-CLEAN-01)
+  3. Running the same protocol to completion in tab Runner View shows all three result-export buttons exactly as before — no cross-mode regression (INLINE-CLEAN-01)
+  4. The active note continues to receive answer/snippet text appended in real time as the protocol runs (the existing Inline-mode contract is unchanged) — the result-export buttons are removed because they are redundant, not because output stopped working (INLINE-CLEAN-01)
+**Plans**: TBD
 **UI hint**: yes
 
-Plans:
-- [x] 60-00-PLAN.md — Wave 0 RED tests for drag persistence, viewport clamping, and compact layout regression guards
-- [x] 60-01-PLAN.md — Durable inline runner position state contract + clamp helper
-- [x] 60-02-PLAN.md — Header dragging, saved-position restore, and layout-change re-clamping
-- [x] 60-03-PLAN.md — Compact draggable CSS overrides + generated CSS rebuild
-- [x] 60-04-PLAN.md — Automated validation and live Obsidian UAT sign-off
-
-### Phase 61: Settings Folder Autocomplete
-**Goal**: Every folder-path input field in the plugin's settings tab (Protocols folder, Snippets folder, Output folder) renders a Templater-style folder-autocomplete dropdown of existing vault folders as the user types, via Obsidian's `AbstractInputSuggest` pattern.
-**Depends on**: Nothing (pure Settings-tab + reusable `FolderSuggest` component; parallel to Phases 59 and 60)
-**Requirements**: SETTINGS-01
+### Phase 70: Loop-Exit Picker Visual Hint
+**Goal**: When the runner reaches a `loop` node, the loop-exit button (the picker entry whose edge label starts with the `+` prefix per Phase 50.1 convention) is visually distinguishable from the body-branch buttons next to it via a subtle background/accent treatment using existing Obsidian CSS variables — applied uniformly across sidebar, tab, and inline runner modes.
+**Depends on**: Nothing (CSS-only rule in the appropriate `src/styles/*.css` file plus a CSS-hook class on the picker button; append-only per phase per CLAUDE.md)
+**Requirements**: LOOP-EXIT-01
 **Success Criteria** (what must be TRUE):
-  1. Focusing any settings path field (Protocols folder, Snippets folder, Output folder) and typing one or more characters shows a dropdown listing existing vault folders whose paths match the typed prefix/substring — typing with zero matches shows an empty or closed dropdown, not an error (SETTINGS-01)
-  2. Clicking (or Enter-selecting) an item in the dropdown fills the field with the full folder path and the Settings tab's existing save-on-change path persists the value — identical to the prior manual-typing behaviour, with no setting-save regression (SETTINGS-01)
-  3. The autocomplete is implemented as a single reusable `FolderSuggest` component built on Obsidian's `AbstractInputSuggest` pattern (matching the Templater reference) and wired into all three settings fields — no custom popup DOM, no duplicated suggester logic per field (SETTINGS-01)
-**Plans:** 4 plans
+  1. Running a protocol that contains a `loop` node into the picker state shows the loop-exit button (the `+`-prefix-labeled edge) with a visibly different background or accent than the body-branch buttons rendered beside it — using existing Obsidian theme variables only (no new colour tokens) (LOOP-EXIT-01)
+  2. The loop-exit button retains its original shape, label text (with `+` prefix stripped per existing convention), and position in the picker — only the background/accent changes (LOOP-EXIT-01)
+  3. Body-branch buttons in the same picker render with the same styling they had before this phase — no visual regression on the non-exit entries (LOOP-EXIT-01)
+  4. The visual hint applies in all three runner modes: sidebar Runner View, tab Runner View, and Inline Runner — verified by reaching a loop picker state in each mode (LOOP-EXIT-01)
+**Plans**: TBD
 **UI hint**: yes
 
-Plans:
-- [ ] 61-00-PLAN.md — RED tests and Obsidian mock support for FolderSuggest + settings attachment
-- [ ] 61-01-PLAN.md — Reusable `FolderSuggest` built on `AbstractInputSuggest`
-- [ ] 61-02-PLAN.md — Wire autocomplete into Protocols, Output, and Snippets settings fields
-- [ ] 61-03-PLAN.md — Automated validation and real Obsidian UAT sign-off
-
-### Phase 62: BRAT Release v1.9.0
-**Goal**: The repository is shippable via BRAT at version 1.9.0 — `manifest.json`, `versions.json`, `package.json` all align on `1.9.0`, a GitHub Release v1.9.0 exists with the three required assets attached at the release root, and end-to-end BRAT install on a clean test vault succeeds.
-**Depends on**: Phases 59, 60, 61 (release asset must reflect the full v1.9 shippable build — all Inline Runner fixes + Settings autocomplete must have landed before tagging; mirrors Phase 55 v1.8.0 cadence)
-**Requirements**: BRAT-02
+### Phase 71: Settings — Donate Section
+**Goal**: A "Помочь разработке" section is rendered at the very top of the plugin's Settings tab with nine crypto-wallet rows (1 EVM address shared across 6 networks, plus BTC, Solana, Tron) and a copy-to-clipboard control for each row that surfaces a transient Obsidian Notice on success.
+**Depends on**: Nothing (Settings-tab UI feature in the same `src/main.ts` settings tab class as Phase 61; reuses `createEl`/`createDiv`/`registerDomEvent` DOM patterns and `navigator.clipboard.writeText` + `new Notice(...)` for copy)
+**Requirements**: DONATE-01
 **Success Criteria** (what must be TRUE):
-  1. `manifest.json.version`, `versions.json` mapping (min-Obsidian for 1.9.0), and `package.json.version` all agree on `1.9.0`; `npm run build` produces a clean `main.js` + `styles.css` against that manifest version (BRAT-02)
-  2. `gh release list` shows a GitHub Release `v1.9.0` (or equivalent tag convention, matching Phase 55 precedent) whose assets include `manifest.json`, `main.js`, and `styles.css` as individually downloadable files at the release root — not inside a zip (BRAT-02)
-  3. Installing the plugin in a fresh Obsidian vault via BRAT with identifier `vegacepticon/RadiProtocol` succeeds end-to-end on the 1.9.0 release — plugin appears in Community Plugins, enables cleanly, and the Runner view opens without errors (BRAT-02)
-
-Plans:
-- [x] 62-01-PLAN.md — Wave 1: version bump across manifest.json (+D1), versions.json (+D4 preserve 1.8.0, add 1.9.0), package.json
-- [x] 62-02-PLAN.md — Wave 2: build + v1.9.0 preflight script + atomic release-prep commit + unprefixed annotated tag `1.9.0`
-- [x] 62-03-PLAN.md — Wave 3: release runbook with D10 Phase 60 UAT gate + D6 web-UI instructions + D7 changelog + SC-3 post-publish verification
-
-</details>
-
-</details>
-
----
-
-<details>
-<summary>✅ v1.10 Phase Details (Phases 63–68) — see .planning/milestones/v1.10-ROADMAP.md for full context</summary>
-
-v1.10 phases (63–68) were archived to `.planning/milestones/v1.10-ROADMAP.md` when the milestone closed on 2026-04-26.
-All 6 phases shipped, 18/18 plans complete, 9/9 requirements satisfied. GitHub Release `1.10.0` published with 3 loose assets; clean-vault BRAT smoke verified.
-
-<details>
-<summary>Legacy v1.10 phase detail (pre-archive) — see archive for canonical version</summary>
-
-### Phase 63: Bidirectional Canvas ↔ Node Editor Sync
-**Goal**: Edits made directly on a canvas node — both the node's text body and a Snippet node's outgoing edge label — propagate live into the open Node Editor form, and the Snippet branch-label field round-trips back out to the edge label, mirroring the Answer↔edge convention established in Phase 50.
-**Depends on**: Nothing (canvas event subscription + form re-render on the existing `EditorPanelView`; isolated from Runner UX work)
-**Requirements**: EDITOR-03, EDITOR-05
-**Success Criteria** (what must be TRUE):
-  1. With the Node Editor open on a Question, Answer, Text block, Snippet, or Loop node, editing that node's text directly on canvas updates the corresponding form field (Question text / Answer text / Text block text / Snippet branch label / Loop headerText) in real time — without the user clicking off the node and back on (EDITOR-05)
-  2. Setting the "branch label" field on a Snippet node in the Node Editor writes that label to the node's outgoing edge on canvas; the canvas Snippet node's own visible text continues to display the configured directory path or file name (EDITOR-03)
-  3. Editing the outgoing edge label of a Snippet node directly on canvas updates the "branch label" field in the open Node Editor form in real time, with the same bidirectional behaviour as Answer.displayLabel ↔ incoming edge label from Phase 50 (EDITOR-03)
-  4. Concurrent edits — typing on canvas while the form is open — never overwrite in-flight user input in the form's currently-focused field; sync direction is debounced and last-write-wins matches the Phase 50 precedent (EDITOR-03, EDITOR-05)
-**Plans:** 3 plans
-
-Plans:
-- [x] 63-01-PLAN.md — Pure reconciler: snippet edge-wins arm + discriminated EdgeLabelDiff/ReconcileResult shape + 2 fixtures + extended unit tests (2026-04-25)
-- [x] 63-02-PLAN.md — Service: discriminated writer + lastSnapshotByFilePath baseline + canvas-changed-for-node dispatch bus + rename/delete cleanup + new edge-label-sync-service.test.ts (2026-04-25)
-- [x] 63-03-PLAN.md — View: formFieldRefs Map + applyCanvasPatch + per-field blur handlers + onOpen subscription + new editor-panel-canvas-sync.test.ts (2026-04-25 — executed via shared registerFieldRef helper; manual UAT pending)
-- [x] 63-04-PLAN.md — Gap Closure: outbound Snippet branch label → incoming edge sync + inbound canvas text → form field sync (closes 2 verified gaps from 63-UAT.md) — completed 2026-04-25
+  1. Opening the plugin's Settings tab shows a "Помочь разработке" section as the first/top-most section, above all existing settings (Protocols folder, Snippets folder, Output folder, Session folder, Default separator, etc.) (DONATE-01)
+  2. The section renders a brief invitation line followed by nine wallet rows: one row labeled with the six EVM networks (Ethereum / Linea / Base / Arbitrum / BNB Chain / Polygon) sharing the address `0x0B528dAF919516899617C536ec26D2d5ab7fB02A`, one row for Bitcoin (`bc1qqexgw3dfv6hgu682syufm02d7rfs6myllfmhh7`), one row for Solana (`HenUEuxAADZqAb7AT6GXL5mz9VNqx6akzwf9w84wNpUA`), and one row for Tron (`TPBbBauXk56obAiQMSKzMQgsnUiea12hAB`) (DONATE-01)
+  3. Each row shows the network name, the wallet address (truncated/wrapped for readability), and a copy-to-clipboard control; clicking the control copies the full untruncated address to the system clipboard via `navigator.clipboard.writeText` and surfaces a transient Obsidian Notice confirming the copy (DONATE-01)
+  4. The section persists no settings — wallet addresses are hard-coded constants in source — and contains no external links, no analytics, no network requests (DONATE-01)
+**Plans**: TBD
 **UI hint**: yes
 
-### Phase 64: Node Editor Polish — Auto-grow & Text Block Quick-Create
-**Goal**: Every multi-line text input in the Node Editor grows with its content (no fixed-height boxes with inner scrollbars), and the toolbar exposes a fifth quick-create button for text-block nodes alongside the existing four.
-**Depends on**: Phase 63 (advisory — the auto-grow textarea wiring may share setup code with the canvas→form sync wiring; running Phase 64 after Phase 63 avoids re-touching the same textarea init code twice)
-**Requirements**: EDITOR-04, EDITOR-06
+### Phase 72: Canvas Library — Full Algorithmic Canvases
+**Goal**: Five hand-authored algorithmic `.canvas` files (ГМ, ОБП full, ОЗП, ОМТ full, ПКОП) exist in the author's local vault, each modeled on the reference `ОГК 1.10.0.canvas` and the corresponding `.md` text template plus the `SNIPPETS` folder structure stored at `Z:\projects\references\`, and each runs end-to-end in the Protocol Runner producing a structurally complete report. None of these canvases are bundled with the plugin distribution or committed to this repository.
+**Depends on**: Nothing strictly (content-authoring track in author's local vault — does not modify `src/`, does not change build output, does not need vitest tests; can run in parallel with the code-side phases 69/70/71. Each canvas is verified by running it end-to-end in the live Runner against the reference `.md` template at `Z:\projects\references\`.)
+**Requirements**: CANVAS-LIB-01, CANVAS-LIB-02, CANVAS-LIB-03, CANVAS-LIB-04, CANVAS-LIB-05
 **Success Criteria** (what must be TRUE):
-  1. Every multi-line text input in the Node Editor — Answer text, Text block text, Snippet branch label, Loop headerText, Question text — automatically grows in height as the author types past the initial visible row count, matching the Phase 48 (NODEUI-04) Question-textarea auto-grow behaviour; no inner scrollbar appears on a single multi-line field (EDITOR-04)
-  2. Auto-grow handles paste, programmatic field population (form load), and re-render without flickering or stuck heights; height collapses back when content is reduced (EDITOR-04)
-  3. The Node Editor toolbar shows a fifth quick-create button labelled "Create text block" (alongside Question / Answer / Snippet / Loop), and one click creates a text-block node on canvas with `radiprotocol_nodeType = "text-block"`, the correct `NODE_COLOR_MAP` colour, and default placement via the same `CanvasNodeFactory` path used by the existing four buttons (EDITOR-06)
-  4. The new text-block button respects the Phase 42 `flex-wrap: wrap` toolbar layout — narrowing the sidebar wraps all five buttons onto multiple rows without hiding any (EDITOR-06)
-**Plans:** 3 plans
-**UI hint**: yes
+  1. A ГМ (головной мозг) canvas exists in the author's vault and runs end-to-end in the Protocol Runner using the existing graph node kinds (Question / Answer / Text block / Snippet / Loop), producing a structurally complete ГМ report matching the corresponding `.md` text template at `Z:\projects\references\` (CANVAS-LIB-01)
+  2. An ОБП (органы брюшной полости — full version) canvas exists and runs end-to-end with output matching the full ОБП `.md` text template (CANVAS-LIB-02)
+  3. An ОЗП (органы забрюшинного пространства) canvas exists and runs end-to-end with output matching the ОЗП `.md` text template (CANVAS-LIB-03)
+  4. An ОМТ (органы малого таза — full version) canvas exists and runs end-to-end with output matching the full ОМТ `.md` text template (CANVAS-LIB-04)
+  5. A ПКОП (пояснично-крестцовый отдел позвоночника) canvas exists and runs end-to-end with output matching the ПКОП `.md` text template (CANVAS-LIB-05)
+**Plans**: TBD
 
-Plans:
-- [x] 64-01-PLAN.md — RED regression tests for all growable Node Editor fields and Text block quick-create (2026-04-25)
-- [x] 64-02-PLAN.md — Shared growable textarea helper, field conversion, append-only CSS, and generated CSS rebuild (2026-04-25)
-- [x] 64-03-PLAN.md — Text block quick-create toolbar button, automated verification, and human UI sign-off (2026-04-25; UAT 7/7 passed)
-
-### Phase 65: Runner Footer Layout — Back/Skip Row
-**Goal**: The Runner footer is rebuilt so "step back" reads "back", Skip renders as a labeled button to the right of Back on the same row, and Skip never visually intrudes between answer-branch buttons and snippet-branch buttons on a mixed-branch question — applied uniformly across sidebar, tab, and inline modes.
-**Depends on**: Nothing (pure presentation rework on the three runner views; isolated from step-back behavior in Phase 66)
-**Requirements**: RUNNER-02
+### Phase 73: Canvas Library — Short Algorithmic Canvases
+**Goal**: Three hand-authored short-version `.canvas` files (ОГК short, ОБП short, ОМТ short) exist alongside the existing ОГК 1.10.0 reference canvas and the full versions of ОБП and ОМТ from Phase 72, each modeled on the corresponding short `.md` text template at `Z:\projects\references\`, and each runs end-to-end in the Protocol Runner producing a structurally complete shortened report. None of these canvases are bundled with the plugin distribution or committed to this repository.
+**Depends on**: Phase 72 (the short ОБП and short ОМТ canvases pair with the full versions delivered in Phase 72; per requirement text, short canvases "exist alongside" their full counterparts. Short ОГК pairs with the existing ОГК 1.10.0 reference canvas, which already exists pre-milestone.)
+**Requirements**: CANVAS-LIB-06, CANVAS-LIB-07, CANVAS-LIB-08
 **Success Criteria** (what must be TRUE):
-  1. The runner footer's primary undo button reads "back" (renamed from "step back") in all three modes — sidebar, tab, inline (RUNNER-02)
-  2. The Skip button renders as a labeled button containing the text "skip" — never an icon-only variant — and is placed on the same horizontal row immediately to the right of the Back button in all three modes (RUNNER-02)
-  3. On a question node with mixed outgoing edges (both answer-branch and snippet-branch buttons), no Skip button is ever rendered between the answer buttons and the snippet buttons; Skip appears only in the footer row alongside Back (RUNNER-02)
-  4. The footer Back+Skip row remains accessible at narrow sidebar widths via the existing flex-wrap toolbar conventions, with no buttons clipped off-screen (RUNNER-02)
-**Plans:** 2 plans
-**UI hint**: yes
+  1. A short-version ОГК (органы грудной клетки) canvas exists alongside the existing ОГК 1.10.0 reference canvas, runs end-to-end in the Protocol Runner, and produces a shortened ОГК report matching the short-ОГК `.md` text template at `Z:\projects\references\` (CANVAS-LIB-06)
+  2. A short-version ОБП canvas exists alongside the full ОБП canvas (CANVAS-LIB-02 from Phase 72), runs end-to-end, and produces a shortened ОБП report matching the short-ОБП `.md` text template (CANVAS-LIB-07)
+  3. A short-version ОМТ canvas exists alongside the full ОМТ canvas (CANVAS-LIB-04 from Phase 72), runs end-to-end, and produces a shortened ОМТ report matching the short-ОМТ `.md` text template (CANVAS-LIB-08)
+**Plans**: TBD
 
-Plans:
-- [x] 65-01-PLAN.md — RED regression tests for Back/Skip footer labels, ordering, and inline parity — completed 2026-04-25
-- [x] 65-02-PLAN.md — Implement shared footer row in RunnerView + InlineRunnerModal, append CSS, rebuild, and visually verify — completed 2026-04-25; human-approved
-
-### Phase 66: Runner Step-Back Reliability & Scroll Pinning
-**Goal**: Step-back is one click = one step in every state of every runner mode, never leaves the runner stuck on "Processing", never corrupts accumulated text inside a loop iteration, and the preview textarea stays scrolled to the bottom on file-bound snippet insert and on step-back — matching the existing correct behaviour for Answer insert and directory-bound snippet insert.
-**Depends on**: Nothing strictly (changes localised to runner state machine + RunnerView/InlineRunnerModal scroll-after-update hooks; advisory: schedule after Phase 63 so canvas-sync events don't muddy step-back debugging)
-**Requirements**: RUNNER-03, RUNNER-04
+### Phase 74: GitHub Release v1.11.0
+**Goal**: Ship a fresh GitHub Release `1.11.0` following the BRAT-installable pattern established by Phases 55 (v1.8.0), 62 (v1.9.0), and 68 (v1.10.0): version files aligned, production build artifacts generated, three loose root assets attached at the GitHub release, unprefixed annotated tag pushed, and end-to-end BRAT install on a clean Obsidian vault verified.
+**Depends on**: Phases 69, 70, 71 complete and UAT-accepted (release asset must reflect the full v1.11 shippable plugin build — Inline button cleanup, loop-exit visual hint, and Donate section must have landed before tagging). Phases 72 and 73 are content-authoring tracks that do not modify the plugin distribution and are NOT release-blocking — they ship via the author's local vault, not via the GitHub release. Mirrors Phase 68's runbook structure (D10 UAT-gate-as-first-section pattern).
+**Requirements**: BRAT-03
 **Success Criteria** (what must be TRUE):
-  1. A single click on Back advances the runner backwards by exactly one step in every state (at-node, awaiting-answer, awaiting-snippet-pick, awaiting-snippet-fill, awaiting-loop-pick, complete) across all three runner modes; double-click never produces double-step (RUNNER-03)
-  2. The runner UI never displays a "Processing" placeholder for longer than one natural re-render frame after a Back click; action buttons return immediately, no hang state persists (RUNNER-03)
-  3. Repeated Back clicks across loop boundaries — including loop-node entry, body-branch dead-end loop-back, and «выход» exit — never corrupt the accumulated protocol text or the loop context stack; the protocol preview matches the same content the user saw at that step on the way forward (RUNNER-03)
-  4. After a file-bound Snippet node inserts its content, the preview textarea is scrolled to the bottom so the most recently inserted line is visible — identical to existing Answer-insert and directory-bound-snippet-insert behaviour (RUNNER-04)
-  5. After a Back click in any state, the preview textarea is scrolled to the bottom so the line revealed by the step-back (or the new tail line after content was popped) is visible — no upward scroll jump (RUNNER-04)
-**Plans:** 5 plans
-
-Plans:
-- [x] 66-01-PLAN.md — ProtocolRunner state-machine surgery: UndoEntry.restoreStatus, _stepBackInFlight guard, RunnerView Processing-text removal — completed 2026-04-25
-- [x] 66-02-PLAN.md — RunnerView scroll-pinning unification: renderPreviewZone scroll-to-bottom default, removal of pendingTextareaScrollTop mechanism — completed 2026-04-25
-- [x] 66-03-PLAN.md — Shared Back-disable-on-click prologue in renderRunnerFooter (RunnerView + InlineRunnerModal) — completed 2026-04-25
-- [x] 66-04-PLAN.md — Loop-boundary correctness suite: D-08 property roundtrip + D-13 four scripted scenarios — completed 2026-04-25
-- [x] 66-05-PLAN.md — 66-UAT.md scripted RUNNER-03/RUNNER-04 visual checklist + human-verify checkpoint — completed 2026-04-25; UAT accepted 9/9, 0 issues, 0 pending
-
-### Phase 67: Inline Runner Resizable Modal & File-Bound Snippet Parity
-**Goal**: The Inline Runner modal is user-resizable via drag, with width and height persisted in workspace state alongside the Phase 60 position state and clamped to viewport on restore; and a file-bound Snippet node in inline mode appends the configured file's content rather than falling back to the snippets root folder, matching sidebar parity from Phase 56.
-**Depends on**: Nothing (FIX-06 confined to `InlineRunnerModal` + `src/styles/inline-runner.css`; reuses Phase 60 workspace-state contract. **FIX-07 root cause is in shared runner-core (`src/runner/protocol-runner.ts:736-741`) — fix touches `protocol-runner.ts` + `src/graph/node-label.ts` per Phase 67 D-13 + D-14 + D-15; the existing `case 'awaiting-snippet-fill'` arms in `runner-view.ts` and `inline-runner-modal.ts` consume the corrected dispatch unchanged.** Reuses Phase 56 file-binding logic.)
-**Requirements**: INLINE-FIX-06, INLINE-FIX-07
-**Success Criteria** (what must be TRUE):
-  1. The Inline Runner modal can be resized by dragging its edges or corners; while dragging, the modal's width and height update smoothly without jumping or losing focus (INLINE-FIX-06)
-  2. Resizing the Inline Runner, switching tabs, and switching back restores the modal at the last user-set width and height — and closing/reopening Obsidian preserves those dimensions across plugin reload via the same workspace-state mechanism that persists position from Phase 60 (INLINE-FIX-06)
-  3. If the last-saved dimensions would exceed the current viewport (e.g. after a monitor or resolution change), the restore path clamps width and height to the current viewport bounds — mirroring the Phase 60 clamp-on-restore pattern; the modal is always visible and remains resizable (INLINE-FIX-06)
-  4. In Inline Runner mode, reaching a Snippet node bound to a specific file appends that file's content to the active note — identical to sidebar behaviour established in Phase 56; no fallback to the snippets root folder listing or directory picker (INLINE-FIX-07)
-  5. Both fixes are regression-safe against the Phase 54 inline-mode invariants and the Phase 60 position-persistence behaviour: the floating modal still does not block note editing, position still persists and clamps, and answers still append to the end of the source note (INLINE-FIX-06, INLINE-FIX-07)
-**Plans:** 3 plans
-**UI hint**: yes
-
-Plans:
-- [x] 67-01-PLAN.md — INLINE-FIX-06 resize: type rename, ResizeObserver wiring, debounced save, append-only CSS, build verification — completed 2026-04-25
-- [x] 67-02-PLAN.md — INLINE-FIX-07 file-bound parity: protocol-runner case snippet branch (D-14), node-label arm (D-15), 3 test layers, ROADMAP/STATE amendment (D-13) — completed 2026-04-25
-- [x] 67-03-PLAN.md — Human UAT checkpoint: real-Obsidian verification of resize persistence + clamp + loop-body file-bound snippet parity in both runner modes — completed 2026-04-25, 8/8 PASS
-
-### Phase 68: GitHub Release v1.10.0
-**Goal**: Ship a fresh GitHub Release for the current milestone using the same BRAT-compatible release pattern as prior shipped milestones: version files aligned, production build artifacts generated, release assets attached at the GitHub release root, and the release process documented clearly enough to run manually when needed.
-**Depends on**: Phases 63-67 complete and Phase 66 UAT accepted (release asset must represent the full v1.10 milestone)
-**Requirements**: Release readiness for v1.10
-**Success Criteria** (what must be TRUE):
-  1. `manifest.json`, `versions.json`, and `package.json` agree on the intended v1.10 release version, preserving prior version mappings.
-  2. `npm run build` produces production `main.js` and `styles.css` for the release version with tests/build checks passing before publication.
-  3. A GitHub Release exists for the v1.10 tag with `manifest.json`, `main.js`, and `styles.css` attached as loose root-level assets, matching the BRAT pattern from Phases 55 and 62.
-  4. The release procedure documents what can be done manually, which files to edit, and the safe ordering for version bump, build, tag/release creation, asset upload, and post-publish verification.
-**Plans:** 4 plans
-
-Plans:
-- [x] 68-01-PLAN.md — Align manifest.json, versions.json, and package.json on v1.10.0 while preserving prior BRAT mappings — completed 2026-04-26
-- [x] 68-02-PLAN.md — Build production assets and create the v1.10.0 preflight script — completed 2026-04-26
-- [x] 68-03-PLAN.md — Commit release prep and create unprefixed tag 1.10.0 — completed 2026-04-26 (tag points at preflighted release HEAD)
-- [x] 68-04-PLAN.md — Create v1.10.0 release runbook, gate on Phase 66 UAT, publish via GitHub web UI, and verify BRAT install — completed 2026-04-26 (Release 1.10.0 live, BRAT smoke PASS)
-
-</details>
-
-</details>
+  1. `manifest.json.version`, `versions.json` mapping for `1.11.0`, and `package.json.version` all agree on `1.11.0`; prior version mappings (`1.8.0`, `1.9.0`, `1.10.0`) are preserved in `versions.json`; `npm run build` produces a clean `main.js` + `styles.css` against that manifest version (BRAT-03)
+  2. An unprefixed annotated tag `1.11.0` exists on the release commit and is pushed to the remote — matching the BRAT convention from Phases 55 / 62 / 68 (BRAT-03)
+  3. A GitHub Release `1.11.0` is published with `manifest.json`, `main.js`, and `styles.css` attached as three individually downloadable loose assets at the release root (no zip), `prerelease=false`, release runbook executed with the D10 UAT-gate-as-first-section pattern (BRAT-03)
+  4. Installing the plugin in a fresh Obsidian vault via BRAT with identifier `vegacepticon/RadiProtocol` succeeds end-to-end on the `1.11.0` release — plugin appears in Community Plugins, enables cleanly at version `1.11.0`, and the Runner view opens without errors (BRAT-03)
+**Plans**: TBD
 
 ---
 
 ## Progress
 
 **Execution Order:**
-Between milestones — v1.10 shipped. Run `/gsd-new-milestone` to define the next scope.
+v1.11 in progress — Phase 69 is next. Phases 69, 70, 71 are independent and code-side; Phases 72, 73 are content-authoring tracks (parallel to code phases); Phase 74 is the release gate (depends on 69–71 UAT acceptance).
 
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
@@ -468,3 +267,9 @@ Between milestones — v1.10 shipped. Run `/gsd-new-milestone` to define the nex
 | 47-58 | v1.8 | 50/50 | Complete | 2026-04-21 |
 | 59-62 | v1.9 | 17/17 | Complete | 2026-04-25 |
 | 63-68 | v1.10 | 18/18 | Complete | 2026-04-26 |
+| 69 | v1.11 | 0/? | Not started | — |
+| 70 | v1.11 | 0/? | Not started | — |
+| 71 | v1.11 | 0/? | Not started | — |
+| 72 | v1.11 | 0/? | Not started | — |
+| 73 | v1.11 | 0/? | Not started | — |
+| 74 | v1.11 | 0/? | Not started | — |
