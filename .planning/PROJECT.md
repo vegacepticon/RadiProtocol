@@ -12,7 +12,7 @@ A radiologist can generate a structured, accurate protocol in seconds by answeri
 
 **Last shipped:** v1.10 Editor Sync & Runner UX Polish — ✅ SHIPPED 2026-04-26 (GitHub Release `1.10.0`, 3 loose assets, BRAT-installable via `vegacepticon/RadiProtocol`)
 
-**Active milestone:** v1.11 Inline Polish, Loop Hint, Donate & Canvas Library — defining requirements
+**Active milestone:** v1.11 Inline Polish, Loop Hint, Donate & Canvas Library — Phase 69 complete ✅
 
 **Previous milestone:** v1.9 Inline Runner Polish & Settings UX — ✅ SHIPPED 2026-04-25
 
