@@ -188,7 +188,9 @@ Full details: `.planning/milestones/v1.10-ROADMAP.md`
   2. Running the same protocol to completion in sidebar Runner View shows all three result-export buttons exactly as before — no cross-mode regression (INLINE-CLEAN-01)
   3. Running the same protocol to completion in tab Runner View shows all three result-export buttons exactly as before — no cross-mode regression (INLINE-CLEAN-01)
   4. The active note continues to receive answer/snippet text appended in real time as the protocol runs (the existing Inline-mode contract is unchanged) — the result-export buttons are removed because they are redundant, not because output stopped working (INLINE-CLEAN-01)
-**Plans**: TBD
+**Plans:** 2 plans
+- [ ] 69-01-PLAN.md — Amend INLINE-CLEAN-01 + ROADMAP §Phase 69 to cover all 6 Inline states (D-02)
+- [ ] 69-02-PLAN.md — Delete output toolbar + 3 dead CSS blocks + paired regression tests (D-01,D-03..D-09)
 **UI hint**: yes
 
 ### Phase 70: Loop-Exit Picker Visual Hint
