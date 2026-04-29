@@ -8,7 +8,7 @@
 
 ### Inline Runner Polish
 
-- [ ] **INLINE-CLEAN-01**: When the Inline Runner reaches the protocol-complete state, the Insert / Copy to clipboard / Save to note buttons are no longer rendered — only the Close (and Run Again, where applicable) controls remain. The Inline Runner already appends every answer/snippet directly to the active note as the protocol runs, so the result-export buttons are redundant in this mode. The sidebar Runner View and the tab Runner View continue to show all three buttons unchanged — this requirement is Inline-mode-only.
+- [ ] **INLINE-CLEAN-01**: In every Inline Runner state (`idle`, `at-node`, `awaiting-snippet-pick`, `awaiting-loop-pick`, `awaiting-snippet-fill`, `complete`), the Insert / Copy to clipboard / Save to note buttons are no longer rendered — only the Close control in the modal header remains. The Inline Runner already appends every answer/snippet directly to the active note as the protocol runs, so the result-export buttons are redundant in this mode. The sidebar Runner View and the tab Runner View continue to show all three buttons unchanged — this requirement is Inline-mode-only.
 
 ### Runner UX
 

@@ -180,11 +180,11 @@ Full details: `.planning/milestones/v1.10-ROADMAP.md`
 ## Phase Details
 
 ### Phase 69: Inline Runner — Hide Result-Export Buttons in Complete State
-**Goal**: When the Inline Runner reaches the protocol-complete state, the user no longer sees the redundant Insert / Copy to clipboard / Save to note buttons — only Close (and Run Again, where applicable) remains. Sidebar Runner View and tab Runner View are unaffected.
+**Goal**: In every Inline Runner state (`idle`, `at-node`, `awaiting-snippet-pick`, `awaiting-loop-pick`, `awaiting-snippet-fill`, `complete`), the user no longer sees the redundant Insert / Copy to clipboard / Save to note buttons — only the Close control in the modal header remains. Sidebar Runner View and tab Runner View are unaffected.
 **Depends on**: Nothing (Inline-mode-only render-time conditional in `InlineRunnerModal`; isolated from sidebar/tab runner code paths)
 **Requirements**: INLINE-CLEAN-01
 **Success Criteria** (what must be TRUE):
-  1. Running a protocol to completion in Inline mode renders a footer/toolbar with Close (and Run Again where applicable) — Insert, Copy to clipboard, and Save to note buttons are absent from the DOM (INLINE-CLEAN-01)
+  1. In every Inline Runner state (`idle`, `at-node`, `awaiting-snippet-pick`, `awaiting-loop-pick`, `awaiting-snippet-fill`, `complete`), the `.rp-copy-btn`, `.rp-save-btn`, and `.rp-insert-btn` button classes are absent from the DOM, and the `.rp-output-toolbar` container is also absent inside `.rp-inline-runner-content`; only the Close control in the modal header remains as a way to exit the modal (INLINE-CLEAN-01)
   2. Running the same protocol to completion in sidebar Runner View shows all three result-export buttons exactly as before — no cross-mode regression (INLINE-CLEAN-01)
   3. Running the same protocol to completion in tab Runner View shows all three result-export buttons exactly as before — no cross-mode regression (INLINE-CLEAN-01)
   4. The active note continues to receive answer/snippet text appended in real time as the protocol runs (the existing Inline-mode contract is unchanged) — the result-export buttons are removed because they are redundant, not because output stopped working (INLINE-CLEAN-01)
