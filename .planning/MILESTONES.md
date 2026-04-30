@@ -2,6 +2,22 @@
 
 ## v1.11 Inline Polish, Loop Hint, Donate & Canvas Library (Shipped: 2026-04-30)
 
+**Phases completed:** 6 phases, 17 plans, 11 tasks
+
+**Key accomplishments:**
+
+- One-liner:
+- `src/donate/wallets.ts`
+- Plan:
+- TWO PARALLEL TRUNKS
+- Completed:
+- Completed:
+- Completed:
+
+---
+
+## v1.11 Inline Polish, Loop Hint, Donate & Canvas Library (Shipped: 2026-04-30)
+
 **Phases completed:** 6 phases (69–74), 17 plans
 **Timeline:** 2026-04-29 → 2026-04-30 (2 days)
 **Git:** 62 commits ahead of origin

@@ -2,9 +2,9 @@
 gsd_state_version: 1.0
 milestone: v1.11
 milestone_name: Inline Polish, Loop Hint, Donate & Canvas Library
-status: milestone_complete
-stopped_at: Phase 74 complete — v1.11.0 shipped via GitHub Release; BRAT smoke install verified on clean vault
-last_updated: "2026-04-30T12:00:00.000Z"
+status: completed
+stopped_at: Phase 73 plan 03 static layer complete; awaiting Task 3 manual UAT for all three Phase 73 canvases (ОГК / ОБП / ОМТ short)
+last_updated: "2026-04-30T09:09:52.871Z"
 last_activity: 2026-04-30
 progress:
   total_phases: 6
@@ -18,7 +18,7 @@ progress:
 
 **Updated:** 2026-04-30
 **Milestone:** v1.11 Inline Polish, Loop Hint, Donate & Canvas Library — ✅ SHIPPED
-**Status:** Milestone complete
+**Status:** v1.11 milestone complete
 
 ---
 
@@ -102,6 +102,17 @@ See: `.planning/MILESTONES.md` (updated 2026-04-26 — v1.10 entry; v1.11 entry 
 - 3 open debug sessions — `inline-runner-drag-resets-size` and `inline-runner-tab-switch-resets-size` both resolved by gap-closure `92a1269` but not formally closed; `phase-27-regressions` carryover from v1.7.
 - 2 stale seeds (`duplicate-node.md`, `quick-node-creation.md`) for v1.6-delivered work in `.planning/seeds/`.
 - `@deprecated` `LoopStartNode` / `LoopEndNode` retained for Migration Check enumeration (carry-over from v1.7).
+
+## Deferred Items
+
+Items acknowledged and deferred at milestone close on 2026-04-30:
+
+| Category | Item | Status |
+|----------|------|--------|
+| debug | inline-runner-drag-resets-size | unknown — resolved by gap-closure 92a1269 but not formally closed |
+| debug | inline-runner-tab-switch-resets-size | unknown — resolved by gap-closure 92a1269 but not formally closed |
+| debug | phase-27-regressions | awaiting_human_verify — color regression root cause found in canvas-live-editor.ts PROTECTED_FIELDS |
+| uat_gap | Phase 72 HUMAN-UAT | resolved — 0 pending scenarios |
 
 ---
 

@@ -10,11 +10,11 @@ A radiologist can generate a structured, accurate protocol in seconds by answeri
 
 ## Current State
 
-**Last shipped:** v1.10 Editor Sync & Runner UX Polish — ✅ SHIPPED 2026-04-26 (GitHub Release `1.10.0`, 3 loose assets, BRAT-installable via `vegacepticon/RadiProtocol`)
+**Last shipped:** v1.11 Inline Polish, Loop Hint, Donate & Canvas Library — ✅ SHIPPED 2026-04-30 (GitHub Release `1.11.0`, 3 loose assets, BRAT-installable via `vegacepticon/RadiProtocol`)
 
-**Active milestone:** v1.11 Inline Polish, Loop Hint, Donate & Canvas Library — Phase 69 complete ✅
+**Active milestone:** None — awaiting next milestone definition
 
-**Previous milestone:** v1.9 Inline Runner Polish & Settings UX — ✅ SHIPPED 2026-04-25
+**Previous milestone:** v1.10 Editor Sync & Runner UX Polish — ✅ SHIPPED 2026-04-26
 
 ## Current Milestone: v1.11 Inline Polish, Loop Hint, Donate & Canvas Library
 
@@ -282,6 +282,24 @@ A radiologist can generate a structured, accurate protocol in seconds by answeri
 
 - ✓ GitHub Release `1.10.0` — unprefixed tag, three loose root assets, BRAT-installable on clean vault (Phase 68) — v1.10
 
+### Validated (v1.11)
+
+**Inline Runner Polish:**
+- ✓ Inline Runner redundant button cleanup — removed Insert/Copy/Save buttons from all 6 Inline states; sidebar and tab runners unaffected; regression tests added (INLINE-CLEAN-01) — v1.11
+
+**Runner UX:**
+- ✓ Loop-exit picker visual hint — desaturated green background accent on `+`-prefix exit button; hover dim effect; Phase 44 body-button styling preserved (LOOP-EXIT-01) — v1.11
+
+**Settings:**
+- ✓ Donate section — "Помочь разработке" with 9 crypto-wallet rows at top of Settings tab; copy-to-clipboard with Notice confirmation; hard-coded constants (DONATE-01) — v1.11
+
+**Canvas Library:**
+- ✓ Full algorithmic canvases (ГМ, ОБП, ОЗП, ОМТ, ПКОП) hand-built and verified end-to-end (CANVAS-LIB-01..05) — v1.11
+- ✓ Short algorithmic canvases (ОГК short, ОБП short, ОМТ short) hand-built and verified end-to-end (CANVAS-LIB-06..08) — v1.11
+
+**Distribution:**
+- ✓ GitHub Release `1.11.0` — version files aligned on `1.11.0`; annotated tag pushed; 3 loose assets; BRAT smoke install verified on clean vault (BRAT-03) — v1.11
+
 ### Deferred (Future Milestones)
 
 - [ ] Canvas selector dropdown in runner view — choose protocol without reopening command
@@ -306,18 +324,17 @@ A radiologist can generate a structured, accurate protocol in seconds by answeri
 
 ## Current State (active milestone)
 
-**Shipped:** v1.10 Editor Sync & Runner UX Polish (2026-04-26)
-**Active milestone:** v1.11 Inline Polish, Loop Hint, Donate & Canvas Library — defining requirements
-**v1.10 shipped:** 6 phases (63–68), 18 plans, 9/9 requirements satisfied, GitHub Release `1.10.0` live
+**Shipped:** v1.11 Inline Polish, Loop Hint, Donate & Canvas Library (2026-04-30)
+**Active milestone:** None — awaiting next milestone definition
+**v1.11 shipped:** 6 phases (69–74), 17 plans, 12/12 requirements satisfied, GitHub Release `1.11.0` live
 
-**Key v1.10 deliverables:**
+**Key v1.11 deliverables:**
 
-- Bidirectional Canvas ↔ Node Editor sync — canvas-text edits patch the open form's DOM in real time via `EdgeLabelSyncService` event bus + `registerFieldRef`; Snippet branch label round-trips to outgoing edge (Phase 63)
-- Node Editor polish — auto-grow on every multi-line field via shared helper; "Create text block" toolbar button (Phase 64)
-- Runner footer row — "back" + labeled "skip" on same row, uniform across sidebar/tab/inline (Phase 65)
-- Step-back reliability + scroll pinning — `UndoEntry.restoreStatus`, `_stepBackInFlight` guard, removal of dead "Processing…" branch, unconditional scroll-to-bottom in `renderPreviewZone` (Phase 66)
-- Inline Runner resizable modal + file-bound Snippet parity — native CSS `resize: both` + `ResizeObserver` debounced save with viewport clamp; root-cause fix in shared runner-core for ALL traversal paths (loop body, direct edge), not just sibling-button (Phase 67)
-- GitHub Release `1.10.0` — three loose BRAT assets, BRAT smoke verified on clean vault (Phase 68)
+- Inline Runner redundant button cleanup — removed Insert/Copy/Save from all 6 Inline states; sidebar/tab unaffected; 6-state absence regression tests + cross-mode presence test (Phase 69)
+- Loop-exit picker visual hint — desaturated green `.rp-loop-exit-btn.rp-loop-exit-btn` specificity-doubled selector; hover dim; Phase 44 body-btn preserved byte-for-byte (Phase 70)
+- Settings donate section — "Помочь разработке" with 9 wallet rows (EVM shared across 6 networks + BTC + SOL + TRX); copy-to-clipboard with Notice; zero persistence (Phase 71)
+- Canvas Library — 8 algorithmic canvases (ГМ, ОБП, ОЗП, ОМТ, ПКОП full + ОГК/ОБП/ОМТ short) hand-built in author's vault and verified end-to-end (Phases 72–73)
+- GitHub Release `1.11.0` — version aligned; annotated tag pushed; 3 loose assets; BRAT smoke verified on clean vault (Phase 74)
 
 ## Context
 
@@ -443,4 +460,4 @@ A radiologist can generate a structured, accurate protocol in seconds by answeri
 4. Update Context with current state
 
 ---
-*Last updated: 2026-04-29 — v1.11 milestone (Inline Polish, Loop Hint, Donate & Canvas Library) opened; defining requirements.*
+*Last updated: 2026-04-30 — v1.11 milestone shipped; awaiting next milestone definition.*
