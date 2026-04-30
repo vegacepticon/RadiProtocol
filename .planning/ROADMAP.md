@@ -328,3 +328,48 @@ Plans:
 
 Plans:
 - [ ] TBD (promote with `/gsd-review-backlog` when ready)
+
+### Phase 999.3: Fix the 523 pre-existing eslint findings (BACKLOG)
+
+**Goal:** Resolve the 517 errors and 6 warnings that surfaced when `eslint` was promoted to a direct devDependency in quick task `260430-uas` (commit `07aa79d`). The dominant rule violation is `obsidianmd/no-static-styles-assignment` across `src/views/` (Obsidian community-plugin lint rule that forbids inline `el.style.foo = ...` assignments — they should be CSS classes in `src/styles/*.css` instead). Other rules in the long tail to be inventoried during `/gsd-spec-phase 999.3`.
+
+**Why:** The lint findings have been silently accumulating for many milestones because `eslint` was only present transitively and `npm run lint` was never run. CONCERNS.md flagged the dependency declaration gap (LOW-6); fixing that exposed the inventory. Cleaning these up aligns the codebase with Obsidian's published plugin guidelines (relevant for community-plugin review status if/when the plugin is submitted).
+
+**Requirements:** TBD (derive during `/gsd-spec-phase 999.3` — likely "0 eslint errors on `npm run lint`", "all `el.style.foo = ...` assignments converted to class toggles + CSS rules", and rule-specific exit criteria for the long tail).
+
+**Plans:** 0 plans
+**Estimate:** 1 plan if the tail is small once the static-style violations are converted; 2-3 plans if the long tail is heavier than expected. Pairs naturally with 999.4 — fix the violations, then turn on the gate that prevents recurrence.
+
+**Pairs with:** Phase 999.4 (lint+test automation gate).
+
+Plans:
+- [ ] TBD (promote with `/gsd-review-backlog` when ready)
+
+### Phase 999.4: Automate the lint + test gate (pre-commit + CI) (BACKLOG)
+
+**Goal:** Add an automatic gate so `npm run lint` and `npm test` run before code lands on `main`, preventing recurrence of the kind of silent drift that produced the 523-finding surprise. Two layers:
+
+  1. **Local pre-commit hook** — fast feedback loop, runs `npm test` (and ideally `eslint --max-warnings=0` on staged `*.ts` files only, not the whole tree). Either via `husky` + `lint-staged`, or a hand-written `.git/hooks/pre-commit` script tracked under `.githooks/` and wired through `core.hooksPath`. The hand-written path avoids adding `husky` as a dependency for a single hook.
+  2. **GitHub Actions CI** — catches what slips past the local hook (collaborator without hook installed, `--no-verify` bypass, etc.). Workflow on `push` to `main` and on PRs: `npm ci && npm run build && npm run lint && npm test`. Fail the workflow on any non-zero exit.
+
+**Why:** The whole reason CONCERNS.md surfaced the 523 lint findings was that nothing automatically ran `eslint` since the script was added. Same risk applies to test regressions — `npm test` is fast (3 seconds) but only runs when a developer remembers. A two-layer gate (local + CI) is industry-standard for this size of project.
+
+**Why two layers, not one:**
+- Pre-commit only — collaborators without hook setup, or `git commit --no-verify`, slip through silently. Project history already shows `--no-verify` usage (e.g. `git commit --no-verify` in the recent quick-task commits).
+- CI only — slow feedback. Lint/test failures get noticed only after push, requiring a fixup commit each time.
+
+**Requirements:** TBD (derive during `/gsd-spec-phase 999.4`):
+- Pre-commit blocks commits that add `eslint` errors on staged files
+- Pre-commit blocks commits where `npm test` fails
+- CI workflow runs on push to main and on PRs, failing on any of: build, lint (errors only, not warnings), or test failure
+- Both gates respect `--no-verify` semantics (local can be bypassed, CI cannot — that's the whole point of CI as the safety net)
+
+**Plans:** 0 plans
+**Estimate:** 1 plan, ~2-3 hours. Mostly mechanical — one `.github/workflows/ci.yml`, one pre-commit script, one `package.json` edit, one `npm install --save-dev lint-staged` (or equivalent).
+
+**Pairs with:** Phase 999.3 — the gate must turn on AFTER the existing 523 findings are fixed; otherwise every commit fails.
+
+**Strict ordering:** 999.3 → 999.4. Reverse order is unworkable (gate would block all commits until 523 findings cleared in one go).
+
+Plans:
+- [ ] TBD (promote with `/gsd-review-backlog` when ready)
