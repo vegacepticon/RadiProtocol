@@ -10,7 +10,7 @@
 //   - Selecting a descendant of the source folder → Russian Notice, performMove NOT called
 //
 // Strategy: stub SnippetTreePicker + Obsidian Modal to capture construction, open/close,
-// and onSelect. Stub FolderPickerModal + other modals too.
+// and onSelect. Stub other modals too.
 
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 
@@ -236,12 +236,6 @@ vi.mock('../../views/confirm-modal', () => ({
     constructor(_a: unknown, _o: unknown) {}
     open(): void {}
     close(): void {}
-  },
-}));
-vi.mock('../../views/folder-picker-modal', () => ({
-  FolderPickerModal: class {
-    constructor(_a: unknown, _f: string[], _c: (f: string) => void) {}
-    open(): void {}
   },
 }));
 vi.mock('../../snippets/canvas-ref-sync', () => ({

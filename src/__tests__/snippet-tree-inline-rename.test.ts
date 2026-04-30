@@ -221,13 +221,6 @@ vi.mock('../views/confirm-modal', () => ({
     close(): void {}
   },
 }));
-vi.mock('../views/folder-picker-modal', () => ({
-  FolderPickerModal: class {
-    constructor(_a: unknown, _f: string[], _c: (f: string) => void) {}
-    open(): void {}
-  },
-}));
-
 // --- Module under test ---------------------------------------------------
 import { SnippetManagerView } from '../views/snippet-manager-view';
 import type { Snippet } from '../snippets/snippet-model';

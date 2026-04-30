@@ -464,8 +464,8 @@ export class SnippetService {
 
   /**
    * Phase 34 (D-06): Return the sorted list of every folder under the snippet
-   * root, including the root itself. Used by FolderPickerModal and by
-   * SnippetEditorModal's "Папка" field. Delegates to listFolderDescendants.
+   * root, including the root itself. Used by SnippetEditorModal's "Папка" field
+   * and SnippetTreePicker. Delegates to listFolderDescendants.
    */
   async listAllFolders(): Promise<string[]> {
     const root = this.settings.snippetFolderPath;

@@ -241,23 +241,6 @@ vi.mock('../snippets/canvas-ref-sync', () => ({
   rewriteCanvasRefs: (app: unknown, mapping: Map<string, string>) => rewriteCanvasRefsSpy(app, mapping),
 }));
 
-// --- Spy on FolderPickerModal construction -------------------------------
-interface FolderPickerCall {
-  folders: string[];
-  onChoose: (folder: string) => void;
-}
-const folderPickerCtorSpy = vi.fn();
-let lastPickerCall: FolderPickerCall | null = null;
-vi.mock('../views/folder-picker-modal', () => ({
-  FolderPickerModal: class {
-    constructor(_app: unknown, folders: string[], onChoose: (folder: string) => void) {
-      folderPickerCtorSpy(folders, onChoose);
-      lastPickerCall = { folders, onChoose };
-    }
-    open(): void {}
-  },
-}));
-
 // --- Stub other modal imports referenced in snippet-manager-view ---------
 vi.mock('../views/snippet-editor-modal', () => ({
   SnippetEditorModal: class {
@@ -405,8 +388,6 @@ describe('SnippetManagerView — drag-and-drop (Phase 34 Plan 02)', () => {
 
   beforeEach(() => {
     rewriteCanvasRefsSpy.mockClear();
-    folderPickerCtorSpy.mockClear();
-    lastPickerCall = null;
     lastMenuItems = [];
   });
 
@@ -577,9 +558,7 @@ describe('SnippetManagerView — drag-and-drop (Phase 34 Plan 02)', () => {
     const root = '.radiprotocol/snippets';
 
     beforeEach(() => {
-      folderPickerCtorSpy.mockClear();
       rewriteCanvasRefsSpy.mockClear();
-      lastPickerCall = null;
       lastMenuItems = [];
       // Phase 51 Plan 04 D-07 — new Modal + SnippetTreePicker instrumentation
       modalInstances.length = 0;
@@ -621,7 +600,7 @@ describe('SnippetManagerView — drag-and-drop (Phase 34 Plan 02)', () => {
       const node = { kind: 'file' as const, path: `${root}/note.json`, name: 'note', snippetKind: 'json' as const };
       await (view as any).openMovePicker(node);
 
-      // Phase 51 D-07 — Modal + SnippetTreePicker replaced FolderPickerModal
+      // Phase 51 D-07 — Modal + SnippetTreePicker is the picker surface
       expect(modalInstances.length).toBe(1);
       expect(modalInstances[0]!.isOpen).toBe(true);
       expect(pickerInstances.length).toBe(1);

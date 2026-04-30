@@ -45,7 +45,6 @@ Multiple modals extend `Modal` or `SuggestModal`:
 - `CanvasSwitchModal` (`src/views/canvas-switch-modal.ts`) — canvas file picker
 - `ResumeSessionModal` (`src/views/resume-session-modal.ts`) — session resume prompt
 - `NodePickerModal` (`src/views/node-picker-modal.ts`) — node selection (extends `SuggestModal`)
-- `FolderPickerModal` (`src/views/folder-picker-modal.ts`) — folder selection (extends `SuggestModal`)
 - `ConfirmModal` (`src/views/confirm-modal.ts`) — generic confirmation dialog
 - `NodeSwitchGuardModal` (`src/views/node-switch-guard-modal.ts`) — unsaved changes guard
 
