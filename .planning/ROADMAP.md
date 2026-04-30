@@ -247,9 +247,9 @@ Full details: `.planning/milestones/v1.10-ROADMAP.md`
   2. A short-version ОБП canvas exists alongside the full ОБП canvas (CANVAS-LIB-02 from Phase 72), runs end-to-end, and produces a shortened ОБП report matching the short-ОБП `.md` text template (CANVAS-LIB-07)
   3. A short-version ОМТ canvas exists alongside the full ОМТ canvas (CANVAS-LIB-04 from Phase 72), runs end-to-end, and produces a shortened ОМТ report matching the short-ОМТ `.md` text template (CANVAS-LIB-08)
 **Plans:** 3 plans
-- [x] 71-01-PLAN.md — Constants module `src/donate/wallets.ts` + unit test (NTC-D-03, NTC-D-04)
-- [x] 71-02-PLAN.md — New `src/styles/donate-section.css` + register in `esbuild.config.mjs` CSS_FILES (VIS-D-02, VIS-D-03)
-- [x] 71-03-PLAN.md — Insert «Помочь разработке» section into `src/settings.ts.display()` + dev-vault UAT (Row-D, EVM-D, NTC-D-01..02)
+- [ ] 73-01-PLAN.md — ОГК short single-trunk linear canvas (CANVAS-LIB-06): 4 sections (ЛЕГКИЕ, ТРАХЕЯ И БРОНХИ, СРЕДОСТЕНИЕ, ПЛЕВРАЛЬНЫЕ ПОЛОСТИ) + terminal Заключение/Рекомендации, no fan-out, no loops
+- [ ] 73-02-PLAN.md — ОБП short single-trunk linear canvas (CANVAS-LIB-07): 3 sections (ПАРЕНХИМАТОЗНЫЕ ОРГАНЫ, ЖЕЛЧНЫЙ ПУЗЫРЬ, ЗАБРЮШИННЫЕ ЛИМФОУЗЛЫ), no contrast fan-out, no loops
+- [ ] 73-03-PLAN.md — ОМТ short canvas with sex 2-way fan-out (CANVAS-LIB-08): Жен sub-flow (МАТКА, ПРИДАТКИ, ПОДВЗДОШНЫЕ ЛИМФОУЗЛЫ, КОСТНЫЕ СТРУКТУРЫ) + Муж sub-flow (ПРОСТАТА, СЕМ.ПУЗ, ПОДВЗДОШНЫЕ ЛИМФОУЗЛЫ, КОСТНЫЕ СТРУКТУРЫ), shared terminal per D-07
 
 ### Phase 74: GitHub Release v1.11.0
 **Goal**: Ship a fresh GitHub Release `1.11.0` following the BRAT-installable pattern established by Phases 55 (v1.8.0), 62 (v1.9.0), and 68 (v1.10.0): version files aligned, production build artifacts generated, three loose root assets attached at the GitHub release, unprefixed annotated tag pushed, and end-to-end BRAT install on a clean Obsidian vault verified.
@@ -288,5 +288,5 @@ v1.11 in progress — Phase 69 is next. Phases 69, 70, 71 are independent and co
 | 70 | v1.11 | 1/1 | Complete    | 2026-04-29 |
 | 71 | v1.11 | 3/3 | Complete    | 2026-04-29 |
 | 72 | v1.11 | 5/5 | Complete    | 2026-04-30 |
-| 73 | v1.11 | 0/? | Not started | — |
+| 73 | v1.11 | 0/3 | Planning   | — |
 | 74 | v1.11 | 0/? | Not started | — |
