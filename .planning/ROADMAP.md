@@ -37,7 +37,7 @@ _v1.11 shipped 2026-04-30. Next milestone not yet defined._
 - [x] Phase 73: Canvas Library — Short Algorithmic Canvases (3/3 plans) — completed 2026-04-29
 - [x] Phase 74: GitHub Release v1.11.0 (3/3 plans) — shipped 2026-04-30
 
-Full details: `.planning/milestones/v1.11-ROADMAP.md`
+Full details: `.planning/archive/milestones/v1.11-ROADMAP.md`
 
 </details>
 
@@ -52,7 +52,7 @@ Full details: `.planning/milestones/v1.11-ROADMAP.md`
 - [x] Phase 6: Loop Support (3/3 plans) — completed 2026-04-07
 - [x] Phase 7: Mid-Session Save and Resume (3/3 plans) — completed 2026-04-07
 
-Full details: `.planning/milestones/v1.0-ROADMAP.md`
+Full details: `.planning/archive/milestones/v1.0-ROADMAP.md`
 
 </details>
 
@@ -68,7 +68,7 @@ Full details: `.planning/milestones/v1.0-ROADMAP.md`
 - [x] Phase 18: CSS Gap Fixes (INSERTED) — completed 2026-04-10
 - [x] Phase 19: Phase 12-14 Formal Verification — completed 2026-04-10
 
-Full details: `.planning/milestones/v1.2-ROADMAP.md`
+Full details: `.planning/archive/milestones/v1.2-ROADMAP.md`
 
 </details>
 
@@ -77,7 +77,7 @@ Full details: `.planning/milestones/v1.2-ROADMAP.md`
 
 - [x] Phase 27: Interactive Placeholder Editor (1/1 plans) — completed 2026-04-12
 
-Full details: `.planning/milestones/v1.3-ROADMAP.md`
+Full details: `.planning/archive/milestones/v1.3-ROADMAP.md`
 
 </details>
 
@@ -89,7 +89,7 @@ Full details: `.planning/milestones/v1.3-ROADMAP.md`
 - [x] Phase 30: Snippet Node — Runner Integration (3/3 plans) — completed 2026-04-14
 - [x] Phase 31: Mixed Answer + Snippet Branching at Question Nodes (4/4 plans) — completed 2026-04-15
 
-Full details: `.planning/milestones/v1.4-ROADMAP.md`
+Full details: `.planning/archive/milestones/v1.4-ROADMAP.md`
 
 </details>
 
@@ -101,7 +101,7 @@ Full details: `.planning/milestones/v1.4-ROADMAP.md`
 - [x] Phase 34: Drag-and-Drop, Context Menu, Rename, Move with Canvas Reference Updates (6/6 plans) — completed 2026-04-15
 - [x] Phase 35: Markdown Snippets in Protocol Runner (2/2 plans) — completed 2026-04-16
 
-Full details: `.planning/milestones/v1.5-ROADMAP.md`
+Full details: `.planning/archive/milestones/v1.5-ROADMAP.md`
 
 </details>
 
@@ -116,7 +116,7 @@ Full details: `.planning/milestones/v1.5-ROADMAP.md`
 - [x] Phase 41: Live Canvas Update on Folder Rename (1/1 plans) — completed 2026-04-16
 - [x] Phase 42: Snippet Node Quick-Create Button & Double-Click Node Selection Fix (4/4 plans) — completed 2026-04-17
 
-Full details: `.planning/milestones/v1.6-ROADMAP.md`
+Full details: `.planning/archive/milestones/v1.6-ROADMAP.md`
 
 </details>
 
@@ -128,7 +128,7 @@ Full details: `.planning/milestones/v1.6-ROADMAP.md`
 - [x] Phase 45: Loop Editor Form, Picker & Color Map (3/3 plans) — completed 2026-04-18
 - [x] Phase 46: Free-Text-Input Removal (3/3 plans) — completed 2026-04-18
 
-Full details: `.planning/milestones/v1.7-ROADMAP.md`
+Full details: `.planning/archive/milestones/v1.7-ROADMAP.md`
 
 </details>
 
@@ -150,7 +150,7 @@ Full details: `.planning/milestones/v1.7-ROADMAP.md`
 - [x] Phase 57: REQUIREMENTS Traceability Refresh + Phase 54 Promotion (GAP CLOSURE) (1/1 plans) — completed 2026-04-21
 - [x] Phase 58: VERIFICATION.md Backfill + Stale Frontmatter Flip (GAP CLOSURE) — completed 2026-04-21
 
-Full details: `.planning/milestones/v1.8-ROADMAP.md`
+Full details: `.planning/archive/milestones/v1.8-ROADMAP.md`
 
 </details>
 
@@ -162,7 +162,7 @@ Full details: `.planning/milestones/v1.8-ROADMAP.md`
 - [x] Phase 61: Settings Folder Autocomplete (4/4 plans) — completed 2026-04-24
 - [x] Phase 62: BRAT Release v1.9.0 (3/3 plans) — shipped 2026-04-25
 
-Full details: `.planning/milestones/v1.9-ROADMAP.md`
+Full details: `.planning/archive/milestones/v1.9-ROADMAP.md`
 
 </details>
 
@@ -176,7 +176,7 @@ Full details: `.planning/milestones/v1.9-ROADMAP.md`
 - [x] Phase 67: Inline Runner Resizable Modal & File-Bound Snippet Parity (3/3 plans) — completed 2026-04-25, UAT 8/8 PASS
 - [x] Phase 68: GitHub Release v1.10.0 (4/4 plans) — shipped 2026-04-26 (Release 1.10.0 live, BRAT smoke verified)
 
-Full details: `.planning/milestones/v1.10-ROADMAP.md`
+Full details: `.planning/archive/milestones/v1.10-ROADMAP.md`
 
 </details>
 

@@ -63,7 +63,7 @@
 - Three open debug sessions — `inline-runner-drag-resets-size` and `inline-runner-tab-switch-resets-size` both resolved by gap-closure `92a1269` but not formally closed; `phase-27-regressions` carryover from v1.7 — color regression root cause documented.
 - Audit at close: `tech_debt` (no blockers); accepted per audit Path A (publish first, close with documented tech debt).
 
-**Archive:** `.planning/milestones/v1.10-ROADMAP.md`, `.planning/milestones/v1.10-REQUIREMENTS.md`, `.planning/milestones/v1.10-MILESTONE-AUDIT.md`, `.planning/milestones/v1.10-phases/` (includes `v1.10-INTEGRATION-CHECK.md`)
+**Archive:** `.planning/archive/milestones/v1.10-ROADMAP.md`, `.planning/archive/milestones/v1.10-REQUIREMENTS.md`, `.planning/archive/milestones/v1.10-MILESTONE-AUDIT.md`, `.planning/archive/milestones/v1.10-phases/` (includes `v1.10-INTEGRATION-CHECK.md`)
 
 ---
 
@@ -83,7 +83,7 @@
 
 **Known deferred items at close:** 8 items (see STATE.md `## Deferred Items`) — 1 v1.7 carryover debug session, 2 UAT status-field oversights (Phase 59 passed / Phase 61 unknown — both with 0 pending scenarios), 14 pending todos (most are stale files for v1.6–v1.8-delivered work)
 
-**Archive:** `.planning/milestones/v1.9-ROADMAP.md`, `.planning/milestones/v1.9-REQUIREMENTS.md`, `.planning/milestones/v1.9-phases/`
+**Archive:** `.planning/archive/milestones/v1.9-ROADMAP.md`, `.planning/archive/milestones/v1.9-REQUIREMENTS.md`, `.planning/archive/milestones/v1.9-phases/`
 
 ---
 
@@ -107,7 +107,7 @@
 
 **Known deferred items at close:** 8 items (see STATE.md `## Deferred Items`) — 1 v1.7 carryover debug session, 2 stale UAT status fields, 5 stale todo files for delivered work
 
-**Archive:** `.planning/milestones/v1.8-ROADMAP.md`, `.planning/milestones/v1.8-REQUIREMENTS.md`, `.planning/milestones/v1.8-MILESTONE-AUDIT.md`
+**Archive:** `.planning/archive/milestones/v1.8-ROADMAP.md`, `.planning/archive/milestones/v1.8-REQUIREMENTS.md`, `.planning/archive/milestones/v1.8-MILESTONE-AUDIT.md`
 
 ---
 
@@ -128,7 +128,7 @@
 
 **Known deferred items at close:** 8 items (see STATE.md `## Deferred Items`) — 3 Nyquist gaps (Phase 43/44/46 VALIDATION.md missing or draft), 2 stale verification frontmatters (Phase 44/45 `human_needed` not promoted despite UAT commits), 1 legacy debug session (phase-27-regressions), 4 legacy todo files whose work was delivered in v1.5/v1.6 but the files were never deleted, plus 6 code-review info/warning items tracked for future cleanup
 
-**Archive:** `.planning/milestones/v1.7-ROADMAP.md`, `.planning/milestones/v1.7-REQUIREMENTS.md`, `.planning/milestones/v1.7-MILESTONE-AUDIT.md`
+**Archive:** `.planning/archive/milestones/v1.7-ROADMAP.md`, `.planning/archive/milestones/v1.7-REQUIREMENTS.md`, `.planning/archive/milestones/v1.7-MILESTONE-AUDIT.md`
 
 ---
 
@@ -165,7 +165,7 @@
 - All 34 v1.5 requirements satisfied; milestone audit passed with tech_debt status (no blockers); 5/5 cross-phase E2E flows verified; 20/20 integration points connected
 - Known deferred items: Node Editor stale subfolderPath display (cosmetic), chip editor English labels (Phase 27 legacy), 3 Phase 26 RED test stubs, Nyquist validation draft for all 4 phases
 
-**Archive:** `.planning/milestones/v1.5-ROADMAP.md`, `.planning/milestones/v1.5-REQUIREMENTS.md`, `.planning/milestones/v1.5-MILESTONE-AUDIT.md`
+**Archive:** `.planning/archive/milestones/v1.5-ROADMAP.md`, `.planning/archive/milestones/v1.5-REQUIREMENTS.md`, `.planning/archive/milestones/v1.5-MILESTONE-AUDIT.md`
 
 ---
 
@@ -184,7 +184,7 @@
 - All 11 v1.4 requirements satisfied; milestone audit re-passed after Phase 30 retroactive verification + Phase 29 live-vault UAT closure + Phase 31 UAT 5/5
 - Known deferred tech debt: Nyquist VALIDATION.md still in draft for phases 28–31 (matches existing v1.2 retroactive-Nyquist backlog entry)
 
-**Archive:** `.planning/milestones/v1.4-ROADMAP.md`, `.planning/milestones/v1.4-REQUIREMENTS.md`, `.planning/milestones/v1.4-MILESTONE-AUDIT.md`, `.planning/milestones/v1.4-phases/`
+**Archive:** `.planning/archive/milestones/v1.4-ROADMAP.md`, `.planning/archive/milestones/v1.4-REQUIREMENTS.md`, `.planning/archive/milestones/v1.4-MILESTONE-AUDIT.md`, `.planning/archive/milestones/v1.4-phases/`
 
 ---
 
@@ -202,7 +202,7 @@
 - Phase 27: UUID guard in `autoSaveAfterDrop()` prevents saving unsaved drafts; 25 automated Vitest tests cover DnD guard conditions, splice algorithm, and UUID guard
 - Code review found 5 issues (WR-01–05); all fixed and verified; 5/5 UAT passed in live Obsidian
 
-**Archive:** `.planning/milestones/v1.3-ROADMAP.md`, `.planning/milestones/v1.3-MILESTONE-AUDIT.md`
+**Archive:** `.planning/archive/milestones/v1.3-ROADMAP.md`, `.planning/archive/milestones/v1.3-MILESTONE-AUDIT.md`
 
 ---
 
@@ -221,7 +221,7 @@
 - Phase 17: Fixed free-text-input/text-block node type read-back when canvas open; fixed Add button in snippet placeholder mini-form (BUG-02, BUG-03, BUG-04)
 - Phase 18–19: Closed 3 CSS styling gaps; wrote retroactive VERIFICATION.md for Phases 12–14; 8/8 UAT passed in live Obsidian
 
-**Archive:** `.planning/milestones/v1.2-ROADMAP.md`, `.planning/milestones/v1.2-MILESTONE-AUDIT.md`
+**Archive:** `.planning/archive/milestones/v1.2-ROADMAP.md`, `.planning/archive/milestones/v1.2-MILESTONE-AUDIT.md`
 
 ---
 
@@ -241,6 +241,6 @@
 - Phase 6: Loop engine with LoopContext stack, undo across loop boundaries, RunnerView loop-end UI with iteration label and loop again/done buttons — 3-lesion protocol confirmed end-to-end
 - Phase 7: SessionService auto-save/resume, ResumeSessionModal, canvas mtime check, snippet content snapshot, Set→Array serialization, onLayoutReady deferral fix — all SESSION requirements verified
 
-**Archive:** `.planning/milestones/v1.0-ROADMAP.md`, `.planning/milestones/v1.0-REQUIREMENTS.md`
+**Archive:** `.planning/archive/milestones/v1.0-ROADMAP.md`, `.planning/archive/milestones/v1.0-REQUIREMENTS.md`
 
 ---
