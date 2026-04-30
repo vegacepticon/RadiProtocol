@@ -28,15 +28,15 @@
 
 The eight canvases below are authored by hand in the author's vault using the existing `RadiProtocol` editor + Snippet system, modeled on the reference `ОГК 1.10.0.canvas` and the `.md` text templates plus the `SNIPPETS` folder structure stored in `Z:\projects\references\`. They are **not** bundled with the plugin distribution and **not** committed to this repository — the requirement is satisfied when each canvas is fully runnable end-to-end in a local Obsidian session and the author confirms it produces a structurally complete protocol report.
 
-- [ ] **CANVAS-LIB-01**: An algorithmic canvas for the **ГМ** (головной мозг) area exists in the author's vault and runs end-to-end in the Protocol Runner using the existing graph node kinds (Question / Answer / Text block / Snippet / Loop). The output is a structurally complete ГМ report based on the corresponding `.md` text template from `Z:\projects\references\`.
+- [x] **CANVAS-LIB-01**: An algorithmic canvas for the **ГМ** (головной мозг) area exists in the author's vault and runs end-to-end in the Protocol Runner using the existing graph node kinds (Question / Answer / Text block / Snippet / Loop). The output is a structurally complete ГМ report based on the corresponding `.md` text template from `Z:\projects\references\`.
 
-- [ ] **CANVAS-LIB-02**: An algorithmic canvas for the **ОБП** (органы брюшной полости — full version) area exists and runs end-to-end with output matching the ОБП `.md` text template.
+- [x] **CANVAS-LIB-02**: An algorithmic canvas for the **ОБП** (органы брюшной полости — full version) area exists and runs end-to-end with output matching the ОБП `.md` text template.
 
-- [ ] **CANVAS-LIB-03**: An algorithmic canvas for the **ОЗП** (органы забрюшинного пространства) area exists and runs end-to-end with output matching the ОЗП `.md` text template.
+- [x] **CANVAS-LIB-03**: An algorithmic canvas for the **ОЗП** (органы забрюшинного пространства) area exists and runs end-to-end with output matching the ОЗП `.md` text template.
 
-- [ ] **CANVAS-LIB-04**: An algorithmic canvas for the **ОМТ** (органы малого таза — full version) area exists and runs end-to-end with output matching the ОМТ `.md` text template.
+- [x] **CANVAS-LIB-04**: An algorithmic canvas for the **ОМТ** (органы малого таза — full version) area exists and runs end-to-end with output matching the ОМТ `.md` text template.
 
-- [ ] **CANVAS-LIB-05**: An algorithmic canvas for the **ПКОП** (пояснично-крестцовый отдел позвоночника) area exists and runs end-to-end with output matching the ПКОП `.md` text template.
+- [x] **CANVAS-LIB-05**: An algorithmic canvas for the **ПКОП** (пояснично-крестцовый отдел позвоночника) area exists and runs end-to-end with output matching the ПКОП `.md` text template.
 
 - [ ] **CANVAS-LIB-06**: A short-version algorithmic canvas for **ОГК** (органы грудной клетки) exists alongside the existing ОГК 1.10.0 reference canvas, runs end-to-end, and produces a shortened ОГК report matching the short-ОГК `.md` text template.
 

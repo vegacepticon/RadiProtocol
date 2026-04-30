@@ -287,6 +287,6 @@ v1.11 in progress — Phase 69 is next. Phases 69, 70, 71 are independent and co
 | 69 | v1.11 | 2/2 | Complete | 2026-04-29 |
 | 70 | v1.11 | 1/1 | Complete    | 2026-04-29 |
 | 71 | v1.11 | 3/3 | Complete    | 2026-04-29 |
-| 72 | v1.11 | 5/5 | Complete   | 2026-04-30 |
+| 72 | v1.11 | 5/5 | Complete    | 2026-04-30 |
 | 73 | v1.11 | 0/? | Not started | — |
 | 74 | v1.11 | 0/? | Not started | — |
