@@ -1,33 +1,33 @@
 ---
 gsd_state_version: 1.0
-milestone: v1.11
-milestone_name: Inline Polish, Loop Hint, Donate & Canvas Library
-status: completed
-stopped_at: Phase 73 plan 03 static layer complete; awaiting Task 3 manual UAT for all three Phase 73 canvases (ОГК / ОБП / ОМТ short)
-last_updated: "2026-04-30T17:14:40.145Z"
-last_activity: 2026-04-30 - Completed quick task 260430-s48: Settings donate reorder & collapse
+milestone: v1.12
+milestone_name: Maintenance & Tech Debt
+status: planning
+stopped_at: ""
+last_updated: "2026-04-30T18:55:00.000Z"
+last_activity: 2026-04-30 - Milestone v1.12 started
 progress:
-  total_phases: 6
-  completed_phases: 6
-  total_plans: 17
-  completed_plans: 17
-  percent: 100
+  total_phases: 0
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
+  percent: 0
 ---
 
 # RadiProtocol — Project State
 
 **Updated:** 2026-04-30
-**Milestone:** v1.11 Inline Polish, Loop Hint, Donate & Canvas Library — ✅ SHIPPED
-**Status:** v1.11 milestone complete
+**Milestone:** v1.12 Maintenance & Tech Debt — defining requirements
+**Status:** Defining requirements
 
 ---
 
 ## Current Position
 
-Phase: 74
-Plan: 74-03 complete
-Status: BRAT smoke install verified; all v1.11 requirements satisfied
-Last activity: 2026-04-30 - Completed quick task 260430-uas: LOW-cleanup batch from CONCERNS.md
+Phase: Not started (defining requirements)
+Plan: —
+Status: Defining requirements
+Last activity: 2026-04-30 — Milestone v1.12 started
 
 ## Project Reference
 

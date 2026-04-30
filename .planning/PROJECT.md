@@ -12,20 +12,32 @@ A radiologist can generate a structured, accurate protocol in seconds by answeri
 
 **Last shipped:** v1.11 Inline Polish, Loop Hint, Donate & Canvas Library — ✅ SHIPPED 2026-04-30 (GitHub Release `1.11.0`, 3 loose assets, BRAT-installable via `vegacepticon/RadiProtocol`)
 
-**Active milestone:** None — awaiting next milestone definition
+**Active milestone:** v1.12 Maintenance & Tech Debt — started 2026-04-30
 
-**Previous milestone:** v1.10 Editor Sync & Runner UX Polish — ✅ SHIPPED 2026-04-26
+**Previous milestone:** v1.11 Inline Polish, Loop Hint, Donate & Canvas Library — ✅ SHIPPED 2026-04-30
 
-## Current Milestone: v1.11 Inline Polish, Loop Hint, Donate & Canvas Library
+## Current Milestone: v1.12 Maintenance & Tech Debt
+
+**Goal:** Pay down accumulated tech debt surfaced by the 2026-04-30 `CONCERNS.md` scan — eliminate render-logic duplication between sidebar and inline runners, decompose the editor-panel god-file, fix the 523 pre-existing eslint findings exposed when `eslint` was promoted to a direct devDependency, and install an automatic lint+test gate so the same drift cannot recur. No new user-facing features; no canvas authoring; no new domain.
+
+**Target features (all internal — no UX surface change for end users):**
+- Shared render module powering both `RunnerView` (sidebar/tab) and `InlineRunnerModal` (floating modal); collapsed parallel test trees (was: ~2350 LOC mirrored across two files)
+- `editor-panel-view.ts` decomposed into per-node-kind form modules; existing 6 test files preserved 1:1
+- `npm run lint` exits 0 on `main` — all `obsidianmd/no-static-styles-assignment` violations and the long tail converted or rule-tuned
+- Pre-commit hook blocking commits that introduce lint errors or test failures (local fast-feedback layer)
+- GitHub Actions CI workflow blocking pushes/PRs to `main` on build/lint/test failure (safety net for `--no-verify` and collaborators without local hooks)
+- No GitHub Release — v1.12 is internal-only; ships as a follow-on `1.11.x` patch only if a regression is found and fixed during this milestone
+
+## Previous Milestone: v1.11 Inline Polish, Loop Hint, Donate & Canvas Library
 
 **Goal:** Close redundancy in Inline Runner, make loop-exit visually obvious, open a path for crypto-donation support of development, and produce a set of algorithmic canvases for primary radiology areas (full ГМ, ОБП, ОЗП, ОМТ, ПКОП and short ОГК, ОБП, ОМТ) using the existing ОГК 1.10.0 canvas + Z:\projects\references SNIPPETS structure as reference.
 
-**Target features:**
-- Inline Runner — remove redundant Insert / Copy to clipboard / Save to note buttons (sidebar+tab keep them)
+**Delivered features:**
+- Inline Runner — removed redundant Insert / Copy to clipboard / Save to note buttons (sidebar+tab kept them)
 - Loop-exit picker button visual hint — `+`-prefix label gets a subtle background/accent distinct from body-branch buttons (sidebar/tab/inline)
 - Donate section at the top of Settings tab — copy-to-clipboard rows for 9 crypto wallet addresses (1 EVM address shared across ETH/Linea/Base/Arbitrum/BNB/Polygon, plus BTC, Solana, Tron)
-- Authoring 8 algorithmic `.canvas` files (ГМ / ОБП / ОЗП / ОМТ / ПКОП full + short ОГК / ОБП / ОМТ) in author's vault, modeled on ОГК 1.10.0 structure — local-only library, not bundled with the plugin
-- GitHub Release `1.11.0` — BRAT-installable per Phases 55/62/68 pattern
+- 8 algorithmic `.canvas` files (ГМ / ОБП / ОЗП / ОМТ / ПКОП full + short ОГК / ОБП / ОМТ) authored in author's vault — local-only library, not bundled
+- GitHub Release `1.11.0` — BRAT-installable
 
 ## Requirements
 
