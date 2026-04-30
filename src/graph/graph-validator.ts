@@ -10,7 +10,7 @@ import { nodeLabel as sharedNodeLabel, isLabeledEdge, isExitEdge, stripExitPrefi
  * Phase 51 D-04 (PICKER-01) — options bag for GraphValidator.
  * Optional to preserve the zero-arg construction used by pure-test sites.
  */
-export interface GraphValidatorOptions {
+interface GraphValidatorOptions {
   /** Phase 51 D-04: probe used to verify radiprotocol_snippetPath references an existing snippet file.
    *  Returns true if the file exists under snippetFolderPath. When undefined (legacy zero-arg
    *  construction), the D-04 check is skipped silently. Production callers inject

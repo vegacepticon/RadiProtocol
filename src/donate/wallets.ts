@@ -12,7 +12,7 @@
 // no runtime functions. It is pure data + types so the unit test runs without the
 // obsidian mock.
 
-export interface DonateWallet {
+interface DonateWallet {
   readonly name: string;
   readonly networks?: readonly string[];
   readonly address: string;

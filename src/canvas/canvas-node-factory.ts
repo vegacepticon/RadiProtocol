@@ -15,7 +15,7 @@ const DEFAULT_NODE_WIDTH = 250;
 const DEFAULT_NODE_HEIGHT = 60;
 const NODE_GAP = 40;
 
-export interface CreateNodeResult {
+interface CreateNodeResult {
   nodeId: string;
   canvasNode: CanvasNodeInternal;
 }

@@ -25,7 +25,7 @@ export interface NodeLabelChange {
   kind: 'answer' | 'snippet';
 }
 
-export interface ReconcileResult {
+interface ReconcileResult {
   diffs: EdgeLabelDiff[];
   nodeChanges: NodeLabelChange[]; // Phase 63: discriminated union (replaces the legacy answer-only map)
 }

@@ -34,7 +34,7 @@ const RECONCILE_DEBOUNCE_MS = 250;
 // previous snapshot for the same filePath. Field deltas → dispatch with
 // changeKind: 'fields'. RPNodeKind delta → dispatch with changeKind: 'nodeType'.
 // Missing nodeId in current pass → dispatch with changeKind: 'deleted'.
-export interface NodeFieldsSnapshot {
+interface NodeFieldsSnapshot {
   questionText?: string;
   answerText?: string;
   displayLabel?: string;
