@@ -43,7 +43,6 @@ const CSS_FILES = [
 /**
  * Concatenates src/styles/*.css in CSS_FILES order → styles.css after each build.
  * Obsidian loads styles.css from the plugin root.
- * src/styles.css is kept in sync as a convenience copy for tools that expect it.
  */
 const cssPlugin = {
   name: 'css-concat',
@@ -57,7 +56,6 @@ const cssPlugin = {
         });
         const combined = parts.join('\n');
         fs.writeFileSync('styles.css', combined);
-        fs.writeFileSync('src/styles.css', combined);
       } catch (err) {
         console.error(`[radiprotocol] CSS concat failed: ${err.message}`);
       }
