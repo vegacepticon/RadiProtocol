@@ -38,11 +38,11 @@ The eight canvases below are authored by hand in the author's vault using the ex
 
 - [x] **CANVAS-LIB-05**: An algorithmic canvas for the **ПКОП** (пояснично-крестцовый отдел позвоночника) area exists and runs end-to-end with output matching the ПКОП `.md` text template.
 
-- [ ] **CANVAS-LIB-06**: A short-version algorithmic canvas for **ОГК** (органы грудной клетки) exists alongside the existing ОГК 1.10.0 reference canvas, runs end-to-end, and produces a shortened ОГК report matching the short-ОГК `.md` text template.
+- [x] **CANVAS-LIB-06**: A short-version algorithmic canvas for **ОГК** (органы грудной клетки) exists alongside the existing ОГК 1.10.0 reference canvas, runs end-to-end, and produces a shortened ОГК report matching the short-ОГК `.md` text template.
 
-- [ ] **CANVAS-LIB-07**: A short-version algorithmic canvas for **ОБП** exists alongside the full ОБП canvas (CANVAS-LIB-02), runs end-to-end, and produces a shortened ОБП report matching the short-ОБП `.md` text template.
+- [x] **CANVAS-LIB-07**: A short-version algorithmic canvas for **ОБП** exists alongside the full ОБП canvas (CANVAS-LIB-02), runs end-to-end, and produces a shortened ОБП report matching the short-ОБП `.md` text template.
 
-- [ ] **CANVAS-LIB-08**: A short-version algorithmic canvas for **ОМТ** exists alongside the full ОМТ canvas (CANVAS-LIB-04), runs end-to-end, and produces a shortened ОМТ report matching the short-ОМТ `.md` text template.
+- [x] **CANVAS-LIB-08**: A short-version algorithmic canvas for **ОМТ** exists alongside the full ОМТ canvas (CANVAS-LIB-04), runs end-to-end, and produces a shortened ОМТ report matching the short-ОМТ `.md` text template.
 
 ### Distribution
 
