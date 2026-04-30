@@ -27,7 +27,7 @@ progress:
 Phase: 74
 Plan: 74-03 complete
 Status: BRAT smoke install verified; all v1.11 requirements satisfied
-Last activity: 2026-04-30
+Last activity: 2026-04-30 - Completed quick task 260430-sxo: Cleanup quick-wins from CONCERNS.md
 
 ## Project Reference
 
@@ -121,6 +121,7 @@ Items acknowledged and deferred at milestone close on 2026-04-30:
 | # | Description | Date | Commit | Directory |
 |---|-------------|------|--------|-----------|
 | 260430-s48 | Settings — Donate moved to bottom + wallet addresses collapsed behind `<details>` | 2026-04-30 | f1ae8fe | [260430-s48-settings-donate-collapse](./quick/260430-s48-settings-donate-collapse/) |
+| 260430-sxo | Cleanup quick-wins from CONCERNS.md (untrack build artifacts, drop duplicate CSS write, delete dead FolderPickerModal, archive shipped milestones) | 2026-04-30 | 4e69205 | [260430-sxo-cleanup-quick-wins-from-concerns-md](./quick/260430-sxo-cleanup-quick-wins-from-concerns-md/) |
 
 ---
 
