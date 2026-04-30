@@ -1,5 +1,29 @@
 # Milestones
 
+## v1.11 Inline Polish, Loop Hint, Donate & Canvas Library (Shipped: 2026-04-30)
+
+**Phases completed:** 6 phases (69–74), 17 plans
+**Timeline:** 2026-04-29 → 2026-04-30 (2 days)
+**Git:** 62 commits ahead of origin
+**Release:** GitHub Release `1.11.0` (unprefixed tag) — 3 loose assets attached at release root, prerelease=false, BRAT-installable via `vegacepticon/RadiProtocol`
+
+**Key accomplishments:**
+
+- Phase 69: Inline Runner redundant button cleanup — removed Insert/Copy/Save buttons from all 6 Inline states; sidebar and tab runners unaffected; 6-state absence regression tests + sidebar presence cross-mode regression test (INLINE-CLEAN-01)
+- Phase 70: Loop-exit picker visual hint — desaturated green background accent on `+`-prefix exit button via `.rp-loop-exit-btn.rp-loop-exit-btn` specificity-doubled selector; hover dim effect; Phase 44 body-button styling preserved byte-for-byte (LOOP-EXIT-01)
+- Phase 71: Settings donate section — "Помочь разработке" section with 9 crypto-wallet rows (EVM shared across 6 networks + BTC + SOL + TRX) at top of Settings tab; copy-to-clipboard with Notice confirmation; zero persistence, hard-coded constants (DONATE-01)
+- Phase 72: Canvas Library — Full algorithmic canvases (ГМ, ОБП, ОЗП, ОМТ, ПКОП) hand-built in author's vault and verified end-to-end against `Z:\projects\references\` `.md` text templates (CANVAS-LIB-01..05)
+- Phase 73: Canvas Library — Short algorithmic canvases (ОГК short, ОБП short, ОМТ short) hand-built alongside full versions, verified end-to-end (CANVAS-LIB-06..08)
+- Phase 74: GitHub Release v1.11.0 — version files aligned on `1.11.0`; clean production build; annotated tag `1.11.0` pushed; GitHub Release published with 3 loose assets; BRAT smoke install verified on clean vault (BRAT-03)
+
+**Known deferred items at close:**
+
+- Verification documentation backfill — Phases 64, 66, 67 still lack formal `gsd-verifier` VERIFICATION.md (carry-over from v1.10)
+- Nyquist `VALIDATION.md` — Phase 63 draft; Phases 64–74 missing entirely (project-wide tech debt)
+- 3 open debug sessions — 2 resolved by gap-closure `92a1269` but not formally closed; `phase-27-regressions` carryover from v1.7
+
+---
+
 ## v1.10 Editor Sync & Runner UX Polish (Shipped: 2026-04-26)
 
 **Phases completed:** 6 phases (63–68), 18 plans, 9/9 requirements satisfied

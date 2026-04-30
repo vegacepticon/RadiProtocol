@@ -8,7 +8,7 @@
 
 ### Inline Runner Polish
 
-- [ ] **INLINE-CLEAN-01**: In every Inline Runner state (`idle`, `at-node`, `awaiting-snippet-pick`, `awaiting-loop-pick`, `awaiting-snippet-fill`, `complete`), the Insert / Copy to clipboard / Save to note buttons are no longer rendered — only the Close control in the modal header remains. The Inline Runner already appends every answer/snippet directly to the active note as the protocol runs, so the result-export buttons are redundant in this mode. The sidebar Runner View and the tab Runner View continue to show all three buttons unchanged — this requirement is Inline-mode-only.
+- [x] **INLINE-CLEAN-01**: In every Inline Runner state (`idle`, `at-node`, `awaiting-snippet-pick`, `awaiting-loop-pick`, `awaiting-snippet-fill`, `complete`), the Insert / Copy to clipboard / Save to note buttons are no longer rendered — only the Close control in the modal header remains. The Inline Runner already appends every answer/snippet directly to the active note as the protocol runs, so the result-export buttons are redundant in this mode. The sidebar Runner View and the tab Runner View continue to show all three buttons unchanged — this requirement is Inline-mode-only.
 
 ### Runner UX
 
@@ -46,7 +46,7 @@ The eight canvases below are authored by hand in the author's vault using the ex
 
 ### Distribution
 
-- [ ] **BRAT-03**: The repository ships a GitHub Release `1.11.0` following the BRAT-installable pattern established by Phases 55 (v1.8.0), 62 (v1.9.0), and 68 (v1.10.0): `manifest.json`, `versions.json`, and `package.json` aligned on `1.11.0` while preserving prior version mappings; clean `npm run build` produces production `main.js` + `styles.css`; an unprefixed annotated tag `1.11.0` pushed; release runbook executed (D10 UAT-gate-as-first-section pattern); GitHub Release published with `manifest.json` + `main.js` + `styles.css` as three loose root assets (no zip, prerelease=false); end-to-end BRAT install on a clean Obsidian vault via `vegacepticon/RadiProtocol` succeeds and the plugin enables at version `1.11.0`.
+- [x] **BRAT-03**: The repository ships a GitHub Release `1.11.0` following the BRAT-installable pattern established by Phases 55 (v1.8.0), 62 (v1.9.0), and 68 (v1.10.0): `manifest.json`, `versions.json`, and `package.json` aligned on `1.11.0` while preserving prior version mappings; clean `npm run build` produces production `main.js` + `styles.css`; an unprefixed annotated tag `1.11.0` pushed; release runbook executed (D10 UAT-gate-as-first-section pattern); GitHub Release published with `manifest.json` + `main.js` + `styles.css` as three loose root assets (no zip, prerelease=false); end-to-end BRAT install on a clean Obsidian vault via `vegacepticon/RadiProtocol` succeeds and the plugin enables at version `1.11.0`.
 
 ## Future Requirements (Deferred)
 
@@ -83,18 +83,18 @@ Phase mappings established by `gsd-roadmapper` 2026-04-29. Phase numbering conti
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| INLINE-CLEAN-01 | Phase 69 | Open |
-| LOOP-EXIT-01 | Phase 70 | Open |
-| DONATE-01 | Phase 71 | Open |
-| CANVAS-LIB-01 | Phase 72 | Open |
-| CANVAS-LIB-02 | Phase 72 | Open |
-| CANVAS-LIB-03 | Phase 72 | Open |
-| CANVAS-LIB-04 | Phase 72 | Open |
-| CANVAS-LIB-05 | Phase 72 | Open |
-| CANVAS-LIB-06 | Phase 73 | Open |
-| CANVAS-LIB-07 | Phase 73 | Open |
-| CANVAS-LIB-08 | Phase 73 | Open |
-| BRAT-03 | Phase 74 | Open |
+| INLINE-CLEAN-01 | Phase 69 | Complete |
+| LOOP-EXIT-01 | Phase 70 | Complete |
+| DONATE-01 | Phase 71 | Complete |
+| CANVAS-LIB-01 | Phase 72 | Complete |
+| CANVAS-LIB-02 | Phase 72 | Complete |
+| CANVAS-LIB-03 | Phase 72 | Complete |
+| CANVAS-LIB-04 | Phase 72 | Complete |
+| CANVAS-LIB-05 | Phase 72 | Complete |
+| CANVAS-LIB-06 | Phase 73 | Complete |
+| CANVAS-LIB-07 | Phase 73 | Complete |
+| CANVAS-LIB-08 | Phase 73 | Complete |
+| BRAT-03 | Phase 74 | Complete |
 
 **Coverage:**
 - v1.11 requirements: 12 total

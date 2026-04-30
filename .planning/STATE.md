@@ -2,31 +2,31 @@
 gsd_state_version: 1.0
 milestone: v1.11
 milestone_name: Inline Polish, Loop Hint, Donate & Canvas Library
-status: ready_to_plan
-stopped_at: Phase 73 plan 03 static layer complete; awaiting Task 3 manual UAT (all three Phase 73 canvases pending Obsidian walkthrough)
-last_updated: "2026-04-30T11:00:00.000Z"
+status: milestone_complete
+stopped_at: Phase 74 complete — v1.11.0 shipped via GitHub Release; BRAT smoke install verified on clean vault
+last_updated: "2026-04-30T12:00:00.000Z"
 last_activity: 2026-04-30
 progress:
   total_phases: 6
-  completed_phases: 5
-  total_plans: 14
-  completed_plans: 14
-  percent: 83
+  completed_phases: 6
+  total_plans: 17
+  completed_plans: 17
+  percent: 100
 ---
 
 # RadiProtocol — Project State
 
-**Updated:** 2026-04-29
-**Milestone:** v1.11 Inline Polish, Loop Hint, Donate & Canvas Library — 🚧 IN PROGRESS
-**Status:** Ready to plan
+**Updated:** 2026-04-30
+**Milestone:** v1.11 Inline Polish, Loop Hint, Donate & Canvas Library — ✅ SHIPPED
+**Status:** Milestone complete
 
 ---
 
 ## Current Position
 
 Phase: 74
-Plan: Not started
-Status: Awaiting checkpoint:human-verify on Tasks 73-01-3, 73-02-3, 73-03-3 (Obsidian walkthroughs)
+Plan: 74-03 complete
+Status: BRAT smoke install verified; all v1.11 requirements satisfied
 Last activity: 2026-04-30
 
 ## Project Reference
@@ -38,7 +38,7 @@ See: `.planning/MILESTONES.md` (updated 2026-04-26 — v1.10 entry; v1.11 entry 
 
 **Core value:** A radiologist can generate a structured, accurate protocol in seconds by answering a guided algorithm — without writing a single line of code.
 
-**Current focus:** Phase 73 — canvas-library-short-algorithmic-canvases
+**Current focus:** v1.11 milestone complete — awaiting next milestone definition
 
 ---
 
@@ -118,5 +118,5 @@ Next action: Author opens each canvas (`Protocols/ОГК short 1.0.0.canvas`, `P
 
 - Branch: `main`
 - Main: `main`
-- Last shipped: v1.10 (2026-04-26; GitHub Release `1.10.0` published)
-- Active phase: 69 (planning not yet started)
+- Last shipped: v1.11 (2026-04-30; GitHub Release `1.11.0` published)
+- Active phase: None (milestone complete)

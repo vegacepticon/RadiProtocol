@@ -1,7 +1,7 @@
 # Roadmap: RadiProtocol
 
 **Project:** RadiProtocol
-**Last updated:** 2026-04-29 (v1.11 milestone opened — phases 69–74 derived from 12 requirements; v1.10 details collapsed into archive)
+**Last updated:** 2026-04-30 (v1.11 milestone shipped — all 12 requirements satisfied; v1.10 details collapsed into archive)
 
 ---
 
@@ -17,7 +17,7 @@
 - ✅ **v1.8 UX Polish & Snippet Picker Overhaul** — Phases 47-58 (shipped 2026-04-21)
 - ✅ **v1.9 Inline Runner Polish & Settings UX** — Phases 59-62 (shipped 2026-04-25)
 - ✅ **v1.10 Editor Sync & Runner UX Polish** — Phases 63-68 (shipped 2026-04-26)
-- 🚧 **v1.11 Inline Polish, Loop Hint, Donate & Canvas Library** — Phases 69-74 (in progress)
+- ✅ **v1.11 Inline Polish, Loop Hint, Donate & Canvas Library** — Phases 69-74 (shipped 2026-04-30)
 
 _v1.10 shipped. v1.11 milestone opened 2026-04-29 — 12 requirements (INLINE-CLEAN-01, LOOP-EXIT-01, DONATE-01, CANVAS-LIB-01..08, BRAT-03) mapped to 6 phases._
 
@@ -28,11 +28,11 @@ _v1.10 shipped. v1.11 milestone opened 2026-04-29 — 12 requirements (INLINE-CL
 ### v1.11 (active)
 
 - [x] **Phase 69: Inline Runner — Hide Result-Export Buttons in Complete State** — At protocol-complete state, Inline Runner stops rendering Insert / Copy to clipboard / Save to note buttons; sidebar and tab Runner views unchanged
-- [ ] **Phase 70: Loop-Exit Picker Visual Hint** — `+`-prefix loop-exit button gets a subtle accent treatment using existing Obsidian CSS variables, applied uniformly across sidebar / tab / inline runner modes
-- [ ] **Phase 71: Settings — Donate Section** — "Помочь разработке" section at the top of the Settings tab with nine crypto-wallet rows and copy-to-clipboard controls
-- [ ] **Phase 72: Canvas Library — Full Algorithmic Canvases** — Five author-vault canvases (ГМ, ОБП, ОЗП, ОМТ, ПКОП) hand-built and verified end-to-end against `Z:\projects\references\` `.md` templates
-- [ ] **Phase 73: Canvas Library — Short Algorithmic Canvases** — Three author-vault short-version canvases (ОГК, ОБП, ОМТ) hand-built alongside the full versions and verified end-to-end against the short `.md` templates
-- [ ] **Phase 74: GitHub Release v1.11.0** — `manifest.json` / `versions.json` / `package.json` aligned on `1.11.0`, unprefixed annotated tag pushed, GitHub Release with three loose root assets, BRAT smoke install on a clean vault verified
+- [x] **Phase 70: Loop-Exit Picker Visual Hint** — `+`-prefix loop-exit button gets a subtle accent treatment using existing Obsidian CSS variables, applied uniformly across sidebar / tab / inline runner modes
+- [x] **Phase 71: Settings — Donate Section** — "Помочь разработке" section at the top of the Settings tab with nine crypto-wallet rows and copy-to-clipboard controls
+- [x] **Phase 72: Canvas Library — Full Algorithmic Canvases** — Five author-vault canvases (ГМ, ОБП, ОЗП, ОМТ, ПКОП) hand-built and verified end-to-end against `Z:\projects\references\` `.md` templates
+- [x] **Phase 73: Canvas Library — Short Algorithmic Canvases** — Three author-vault short-version canvases (ОГК, ОБП, ОМТ) hand-built alongside the full versions and verified end-to-end against the short `.md` templates
+- [x] **Phase 74: GitHub Release v1.11.0** — `manifest.json` / `versions.json` / `package.json` aligned on `1.11.0`, unprefixed annotated tag pushed, GitHub Release with three loose root assets, BRAT smoke install on a clean vault verified
 
 ### Archived milestones
 
