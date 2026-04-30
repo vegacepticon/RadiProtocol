@@ -1904,3 +1904,29 @@
 .rp-donate-intro {
   margin-bottom: var(--size-4-2);
 }
+
+/* Quick 260430-s48: collapsible wallets ─────────────────────────────────────── */
+
+/* The <details> wrapper around the four wallet Setting rows. No box, no border —
+ * the visual weight comes from the <summary> below. A small bottom margin keeps
+ * the disclosure from sitting flush against the next section (or the page edge,
+ * since this is now the last block on the page). */
+.rp-donate-details {
+  margin-bottom: var(--size-4-2);
+}
+
+/* Clickable summary text. Inherits Obsidian's body color but uses the muted
+ * accent so it reads as a control rather than a heading. cursor:pointer makes
+ * the affordance obvious; the small vertical padding aligns it with adjacent
+ * Setting rows' baseline. user-select:none prevents accidental text-drag when
+ * users click to expand. */
+.rp-donate-summary {
+  cursor: pointer;
+  padding: var(--size-2-2) 0;
+  color: var(--text-muted);
+  user-select: none;
+}
+
+.rp-donate-summary:hover {
+  color: var(--text-normal);
+}

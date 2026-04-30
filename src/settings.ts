@@ -65,36 +65,6 @@ export class RadiProtocolSettingsTab extends PluginSettingTab {
     const { containerEl } = this;
     containerEl.empty();
 
-    // Phase 71 (DONATE-01) — "Помочь разработке" section. Top-most per ROADMAP SC#1.
-    // Stateless: addresses are hard-coded constants in ./donate/wallets, no settings persistence.
-    new Setting(containerEl).setName('Помочь разработке').setHeading();
-
-    containerEl.createEl('p', {
-      text: DONATE_INVITATION_TEXT,
-      cls: 'rp-donate-intro',
-    });
-
-    for (const wallet of DONATE_WALLETS) {
-      const desc = wallet.networks ? wallet.networks.join(' · ') : '';
-      const { address } = wallet;
-      const setting = new Setting(containerEl)
-        .setName(wallet.name)
-        .setDesc(desc);
-      setting.descEl.createEl('code', {
-        text: address,
-        cls: 'rp-donate-address',
-      });
-      setting.addExtraButton(btn => btn
-        .setIcon('copy')
-        .setTooltip(DONATE_TOOLTIP_TEXT)
-        .onClick(() => {
-          void navigator.clipboard.writeText(address).then(() => {
-            new Notice(DONATE_NOTICE_TEXT);
-          });
-        })
-      );
-    }
-
     // Group 1 — Runner
     new Setting(containerEl).setName('Runner').setHeading();
 
@@ -205,5 +175,42 @@ export class RadiProtocolSettingsTab extends PluginSettingTab {
           await this.plugin.saveSettings();
         })
       );
+
+    // Quick 260430-s48: relocated to bottom; addresses collapsed behind <details>.
+    // Stateless: addresses are hard-coded constants in ./donate/wallets, no settings persistence.
+    new Setting(containerEl).setName('Помочь разработке').setHeading();
+
+    containerEl.createEl('p', {
+      text: DONATE_INVITATION_TEXT,
+      cls: 'rp-donate-intro',
+    });
+
+    // Quick 260430-s48: addresses collapsed by default to reduce settings-tab clutter.
+    const detailsEl = containerEl.createEl('details', { cls: 'rp-donate-details' });
+    detailsEl.createEl('summary', {
+      text: 'Показать адреса кошельков',
+      cls: 'rp-donate-summary',
+    });
+
+    for (const wallet of DONATE_WALLETS) {
+      const desc = wallet.networks ? wallet.networks.join(' · ') : '';
+      const { address } = wallet;
+      const setting = new Setting(detailsEl)
+        .setName(wallet.name)
+        .setDesc(desc);
+      setting.descEl.createEl('code', {
+        text: address,
+        cls: 'rp-donate-address',
+      });
+      setting.addExtraButton(btn => btn
+        .setIcon('copy')
+        .setTooltip(DONATE_TOOLTIP_TEXT)
+        .onClick(() => {
+          void navigator.clipboard.writeText(address).then(() => {
+            new Notice(DONATE_NOTICE_TEXT);
+          });
+        })
+      );
+    }
   }
 }
