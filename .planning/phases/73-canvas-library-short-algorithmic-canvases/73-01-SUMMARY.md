@@ -121,3 +121,13 @@ Pending. Author runs:
 ## Build Reproducibility
 
 Re-run: `node .planning/phases/73-canvas-library-short-algorithmic-canvases/build/build-ogk-short.mjs`.
+
+## Self-Check: PASSED
+
+- File exists: `.planning/phases/73-canvas-library-short-algorithmic-canvases/build/build-ogk-short.mjs`
+- File exists: `.planning/phases/73-canvas-library-short-algorithmic-canvases/73-01-SUMMARY.md`
+- File exists: `Z:\documents\vaults\TEST-BASE\Protocols\ОГК short 1.0.0.canvas`
+- Commit: `5b77672` (Task 1 — feat(73-01): generate ОГК short algorithmic canvas)
+- Commit: `1878095` (Task 2 — docs(73-01): author 73-01-SUMMARY.md for ОГК short canvas)
+- Static layer: 13/13 invariant checks pass (Task 1 builder output)
+- Manual layer: pending Task 3 author Obsidian walkthrough
