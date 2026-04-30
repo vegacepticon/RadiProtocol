@@ -295,3 +295,36 @@ v1.11 in progress — Phase 69 is next. Phases 69, 70, 71 are independent and co
 | 72 | v1.11 | 5/5 | Complete    | 2026-04-30 |
 | 73 | v1.11 | 3/3 | Complete    | 2026-04-30 |
 | 74 | v1.11 | 0/? | Not started | — |
+
+
+---
+
+## Backlog
+
+Tech-debt items captured from the 2026-04-30 `CONCERNS.md` scan. Not attached to any active milestone — promote with `/gsd-review-backlog` when ready, or fold into a future maintenance milestone.
+
+### Phase 999.1: RunnerView ↔ InlineRunnerModal deduplication (BACKLOG)
+
+**Goal:** Extract a shared `RunnerRenderer` (or composable hooks) module under `src/runner/` that owns all `renderQuestion`, `renderAnswer`, `renderSnippetPicker`, `renderTextBlock`, `renderLoop` logic. `RunnerView` (sidebar leaf) and `InlineRunnerModal` (floating modal) become thin shells wiring host-specific concerns (layout persistence, output toolbar). Collapse the parallel `inline-runner-*` test trees into shared fixtures.
+
+**Why:** ~2350 LOC of mirrored render logic across `src/views/runner-view.ts` (1145) and `src/views/inline-runner-modal.ts` (1205). Every runner-side feature is implemented and tested twice. CONCERNS.md MEDIUM-2 (2026-04-30) names this the single biggest dev-velocity drag in the codebase.
+
+**Requirements:** TBD (derive during `/gsd-spec-phase 999.1`)
+**Plans:** 0 plans
+**Estimate:** 3-4 plans within one phase, or split across 2-3 phases.
+
+Plans:
+- [ ] TBD (promote with `/gsd-review-backlog` when ready)
+
+### Phase 999.2: editor-panel-view.ts split into per-kind form modules (BACKLOG)
+
+**Goal:** Extract per-node-kind form renderers from `src/views/editor-panel-view.ts` (currently 1226 LOC, 20 methods) into siblings: `editor-panel/forms/question-form.ts`, `answer-form.ts`, `text-block-form.ts`, `snippet-form.ts`, `loop-form.ts`. The view itself becomes a dispatcher. Mirror the test split that already exists across 6 test files (~120 KB).
+
+**Why:** CLAUDE.md explicitly flags this file as a "sharp edge" — recurring regressions caused by executor agents losing context while editing unrelated sections. Each editor-side phase pays a "find the right section" tax.
+
+**Requirements:** TBD (derive during `/gsd-spec-phase 999.2`)
+**Plans:** 0 plans
+**Estimate:** 1-2 plans within one phase. Lower urgency than 999.1 — file is not actively bleeding bugs, just expensive to navigate.
+
+Plans:
+- [ ] TBD (promote with `/gsd-review-backlog` when ready)
