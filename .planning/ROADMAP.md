@@ -231,9 +231,9 @@ Full details: `.planning/milestones/v1.10-ROADMAP.md`
   3. An ОЗП (органы забрюшинного пространства) canvas exists and runs end-to-end with output matching the ОЗП `.md` text template (CANVAS-LIB-03)
   4. An ОМТ (органы малого таза — full version) canvas exists and runs end-to-end with output matching the full ОМТ `.md` text template (CANVAS-LIB-04)
   5. A ПКОП (пояснично-крестцовый отдел позвоночника) canvas exists and runs end-to-end with output matching the ПКОП `.md` text template (CANVAS-LIB-05)
-**Plans:** 1/5 plans executed
+**Plans:** 2/5 plans executed
 - [x] 72-01-PLAN.md — ГМ (головной мозг) authoring guide — start + 7 sections + 1 focal-lesion loop + terminal Заключение/Рекомендации, modeled on ОГК 1.10.0 + ГМ.md (CANVAS-LIB-01)
-- [ ] 72-02-PLAN.md — ОБП full (органы брюшной полости) authoring guide — «Контраст вводился?» fan-out + 9 sections + 2 loops (ПЕЧЕНЬ + ПОДЖЕЛУДОЧНАЯ ЖЕЛЕЗА) modeled on ОГК + ОБП без/с контрастом.md (CANVAS-LIB-02)
+- [x] 72-02-PLAN.md — ОБП full (органы брюшной полости) authoring guide — «Контраст вводился?» fan-out + 9 sections + 2 loops (ПЕЧЕНЬ + ПОДЖЕЛУДОЧНАЯ ЖЕЛЕЗА) modeled on ОГК + ОБП без/с контрастом.md (CANVAS-LIB-02)
 - [ ] 72-03-PLAN.md — ОЗП (органы забрюшинного пространства) authoring guide — «Контраст вводился?» fan-out + 7-9 sections + 3 loops (НАДПОЧЕЧНИКИ + 2 kidneys) modeled on ОЗП без/с контрастом.md (CANVAS-LIB-03)
 - [ ] 72-04-PLAN.md — ОМТ full (органы малого таза) authoring guide — sex × contrast 4-leaf fan-out + per-gender sections + 2 loops on жен trunks (МАТКА + ЯИЧНИКИ) modeled on 4 ОМТ .md templates (CANVAS-LIB-04)
 - [ ] 72-05-PLAN.md — ПКОП (пояснично-крестцовый отдел позвоночника) authoring guide — 8 sections + 2 loops (ПОЗВОНКИ + 5-iteration МЕЖПОЗВОНКОВЫЕ ДИСКИ L1-L2..L5-S1) modeled on ПКОП остеохондроз.md (CANVAS-LIB-05)
@@ -287,6 +287,6 @@ v1.11 in progress — Phase 69 is next. Phases 69, 70, 71 are independent and co
 | 69 | v1.11 | 2/2 | Complete | 2026-04-29 |
 | 70 | v1.11 | 1/1 | Complete    | 2026-04-29 |
 | 71 | v1.11 | 3/3 | Complete    | 2026-04-29 |
-| 72 | v1.11 | 1/5 | In Progress|  |
+| 72 | v1.11 | 2/5 | In Progress|  |
 | 73 | v1.11 | 0/? | Not started | — |
 | 74 | v1.11 | 0/? | Not started | — |
