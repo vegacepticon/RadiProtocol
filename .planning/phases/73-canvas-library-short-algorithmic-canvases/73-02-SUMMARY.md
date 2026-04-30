@@ -120,3 +120,13 @@ Pending. Author runs:
 ## Build Reproducibility
 
 Re-run: `node .planning/phases/73-canvas-library-short-algorithmic-canvases/build/build-obp-short.mjs`.
+
+## Self-Check: PASSED
+
+- File exists: `.planning/phases/73-canvas-library-short-algorithmic-canvases/build/build-obp-short.mjs`
+- File exists: `.planning/phases/73-canvas-library-short-algorithmic-canvases/73-02-SUMMARY.md`
+- File exists: `Z:\documents\vaults\TEST-BASE\Protocols\ОБП short 1.0.0.canvas`
+- Commit: `b4a958d` (Task 1 — feat(73-02): generate ОБП short algorithmic canvas)
+- Commit: `a127f8c` (Task 2 — docs(73-02): author 73-02-SUMMARY.md for ОБП short canvas)
+- Static layer: 12/12 invariant checks pass (Task 1 builder output)
+- Manual layer: pending Task 3 author Obsidian walkthrough (`checkpoint:human-verify`)
