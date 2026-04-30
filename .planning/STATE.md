@@ -2,16 +2,15 @@
 gsd_state_version: 1.0
 milestone: v1.12
 milestone_name: Maintenance & Tech Debt
-status: planning
-stopped_at: ""
-last_updated: "2026-04-30T18:55:00.000Z"
-last_activity: 2026-04-30 - Milestone v1.12 started
+status: Defining requirements
+stopped_at: Phase 77 context gathered
+last_updated: "2026-04-30T19:50:40.804Z"
+last_activity: 2026-04-30 — Milestone v1.12 started
 progress:
-  total_phases: 0
+  total_phases: 10
   completed_phases: 0
   total_plans: 0
   completed_plans: 0
-  percent: 0
 ---
 
 # RadiProtocol — Project State
@@ -140,9 +139,9 @@ Items acknowledged and deferred at milestone close on 2026-04-30:
 
 ## Session Continuity
 
-Last session: 2026-04-30T11:00:00.000Z
-Stopped at: Phase 73 plan 03 static layer complete; awaiting Task 3 manual UAT for all three Phase 73 canvases (ОГК / ОБП / ОМТ short)
-Resume file: .planning/phases/73-canvas-library-short-algorithmic-canvases/73-03-SUMMARY.md
+Last session: 2026-04-30T19:50:40.800Z
+Stopped at: Phase 77 context gathered
+Resume file: .planning/phases/77-eslint-findings-cleanup/77-CONTEXT.md
 Next action: Author opens each canvas (`Protocols/ОГК short 1.0.0.canvas`, `Protocols/ОБП short 1.0.0.canvas`, `Protocols/ОМТ short 1.0.0.canvas`) in Obsidian and walks every primary path — single trunk for ОГК / ОБП short, BOTH Жен AND Муж for ОМТ short. After all three approved, mark CANVAS-LIB-06/07/08 complete in REQUIREMENTS.md.
 
 ---
