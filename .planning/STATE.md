@@ -4,8 +4,8 @@ milestone: v1.11
 milestone_name: Inline Polish, Loop Hint, Donate & Canvas Library
 status: completed
 stopped_at: Phase 73 plan 03 static layer complete; awaiting Task 3 manual UAT for all three Phase 73 canvases (ОГК / ОБП / ОМТ short)
-last_updated: "2026-04-30T09:09:52.871Z"
-last_activity: 2026-04-30
+last_updated: "2026-04-30T17:14:40.145Z"
+last_activity: 2026-04-30 - Completed quick task 260430-s48: Settings donate reorder & collapse
 progress:
   total_phases: 6
   completed_phases: 6
@@ -113,6 +113,14 @@ Items acknowledged and deferred at milestone close on 2026-04-30:
 | debug | inline-runner-tab-switch-resets-size | unknown — resolved by gap-closure 92a1269 but not formally closed |
 | debug | phase-27-regressions | awaiting_human_verify — color regression root cause found in canvas-live-editor.ts PROTECTED_FIELDS |
 | uat_gap | Phase 72 HUMAN-UAT | resolved — 0 pending scenarios |
+
+---
+
+### Quick Tasks Completed
+
+| # | Description | Date | Commit | Directory |
+|---|-------------|------|--------|-----------|
+| 260430-s48 | Settings — Donate moved to bottom + wallet addresses collapsed behind `<details>` | 2026-04-30 | f1ae8fe | [260430-s48-settings-donate-collapse](./quick/260430-s48-settings-donate-collapse/) |
 
 ---
 
