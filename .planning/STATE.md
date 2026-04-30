@@ -55,9 +55,20 @@ See: `.planning/MILESTONES.md` (updated 2026-04-26 — v1.10 entry; v1.11 entry 
 
 ---
 
+## v1.12 Phase Map
+
+| Phase | Goal (one-line) | Requirements | Depends on |
+|-------|-----------------|--------------|------------|
+| 75 | RunnerView ↔ InlineRunnerModal Deduplication — shared `RunnerRenderer` under `src/runner/` consumed by both host shells; collapse parallel `inline-runner-*.test.ts` trees into shared fixtures | DEDUP-01, DEDUP-02 | Nothing |
+| 76 | editor-panel-view.ts Decomposition — per-node-kind form modules under `src/views/editor-panel/forms/`; remaining `editor-panel-view.ts` < 400 LOC dispatcher; all six existing test files pass | SPLIT-01, SPLIT-02 | Nothing |
+| 77 | Eslint Findings Cleanup — `npm run lint` exits 0 on `main`; 517 errors + 6 warnings cleared (dominant `obsidianmd/no-static-styles-assignment` converted to CSS class toggles per CLAUDE.md per-feature CSS architecture) | LINT-01 | Nothing |
+| 78 | Lint + Test Automation Gate — pre-commit hook (`.githooks/pre-commit`) + GitHub Actions workflow (`.github/workflows/ci.yml`) running `npm ci && npm run build && npm run lint && npm test` on push/PR | CI-01, CI-02 | Phase 77 (gate unworkable until existing findings cleared) |
+
+---
+
 ## Accumulated Context
 
-### v1.0–v1.10 Shipped
+### v1.0–v1.11 Shipped
 
 - v1.0 (7 phases): foundation — parser, runner, UI, editor panel, snippets, loops, sessions.
 - v1.2 (8 phases): runner UX and bug fixes (layout, selectors, separators, read-back).
@@ -69,6 +80,7 @@ See: `.planning/MILESTONES.md` (updated 2026-04-26 — v1.10 entry; v1.11 entry 
 - v1.8 (14 phases, 47–58): runner regressions closed, Node Editor UX polish, edge semantics (`+`-prefix exit, Answer↔edge sync), snippet picker overhaul + file-binding + button UX reversal, JSON placeholders → 2 types, Skip/Close buttons, Inline Protocol Display Mode, BRAT distribution (GitHub Release v1.8.0).
 - v1.9 (4 phases, 59–62): Inline Runner feature parity, position persistence + compact layout, folder autocomplete on settings path fields, BRAT Release v1.9.0.
 - v1.10 (6 phases, 63–68): bidirectional Canvas ↔ Node Editor sync, auto-grow textareas + Text block quick-create, Back/Skip footer layout, step-back reliability + scroll pinning, Inline Runner resizable modal + file-bound Snippet parity, BRAT Release `1.10.0`.
+- v1.11 (6 phases, 69–74): Inline Runner redundant-button cleanup, loop-exit picker visual hint, Settings donate section (9 wallet rows), 8 hand-authored algorithmic canvases (5 full + 3 short, in author's vault — not bundled), GitHub Release `1.11.0`.
 
 ### Standing Pitfalls (carry-over from v1.10)
 

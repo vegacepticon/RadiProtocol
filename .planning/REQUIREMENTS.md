@@ -58,12 +58,12 @@ Filled by the roadmapper. Each REQ-ID maps to exactly one phase.
 
 | REQ-ID | Phase | Status |
 |---|---|---|
-| DEDUP-01 | TBD (Phase 75) | Active |
-| DEDUP-02 | TBD (Phase 75) | Active |
-| SPLIT-01 | TBD (Phase 76) | Active |
-| SPLIT-02 | TBD (Phase 76) | Active |
-| LINT-01 | TBD (Phase 77) | Active |
-| CI-01 | TBD (Phase 78) | Active |
-| CI-02 | TBD (Phase 78) | Active |
+| DEDUP-01 | 75 | Active |
+| DEDUP-02 | 75 | Active |
+| SPLIT-01 | 76 | Active |
+| SPLIT-02 | 76 | Active |
+| LINT-01 | 77 | Active |
+| CI-01 | 78 | Active |
+| CI-02 | 78 | Active |
 
 **Phase ordering constraint:** Phase 78 (CI gate) MUST follow Phase 77 (lint cleanup). Reverse order is unworkable — the gate would block all subsequent commits until 523 findings cleared in one go. Phases 75 and 76 are independent of 77/78 and of each other.

@@ -1,7 +1,7 @@
 # Roadmap: RadiProtocol
 
 **Project:** RadiProtocol
-**Last updated:** 2026-04-30 (v1.11 milestone shipped — all 12 requirements satisfied; v1.10 details collapsed into archive)
+**Last updated:** 2026-04-30 (v1.12 milestone opened — Phases 75–78 added; v1.11 shipped, all 12 requirements satisfied; v1.10 details collapsed into archive)
 
 ---
 
@@ -18,8 +18,9 @@
 - ✅ **v1.9 Inline Runner Polish & Settings UX** — Phases 59-62 (shipped 2026-04-25)
 - ✅ **v1.10 Editor Sync & Runner UX Polish** — Phases 63-68 (shipped 2026-04-26)
 - ✅ **v1.11 Inline Polish, Loop Hint, Donate & Canvas Library** — Phases 69-74 (shipped 2026-04-30)
+- 🚧 **v1.12 Maintenance & Tech Debt** — Phases 75-78 (in progress)
 
-_v1.11 shipped 2026-04-30. Next milestone not yet defined._
+_v1.12 in progress; opened 2026-04-30. Internal-only — no GitHub Release planned for `1.12.0`._
 
 ---
 
@@ -270,12 +271,64 @@ Full details: `.planning/archive/milestones/v1.10-ROADMAP.md`
 - [x] 71-02-PLAN.md — New `src/styles/donate-section.css` + register in `esbuild.config.mjs` CSS_FILES (VIS-D-02, VIS-D-03)
 - [x] 71-03-PLAN.md — Insert «Помочь разработке» section into `src/settings.ts.display()` + dev-vault UAT (Row-D, EVM-D, NTC-D-01..02)
 
+### Phase 75: RunnerView ↔ InlineRunnerModal Deduplication
+**Goal**: Render logic for every protocol-runner step (Question, Answer, Snippet picker, Text block, Loop picker) lives in a single shared module under `src/runner/` (e.g. `RunnerRenderer`) consumed by both `RunnerView` (sidebar/tab leaf) and `InlineRunnerModal` (floating modal). The two host shells become thin wrappers responsible only for host-specific chrome (sidebar leaf vs modal frame, output toolbar visibility per Phase 69, layout/position persistence per Phases 60/67). Parallel `inline-runner-*.test.ts` trees collapse into shared fixtures exercising the renderer once and each host once. Closes the largest dev-velocity drag in the codebase (CONCERNS.md MEDIUM-2, ~2350 LOC mirrored across `src/views/runner-view.ts` 1145 LOC and `src/views/inline-runner-modal.ts` 1205 LOC).
+**Depends on**: Nothing (independent refactor; no contract changes to runner state machine, snippet system, or canvas parser per REQUIREMENTS.md "Out of Scope")
+**Requirements**: DEDUP-01, DEDUP-02
+**Success Criteria** (what must be TRUE):
+  1. After this phase, modifying any per-step picker rendering requires a single edit, not two — verified by `git grep -n "renderSnippetPicker\\|renderQuestion\\|renderAnswer\\|renderTextBlock\\|renderLoop" src/` showing each method declared in exactly one file under `src/runner/`, with `src/views/runner-view.ts` and `src/views/inline-runner-modal.ts` containing zero duplicate declarations of those methods (DEDUP-01)
+  2. For every supported runner state (`idle`, `at-node`, `awaiting-snippet-pick`, `awaiting-snippet-fill`, `awaiting-loop-pick`, `complete`), running the same protocol step in sidebar mode and in inline mode produces DOM nodes with the same structure, classes, and content — visual differences are limited to host chrome (sidebar leaf vs modal frame) and the Phase 69 output-toolbar absence in inline mode (DEDUP-01)
+  3. Total LOC across runner-side test files (`runner-view.test.ts` + `inline-runner-*.test.ts` family) is reduced by at least 30% compared to the pre-Phase-75 baseline — measured by `wc -l` on the file set before and after — with shared fixtures exercising the renderer once and each host shell once (DEDUP-02)
+  4. Every behavioral assertion present in the pre-Phase-75 `inline-runner-*.test.ts` files either has a corresponding assertion in the new shared/host structure or is documented in the phase's VERIFICATION.md as obsoleted by the refactor (zero silent behavior loss) — verified by full vitest suite green at the end of the phase (DEDUP-02)
+  5. All v1.11 file-bound and directory-bound Snippet traversal paths (sibling-button click, loop-body edge, direct edge per Phase 67 D-14/D-15) continue to work in both runner modes after the refactor — verified by running the existing `inline-runner-modal-loop-body-file-bound.test.ts` scenarios (or their post-refactor equivalents) green
+**Plans:** TBD
+**UI hint**: no
+
+### Phase 76: editor-panel-view.ts Decomposition
+**Goal**: `src/views/editor-panel-view.ts` is decomposed into per-node-kind form modules under `src/views/editor-panel/forms/` — one file per kind (`question-form.ts`, `answer-form.ts`, `text-block-form.ts`, `snippet-form.ts`, `loop-form.ts`, plus any other kinds currently handled inline). The remaining `editor-panel-view.ts` becomes a dispatcher under 400 LOC that registers forms, routes node-selection events to the right form, and owns shared concerns only (canvas-sync subscription per Phase 63, toolbar). All six existing `editor-panel-*.test.ts` files continue to pass after the split. Eliminates the "find the right section" tax CLAUDE.md flags as a recurring source of executor regressions in this 1226-LOC god-file.
+**Depends on**: Nothing (independent refactor; no contract changes to the canvas parser, edge-label sync service, or quick-create factory per REQUIREMENTS.md "Out of Scope")
+**Requirements**: SPLIT-01, SPLIT-02
+**Success Criteria** (what must be TRUE):
+  1. After this phase, `src/views/editor-panel-view.ts` is fewer than 400 LOC — verified by `wc -l src/views/editor-panel-view.ts` — and contains no inline form-rendering bodies for individual node kinds; per-kind form modules exist at `src/views/editor-panel/forms/question-form.ts`, `answer-form.ts`, `text-block-form.ts`, `snippet-form.ts`, `loop-form.ts` (plus any additional kinds currently handled inline) (SPLIT-01)
+  2. Editing a single node-kind form (e.g. modifying the Question form) requires touching exactly one file under `src/views/editor-panel/forms/` plus optional shared helpers — verified by reviewers being able to point to the file from the kind name without grepping `editor-panel-view.ts` (SPLIT-01)
+  3. All six existing test files (`editor-panel-create.test.ts`, `editor-panel-forms.test.ts`, `editor-panel-loop-form.test.ts`, `editor-panel-canvas-sync.test.ts`, `editor-panel-snippet-picker.test.ts`, `editor-panel.test.ts`) pass without modification of their assertion semantics — `npm test` exits 0 with the full suite green; tests may be mechanically split to mirror the new module boundaries provided every existing test case appears in exactly one resulting file with the same assertion semantics (SPLIT-02)
+  4. Phase 63 bidirectional Canvas ↔ Node Editor sync continues to work in every form after the split — verified by the existing `editor-panel-canvas-sync.test.ts` suite passing, plus a manual smoke check that `registerFieldRef`-based inbound canvas patches still reach Question / Answer / Snippet branch-label / Loop headerText fields (SPLIT-01, SPLIT-02)
+  5. The dispatcher's `registerFieldRef`-based canvas-sync surface and `CanvasNodeFactory`-driven quick-create toolbar (Phases 63/64) live in `editor-panel-view.ts`, not duplicated across form modules — preserving the single canvas-sync subscription per view contract (SPLIT-01)
+**Plans:** TBD
+**UI hint**: no
+
+### Phase 77: Eslint Findings Cleanup
+**Goal**: `npm run lint` exits with code 0 on a clean `main` checkout. All 517 errors and 6 warnings surfaced by quick task `260430-uas` (commit `07aa79d`, when `eslint` was promoted to a direct devDependency) are resolved. The dominant `obsidianmd/no-static-styles-assignment` violations across `src/views/` are converted to CSS class toggles + rules in the appropriate `src/styles/*.css` file per CLAUDE.md's per-feature CSS architecture (`runner-view.css`, `editor-panel.css`, `snippet-manager.css`, `snippet-fill-modal.css`, `loop-support.css`, `canvas-selector.css` — append-only per phase). Rule tuning (project-wide or per-file disable) is permitted only with a written justification in the same commit message — the default is to fix the violation. Required prerequisite for the Phase 78 CI gate.
+**Depends on**: Nothing (no contract changes; rules apply to existing source as-is)
+**Requirements**: LINT-01
+**Success Criteria** (what must be TRUE):
+  1. `npm run lint` on a clean `main` checkout exits with code 0 — zero errors reported across the entire `src/` tree — verified by running the command and observing `$?` = 0 (LINT-01)
+  2. The dominant `obsidianmd/no-static-styles-assignment` violations across `src/views/` are resolved by converting `el.style.foo = ...` assignments into CSS class toggles plus rules appended to the appropriate per-feature `src/styles/*.css` file (per CLAUDE.md's per-feature CSS architecture); `npm run build` regenerates root `styles.css` cleanly with the new rules included (LINT-01)
+  3. Any rule disabled (project-wide in `eslint.config.js` or per-file via inline `eslint-disable` comments) is accompanied by a written justification in the commit message that adds the disable; the default is to fix the violation, not silence the rule (LINT-01)
+  4. The full vitest suite continues to pass after the cleanup — `npm test` exits 0 — proving the lint fixes did not introduce behavior regressions; existing CSS files are edited append-only per phase per CLAUDE.md (no rules deleted from existing files unless they belong to this phase) (LINT-01)
+  5. Pre-existing 6 warnings are either resolved or explicitly documented as out-of-scope (per REQUIREMENTS.md Future Requirements: "Lint-warning fixes are nice-to-have; in scope only if cheap") — phase VERIFICATION.md lists each remaining warning with rationale (LINT-01)
+**Plans:** TBD
+**UI hint**: no
+
+### Phase 78: Lint + Test Automation Gate
+**Goal**: Two-layer automatic gate ensures `npm run lint` and `npm test` run before code lands on `main`, preventing recurrence of the silent-drift class that produced the Phase 77 523-finding surprise. Layer 1 (local fast feedback): a pre-commit git hook tracked under `.githooks/pre-commit`, wired via `git config core.hooksPath .githooks` or equivalent automation in `package.json`'s `prepare` script, runs `eslint` on staged `*.ts` files and `npm test` and fails the commit on any error or test failure (bypass via `git commit --no-verify` preserved as the intentional escape hatch). Layer 2 (safety net for `--no-verify` and collaborators without local hooks): a GitHub Actions workflow at `.github/workflows/ci.yml` runs on every push to `main` and on every pull request executing `npm ci && npm run build && npm run lint && npm test`, failing the workflow on any non-zero exit. Strictly ordered after Phase 77 — turning on the gate before the existing 523 findings are fixed would block all subsequent commits on `main`.
+**Depends on**: Phase 77 (the gate is unworkable until the existing 517 errors + 6 warnings are cleared per CONCERNS.md MEDIUM-2 / REQUIREMENTS.md ordering constraint at the bottom of the file; reverse order would block every commit until the cleanup landed in one go)
+**Requirements**: CI-01, CI-02
+**Success Criteria** (what must be TRUE):
+  1. A pre-commit hook tracked at `.githooks/pre-commit` and wired via `git config core.hooksPath .githooks` (or equivalent automation in `package.json`'s `prepare` script) runs `eslint` against staged `*.ts` files and `npm test` before allowing a commit — verified by attempting `git commit` on a branch where a deliberately introduced eslint error or failing test exists, and observing the commit blocked with a non-zero exit (CI-01)
+  2. The pre-commit hook respects the `git commit --no-verify` escape hatch — verified by running `git commit --no-verify` on the same broken branch and observing the commit succeed locally (CI-01); the GitHub Actions workflow remains the authoritative safety net for any `--no-verify` bypass
+  3. A GitHub Actions workflow at `.github/workflows/ci.yml` runs on every `push` to `main` and on every pull request, executing `npm ci && npm run build && npm run lint && npm test` against a Node.js version matching the project's documented dev environment (Node 18+) — verified by the workflow file existing on `main` and passing on a clean push of the Phase 78 release commit (CI-02)
+  4. Pushing a commit with an eslint error to a PR branch produces a red ✕ CI status on the GitHub PR within 5 minutes of push — verified by intentionally introducing a lint violation in a throwaway branch, pushing, and observing the workflow fail with non-zero exit (CI-02)
+  5. Pushing a commit with a failing vitest test to a PR branch likewise produces a red ✕ CI status — verified by intentionally introducing a failing test, pushing, and observing the workflow fail at the `npm test` step (CI-02)
+**Plans:** TBD
+**UI hint**: no
+
 ---
 
 ## Progress
 
 **Execution Order:**
-v1.11 in progress — Phase 69 is next. Phases 69, 70, 71 are independent and code-side; Phases 72, 73 are content-authoring tracks (parallel to code phases); Phase 74 is the release gate (depends on 69–71 UAT acceptance).
+v1.12 in progress — Phases 75, 76, 77 are independent and can run in any order or in parallel; Phase 78 strictly depends on Phase 77 (lint+test gate is unworkable until existing findings cleared). No GitHub Release for `1.12.0` — internal-only milestone.
 
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
@@ -295,81 +348,14 @@ v1.11 in progress — Phase 69 is next. Phases 69, 70, 71 are independent and co
 | 72 | v1.11 | 5/5 | Complete    | 2026-04-30 |
 | 73 | v1.11 | 3/3 | Complete    | 2026-04-30 |
 | 74 | v1.11 | 0/? | Not started | — |
+| 75 | v1.12 | 0/? | Not started | — |
+| 76 | v1.12 | 0/? | Not started | — |
+| 77 | v1.12 | 0/? | Not started | — |
+| 78 | v1.12 | 0/? | Not started | — |
 
 
 ---
 
 ## Backlog
 
-Tech-debt items captured from the 2026-04-30 `CONCERNS.md` scan. Not attached to any active milestone — promote with `/gsd-review-backlog` when ready, or fold into a future maintenance milestone.
-
-### Phase 999.1: RunnerView ↔ InlineRunnerModal deduplication (BACKLOG)
-
-**Goal:** Extract a shared `RunnerRenderer` (or composable hooks) module under `src/runner/` that owns all `renderQuestion`, `renderAnswer`, `renderSnippetPicker`, `renderTextBlock`, `renderLoop` logic. `RunnerView` (sidebar leaf) and `InlineRunnerModal` (floating modal) become thin shells wiring host-specific concerns (layout persistence, output toolbar). Collapse the parallel `inline-runner-*` test trees into shared fixtures.
-
-**Why:** ~2350 LOC of mirrored render logic across `src/views/runner-view.ts` (1145) and `src/views/inline-runner-modal.ts` (1205). Every runner-side feature is implemented and tested twice. CONCERNS.md MEDIUM-2 (2026-04-30) names this the single biggest dev-velocity drag in the codebase.
-
-**Requirements:** TBD (derive during `/gsd-spec-phase 999.1`)
-**Plans:** 0 plans
-**Estimate:** 3-4 plans within one phase, or split across 2-3 phases.
-
-Plans:
-- [ ] TBD (promote with `/gsd-review-backlog` when ready)
-
-### Phase 999.2: editor-panel-view.ts split into per-kind form modules (BACKLOG)
-
-**Goal:** Extract per-node-kind form renderers from `src/views/editor-panel-view.ts` (currently 1226 LOC, 20 methods) into siblings: `editor-panel/forms/question-form.ts`, `answer-form.ts`, `text-block-form.ts`, `snippet-form.ts`, `loop-form.ts`. The view itself becomes a dispatcher. Mirror the test split that already exists across 6 test files (~120 KB).
-
-**Why:** CLAUDE.md explicitly flags this file as a "sharp edge" — recurring regressions caused by executor agents losing context while editing unrelated sections. Each editor-side phase pays a "find the right section" tax.
-
-**Requirements:** TBD (derive during `/gsd-spec-phase 999.2`)
-**Plans:** 0 plans
-**Estimate:** 1-2 plans within one phase. Lower urgency than 999.1 — file is not actively bleeding bugs, just expensive to navigate.
-
-Plans:
-- [ ] TBD (promote with `/gsd-review-backlog` when ready)
-
-### Phase 999.3: Fix the 523 pre-existing eslint findings (BACKLOG)
-
-**Goal:** Resolve the 517 errors and 6 warnings that surfaced when `eslint` was promoted to a direct devDependency in quick task `260430-uas` (commit `07aa79d`). The dominant rule violation is `obsidianmd/no-static-styles-assignment` across `src/views/` (Obsidian community-plugin lint rule that forbids inline `el.style.foo = ...` assignments — they should be CSS classes in `src/styles/*.css` instead). Other rules in the long tail to be inventoried during `/gsd-spec-phase 999.3`.
-
-**Why:** The lint findings have been silently accumulating for many milestones because `eslint` was only present transitively and `npm run lint` was never run. CONCERNS.md flagged the dependency declaration gap (LOW-6); fixing that exposed the inventory. Cleaning these up aligns the codebase with Obsidian's published plugin guidelines (relevant for community-plugin review status if/when the plugin is submitted).
-
-**Requirements:** TBD (derive during `/gsd-spec-phase 999.3` — likely "0 eslint errors on `npm run lint`", "all `el.style.foo = ...` assignments converted to class toggles + CSS rules", and rule-specific exit criteria for the long tail).
-
-**Plans:** 0 plans
-**Estimate:** 1 plan if the tail is small once the static-style violations are converted; 2-3 plans if the long tail is heavier than expected. Pairs naturally with 999.4 — fix the violations, then turn on the gate that prevents recurrence.
-
-**Pairs with:** Phase 999.4 (lint+test automation gate).
-
-Plans:
-- [ ] TBD (promote with `/gsd-review-backlog` when ready)
-
-### Phase 999.4: Automate the lint + test gate (pre-commit + CI) (BACKLOG)
-
-**Goal:** Add an automatic gate so `npm run lint` and `npm test` run before code lands on `main`, preventing recurrence of the kind of silent drift that produced the 523-finding surprise. Two layers:
-
-  1. **Local pre-commit hook** — fast feedback loop, runs `npm test` (and ideally `eslint --max-warnings=0` on staged `*.ts` files only, not the whole tree). Either via `husky` + `lint-staged`, or a hand-written `.git/hooks/pre-commit` script tracked under `.githooks/` and wired through `core.hooksPath`. The hand-written path avoids adding `husky` as a dependency for a single hook.
-  2. **GitHub Actions CI** — catches what slips past the local hook (collaborator without hook installed, `--no-verify` bypass, etc.). Workflow on `push` to `main` and on PRs: `npm ci && npm run build && npm run lint && npm test`. Fail the workflow on any non-zero exit.
-
-**Why:** The whole reason CONCERNS.md surfaced the 523 lint findings was that nothing automatically ran `eslint` since the script was added. Same risk applies to test regressions — `npm test` is fast (3 seconds) but only runs when a developer remembers. A two-layer gate (local + CI) is industry-standard for this size of project.
-
-**Why two layers, not one:**
-- Pre-commit only — collaborators without hook setup, or `git commit --no-verify`, slip through silently. Project history already shows `--no-verify` usage (e.g. `git commit --no-verify` in the recent quick-task commits).
-- CI only — slow feedback. Lint/test failures get noticed only after push, requiring a fixup commit each time.
-
-**Requirements:** TBD (derive during `/gsd-spec-phase 999.4`):
-- Pre-commit blocks commits that add `eslint` errors on staged files
-- Pre-commit blocks commits where `npm test` fails
-- CI workflow runs on push to main and on PRs, failing on any of: build, lint (errors only, not warnings), or test failure
-- Both gates respect `--no-verify` semantics (local can be bypassed, CI cannot — that's the whole point of CI as the safety net)
-
-**Plans:** 0 plans
-**Estimate:** 1 plan, ~2-3 hours. Mostly mechanical — one `.github/workflows/ci.yml`, one pre-commit script, one `package.json` edit, one `npm install --save-dev lint-staged` (or equivalent).
-
-**Pairs with:** Phase 999.3 — the gate must turn on AFTER the existing 523 findings are fixed; otherwise every commit fails.
-
-**Strict ordering:** 999.3 → 999.4. Reverse order is unworkable (gate would block all commits until 523 findings cleared in one go).
-
-Plans:
-- [ ] TBD (promote with `/gsd-review-backlog` when ready)
+(empty — items promoted to v1.12 phases 75-78)
