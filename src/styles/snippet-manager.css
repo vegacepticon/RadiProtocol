@@ -521,3 +521,14 @@
 .rp-snippet-editor-unsaved-dot.is-visible {
   display: inline;
 }
+
+/* Phase 77: snippet-chip-editor mini-form + row layout — replaces inline display/gap (LINT-01) */
+.rp-chip-row-flex {
+  display: flex;
+  gap: var(--size-4-1);
+}
+
+.rp-chip-form-hidden,
+.rp-chip-option-label-hidden {
+  display: none;
+}

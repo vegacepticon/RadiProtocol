@@ -124,7 +124,7 @@ export function mountChipEditor(
   const addPlaceholderBtn = templateSection.createEl('button', { text: '+ Add placeholder' });
   addPlaceholderBtn.setAttribute('type', 'button');
   const addPlaceholderForm = templateSection.createDiv({ cls: 'rp-add-placeholder-form' });
-  addPlaceholderForm.style.display = 'none';
+  addPlaceholderForm.toggleClass('rp-chip-form-hidden', true);
 
   const miniLabelEl = addPlaceholderForm.createEl('label');
   miniLabelEl.textContent = 'Label';
@@ -147,9 +147,7 @@ export function mountChipEditor(
     opt.value = value;
   }
 
-  const miniActionRow = addPlaceholderForm.createDiv();
-  miniActionRow.style.display = 'flex';
-  miniActionRow.style.gap = 'var(--size-4-1)';
+  const miniActionRow = addPlaceholderForm.createDiv({ cls: 'rp-chip-row-flex' });
 
   const miniAddBtn = miniActionRow.createEl('button', { text: 'Add' });
   miniAddBtn.addClass('mod-cta');
@@ -165,7 +163,7 @@ export function mountChipEditor(
 
   // Wire [+ Add placeholder] button: show mini-form
   on(addPlaceholderBtn, 'click', () => {
-    addPlaceholderForm.style.display = '';
+    addPlaceholderForm.toggleClass('rp-chip-form-hidden', false);
     miniLabelInput.value = '';
     miniTypeSelect.value = 'free-text';
     miniLabelInput.focus();
@@ -196,14 +194,14 @@ export function mountChipEditor(
     insertAtCursor(templateArea, `{{${slug}}}`);
     draft.template = templateArea.value;
 
-    addPlaceholderForm.style.display = 'none';
+    addPlaceholderForm.toggleClass('rp-chip-form-hidden', true);
     renderPlaceholderList();
     onChange();
   });
 
   // Wire [Cancel] in mini-form
   on(miniCancelBtn, 'click', () => {
-    addPlaceholderForm.style.display = 'none';
+    addPlaceholderForm.toggleClass('rp-chip-form-hidden', true);
   });
 
   // --- Placeholder list rendering ------------------------------------------
@@ -377,9 +375,8 @@ export function mountChipEditor(
       const options = ph.options ?? [];
       options.forEach((opt, oi) => {
         const optRow = optionList.createDiv({ cls: 'rp-option-row' });
-        const optLabel = optRow.createEl('label');
+        const optLabel = optRow.createEl('label', { cls: 'rp-chip-option-label-hidden' });
         optLabel.htmlFor = `rp-opt-${ph.id}-${oi}`;
-        optLabel.style.display = 'none';
         optLabel.textContent = `Option ${oi + 1}`;
         const optInput = optRow.createEl('input', { type: 'text' });
         optInput.id = `rp-opt-${ph.id}-${oi}`;
