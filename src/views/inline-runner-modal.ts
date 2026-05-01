@@ -655,12 +655,9 @@ export class InlineRunnerModal {
     if (this.containerEl === null) return;
     this.containerEl.style.left = `${Math.round(position.left)}px`;
     this.containerEl.style.top = `${Math.round(position.top)}px`;
-    this.containerEl.style.right = '';
-    this.containerEl.style.bottom = '';
     // Phase 67: do NOT clear style.width — the modal is resizable and width must persist across drags
     // this.containerEl.style.width = '';
-    this.containerEl.style.maxWidth = '';
-    this.containerEl.style.transform = '';
+    this.containerEl.toggleClass('rp-inline-runner-applied-position', true);
   }
 
   /** Phase 67 D-10: applyPosition + size. Missing width/height ⇒ default fallback. */
@@ -673,7 +670,6 @@ export class InlineRunnerModal {
       ? layout.height : INLINE_RUNNER_DEFAULT_HEIGHT;
     this.containerEl.style.width = `${Math.round(width)}px`;
     this.containerEl.style.height = `${Math.round(height)}px`;
-    this.containerEl.style.maxWidth = '';   // CSS rules at file bottom enforce max
   }
 
   /** Phase 67 D-06/D-10: restore saved layout (clamped) or apply default. */

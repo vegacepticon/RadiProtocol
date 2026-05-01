@@ -236,3 +236,11 @@
 .rp-inline-runner-container.is-resizing {
   box-shadow: var(--shadow-xl);                       /* D-02: exact mirror of Phase 60 `.is-dragging` */
 }
+
+/* Phase 77: applyPosition/applyLayout reset right/bottom/maxWidth/transform when explicit left/top is applied (Phase 60/67 drag+resize, LINT-01) */
+.rp-inline-runner-container.rp-inline-runner-applied-position {
+  right: auto;
+  bottom: auto;
+  max-width: none;
+  transform: none;
+}

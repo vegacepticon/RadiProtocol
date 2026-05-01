@@ -58,6 +58,10 @@ class FakeElement {
   setAttribute(_name: string, _value: string): void {}
   addClass(cls: string): void { this.classList.add(cls); }
   removeClass(cls: string): void { this.classList.remove(cls); }
+  toggleClass(cls: string, on?: boolean): void {
+    if (on ?? !this.classList.contains(cls)) this.classList.add(cls);
+    else this.classList.remove(cls);
+  }
   hasClass(cls: string): boolean { return this.classList.contains(cls); }
   remove(): void {
     if (this.parentElement !== null) {
@@ -170,9 +174,7 @@ describe('Phase 60 D-01/D-02 inline runner position persistence', () => {
 
     expect(modal.containerEl?.style.left).toBe('588px');
     expect(modal.containerEl?.style.top).toBe('432px');
-    expect(modal.containerEl?.style.right).toBe('');
-    expect(modal.containerEl?.style.bottom).toBe('');
-    expect(modal.containerEl?.style.transform).toBe('');
+    expect(modal.containerEl?.hasClass('rp-inline-runner-applied-position')).toBe(true);
   });
 
   it('dragging the header updates left/top, clears bottom/right, and saves coordinates', () => {
@@ -185,8 +187,7 @@ describe('Phase 60 D-01/D-02 inline runner position persistence', () => {
 
     expect(modal.containerEl?.style.left).toBe('628px');
     expect(modal.containerEl?.style.top).toBe('457px');
-    expect(modal.containerEl?.style.right).toBe('');
-    expect(modal.containerEl?.style.bottom).toBe('');
+    expect(modal.containerEl?.hasClass('rp-inline-runner-applied-position')).toBe(true);
     expect(plugin.saveSpy).toHaveBeenCalledWith({ left: 628, top: 457, width: 420, height: 320 });
     expect(doc.listeners.get('pointermove')).toHaveLength(0);
   });
@@ -213,7 +214,9 @@ describe('Phase 60 D-01/D-02 inline runner position persistence', () => {
     const { modal, plugin } = mount({ left: 920, top: 740 });
     modal.restoreOrDefaultPosition();
     if (modal.containerEl !== null) {
+      // eslint-disable-next-line obsidianmd/no-static-styles-assignment -- Phase 77: test fixture forcing pre-condition; production at inline-runner-modal.ts:656-657 uses template literal which is not flagged by the rule
       modal.containerEl.style.left = '920px';
+      // eslint-disable-next-line obsidianmd/no-static-styles-assignment -- Phase 77: see comment above
       modal.containerEl.style.top = '740px';
     }
 
