@@ -527,9 +527,9 @@ export class EditorPanelView extends ItemView {
     textarea.value = options.value;
 
     const resize = () => {
-      if (!textarea.style) return;
-      textarea.style.height = 'auto';
-      textarea.style.height = textarea.scrollHeight + 'px';
+      if (typeof textarea.setCssProps !== 'function') return;
+      textarea.setCssProps({ '--rp-textarea-height': 'auto' });
+      textarea.setCssProps({ '--rp-textarea-height': textarea.scrollHeight + 'px' });
     };
 
     if (typeof requestAnimationFrame === 'function') {
@@ -656,9 +656,9 @@ export class EditorPanelView extends ItemView {
     value: string,
   ): void {
     el.value = value;
-    if (typeof HTMLTextAreaElement !== 'undefined' && el instanceof HTMLTextAreaElement && el.style) {
-      el.style.height = 'auto';
-      el.style.height = el.scrollHeight + 'px';
+    if (typeof HTMLTextAreaElement !== 'undefined' && el instanceof HTMLTextAreaElement && typeof el.setCssProps === 'function') {
+      el.setCssProps({ '--rp-textarea-height': 'auto' });
+      el.setCssProps({ '--rp-textarea-height': el.scrollHeight + 'px' });
     }
   }
 

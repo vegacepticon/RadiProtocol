@@ -139,6 +139,10 @@ const fakeNode = (parentCls?: string): Record<string, unknown> => {
     addClass: () => {},
     removeClass: () => {},
     setText: () => {},
+    recordedCssProps: [] as Record<string, string>[],
+    setCssProps(this: { recordedCssProps: Record<string, string>[] }, props: Record<string, string>): void {
+      this.recordedCssProps.push({ ...props });
+    },
     disabled: false,
   };
   return self;
@@ -290,16 +294,17 @@ describe('NODEUI-04: question form custom DOM + auto-grow textarea', () => {
     expect(descIdx).toBeLessThan(taIdx);
   });
 
-  it('input event on the textarea writes style.height = "auto" then = scrollHeight + "px"', () => {
+  it('input event on the textarea records auto then scrollHeight through setCssProps', () => {
     const view = makeView();
     const container = fakeNode();
     // @ts-expect-error accessing private for test
     view['buildKindForm'](container, {}, 'question');
     expect(textareaInputCb.cb).not.toBeNull();
     expect(lastTextarea).not.toBeNull();
-    (lastTextarea as { style: { height: string } }).style.height = 'prev';
     textareaInputCb.cb?.();
-    expect((lastTextarea as { style: { height: string } }).style.height).toBe('123px');
+    const recorded = (lastTextarea as { recordedCssProps: Record<string, string>[] }).recordedCssProps;
+    expect(recorded.at(-2)).toEqual({ '--rp-textarea-height': 'auto' });
+    expect(recorded.at(-1)).toEqual({ '--rp-textarea-height': '123px' });
   });
 });
 
@@ -380,7 +385,10 @@ describe('Phase 64 EDITOR-04: shared auto-grow textarea coverage', () => {
     const element = createdElements.find(e => e.tag === 'textarea');
     expect(element?.cls, `${label} textarea should opt into shared growable styling`).toContain('rp-growable-textarea');
     expect(textarea?.value).toBe(Object.values(record)[0]);
-    expect(textarea?.__heightHistory).toEqual(['auto', '123px']);
+    expect((textarea as { recordedCssProps: Record<string, string>[] } | undefined)?.recordedCssProps).toEqual([
+      { '--rp-textarea-height': 'auto' },
+      { '--rp-textarea-height': '123px' },
+    ]);
   });
 
   it.each(cases)('Phase 64: $kind $label input grows/shrinks and preserves pending edit keys', ({ kind, record, newValue, expectedEdits }) => {
@@ -397,20 +405,26 @@ describe('Phase 64 EDITOR-04: shared auto-grow textarea coverage', () => {
 
     (textarea as { value: string }).value = newValue;
     (textarea as { scrollHeight: number }).scrollHeight = 240;
-    (textarea as { __heightHistory: string[] }).__heightHistory.length = 0;
+    (textarea as { recordedCssProps: Record<string, string>[] }).recordedCssProps.length = 0;
     inputCb?.();
 
-    expect((textarea as { __heightHistory: string[] }).__heightHistory).toEqual(['auto', '240px']);
+    expect((textarea as { recordedCssProps: Record<string, string>[] }).recordedCssProps).toEqual([
+      { '--rp-textarea-height': 'auto' },
+      { '--rp-textarea-height': '240px' },
+    ]);
     for (const [key, value] of Object.entries(expectedEdits)) {
       expect(view['pendingEdits'][key]).toBe(value);
     }
 
     (textarea as { value: string }).value = '';
     (textarea as { scrollHeight: number }).scrollHeight = 18;
-    (textarea as { __heightHistory: string[] }).__heightHistory.length = 0;
+    (textarea as { recordedCssProps: Record<string, string>[] }).recordedCssProps.length = 0;
     inputCb?.();
 
-    expect((textarea as { __heightHistory: string[] }).__heightHistory).toEqual(['auto', '18px']);
+    expect((textarea as { recordedCssProps: Record<string, string>[] }).recordedCssProps).toEqual([
+      { '--rp-textarea-height': 'auto' },
+      { '--rp-textarea-height': '18px' },
+    ]);
     if (kind === 'snippet') {
       expect(view['pendingEdits']['radiprotocol_snippetLabel']).toBeUndefined();
     }
