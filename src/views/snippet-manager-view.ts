@@ -271,9 +271,8 @@ export class SnippetManagerView extends ItemView {
       row.setAttribute('data-editing', 'true');
     }
 
-    const indent = row.createSpan({ cls: 'radi-snippet-tree-indent' });
+    const indent = row.createSpan({ cls: 'radi-snippet-tree-indent rp-snippet-tree-indent-inline' });
     indent.style.width = `${depth * 16}px`;
-    indent.style.display = 'inline-block';
 
     const expanded = node.kind === 'folder' ? this.isExpanded(node.path) : false;
 
@@ -282,9 +281,7 @@ export class SnippetManagerView extends ItemView {
       setIcon(chev, expanded ? 'chevron-down' : 'chevron-right');
     } else {
       // Spacer to keep labels aligned when there is no chevron
-      const spacer = row.createSpan({ cls: 'radi-snippet-tree-chevron-spacer' });
-      spacer.style.display = 'inline-block';
-      spacer.style.width = '12px';
+      row.createSpan({ cls: 'radi-snippet-tree-chevron-spacer rp-snippet-tree-spacer' });
     }
 
     const iconEl = row.createSpan({ cls: 'radi-snippet-tree-icon' });
@@ -356,9 +353,8 @@ export class SnippetManagerView extends ItemView {
     if (node.kind === 'folder' && expanded) {
       if (node.children.length === 0) {
         const empty = container.createDiv({ cls: 'radi-snippet-tree-row radi-snippet-tree-empty-placeholder' });
-        const emptyIndent = empty.createSpan({ cls: 'radi-snippet-tree-indent' });
+        const emptyIndent = empty.createSpan({ cls: 'radi-snippet-tree-indent rp-snippet-tree-indent-inline' });
         emptyIndent.style.width = `${(depth + 1) * 16}px`;
-        emptyIndent.style.display = 'inline-block';
         empty.createSpan({ text: '(пусто)', cls: 'radi-snippet-tree-empty-label' });
       } else {
         for (const child of node.children) {
@@ -908,7 +904,7 @@ export class SnippetManagerView extends ItemView {
     // need this, and we leave the label in place so cancelInlineRename can
     // simply remove the input without rebuilding the row.
     try {
-      (labelEl as unknown as { style: Record<string, string> }).style['display'] = 'none';
+      labelEl.toggleClass('rp-snippet-tree-label-hidden', true);
     } catch { /* noop */ }
     try {
       (input as unknown as { focus: () => void }).focus();
@@ -934,7 +930,7 @@ export class SnippetManagerView extends ItemView {
         (input as unknown as { remove: () => void }).remove();
       } catch { /* noop */ }
       try {
-        (labelEl as unknown as { style: Record<string, string> }).style['display'] = '';
+        labelEl.toggleClass('rp-snippet-tree-label-hidden', false);
       } catch { /* noop */ }
       this.currentlyRenamingPath = null;
     };
