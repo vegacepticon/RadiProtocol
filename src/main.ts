@@ -1,6 +1,6 @@
 // main.ts
 import { Plugin, Notice, Menu, TFile, TFolder, SuggestModal } from 'obsidian';
-import type { WorkspaceLeaf } from 'obsidian';
+import type { App, WorkspaceLeaf } from 'obsidian';
 import { RadiProtocolSettings, DEFAULT_SETTINGS, RadiProtocolSettingsTab, type InlineRunnerLayout } from './settings';
 import { CanvasParser } from './graph/canvas-parser';
 import { EditorPanelView, EDITOR_PANEL_VIEW_TYPE } from './views/editor-panel-view';
@@ -77,6 +77,33 @@ export function resolveProtocolCanvasFiles(
     `[RadiProtocol][INLINE-FIX-01] Resolved '${folderPath}' → '${normalized}' via getFiles() fallback; ${out.length} canvas file(s). (getAbstractFileByPath returned ${folder === null ? 'null' : typeof folder})`,
   );
   return out;
+}
+
+type CanvasPickerSuggestion = { file: TFile; name: string };
+
+class CanvasPickerSuggestModal extends SuggestModal<CanvasPickerSuggestion> {
+  constructor(
+    app: App,
+    private readonly canvasFiles: TFile[],
+    private readonly onChoose: (item: CanvasPickerSuggestion) => void,
+  ) {
+    super(app);
+  }
+
+  getSuggestions(query: string): CanvasPickerSuggestion[] {
+    const q = query.toLowerCase();
+    return this.canvasFiles
+      .map(f => ({ file: f, name: f.basename }))
+      .filter(item => item.name.toLowerCase().includes(q));
+  }
+
+  renderSuggestion(item: CanvasPickerSuggestion, el: HTMLElement): void {
+    el.createEl('div', { text: item.name });
+  }
+
+  onChooseSuggestion(item: CanvasPickerSuggestion): void {
+    this.onChoose(item);
+  }
 }
 
 export default class RadiProtocolPlugin extends Plugin {
@@ -243,7 +270,7 @@ export default class RadiProtocolPlugin extends Plugin {
       await leaf.setViewState({ type: EDITOR_PANEL_VIEW_TYPE, active: true });
       const activeLeaf = workspace.getLeavesOfType(EDITOR_PANEL_VIEW_TYPE)[0];
       if (activeLeaf !== undefined) {
-        workspace.revealLeaf(activeLeaf);
+        void workspace.revealLeaf(activeLeaf);
       }
     }
   }
@@ -252,7 +279,7 @@ export default class RadiProtocolPlugin extends Plugin {
     const { workspace } = this.app;
     const leaves = workspace.getLeavesOfType(EDITOR_PANEL_VIEW_TYPE);
     if (leaves.length > 0 && leaves[0] !== undefined) {
-      workspace.revealLeaf(leaves[0]);
+      void workspace.revealLeaf(leaves[0]);
       return;
     }
     // No existing leaf — create one in the right sidebar
@@ -261,7 +288,7 @@ export default class RadiProtocolPlugin extends Plugin {
       await leaf.setViewState({ type: EDITOR_PANEL_VIEW_TYPE, active: true });
       const newLeaves = workspace.getLeavesOfType(EDITOR_PANEL_VIEW_TYPE);
       if (newLeaves[0] !== undefined) {
-        workspace.revealLeaf(newLeaves[0]);
+        void workspace.revealLeaf(newLeaves[0]);
       }
     }
   }
@@ -274,7 +301,7 @@ export default class RadiProtocolPlugin extends Plugin {
       await leaf.setViewState({ type: SNIPPET_MANAGER_VIEW_TYPE, active: true });
       const activeLeaf = workspace.getLeavesOfType(SNIPPET_MANAGER_VIEW_TYPE)[0];
       if (activeLeaf !== undefined) {
-        workspace.revealLeaf(activeLeaf);
+        void workspace.revealLeaf(activeLeaf);
       }
     }
   }
@@ -293,7 +320,7 @@ export default class RadiProtocolPlugin extends Plugin {
 
       if (leafIsInSidebar === targetIsSidebar) {
         // RUNTAB-03: mode unchanged — reveal existing leaf, no duplicate
-        workspace.revealLeaf(existingLeaf);
+        void workspace.revealLeaf(existingLeaf);
         return;
       }
 
@@ -313,7 +340,7 @@ export default class RadiProtocolPlugin extends Plugin {
 
     if (leaf !== null) {
       await leaf.setViewState({ type: RUNNER_VIEW_TYPE, active: true });
-      workspace.revealLeaf(leaf);
+      void workspace.revealLeaf(leaf);
     } else {
       new Notice('Could not open runner view: no available leaf.');
     }
@@ -514,29 +541,10 @@ export default class RadiProtocolPlugin extends Plugin {
     }
 
     // Canvas picker via SuggestModal
-    const plugin = this;
-    const targetNote = activeFile;
-    this.pickerModal = new (class extends SuggestModal<{ file: TFile; name: string }> {
-      constructor() {
-        super(plugin.app);
-      }
-
-      getSuggestions(query: string): { file: TFile; name: string }[] {
-        const q = query.toLowerCase();
-        return canvasFiles
-          .map(f => ({ file: f, name: f.basename }))
-          .filter(item => item.name.toLowerCase().includes(q));
-      }
-
-      renderSuggestion(item: { file: TFile; name: string }, el: HTMLElement): void {
-        el.createEl('div', { text: item.name });
-      }
-
-      onChooseSuggestion(item: { file: TFile; name: string }): void {
-        plugin.pickerModal = null;
-        void plugin.openInlineRunner(item.file, targetNote);
-      }
-    })();
+    this.pickerModal = new CanvasPickerSuggestModal(this.app, canvasFiles, (item) => {
+      this.pickerModal = null;
+      void this.openInlineRunner(item.file, activeFile);
+    });
 
     this.pickerModal.open();
   }
