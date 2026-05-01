@@ -596,7 +596,7 @@ export class InlineRunnerModal {
     this.app.workspace.iterateAllLeaves((leaf) => {
       const view = leaf.view;
       if ('file' in view && view.file instanceof TFile) {
-        if ((view.file as TFile).path === this.targetNote.path) {
+        if (view.file.path === this.targetNote.path) {
           targetHasOpenLeaves = true;
         }
       }

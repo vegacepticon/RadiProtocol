@@ -278,10 +278,14 @@ export class EditorPanelView extends ItemView {
       new Notice('Canvas file not found in vault.');
       return;
     }
+    if (!(file instanceof TFile)) {
+      new Notice('Could not read canvas file (not a file).');
+      return;
+    }
 
     let raw: string;
     try {
-      raw = await this.plugin.app.vault.read(file as TFile);
+      raw = await this.plugin.app.vault.read(file);
     } catch {
       new Notice('Could not read canvas file.');
       return;
@@ -378,7 +382,7 @@ export class EditorPanelView extends ItemView {
     }
 
     try {
-      await this.plugin.app.vault.modify(file as TFile, JSON.stringify(canvasData, null, 2));
+      await this.plugin.app.vault.modify(file, JSON.stringify(canvasData, null, 2));
     } catch {
       new Notice('Could not save — write failed. Check file permissions.');
     }

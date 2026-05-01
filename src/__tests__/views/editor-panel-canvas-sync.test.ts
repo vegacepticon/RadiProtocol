@@ -13,7 +13,7 @@
 // + RESEARCH §"Defensive note" line 824 (FakeNode.ownerDocument back-reference).
 
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { Setting } from 'obsidian';
+import { Setting, TFile } from 'obsidian';
 import { EditorPanelView } from '../../views/editor-panel-view';
 import type RadiProtocolPlugin from '../../main';
 import type { CanvasChangedForNodeDetail } from '../../canvas/edge-label-sync-service';
@@ -806,25 +806,28 @@ function makeSnippetCanvasJson(snippetLabel?: string, edgeLabel?: string): strin
   });
 }
 
-function makeSaveView(params: {
+interface SaveViewParams {
   saveLiveBatchReturn?: boolean;
   saveLiveReturn?: boolean;
   vaultReadContent?: string;
-}): {
+}
+
+function makeSaveView(params: SaveViewParams = {}): {
   view: EditorPanelView;
   saveLiveBatchSpy: ReturnType<typeof vi.fn>;
   saveLiveSpy: ReturnType<typeof vi.fn>;
   vaultModifySpy: ReturnType<typeof vi.fn>;
 } {
-  const saveLiveBatchSpy = vi.fn().mockResolvedValue(params.saveLiveBatchReturn ?? true);
+  const saveLiveBatchSpy = vi.fn().mockResolvedValue(params.saveLiveBatchReturn ?? false);
   const saveLiveSpy = vi.fn().mockResolvedValue(params.saveLiveReturn ?? false);
   const vaultModifySpy = vi.fn().mockResolvedValue(undefined);
+  const canvasFile = Object.assign(new TFile(), { path: 'test.canvas' });
   const plugin = {
     app: {
       vault: {
         read: vi.fn().mockResolvedValue(params.vaultReadContent ?? makeSnippetCanvasJson()),
         modify: vaultModifySpy,
-        getAbstractFileByPath: vi.fn().mockReturnValue({ path: 'test.canvas' }),
+        getAbstractFileByPath: vi.fn().mockReturnValue(canvasFile),
       },
       workspace: {
         getLeavesOfType: vi.fn().mockReturnValue([]),
