@@ -18,7 +18,7 @@
 - ✅ **v1.9 Inline Runner Polish & Settings UX** — Phases 59-62 (shipped 2026-04-25)
 - ✅ **v1.10 Editor Sync & Runner UX Polish** — Phases 63-68 (shipped 2026-04-26)
 - ✅ **v1.11 Inline Polish, Loop Hint, Donate & Canvas Library** — Phases 69-74 (shipped 2026-04-30)
-- 🚧 **v1.12 Maintenance & Tech Debt** — Phases 75-78 (Phase 77 complete, Phase 78 complete; 75-76 pending)
+- 🚧 **v1.12 Maintenance & Tech Debt** — Phases 75-78 (Phase 76 complete, Phase 77 complete, Phase 78 complete; 75 pending)
 
 _v1.12 in progress; opened 2026-04-30. Internal-only — no GitHub Release planned for `1.12.0`._
 
@@ -294,7 +294,8 @@ Full details: `.planning/archive/milestones/v1.10-ROADMAP.md`
   3. All six existing test files (`editor-panel-create.test.ts`, `editor-panel-forms.test.ts`, `editor-panel-loop-form.test.ts`, `editor-panel-canvas-sync.test.ts`, `editor-panel-snippet-picker.test.ts`, `editor-panel.test.ts`) pass without modification of their assertion semantics — `npm test` exits 0 with the full suite green; tests may be mechanically split to mirror the new module boundaries provided every existing test case appears in exactly one resulting file with the same assertion semantics (SPLIT-02)
   4. Phase 63 bidirectional Canvas ↔ Node Editor sync continues to work in every form after the split — verified by the existing `editor-panel-canvas-sync.test.ts` suite passing, plus a manual smoke check that `registerFieldRef`-based inbound canvas patches still reach Question / Answer / Snippet branch-label / Loop headerText fields (SPLIT-01, SPLIT-02)
   5. The dispatcher's `registerFieldRef`-based canvas-sync surface and `CanvasNodeFactory`-driven quick-create toolbar (Phases 63/64) live in `editor-panel-view.ts`, not duplicated across form modules — preserving the single canvas-sync subscription per view contract (SPLIT-01)
-**Plans:** TBD
+**Plans:** 5 completed plans plus final gap-closure extractions documented in `76-SUMMARY.md` / `76-VERIFICATION.md`.
+**Status:** ✅ Complete — `editor-panel-view.ts` is 393 LOC; full `npm test`, `npm run build`, and `npm run lint` pass.
 **UI hint**: no
 
 ### Phase 77: Eslint Findings Cleanup
