@@ -1,0 +1,59 @@
+#!/usr/bin/env bash
+# Phase 78: Pre-commit hook — lint + test gate
+# Blocks commit if staged *.ts files have eslint errors or tests fail.
+# Bypass: git commit --no-verify
+
+set -e
+
+echo "╭─ RadiProtocol pre-commit gate ─────────────────────"
+
+# 1. Collect staged *.ts files
+STAGED_TS=$(git diff --cached --name-only --diff-filter=ACM | grep '\.ts$' || true)
+
+if [ -z "$STAGED_TS" ]; then
+  echo "│ No staged *.ts files — skipping lint + test."
+  echo "╰────────────────────────────────────────────────────"
+  exit 0
+fi
+
+echo "│ Checking ${STAGED_TS#*$'\n'}"
+echo "│"
+
+# 2. Lint staged files
+echo "│ Running eslint on staged files…"
+LINT_OUTPUT=$(npx eslint $STAGED_TS 2>&1) && LINT_EXIT=0 || LINT_EXIT=$?
+
+if [ "$LINT_EXIT" -ne 0 ]; then
+  echo "│ ✖ ESLINT FAILED"
+  echo "│"
+  echo "$LINT_OUTPUT" | while IFS= read -r line; do
+    echo "│   $line"
+  done
+  echo "│"
+  echo "│ Fix the errors or use: git commit --no-verify"
+  echo "╰────────────────────────────────────────────────────"
+  exit 1
+fi
+
+echo "│ ✓ ESLint passed"
+echo "│"
+
+# 3. Run full test suite
+echo "│ Running test suite…"
+TEST_OUTPUT=$(npm test 2>&1) && TEST_EXIT=0 || TEST_EXIT=$?
+
+if [ "$TEST_EXIT" -ne 0 ]; then
+  echo "│ ✖ TESTS FAILED"
+  echo "│"
+  echo "$TEST_OUTPUT" | tail -30 | while IFS= read -r line; do
+    echo "│   $line"
+  done
+  echo "│"
+  echo "│ Fix the tests or use: git commit --no-verify"
+  echo "╰────────────────────────────────────────────────────"
+  exit 1
+fi
+
+echo "│ ✓ Tests passed"
+echo "│"
+echo "╰────────────────────────────────────────────────────"

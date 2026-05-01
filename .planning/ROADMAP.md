@@ -18,7 +18,7 @@
 - ✅ **v1.9 Inline Runner Polish & Settings UX** — Phases 59-62 (shipped 2026-04-25)
 - ✅ **v1.10 Editor Sync & Runner UX Polish** — Phases 63-68 (shipped 2026-04-26)
 - ✅ **v1.11 Inline Polish, Loop Hint, Donate & Canvas Library** — Phases 69-74 (shipped 2026-04-30)
-- 🚧 **v1.12 Maintenance & Tech Debt** — Phases 75-78 (in progress)
+|- 🚧 **v1.12 Maintenance & Tech Debt** — Phases 75-78 (Phase 77 complete, Phase 78 complete; 75-76 pending)
 
 _v1.12 in progress; opened 2026-04-30. Internal-only — no GitHub Release planned for `1.12.0`._
 
@@ -361,7 +361,9 @@ Full details: `.planning/archive/milestones/v1.10-ROADMAP.md`
   3. A GitHub Actions workflow at `.github/workflows/ci.yml` runs on every `push` to `main` and on every pull request, executing `npm ci && npm run build && npm run lint && npm test` against a Node.js version matching the project's documented dev environment (Node 18+) — verified by the workflow file existing on `main` and passing on a clean push of the Phase 78 release commit (CI-02)
   4. Pushing a commit with an eslint error to a PR branch produces a red ✕ CI status on the GitHub PR within 5 minutes of push — verified by intentionally introducing a lint violation in a throwaway branch, pushing, and observing the workflow fail with non-zero exit (CI-02)
   5. Pushing a commit with a failing vitest test to a PR branch likewise produces a red ✕ CI status — verified by intentionally introducing a failing test, pushing, and observing the workflow fail at the `npm test` step (CI-02)
-**Plans:** TBD
+**Plans:** 2 plans
+- [x] 78-01-PLAN.md — Pre-commit hook `.githooks/pre-commit` + wire via `core.hooksPath` + verify CI-01/CI-02 (completed 2026-05-01)
+- [x] 78-02-PLAN.md — GitHub Actions CI workflow `.github/workflows/ci.yml` + YAML validation (completed 2026-05-01)
 **UI hint**: no
 
 ---
@@ -391,8 +393,8 @@ v1.12 in progress — Phases 75, 76, 77 are independent and can run in any order
 | 74 | v1.11 | 0/? | Not started | — |
 | 75 | v1.12 | 0/? | Not started | — |
 | 76 | v1.12 | 0/? | Not started | — |
-| 77 | v1.12 | 0/? | Not started | — |
-| 78 | v1.12 | 0/? | Not started | — |
+| 77 | v1.12 | 14/14 | Complete | 2026-05-01 |
+| 78 | v1.12 | 2/2 | Complete | 2026-05-01 |
 
 
 ---
