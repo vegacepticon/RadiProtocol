@@ -4,7 +4,7 @@
 // awaiting-loop-pick / awaiting-snippet-fill / complete). Asserts that
 // .rp-copy-btn, .rp-save-btn, .rp-insert-btn, and the .rp-output-toolbar container
 // are absent from .rp-inline-runner-content's DOM in every state.
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 
 // ───── MockEl harness mirrors inline-runner-modal.test.ts ─────
 interface MockEl {
@@ -150,10 +150,6 @@ function buildMatcher(sel: string): (el: MockEl) => boolean {
     return (el) => el.classList.has(cls);
   }
   return (el) => el.tagName === sel.toUpperCase();
-}
-
-function findByClass(root: MockEl, cls: string): MockEl[] {
-  return walk(root, '.' + cls);
 }
 
 // ───── Mock obsidian ─────

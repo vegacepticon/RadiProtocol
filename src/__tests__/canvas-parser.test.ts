@@ -74,7 +74,7 @@ describe('CanvasParser', () => {
       expect(node).toBeDefined();
       expect(node?.kind).toBe('loop-start');
       // RUN-07 — Phase 44 Plan 04: parser must NOT set the deleted field.
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+       
       expect('maxIterations' in (node as any)).toBe(false);
     });
   });
@@ -89,7 +89,7 @@ describe('CanvasParser — snippet node (Phase 29)', () => {
     const node = result.graph.nodes.get('n-snippet1');
     expect(node).toBeDefined();
     expect(node?.kind).toBe('snippet');
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+     
     expect((node as any).subfolderPath).toBe('CT/adrenal');
   });
 
@@ -101,7 +101,7 @@ describe('CanvasParser — snippet node (Phase 29)', () => {
     const node = result.graph.nodes.get('n-snippet1');
     expect(node).toBeDefined();
     expect(node?.kind).toBe('snippet');
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+     
     expect((node as any).subfolderPath).toBeUndefined();
   });
 });
@@ -143,7 +143,7 @@ describe('CanvasParser — snippet node extra fields (Phase 31)', () => {
     const node = result.graph.nodes.get('n-snippet1');
     expect(node).toBeDefined();
     expect(node?.kind).toBe('snippet');
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+     
     return node as any;
   }
 
@@ -223,7 +223,7 @@ describe('Phase 51 — radiprotocol_snippetPath parsing (PICKER-01)', () => {
     const node = result.graph.nodes.get('n-snippet1');
     expect(node).toBeDefined();
     expect(node?.kind).toBe('snippet');
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+     
     return node as any;
   }
 

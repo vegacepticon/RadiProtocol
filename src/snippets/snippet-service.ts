@@ -485,7 +485,8 @@ export class SnippetService {
     template: string;
     placeholders: JsonSnippet['placeholders'];
   } {
-    const clean = (s: string): string => s.replace(/[\u0000-\u001F\u007F]/g, '');
+    // eslint-disable-next-line no-control-regex
+    const clean = (s: string): string => s.replace(new RegExp('[\\x00-\\x1f\\x7f]', 'g'), '');
     return {
       name: clean(snippet.name),
       template: clean(snippet.template),

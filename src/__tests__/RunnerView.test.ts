@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { RunnerView, RUNNER_VIEW_TYPE } from '../views/runner-view';
 
 describe('RunnerView (UI-01, UI-07, UI-12)', () => {

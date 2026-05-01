@@ -1,11 +1,11 @@
 // views/runner-view.ts — Phase 5: Full RunnerView with awaiting-snippet-fill branch
-import { ItemView, WorkspaceLeaf, Notice, TFile, TFolder, MarkdownView, setIcon } from 'obsidian';
+import { ItemView, WorkspaceLeaf, Notice, TFile, MarkdownView, setIcon } from 'obsidian';
 import type RadiProtocolPlugin from '../main';
 import { ProtocolRunner } from '../runner/protocol-runner';
 import { GraphValidator } from '../graph/graph-validator';
 import type { ProtocolGraph, AnswerNode, SnippetNode } from '../graph/graph-model';
 import { SnippetFillInModal } from './snippet-fill-in-modal';
-import type { Snippet, SnippetFile } from '../snippets/snippet-model';
+import type { Snippet } from '../snippets/snippet-model';
 import { ResumeSessionModal } from './resume-session-modal';
 import type { PersistedSession } from '../sessions/session-model';
 import { validateSessionNodeIds } from '../sessions/session-service';

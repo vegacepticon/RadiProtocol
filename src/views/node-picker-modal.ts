@@ -68,7 +68,7 @@ export function buildNodeOptions(graph: ProtocolGraph): NodeOption[] {
       const s = node as SnippetNode;
       // D-07 + D-CL-05: subfolderPath может быть undefined → fallback '(корень snippets)';
       // id — последний fallback (defense-in-depth, не должен срабатывать так как '(корень snippets)' truthy).
-      options.push({ id, label: s.subfolderPath || '(корень snippets)' || id, kind: 'snippet' });
+      options.push({ id, label: s.subfolderPath || '(корень snippets)', kind: 'snippet' });
     } else if (node.kind === 'loop') {
       const l = node as LoopNode;
       options.push({ id, label: l.headerText || id, kind: 'loop' });
@@ -123,6 +123,7 @@ export class NodePickerModal extends SuggestModal<NodeOption> {
   }
 
   onChooseSuggestion(option: NodeOption, _evt: MouseEvent | KeyboardEvent): void {
+    void _evt;
     this.onChooseCb(option);
   }
 }

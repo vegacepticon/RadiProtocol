@@ -6,7 +6,7 @@ import * as fs from 'node:fs';
 import * as path from 'node:path';
 
 const fixturesDir = path.join(__dirname, 'fixtures');
-function loadGraph(name: string) {
+function _loadGraph(name: string) {
   const json = fs.readFileSync(path.join(fixturesDir, name), 'utf-8');
   const parser = new CanvasParser();
   const result = parser.parse(json, name);

@@ -1,5 +1,6 @@
 // src/__tests__/canvas-write-back.test.ts
 import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { TFile } from 'obsidian';
 import { EditorPanelView } from '../views/editor-panel-view';
 import { CanvasLiveEditor } from '../canvas/canvas-live-editor';
 
@@ -26,7 +27,7 @@ describe('saveNodeEdits — write-back contract (EDIT-03, EDIT-04)', () => {
     mockVaultRead = vi.fn().mockResolvedValue(makeCanvasJson());
     mockVaultModify = vi.fn().mockResolvedValue(undefined);
     mockGetLeavesOfType = vi.fn().mockReturnValue([]); // canvas not open by default
-    mockGetAbstractFileByPath = vi.fn().mockReturnValue({ path: 'test.canvas' }); // TFile mock
+    mockGetAbstractFileByPath = vi.fn().mockReturnValue(new TFile('test.canvas')); // TFile mock
     // LIVE-03: saveLive returns false = canvas closed, fall through to vault.modify()
     mockSaveLive = vi.fn().mockResolvedValue(false);
 
@@ -238,7 +239,7 @@ describe('PHASE-50 CanvasLiveEditor edge writes (D-08 / D-12 / D-14)', () => {
         getLeavesOfType: (t: string) => (t === 'canvas' ? [{ view: mockView }] : []),
       },
     };
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+     
     const editor = new CanvasLiveEditor(mockApp as any);
     return { editor, setDataSpy, requestSaveSpy };
   }

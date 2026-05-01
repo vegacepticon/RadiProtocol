@@ -1,7 +1,7 @@
 // views/inline-runner-modal.ts — Phase 54: Inline protocol display mode
 // A floating, non-blocking DOM host for inline protocol runs over the active note.
 // NOT an Obsidian Modal subclass — plain class managing its own DOM element.
-import { App, TFile, TFolder, Notice, setIcon } from 'obsidian';
+import { App, TFile, Notice, setIcon } from 'obsidian';
 import type RadiProtocolPlugin from '../main';
 import { ProtocolRunner } from '../runner/protocol-runner';
 import { GraphValidator } from '../graph/graph-validator';
@@ -890,7 +890,8 @@ export class InlineRunnerModal {
   }
 
   /** Handle loop branch click — append any traversed answer text to note. */
-  private async handleLoopBranchClick(edge: import('../graph/graph-model').RPEdge, isExit: boolean): Promise<void> {
+  private async handleLoopBranchClick(edge: import('../graph/graph-model').RPEdge, _isExit: boolean): Promise<void> {
+    void _isExit;
     // Capture accumulated text before the branch choice
     const stateBefore = this.runner.getState();
     const beforeText = stateBefore.status === 'awaiting-loop-pick'

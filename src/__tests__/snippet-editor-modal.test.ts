@@ -408,10 +408,10 @@ describe('SnippetEditorModal', () => {
 
   it('MODAL-01: create mode sets «Новый сниппет» title and renders type toggle', async () => {
     const { plugin } = makeMockPlugin();
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+     
     const modal = new SnippetEditorModal(
-      {} as any, // eslint-disable-line @typescript-eslint/no-explicit-any
-      plugin as any, // eslint-disable-line @typescript-eslint/no-explicit-any
+      {} as any,  
+      plugin as any,  
       { mode: 'create', initialFolder: '.radiprotocol/snippets' },
     );
     await modal.onOpen();
@@ -645,7 +645,7 @@ describe('SnippetEditorModal', () => {
   it('Phase 34 MOVE-04: move-on-save Notice is exactly «Сниппет перемещён.» (no canvas-count suffix)', async () => {
     const noticeMessages: string[] = [];
     // Re-hook Notice constructor to capture messages
-    // eslint-disable-next-line @typescript-eslint/no-require-imports, @typescript-eslint/no-var-requires
+     
     const obsidianMod = await import('obsidian');
     const OrigNotice = (obsidianMod as unknown as { Notice: new (msg: string) => unknown }).Notice;
     (obsidianMod as unknown as { Notice: new (msg: string) => unknown }).Notice = class {

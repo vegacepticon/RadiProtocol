@@ -3,7 +3,7 @@
 // in complete-state, the three result-export buttons (.rp-copy-btn / .rp-save-btn /
 // .rp-insert-btn) are STILL rendered. Validates SC#2 + SC#3 of ROADMAP.md §Phase 69
 // — the inline-only deletion in Plan 02 must NOT regress sidebar/tab.
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 
 vi.mock('obsidian');
 

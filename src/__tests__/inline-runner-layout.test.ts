@@ -93,6 +93,7 @@ class FakeElement {
   addClass(cls: string): void { this.classList.add(cls); }
   removeClass(cls: string): void { this.classList.remove(cls); }
   hasClass(cls: string): boolean { return this.classList.contains(cls); }
+  toggleClass(cls: string, add: boolean): void { if (add) this.classList.add(cls); else this.classList.remove(cls); }
   remove(): void {
     if (this.parentElement !== null) {
       this.parentElement.children = this.parentElement.children.filter(child => child !== this);

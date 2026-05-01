@@ -256,7 +256,7 @@ vi.mock('../../snippets/canvas-ref-sync', () => ({
 
 // --- Import SUT ----------------------------------------------------------
 import { SnippetEditorModal } from '../../views/snippet-editor-modal';
-import type { JsonSnippet, Snippet } from '../../snippets/snippet-model';
+import type { JsonSnippet } from '../../snippets/snippet-model';
 
 // --- Plugin factory ------------------------------------------------------
 interface MockSnippetService {

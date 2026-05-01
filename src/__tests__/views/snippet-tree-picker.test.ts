@@ -185,7 +185,6 @@ import {
   SnippetTreePicker,
   type SnippetTreePickerOptions,
   type SnippetTreePickerResult,
-  type SnippetTreePickerMode,
 } from '../../views/snippet-tree-picker';
 import type { Snippet } from '../../snippets/snippet-model';
 

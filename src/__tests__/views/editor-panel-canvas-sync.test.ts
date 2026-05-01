@@ -41,7 +41,7 @@ const textareaOnChange: { cb: ((v: string) => void) | null } = { cb: null };
 const textInputOnChange: { cb: ((v: string) => void) | null } = { cb: null };
 const dropdownOptions: Array<[string, string]> = [];
 
-let lastAddTextInputEl: Record<string, unknown> | null = null;
+let _lastAddTextInputEl: Record<string, unknown> | null = null;
 
 function installSettingPrototypeMock(): void {
   settingCalls.setName = [];
@@ -50,7 +50,7 @@ function installSettingPrototypeMock(): void {
   textareaOnChange.cb = null;
   textInputOnChange.cb = null;
   dropdownOptions.length = 0;
-  lastAddTextInputEl = null;
+  _lastAddTextInputEl = null;
 
   const SettingProto = Setting.prototype as unknown as Record<string, unknown>;
   SettingProto.setName = vi.fn(function (this: unknown, name: string) {
@@ -83,7 +83,7 @@ function installSettingPrototypeMock(): void {
   // formFieldRefs.get('radiprotocol_displayLabel').
   SettingProto.addText = vi.fn(function (this: unknown, cb: (t: unknown) => void) {
     const inputEl = makeInputElStub();
-    lastAddTextInputEl = inputEl;
+    _lastAddTextInputEl = inputEl;
     const mockText = {
       inputEl,
       setValue: vi.fn(function (this: unknown) { return this; }),
@@ -264,7 +264,7 @@ function resetDomCaptures(): void {
 
 async function drainMicrotasks(times = 3): Promise<void> {
   for (let i = 0; i < times; i += 1) {
-    // eslint-disable-next-line no-await-in-loop
+     
     await Promise.resolve();
   }
 }

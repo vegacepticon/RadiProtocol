@@ -59,7 +59,7 @@ function buildService(initialCanvasContent: string): BuildServiceResult {
     },
     registerEvent: registerEventSpy,
   };
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+   
   const service = new EdgeLabelSyncService(mockApp as any, mockPlugin as any);
   service.register();
   return {
@@ -157,7 +157,7 @@ describe('EdgeLabelSyncService — dispatch contract (Phase 63 D-12)', () => {
     const calls: CanvasChangedForNodeDetail[] = [];
     service.subscribe((detail) => calls.push(detail));
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+     
     await (service as any).reconcile('test.canvas');
 
     // Phase 50 fixture: Answer n-a1 has displayLabel='X', edge has label='Y' → edge wins.
@@ -201,14 +201,14 @@ describe('EdgeLabelSyncService — dispatch contract (Phase 63 D-12)', () => {
     });
     const { service, setCanvas } = buildService(inSync);
     // Seed snapshot with first pass (no subscriber yet).
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+     
     await (service as any).reconcile('test.canvas');
 
     // Subscribe and run a second pass with byte-identical content — must not dispatch.
     const calls: CanvasChangedForNodeDetail[] = [];
     service.subscribe((detail) => calls.push(detail));
     setCanvas(inSync); // explicit no-op; setCanvas is for clarity
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+     
     await (service as any).reconcile('test.canvas');
 
     expect(calls).toHaveLength(0);
@@ -230,7 +230,7 @@ describe('EdgeLabelSyncService — dispatch contract (Phase 63 D-12)', () => {
     const calls: CanvasChangedForNodeDetail[] = [];
     service.subscribe((detail) => calls.push(detail));
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+     
     await (service as any).reconcile('test.canvas');
 
     const snippetDispatch = calls.find(
@@ -249,14 +249,14 @@ describe('EdgeLabelSyncService — node-text snapshot (Phase 63 EDITOR-05)', () 
     const pass1 = questionSnippetCanvas({ questionText: 'Q1' });
     const { service, setCanvas } = buildService(pass1);
     // Seed snapshot silently (subscribe AFTER pass-1).
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+     
     await (service as any).reconcile('test.canvas');
 
     const calls: CanvasChangedForNodeDetail[] = [];
     service.subscribe((detail) => calls.push(detail));
 
     setCanvas(questionSnippetCanvas({ questionText: 'Q1 edited' }));
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+     
     await (service as any).reconcile('test.canvas');
 
     const fieldDispatch = calls.find(
@@ -270,14 +270,14 @@ describe('EdgeLabelSyncService — node-text snapshot (Phase 63 EDITOR-05)', () 
     const content = questionSnippetCanvas({ questionText: 'Stable' });
     const { service } = buildService(content);
     // Pass 1 — seed snapshot. No subscriber.
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+     
     await (service as any).reconcile('test.canvas');
 
     const calls: CanvasChangedForNodeDetail[] = [];
     service.subscribe((detail) => calls.push(detail));
 
     // Pass 2 — byte-identical content; ZERO dispatches expected.
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+     
     await (service as any).reconcile('test.canvas');
 
     expect(calls).toHaveLength(0);
@@ -287,14 +287,14 @@ describe('EdgeLabelSyncService — node-text snapshot (Phase 63 EDITOR-05)', () 
     // Pass-1: n-q1 is a question. Pass-2: n-q1 becomes an answer.
     const pass1 = questionSnippetCanvas({ questionText: 'Q1', questionKind: 'question' });
     const { service, setCanvas } = buildService(pass1);
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+     
     await (service as any).reconcile('test.canvas');
 
     const calls: CanvasChangedForNodeDetail[] = [];
     service.subscribe((detail) => calls.push(detail));
 
     setCanvas(questionSnippetCanvas({ questionText: 'Q1', questionKind: 'answer' }));
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+     
     await (service as any).reconcile('test.canvas');
 
     const nodeTypeDispatch = calls.find(
@@ -308,14 +308,14 @@ describe('EdgeLabelSyncService — node-text snapshot (Phase 63 EDITOR-05)', () 
     // Pass-1 includes n-q1; pass-2 omits it.
     const pass1 = questionSnippetCanvas({ questionText: 'Q1', includeQuestion: true });
     const { service, setCanvas } = buildService(pass1);
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+     
     await (service as any).reconcile('test.canvas');
 
     const calls: CanvasChangedForNodeDetail[] = [];
     service.subscribe((detail) => calls.push(detail));
 
     setCanvas(questionSnippetCanvas({ includeQuestion: false }));
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+     
     await (service as any).reconcile('test.canvas');
 
     const deletionDispatch = calls.find(
@@ -329,53 +329,53 @@ describe('EdgeLabelSyncService — snapshot cleanup (Phase 63 T-02 leak preventi
   it('removes snapshot for filePath when vault.on("rename") fires (old → new)', async () => {
     const { service, vaultHandlers } = buildService(questionSnippetCanvas({ questionText: 'Q1' }));
     // Seed snapshot for 'test.canvas'.
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+     
     await (service as any).reconcile('test.canvas');
     // Manually inject snapshot under 'old.canvas' so we can prove rename purges it.
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+     
     (service as any).lastSnapshotByFilePath.set('old.canvas', new Map());
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+     
     expect((service as any).lastSnapshotByFilePath.has('old.canvas')).toBe(true);
 
     const renameHandler = vaultHandlers.get('rename');
     expect(renameHandler).toBeDefined();
     renameHandler!({ path: 'new.canvas' }, 'old.canvas');
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+     
     expect((service as any).lastSnapshotByFilePath.has('old.canvas')).toBe(false);
   });
 
   it('removes snapshot for filePath when vault.on("delete") fires', async () => {
     const { service, vaultHandlers } = buildService(questionSnippetCanvas({ questionText: 'Q1' }));
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+     
     (service as any).lastSnapshotByFilePath.set('doomed.canvas', new Map());
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+     
     expect((service as any).lastSnapshotByFilePath.has('doomed.canvas')).toBe(true);
 
     const deleteHandler = vaultHandlers.get('delete');
     expect(deleteHandler).toBeDefined();
     deleteHandler!({ path: 'doomed.canvas' });
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+     
     expect((service as any).lastSnapshotByFilePath.has('doomed.canvas')).toBe(false);
   });
 
   it('destroy() clears all snapshots and timers (T-02 leak prevention)', () => {
     const { service } = buildService(questionSnippetCanvas({ questionText: 'Q1' }));
     // Seed two snapshot entries.
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+     
     (service as any).lastSnapshotByFilePath.set('a.canvas', new Map());
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+     
     (service as any).lastSnapshotByFilePath.set('b.canvas', new Map());
     // Seed a debounce timer too.
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+     
     (service as any).debounceTimers.set('a.canvas', setTimeout(() => {}, 10000));
 
     service.destroy();
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+     
     expect((service as any).lastSnapshotByFilePath.size).toBe(0);
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+     
     expect((service as any).debounceTimers.size).toBe(0);
   });
 });
@@ -393,7 +393,7 @@ describe('Gap 2 — inbound text diff dispatch', () => {
       ],
     });
     const { service, setCanvas } = buildService(pass1);
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+     
     await (service as any).reconcile('test.canvas');
 
     const calls: CanvasChangedForNodeDetail[] = [];
@@ -409,7 +409,7 @@ describe('Gap 2 — inbound text diff dispatch', () => {
         },
       ],
     }));
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+     
     await (service as any).reconcile('test.canvas');
 
     const fieldDispatch = calls.find((c) => c.changeKind === 'fields' && c.nodeId === 'n-q1');
@@ -429,7 +429,7 @@ describe('Gap 2 — inbound text diff dispatch', () => {
       ],
     });
     const { service, setCanvas } = buildService(pass1);
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+     
     await (service as any).reconcile('test.canvas');
 
     const calls: CanvasChangedForNodeDetail[] = [];
@@ -445,7 +445,7 @@ describe('Gap 2 — inbound text diff dispatch', () => {
         },
       ],
     }));
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+     
     await (service as any).reconcile('test.canvas');
 
     const fieldDispatch = calls.find((c) => c.changeKind === 'fields' && c.nodeId === 'n-q1');
@@ -467,7 +467,7 @@ describe('Gap 2 — inbound text diff dispatch', () => {
       ],
     });
     const { service, setCanvas } = buildService(pass1);
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+     
     await (service as any).reconcile('test.canvas');
 
     const calls: CanvasChangedForNodeDetail[] = [];
@@ -483,7 +483,7 @@ describe('Gap 2 — inbound text diff dispatch', () => {
         },
       ],
     }));
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+     
     await (service as any).reconcile('test.canvas');
 
     const fieldDispatch = calls.find((c) => c.changeKind === 'fields' && c.nodeId === 'n-snip');
@@ -502,7 +502,7 @@ describe('Gap 2 — inbound text diff dispatch', () => {
       ],
     });
     const { service, setCanvas } = buildService(pass1);
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+     
     await (service as any).reconcile('test.canvas');
 
     const calls: CanvasChangedForNodeDetail[] = [];
@@ -518,7 +518,7 @@ describe('Gap 2 — inbound text diff dispatch', () => {
         },
       ],
     }));
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+     
     await (service as any).reconcile('test.canvas');
 
     const fieldDispatch = calls.find((c) => c.changeKind === 'fields' && c.nodeId === 'n-a1');
@@ -538,7 +538,7 @@ describe('Gap 2 — inbound text diff dispatch', () => {
       ],
     });
     const { service, setCanvas } = buildService(pass1);
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+     
     await (service as any).reconcile('test.canvas');
 
     const calls: CanvasChangedForNodeDetail[] = [];
@@ -554,7 +554,7 @@ describe('Gap 2 — inbound text diff dispatch', () => {
         },
       ],
     }));
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+     
     await (service as any).reconcile('test.canvas');
 
     const fieldDispatch = calls.find((c) => c.changeKind === 'fields' && c.nodeId === 'n-tb');
@@ -574,7 +574,7 @@ describe('Gap 2 — inbound text diff dispatch', () => {
       ],
     });
     const { service, setCanvas } = buildService(pass1);
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+     
     await (service as any).reconcile('test.canvas');
 
     const calls: CanvasChangedForNodeDetail[] = [];
@@ -590,7 +590,7 @@ describe('Gap 2 — inbound text diff dispatch', () => {
         },
       ],
     }));
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+     
     await (service as any).reconcile('test.canvas');
 
     const fieldDispatch = calls.find((c) => c.changeKind === 'fields' && c.nodeId === 'n-loop');
@@ -612,7 +612,7 @@ describe('Gap 3 — text → canonical field persistence', () => {
       ],
     });
     const { service, setCanvas, saveLiveBatchSpy } = buildService(pass1);
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+     
     await (service as any).reconcile('test.canvas');
 
     setCanvas(makeCanvas({
@@ -625,7 +625,7 @@ describe('Gap 3 — text → canonical field persistence', () => {
         },
       ],
     }));
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+     
     await (service as any).reconcile('test.canvas');
 
     expect(saveLiveBatchSpy).toHaveBeenCalled();
@@ -649,7 +649,7 @@ describe('Gap 3 — text → canonical field persistence', () => {
     });
     const { service, setCanvas, saveLiveBatchSpy, vaultModifySpy } = buildService(pass1);
     saveLiveBatchSpy.mockResolvedValue(false); // simulate closed canvas
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+     
     await (service as any).reconcile('test.canvas');
 
     setCanvas(makeCanvas({
@@ -662,7 +662,7 @@ describe('Gap 3 — text → canonical field persistence', () => {
         },
       ],
     }));
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+     
     await (service as any).reconcile('test.canvas');
 
     expect(vaultModifySpy).toHaveBeenCalled();
@@ -683,7 +683,7 @@ describe('Gap 3 — text → canonical field persistence', () => {
       ],
     });
     const { service, setCanvas, saveLiveBatchSpy } = buildService(pass1);
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+     
     await (service as any).reconcile('test.canvas');
 
     setCanvas(makeCanvas({
@@ -696,7 +696,7 @@ describe('Gap 3 — text → canonical field persistence', () => {
         },
       ],
     }));
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+     
     await (service as any).reconcile('test.canvas');
 
     const batchArgs = saveLiveBatchSpy.mock.calls[0]!;
@@ -718,7 +718,7 @@ describe('Gap 3 — text → canonical field persistence', () => {
       ],
     });
     const { service, setCanvas, saveLiveBatchSpy } = buildService(pass1);
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+     
     await (service as any).reconcile('test.canvas');
 
     setCanvas(makeCanvas({
@@ -731,7 +731,7 @@ describe('Gap 3 — text → canonical field persistence', () => {
         },
       ],
     }));
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+     
     await (service as any).reconcile('test.canvas');
 
     const batchArgs = saveLiveBatchSpy.mock.calls[0]!;
@@ -753,7 +753,7 @@ describe('Gap 3 — text → canonical field persistence', () => {
       ],
     });
     const { service, setCanvas, saveLiveBatchSpy } = buildService(pass1);
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+     
     await (service as any).reconcile('test.canvas');
 
     setCanvas(makeCanvas({
@@ -766,7 +766,7 @@ describe('Gap 3 — text → canonical field persistence', () => {
         },
       ],
     }));
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+     
     await (service as any).reconcile('test.canvas');
 
     const batchArgs = saveLiveBatchSpy.mock.calls[0]!;
@@ -789,7 +789,7 @@ describe('Gap 3 — text → canonical field persistence', () => {
       ],
     });
     const { service, setCanvas, saveLiveBatchSpy } = buildService(pass1);
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+     
     await (service as any).reconcile('test.canvas');
 
     setCanvas(makeCanvas({
@@ -802,7 +802,7 @@ describe('Gap 3 — text → canonical field persistence', () => {
         },
       ],
     }));
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+     
     await (service as any).reconcile('test.canvas');
 
     // Snippet text changes produce no dispatches and no nodeEdits → saveLiveBatch

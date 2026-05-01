@@ -596,9 +596,9 @@ describe('path-safety gate applies to every entry point (D-10)', () => {
     '.radiprotocol/snippets-evil/foo.json',
   ];
 
-  let errSpy: ReturnType<typeof vi.spyOn>;
+  let _errSpy: ReturnType<typeof vi.spyOn>;
   beforeEach(() => {
-    errSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    _errSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
   });
 
   for (const bad of unsafePaths) {

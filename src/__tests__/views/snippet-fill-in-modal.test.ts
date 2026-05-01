@@ -13,7 +13,7 @@
 // Tests remain RED because production dispatch still renders radios for
 // 'choice' (Plan 03 will flip to checkboxes), not because of infra.
 
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 
 // ───── MockEl with querySelector/querySelectorAll + event dispatch ─────
 interface MockEl {

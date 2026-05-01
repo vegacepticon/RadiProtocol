@@ -50,11 +50,6 @@ function getString(obj: Record<string, unknown>, key: string, fallback = ''): st
   return typeof v === 'string' ? v : fallback;
 }
 
-function getNumber(obj: Record<string, unknown>, key: string, fallback = 0): number {
-  const v = obj[key];
-  return typeof v === 'number' ? v : fallback;
-}
-
 export class CanvasParser {
   /**
    * Parse a canvas JSON string into a ProtocolGraph.

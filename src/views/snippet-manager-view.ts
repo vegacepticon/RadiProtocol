@@ -954,6 +954,7 @@ export class SnippetManagerView extends ItemView {
     };
 
     const onBlur = (_ev: Event): void => {
+      void _ev;
       if (settled) return;
       settled = true;
       const value = (input as unknown as { value: string }).value;
