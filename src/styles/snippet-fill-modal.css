@@ -73,3 +73,10 @@
   padding-top: var(--size-4-1); /* 8px */
   border-top: 1px solid var(--background-modifier-border);
 }
+
+/* Phase 77: snippet-fill-in-modal option row — replaces inline display/alignItems/gap (LINT-01) */
+.rp-snippet-fill-option-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}

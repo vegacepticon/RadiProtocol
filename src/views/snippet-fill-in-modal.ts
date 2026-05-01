@@ -144,10 +144,7 @@ export class SnippetFillInModal extends Modal {
 
     // Render one checkbox per predefined option
     for (const opt of options) {
-      const row = optionsDiv.createDiv();
-      row.style.display = 'flex';
-      row.style.alignItems = 'center';
-      row.style.gap = '4px';
+      const row = optionsDiv.createDiv({ cls: 'rp-snippet-fill-option-row' });
 
       const ctrl = row.createEl('input', { type: 'checkbox' });
       ctrl.name = `rp-${placeholder.id}`;
