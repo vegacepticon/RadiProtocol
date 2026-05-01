@@ -79,6 +79,25 @@ export default tseslint.config(
     },
   },
 
+  // Phase 77 D-02: tests/mocks override —
+  //   * @typescript-eslint/no-explicit-any: off — Obsidian API mocks need flexible
+  //     shapes (see src/__mocks__/obsidian.ts where every method takes `unknown`);
+  //     full typing duplicates production types or breaks tests.
+  //   * @typescript-eslint/no-unused-vars: error w/ _underscore-pattern — already
+  //     project convention per CONVENTIONS.md §Naming Patterns. Mock callbacks
+  //     intentionally accept (_evt, _text, _cb) to match upstream signatures.
+  {
+    files: ['src/__tests__/**/*.ts', 'src/__mocks__/**/*.ts'],
+    rules: {
+      '@typescript-eslint/no-explicit-any': 'off',
+      '@typescript-eslint/no-unused-vars': ['error', {
+        argsIgnorePattern: '^_',
+        varsIgnorePattern: '^_',
+        caughtErrorsIgnorePattern: '^_',
+      }],
+    },
+  },
+
   // Ignore patterns
   {
     ignores: [
@@ -88,6 +107,7 @@ export default tseslint.config(
       'esbuild.config.mjs',
       'version-bump.mjs',
       'vitest.config.ts',
+      '.planning/**',
     ],
   }
 );
