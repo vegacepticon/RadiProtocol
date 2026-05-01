@@ -358,3 +358,10 @@
   outline: 2px solid var(--interactive-accent);
   outline-offset: 1px;
 }
+
+/* Phase 77: preview textarea — height driven by --rp-textarea-height (Phase 64 auto-grow, LINT-01).
+   Pre-existing rule at runner-view.css:39-52 already provides flex/width/min-height/font sizing —
+   this block layers ONLY a height declaration on top via cascade. DO NOT EDIT the pre-existing rule. */
+.rp-preview-textarea {
+  height: var(--rp-textarea-height, auto);
+}

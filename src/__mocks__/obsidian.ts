@@ -7,10 +7,14 @@
 /** Minimal mock element returned by createEl/createDiv */
 function makeMockEl(): MockElement {
   const el: MockElement = {
+    recordedCssProps: [],
     createEl: (_tag: string, _opts?: unknown) => makeMockEl(),
     createDiv: (_opts?: unknown) => makeMockEl(),
     empty: () => {},
     setText: (_text: string) => {},
+    setCssProps: (props: Record<string, string>) => {
+      el.recordedCssProps.push({ ...props });
+    },
     type: '',
     min: '',
   };
@@ -18,10 +22,12 @@ function makeMockEl(): MockElement {
 }
 
 interface MockElement {
+  recordedCssProps: Record<string, string>[];
   createEl: (tag: string, opts?: unknown) => MockElement;
   createDiv: (opts?: unknown) => MockElement;
   empty: () => void;
   setText: (text: string) => void;
+  setCssProps: (props: Record<string, string>) => void;
   type: string;
   min: string;
 }

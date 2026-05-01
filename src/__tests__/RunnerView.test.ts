@@ -37,6 +37,8 @@ interface FakeTextareaEl {
   scrollTop: number;
   scrollHeight: number;
   style: { width: string; height: string };
+  recordedCssProps: Record<string, string>[];
+  setCssProps: (props: Record<string, string>) => void;
   className: string;
 }
 
@@ -55,6 +57,10 @@ function makeFakeZone(): FakeZone {
         // Simulate a tall textarea so scrollTop=500 is within content bounds after height recompute.
         scrollHeight: 5000,
         style: { width: '', height: '' },
+        recordedCssProps: [],
+        setCssProps(props: Record<string, string>): void {
+          this.recordedCssProps.push({ ...props });
+        },
         className: opts?.cls ?? '',
       };
       zone.lastCreated = el;

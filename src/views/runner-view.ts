@@ -1052,18 +1052,16 @@ export class RunnerView extends ItemView {
   private renderPreviewZone(zone: HTMLElement, text: string): void {
     const textarea = zone.createEl('textarea', { cls: 'rp-preview-textarea' });
     textarea.value = text;
-    // Force width inline so theme/app CSS cannot override it
-    textarea.style.width = '100%';
     // Defer height calculation until the element has layout
     requestAnimationFrame(() => {
-      textarea.style.height = 'auto';
-      textarea.style.height = textarea.scrollHeight + 'px';
+      textarea.setCssProps({ '--rp-textarea-height': 'auto' });
+      textarea.setCssProps({ '--rp-textarea-height': textarea.scrollHeight + 'px' });
       // Phase 66 D-09: pin to bottom on every render — last inserted line is visible.
       textarea.scrollTop = textarea.scrollHeight;
     });
     this.registerDomEvent(textarea, 'input', () => {
-      textarea.style.height = 'auto';
-      textarea.style.height = textarea.scrollHeight + 'px';
+      textarea.setCssProps({ '--rp-textarea-height': 'auto' });
+      textarea.setCssProps({ '--rp-textarea-height': textarea.scrollHeight + 'px' });
     });
     this.previewTextarea = textarea;
   }
