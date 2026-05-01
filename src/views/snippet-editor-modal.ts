@@ -140,10 +140,9 @@ export class SnippetEditorModal extends Modal {
 
   async onOpen(): Promise<void> {
     // D-07: wide Obsidian modal
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const modalEl = (this as unknown as { modalEl?: { style?: { maxWidth: string } } }).modalEl;
-    if (modalEl && modalEl.style) {
-      modalEl.style.maxWidth = '800px';
+    const modalEl = (this as unknown as { modalEl?: { addClass?: (cls: string) => void } }).modalEl;
+    if (typeof modalEl?.addClass === 'function') {
+      modalEl.addClass('rp-snippet-editor-modal');
     }
 
     const { contentEl, titleEl } = this;
@@ -195,9 +194,8 @@ export class SnippetEditorModal extends Modal {
     this.renderContentRegion();
 
     // Save-error placeholder
-    this.saveErrorEl = contentEl.createDiv({ cls: 'radi-snippet-editor-save-error' });
-    this.saveErrorEl.style.display = 'none';
-    this.saveErrorEl.style.color = 'var(--text-error)';
+    this.saveErrorEl = contentEl.createDiv({ cls: 'radi-snippet-editor-save-error rp-snippet-editor-save-error' });
+    this.saveErrorEl.toggleClass('rp-snippet-banner-hidden', true);
 
     // Button row
     this.renderButtonRow(contentEl);
@@ -214,8 +212,7 @@ export class SnippetEditorModal extends Modal {
         'Сниппет содержит ошибку — исправьте источник и откройте заново.',
       );
       this.contentRegionEl.setAttribute('aria-disabled', 'true');
-      this.contentRegionEl.style.pointerEvents = 'none';
-      this.contentRegionEl.style.opacity = '0.5';
+      this.contentRegionEl.toggleClass('rp-snippet-form-locked', true);
     }
 
     // Initial collision check (edit mode pre-populated name shouldn't collide with self)
@@ -370,9 +367,8 @@ export class SnippetEditorModal extends Modal {
     input.value = this.draft.name;
     this.nameInputEl = input;
 
-    this.collisionErrorEl = row.createDiv({ cls: 'radi-snippet-editor-collision-error' });
-    this.collisionErrorEl.style.display = 'none';
-    this.collisionErrorEl.style.color = 'var(--text-error)';
+    this.collisionErrorEl = row.createDiv({ cls: 'radi-snippet-editor-collision-error rp-snippet-editor-save-error' });
+    this.collisionErrorEl.toggleClass('rp-snippet-banner-hidden', true);
     this.collisionErrorEl.textContent = COLLISION_ERROR_TEXT;
 
     input.addEventListener('input', () => {
@@ -515,14 +511,14 @@ export class SnippetEditorModal extends Modal {
     // subsequent «no collision» pass.
     if (this.validationBannerEl !== null) return;
     if (this.hasCollision) {
-      this.collisionErrorEl.style.display = '';
+      this.collisionErrorEl.toggleClass('rp-snippet-banner-hidden', false);
       this.saveBtnEl.disabled = true;
       this.saveBtnEl.setAttribute(
         'title',
         'Устраните конфликт имени, чтобы сохранить.',
       );
     } else {
-      this.collisionErrorEl.style.display = 'none';
+      this.collisionErrorEl.toggleClass('rp-snippet-banner-hidden', true);
       this.saveBtnEl.disabled = false;
       this.saveBtnEl.removeAttribute('title');
     }
@@ -634,7 +630,7 @@ export class SnippetEditorModal extends Modal {
   private showSaveError(msg: string): void {
     if (!this.saveErrorEl) return;
     this.saveErrorEl.textContent = msg;
-    this.saveErrorEl.style.display = '';
+    this.saveErrorEl.toggleClass('rp-snippet-banner-hidden', false);
   }
 
   private async handleCancel(): Promise<void> {

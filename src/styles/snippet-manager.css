@@ -546,3 +546,23 @@
 .rp-snippet-tree-label-hidden {
   display: none;
 }
+
+/* Phase 77: snippet-editor-modal — modal max-width, save-error color, banner toggle, form-locked state (LINT-01).
+   The banner element retains its Phase 52 base rule `.radi-snippet-editor-validation-banner`; the new
+   `.rp-snippet-banner-hidden` class is independent and can coexist with legacy `radi-` classes. */
+.rp-snippet-editor-modal {
+  max-width: 800px;
+}
+
+.rp-snippet-editor-save-error {
+  color: var(--text-error);
+}
+
+.rp-snippet-banner-hidden {
+  display: none;
+}
+
+.rp-snippet-form-locked {
+  pointer-events: none;
+  opacity: 0.5;
+}
