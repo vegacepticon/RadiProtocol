@@ -307,7 +307,48 @@ Full details: `.planning/archive/milestones/v1.10-ROADMAP.md`
   3. Any rule disabled (project-wide in `eslint.config.js` or per-file via inline `eslint-disable` comments) is accompanied by a written justification in the commit message that adds the disable; the default is to fix the violation, not silence the rule (LINT-01)
   4. The full vitest suite continues to pass after the cleanup — `npm test` exits 0 — proving the lint fixes did not introduce behavior regressions; existing CSS files are edited append-only per phase per CLAUDE.md (no rules deleted from existing files unless they belong to this phase) (LINT-01)
   5. Pre-existing 6 warnings are either resolved or explicitly documented as out-of-scope (per REQUIREMENTS.md Future Requirements: "Lint-warning fixes are nice-to-have; in scope only if cheap") — phase VERIFICATION.md lists each remaining warning with rationale (LINT-01)
-**Plans:** TBD
+**Plans:** 14 plans across 9 waves
+
+**Wave 1 — Lint baseline reset**
+- [ ] 77-01-PLAN.md — eslint.config.mjs baseline (D-01 .planning/** ignore + D-02 tests/mocks override)
+
+**Wave 2 *(blocked on Wave 1 completion)* — Per-file static-styles migrations (parallel-safe)**
+- [ ] 77-02-PLAN.md — snippet-fill-in-modal.ts: 3 inline styles → rp-snippet-fill-option-row class
+- [ ] 77-03-PLAN.md — snippet-chip-editor.ts: 7 display/gap toggles → rp-chip-* classes
+- [ ] 77-06-PLAN.md — runner-view.ts: 3 inline styles → setCssProps + .rp-preview-textarea (introduces setCssProps to codebase + adds mock stub with `recordedCssProps` recorder)
+- [ ] 77-08-PLAN.md — inline-runner-modal.ts: 5 literal-clear assignments → rp-inline-runner-applied-position class (Pitfall 7: lines 656-657 template literals NOT migrated) + test fixture eslint-disable wrapping
+
+**Wave 3 *(blocked on Wave 2 plans 03, 06)* — Sequential CSS file appends**
+- [ ] 77-04-PLAN.md — snippet-manager-view.ts: 6 display/width toggles → rp-snippet-tree-* classes (Pitfall 7: line 275 template literal NOT migrated)
+- [ ] 77-07-PLAN.md — editor-panel-view.ts: 2 auto-grow helpers → setCssProps with shared --rp-textarea-height + test ripple (editor-panel-forms.test.ts:300); does NOT re-edit src/__mocks__/obsidian.ts
+
+**Wave 4 *(blocked on Wave 3 plan 04)* — Final snippet-manager.css appender**
+- [ ] 77-05-PLAN.md — snippet-editor-modal.ts: 10 styles → rp-snippet-editor-* + rp-snippet-banner-hidden + rp-snippet-form-locked + remove unused eslint-disable line 143 (legacy `.radi-snippet-editor-validation-banner` rule preserved untouched)
+
+**Wave 5 *(blocked on Wave 1 completion)* — Test residuals + main.ts (parallel-safe)**
+- [ ] 77-09-PLAN.md — Test residuals: 3 × no-this-alias (Pitfall 3 fix — `instances.push(this)`), no-floating-promises, sentence-case fixtures (979/990/996/999 lock-step), ban-ts-comment, prefer-const, lastMenuItems
+- [ ] 77-10-PLAN.md — main.ts: 6 × no-floating-promises (void prefix) + 1 × no-this-alias (Path B refactor RECOMMENDED per ROADMAP SC#3; Path A disable only if churn > ~40 LOC)
+
+**Wave 6 *(blocked on Waves 2–3 plans 07, 08)* — TFile cast fixes**
+- [ ] 77-11-PLAN.md — 3 × no-tfile-tfolder-cast → instanceof TFile guards (editor-panel-view.ts:284,381 + inline-runner-modal.ts:599)
+
+**Wave 7 *(blocked on Waves 3–4–6 plans 05, 07, 11)* — Sentence-case sweep**
+- [ ] 77-12-PLAN.md — 26 × sentence-case in src (main.ts, settings.ts, editor-panel-view.ts, snippet-chip-editor.ts) + lock-step test assertion updates
+
+**Wave 8 *(blocked on Wave 1 completion)* — Residual rules + warnings**
+- [ ] 77-13-PLAN.md — Residuals: no-constant-binary, no-control-regex (with rationale), 3 unused-disables (per-site protocol — verify each rule name + «unused» status before deletion), eslint --fix whitespace, document 2 prefer-file-manager-trash-file as out-of-scope in 77-VERIFICATION.md
+
+**Wave 9 *(blocked on all prior waves)* — Final gate + manual UAT**
+- [ ] 77-14-PLAN.md — Final gate: lint+build+test all exit 0; SC#3 audit; manual UAT checkpoint; finalize 77-VERIFICATION.md
+
+**Cross-cutting constraints** (apply to every plan):
+- `npm run build` exits 0 after every commit (D-12)
+- `npm test` exits 0 after every commit (vitest baseline preserved)
+- CSS files in `src/styles/*.css` are append-only per phase with `/* Phase 77: ... */` comment headers (CLAUDE.md)
+- Any rule disable (project-wide or per-line) carries a written justification in the commit message that adds it (ROADMAP SC#3)
+- Never delete code/CSS rules added by prior phases (CLAUDE.md «only modify code relevant to current phase»)
+- Threat model T-77-01..T-77-04 hosted in 77-01-PLAN.md; later plans cross-reference via `threat_model_ref: 77-01-PLAN.md`
+
 **UI hint**: no
 
 ### Phase 78: Lint + Test Automation Gate
