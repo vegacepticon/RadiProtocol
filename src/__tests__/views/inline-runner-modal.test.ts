@@ -269,16 +269,9 @@ vi.mock('../../views/snippet-fill-in-modal', () => {
     constructor(_app: unknown, snippet: unknown) {
       this.snippet = snippet;
       this.result = new Promise<string | null>(res => { this.resolveFn = res; });
-      const self = this;
-      instances.push({
-        snippet,
-        result: this.result,
-        __resolve: (v: string | null) => this.resolveFn(v),
-        open: () => { self.opened = true; },
-        close: () => { self.closed = true; },
-        get opened() { return self.opened; },
-      } as any);
+      instances.push(this as unknown as (typeof instances)[number]);
     }
+    __resolve(v: string | null): void { this.resolveFn(v); }
     open(): void { this.opened = true; }
     close(): void { this.closed = true; }
   }
@@ -287,7 +280,7 @@ vi.mock('../../views/snippet-fill-in-modal', () => {
 
 // Import after mocks are installed.
 import { InlineRunnerModal } from '../../views/inline-runner-modal';
-// @ts-ignore — mock factory export, not present in real module
+// @ts-expect-error: mock factory export is only provided by the vi.mock replacement, not the real module type
 import { __fillModalInstances } from '../../views/snippet-fill-in-modal';
 import { TFile } from 'obsidian';
 

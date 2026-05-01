@@ -308,7 +308,7 @@ describe('Phase 51 Plan 06 — ProtocolRunner D-13/D-14/D-15 auto-insert dispatc
     const runner = new ProtocolRunner();
     runner.start(graph);
     // After start: tb-pre auto-appended, halts at Question (Phase 56: no auto-advance).
-    let s0 = runner.getState();
+    const s0 = runner.getState();
     expect(s0.status).toBe('at-node');
     if (s0.status !== 'at-node') return;
     expect(s0.currentNodeId).toBe('q1');

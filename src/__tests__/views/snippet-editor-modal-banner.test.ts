@@ -301,7 +301,7 @@ async function openModal(snippet: BrokenSnippet) {
     },
   );
   // SnippetEditorModal.onOpen is async — allow microtasks to flush
-  modal.onOpen();
+  void modal.onOpen();
   await Promise.resolve();
   await Promise.resolve();
   return modal;

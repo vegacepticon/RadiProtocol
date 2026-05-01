@@ -118,7 +118,7 @@ function makeEl(tag = 'div'): MockEl {
 
 // --- vi.mock('obsidian', ...) — capture Menu items for introspection -----
 interface CapturedMenuItem { title: string; icon?: string; cb: () => void }
-let lastMenuItems: CapturedMenuItem[] = [];
+let _lastMenuItems: CapturedMenuItem[] = [];
 
 vi.mock('obsidian', () => {
   class ItemView {
@@ -158,7 +158,7 @@ vi.mock('obsidian', () => {
       };
       cb(api);
       this.items.push(state);
-      lastMenuItems = this.items;
+      _lastMenuItems = this.items;
       return this;
     }
     addSeparator(): this { return this; }
@@ -388,7 +388,7 @@ describe('SnippetManagerView — drag-and-drop (Phase 34 Plan 02)', () => {
 
   beforeEach(() => {
     rewriteCanvasRefsSpy.mockClear();
-    lastMenuItems = [];
+    _lastMenuItems = [];
   });
 
   function makeTreeView(): { plugin: any; service: MockService; view: SnippetManagerView } {
@@ -559,7 +559,7 @@ describe('SnippetManagerView — drag-and-drop (Phase 34 Plan 02)', () => {
 
     beforeEach(() => {
       rewriteCanvasRefsSpy.mockClear();
-      lastMenuItems = [];
+      _lastMenuItems = [];
       // Phase 51 Plan 04 D-07 — new Modal + SnippetTreePicker instrumentation
       modalInstances.length = 0;
       pickerInstances.length = 0;

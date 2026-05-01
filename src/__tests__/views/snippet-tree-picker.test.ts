@@ -976,7 +976,7 @@ describe('Lifecycle', () => {
     svc.listFolder.mockResolvedValue({ folders: [], snippets: [] });
     const container = makeEl('div');
     // Place a child before constructor — expect it to remain.
-    container.createEl('div', { text: 'pre-existing' });
+    container.createEl('div', { text: 'Pre-existing' });
     const onSelect = vi.fn();
     new SnippetTreePicker({
       app: APP,
@@ -987,16 +987,16 @@ describe('Lifecycle', () => {
       onSelect,
     });
     expect(container.children.length).toBe(1);
-    expect(container.children[0]?._text).toBe('pre-existing');
+    expect(container.children[0]?._text).toBe('Pre-existing');
   });
 
   it('mount() empties container before re-rendering', async () => {
     svc.listFolder.mockResolvedValue({ folders: [], snippets: [] });
     const { picker, container } = makePicker({ mode: 'folder-only' }, svc);
-    container.createEl('div', { text: 'stale' });
+    container.createEl('div', { text: 'Stale' });
     await picker.mount();
-    // 'stale' child must be gone, replaced by picker DOM (root + search).
-    expect(findFirst(container, (el) => el._text === 'stale')).toBeNull();
+    // 'Stale' child must be gone, replaced by picker DOM (root + search).
+    expect(findFirst(container, (el) => el._text === 'Stale')).toBeNull();
     expect(findFirst(container, (el) => el.classList.has('rp-stp-root'))).not.toBeNull();
   });
 

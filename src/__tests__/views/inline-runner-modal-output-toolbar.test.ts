@@ -258,16 +258,9 @@ vi.mock('../../views/snippet-fill-in-modal', () => {
     constructor(_app: unknown, snippet: unknown) {
       this.snippet = snippet;
       this.result = new Promise<string | null>(res => { this.resolveFn = res; });
-      const self = this;
-      instances.push({
-        snippet,
-        result: this.result,
-        __resolve: (v: string | null) => this.resolveFn(v),
-        open: () => { self.opened = true; },
-        close: () => { self.closed = true; },
-        get opened() { return self.opened; },
-      } as any);
+      instances.push(this as unknown as (typeof instances)[number]);
     }
+    __resolve(v: string | null): void { this.resolveFn(v); }
     open(): void { this.opened = true; }
     close(): void { this.closed = true; }
   }
