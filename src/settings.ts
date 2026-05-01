@@ -83,7 +83,7 @@ export class RadiProtocolSettingsTab extends PluginSettingTab {
 
     new Setting(containerEl)
       .setName('Text separator')
-      .setDesc('How accumulated report text is joined between nodes. "Newline" adds a line break before each new chunk; "Space" adds a single space.')
+      .setDesc('How accumulated report text is joined between nodes. "newline" adds a line break before each new chunk; "space" adds a single space.')
       .addDropdown(drop => {
         drop
           .addOption('newline', 'Newline (default)')
@@ -108,7 +108,7 @@ export class RadiProtocolSettingsTab extends PluginSettingTab {
       .addText(text => {
         new FolderSuggest(this.app, text.inputEl);
         text
-          .setPlaceholder('e.g. Protocols')
+          .setPlaceholder('E.g. Protocols')
           .setValue(this.plugin.settings.protocolFolderPath)
           .onChange(async (value) => {
             this.plugin.settings.protocolFolderPath = value.trim();
@@ -135,11 +135,11 @@ export class RadiProtocolSettingsTab extends PluginSettingTab {
 
     new Setting(containerEl)
       .setName('Output folder')
-      .setDesc("Vault-relative folder for saved reports. Used when destination is 'Save to note' or 'Both'.")
+      .setDesc("Vault-relative folder for saved reports. Used when destination is 'save to note' or 'both'.")
       .addText(text => {
         new FolderSuggest(this.app, text.inputEl);
         text
-          .setPlaceholder('RadiProtocol Output')
+          .setPlaceholder(DEFAULT_SETTINGS.outputFolderPath)
           .setValue(this.plugin.settings.outputFolderPath)
           .onChange(async (value) => {
             this.plugin.settings.outputFolderPath = value.trim() || 'RadiProtocol Output';

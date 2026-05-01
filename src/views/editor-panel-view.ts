@@ -54,7 +54,7 @@ export class EditorPanelView extends ItemView {
   }
 
   getViewType(): string { return EDITOR_PANEL_VIEW_TYPE; }
-  getDisplayText(): string { return 'RadiProtocol node editor'; }
+  getDisplayText(): string { return 'Protocol node editor'; }
   getIcon(): string { return 'pencil'; }
 
   async onOpen(): Promise<void> {
@@ -185,7 +185,7 @@ export class EditorPanelView extends ItemView {
     const container = this.contentEl.createDiv({ cls: 'rp-editor-idle' });
     container.createEl('p', { text: 'No node selected' });
     container.createEl('p', {
-      text: "Right-click a canvas node and choose 'Edit RadiProtocol properties' to open its configuration form.",
+      text: "Right-click a canvas node and choose 'edit protocol properties' to open its configuration form.",
     });
     // Phase 48 NODEUI-05: toolbar moved to bottom (was Phase 39 top-of-panel).
     this.renderToolbar(this.contentEl);
@@ -454,7 +454,7 @@ export class EditorPanelView extends ItemView {
     // Node type dropdown — always first
     new Setting(formArea)
       .setName('Node type')
-      .setDesc('The RadiProtocol role of this canvas node. Changing this will update the fields below.')
+      .setDesc('The protocol role of this canvas node. Changing this will update the fields below.')
       .addDropdown(drop => {
         drop
           .addOption('', '— unset —')
@@ -761,7 +761,7 @@ export class EditorPanelView extends ItemView {
         // Separator override dropdown (D-05, D-06, SEP-02)
         new Setting(container)
           .setName('Text separator')
-          .setDesc('How this node\'s text is joined to the accumulated report. "Use global" inherits the setting from Settings > Runner.')
+          .setDesc('How this node\'s text is joined to the accumulated report. "use global" inherits the setting from settings > runner.')
           .addDropdown(drop => {
             drop
               .addOption('', 'Use global (default)')
@@ -799,7 +799,7 @@ export class EditorPanelView extends ItemView {
         // Separator override dropdown (D-05, D-06, SEP-02)
         new Setting(container)
           .setName('Text separator')
-          .setDesc('How this node\'s text is joined to the accumulated report. "Use global" inherits the setting from Settings > Runner.')
+          .setDesc('How this node\'s text is joined to the accumulated report. "use global" inherits the setting from settings > runner.')
           .addDropdown(drop => {
             drop
               .addOption('', 'Use global (default)')
@@ -933,7 +933,7 @@ export class EditorPanelView extends ItemView {
         // Phase 31 D-04: per-node separator override. '' = use global default from settings.
         new Setting(container)
           .setName('Separator override')
-          .setDesc('How the rendered snippet text is joined to the accumulated protocol. Default uses the global Text Separator setting.')
+          .setDesc('How the rendered snippet text is joined to the accumulated protocol. Default uses the global text separator setting.')
           .addDropdown(drop => {
             drop.addOption('', '\u2014 use global default \u2014');
             drop.addOption('newline', 'Newline');
@@ -1104,7 +1104,7 @@ export class EditorPanelView extends ItemView {
 
     const sourceKind = sourceData['radiprotocol_nodeType'] as RPNodeKind | undefined;
     if (!sourceKind) {
-      new Notice('Select a RadiProtocol node to duplicate.');
+      new Notice('Select a protocol node to duplicate.');
       return;
     }
 

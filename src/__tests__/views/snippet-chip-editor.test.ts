@@ -281,11 +281,11 @@ describe('snippet-chip-editor Phase 52 — narrowing probes (RED pre-Plan-03)', 
     const container = makeEl('div');
     const onChange = vi.fn();
     mountChipEditor(container as unknown as HTMLElement, draft, onChange);
-    // Expand mini-form via the [+ Add placeholder] button click
+    // Expand mini-form via the [+ add placeholder] button click
     const addBtn = container.querySelectorAll('button').find(
-      (b) => (b as unknown as { _text: string })._text === '+ Add placeholder',
+      (b) => (b as unknown as { _text: string })._text === '+ add placeholder',
     );
-    if (!addBtn) throw new Error('+ Add placeholder button missing');
+    if (!addBtn) throw new Error('+ add placeholder button missing');
     addBtn.dispatchEvent({ type: 'click' });
     const selectEls = container.querySelectorAll('select');
     // mini-form select is the first select
@@ -366,7 +366,7 @@ describe('snippet-chip-editor Phase 52 — narrowing probes (RED pre-Plan-03)', 
 });
 
 describe('snippet-chip-editor Phase 52 — options-list roundtrip (SC 2 regression guard)', () => {
-  it('A2: + Add option → type → × remove mutates draft.placeholders.options', () => {
+  it('A2: + add option → type → × remove mutates draft.placeholders.options', () => {
     const draft = makeDraft([
       { id: 'f', label: 'F', type: 'choice', options: [] },
     ]);
@@ -377,12 +377,12 @@ describe('snippet-chip-editor Phase 52 — options-list roundtrip (SC 2 regressi
     const chip = container.querySelectorAll('.rp-placeholder-chip')[0];
     if (!chip) throw new Error('chip missing');
     chip.dispatchEvent({ type: 'click' });
-    // Find the [+ Add option] button
+    // Find the [+ add option] button
     const allButtons = container.querySelectorAll('button');
     const addBtn = allButtons.find(
-      (b) => (b as unknown as { _text: string })._text === '+ Add option',
+      (b) => (b as unknown as { _text: string })._text === '+ add option',
     );
-    if (!addBtn) throw new Error('+ Add option button missing');
+    if (!addBtn) throw new Error('+ add option button missing');
     addBtn.dispatchEvent({ type: 'click' });
     expect(draft.placeholders[0]!.options).toHaveLength(1);
     expect(onChange).toHaveBeenCalled();

@@ -225,7 +225,7 @@ export default class RadiProtocolPlugin extends Plugin {
         menu.addSeparator();
         menu.addItem(item =>
           item
-            .setTitle('Edit RadiProtocol properties')
+            .setTitle('Edit protocol properties')
             .setSection('radiprotocol')
             .onClick(() => {
               void this.openEditorPanelForNode(filePath, nodeId);
@@ -519,14 +519,14 @@ export default class RadiProtocolPlugin extends Plugin {
     // D9 guard: active file must be a markdown note
     const activeFile = this.app.workspace.getActiveFile();
     if (activeFile === null || activeFile.extension !== 'md') {
-      new Notice('Open a markdown note first, then run this command.');
+      new Notice('Open a Markdown note first, then run this command.');
       return;
     }
 
     // Protocol folder enumeration
     const folderPath = this.settings.protocolFolderPath.trim();
     if (folderPath === '') {
-      new Notice('Set a protocol folder in Settings to get started.');
+      new Notice('Set a protocol folder in settings to get started.');
       return;
     }
 

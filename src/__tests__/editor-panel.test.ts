@@ -40,8 +40,8 @@ describe('EditorPanelView', () => {
       expect(view.getViewType()).toBe(EDITOR_PANEL_VIEW_TYPE);
     });
 
-    it('getDisplayText returns RadiProtocol node editor (sentence case)', () => {
-      expect(view.getDisplayText()).toBe('RadiProtocol node editor');
+    it('getDisplayText returns Protocol node editor (sentence case)', () => {
+      expect(view.getDisplayText()).toBe('Protocol node editor');
     });
 
     it('getIcon returns pencil', () => {

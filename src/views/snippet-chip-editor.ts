@@ -120,8 +120,8 @@ export function mountChipEditor(
     onChange();
   });
 
-  // --- [+ Add placeholder] button and inline mini-form (D-04) ---
-  const addPlaceholderBtn = templateSection.createEl('button', { text: '+ Add placeholder' });
+  // --- [+ add placeholder] button and inline mini-form (D-04) ---
+  const addPlaceholderBtn = templateSection.createEl('button', { text: '+ add placeholder' });
   addPlaceholderBtn.setAttribute('type', 'button');
   const addPlaceholderForm = templateSection.createDiv({ cls: 'rp-add-placeholder-form' });
   addPlaceholderForm.toggleClass('rp-chip-form-hidden', true);
@@ -131,7 +131,7 @@ export function mountChipEditor(
   miniLabelEl.htmlFor = 'rp-add-ph-label';
   const miniLabelInput = addPlaceholderForm.createEl('input', { type: 'text' });
   miniLabelInput.id = 'rp-add-ph-label';
-  miniLabelInput.placeholder = 'e.g. Patient age';
+  miniLabelInput.placeholder = 'E.g. Patient age';
 
   const miniTypeLabel = addPlaceholderForm.createEl('label');
   miniTypeLabel.textContent = 'Type';
@@ -161,7 +161,7 @@ export function mountChipEditor(
   placeholderHeading.textContent = 'Placeholders';
   const placeholderList = placeholderSection.createDiv({ cls: 'rp-placeholder-list' });
 
-  // Wire [+ Add placeholder] button: show mini-form
+  // Wire [+ add placeholder] button: show mini-form
   on(addPlaceholderBtn, 'click', () => {
     addPlaceholderForm.toggleClass('rp-chip-form-hidden', false);
     miniLabelInput.value = '';
@@ -398,7 +398,7 @@ export function mountChipEditor(
     };
     renderOptionRows();
 
-    const addOptionBtn = optionsSec.createEl('button', { text: '+ Add option' });
+    const addOptionBtn = optionsSec.createEl('button', { text: '+ add option' });
     addOptionBtn.setAttribute('type', 'button');
     on(addOptionBtn, 'click', () => {
       if (!ph.options) ph.options = [];

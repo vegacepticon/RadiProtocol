@@ -114,7 +114,7 @@ export class CanvasSelectorWidget {
 
     // D-03: empty setting -> show hint
     if (folderPath === '') {
-      popover.createDiv({ cls: 'rp-selector-empty-hint', text: 'Set a protocol folder in Settings to get started.' });
+      popover.createDiv({ cls: 'rp-selector-empty-hint', text: 'Set a protocol folder in settings to get started.' });
       return;
     }
 
@@ -122,7 +122,7 @@ export class CanvasSelectorWidget {
     const rootFolder = this.app.vault.getAbstractFileByPath(folderPath);
     if (!(rootFolder instanceof TFolder)) {
       // Folder does not exist yet
-      popover.createDiv({ cls: 'rp-selector-empty-hint', text: 'Set a protocol folder in Settings to get started.' });
+      popover.createDiv({ cls: 'rp-selector-empty-hint', text: 'Set a protocol folder in settings to get started.' });
       return;
     }
 

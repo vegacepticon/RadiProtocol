@@ -357,7 +357,7 @@ describe('EditorPanelView duplicate', () => {
 
     await (view as unknown as { onDuplicate(): Promise<void> }).onDuplicate();
 
-    expect(Notice).toHaveBeenCalledWith('Select a RadiProtocol node to duplicate.');
+    expect(Notice).toHaveBeenCalledWith('Select a protocol node to duplicate.');
     expect((mockPlugin.canvasNodeFactory as { createNode: ReturnType<typeof vi.fn> }).createNode)
       .not.toHaveBeenCalled();
   });
