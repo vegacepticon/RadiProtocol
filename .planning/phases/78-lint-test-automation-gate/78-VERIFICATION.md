@@ -28,9 +28,9 @@ Install two-layer automatic gate to prevent ESLint/test drift from recurring.
 - **Note**: CI-04/CI-05 (red status on PR) require actual GitHub push — will verify on next PR
 
 ## Pre-flight checks
-- `npm run lint`: 0 errors, 2 warnings (prefer-file-manager-trash-file — pre-existing) ✅
-- `npm test`: 816 passed, 2 failed (pre-existing snippet-editor-modal), 1 skipped ✅
-- `npm run build`: clean exit 0 ✅
+- `npm run lint`: exit 0 — 0 errors, 2 warnings (`prefer-file-manager-trash-file`, documented out-of-scope in Phase 77) ✅
+- `npm test`: exit 0 — 818 passed, 1 skipped ✅
+- `npm run build`: exit 0 ✅
 
 ## Deferred
 - CI-04/CI-05: External verification — requires push to GitHub PR branch with deliberate error/failing test

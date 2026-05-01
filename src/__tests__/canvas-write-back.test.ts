@@ -27,7 +27,9 @@ describe('saveNodeEdits — write-back contract (EDIT-03, EDIT-04)', () => {
     mockVaultRead = vi.fn().mockResolvedValue(makeCanvasJson());
     mockVaultModify = vi.fn().mockResolvedValue(undefined);
     mockGetLeavesOfType = vi.fn().mockReturnValue([]); // canvas not open by default
-    mockGetAbstractFileByPath = vi.fn().mockReturnValue(new TFile('test.canvas')); // TFile mock
+    const canvasFile = new TFile();
+    canvasFile.path = 'test.canvas';
+    mockGetAbstractFileByPath = vi.fn().mockReturnValue(canvasFile); // TFile mock
     // LIVE-03: saveLive returns false = canvas closed, fall through to vault.modify()
     mockSaveLive = vi.fn().mockResolvedValue(false);
 

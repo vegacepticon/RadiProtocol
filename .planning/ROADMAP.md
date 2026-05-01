@@ -18,7 +18,7 @@
 - ✅ **v1.9 Inline Runner Polish & Settings UX** — Phases 59-62 (shipped 2026-04-25)
 - ✅ **v1.10 Editor Sync & Runner UX Polish** — Phases 63-68 (shipped 2026-04-26)
 - ✅ **v1.11 Inline Polish, Loop Hint, Donate & Canvas Library** — Phases 69-74 (shipped 2026-04-30)
-|- 🚧 **v1.12 Maintenance & Tech Debt** — Phases 75-78 (Phase 77 complete, Phase 78 complete; 75-76 pending)
+- 🚧 **v1.12 Maintenance & Tech Debt** — Phases 75-78 (Phase 77 complete, Phase 78 complete; 75-76 pending)
 
 _v1.12 in progress; opened 2026-04-30. Internal-only — no GitHub Release planned for `1.12.0`._
 

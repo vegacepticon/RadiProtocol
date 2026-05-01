@@ -107,7 +107,11 @@ function makeEl(tag = 'div'): MockEl {
       const child = makeEl(subtag);
       child.parent = el as unknown as MockEl;
       if (opts?.text !== undefined) child.textContent = opts.text;
-      if (opts?.cls) child.classList.add(opts.cls);
+      if (opts?.cls) {
+        for (const cls of opts.cls.split(/\s+/).filter(Boolean)) {
+          child.classList.add(cls);
+        }
+      }
       if (opts?.type) child._type = opts.type;
       children.push(child);
       return child;
