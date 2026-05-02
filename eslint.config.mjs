@@ -107,6 +107,7 @@ export default tseslint.config(
       'esbuild.config.mjs',
       'version-bump.mjs',
       'vitest.config.ts',
+      'stylelint.config.mjs',
       '.planning/**',
     ],
   }

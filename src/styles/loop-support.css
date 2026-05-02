@@ -54,9 +54,7 @@
 }
 
 .rp-loop-picker-list {
-  display: flex;
-  flex-direction: column;
-  gap: var(--size-2-2);
+  /* display/flex/gap migrated to .rp-stack-md utility (Phase 80) */
   margin-top: var(--size-2-3);
 }
 

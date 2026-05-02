@@ -313,7 +313,7 @@ export class InlineRunnerModal {
     const canvasName = this.canvasFilePath!.replace(/\.canvas$/, '').split('/').pop() ?? 'Protocol';
     titleEl.setText(canvasName);
 
-    const closeBtn = header.createEl('button', { cls: 'rp-inline-runner-close-btn' });
+    const closeBtn = header.createEl('button', { cls: 'rp-inline-runner-close-btn rp-center' });
     setIcon(closeBtn, 'x');
     closeBtn.setAttribute('aria-label', 'Close protocol');
     closeBtn.title = 'Close protocol';

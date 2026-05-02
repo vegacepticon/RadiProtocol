@@ -36,9 +36,7 @@
 }
 
 .rp-inline-runner-close-btn {
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  /* display/align/justify migrated to .rp-center utility (Phase 80) */
   background: transparent;
   border: none;
   cursor: pointer;

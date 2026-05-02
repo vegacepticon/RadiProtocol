@@ -16,9 +16,7 @@
 }
 
 .rp-editor-form {
-  display: flex;
-  flex-direction: column;
-  gap: var(--size-2-1); /* 4px */
+  /* display/flex/gap migrated to .rp-stack utility (Phase 80) */
   flex: 1 1 auto;
   overflow-y: auto;
 }

@@ -8,9 +8,7 @@
 }
 
 .rp-snippet-modal-field {
-  display: flex;
-  flex-direction: column;
-  gap: var(--size-2-1); /* 4px */
+  /* migrated to .rp-stack utility (Phase 80) */
 }
 
 .rp-snippet-modal-label {
@@ -20,9 +18,7 @@
 }
 
 .rp-snippet-modal-options {
-  display: flex;
-  flex-direction: column;
-  gap: var(--size-2-1); /* 4px */
+  /* migrated to .rp-stack utility (Phase 80) */
 }
 
 .rp-snippet-modal-custom-row {

@@ -55,7 +55,7 @@ export function renderQuestionAtNode(
   }
 
   if (answerNeighbors.length > 0) {
-    const answerList = questionZone.createDiv({ cls: 'rp-answer-list' });
+    const answerList = questionZone.createDiv({ cls: 'rp-answer-list rp-stack' });
     for (const answerNode of answerNeighbors) {
       const btn = answerList.createEl('button', {
         cls: 'rp-answer-btn',

@@ -107,7 +107,7 @@ export class SnippetTreePicker {
     container.empty();
 
     // Root wrapper.
-    const root = container.createDiv({ cls: 'rp-stp-root' });
+    const root = container.createDiv({ cls: 'rp-stp-root rp-stack-lg' });
 
     // Search input row (always rendered above breadcrumb).
     const searchWrap = root.createDiv({ cls: 'rp-stp-search' });

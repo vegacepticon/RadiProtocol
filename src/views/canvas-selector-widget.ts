@@ -143,7 +143,7 @@ export class CanvasSelectorWidget {
 
     // Back row (D-07) - shown when not at root
     if (this.currentPath.length > 0) {
-      const backRow = popover.createDiv({ cls: 'rp-selector-row rp-selector-back-row' });
+      const backRow = popover.createDiv({ cls: 'rp-selector-row rp-selector-back-row rp-row-sm' });
       const backIcon = backRow.createSpan({ cls: 'rp-selector-row-icon' });
       setIcon(backIcon, 'arrow-left');
       backRow.createSpan({ cls: 'rp-selector-row-label', text: 'Back' });
@@ -169,7 +169,7 @@ export class CanvasSelectorWidget {
 
     // Folder rows (D-07)
     for (const folder of folders) {
-      const row = popover.createDiv({ cls: 'rp-selector-row rp-selector-folder-row' });
+      const row = popover.createDiv({ cls: 'rp-selector-row rp-selector-folder-row rp-row-sm' });
       const iconEl = row.createSpan({ cls: 'rp-selector-row-icon' });
       setIcon(iconEl, 'folder');
       row.createSpan({ cls: 'rp-selector-row-label', text: folder.name });
@@ -184,7 +184,7 @@ export class CanvasSelectorWidget {
 
     // File rows (D-08, D-09)
     for (const file of files) {
-      const row = popover.createDiv({ cls: 'rp-selector-row rp-selector-file-row' });
+      const row = popover.createDiv({ cls: 'rp-selector-row rp-selector-file-row rp-row-sm' });
       if (file.path === this.selectedFilePath) {
         row.addClass('is-selected');
       }

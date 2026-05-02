@@ -40,7 +40,7 @@ export function renderLoopPicker(
 
   // RUN-01: one button per outgoing edge (Pitfall 4 — filter edges, not adjacency).
   const outgoing = graph.edges.filter(e => e.fromNodeId === state.nodeId);
-  const list = questionZone.createDiv({ cls: 'rp-loop-picker-list' });
+  const list = questionZone.createDiv({ cls: 'rp-loop-picker-list rp-stack-md' });
   for (const edge of outgoing) {
     // Phase 50.1 EDGE-03 — "+"-prefix convention:
     //   * "+"-prefixed edge → caption = stripExitPrefix(label), class = rp-loop-exit-btn.

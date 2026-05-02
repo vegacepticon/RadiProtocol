@@ -4,9 +4,7 @@
 /* Plan 02 owns this file end-to-end — host wrappers for Plans 03/04/05 included here. */
 
 .rp-stp-root {
-  display: flex;
-  flex-direction: column;
-  gap: var(--size-4-2);
+  /* display/flex/gap migrated to .rp-stack-lg utility (Phase 80) */
 }
 
 .rp-stp-search {

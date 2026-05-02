@@ -29,6 +29,7 @@ const prod = process.argv[2] === 'production';
  * Each file owns one feature; agents should only edit the relevant file.
  */
 const CSS_FILES = [
+  '_utilities',
   'runner-view',
   'canvas-selector',
   'editor-panel',

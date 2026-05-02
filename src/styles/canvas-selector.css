@@ -63,11 +63,8 @@
 }
 
 .rp-selector-row {
-  display: flex;
-  align-items: center;
-  gap: var(--size-2-1);
+  /* display/align/gap migrated to .rp-row-sm utility (Phase 80) */
   padding: var(--size-2-1) var(--size-4-1);
-  min-height: 32px;
   cursor: pointer;
   font-size: var(--font-text-size);
 }
