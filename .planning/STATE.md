@@ -3,10 +3,9 @@ gsd_state_version: 1.0
 milestone: v1.13
 milestone_name: AI-Agent Friction Reduction & Codebase Health
 status: executing
-stopped_at: Phase 80 complete — CSS utilities + stylelint committed; proceeding to Phase 81
+stopped_at: Phase 81 complete — typed dom-helpers committed; proceeding to Phase 82
 last_updated: "2026-05-02T20:00:00.000Z"
-last_activity: 2026-05-02 — Phase 80 executed (_utilities.css, stylelint, pre-commit gate); committed to dev/v1.13-phase-79
-progress:
+last_activity: 2026-05-02 — Phase 81 executed (createButton/createInput/createTextarea, registerEvent wrapper, hot-path refac...[truncated]
   total_phases: 5
   completed_phases: 2
   total_plans: 2
