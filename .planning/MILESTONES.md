@@ -272,3 +272,29 @@
 **Archive:** `.planning/archive/milestones/v1.0-ROADMAP.md`, `.planning/archive/milestones/v1.0-REQUIREMENTS.md`
 
 ---
+
+## v1.13 AI-Agent Friction Reduction & Codebase Health (Closed: 2026-05-02 — internal-only, no GitHub Release)
+
+**Phases completed:** 5 phases (79–83), 17 plans, 5/5 requirements satisfied
+**Timeline:** 2026-05-02 (1 day)
+**Git:** 8 commits on `dev/v1.13-phase-79` → merged via [PR #2](https://github.com/vegacepticon/RadiProtocol/pull/2)
+**src/ delta:** +613/−615 across 12 files (tree-renderer.ts +530, session-recovery-coordinator.ts +112, runner-view.ts −45, snippet-manager-view.ts −473, dom-helpers.ts +64, _utilities.css +63)
+**Release:** **none** — v1.13 is internal-only by REQUIREMENTS.md design; end users on `1.12.0` see no behavior change.
+
+**Key accomplishments:**
+
+- Phase 79: Typed constants for runner states (`src/constants/runner-states.ts`) and CSS classes (`src/constants/css-classes.ts`) — replaced stringly-typed literals across `src/runner/`, `src/views/`, and `src/__tests__/` (EXTRACT-TYPES-01)
+- Phase 80: Reusable CSS utilities (`src/styles/_utilities.css`) + `stylelint` config wired into `npm run lint` and pre-commit hook (SPLIT-CSS-01)
+- Phase 81: Typed `dom-helpers` module (`src/utils/dom-helpers.ts`) with `createButton`, `createInput`, `createTextarea`, `registerDomEvent` — eliminated `as HTML*Element` casts in hot-path renderers (TYPE-SAFETY-01)
+- Phase 82: `SnippetManagerView` decomposition — extracted `src/views/snippet-manager/tree-renderer.ts` (~530 LOC); original view 1034 → 531 lines (−48%) (REFACTOR-SNIPPET-MGR-01)
+- Phase 83: `RunnerView` SessionRecoveryCoordinator — extracted `src/runner/session-recovery-coordinator.ts` (112 LOC); view 925 → 880 lines; autosave, resume prompt, canvas-modification-warning fully delegated (REFACTOR-RUNNER-VIEW-01)
+
+**Final gate:** `npm test` 847/1 skipped, `npm run build` exit 0, `npm run lint` 0 errors / 2 known warnings
+
+**Known deferred items at close:**
+
+- **2 lint warnings** — `obsidianmd/prefer-file-manager-trash-file` in `src/snippets/snippet-service.ts:240,283` (documented out-of-scope since v1.12)
+- **MEDIUM-5** — `protocol-runner.ts` (819 LOC) remains large; not in v1.13 scope
+- **Verification backfill** — Phases 64/66/67/68 still lack formal `VERIFICATION.md`; Nyquist `VALIDATION.md` for Phases 63–83 missing (project-wide tech debt)
+
+---
