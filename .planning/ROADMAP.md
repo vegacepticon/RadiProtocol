@@ -30,6 +30,21 @@ _v1.12 closed 2026-05-02 — 7/7 requirements satisfied; internal-only, no GitHu
 ### Archived milestones
 
 <details>
+<summary>✅ v1.13 AI-Agent Friction Reduction & Codebase Health (Phases 79-83) — CLOSED 2026-05-02 (internal-only, no GitHub Release)</summary>
+
+- [x] Phase 79: Typed Constants for Runner States and CSS Classes (2/2 plans) — completed 2026-05-02
+- [x] Phase 80: Reusable CSS Utilities + Stylelint Gate (5/5 plans) — completed 2026-05-02
+- [x] Phase 81: Typed dom-helpers Module (5/5 plans) — completed 2026-05-02
+- [x] Phase 82: SnippetManagerView Decomposition (5/5 plans) — completed 2026-05-02 (PARTIAL on soft <400 LOC budget — 537 LOC; behavior preserved)
+- [x] Phase 83: RunnerView SessionRecoveryCoordinator Extraction (5/5 plans) — completed 2026-05-02 (PARTIAL on soft <700 LOC budget — 880 LOC; behavior preserved)
+
+5/5 requirements satisfied behaviorally; 2 PARTIAL on soft LOC budgets with documented rationale.
+
+Full details: `.planning/MILESTONES.md` (v1.13 entry), `.planning/MILESTONE-AUDIT.md` (Path A audit), `.planning/milestones/v1.13-phases/` (phase directory tree).
+
+</details>
+
+<details>
 <summary>✅ v1.11 Inline Polish, Loop Hint, Donate & Canvas Library (Phases 69-74) — SHIPPED 2026-04-30</summary>
 
 - [x] Phase 69: Inline Runner — Hide Result-Export Buttons in Complete State (2/2 plans) — completed 2026-04-29
@@ -377,10 +392,6 @@ Full details: `.planning/archive/milestones/v1.10-ROADMAP.md`
 **UI hint**: no
 
 ---
-
-## v1.13 — AI-Agent Friction Reduction & Codebase Health (Phases 79–83)
-
-_Opened 2026-05-02. Internal-only — no GitHub Release planned for `1.13.0`. End users on `1.11.0` see no behavior change. Theme: typed surfaces + reusable utilities + view decompositions to reduce the rate at which AI executor agents (and humans) introduce regressions in shared `src/` files. See REQUIREMENTS.md for the full motivation._
 
 ### Phase 79: Typed Constants for Runner States and CSS Classes
 **Goal**: Replace stringly-typed runner-state literals (`'awaiting-snippet-pick'`, `'awaiting-snippet-fill'`, `'awaiting-loop-pick'`, `'idle'`, `'at-node'`, `'complete'`, `'error'`) and shared cross-file CSS class names (the `rp-runner-footer-row`, `rp-loop-exit-btn`, `rp-snippet-tree-*`, `rp-chip-*` families introduced in Phases 75/77) with typed constants in a new module under `src/runner/` and `src/styles/` (or a single `src/types/constants.ts` — exact file boundaries decided in Phase 79 planning). Outside the canonical type / constants file, `git grep -nP "['\"]awaiting-snippet-(pick|fill)['\"]" src/` should return zero call-site matches. Foundation phase that EXTRACT-TYPES-01 contracts directly to; benefits Phases 82 and 83 by making subsequent rewrites of those call sites consume the typed surface.

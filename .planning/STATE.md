@@ -2,44 +2,44 @@
 gsd_state_version: 1.0
 milestone: v1.13
 milestone_name: AI-Agent Friction Reduction & Codebase Health
-status: complete
-stopped_at: v1.13 closed — MILESTONES.md + ROADMAP.md updated; PR #2 created for merge to main
-last_updated: "2026-05-02T20:45:00.000Z"
-last_activity: 2026-05-02 — Milestone v1.13 closed; PR #2 created; awaiting merge to main
+status: closed
+stopped_at: 2026-05-02 — v1.13 archived; phases 79–83 moved to .planning/milestones/v1.13-phases/; awaiting next milestone definition
+last_updated: "2026-05-02T00:00:00.000Z"
+last_activity: 2026-05-02 — Milestone v1.13 closed and archived; awaiting next milestone definition
 progress:
   total_phases: 5
   completed_phases: 5
-  total_plans: 5
-  completed_plans: 5
+  total_plans: 22
+  completed_plans: 22
 ---
 
 # RadiProtocol — Project State
 
 **Updated:** 2026-05-02
-**Milestone:** v1.13 AI-Agent Friction Reduction & Codebase Health — **OPEN**
-**Status:** Phase 83 complete — SessionRecoveryCoordinator extracted; milestone v1.13 ready for close
+**Milestone:** v1.13 AI-Agent Friction Reduction & Codebase Health — **CLOSED**
+**Status:** Closed 2026-05-02 — 5/5 phases complete, 5/5 requirements satisfied; awaiting next milestone definition
 
 ---
 
 ## Current Position
 
-Phase: 83 — Complete
-Plan: `.planning/phases/83-runner-view-session-recovery/`
-Status: coordinator.ts extracted (112 LOC); view → 880 lines; build/test/lint pass; committed to dev/v1.13-phase-79
-Last activity: 2026-05-02 — Phase 83 executed (SessionRecoveryCoordinator, delegate pattern)
+Phase: none active
+Plan: none active
+Status: v1.13 closed — phases 79–83 archived to `.planning/milestones/v1.13-phases/`
+Last activity: 2026-05-02 — gsd-complete-milestone executed for v1.13
 
 ## Project Reference
 
 See: `.planning/PROJECT.md` (updated 2026-05-02 — v1.13 Current Milestone section).
-See: `.planning/REQUIREMENTS.md` (v1.13 — 5 active requirements: EXTRACT-TYPES-01, SPLIT-CSS-01, TYPE-SAFETY-01, REFACTOR-SNIPPET-MGR-01, REFACTOR-RUNNER-VIEW-01).
-See: `.planning/ROADMAP.md` (v1.13 phase blocks 79–83 appended; v1.12 archived block preserved).
-See: `.planning/MILESTONES.md` (v1.12 closing entry; v1.13 entry pending milestone close).
-See: `.planning/MILESTONE-AUDIT.md` (v1.12 audit; 7/7 requirements satisfied — Path A close).
-See: `.planning/milestones/v1.12-ROADMAP.md` (v1.12 snapshot at close).
+See: `.planning/REQUIREMENTS.md` (v1.13 — 5 requirements satisfied: EXTRACT-TYPES-01, SPLIT-CSS-01, TYPE-SAFETY-01, REFACTOR-SNIPPET-MGR-01, REFACTOR-RUNNER-VIEW-01).
+See: `.planning/ROADMAP.md` (v1.13 archived as collapsible block in Archived milestones; Backlog awaiting next milestone).
+See: `.planning/MILESTONES.md` (v1.13 closing entry; v1.12 entry preserved).
+See: `.planning/MILESTONE-AUDIT.md` (v1.13 audit; 5/5 requirements satisfied behaviorally; 2 PARTIAL on soft LOC budgets — Path A close).
+See: `.planning/milestones/v1.13-phases/` (v1.13 phase directory tree at close).
 
 **Core value:** A radiologist can generate a structured, accurate protocol in seconds by answering a guided algorithm — without writing a single line of code.
 
-**Current focus:** v1.13 — reduce AI-agent friction across shared `src/` files via typed constants, reusable CSS utilities + stylelint, typed DOM helpers, and two further god-file decompositions (`SnippetManagerView`, `RunnerView`).
+**Current focus:** awaiting next milestone definition.
 
 ---
 
@@ -134,10 +134,10 @@ See: `.planning/milestones/v1.12-ROADMAP.md` (v1.12 snapshot at close).
 
 ## Session Continuity
 
-Last session: 2026-05-02T20:40:00.000Z
-Stopped at: Phase 83 complete — committed to dev/v1.13-phase-79; milestone v1.13 ready for close
-Resume file: `.planning/phases/83-runner-view-session-recovery/VERIFICATION.md` (next)
-Next action: gsd-complete-milestone v1.13, then PR/merge to main.
+Last session: 2026-05-02
+Stopped at: v1.13 closed and archived; awaiting next milestone definition
+Resume file: none (no active phase)
+Next action: define next milestone (v1.14 or successor) — see Carry into v1.14 list in `.planning/MILESTONE-AUDIT.md`.
 
 ---
 
@@ -146,6 +146,6 @@ Next action: gsd-complete-milestone v1.13, then PR/merge to main.
 - Branch: `main`
 - Main: `main`
 - Last user-facing release: v1.11 (2026-04-30; GitHub Release `1.11.0` published)
-- Last internal milestone: v1.12 (2026-05-02; closed, no release)
-- Active milestone: v1.13 (opened 2026-05-02; executing)
-- Active phase: 79 complete — 80 planning
+- Last internal milestones: v1.12 (2026-05-02; closed, no release), v1.13 (2026-05-02; closed, no release)
+- Active milestone: none (awaiting next milestone definition)
+- Active phase: none

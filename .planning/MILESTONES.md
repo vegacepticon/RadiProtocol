@@ -1,5 +1,42 @@
 # Milestones
 
+## v1.13 AI-Agent Friction Reduction & Codebase Health (Closed: 2026-05-02 — internal-only, no GitHub Release)
+
+**Phases completed:** 5 phases (79–83), 22 plans, 5/5 requirements satisfied
+**Timeline:** 2026-05-02 → 2026-05-02 (single day)
+**Git:** PR #2 squash-merged as `eb5c670`; release tag `1.13.0` (`2ad1c0a`) present but no GitHub Release published; src/ delta vs v1.12 close (`febabfd`): +1096/−735 across 35 files
+**Release:** **none** — v1.13 is internal-only by REQUIREMENTS.md design; end users on `1.11.0` see no behavior change. If a regression surfaces it ships as `1.11.x` patch.
+
+**Key accomplishments:**
+
+- Phase 79: Typed Constants for Runner States and CSS Classes — `src/constants/runner-states.ts` (11 LOC, exports `RUNNER_STATUS` + `RunnerStatus` union) and `src/constants/css-classes.ts` (17 LOC, exports `CSS_CLASS` + `CssClass` union). Stringly-typed runner-state literals replaced across `src/runner/protocol-runner.ts` and `src/runner/runner-state.ts`. Shared CSS class names migrated at 7 hot-path call sites: `runner-view.ts`, `inline-runner-modal.ts`, `snippet-editor-modal.ts`, `snippet-form.ts`, `runner-host.ts`, `render-snippet-picker.ts`, `render-snippet-fill.ts`. `git grep -nP "['\"]awaiting-snippet-(pick|fill)['\"]" src/` returns matches only inside the canonical constants file. Final gate: `npm test` 847/1 skipped, `npm run build` exit 0, `npm run lint` 0 errors / 2 pre-existing warnings (EXTRACT-TYPES-01)
+- Phase 80: Reusable CSS Utilities + Stylelint Gate — new `src/styles/_utilities.css` (65 LOC) registered first in `esbuild.config.mjs` `CSS_FILES`, exporting `.rp-stack`, `.rp-row`, `.rp-center`, `.rp-hidden`, `.rp-disabled` (plus size variants). At least one duplicated flex/gap/visibility rule per existing per-feature CSS file migrated (8 feature files). `stylelint` + `stylelint-config-standard` installed as devDependencies; `stylelint.config.mjs` extends standard config with focused rules. `npm run lint` script invokes `stylelint 'src/styles/**/*.css'` alongside ESLint. `.githooks/pre-commit` runs stylelint on staged `src/styles/**/*.css` files (existing eslint-on-staged-`*.ts` and `npm test` behavior preserved). `.github/workflows/ci.yml` continues to invoke `npm run lint` (now covers stylelint) (SPLIT-CSS-01)
+- Phase 81: Typed dom-helpers Module — new `src/utils/dom-helpers.ts` (69 LOC) exports `createButton(parent, opts?) → HTMLButtonElement`, `createInput(parent, opts?) → HTMLInputElement`, `createTextarea(parent, opts?) → HTMLTextAreaElement`, and `registerEvent(scope, target, event, handler) → void`. Hot-path call sites — `src/runner/render/*` plus `src/views/snippet-tree-picker.ts` and `src/views/snippet-editor-modal.ts` — no longer contain `as HTMLButtonElement` / `as HTMLInputElement` / `as HTMLTextAreaElement` casts for the four element kinds. Mock at `src/__mocks__/obsidian.ts` updated; existing extension points (`recordedCssProps`, etc.) preserved verbatim. `RunnerHost` interface untouched (TYPE-SAFETY-01)
+- Phase 82: SnippetManagerView Decomposition — tree rendering, drag-and-drop, inline rename, and context-menu logic extracted from `src/views/snippet-manager-view.ts` into `src/views/snippet-manager/tree-renderer.ts` (`SnippetManagerTreeRenderer` class, 577 LOC). Host view 1037 → 537 LOC (48% reduction). Phase 32 vault watcher / 120ms debounce / prefix-filter pattern preserved; Phase 32/34 `rewriteCanvasRefs` integration (with `WriteMutex` per file path) preserved verbatim. Two test files mechanically updated to reference `tree-renderer.ts`. **PARTIAL on soft <400 LOC budget** — host view at 537 LOC; rationale documented in `82-VERIFICATION.md` (tree + DnD + rename are tightly coupled by DOM state; further splitting judged worse-than-the-disease). 2 deferred lint warnings re-deferred (REFACTOR-SNIPPET-MGR-01)
+- Phase 83: RunnerView SessionRecoveryCoordinator Extraction — `SessionRecoveryCoordinator` extracted to `src/runner/session-recovery-coordinator.ts` (112 LOC). Owns the three behavioral surfaces: autosave/append-policy (`autoSave()`), resume prompt + canvas-modification-warning (`resolveSession()` returning `'resume' | 'start-over' | 'error'`). `RunnerView` constructor wires the coordinator; `openCanvas()`'s ~45-LOC session-recovery block replaced with a single `resolveSession()` call. Imports of `ResumeSessionModal`, `PersistedSession`, and `validateSessionNodeIds` relocated to coordinator. Host 925 → 880 LOC. **PARTIAL on soft <700 LOC budget** — further reduction requires extracting the snippet-picker and canvas-switching surfaces, deferred to v1.14 by scope. Phase 7 contract preserved (autosave timing, resume conditions, canvas-modification warnings); Phase 75 contract preserved (`RunnerHost` interface untouched, shared renderer delegation unchanged); `InlineRunnerModal` not modified per REQUIREMENTS.md "Out of Scope" (REFACTOR-RUNNER-VIEW-01)
+
+**Resolved during v1.13:**
+
+- **Phase 75 atomic-commit gap (HIGH from v1.12 close)** — resolved as a side effect of the v1.13 squash merge `eb5c670` (PR #2). Working-tree-only Phase 75 deltas now committed.
+- **CI-04 / CI-05 live red-status verification (deferred from v1.12)** — naturally exercised by the v1.13 PR; Phase 80 stylelint integration confirmed gate behavior on real PR.
+
+**Known deferred items at close:**
+
+- **REFACTOR-SNIPPET-MGR-01 soft-LOC carry-over** — `snippet-manager-view.ts` remains 537 LOC vs <400 LOC soft target. Further reduction would require splitting `tree-renderer.ts` into separate tree / DnD / rename / context-menu controllers; planner judged this would force shared mutable DOM state across module boundaries, worse than a single 537-LOC dispatcher. Re-evaluate in v1.14 if a natural seam emerges.
+- **REFACTOR-RUNNER-VIEW-01 soft-LOC carry-over** — `runner-view.ts` remains 880 LOC vs <700 LOC soft target. Coordinator extraction proved the pattern; v1.14 carries (a) snippet-picker surface (`mountSnippetPicker`, `handleSnippetPickerSelection`, `handleSnippetFill`) and (b) canvas-switching surface (`handleSelectorSelect`, `handleClose`, `restartCanvas`).
+- **2 deferred lint warnings re-deferred (third milestone in a row)** — `obsidianmd/prefer-file-manager-trash-file` × 2 in `src/snippets/snippet-service.ts:240,283`. v1.13 Phase 82 re-evaluated and re-deferred. Recommend wrapping into a v1.14 quick task.
+- **`registerEvent` typed wrapper provided but not yet wired** — Phase 81 added it to `dom-helpers.ts` but did not adopt at call sites; only typed element creation is in use. Long-tail `as HTML*Element` casts remain in `src/views/settings-tab.ts`, `snippet-fill-in-modal.ts`, `snippet-editor-modal.ts` outside the declared hot path. Opportunistic migration deferred to v1.14.
+- **Exhaustive CSS utility migration deferred** — Phase 80 demonstrated the pattern with at-least-one-per-feature; full sweep over every duplicated flex/gap rule deferred per REQUIREMENTS.md "Future Requirements".
+- **`.planning/phases/75-runner-view-inline-runner-deduplication/` orphan directory** — present alongside the v1.12 archive copy at `.planning/milestones/v1.12-phases/75-runner-view-inline-runner-deduplication/`. Mechanical cleanup at next `/gsd-cleanup` pass.
+- **MEDIUM-5 from v1.12 CONCERNS.md (deferred two milestones running)** — `protocol-runner.ts` (819 LOC) decomposition. Explicitly out of v1.13 scope (REQUIREMENTS.md "Out of Scope: No engine decomposition").
+- **Carry-over project-wide tech debt (unchanged from v1.12 close):** Phases 64/66/67 lack formal `VERIFICATION.md`; Nyquist `VALIDATION.md` missing for Phases 63–83 (gap widens by one milestone); 3 open debug sessions (`inline-runner-drag-resets-size`, `inline-runner-tab-switch-resets-size`, `phase-27-regressions`); 2 stale seeds; deprecated `LoopStartNode` / `LoopEndNode` retained for Migration Check enumeration.
+
+**Audit:** `.planning/MILESTONE-AUDIT.md` (Path A — close with documented soft-target carry-overs, no blockers).
+
+**Archive:** `.planning/milestones/v1.13-phases/` (79/80/81/82/83 directory tree).
+
+---
+
 ## v1.12 Maintenance & Tech Debt (Closed: 2026-05-02 — internal-only, no GitHub Release)
 
 **Phases completed:** 4 phases (75–78), 28 plans, 7/7 requirements satisfied
