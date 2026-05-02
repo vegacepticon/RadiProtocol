@@ -3,30 +3,30 @@ gsd_state_version: 1.0
 milestone: v1.13
 milestone_name: AI-Agent Friction Reduction & Codebase Health
 status: executing
-stopped_at: Phase 79 complete — typed constants committed; proceeding to Phase 80
-last_updated: "2026-05-02T19:00:00.000Z"
-last_activity: 2026-05-02 — Phase 79 executed (runner states + CSS classes constants); build/test/lint pass; committed to dev/v1.13-phase-79
+stopped_at: Phase 80 complete — CSS utilities + stylelint committed; proceeding to Phase 81
+last_updated: "2026-05-02T20:00:00.000Z"
+last_activity: 2026-05-02 — Phase 80 executed (_utilities.css, stylelint, pre-commit gate); committed to dev/v1.13-phase-79
 progress:
   total_phases: 5
-  completed_phases: 1
-  total_plans: 1
-  completed_plans: 1
+  completed_phases: 2
+  total_plans: 2
+  completed_plans: 2
 ---
 
 # RadiProtocol — Project State
 
 **Updated:** 2026-05-02
 **Milestone:** v1.13 AI-Agent Friction Reduction & Codebase Health — **OPEN**
-**Status:** Phase 79 complete — typed constants committed; proceeding to Phase 80 plan
+**Status:** Phase 80 complete — CSS utilities + stylelint wired; proceeding to Phase 81 plan
 
 ---
 
 ## Current Position
 
-Phase: 79 — Complete
-Plan: `.planning/phases/79-typed-constants-for-runner-states-and-css-classes/`
-Status: Typed constants committed; build/test/lint pass
-Last activity: 2026-05-02 — Phase 79 executed (runner states + CSS classes constants); committed to dev/v1.13-phase-79
+Phase: 80 — Complete
+Plan: `.planning/phases/80-reusable-css-utilities-stylelint/`
+Status: CSS utilities + stylelint committed; build/test/lint pass
+Last activity: 2026-05-02 — Phase 80 executed (_utilities.css, stylelint, pre-commit gate); committed to dev/v1.13-phase-79
 
 ## Project Reference
 
@@ -48,7 +48,7 @@ See: `.planning/milestones/v1.12-ROADMAP.md` (v1.12 snapshot at close).
 | Phase | Goal (one-line) | Requirements | Status |
 |-------|-----------------|--------------|--------|
 | 79 | Typed constants for runner states and CSS classes — replaces stringly-typed literals across `src/runner/`, `src/views/`, and `src/__tests__/` | EXTRACT-TYPES-01 | Complete |
-| 80 | Reusable CSS utilities + `stylelint` config wired into `npm run lint` and pre-commit hook | SPLIT-CSS-01 | Planned |
+| 80 | Reusable CSS utilities + `stylelint` config wired into `npm run lint` and pre-commit hook | SPLIT-CSS-01 | Complete |
 | 81 | Typed `dom-helpers` module wrapping `createEl`/`createDiv`/`registerDomEvent` with typed return types | TYPE-SAFETY-01 | Planned |
 | 82 | `SnippetManagerView` decomposition — extract tree/modal/drag-and-drop controllers into `src/views/snippet-manager/`; host view <400 LOC | REFACTOR-SNIPPET-MGR-01 | Planned |
 | 83 | `RunnerView` further decomposition — extract `SessionRecoveryCoordinator` (autosave/append-policy + resume-prompt + canvas-modification-warning) | REFACTOR-RUNNER-VIEW-01 | Planned |
@@ -134,10 +134,10 @@ See: `.planning/milestones/v1.12-ROADMAP.md` (v1.12 snapshot at close).
 
 ## Session Continuity
 
-Last session: 2026-05-02T19:00:00.000Z
-Stopped at: Phase 79 complete — committed to dev/v1.13-phase-79; proceeding to Phase 80 plan
-Resume file: `.planning/phases/80-reusable-css-utilities-stylelint/PLAN.md` (next)
-Next action: plan Phase 80 (Reusable CSS Utilities + Stylelint Gate), then execute.
+Last session: 2026-05-02T20:00:00.000Z
+Stopped at: Phase 80 complete — committed to dev/v1.13-phase-79; proceeding to Phase 81 plan
+Resume file: `.planning/phases/81-typed-dom-helpers/PLAN.md` (next)
+Next action: plan Phase 81 (Typed dom-helpers Module), then execute.
 
 ---
 
