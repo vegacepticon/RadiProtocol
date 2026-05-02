@@ -1,57 +1,59 @@
 ---
 gsd_state_version: 1.0
-milestone: v1.12
-milestone_name: Maintenance & Tech Debt
-status: Closed (internal-only — no GitHub Release)
-stopped_at: v1.12 closed 2026-05-02 — awaiting next milestone definition
+milestone: v1.13
+milestone_name: AI-Agent Friction Reduction & Codebase Health
+status: planning
+stopped_at: v1.13 opened 2026-05-02 — REQUIREMENTS.md drafted; ROADMAP.md drafted (Phases 79–83); awaiting first phase plan
 last_updated: "2026-05-02T00:00:00.000Z"
-last_activity: 2026-05-02 — v1.12 audited (7/7 requirements satisfied) and closed; archive under .planning/milestones/v1.12-*
+last_activity: 2026-05-02 — v1.13 milestone opened (5 work items, 5 phases 79–83); planning artifacts written without commits per session directive
 progress:
-  total_phases: 4
-  completed_phases: 4
-  total_plans: 28
-  completed_plans: 28
+  total_phases: 5
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
 ---
 
 # RadiProtocol — Project State
 
 **Updated:** 2026-05-02
-**Milestone:** v1.12 Maintenance & Tech Debt — **CLOSED 2026-05-02**
-**Status:** Closed (internal-only milestone — no GitHub Release; v1.11.0 remains the latest user-facing release)
+**Milestone:** v1.13 AI-Agent Friction Reduction & Codebase Health — **OPEN**
+**Status:** Planning (REQUIREMENTS.md + ROADMAP.md drafted; no phase plans yet)
 
 ---
 
 ## Current Position
 
-Milestone: v1.12 — closed 2026-05-02
-Audit: `.planning/MILESTONE-AUDIT.md` (Path A — close with documented tech debt, no blockers)
-Last shipped user-facing release: v1.11.0 (2026-04-30)
-Next action: define next milestone (v1.13 scope TBD), or commit Phase 75 atomic per-plan commits if continuing on v1.12 housekeeping
+Phase: Not started (defining requirements / first phase plan)
+Plan: —
+Status: Defining requirements
+Last activity: 2026-05-02 — Milestone v1.13 started
 
 ## Project Reference
 
-See: `.planning/PROJECT.md` (last updated 2026-04-29).
-See: `.planning/REQUIREMENTS.md` (v1.12 requirements — all 7 satisfied per audit).
-See: `.planning/ROADMAP.md` (v1.12 phase blocks at lines 274–376; progress table at lines 385–407 still shows Phase 75/76 as "Not started" — documentation drift, see Tech Debt below).
-See: `.planning/MILESTONES.md` (v1.12 closing entry prepended 2026-05-02).
-See: `.planning/MILESTONE-AUDIT.md` (full audit findings).
-See: `.planning/milestones/v1.12-ROADMAP.md` (snapshot at close).
-See: `.planning/milestones/v1.12-phases/` (archived 75/76/77/78 artifacts).
+See: `.planning/PROJECT.md` (updated 2026-05-02 — v1.13 Current Milestone section).
+See: `.planning/REQUIREMENTS.md` (v1.13 — 5 active requirements: EXTRACT-TYPES-01, SPLIT-CSS-01, TYPE-SAFETY-01, REFACTOR-SNIPPET-MGR-01, REFACTOR-RUNNER-VIEW-01).
+See: `.planning/ROADMAP.md` (v1.13 phase blocks 79–83 appended; v1.12 archived block preserved).
+See: `.planning/MILESTONES.md` (v1.12 closing entry; v1.13 entry pending milestone close).
+See: `.planning/MILESTONE-AUDIT.md` (v1.12 audit; 7/7 requirements satisfied — Path A close).
+See: `.planning/milestones/v1.12-ROADMAP.md` (v1.12 snapshot at close).
 
 **Core value:** A radiologist can generate a structured, accurate protocol in seconds by answering a guided algorithm — without writing a single line of code.
 
-**Current focus:** v1.12 closed — awaiting next milestone definition.
+**Current focus:** v1.13 — reduce AI-agent friction across shared `src/` files via typed constants, reusable CSS utilities + stylelint, typed DOM helpers, and two further god-file decompositions (`SnippetManagerView`, `RunnerView`).
 
 ---
 
-## v1.12 Phase Map (closed)
+## v1.13 Phase Map (planning)
 
 | Phase | Goal (one-line) | Requirements | Status |
 |-------|-----------------|--------------|--------|
-| 75 | RunnerView ↔ InlineRunnerModal Deduplication — shared `src/runner/render/*` consumed by both host shells; inline test family merged onto shared fixtures | DEDUP-01, DEDUP-02 | ✅ Complete (verification GREEN; **artifacts in working tree, not yet committed** — see Deferred Items) |
-| 76 | editor-panel-view.ts Decomposition — per-kind form modules + helper extraction; dispatcher under 400 LOC | SPLIT-01, SPLIT-02 | ✅ Complete (commit `0406c98`; 393 LOC) |
-| 77 | Eslint Findings Cleanup — 517 errors → 0; 6 warnings → 2 documented | LINT-01 | ✅ Complete (12 commits `681f82d`..`99f8afa`) |
-| 78 | Lint + Test Automation Gate — pre-commit hook + GitHub Actions workflow | CI-01, CI-02 | ✅ Complete (commits `8dee957`, `907cec1`; CI-04/05 live red-status verification deferred to first natural PR) |
+| 79 | Typed constants for runner states and CSS classes — replaces stringly-typed literals across `src/runner/`, `src/views/`, and `src/__tests__/` | EXTRACT-TYPES-01 | Planned |
+| 80 | Reusable CSS utilities + `stylelint` config wired into `npm run lint` and pre-commit hook | SPLIT-CSS-01 | Planned |
+| 81 | Typed `dom-helpers` module wrapping `createEl`/`createDiv`/`registerDomEvent` with typed return types | TYPE-SAFETY-01 | Planned |
+| 82 | `SnippetManagerView` decomposition — extract tree/modal/drag-and-drop controllers into `src/views/snippet-manager/`; host view <400 LOC | REFACTOR-SNIPPET-MGR-01 | Planned |
+| 83 | `RunnerView` further decomposition — extract `SessionRecoveryCoordinator` (autosave/append-policy + resume-prompt + canvas-modification-warning) | REFACTOR-RUNNER-VIEW-01 | Planned |
+
+**Execution order:** Phases 79, 80, 81 are independent foundations and can run in any order or in parallel. Phases 82 and 83 may benefit from 79 (typed state names) and 81 (typed dom-helpers) but do not strictly depend on them — see ROADMAP.md "Depends on" lines for the precise contract.
 
 ---
 
@@ -70,7 +72,7 @@ See: `.planning/milestones/v1.12-phases/` (archived 75/76/77/78 artifacts).
 - v1.9 (4 phases, 59–62): Inline Runner feature parity, position persistence + compact layout, folder autocomplete on settings path fields, BRAT Release v1.9.0.
 - v1.10 (6 phases, 63–68): bidirectional Canvas ↔ Node Editor sync, auto-grow textareas + Text block quick-create, Back/Skip footer layout, step-back reliability + scroll pinning, Inline Runner resizable modal + file-bound Snippet parity, BRAT Release `1.10.0`.
 - v1.11 (6 phases, 69–74): Inline Runner redundant-button cleanup, loop-exit picker visual hint, Settings donate section (9 wallet rows), 8 hand-authored algorithmic canvases (5 full + 3 short, in author's vault — not bundled), GitHub Release `1.11.0`.
-- **v1.12 (4 phases, 75–78): RunnerView/InlineRunnerModal renderer extraction, editor-panel-view decomposition, ESLint findings cleanup (517 → 0), pre-commit + GitHub Actions automation gate. Internal-only — no GitHub Release.**
+- v1.12 (4 phases, 75–78): RunnerView/InlineRunnerModal renderer extraction, editor-panel-view decomposition, ESLint findings cleanup (517 → 0), pre-commit + GitHub Actions automation gate. Internal-only — no GitHub Release.
 
 ### Standing Pitfalls (carry-over)
 
@@ -88,33 +90,30 @@ See: `.planning/milestones/v1.12-phases/` (archived 75/76/77/78 artifacts).
 12. v1.9: Inline Runner position persistence uses clamp-on-restore (not clamp-on-save) — survives monitor/resolution changes.
 13. v1.10 / Phase 67: file-bound Snippet parity (INLINE-FIX-07) root-cause was in shared `src/runner/protocol-runner.ts` `advanceThrough` case `'snippet'`, NOT inline-only. Phase 56 fixed only the sibling-button click path; loop-body and direct-edge traversals remained broken until Phase 67 D-14 + D-15. Going forward, runner-core dispatch for any new node-kind extension MUST consider all traversal paths (sibling-button click, loop-body edge, direct edge) — not just the click path.
 14. v1.10 / Phase 63: Node Editor canvas → form sync subscribes to `EdgeLabelSyncService`'s `canvas-changed-for-node` event bus and patches DOM via `registerFieldRef`; future Node-Editor work that adds new fields MUST register them through this helper or they will not receive inbound canvas patches.
-15. **v1.12 / Phase 75: shared protocol-runner rendering now lives in `src/runner/render/*.ts` with `runner-host.ts` providing the host abstraction. New per-step UI MUST be added to the shared renderer, NOT duplicated into the host shells. The hosts (`runner-view.ts`, `inline-runner-modal.ts`) are thin wrappers responsible only for chrome, lifecycle, autosave/append policy, layout/position, and output-toolbar differences.**
-16. **v1.12 / Phase 76: `src/views/editor-panel-view.ts` is a <400-LOC dispatcher. Per-kind form bodies live under `src/views/editor-panel/forms/`; helpers under `src/views/editor-panel/`. Adding form-rendering logic back into the dispatcher is a regression — extract to a helper or form module instead. Spyable private surface (`renderNodeForm`, `renderForm`, `buildKindForm`, `applyCanvasPatch`, `pendingEdits`, `formFieldRefs`, etc.) is preserved by routing through wrapper methods on `EditorPanelView`; do not bypass these wrappers when extracting further.**
-17. **v1.12 / Phase 77: per-feature `src/styles/*.css` files are the home for previously-inline styles. New visual rules belong in the matching feature file, append-only per phase, with a `/* Phase N: description */` header. Inline `el.style.foo = ...` assignments are an ESLint error (`obsidianmd/no-static-styles-assignment`) — use class toggles or `setCssProps` with custom properties instead.**
-18. **v1.12 / Phase 78: pre-commit hook `.githooks/pre-commit` runs eslint on staged `*.ts` and `npm test` before allowing commits. Wired via `core.hooksPath`. `--no-verify` is the intentional escape hatch (CI is the safety net). GitHub Actions workflow at `.github/workflows/ci.yml` runs `npm ci && npm run build && npm run lint && npm test` on push to `main` and on every PR.**
+15. v1.12 / Phase 75: shared protocol-runner rendering now lives in `src/runner/render/*.ts` with `runner-host.ts` providing the host abstraction. New per-step UI MUST be added to the shared renderer, NOT duplicated into the host shells. The hosts (`runner-view.ts`, `inline-runner-modal.ts`) are thin wrappers responsible only for chrome, lifecycle, autosave/append policy, layout/position, and output-toolbar differences.
+16. v1.12 / Phase 76: `src/views/editor-panel-view.ts` is a <400-LOC dispatcher. Per-kind form bodies live under `src/views/editor-panel/forms/`; helpers under `src/views/editor-panel/`. Adding form-rendering logic back into the dispatcher is a regression — extract to a helper or form module instead. Spyable private surface (`renderNodeForm`, `renderForm`, `buildKindForm`, `applyCanvasPatch`, `pendingEdits`, `formFieldRefs`, etc.) is preserved by routing through wrapper methods on `EditorPanelView`; do not bypass these wrappers when extracting further.
+17. v1.12 / Phase 77: per-feature `src/styles/*.css` files are the home for previously-inline styles. New visual rules belong in the matching feature file, append-only per phase, with a `/* Phase N: description */` header. Inline `el.style.foo = ...` assignments are an ESLint error (`obsidianmd/no-static-styles-assignment`) — use class toggles or `setCssProps` with custom properties instead.
+18. v1.12 / Phase 78: pre-commit hook `.githooks/pre-commit` runs eslint on staged `*.ts` and `npm test` before allowing commits. Wired via `core.hooksPath`. `--no-verify` is the intentional escape hatch (CI is the safety net). GitHub Actions workflow at `.github/workflows/ci.yml` runs `npm ci && npm run build && npm run lint && npm test` on push to `main` and on every PR.
 
-### Open Tech Debt at v1.12 close
+### Open Tech Debt at v1.13 open (carry-over from v1.12 close)
 
-- **Phase 75 atomic-commit gap (introduced 2026-05-02; HIGH-priority closeout)** — verification GREEN but source deltas, new modules under `src/runner/`, new shared tests under `src/__tests__/runner/`, and `.planning/phases/75-runner-view-inline-runner-deduplication/` exist only in the working tree. ROADMAP.md progress table still labels Phase 75 as "Not started". Mechanical cleanup pending.
-- **CI-04 / CI-05 live red-status verification (introduced 2026-05-02)** — workflow structurally valid; observation of red ✕ on a real PR with deliberate eslint or test failure happens on the first natural PR.
-- **2 lint warnings remaining** — `obsidianmd/prefer-file-manager-trash-file` in `src/snippets/snippet-service.ts:240,283`. Documented out-of-scope in REQUIREMENTS.md "Future Requirements"; safe in a future phase.
-- **MEDIUM-5 from CONCERNS.md (deferred per REQUIREMENTS.md)** — `protocol-runner.ts` (819 LOC) and `snippet-manager-view.ts` (1037 LOC) remain large. Re-evaluate now that DEDUP-01 has shipped a renderer-extraction template.
-- Verification documentation backfill — Phases 64, 66, 67 lack formal `gsd-verifier` `VERIFICATION.md` (UAT-PASS evidence exists). Pattern: v1.8 Phase 58 backfill.
-- Nyquist `VALIDATION.md` — Phase 63 draft, Phases 64–78 missing entirely; project-wide tech debt.
-- 3 open debug sessions — `inline-runner-drag-resets-size` and `inline-runner-tab-switch-resets-size` resolved by gap-closure `92a1269` but not formally closed; `phase-27-regressions` carryover from v1.7.
-- 2 stale seeds (`duplicate-node.md`, `quick-node-creation.md`) for v1.6-delivered work in `.planning/seeds/`.
-- `@deprecated` `LoopStartNode` / `LoopEndNode` retained for Migration Check enumeration (carry-over from v1.7).
+- **Phase 75 atomic-commit gap (HIGH-priority closeout, opened 2026-05-02)** — verification GREEN but source deltas, new modules under `src/runner/`, new shared tests under `src/__tests__/runner/`, and `.planning/phases/75-runner-view-inline-runner-deduplication/` exist only in the working tree. ROADMAP.md progress table still labels Phase 75 as "Not started". Mechanical cleanup pending; should be resolved before Phase 83 touches `RunnerView` further.
+- **CI-04 / CI-05 live red-status verification (opened 2026-05-02)** — workflow structurally valid; observation of red ✕ on a real PR with deliberate eslint or test failure happens on the first natural PR. v1.13's stylelint addition (Phase 80) will exercise the gate naturally.
+- **2 lint warnings remaining** — `obsidianmd/prefer-file-manager-trash-file` in `src/snippets/snippet-service.ts:240,283`. Documented out-of-scope in v1.12 REQUIREMENTS.md "Future Requirements"; safe in a future phase. Re-evaluate during Phase 82 (SnippetManagerView decomposition) since `snippet-service.ts` is in adjacent territory.
+- **Verification documentation backfill** — Phases 64, 66, 67 lack formal `gsd-verifier` `VERIFICATION.md` (UAT-PASS evidence exists). Pattern: v1.8 Phase 58 backfill.
+- **Nyquist `VALIDATION.md`** — Phase 63 draft, Phases 64–78 missing entirely; project-wide tech debt.
+- **3 open debug sessions** — `inline-runner-drag-resets-size` and `inline-runner-tab-switch-resets-size` resolved by gap-closure `92a1269` but not formally closed; `phase-27-regressions` carryover from v1.7.
+- **2 stale seeds** (`duplicate-node.md`, `quick-node-creation.md`) for v1.6-delivered work in `.planning/seeds/`.
+- **`@deprecated` `LoopStartNode` / `LoopEndNode`** retained for Migration Check enumeration (carry-over from v1.7).
 
-## Deferred Items
-
-Items acknowledged and deferred at milestone close on 2026-05-02:
+## Deferred Items (carry-over from v1.12 close)
 
 | Category | Item | Status |
 |----------|------|--------|
 | commit | Phase 75 atomic per-plan commits + ROADMAP.md status flip | pending — verification GREEN; mechanical cleanup |
-| ci_verification | CI-04/CI-05 live red-status check on real PR | deferred to next natural PR |
-| lint | 2 × `obsidianmd/prefer-file-manager-trash-file` warnings in `snippet-service.ts` | documented out-of-scope |
-| refactor | MEDIUM-5 — `protocol-runner.ts` (819 LOC) and `snippet-manager-view.ts` (1037 LOC) decomposition | deferred per REQUIREMENTS.md |
+| ci_verification | CI-04/CI-05 live red-status check on real PR | deferred to next natural PR (likely Phase 80 stylelint PR) |
+| lint | 2 × `obsidianmd/prefer-file-manager-trash-file` warnings in `snippet-service.ts` | documented out-of-scope; re-evaluate during Phase 82 |
+| refactor | MEDIUM-5 — `protocol-runner.ts` (819 LOC) decomposition | deferred (Phase 83 only touches the View shell, not the engine) |
 | debug | inline-runner-drag-resets-size | unknown — resolved by gap-closure 92a1269 but not formally closed |
 | debug | inline-runner-tab-switch-resets-size | unknown — resolved by gap-closure 92a1269 but not formally closed |
 | debug | phase-27-regressions | awaiting_human_verify — color regression root cause found in canvas-live-editor.ts PROTECTED_FIELDS |
@@ -136,9 +135,9 @@ Items acknowledged and deferred at milestone close on 2026-05-02:
 ## Session Continuity
 
 Last session: 2026-05-02T00:00:00.000Z
-Stopped at: v1.12 closed (audit + archive complete; Phase 75 atomic commits pending)
-Resume file: `.planning/MILESTONES.md` (v1.12 closing entry) and `.planning/MILESTONE-AUDIT.md` (audit findings)
-Next action: define next milestone scope (v1.13 TBD) OR run Phase 75 atomic per-plan commit pass + flip ROADMAP.md status.
+Stopped at: v1.13 milestone planning artifacts written (PROJECT.md, STATE.md, REQUIREMENTS.md, ROADMAP.md) — NO commits per session directive
+Resume file: `.planning/REQUIREMENTS.md` (v1.13 — 5 active requirements) and `.planning/ROADMAP.md` (Phases 79–83 appended)
+Next action: review and commit `.planning/` artifacts manually, then `/gsd-discuss-phase 79` (or `/gsd-plan-phase 79`) to start the typed-constants foundation phase.
 
 ---
 
@@ -148,4 +147,5 @@ Next action: define next milestone scope (v1.13 TBD) OR run Phase 75 atomic per-
 - Main: `main`
 - Last user-facing release: v1.11 (2026-04-30; GitHub Release `1.11.0` published)
 - Last internal milestone: v1.12 (2026-05-02; closed, no release)
-- Active phase: none — v1.12 closed
+- Active milestone: v1.13 (opened 2026-05-02; planning)
+- Active phase: none — v1.13 awaiting first phase plan

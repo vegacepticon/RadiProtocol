@@ -1,7 +1,7 @@
 # Roadmap: RadiProtocol
 
 **Project:** RadiProtocol
-**Last updated:** 2026-04-30 (v1.12 milestone opened — Phases 75–78 added; v1.11 shipped, all 12 requirements satisfied; v1.10 details collapsed into archive)
+**Last updated:** 2026-05-02 (v1.13 milestone opened — Phases 79–83 appended; v1.12 closed 2026-05-02 with 7/7 requirements satisfied per MILESTONE-AUDIT.md)
 
 ---
 
@@ -18,9 +18,10 @@
 - ✅ **v1.9 Inline Runner Polish & Settings UX** — Phases 59-62 (shipped 2026-04-25)
 - ✅ **v1.10 Editor Sync & Runner UX Polish** — Phases 63-68 (shipped 2026-04-26)
 - ✅ **v1.11 Inline Polish, Loop Hint, Donate & Canvas Library** — Phases 69-74 (shipped 2026-04-30)
-- 🚧 **v1.12 Maintenance & Tech Debt** — Phases 75-78 (Phase 76 complete, Phase 77 complete, Phase 78 complete; 75 pending)
+- ✅ **v1.12 Maintenance & Tech Debt** — Phases 75-78 (closed 2026-05-02, internal-only)
+- 🚧 **v1.13 AI-Agent Friction Reduction & Codebase Health** — Phases 79-83 (opened 2026-05-02; 0/5 phases complete)
 
-_v1.12 in progress; opened 2026-04-30. Internal-only — no GitHub Release planned for `1.12.0`._
+_v1.12 closed 2026-05-02 — 7/7 requirements satisfied; internal-only, no GitHub Release. v1.13 opened 2026-05-02 — internal-only milestone, no GitHub Release planned for `1.13.0`._
 
 ---
 
@@ -377,10 +378,79 @@ Full details: `.planning/archive/milestones/v1.10-ROADMAP.md`
 
 ---
 
+## v1.13 — AI-Agent Friction Reduction & Codebase Health (Phases 79–83)
+
+_Opened 2026-05-02. Internal-only — no GitHub Release planned for `1.13.0`. End users on `1.11.0` see no behavior change. Theme: typed surfaces + reusable utilities + view decompositions to reduce the rate at which AI executor agents (and humans) introduce regressions in shared `src/` files. See REQUIREMENTS.md for the full motivation._
+
+### Phase 79: Typed Constants for Runner States and CSS Classes
+**Goal**: Replace stringly-typed runner-state literals (`'awaiting-snippet-pick'`, `'awaiting-snippet-fill'`, `'awaiting-loop-pick'`, `'idle'`, `'at-node'`, `'complete'`, `'error'`) and shared cross-file CSS class names (the `rp-runner-footer-row`, `rp-loop-exit-btn`, `rp-snippet-tree-*`, `rp-chip-*` families introduced in Phases 75/77) with typed constants in a new module under `src/runner/` and `src/styles/` (or a single `src/types/constants.ts` — exact file boundaries decided in Phase 79 planning). Outside the canonical type / constants file, `git grep -nP "['\"]awaiting-snippet-(pick|fill)['\"]" src/` should return zero call-site matches. Foundation phase that EXTRACT-TYPES-01 contracts directly to; benefits Phases 82 and 83 by making subsequent rewrites of those call sites consume the typed surface.
+**Depends on**: Nothing (foundation; no contract changes to runner state machine, snippet system, or canvas parser per REQUIREMENTS.md "Out of Scope")
+**Requirements**: EXTRACT-TYPES-01
+**Success Criteria** (what must be TRUE):
+  1. Every occurrence of the runner-state string literals (`'idle'`, `'at-node'`, `'awaiting-snippet-pick'`, `'awaiting-snippet-fill'`, `'awaiting-loop-pick'`, `'complete'`, `'error'`) outside the canonical discriminated-union type definition uses an exported `const` (e.g. `RUNNER_STATE.AWAITING_SNIPPET_PICK`) or imports the existing union type — verified by `git grep -nP "['\"]awaiting-snippet-(pick|fill)['\"]" src/` showing matches only in the canonical type / constants file (EXTRACT-TYPES-01)
+  2. Shared CSS class names used in two or more `src/` files (the families introduced in Phases 75/77 plus any others surfaced during phase planning) are exported as `const` from a single module and consumed by name from each call site; one-off classes used in a single `src/styles/*.css` file plus a single `src/views/*.ts` file are intentionally left inline (out of scope per REQUIREMENTS.md "no exhaustive sweeps") (EXTRACT-TYPES-01)
+  3. The full vitest suite continues to pass (`npm test` exits 0); test fixtures may consume the same constants for additional safety, but assertion semantics are preserved (EXTRACT-TYPES-01)
+  4. `npm run lint` continues to exit 0 — no rule disables added without written justification per the v1.12 Phase 77 contract; `npm run build` continues to exit 0 (EXTRACT-TYPES-01)
+  5. The Phase 75 shared renderer contract is preserved — host shells (`runner-view.ts`, `inline-runner-modal.ts`) still delegate per-step rendering to `src/runner/render/*` modules without leaking new dispatch logic (EXTRACT-TYPES-01)
+**UI hint**: no
+
+### Phase 80: Reusable CSS Utilities + Stylelint Gate
+**Goal**: Extract reusable CSS utility classes (`.rp-row` for horizontal flex with gap, `.rp-stack` for vertical stack, hidden/disabled state classes) from the per-feature `src/styles/*.css` files where the same flex/gap/visibility patterns recur. Utilities live in a new `src/styles/_utilities.css` registered in `esbuild.config.mjs` `CSS_FILES` ahead of the per-feature files. Add `stylelint` as a devDependency with rules covering duplicated property declarations, invalid selectors, and (where mechanically expressible) a project-style rule for the per-feature `/* Phase N: description */` comment header convention. Wire `stylelint 'src/styles/**/*.css'` into `npm run lint` alongside ESLint, into `.githooks/pre-commit` for staged CSS files, and into the existing `.github/workflows/ci.yml` workflow via the existing `npm run lint` invocation. Goal is to demonstrate the pattern (at-least-one duplicated rule per feature file migrated to the utility class), not exhaustively migrate every duplicate.
+**Depends on**: Nothing (orthogonal to typed surfaces; can run in parallel with Phases 79 and 81)
+**Requirements**: SPLIT-CSS-01
+**Success Criteria** (what must be TRUE):
+  1. `src/styles/_utilities.css` exists and is registered in `esbuild.config.mjs` `CSS_FILES` ahead of the per-feature files; at least one duplicated flex/gap/visibility rule per existing per-feature CSS file (`runner-view.css`, `canvas-selector.css`, `editor-panel.css`, `snippet-manager.css`, `snippet-fill-modal.css`, `loop-support.css`, `donate-section.css`) has been migrated to consume the new utility class — verified by reviewing each file's diff against `main` (SPLIT-CSS-01)
+  2. `stylelint` is a devDependency with a config (`stylelint.config.mjs` or equivalent); rules at minimum cover duplicated property declarations and invalid selectors; the per-feature `/* Phase N: description */` comment header convention is encoded as a lint-only rule (warning, not error) where mechanically expressible (SPLIT-CSS-01)
+  3. `npm run lint` is updated to invoke `stylelint 'src/styles/**/*.css'` alongside ESLint; both gates exit 0 on a clean `main` checkout — verified by running the command and observing `$?` = 0 (SPLIT-CSS-01)
+  4. `.githooks/pre-commit` (Phase 78) is updated to run stylelint on staged `src/styles/**/*.css` files; the existing eslint-on-staged-`*.ts` and `npm test` behavior is preserved (append, do not rewrite) — verified by deliberately introducing a stylelint violation, staging, and observing the commit blocked (SPLIT-CSS-01)
+  5. `.github/workflows/ci.yml` continues to invoke `npm run lint` (now covering stylelint), exiting non-zero on stylelint violation; no separate workflow file added; `npm run build` continues to regenerate `styles.css` cleanly via the existing esbuild concatenation pipeline with the new utilities file ordered first (SPLIT-CSS-01)
+**UI hint**: no
+
+### Phase 81: Typed dom-helpers Module
+**Goal**: Add a typed `dom-helpers` module (e.g. `src/utils/dom-helpers.ts`) wrapping the most common Obsidian DOM idioms with typed return types: `createButton(parent, opts) → HTMLButtonElement`, `createInput(parent, opts) → HTMLInputElement`, `createTextarea(parent, opts) → HTMLTextAreaElement`, `registerEvent(scope, target, event, handler)` as a typed wrapper over `registerDomEvent` that narrows the event type by event name. At least the **hot-path call sites** (the runner shared renderer under `src/runner/render/*` plus `editor-panel-view.ts` dispatcher) consume the typed helpers — not every `createEl` call is migrated; the goal is the typed surface, not a full sweep. The mock used by tests (`src/__mocks__/obsidian.ts`) is updated so the typed helpers work in vitest without `as any` escape hatches in test files; existing mock-extension points (`recordedCssProps`, etc.) are preserved.
+**Depends on**: Nothing (orthogonal foundation; can run in parallel with Phases 79 and 80)
+**Requirements**: TYPE-SAFETY-01
+**Success Criteria** (what must be TRUE):
+  1. A typed `dom-helpers` module exists at `src/utils/dom-helpers.ts` (or equivalent location decided in Phase 81 planning) exporting at minimum `createButton`, `createInput`, `createTextarea`, and `registerEvent` with the typed return / handler signatures described above; the typed wrappers narrow `as HTMLButtonElement` / `as HTMLInputElement` / `as HTMLTextAreaElement` casts at the hot-path call sites (TYPE-SAFETY-01)
+  2. The hot-path call sites — every module under `src/runner/render/*` plus `src/views/editor-panel-view.ts` — consume the typed helpers for at least the four element kinds covered by the new module — verified by `git grep -nP "as HTML(Button|Input|TextArea)Element" src/runner/render src/views/editor-panel-view.ts` returning zero matches (TYPE-SAFETY-01)
+  3. The mock at `src/__mocks__/obsidian.ts` is updated so the typed helpers work in vitest without `as any` in test files; existing mock-extension points (`recordedCssProps`, etc. introduced in Phase 77) are preserved verbatim (TYPE-SAFETY-01)
+  4. `npm test` exits 0 with the full suite green; `npm run lint` exits 0; `npm run build` exits 0 — verified by running each command on a clean Phase 81 branch (TYPE-SAFETY-01)
+  5. The Phase 75 shared renderer / `RunnerHost` contract is preserved — the typed helpers do not introduce a new dispatch path, just typed wrappers over existing `createEl` / `registerDomEvent` call sites; the `RunnerHost` interface is untouched (TYPE-SAFETY-01)
+**UI hint**: no
+
+### Phase 82: SnippetManagerView Decomposition
+**Goal**: `src/views/snippet-manager-view.ts` (1037 LOC, MEDIUM-5 carry-over from v1.12 CONCERNS.md) is decomposed by extracting its three behavioral surfaces — the **tree controller** (folder navigation, expand/collapse, drag-source/drag-target), the **modal controller** (create/edit/rename/delete dispatch, snippet-editor-modal coordination), and the **drag-and-drop controller** (drop validation, vault rewrite via `rewriteCanvasRefs`, debounced refresh) — into per-controller modules under `src/views/snippet-manager/` (one file per controller, plus a `_shared.ts` for any cross-controller types if needed). The remaining `snippet-manager-view.ts` becomes a thin host coordinator under **400 LOC** (mirrors the v1.12 Phase 76 dispatcher budget for `editor-panel-view.ts`). Behavior preserved verbatim — no changes to snippet CRUD, drag-drop, or canvas reference rewriting; `WriteMutex` per file path and the Phase 32/34 `rewriteCanvasRefs` integration are preserved exactly. The 2 deferred `obsidianmd/prefer-file-manager-trash-file` warnings in `snippet-service.ts:240,283` are re-evaluated during this phase.
+**Depends on**: Nothing strictly. **Strongly benefits from Phase 79 (EXTRACT-TYPES-01) and Phase 81 (TYPE-SAFETY-01) landing first** — the controller extraction moves many call sites of stringly-typed states and `as HTMLButtonElement` casts; rewriting them once against the typed surfaces costs less than rewriting them twice (REQUIREMENTS.md "Phase ordering constraint")
+**Requirements**: REFACTOR-SNIPPET-MGR-01
+**Success Criteria** (what must be TRUE):
+  1. After this phase, `src/views/snippet-manager-view.ts` is fewer than 400 LOC — verified by `wc -l src/views/snippet-manager-view.ts` — and contains no inline tree-rendering, modal-coordination, or drag-drop bodies; per-controller modules exist under `src/views/snippet-manager/` (one file per controller) (REFACTOR-SNIPPET-MGR-01)
+  2. Editing a single behavioral surface (e.g. modifying the drag-and-drop drop validation) requires touching exactly one file under `src/views/snippet-manager/` plus optional shared helpers — verified by reviewers being able to point to the file from the surface name without grepping `snippet-manager-view.ts` (REFACTOR-SNIPPET-MGR-01)
+  3. All existing snippet-manager-related tests under `src/__tests__/` continue to pass without modification of their assertion semantics — `npm test` exits 0 with the full suite green; tests may be mechanically split to mirror the new module boundaries provided every existing test case appears in exactly one resulting file with the same assertion semantics (REFACTOR-SNIPPET-MGR-01)
+  4. The Phase 32 vault watcher / debounce pattern (120ms, prefix-filtered) and the Phase 32/34 `rewriteCanvasRefs` integration (with `WriteMutex` per file path) are preserved verbatim — no behavior change to snippet CRUD, drag-drop, or canvas reference rewriting; `WriteMutex` continues to wrap every `vault.modify()` call on snippet/canvas paths (REFACTOR-SNIPPET-MGR-01)
+  5. The 2 lint warnings in `snippet-service.ts:240,283` (`obsidianmd/prefer-file-manager-trash-file`, deferred from v1.12) are either fixed (preferred) or explicitly re-deferred in `82-VERIFICATION.md` with rationale; `npm run lint` continues to exit 0 (with warnings count = 0 if fixed, or = 2 with documented rationale if re-deferred); `npm run build` continues to exit 0 (REFACTOR-SNIPPET-MGR-01)
+**UI hint**: no
+
+### Phase 83: RunnerView Decomposition — SessionRecoveryCoordinator
+**Goal**: `src/views/runner-view.ts` (924 LOC after Phase 75) is further trimmed by extracting a **`SessionRecoveryCoordinator`** module to `src/runner/session-recovery-coordinator.ts` (or `src/views/runner/`, exact location decided in Phase 83 planning). The coordinator owns autosave/append-policy (when `RunnerView` writes session snapshots via `SessionService`, preserved from Phase 7 contract), the resume prompt the user sees on workspace re-open when an in-flight session exists for the canvas, and the canvas-modification-warning prompt that fires when the underlying `.canvas` has changed since the session started (preserved from Phase 7 contract per Pitfall #1). The remaining `runner-view.ts` is responsible only for ItemView lifecycle, workspace `getState`/`setState`, and host chrome around the Phase 75 shared renderer; LOC target is **<700 LOC** (a softer budget than Phase 76's 400 because the View also owns canvas-selector mounting, output-toolbar rendering for sidebar/tab modes, and the Phase 65 footer wrapper). The exact target is to be confirmed during Phase 83 planning. `InlineRunnerModal` does NOT receive an equivalent coordinator extraction in this phase per REQUIREMENTS.md "Out of Scope".
+**Depends on**: Nothing strictly. **Strongly benefits from Phase 79 (EXTRACT-TYPES-01) and Phase 81 (TYPE-SAFETY-01) landing first** for the same reason as Phase 82. Also benefits from the **v1.12 Phase 75 atomic-commit cleanup** landing first — without it, the Phase 83 diff stacks on top of working-tree-only changes from v1.12 and creates a three-way merge hazard (REQUIREMENTS.md "Pre-existing v1.12 deferred item")
+**Requirements**: REFACTOR-RUNNER-VIEW-01
+**Success Criteria** (what must be TRUE):
+  1. After this phase, a `SessionRecoveryCoordinator` module exists at `src/runner/session-recovery-coordinator.ts` (or equivalent location decided in Phase 83 planning) and owns the three behavioral surfaces — autosave/append-policy, resume prompt, canvas-modification-warning — described in REQUIREMENTS.md REFACTOR-RUNNER-VIEW-01 (REFACTOR-RUNNER-VIEW-01)
+  2. `src/views/runner-view.ts` is under 700 LOC after extraction — verified by `wc -l src/views/runner-view.ts` — and contains only ItemView lifecycle (`onOpen`/`onClose`), workspace `getState`/`setState`, host chrome, canvas-selector mounting, output-toolbar rendering for sidebar/tab modes, the Phase 65 footer wrapper, and delegation to the shared `src/runner/render/*` renderer per the Phase 75 contract (REFACTOR-RUNNER-VIEW-01)
+  3. All existing runner-view + inline-runner tests under `src/__tests__/` (including the Phase 75 shared fixtures) continue to pass without modification of their assertion semantics — `npm test` exits 0 with the full suite green; the autosave/append-policy + resume-prompt + canvas-modification-warning behaviors continue to fire under the same conditions as before (REFACTOR-RUNNER-VIEW-01)
+  4. The Phase 75 contract is preserved — host shells delegate per-step rendering to the shared `src/runner/render/*` modules; the coordinator extraction is orthogonal to renderer decomposition; `RunnerHost` interface is untouched (REFACTOR-RUNNER-VIEW-01)
+  5. `InlineRunnerModal` is **not** modified in this phase except as required by the coordinator's import surface (e.g. type imports). The inline modal's Phase 54 modal-as-buffer / append-to-end / source-note-binding contract is preserved verbatim. `npm run lint` continues to exit 0; `npm run build` continues to exit 0 (REFACTOR-RUNNER-VIEW-01)
+**UI hint**: no
+
+---
+
 ## Progress
 
-**Execution Order:**
-v1.12 in progress — Phases 75, 76, 77 are independent and can run in any order or in parallel; Phase 78 strictly depends on Phase 77 (lint+test gate is unworkable until existing findings cleared). No GitHub Release for `1.12.0` — internal-only milestone.
+**Execution Order (v1.12 — closed):**
+Phases 75, 76, 77 were independent; Phase 78 strictly depended on Phase 77. v1.12 closed 2026-05-02 with 7/7 requirements satisfied (Phase 75 work-tree-complete but uncommitted; see STATE.md "Open Tech Debt at v1.13 open"). Internal-only — no GitHub Release for `1.12.0`.
+
+**Execution Order (v1.13 — active):**
+Phases 79, 80, 81 are independent foundations and can run in any order or in parallel. Phases 82 and 83 are independent of each other and of the foundations, but **strongly benefit from Phases 79 and 81 landing first** (typed surfaces reduce double-rewrites of moved call sites). Phase 83 also strongly benefits from the v1.12 Phase 75 atomic-commit cleanup landing first. Recommended order: 79 → 81 → 80 → 82 → 83, with 80 (stylelint) interleaved wherever convenient. No hard dependencies between v1.13 phases. Internal-only — no GitHub Release for `1.13.0`.
 
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
@@ -399,15 +469,20 @@ v1.12 in progress — Phases 75, 76, 77 are independent and can run in any order
 | 71 | v1.11 | 3/3 | Complete    | 2026-04-29 |
 | 72 | v1.11 | 5/5 | Complete    | 2026-04-30 |
 | 73 | v1.11 | 3/3 | Complete    | 2026-04-30 |
-| 74 | v1.11 | 0/? | Not started | — |
-| 75 | v1.12 | 0/? | Not started | — |
-| 76 | v1.12 | 0/? | Not started | — |
+| 74 | v1.11 | 3/3 | Complete    | 2026-04-30 |
+| 75 | v1.12 | 7/7 | Complete (working tree; commit pending — see Deferred Items in STATE.md) | 2026-05-02 |
+| 76 | v1.12 | 5/5 | Complete | 2026-05-01 |
 | 77 | v1.12 | 14/14 | Complete | 2026-05-01 |
 | 78 | v1.12 | 2/2 | Complete | 2026-05-01 |
+| 79 | v1.13 | 0/? | Not started | — |
+| 80 | v1.13 | 0/? | Not started | — |
+| 81 | v1.13 | 0/? | Not started | — |
+| 82 | v1.13 | 0/? | Not started | — |
+| 83 | v1.13 | 0/? | Not started | — |
 
 
 ---
 
 ## Backlog
 
-(empty — items promoted to v1.12 phases 75-78)
+(empty — items promoted to v1.13 phases 79-83)

@@ -12,23 +12,34 @@ A radiologist can generate a structured, accurate protocol in seconds by answeri
 
 **Last shipped:** v1.11 Inline Polish, Loop Hint, Donate & Canvas Library — ✅ SHIPPED 2026-04-30 (GitHub Release `1.11.0`, 3 loose assets, BRAT-installable via `vegacepticon/RadiProtocol`)
 
-**Active milestone:** v1.12 Maintenance & Tech Debt — started 2026-04-30
+**Active milestone:** v1.13 AI-Agent Friction Reduction & Codebase Health — started 2026-05-02
 
-**Previous milestone:** v1.11 Inline Polish, Loop Hint, Donate & Canvas Library — ✅ SHIPPED 2026-04-30
+**Previous milestone:** v1.12 Maintenance & Tech Debt — ✅ CLOSED 2026-05-02 (internal-only, no GitHub Release; 7/7 requirements satisfied per MILESTONE-AUDIT.md)
 
-## Current Milestone: v1.12 Maintenance & Tech Debt
+## Current Milestone: v1.13 AI-Agent Friction Reduction & Codebase Health
+
+**Goal:** Reduce the friction that AI executor agents (and future human contributors) hit when navigating shared files in `src/`. The recurring failure mode the v1.12 audit and CLAUDE.md flag is the same: agents accidentally delete code in unrelated sections of large shared files, or reach for `el.style.foo` / `as Type` casts when typed surfaces would have made the safe path obvious. v1.13 invests in **types, naming, and structure** so the next phase doesn't have to re-fight those battles. No new user-facing features; no canvas authoring; no new node kinds. Every requirement is internal — typed constants, reusable CSS utilities + a stylesheet linter, typed DOM helpers, and two further god-file decompositions (`SnippetManagerView`, `RunnerView`) following the v1.12 Phase 75/76 extraction template.
+
+**Target features (all internal — no UX surface change for end users):**
+- Typed constants module covering runner state names and shared CSS class names — replaces stringly-typed `'awaiting-snippet-pick'`/`'rp-runner-footer-row'` literals scattered across `src/runner/`, `src/views/`, and `src/__tests__/`; agents get exhaustive-checking + grep-friendly identifiers
+- Reusable CSS utilities (`.rp-row`, `.rp-stack`, hidden/disabled state classes, etc.) extracted from the per-feature `src/styles/*.css` files where the same flex/gap/visibility patterns recur, plus a `stylelint` config wired into `npm run lint` and the `.githooks/pre-commit` gate so style-rule drift is caught the same way ESLint catches TS drift
+- Typed `dom-helpers` module wrapping `createEl`/`createDiv`/`registerDomEvent` — provides typed return types (`HTMLButtonElement`, `HTMLInputElement`, etc.), narrows `as HTMLElement` casts in the hot paths, and gives test harnesses a single mock-extension point
+- `SnippetManagerView` (currently 1037 LOC, MEDIUM-5 carry-over from v1.12) decomposed by extracting controllers — tree controller, modal controller, drag-and-drop controller — into `src/views/snippet-manager/` with the host view as a thin coordinator under ~400 LOC; mirrors v1.12 Phase 76 dispatcher pattern
+- `RunnerView` (currently 924 LOC after Phase 75) further trimmed by extracting `SessionRecoveryCoordinator` — owns autosave/append-policy plus the resume-prompt + canvas-modification-warning interaction — leaving `RunnerView` responsible only for ItemView lifecycle and host chrome around the Phase 75 shared renderer
+- No GitHub Release — v1.13 is internal-only; ships as a follow-on `1.11.x` patch only if a regression is found and fixed during this milestone
+
+## Previous Milestone: v1.12 Maintenance & Tech Debt
 
 **Goal:** Pay down accumulated tech debt surfaced by the 2026-04-30 `CONCERNS.md` scan — eliminate render-logic duplication between sidebar and inline runners, decompose the editor-panel god-file, fix the 523 pre-existing eslint findings exposed when `eslint` was promoted to a direct devDependency, and install an automatic lint+test gate so the same drift cannot recur. No new user-facing features; no canvas authoring; no new domain.
 
-**Target features (all internal — no UX surface change for end users):**
-- Shared render module powering both `RunnerView` (sidebar/tab) and `InlineRunnerModal` (floating modal); collapsed parallel test trees (was: ~2350 LOC mirrored across two files)
-- `editor-panel-view.ts` decomposed into per-node-kind form modules; existing 6 test files preserved 1:1
-- `npm run lint` exits 0 on `main` — all `obsidianmd/no-static-styles-assignment` violations and the long tail converted or rule-tuned
-- Pre-commit hook blocking commits that introduce lint errors or test failures (local fast-feedback layer)
-- GitHub Actions CI workflow blocking pushes/PRs to `main` on build/lint/test failure (safety net for `--no-verify` and collaborators without local hooks)
-- No GitHub Release — v1.12 is internal-only; ships as a follow-on `1.11.x` patch only if a regression is found and fixed during this milestone
+**Delivered features (all internal — no UX surface change for end users):**
+- Shared render module powering both `RunnerView` (sidebar/tab) and `InlineRunnerModal` (floating modal); collapsed parallel test trees (~2350 LOC mirrored across two files); inline test LOC 2222 → 1555 (–30.0%, target met exactly) (Phase 75)
+- `editor-panel-view.ts` decomposed 1230 → 393 LOC (under <400 budget) into per-node-kind form modules + 9 helper modules; all 6 existing test files preserved 1:1 (Phase 76)
+- `npm run lint` exits 0 on `main` — 517 errors → 0; 6 warnings → 2 documented out-of-scope (Phase 77)
+- Pre-commit hook + GitHub Actions CI workflow blocking lint/test failure on `main` and PRs (Phase 78)
+- No GitHub Release — v1.12 was internal-only
 
-## Previous Milestone: v1.11 Inline Polish, Loop Hint, Donate & Canvas Library
+## Older Milestone: v1.11 Inline Polish, Loop Hint, Donate & Canvas Library
 
 **Goal:** Close redundancy in Inline Runner, make loop-exit visually obvious, open a path for crypto-donation support of development, and produce a set of algorithmic canvases for primary radiology areas (full ГМ, ОБП, ОЗП, ОМТ, ПКОП and short ОГК, ОБП, ОМТ) using the existing ОГК 1.10.0 canvas + Z:\projects\references SNIPPETS structure as reference.
 
@@ -336,8 +347,9 @@ A radiologist can generate a structured, accurate protocol in seconds by answeri
 
 ## Current State (active milestone)
 
-**Shipped:** v1.11 Inline Polish, Loop Hint, Donate & Canvas Library (2026-04-30)
-**Active milestone:** None — awaiting next milestone definition
+**Shipped:** v1.11 Inline Polish, Loop Hint, Donate & Canvas Library (2026-04-30; GitHub Release `1.11.0`)
+**Last closed:** v1.12 Maintenance & Tech Debt (2026-05-02; internal-only, no Release; 7/7 requirements satisfied per MILESTONE-AUDIT.md)
+**Active milestone:** v1.13 AI-Agent Friction Reduction & Codebase Health — started 2026-05-02 (Phases 79–83)
 **v1.11 shipped:** 6 phases (69–74), 17 plans, 12/12 requirements satisfied, GitHub Release `1.11.0` live
 
 **Key v1.11 deliverables:**
