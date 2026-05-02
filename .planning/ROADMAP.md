@@ -19,7 +19,7 @@
 - ✅ **v1.10 Editor Sync & Runner UX Polish** — Phases 63-68 (shipped 2026-04-26)
 - ✅ **v1.11 Inline Polish, Loop Hint, Donate & Canvas Library** — Phases 69-74 (shipped 2026-04-30)
 - ✅ **v1.12 Maintenance & Tech Debt** — Phases 75-78 (closed 2026-05-02, internal-only)
-- 🚧 **v1.13 AI-Agent Friction Reduction & Codebase Health** — Phases 79-83 (opened 2026-05-02; 0/5 phases complete)
+- 🚧 **v1.13 AI-Agent Friction Reduction & Codebase Health** — Phases 79-83 (opened 2026-05-02; 3/5 phases complete)
 
 _v1.12 closed 2026-05-02 — 7/7 requirements satisfied; internal-only, no GitHub Release. v1.13 opened 2026-05-02 — internal-only milestone, no GitHub Release planned for `1.13.0`._
 
@@ -477,8 +477,8 @@ Phases 79, 80, 81 are independent foundations and can run in any order or in par
 | 79 | v1.13 | 2/2 | Complete | 2026-05-02 |
 | 80 | v1.13 | 5/5 | Complete | 2026-05-02 |
 | 81 | v1.13 | 5/5 | Complete | 2026-05-02 |
-| 82 | v1.13 | 0/? | Not started | — |
-| 83 | v1.13 | 0/? | Not started | — |
+| 82 | v1.13 | 5/5 | Complete | 2026-05-02 |
+| 83 | v1.13 | 0/? | In progress | — |
 
 
 ---
