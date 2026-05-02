@@ -474,7 +474,7 @@ Phases 79, 80, 81 are independent foundations and can run in any order or in par
 | 76 | v1.12 | 5/5 | Complete | 2026-05-01 |
 | 77 | v1.12 | 14/14 | Complete | 2026-05-01 |
 | 78 | v1.12 | 2/2 | Complete | 2026-05-01 |
-| 79 | v1.13 | 0/? | Not started | — |
+| 79 | v1.13 | 2/2 | Complete | 2026-05-02 |
 | 80 | v1.13 | 0/? | Not started | — |
 | 81 | v1.13 | 0/? | Not started | — |
 | 82 | v1.13 | 0/? | Not started | — |
