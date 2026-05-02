@@ -2,72 +2,62 @@
 gsd_state_version: 1.0
 milestone: v1.12
 milestone_name: Maintenance & Tech Debt
-status: Ready to execute
-stopped_at: Phase 77 planned (14 plans, 9 waves)
-last_updated: "2026-05-01T00:00:00.000Z"
-last_activity: 2026-05-01 — Phase 77 planned (14 plans across 9 waves)
+status: Closed (internal-only — no GitHub Release)
+stopped_at: v1.12 closed 2026-05-02 — awaiting next milestone definition
+last_updated: "2026-05-02T00:00:00.000Z"
+last_activity: 2026-05-02 — v1.12 audited (7/7 requirements satisfied) and closed; archive under .planning/milestones/v1.12-*
 progress:
-  total_phases: 10
-  completed_phases: 0
-  total_plans: 14
-  completed_plans: 0
+  total_phases: 4
+  completed_phases: 4
+  total_plans: 28
+  completed_plans: 28
 ---
 
 # RadiProtocol — Project State
 
-**Updated:** 2026-05-01
-**Milestone:** v1.12 Maintenance & Tech Debt — Phase 77 planned, ready to execute
-**Status:** Ready to execute
+**Updated:** 2026-05-02
+**Milestone:** v1.12 Maintenance & Tech Debt — **CLOSED 2026-05-02**
+**Status:** Closed (internal-only milestone — no GitHub Release; v1.11.0 remains the latest user-facing release)
 
 ---
 
 ## Current Position
 
-Phase: 77 — eslint-findings-cleanup (planned)
-Plan: 14 plans across 9 waves
-Status: Ready to execute
-Last activity: 2026-05-01 — Phase 77 planned (research → patterns → 14 plans → 2 verification iterations passed)
+Milestone: v1.12 — closed 2026-05-02
+Audit: `.planning/MILESTONE-AUDIT.md` (Path A — close with documented tech debt, no blockers)
+Last shipped user-facing release: v1.11.0 (2026-04-30)
+Next action: define next milestone (v1.13 scope TBD), or commit Phase 75 atomic per-plan commits if continuing on v1.12 housekeeping
 
 ## Project Reference
 
-See: `.planning/PROJECT.md` (updated 2026-04-29 — v1.11 milestone opened, current state section refreshed).
-See: `.planning/REQUIREMENTS.md` (updated 2026-04-29 — traceability table filled with phase mappings 69–74).
-See: `.planning/ROADMAP.md` (updated 2026-04-29 — v1.10 details collapsed into archive, v1.11 phases 69–74 added with full success criteria).
-See: `.planning/MILESTONES.md` (updated 2026-04-26 — v1.10 entry; v1.11 entry will be appended at milestone close).
+See: `.planning/PROJECT.md` (last updated 2026-04-29).
+See: `.planning/REQUIREMENTS.md` (v1.12 requirements — all 7 satisfied per audit).
+See: `.planning/ROADMAP.md` (v1.12 phase blocks at lines 274–376; progress table at lines 385–407 still shows Phase 75/76 as "Not started" — documentation drift, see Tech Debt below).
+See: `.planning/MILESTONES.md` (v1.12 closing entry prepended 2026-05-02).
+See: `.planning/MILESTONE-AUDIT.md` (full audit findings).
+See: `.planning/milestones/v1.12-ROADMAP.md` (snapshot at close).
+See: `.planning/milestones/v1.12-phases/` (archived 75/76/77/78 artifacts).
 
 **Core value:** A radiologist can generate a structured, accurate protocol in seconds by answering a guided algorithm — without writing a single line of code.
 
-**Current focus:** v1.11 milestone complete — awaiting next milestone definition
+**Current focus:** v1.12 closed — awaiting next milestone definition.
 
 ---
 
-## v1.11 Phase Map
+## v1.12 Phase Map (closed)
 
-| Phase | Goal (one-line) | Requirements | Depends on |
-|-------|-----------------|--------------|------------|
-| 69 | Inline Runner — Hide Result-Export Buttons in Complete State | INLINE-CLEAN-01 | Nothing |
-| 70 | Loop-Exit Picker Visual Hint | LOOP-EXIT-01 | Nothing |
-| 71 | Settings — Donate Section | DONATE-01 | Nothing |
-| 72 | Canvas Library — Full Algorithmic Canvases (ГМ, ОБП, ОЗП, ОМТ, ПКОП) | CANVAS-LIB-01..05 | Nothing (content-authoring track in author's vault; not bundled, not committed) |
-| 73 | Canvas Library — Short Algorithmic Canvases (ОГК, ОБП, ОМТ short) | CANVAS-LIB-06..08 | Phase 72 (short ОБП and short ОМТ pair with full versions) |
-| 74 | GitHub Release v1.11.0 | BRAT-03 | Phases 69, 70, 71 UAT-accepted (72/73 are not release-blocking) |
-
----
-
-## v1.12 Phase Map
-
-| Phase | Goal (one-line) | Requirements | Depends on |
-|-------|-----------------|--------------|------------|
-| 75 | RunnerView ↔ InlineRunnerModal Deduplication — shared `RunnerRenderer` under `src/runner/` consumed by both host shells; collapse parallel `inline-runner-*.test.ts` trees into shared fixtures | DEDUP-01, DEDUP-02 | Nothing |
-| 76 | editor-panel-view.ts Decomposition — per-node-kind form modules under `src/views/editor-panel/forms/`; remaining `editor-panel-view.ts` < 400 LOC dispatcher; all six existing test files pass | SPLIT-01, SPLIT-02 | Nothing |
-| 77 | Eslint Findings Cleanup — `npm run lint` exits 0 on `main`; 517 errors + 6 warnings cleared (dominant `obsidianmd/no-static-styles-assignment` converted to CSS class toggles per CLAUDE.md per-feature CSS architecture) | LINT-01 | Nothing |
-| 78 | Lint + Test Automation Gate — pre-commit hook (`.githooks/pre-commit`) + GitHub Actions workflow (`.github/workflows/ci.yml`) running `npm ci && npm run build && npm run lint && npm test` on push/PR | CI-01, CI-02 | Phase 77 (gate unworkable until existing findings cleared) |
+| Phase | Goal (one-line) | Requirements | Status |
+|-------|-----------------|--------------|--------|
+| 75 | RunnerView ↔ InlineRunnerModal Deduplication — shared `src/runner/render/*` consumed by both host shells; inline test family merged onto shared fixtures | DEDUP-01, DEDUP-02 | ✅ Complete (verification GREEN; **artifacts in working tree, not yet committed** — see Deferred Items) |
+| 76 | editor-panel-view.ts Decomposition — per-kind form modules + helper extraction; dispatcher under 400 LOC | SPLIT-01, SPLIT-02 | ✅ Complete (commit `0406c98`; 393 LOC) |
+| 77 | Eslint Findings Cleanup — 517 errors → 0; 6 warnings → 2 documented | LINT-01 | ✅ Complete (12 commits `681f82d`..`99f8afa`) |
+| 78 | Lint + Test Automation Gate — pre-commit hook + GitHub Actions workflow | CI-01, CI-02 | ✅ Complete (commits `8dee957`, `907cec1`; CI-04/05 live red-status verification deferred to first natural PR) |
 
 ---
 
 ## Accumulated Context
 
-### v1.0–v1.11 Shipped
+### v1.0–v1.12 Shipped
 
 - v1.0 (7 phases): foundation — parser, runner, UI, editor panel, snippets, loops, sessions.
 - v1.2 (8 phases): runner UX and bug fixes (layout, selectors, separators, read-back).
@@ -80,8 +70,9 @@ See: `.planning/MILESTONES.md` (updated 2026-04-26 — v1.10 entry; v1.11 entry 
 - v1.9 (4 phases, 59–62): Inline Runner feature parity, position persistence + compact layout, folder autocomplete on settings path fields, BRAT Release v1.9.0.
 - v1.10 (6 phases, 63–68): bidirectional Canvas ↔ Node Editor sync, auto-grow textareas + Text block quick-create, Back/Skip footer layout, step-back reliability + scroll pinning, Inline Runner resizable modal + file-bound Snippet parity, BRAT Release `1.10.0`.
 - v1.11 (6 phases, 69–74): Inline Runner redundant-button cleanup, loop-exit picker visual hint, Settings donate section (9 wallet rows), 8 hand-authored algorithmic canvases (5 full + 3 short, in author's vault — not bundled), GitHub Release `1.11.0`.
+- **v1.12 (4 phases, 75–78): RunnerView/InlineRunnerModal renderer extraction, editor-panel-view decomposition, ESLint findings cleanup (517 → 0), pre-commit + GitHub Actions automation gate. Internal-only — no GitHub Release.**
 
-### Standing Pitfalls (carry-over from v1.10)
+### Standing Pitfalls (carry-over)
 
 1. Never modify `.canvas` while open in Canvas view (Strategy A) unless Pattern B live-editor is used.
 2. `vault.modify()` race conditions — use `WriteMutex` (async-mutex) per file path.
@@ -97,33 +88,38 @@ See: `.planning/MILESTONES.md` (updated 2026-04-26 — v1.10 entry; v1.11 entry 
 12. v1.9: Inline Runner position persistence uses clamp-on-restore (not clamp-on-save) — survives monitor/resolution changes.
 13. v1.10 / Phase 67: file-bound Snippet parity (INLINE-FIX-07) root-cause was in shared `src/runner/protocol-runner.ts` `advanceThrough` case `'snippet'`, NOT inline-only. Phase 56 fixed only the sibling-button click path; loop-body and direct-edge traversals remained broken until Phase 67 D-14 + D-15. Going forward, runner-core dispatch for any new node-kind extension MUST consider all traversal paths (sibling-button click, loop-body edge, direct edge) — not just the click path.
 14. v1.10 / Phase 63: Node Editor canvas → form sync subscribes to `EdgeLabelSyncService`'s `canvas-changed-for-node` event bus and patches DOM via `registerFieldRef`; future Node-Editor work that adds new fields MUST register them through this helper or they will not receive inbound canvas patches.
+15. **v1.12 / Phase 75: shared protocol-runner rendering now lives in `src/runner/render/*.ts` with `runner-host.ts` providing the host abstraction. New per-step UI MUST be added to the shared renderer, NOT duplicated into the host shells. The hosts (`runner-view.ts`, `inline-runner-modal.ts`) are thin wrappers responsible only for chrome, lifecycle, autosave/append policy, layout/position, and output-toolbar differences.**
+16. **v1.12 / Phase 76: `src/views/editor-panel-view.ts` is a <400-LOC dispatcher. Per-kind form bodies live under `src/views/editor-panel/forms/`; helpers under `src/views/editor-panel/`. Adding form-rendering logic back into the dispatcher is a regression — extract to a helper or form module instead. Spyable private surface (`renderNodeForm`, `renderForm`, `buildKindForm`, `applyCanvasPatch`, `pendingEdits`, `formFieldRefs`, etc.) is preserved by routing through wrapper methods on `EditorPanelView`; do not bypass these wrappers when extracting further.**
+17. **v1.12 / Phase 77: per-feature `src/styles/*.css` files are the home for previously-inline styles. New visual rules belong in the matching feature file, append-only per phase, with a `/* Phase N: description */` header. Inline `el.style.foo = ...` assignments are an ESLint error (`obsidianmd/no-static-styles-assignment`) — use class toggles or `setCssProps` with custom properties instead.**
+18. **v1.12 / Phase 78: pre-commit hook `.githooks/pre-commit` runs eslint on staged `*.ts` and `npm test` before allowing commits. Wired via `core.hooksPath`. `--no-verify` is the intentional escape hatch (CI is the safety net). GitHub Actions workflow at `.github/workflows/ci.yml` runs `npm ci && npm run build && npm run lint && npm test` on push to `main` and on every PR.**
 
-### v1.11 Phase-Specific Domain Notes
+### Open Tech Debt at v1.12 close
 
-- **Phase 69 (INLINE-CLEAN-01)** is Inline-mode-only. The buttons live in `InlineRunnerModal` (the same file Phase 65 RUNNER-02 modified for the shared `.rp-runner-footer-row`). Sidebar `RunnerView` and tab Runner View are unaffected — guard against accidental cross-mode regression. Confirm Inline mode appends every answer/snippet directly to the active note as the protocol runs (the existing Phase 54 contract) — that's why the result-export buttons are redundant in Inline only.
-- **Phase 70 (LOOP-EXIT-01)** is purely CSS — the `+`-prefix loop-exit edge label convention is from Phase 50.1; the picker rendering is in `RunnerView.renderLoopPicker` and the inline equivalent. Tag the exit button with a CSS hook (e.g. a class like `is-loop-exit`) and add a rule in the appropriate `src/styles/*.css` file using existing Obsidian theme variables — no new colour tokens. Per CLAUDE.md, append-only per phase, do not edit existing rules.
-- **Phase 71 (DONATE-01)** is a Settings-tab UI feature. Closest existing analog is Phase 61 (Settings folder autocomplete on `AbstractInputSuggest`) — same file (`src/main.ts` settings tab class), same DOM patterns (`createEl`/`createDiv`, `registerDomEvent`). Wallet addresses are hard-coded constants — no persistence, no user input. Copy-to-clipboard control is `navigator.clipboard.writeText` + `new Notice(...)`.
-- **Phase 72 / 73 (CANVAS-LIB-01..08)** are content-authoring deliverables — eight `.canvas` files hand-built by the author in a local vault. They do NOT modify `src/`, do NOT change build output, do NOT need vitest tests. Each canvas is verified by running it end-to-end in the live Runner against the corresponding `.md` text template at `Z:\projects\references\` (and the SNIPPETS folder structure there). NOT bundled with the plugin. NOT committed to this repository.
-- **Phase 74 (BRAT-03)** is the standard release phase — must depend on all preceding code-side phases (69, 70, 71) being complete and UAT-accepted. Mirror Phase 68's runbook structure (D10 UAT-gate-as-first-section pattern, three loose-asset GitHub Release, unprefixed annotated tag `1.11.0`, BRAT smoke install on clean vault). Phases 72/73 ship via author's local vault and are NOT release-blocking.
-
-### Open Tech Debt (carried from v1.10 close)
-
-- Verification documentation backfill — Phases 64, 66, 67 lack formal `gsd-verifier` VERIFICATION.md (UAT-PASS evidence exists). Pattern: v1.8 Phase 58 backfill.
-- Nyquist `VALIDATION.md` — Phase 63 draft, Phases 64–68 missing entirely; project-wide tech debt also covers Phases 12–19, 28–31, 32–35, 36–42, 43, 44, 46.
-- 3 open debug sessions — `inline-runner-drag-resets-size` and `inline-runner-tab-switch-resets-size` both resolved by gap-closure `92a1269` but not formally closed; `phase-27-regressions` carryover from v1.7.
+- **Phase 75 atomic-commit gap (introduced 2026-05-02; HIGH-priority closeout)** — verification GREEN but source deltas, new modules under `src/runner/`, new shared tests under `src/__tests__/runner/`, and `.planning/phases/75-runner-view-inline-runner-deduplication/` exist only in the working tree. ROADMAP.md progress table still labels Phase 75 as "Not started". Mechanical cleanup pending.
+- **CI-04 / CI-05 live red-status verification (introduced 2026-05-02)** — workflow structurally valid; observation of red ✕ on a real PR with deliberate eslint or test failure happens on the first natural PR.
+- **2 lint warnings remaining** — `obsidianmd/prefer-file-manager-trash-file` in `src/snippets/snippet-service.ts:240,283`. Documented out-of-scope in REQUIREMENTS.md "Future Requirements"; safe in a future phase.
+- **MEDIUM-5 from CONCERNS.md (deferred per REQUIREMENTS.md)** — `protocol-runner.ts` (819 LOC) and `snippet-manager-view.ts` (1037 LOC) remain large. Re-evaluate now that DEDUP-01 has shipped a renderer-extraction template.
+- Verification documentation backfill — Phases 64, 66, 67 lack formal `gsd-verifier` `VERIFICATION.md` (UAT-PASS evidence exists). Pattern: v1.8 Phase 58 backfill.
+- Nyquist `VALIDATION.md` — Phase 63 draft, Phases 64–78 missing entirely; project-wide tech debt.
+- 3 open debug sessions — `inline-runner-drag-resets-size` and `inline-runner-tab-switch-resets-size` resolved by gap-closure `92a1269` but not formally closed; `phase-27-regressions` carryover from v1.7.
 - 2 stale seeds (`duplicate-node.md`, `quick-node-creation.md`) for v1.6-delivered work in `.planning/seeds/`.
 - `@deprecated` `LoopStartNode` / `LoopEndNode` retained for Migration Check enumeration (carry-over from v1.7).
 
 ## Deferred Items
 
-Items acknowledged and deferred at milestone close on 2026-04-30:
+Items acknowledged and deferred at milestone close on 2026-05-02:
 
 | Category | Item | Status |
 |----------|------|--------|
+| commit | Phase 75 atomic per-plan commits + ROADMAP.md status flip | pending — verification GREEN; mechanical cleanup |
+| ci_verification | CI-04/CI-05 live red-status check on real PR | deferred to next natural PR |
+| lint | 2 × `obsidianmd/prefer-file-manager-trash-file` warnings in `snippet-service.ts` | documented out-of-scope |
+| refactor | MEDIUM-5 — `protocol-runner.ts` (819 LOC) and `snippet-manager-view.ts` (1037 LOC) decomposition | deferred per REQUIREMENTS.md |
 | debug | inline-runner-drag-resets-size | unknown — resolved by gap-closure 92a1269 but not formally closed |
 | debug | inline-runner-tab-switch-resets-size | unknown — resolved by gap-closure 92a1269 but not formally closed |
 | debug | phase-27-regressions | awaiting_human_verify — color regression root cause found in canvas-live-editor.ts PROTECTED_FIELDS |
-| uat_gap | Phase 72 HUMAN-UAT | resolved — 0 pending scenarios |
+| verification_backfill | Phases 64/66/67 formal `VERIFICATION.md` | carry-over from v1.10 |
+| nyquist | `VALIDATION.md` for Phases 63–78 | project-wide tech debt |
 
 ---
 
@@ -139,10 +135,10 @@ Items acknowledged and deferred at milestone close on 2026-04-30:
 
 ## Session Continuity
 
-Last session: 2026-05-01T00:00:00.000Z
-Stopped at: Phase 77 planned (14 plans, 9 waves; 2 verification iterations passed)
-Resume file: .planning/phases/77-eslint-findings-cleanup/77-01-PLAN.md (start of Wave 1)
-Next action: Run `/gsd-execute-phase 77` to execute Wave 1 (config baseline) → Waves 2-9 (per-file static-styles + residual rule fixes + final gate).
+Last session: 2026-05-02T00:00:00.000Z
+Stopped at: v1.12 closed (audit + archive complete; Phase 75 atomic commits pending)
+Resume file: `.planning/MILESTONES.md` (v1.12 closing entry) and `.planning/MILESTONE-AUDIT.md` (audit findings)
+Next action: define next milestone scope (v1.13 TBD) OR run Phase 75 atomic per-plan commit pass + flip ROADMAP.md status.
 
 ---
 
@@ -150,5 +146,6 @@ Next action: Run `/gsd-execute-phase 77` to execute Wave 1 (config baseline) →
 
 - Branch: `main`
 - Main: `main`
-- Last shipped: v1.11 (2026-04-30; GitHub Release `1.11.0` published)
-- Active phase: 77 (planned, ready to execute)
+- Last user-facing release: v1.11 (2026-04-30; GitHub Release `1.11.0` published)
+- Last internal milestone: v1.12 (2026-05-02; closed, no release)
+- Active phase: none — v1.12 closed

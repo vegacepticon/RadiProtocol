@@ -1,5 +1,5 @@
 // src/__tests__/views/runner-snippet-picker.test.ts
-// Phase 51 Plan 05 (PICKER-02, D-06) — RunnerView renderSnippetPicker rewrite on top
+// Phase 51 Plan 05 (PICKER-02, D-06) — RunnerView mountSnippetPicker rewrite on top
 // of SnippetTreePicker (file-only mode).
 //
 // Covers:
@@ -241,7 +241,7 @@ beforeEach(() => {
 
 // ── Tests ─────────────────────────────────────────────────────────────────
 
-describe('Phase 51 Plan 05 — RunnerView renderSnippetPicker on SnippetTreePicker (D-06)', () => {
+describe('Phase 51 Plan 05 — RunnerView mountSnippetPicker on SnippetTreePicker (D-06)', () => {
   it('Test 1: mounts SnippetTreePicker mode=file-only rooted at settings.snippetFolderPath + node.subfolderPath', async () => {
     const { view } = makeView({
       status: 'awaiting-snippet-pick',
@@ -253,8 +253,8 @@ describe('Phase 51 Plan 05 — RunnerView renderSnippetPicker on SnippetTreePick
     const questionZone = makeFakeNode();
 
     await (view as unknown as {
-      renderSnippetPicker: (state: unknown, zone: HTMLElement) => Promise<void>;
-    }).renderSnippetPicker(
+      mountSnippetPicker: (state: unknown, zone: HTMLElement) => Promise<void>;
+    }).mountSnippetPicker(
       {
         status: 'awaiting-snippet-pick',
         nodeId: 'n1',
@@ -283,8 +283,8 @@ describe('Phase 51 Plan 05 — RunnerView renderSnippetPicker on SnippetTreePick
     const questionZone = makeFakeNode();
 
     await (view as unknown as {
-      renderSnippetPicker: (state: unknown, zone: HTMLElement) => Promise<void>;
-    }).renderSnippetPicker(
+      mountSnippetPicker: (state: unknown, zone: HTMLElement) => Promise<void>;
+    }).mountSnippetPicker(
       {
         status: 'awaiting-snippet-pick',
         nodeId: 'n1',
@@ -317,8 +317,8 @@ describe('Phase 51 Plan 05 — RunnerView renderSnippetPicker on SnippetTreePick
 
     const questionZone = makeFakeNode();
     await (view as unknown as {
-      renderSnippetPicker: (state: unknown, zone: HTMLElement) => Promise<void>;
-    }).renderSnippetPicker(
+      mountSnippetPicker: (state: unknown, zone: HTMLElement) => Promise<void>;
+    }).mountSnippetPicker(
       {
         status: 'awaiting-snippet-pick',
         nodeId: 'n1',
@@ -353,8 +353,8 @@ describe('Phase 51 Plan 05 — RunnerView renderSnippetPicker on SnippetTreePick
 
     const questionZone = makeFakeNode();
     await (view as unknown as {
-      renderSnippetPicker: (state: unknown, zone: HTMLElement) => Promise<void>;
-    }).renderSnippetPicker(
+      mountSnippetPicker: (state: unknown, zone: HTMLElement) => Promise<void>;
+    }).mountSnippetPicker(
       {
         status: 'awaiting-snippet-pick',
         nodeId: 'n1',
@@ -396,8 +396,8 @@ describe('Phase 51 Plan 05 — RunnerView renderSnippetPicker on SnippetTreePick
 
     const questionZone = makeFakeNode();
     await (view as unknown as {
-      renderSnippetPicker: (state: unknown, zone: HTMLElement) => Promise<void>;
-    }).renderSnippetPicker(
+      mountSnippetPicker: (state: unknown, zone: HTMLElement) => Promise<void>;
+    }).mountSnippetPicker(
       {
         status: 'awaiting-snippet-pick',
         nodeId: 'n1',
@@ -442,8 +442,8 @@ describe('Phase 51 Plan 05 — RunnerView renderSnippetPicker on SnippetTreePick
 
     const questionZone = makeFakeNode();
     await (view as unknown as {
-      renderSnippetPicker: (state: unknown, zone: HTMLElement) => Promise<void>;
-    }).renderSnippetPicker(
+      mountSnippetPicker: (state: unknown, zone: HTMLElement) => Promise<void>;
+    }).mountSnippetPicker(
       {
         status: 'awaiting-snippet-pick',
         nodeId: 'n1',
@@ -490,8 +490,8 @@ describe('Phase 51 Plan 05 — RunnerView renderSnippetPicker on SnippetTreePick
 
     const questionZone = makeFakeNode();
     await (view as unknown as {
-      renderSnippetPicker: (state: unknown, zone: HTMLElement) => Promise<void>;
-    }).renderSnippetPicker(
+      mountSnippetPicker: (state: unknown, zone: HTMLElement) => Promise<void>;
+    }).mountSnippetPicker(
       {
         status: 'awaiting-snippet-pick',
         nodeId: 'n1',
@@ -514,7 +514,7 @@ describe('Phase 51 Plan 05 — RunnerView renderSnippetPicker on SnippetTreePick
     );
   });
 
-  it('Test 8 (lifecycle): previous SnippetTreePicker instance is unmounted when renderSnippetPicker runs a second time', async () => {
+  it('Test 8 (lifecycle): previous SnippetTreePicker instance is unmounted when mountSnippetPicker runs a second time', async () => {
     const { view } = makeView({
       status: 'awaiting-snippet-pick',
       nodeId: 'n1',
@@ -525,8 +525,8 @@ describe('Phase 51 Plan 05 — RunnerView renderSnippetPicker on SnippetTreePick
 
     const qz1 = makeFakeNode();
     await (view as unknown as {
-      renderSnippetPicker: (state: unknown, zone: HTMLElement) => Promise<void>;
-    }).renderSnippetPicker(
+      mountSnippetPicker: (state: unknown, zone: HTMLElement) => Promise<void>;
+    }).mountSnippetPicker(
       {
         status: 'awaiting-snippet-pick',
         nodeId: 'n1',
@@ -541,8 +541,8 @@ describe('Phase 51 Plan 05 — RunnerView renderSnippetPicker on SnippetTreePick
 
     const qz2 = makeFakeNode();
     await (view as unknown as {
-      renderSnippetPicker: (state: unknown, zone: HTMLElement) => Promise<void>;
-    }).renderSnippetPicker(
+      mountSnippetPicker: (state: unknown, zone: HTMLElement) => Promise<void>;
+    }).mountSnippetPicker(
       {
         status: 'awaiting-snippet-pick',
         nodeId: 'n1',
@@ -553,7 +553,7 @@ describe('Phase 51 Plan 05 — RunnerView renderSnippetPicker on SnippetTreePick
       qz2 as unknown as HTMLElement,
     );
     expect(pickerInstances.length).toBe(2);
-    // Defensive cleanup in renderSnippetPicker — prior picker unmounted before new mount.
+    // Defensive cleanup in mountSnippetPicker — prior picker unmounted before new mount.
     expect(pickerUnmountSpy).toHaveBeenCalledTimes(1);
   });
 });
@@ -588,10 +588,10 @@ describe('Phase 52 D-04 — validationError fixtures', () => {
 //   Test: handleSnippetFill blocks a broken snippet with Notice + stepBack
 //          + autoSaveSession + render; does NOT open SnippetFillInModal nor
 //          call completeSnippet.
-//   Test: renderSnippetPicker onSelect with a broken JsonSnippet renders an
+//   Test: mountSnippetPicker onSelect with a broken JsonSnippet renders an
 //          inline «не может быть использован» error in the questionZone and
 //          does NOT call handleSnippetPickerSelection.
-//   Test: renderSnippetPicker onSelect with a valid JsonSnippet (validationError
+//   Test: mountSnippetPicker onSelect with a valid JsonSnippet (validationError
 //          === null) continues through to handleSnippetPickerSelection (happy
 //          path regression).
 import { Notice } from 'obsidian';
@@ -646,7 +646,7 @@ describe('Phase 52 D-04 — RunnerView validationError guards', () => {
     noticeSpy.mockRestore();
   });
 
-  it('renderSnippetPicker onSelect renders inline error on broken snippet and skips handleSnippetPickerSelection (Phase 52 D-04)', async () => {
+  it('mountSnippetPicker onSelect renders inline error on broken snippet and skips handleSnippetPickerSelection (Phase 52 D-04)', async () => {
     const { view, plugin, handleSnippetPickerSelectionSpy } = makeView({
       status: 'awaiting-snippet-pick',
       nodeId: 'n1',
@@ -668,8 +668,8 @@ describe('Phase 52 D-04 — RunnerView validationError guards', () => {
 
     const questionZone = makeFakeNode();
     await (view as unknown as {
-      renderSnippetPicker: (state: unknown, zone: HTMLElement) => Promise<void>;
-    }).renderSnippetPicker(
+      mountSnippetPicker: (state: unknown, zone: HTMLElement) => Promise<void>;
+    }).mountSnippetPicker(
       {
         status: 'awaiting-snippet-pick',
         nodeId: 'n1',
@@ -696,7 +696,7 @@ describe('Phase 52 D-04 — RunnerView validationError guards', () => {
     expect(errs[0]!.text).toContain(broken.path);
   });
 
-  it('renderSnippetPicker onSelect routes a valid JsonSnippet through handleSnippetPickerSelection (happy-path regression)', async () => {
+  it('mountSnippetPicker onSelect routes a valid JsonSnippet through handleSnippetPickerSelection (happy-path regression)', async () => {
     const { view, plugin, handleSnippetPickerSelectionSpy } = makeView({
       status: 'awaiting-snippet-pick',
       nodeId: 'n1',
@@ -717,8 +717,8 @@ describe('Phase 52 D-04 — RunnerView validationError guards', () => {
 
     const questionZone = makeFakeNode();
     await (view as unknown as {
-      renderSnippetPicker: (state: unknown, zone: HTMLElement) => Promise<void>;
-    }).renderSnippetPicker(
+      mountSnippetPicker: (state: unknown, zone: HTMLElement) => Promise<void>;
+    }).mountSnippetPicker(
       {
         status: 'awaiting-snippet-pick',
         nodeId: 'n1',

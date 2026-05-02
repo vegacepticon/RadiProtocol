@@ -3,7 +3,7 @@ import { ItemView, WorkspaceLeaf, Notice, TFile, MarkdownView, setIcon } from 'o
 import type RadiProtocolPlugin from '../main';
 import { ProtocolRunner } from '../runner/protocol-runner';
 import { GraphValidator } from '../graph/graph-validator';
-import type { ProtocolGraph, AnswerNode, SnippetNode } from '../graph/graph-model';
+import type { ProtocolGraph } from '../graph/graph-model';
 import { SnippetFillInModal } from './snippet-fill-in-modal';
 import type { Snippet } from '../snippets/snippet-model';
 import { ResumeSessionModal } from './resume-session-modal';
@@ -11,8 +11,17 @@ import type { PersistedSession } from '../sessions/session-model';
 import { validateSessionNodeIds } from '../sessions/session-service';
 import { CanvasSelectorWidget } from './canvas-selector-widget';
 import { CanvasSwitchModal } from './canvas-switch-modal';
-import { isExitEdge, nodeLabel, stripExitPrefix } from '../graph/node-label';
 import { SnippetTreePicker } from './snippet-tree-picker';
+import { renderLoopPicker } from '../runner/render/render-loop-picker';
+import { renderQuestionAtNode } from '../runner/render/render-question';
+import { renderSnippetPicker } from '../runner/render/render-snippet-picker';
+import { renderCompleteHeading } from '../runner/render/render-complete';
+import { renderErrorList } from '../runner/render/render-error';
+import {
+  isFullSnippetPath,
+  renderSnippetFillLoading,
+  renderSnippetFillNotFound,
+} from '../runner/render/render-snippet-fill';
 
 export const RUNNER_VIEW_TYPE = 'radiprotocol-runner';
 
@@ -446,142 +455,51 @@ export class RunnerView extends ItemView {
       }
 
       case 'at-node': {
-        if (this.graph === null) {
-          this.renderError(['Internal error: graph not loaded.']);
-          return;
-        }
-        const node = this.graph.nodes.get(state.currentNodeId);
-        if (node === undefined) {
-          this.renderError([`Node "${state.currentNodeId}" not found in graph.`]);
-          return;
-        }
-        let showSkipFooterControl = false;
+        const result = renderQuestionAtNode(questionZone, this.graph, state, {
+          bindClick: (el, handler) => this.registerDomEvent(el, 'click', handler),
+          renderError: (messages) => this.renderError(messages),
+          onChooseAnswer: (answerNode) => {
+            this.runner.syncManualEdit(this.previewTextarea?.value ?? '');  // BUG-01: capture manual edit (D-01)
+            this.runner.chooseAnswer(answerNode.id);
+            void this.autoSaveSession();   // SESSION-01 — save after answer
+            void this.renderAsync();
+          },
+          onChooseSnippetBranch: (snippetNode, isFileBound) => {
+            this.runner.syncManualEdit(this.previewTextarea?.value ?? '');  // BUG-01: capture manual edit (D-01)
 
-        switch (node.kind) {
-          case 'question': {
-            questionZone.createEl('p', {
-              text: node.questionText,
-              cls: 'rp-question-text',
-            });
-            // Phase 31: partition outgoing neighbors into answer + snippet branches.
-            const neighborIds = this.graph.adjacency.get(state.currentNodeId) ?? [];
-            const answerNeighbors: AnswerNode[] = [];
-            const snippetNeighbors: SnippetNode[] = [];
-            for (const nid of neighborIds) {
-              const n = this.graph.nodes.get(nid);
-              if (n === undefined) continue;
-              if (n.kind === 'answer') answerNeighbors.push(n);
-              else if (n.kind === 'snippet') snippetNeighbors.push(n);
+            if (isFileBound) {
+              // Phase 56 D-04 (PICKER-01 reversal): file-bound Snippet → direct dispatch.
+              const snippetPath = snippetNode.radiprotocol_snippetPath as string;
+              this.runner.pickFileBoundSnippet(state.currentNodeId, snippetNode.id, snippetPath);
+            } else {
+              // Directory-bound — Phase 51 path preserved.
+              this.runner.chooseSnippetBranch(snippetNode.id);
             }
 
-            if (answerNeighbors.length > 0) {
-              const answerList = questionZone.createDiv({ cls: 'rp-answer-list' });
-              for (const answerNode of answerNeighbors) {
-                const btn = answerList.createEl('button', {
-                  cls: 'rp-answer-btn',
-                  text: answerNode.displayLabel ?? answerNode.answerText,
-                });
-                this.registerDomEvent(btn, 'click', () => {
-                  this.runner.syncManualEdit(this.previewTextarea?.value ?? '');  // BUG-01: capture manual edit (D-01)
-                  this.runner.chooseAnswer(answerNode.id);
-                  void this.autoSaveSession();   // SESSION-01 — save after answer
-                  void this.renderAsync();
-                });
-              }
-            }
-
-            if (snippetNeighbors.length > 0) {
-              // Phase 31 D-02: snippet branches rendered below answers, visually distinct.
-              const snippetList = questionZone.createDiv({ cls: 'rp-snippet-branch-list' });
-              for (const snippetNode of snippetNeighbors) {
-                // Phase 51 D-16 (PICKER-01) — caption fallback split by binding variant.
-                // Directory-bound (radiprotocol_snippetPath undefined/empty): keep Phase 31 📁 prefix.
-                // File-bound (radiprotocol_snippetPath non-empty):              📄 prefix + 3-step fallback chain.
-                // See `.planning/notes/snippet-node-binding-and-picker.md`.
-                const isFileBound =
-                  typeof snippetNode.radiprotocol_snippetPath === 'string' &&
-                  snippetNode.radiprotocol_snippetPath !== '';
-                let label: string;
-                if (isFileBound) {
-                  const snippetPath = snippetNode.radiprotocol_snippetPath as string;
-                  if (snippetNode.snippetLabel !== undefined && snippetNode.snippetLabel.length > 0) {
-                    label = `\uD83D\uDCC4 ${snippetNode.snippetLabel}`;  // 📄
-                  } else {
-                    // basename → strip extension
-                    const lastSlash = snippetPath.lastIndexOf('/');
-                    const basename = lastSlash >= 0 ? snippetPath.slice(lastSlash + 1) : snippetPath;
-                    const dot = basename.lastIndexOf('.');
-                    const stem = dot > 0 ? basename.slice(0, dot) : basename;
-                    label = stem.length > 0 ? `\uD83D\uDCC4 ${stem}` : '\uD83D\uDCC4 Snippet';
-                  }
-                } else {
-                  // Directory binding — preserved Phase 31 D-01 caption with 📁 prefix
-                  label = (snippetNode.snippetLabel !== undefined && snippetNode.snippetLabel.length > 0)
-                    ? `\uD83D\uDCC1 ${snippetNode.snippetLabel}`   // 📁
-                    : '\uD83D\uDCC1 Snippet';                       // D-01 fallback
-                }
-                const btn = snippetList.createEl('button', {
-                  cls: 'rp-snippet-branch-btn',
-                  text: label,
-                });
-                this.registerDomEvent(btn, 'click', () => {
-                  this.runner.syncManualEdit(this.previewTextarea?.value ?? '');  // BUG-01: capture manual edit (D-01)
-
-                  if (isFileBound) {
-                    // Phase 56 D-04 (PICKER-01 reversal): file-bound Snippet → direct dispatch,
-                    // bypassing chooseSnippetBranch → awaiting-snippet-pick → picker. Reverses
-                    // Phase 51 D-16 click routing. snippetPath is non-empty because isFileBound
-                    // gate above checked exactly that (line ~532-534).
-                    const snippetPath = snippetNode.radiprotocol_snippetPath as string;
-                    this.runner.pickFileBoundSnippet(state.currentNodeId, snippetNode.id, snippetPath);
-                  } else {
-                    // Directory-bound — Phase 51 path preserved (SC 3).
-                    this.runner.chooseSnippetBranch(snippetNode.id);
-                  }
-
-                  void this.autoSaveSession();   // SESSION-01 — save after snippet branch choice
-                  void this.renderAsync();
-                });
-              }
-            }
-            // Phase 65 RUNNER-02: Skip is rendered in the shared footer row after all
-            // answer and snippet branch lists, never between mixed branch groups.
-            showSkipFooterControl = answerNeighbors.length > 0;
-            break;
-          }
-
-          // Phase 43 D-14 — case 'loop-end' удалён вместе с LoopEndNode kind.
-          // Unified 'loop' picker UI реализуется в Phase 44 (RUN-01). До тех пор
-          // runtime просто transitionToError'ит на loop-узле (см. ProtocolRunner.advanceThrough).
-
-          default: {
-            // Phase 66 D-07: at-node only halts on `question`. Snippet → 'awaiting-snippet-pick',
-            // loop → 'awaiting-loop-pick', text-block w/ snippetId → 'awaiting-snippet-fill',
-            // others auto-advance. Reaching this default is a runtime invariant violation.
-            const _exhaustiveAtNode: never = node as never;
-            void _exhaustiveAtNode;
-            this.renderError([
-              `Internal bug: RunnerView.renderState reached at-node default branch for kind='${(node as { kind: string }).kind}'. Step back and report.`,
-            ]);
-            return;
-          }
-        }
-
-        this.renderRunnerFooter(questionZone, {
-          showBack: state.canStepBack,
+            void this.autoSaveSession();   // SESSION-01 — save after snippet branch choice
+            void this.renderAsync();
+          },
           onBack: () => {
             this.runner.stepBack();
             void this.autoSaveSession();   // SESSION-01 — save the reverted state
             this.render();
           },
-          showSkip: showSkipFooterControl,
           onSkip: () => {
             this.runner.syncManualEdit(this.previewTextarea?.value ?? '');  // BUG-01 / D-11
             this.runner.skip();
             void this.autoSaveSession();   // SESSION-01 — save after skip (D-10: recordable step)
             void this.renderAsync();
           },
+          canSkip: true,
         });
+        if (result === 'error') return;
+        if (result === 'not-question') {
+          const node = this.graph?.nodes.get(state.currentNodeId);
+          this.renderError([
+            `Internal bug: RunnerView.renderState reached at-node default branch for kind='${(node as { kind: string } | undefined)?.kind ?? 'unknown'}'. Step back and report.`,
+          ]);
+          return;
+        }
 
         this.renderPreviewZone(previewZone, state.accumulatedText);
         this.renderOutputToolbar(outputToolbar, state.accumulatedText, false);
@@ -602,69 +520,27 @@ export class RunnerView extends ItemView {
           text: 'Loading snippets...',
           cls: 'rp-empty-state-body',
         });
-        void this.renderSnippetPicker(state, questionZone);
+        void this.mountSnippetPicker(state, questionZone);
         break;
       }
 
       case 'awaiting-loop-pick': {
-        if (this.graph === null) {
-          this.renderError(['Internal error: graph not loaded.']);
-          return;
-        }
-        const node = this.graph.nodes.get(state.nodeId);
-        if (node === undefined || node.kind !== 'loop') {
-          this.renderError([`Loop node "${state.nodeId}" not found in graph.`]);
-          return;
-        }
-
-        // RUN-01: render headerText above picker when present.
-        if (node.headerText !== '') {
-          questionZone.createEl('p', {
-            text: node.headerText,
-            cls: 'rp-loop-header-text',
-          });
-        }
-
-        // RUN-01: one button per outgoing edge (Pitfall 4 — filter edges, not adjacency).
-        const outgoing = this.graph.edges.filter(e => e.fromNodeId === state.nodeId);
-        const list = questionZone.createDiv({ cls: 'rp-loop-picker-list' });
-        for (const edge of outgoing) {
-          // Phase 50.1 EDGE-03 — "+"-prefix convention:
-          //   * "+"-prefixed edge (exit; uniqueness + non-empty caption enforced by GraphValidator
-          //     LOOP-04 D-06/D-08) → caption = stripExitPrefix(label) (D-09),
-          //                           CSS class = rp-loop-exit-btn.
-          //   * non-"+" edge (body branch, labeled or unlabeled — both valid under D-10)
-          //     → caption = nodeLabel() of the target node (preserved from Phase 49 D-11/D-12),
-          //       CSS class = rp-loop-body-btn.
-          const exit = isExitEdge(edge);
-          let caption: string;
-          if (exit) {
-            caption = stripExitPrefix(edge.label ?? '');    // Phase 50.1 D-09 — strip "+" + following ws
-          } else {
-            const target = this.graph.nodes.get(edge.toNodeId);
-            caption = target !== undefined ? nodeLabel(target) : edge.toNodeId;
-          }
-          const btn = list.createEl('button', {
-            cls: exit ? 'rp-loop-exit-btn' : 'rp-loop-body-btn',
-            text: caption,
-          });
-          this.registerDomEvent(btn, 'click', () => {
+        const rendered = renderLoopPicker(questionZone, this.graph, state, {
+          bindClick: (el, handler) => this.registerDomEvent(el, 'click', handler),
+          renderError: (messages) => this.renderError(messages),
+          onChooseLoopBranch: (edge) => {
             this.runner.syncManualEdit(this.previewTextarea?.value ?? '');  // Pitfall 7
             this.runner.chooseLoopBranch(edge.id);                          // per locked decision: edge.id
             void this.autoSaveSession();
             void this.renderAsync();
-          });
-        }
-
-        // RUN-05: step-back footer row (same handler pattern as at-node arm).
-        this.renderRunnerFooter(questionZone, {
-          showBack: state.canStepBack,
+          },
           onBack: () => {
             this.runner.stepBack();
             void this.autoSaveSession();
             this.render();
           },
         });
+        if (!rendered) return;
 
         this.renderPreviewZone(previewZone, state.accumulatedText);
         this.renderOutputToolbar(outputToolbar, state.accumulatedText, false);
@@ -672,10 +548,7 @@ export class RunnerView extends ItemView {
       }
 
       case 'awaiting-snippet-fill': {
-        questionZone.createEl('p', {
-          text: 'Loading snippet...',
-          cls: 'rp-empty-state-body',
-        });
+        renderSnippetFillLoading(questionZone);
         this.renderPreviewZone(previewZone, state.accumulatedText);
         this.renderOutputToolbar(outputToolbar, state.accumulatedText, false);
         // Async: load snippet and open modal (SNIP-06, D-17)
@@ -684,7 +557,7 @@ export class RunnerView extends ItemView {
       }
 
       case 'complete': {
-        questionZone.createEl('h2', { text: 'Protocol complete', cls: 'rp-complete-heading' });
+        renderCompleteHeading(questionZone);
         // RUNNER-01: "Run again" button — restarts the same canvas from the beginning.
         const runAgainBtn = questionZone.createEl('button', {
           cls: 'rp-run-again-btn',
@@ -723,45 +596,6 @@ export class RunnerView extends ItemView {
     this.render();
   }
 
-  /** Phase 65 RUNNER-02: shared Back/Skip footer row below branch/picker controls. */
-  private renderRunnerFooter(
-    zone: HTMLElement,
-    options: {
-      showBack: boolean;
-      onBack: () => void;
-      showSkip?: boolean;
-      onSkip?: () => void;
-    },
-  ): void {
-    if (!options.showBack && options.showSkip !== true) return;
-
-    const footerRow = zone.createDiv({ cls: 'rp-runner-footer-row' });
-    if (options.showBack) {
-      const backBtn = footerRow.createEl('button', {
-        cls: 'rp-step-back-btn',
-        text: 'Back',
-      });
-      if ('setAttribute' in backBtn) backBtn.setAttribute('aria-label', 'Go back one step');
-      backBtn.title = 'Go back one step';
-      // Phase 66 D-01 + D-02 + D-03: visual half of the double-click guard.
-      // Disable Back synchronously on first click; the runner-side `_stepBackInFlight`
-      // (Plan 01) silences any second invocation that slipped through. No new CSS — D-02.
-      this.registerDomEvent(backBtn, 'click', () => {
-        backBtn.disabled = true;
-        options.onBack();
-      });
-    }
-    if (options.showSkip === true && options.onSkip !== undefined) {
-      const skipBtn = footerRow.createEl('button', {
-        cls: 'rp-skip-btn',
-        text: 'Skip',
-      });
-      if ('setAttribute' in skipBtn) skipBtn.setAttribute('aria-label', 'Skip this question');
-      skipBtn.title = 'Skip this question';
-      this.registerDomEvent(skipBtn, 'click', options.onSkip);
-    }
-  }
-
   /**
    * Phase 51 D-06 (PICKER-02) — drill-down rebuilt on the unified SnippetTreePicker
    * in file-only mode rooted at the Snippet node's subfolderPath. Phase 30 D-05 semantics
@@ -773,7 +607,7 @@ export class RunnerView extends ItemView {
    * (owned by Plan 02). This plan does NOT modify CSS.
    * See `.planning/notes/snippet-node-binding-and-picker.md`.
    */
-  private async renderSnippetPicker(
+  private async mountSnippetPicker(
     state: {
       status: 'awaiting-snippet-pick';
       nodeId: string;
@@ -783,70 +617,28 @@ export class RunnerView extends ItemView {
     },
     questionZone: HTMLElement,
   ): Promise<void> {
-    const rootPath = this.plugin.settings.snippetFolderPath;
-    const nodeRootRel = state.subfolderPath ?? '';
-    const nodeRootAbs = nodeRootRel === '' ? rootPath : `${rootPath}/${nodeRootRel}`;
-
-    // Defensive cleanup of any prior picker instance (lifecycle discipline)
+    // Defensive cleanup of any prior picker instance (lifecycle discipline).
     if (this.snippetTreePicker !== null) {
       this.snippetTreePicker.unmount();
       this.snippetTreePicker = null;
     }
 
-    questionZone.empty();
-    const pickerHost = questionZone.createDiv({ cls: 'rp-stp-runner-host' });
-
-    const capturedNodeId = state.nodeId;  // T-30-04 stale-result guard
-
-    this.snippetTreePicker = new SnippetTreePicker({
+    this.snippetTreePicker = renderSnippetPicker(questionZone, state, {
       app: this.app,
       snippetService: this.plugin.snippetService,
-      container: pickerHost as unknown as HTMLElement,
-      mode: 'file-only',
-      rootPath: nodeRootAbs,
-      onSelect: (result) => {
-        void (async () => {
-          const absPath = result.relativePath === ''
-            ? nodeRootAbs
-            : `${nodeRootAbs}/${result.relativePath}`;
-          const snippet = await this.plugin.snippetService.load(absPath);
-          // T-30-04 stale-result guard — bail if user advanced/stepped-back during await
-          const currentState = this.runner.getState();
-          if (
-            currentState.status !== 'awaiting-snippet-pick' ||
-            currentState.nodeId !== capturedNodeId
-          ) {
-            return;
-          }
-          if (snippet === null) {
-            // D-04-style inline error in picker — does NOT mutate runner state
-            questionZone.empty();
-            questionZone.createEl('p', {
-              cls: 'rp-empty-state-body',
-              text: `Сниппет не найден: ${result.relativePath}`,
-            });
-            return;
-          }
-          // Phase 52 D-04: validationError guard for the picker-click path.
-          // Keeps session alive — user can pick another snippet or step back.
-          // Matches the «Сниппет не найден» UX above for consistency.
-          if (snippet.kind === 'json' && snippet.validationError !== null) {
-            questionZone.empty();
-            questionZone.createEl('p', {
-              cls: 'rp-empty-state-body',
-              text: `Сниппет «${snippet.path}» не может быть использован. ${snippet.validationError}`,
-            });
-            return;
-          }
-          await this.handleSnippetPickerSelection(snippet);
-        })();
+      rootPath: this.plugin.settings.snippetFolderPath,
+      hostClass: 'rp-stp-runner-host',
+      copy: {
+        notFound: (relativePath) => `Сниппет не найден: ${relativePath}`,
+        validationError: (snippetPath, validationMessage) =>
+          `Сниппет «${snippetPath}» не может быть использован. ${validationMessage}`,
       },
-    });
-    void this.snippetTreePicker.mount();
-
-    // Step-back (Phase 30 D-11) — preserved through Phase 65 footer row.
-    this.renderRunnerFooter(questionZone, {
-      showBack: state.canStepBack,
+      bindClick: (el, handler) => this.registerDomEvent(el, 'click', handler),
+      getCurrentNodeId: () => {
+        const s = this.runner.getState();
+        return s.status === 'awaiting-snippet-pick' ? s.nodeId : null;
+      },
+      onSnippetReady: (snippet) => this.handleSnippetPickerSelection(snippet),
       onBack: () => {
         if (this.snippetTreePicker !== null) {
           this.snippetTreePicker.unmount();
@@ -866,7 +658,7 @@ export class RunnerView extends ItemView {
    *  - Else open SnippetFillInModal; on resolve → completeSnippet(rendered); on cancel → completeSnippet('') (D-14).
    */
   private async handleSnippetPickerSelection(snippet: Snippet): Promise<void> {
-    // Phase 52 D-04: defensive validationError guard. The renderSnippetPicker
+    // Phase 52 D-04: defensive validationError guard. The shared picker
     // onSelect callback already intercepts this case for the file-row path, but
     // other callers (or future refactors) could route a broken snippet here.
     // Emit a non-fatal Notice and bail before any state mutation or scroll
@@ -932,10 +724,7 @@ export class RunnerView extends ItemView {
     // Phase 51 full-path (contains '/' OR ends with .md/.json) — auto-insert from Plan 06 —
     // load directly without extension append.
     // See `.planning/notes/snippet-node-binding-and-picker.md`.
-    const isPhase51FullPath =
-      snippetId.includes('/') ||
-      snippetId.endsWith('.md') ||
-      snippetId.endsWith('.json');
+    const isPhase51FullPath = isFullSnippetPath(snippetId);
     const root = this.plugin.settings.snippetFolderPath;
     const absPath = isPhase51FullPath
       ? `${root}/${snippetId}`
@@ -944,10 +733,8 @@ export class RunnerView extends ItemView {
     const snippet = await this.plugin.snippetService.load(absPath);
 
     if (snippet === null) {
-      questionZone.empty();
-      questionZone.createEl('p', {
-        text: `Snippet '${snippetId}' not found. The snippet may have been deleted. Use step-back to continue.`,
-        cls: 'rp-empty-state-body',
+      renderSnippetFillNotFound(questionZone, snippetId, {
+        trailer: ' The snippet may have been deleted. Use step-back to continue.',
       });
       return;
     }
@@ -981,10 +768,8 @@ export class RunnerView extends ItemView {
         this.render();
         return;
       }
-      questionZone.empty();
-      questionZone.createEl('p', {
-        text: `Snippet '${snippetId}' not found. The snippet may have been deleted. Use step-back to continue.`,
-        cls: 'rp-empty-state-body',
+      renderSnippetFillNotFound(questionZone, snippetId, {
+        trailer: ' The snippet may have been deleted. Use step-back to continue.',
       });
       return;
     }
@@ -1133,11 +918,7 @@ export class RunnerView extends ItemView {
     }
     const root = this.contentEl.createDiv({ cls: 'rp-runner-view' });
     const questionZone = root.createDiv({ cls: 'rp-question-zone rp-validation-panel' });
-    questionZone.createEl('p', { text: 'Protocol error' });
-    const ul = questionZone.createEl('ul', { cls: 'rp-error-list' });
-    for (const err of errors) {
-      ul.createEl('li', { text: err });
-    }
+    renderErrorList(questionZone, errors);
   }
 
 }

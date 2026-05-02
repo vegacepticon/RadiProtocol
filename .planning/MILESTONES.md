@@ -1,5 +1,33 @@
 # Milestones
 
+## v1.12 Maintenance & Tech Debt (Closed: 2026-05-02 — internal-only, no GitHub Release)
+
+**Phases completed:** 4 phases (75–78), 28 plans, 7/7 requirements satisfied
+**Timeline:** 2026-04-30 → 2026-05-02 (3 days)
+**Git:** 23 commits since milestone open (`00b70ad`..`HEAD`); src/ delta +1860/−1253 across 60 files (Phase 75 work-tree-complete but uncommitted at close — see Known Deferred)
+**Release:** **none** — v1.12 is internal-only by REQUIREMENTS.md design; end users on `1.11.0` see no behavior change. If a regression surfaces it ships as `1.11.x` patch.
+
+**Key accomplishments:**
+
+- Phase 75: RunnerView ↔ InlineRunnerModal Deduplication — extracted shared per-step renderers into `src/runner/render/` (render-footer, render-loop-picker, render-question, render-snippet-picker, render-snippet-fill, render-complete, render-error) plus runner-host / runner-renderer / runner-text / snippet-label modules under `src/runner/`; both host shells now delegate rendering and retain only chrome/lifecycle/autosave-policy/output-toolbar differences. View LOC 2345 → 1929 (–17.7%); inline test family LOC 2222 → 1555 (–30.0%, target met exactly). Final gate: `npm test` 847/1 skipped, `npm run build` exit 0, `npm run lint` 0 errors / 2 known warnings (DEDUP-01, DEDUP-02)
+- Phase 76: editor-panel-view.ts Decomposition — `src/views/editor-panel-view.ts` reduced 1230 → 393 LOC (under <400 budget) and now acts as a dispatcher; per-kind form modules under `src/views/editor-panel/forms/` (`start-form.ts`, `question-form.ts`, `answer-form.ts`, `text-block-form.ts`, `loop-form.ts`, `snippet-form.ts`, `_shared.ts`); 9 helper modules extracted under `src/views/editor-panel/` (autosave, canvas-listener, canvas-patch, growable-textarea, quick-create-controller, render-form, render-toolbar, save-node-edits, legacy/list-snippet-subfolders). Phase 63 single-canvas-sync-subscription contract preserved; spyable `EditorPanelView` private surface preserved (`renderNodeFormImpl` routes via `host.renderForm(...)`). Tests: 818/1 skipped (SPLIT-01, SPLIT-02)
+- Phase 77: Eslint Findings Cleanup — `npm run lint` exits 0 on `main`; 517 errors → 0; 6 warnings → 2 (documented out-of-scope: `obsidianmd/prefer-file-manager-trash-file` × 2 in `snippet-service.ts:240,283`). 14 plans across 9 waves, 12 atomic commits; dominant `obsidianmd/no-static-styles-assignment` violations across `src/views/` converted to CSS class toggles + appended rules in per-feature `src/styles/*.css` files (per CLAUDE.md per-feature CSS architecture); `instanceof TFile` runtime guards replace casts in `editor-panel-view.ts` and `inline-runner-modal.ts`; `no-control-regex` and `no-constant-binary-expression` resolved with documented rationale (LINT-01)
+- Phase 78: Lint + Test Automation Gate — two-layer gate installed. Layer 1: `.githooks/pre-commit` runs eslint on staged `*.ts` + `npm test`, blocks commit on error, `--no-verify` bypass preserved (verified locally on disposable `test/lint-gate` branch). Layer 2: `.github/workflows/ci.yml` runs `npm ci && npm run build && npm run lint && npm test` on push to `main` and on every PR (Node 18+); workflow file structurally validated. Strictly ordered after Phase 77 per REQUIREMENTS.md (gate would block all commits before lint cleanup) (CI-01, CI-02)
+
+**Known deferred items at close:**
+
+- **Phase 75 atomic commits** — verification gate is GREEN but source deltas, new modules under `src/runner/`, new shared tests under `src/__tests__/runner/`, and the entire `.planning/phases/75-runner-view-inline-runner-deduplication/` directory exist only in the working tree. ROADMAP.md still labels Phase 75 as "Not started" in its progress table. Mechanical cleanup — next session should commit per-plan and update ROADMAP.md.
+- **CI-04 / CI-05 live red-status verification** — workflow structurally valid; observation of red ✕ on a real PR with a deliberate eslint or test failure happens on the next natural PR.
+- **2 lint warnings remaining** — `obsidianmd/prefer-file-manager-trash-file` in `src/snippets/snippet-service.ts:240,283`; documented out-of-scope in REQUIREMENTS.md "Future Requirements".
+- **MEDIUM-5 from CONCERNS.md (deferred per REQUIREMENTS.md)** — `protocol-runner.ts` (819 LOC) and `snippet-manager-view.ts` (1037 LOC) remain large; re-evaluate now that DEDUP-01 has shipped a renderer-extraction template.
+- **Carry-over project-wide tech debt (unchanged from v1.10/v1.11 close):** Phases 64/66/67 lack formal `VERIFICATION.md`; Nyquist `VALIDATION.md` missing for Phases 63–78; 3 open debug sessions (`inline-runner-drag-resets-size`, `inline-runner-tab-switch-resets-size`, `phase-27-regressions`); 2 stale seeds; deprecated `LoopStartNode` / `LoopEndNode` retained for Migration Check enumeration.
+
+**Audit:** `.planning/MILESTONE-AUDIT.md` (Path A — close with documented tech debt, no blockers).
+
+**Archive:** `.planning/milestones/v1.12-ROADMAP.md`, `.planning/milestones/v1.12-phases/` (75/76/77/78 directory tree).
+
+---
+
 ## v1.11 Inline Polish, Loop Hint, Donate & Canvas Library (Shipped: 2026-04-30)
 
 **Phases completed:** 6 phases, 17 plans, 11 tasks

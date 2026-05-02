@@ -5,10 +5,19 @@ import { App, TFile, Notice, setIcon } from 'obsidian';
 import type RadiProtocolPlugin from '../main';
 import { ProtocolRunner } from '../runner/protocol-runner';
 import { GraphValidator } from '../graph/graph-validator';
-import type { ProtocolGraph, AnswerNode, SnippetNode } from '../graph/graph-model';
+import type { ProtocolGraph, AnswerNode } from '../graph/graph-model';
 import { SnippetTreePicker } from './snippet-tree-picker';
 import { SnippetFillInModal } from './snippet-fill-in-modal';
-import { isExitEdge, nodeLabel, stripExitPrefix } from '../graph/node-label';
+import { renderLoopPicker } from '../runner/render/render-loop-picker';
+import { renderQuestionAtNode } from '../runner/render/render-question';
+import { renderSnippetPicker } from '../runner/render/render-snippet-picker';
+import { renderCompleteHeading } from '../runner/render/render-complete';
+import { renderErrorList } from '../runner/render/render-error';
+import {
+  isFullSnippetPath,
+  renderSnippetFillLoading,
+  renderSnippetFillNotFound,
+} from '../runner/render/render-snippet-fill';
 import type { InlineRunnerLayout } from '../settings';
 
 interface InlineRunnerViewport {
@@ -342,113 +351,36 @@ export class InlineRunnerModal {
       }
 
       case 'at-node': {
-        if (this.graph === null) {
-          this.renderError(questionZone, ['Internal error: graph not loaded.']);
-          return;
-        }
-        const node = this.graph.nodes.get(state.currentNodeId);
-        if (node === undefined) {
-          this.renderError(questionZone, [`Node "${state.currentNodeId}" not found in graph.`]);
-          return;
-        }
-        let showSkipFooterControl = false;
-
-        switch (node.kind) {
-          case 'question': {
-            questionZone.createEl('p', {
-              text: node.questionText,
-              cls: 'rp-question-text',
-            });
-
-            const neighborIds = this.graph.adjacency.get(state.currentNodeId) ?? [];
-            const answerNeighbors: AnswerNode[] = [];
-            const snippetNeighbors: SnippetNode[] = [];
-            for (const nid of neighborIds) {
-              const n = this.graph.nodes.get(nid);
-              if (n === undefined) continue;
-              if (n.kind === 'answer') answerNeighbors.push(n);
-              else if (n.kind === 'snippet') snippetNeighbors.push(n);
+        const result = renderQuestionAtNode(questionZone, this.graph, state, {
+          bindClick: (el, handler) => el.addEventListener('click', handler),
+          renderError: (messages) => this.renderError(questionZone, messages),
+          onChooseAnswer: (answerNode) => this.handleAnswerClick(answerNode),
+          onChooseSnippetBranch: (snippetNode, isFileBound) => {
+            if (isFileBound) {
+              const snippetPath = snippetNode.radiprotocol_snippetPath as string;
+              this.runner.pickFileBoundSnippet(state.currentNodeId, snippetNode.id, snippetPath);
+            } else {
+              this.runner.chooseSnippetBranch(snippetNode.id);
             }
-
-            if (answerNeighbors.length > 0) {
-              const answerList = questionZone.createDiv({ cls: 'rp-answer-list' });
-              for (const answerNode of answerNeighbors) {
-                const btn = answerList.createEl('button', {
-                  cls: 'rp-answer-btn',
-                  text: answerNode.displayLabel ?? answerNode.answerText,
-                });
-                btn.addEventListener('click', () => {
-                  void this.handleAnswerClick(answerNode);
-                });
-              }
-            }
-
-            if (snippetNeighbors.length > 0) {
-              const snippetList = questionZone.createDiv({ cls: 'rp-snippet-branch-list' });
-              for (const snippetNode of snippetNeighbors) {
-                const isFileBound =
-                  typeof snippetNode.radiprotocol_snippetPath === 'string' &&
-                  snippetNode.radiprotocol_snippetPath !== '';
-                let label: string;
-                if (isFileBound) {
-                  const snippetPath = snippetNode.radiprotocol_snippetPath as string;
-                  if (snippetNode.snippetLabel !== undefined && snippetNode.snippetLabel.length > 0) {
-                    label = `\uD83D\uDCC4 ${snippetNode.snippetLabel}`;
-                  } else {
-                    const lastSlash = snippetPath.lastIndexOf('/');
-                    const basename = lastSlash >= 0 ? snippetPath.slice(lastSlash + 1) : snippetPath;
-                    const dot = basename.lastIndexOf('.');
-                    const stem = dot > 0 ? basename.slice(0, dot) : basename;
-                    label = stem.length > 0 ? `\uD83D\uDCC4 ${stem}` : '\uD83D\uDCC4 Snippet';
-                  }
-                } else {
-                  label = (snippetNode.snippetLabel !== undefined && snippetNode.snippetLabel.length > 0)
-                    ? `\uD83D\uDCC1 ${snippetNode.snippetLabel}`
-                    : '\uD83D\uDCC1 Snippet';
-                }
-                const btn = snippetList.createEl('button', {
-                  cls: 'rp-snippet-branch-btn',
-                  text: label,
-                });
-                btn.addEventListener('click', () => {
-                  if (isFileBound) {
-                    const snippetPath = snippetNode.radiprotocol_snippetPath as string;
-                    this.runner.pickFileBoundSnippet(state.currentNodeId, snippetNode.id, snippetPath);
-                  } else {
-                    this.runner.chooseSnippetBranch(snippetNode.id);
-                  }
-                  this.render();
-                });
-              }
-            }
-
-            // Phase 65 RUNNER-02: Skip is rendered in the shared footer row after all
-            // answer and snippet branch lists, never between mixed branch groups.
-            showSkipFooterControl = answerNeighbors.length > 0 && typeof this.runner.skip === 'function';
-            break;
-          }
-
-          default: {
-            questionZone.createEl('p', {
-              text: 'Processing...',
-              cls: 'rp-empty-state-body',
-            });
-            break;
-          }
-        }
-
-        this.renderRunnerFooter(questionZone, {
-          showBack: state.canStepBack,
+            this.render();
+          },
           onBack: () => {
             this.runner.stepBack();
             this.render();
           },
-          showSkip: showSkipFooterControl,
           onSkip: () => {
             this.runner.skip();
             this.render();
           },
+          canSkip: typeof this.runner.skip === 'function',
         });
+        if (result === 'error') return;
+        if (result === 'not-question') {
+          questionZone.createEl('p', {
+            text: 'Processing...',
+            cls: 'rp-empty-state-body',
+          });
+        }
 
         break;
       }
@@ -458,70 +390,33 @@ export class InlineRunnerModal {
           text: 'Loading snippets...',
           cls: 'rp-empty-state-body',
         });
-        void this.renderSnippetPicker(state, questionZone);
+        void this.mountSnippetPicker(state, questionZone);
         break;
       }
 
       case 'awaiting-loop-pick': {
-        if (this.graph === null) {
-          this.renderError(questionZone, ['Internal error: graph not loaded.']);
-          return;
-        }
-        const node = this.graph.nodes.get(state.nodeId);
-        if (node === undefined || node.kind !== 'loop') {
-          this.renderError(questionZone, [`Loop node "${state.nodeId}" not found in graph.`]);
-          return;
-        }
-
-        if (node.headerText !== '') {
-          questionZone.createEl('p', {
-            text: node.headerText,
-            cls: 'rp-loop-header-text',
-          });
-        }
-
-        const outgoing = this.graph.edges.filter(e => e.fromNodeId === state.nodeId);
-        const list = questionZone.createDiv({ cls: 'rp-loop-picker-list' });
-        for (const edge of outgoing) {
-          const exit = isExitEdge(edge);
-          let caption: string;
-          if (exit) {
-            caption = stripExitPrefix(edge.label ?? '');
-          } else {
-            const target = this.graph.nodes.get(edge.toNodeId);
-            caption = target !== undefined ? nodeLabel(target) : edge.toNodeId;
-          }
-          const btn = list.createEl('button', {
-            cls: exit ? 'rp-loop-exit-btn' : 'rp-loop-body-btn',
-            text: caption,
-          });
-          btn.addEventListener('click', () => {
-            void this.handleLoopBranchClick(edge, exit);
-          });
-        }
-
-        this.renderRunnerFooter(questionZone, {
-          showBack: state.canStepBack,
+        const rendered = renderLoopPicker(questionZone, this.graph, state, {
+          bindClick: (el, handler) => el.addEventListener('click', handler),
+          renderError: (messages) => this.renderError(questionZone, messages),
+          onChooseLoopBranch: (edge, isExit) => this.handleLoopBranchClick(edge, isExit),
           onBack: () => {
             this.runner.stepBack();
             this.render();
           },
         });
+        if (!rendered) return;
 
         break;
       }
 
       case 'awaiting-snippet-fill': {
-        questionZone.createEl('p', {
-          text: 'Loading snippet...',
-          cls: 'rp-empty-state-body',
-        });
+        renderSnippetFillLoading(questionZone);
         void this.handleSnippetFill(state.snippetId, questionZone);
         break;
       }
 
       case 'complete': {
-        questionZone.createEl('h2', { text: 'Protocol complete', cls: 'rp-complete-heading' });
+        renderCompleteHeading(questionZone);
         break;
       }
 
@@ -539,43 +434,6 @@ export class InlineRunnerModal {
   }
 
   // ── Event Handlers ────────────────────────────────────────────────────────
-
-  /** Phase 65 RUNNER-02: shared Back/Skip footer row below branch/picker controls. */
-  private renderRunnerFooter(
-    zone: HTMLElement,
-    options: {
-      showBack: boolean;
-      onBack: () => void;
-      showSkip?: boolean;
-      onSkip?: () => void;
-    },
-  ): void {
-    if (!options.showBack && options.showSkip !== true) return;
-
-    const footerRow = zone.createDiv({ cls: 'rp-runner-footer-row' });
-    if (options.showBack) {
-      const backBtn = footerRow.createEl('button', {
-        cls: 'rp-step-back-btn',
-        text: 'Back',
-      });
-      if ('setAttribute' in backBtn) backBtn.setAttribute('aria-label', 'Go back one step');
-      backBtn.title = 'Go back one step';
-      // Phase 66 D-01 + D-02 + D-03: visual half of the double-click guard.
-      backBtn.addEventListener('click', () => {
-        backBtn.disabled = true;
-        options.onBack();
-      });
-    }
-    if (options.showSkip === true && options.onSkip !== undefined) {
-      const skipBtn = footerRow.createEl('button', {
-        cls: 'rp-skip-btn',
-        text: 'Skip',
-      });
-      if ('setAttribute' in skipBtn) skipBtn.setAttribute('aria-label', 'Skip this question');
-      skipBtn.title = 'Skip this question';
-      skipBtn.addEventListener('click', options.onSkip);
-    }
-  }
 
   /** D1: freeze/resume — hide modal when active note is not the target note. */
   private handleActiveLeafChange(): void {
@@ -946,7 +804,7 @@ export class InlineRunnerModal {
 
 
   /** Render snippet picker inline (Phase 51 D-06 pattern). */
-  private async renderSnippetPicker(
+  private async mountSnippetPicker(
     state: {
       status: 'awaiting-snippet-pick';
       nodeId: string;
@@ -956,83 +814,43 @@ export class InlineRunnerModal {
     },
     questionZone: HTMLElement,
   ): Promise<void> {
-    const rootPath = this.plugin.settings.snippetFolderPath;
-    const nodeRootRel = state.subfolderPath ?? '';
-    const nodeRootAbs = nodeRootRel === '' ? rootPath : `${rootPath}/${nodeRootRel}`;
-
     if (this.snippetTreePicker !== null) {
       this.snippetTreePicker.unmount();
       this.snippetTreePicker = null;
     }
 
-    questionZone.empty();
-    const pickerHost = questionZone.createDiv({ cls: 'rp-stp-inline-host' });
-
-    const capturedNodeId = state.nodeId;
-
-    this.snippetTreePicker = new SnippetTreePicker({
+    this.snippetTreePicker = renderSnippetPicker(questionZone, state, {
       app: this.app,
       snippetService: this.plugin.snippetService,
-      container: pickerHost as unknown as HTMLElement,
-      mode: 'file-only',
-      rootPath: nodeRootAbs,
-      onSelect: (result) => {
-        void (async () => {
-          const absPath = result.relativePath === ''
-            ? nodeRootAbs
-            : `${nodeRootAbs}/${result.relativePath}`;
-          const snippet = await this.plugin.snippetService.load(absPath);
-
-          const currentState = this.runner.getState();
-          if (
-            currentState.status !== 'awaiting-snippet-pick' ||
-            currentState.nodeId !== capturedNodeId
-          ) {
-            return;
-          }
-
-          // CR-01: Verify the modal container is still in the DOM before
-          // operating on any captured DOM references. If the modal was
-          // closed or re-rendered, the captured questionZone is detached.
-          if (this.containerEl === null || !document.body.contains(this.containerEl)) {
-            return;
-          }
-
-          if (snippet === null) {
-            // Re-render to get a fresh DOM instead of writing to a stale element.
-            this.render();
-            const freshZone = this.contentEl?.querySelector('.rp-question-zone');
-            if (freshZone) {
-              freshZone.empty();
-              freshZone.createEl('p', {
-                cls: 'rp-empty-state-body',
-                text: `Snippet not found: ${result.relativePath}`,
-              });
-            }
-            return;
-          }
-
-          if (snippet.kind === 'json' && snippet.validationError !== null) {
-            this.render();
-            const freshZone = this.contentEl?.querySelector('.rp-question-zone');
-            if (freshZone) {
-              freshZone.empty();
-              freshZone.createEl('p', {
-                cls: 'rp-empty-state-body',
-                text: `Snippet "${snippet.path}" cannot be used. ${snippet.validationError}`,
-              });
-            }
-            return;
-          }
-
-          await this.handleSnippetPickerSelection(snippet);
-        })();
+      rootPath: this.plugin.settings.snippetFolderPath,
+      hostClass: 'rp-stp-inline-host',
+      copy: {
+        notFound: (relativePath) => `Snippet not found: ${relativePath}`,
+        validationError: (snippetPath, validationMessage) =>
+          `Snippet "${snippetPath}" cannot be used. ${validationMessage}`,
       },
-    });
-    void this.snippetTreePicker.mount();
-
-    this.renderRunnerFooter(questionZone, {
-      showBack: state.canStepBack,
+      bindClick: (el, handler) => el.addEventListener('click', handler),
+      getCurrentNodeId: () => {
+        const s = this.runner.getState();
+        return s.status === 'awaiting-snippet-pick' ? s.nodeId : null;
+      },
+      // CR-01: detached-DOM guard for inline modal closures.
+      isStillMounted: () =>
+        this.containerEl !== null && document.body.contains(this.containerEl),
+      // Inline modal re-renders before showing the error so the new picker
+      // takes a fresh DOM, then writes the error into the fresh question zone.
+      presentAsyncError: (message) => {
+        this.render();
+        const freshZone = this.contentEl?.querySelector('.rp-question-zone');
+        if (freshZone) {
+          freshZone.empty();
+          (freshZone as HTMLElement).createEl('p', {
+            cls: 'rp-empty-state-body',
+            text: message,
+          });
+        }
+      },
+      onSnippetReady: (snippet) => this.handleSnippetPickerSelection(snippet),
       onBack: () => {
         if (this.snippetTreePicker !== null) {
           this.snippetTreePicker.unmount();
@@ -1091,10 +909,7 @@ export class InlineRunnerModal {
    * visible underneath (gated by isFillModalOpen in handleActiveLeafChange).
    */
   private async handleSnippetFill(snippetId: string, questionZone: HTMLElement): Promise<void> {
-    const isPhase51FullPath =
-      snippetId.includes('/') ||
-      snippetId.endsWith('.md') ||
-      snippetId.endsWith('.json');
+    const isPhase51FullPath = isFullSnippetPath(snippetId);
     const root = this.plugin.settings.snippetFolderPath;
     // WR-03: avoid double-prefixing when snippetId is already an absolute vault path
     const absPath = snippetId.startsWith(root + '/')
@@ -1122,11 +937,7 @@ export class InlineRunnerModal {
     }
 
     if (snippet === null) {
-      questionZone.empty();
-      questionZone.createEl('p', {
-        text: `Snippet '${snippetId}' not found.`,
-        cls: 'rp-empty-state-body',
-      });
+      renderSnippetFillNotFound(questionZone, snippetId);
       return;
     }
 
@@ -1148,11 +959,7 @@ export class InlineRunnerModal {
         return;
       }
       // Legacy path — MD snippet via non-full-path id; treat as not-found.
-      questionZone.empty();
-      questionZone.createEl('p', {
-        text: `Snippet '${snippetId}' not found.`,
-        cls: 'rp-empty-state-body',
-      });
+      renderSnippetFillNotFound(questionZone, snippetId);
       return;
     }
 
@@ -1193,10 +1000,6 @@ export class InlineRunnerModal {
   private renderError(zone: HTMLElement, errors: string[]): void {
     zone.empty();
     const errorPanel = zone.createDiv({ cls: 'rp-error-panel' });
-    errorPanel.createEl('p', { text: 'Protocol error', cls: 'rp-error-title' });
-    const ul = errorPanel.createEl('ul', { cls: 'rp-error-list' });
-    for (const err of errors) {
-      ul.createEl('li', { text: err });
-    }
+    renderErrorList(errorPanel, errors, { titleClass: 'rp-error-title' });
   }
 }

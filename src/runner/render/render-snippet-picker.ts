@@ -1,0 +1,124 @@
+// runner/render/render-snippet-picker.ts
+// Phase 75 Plan 04 (DEDUP-01) — shared awaiting-snippet-pick renderer.
+//
+// Owns:
+//   - host-class wrapper div + SnippetTreePicker construction (file-only mode)
+//   - stale-result guard (state status + nodeId)
+//   - optional DOM-attached guard (inline modal)
+//   - localised not-found / validation-error dispatch via host copy
+//   - shared Back footer
+//
+// Hosts retain:
+//   - SnippetTreePicker instance lifetime (returned from this function so the
+//     host can call unmount() on state-change / step-back)
+//   - autosave / accumulator-delta side effects
+//   - snippet placeholder modal flow (handleSnippetPickerSelection)
+//   - re-render entry point
+//
+// See `.planning/phases/75-runner-view-inline-runner-deduplication/75-04-PLAN.md`.
+import type { App } from 'obsidian';
+import type { Snippet } from '../../snippets/snippet-model';
+import type { SnippetService } from '../../snippets/snippet-service';
+import type { RunnerState } from '../runner-state';
+import { SnippetTreePicker } from '../../views/snippet-tree-picker';
+import { renderRunnerFooter, type RunnerFooterHost } from './render-footer';
+
+export type AwaitingSnippetPickState = Extract<RunnerState, { status: 'awaiting-snippet-pick' }>;
+
+export type SnippetPickerHostClass = 'rp-stp-runner-host' | 'rp-stp-inline-host';
+
+/** Host-supplied copy for async errors surfaced by the picker. RunnerView ships RU,
+ *  InlineRunnerModal ships EN — divergence preserved per Phase 75 CONTEXT. */
+export interface SnippetPickerCopy {
+  /** Snippet at the picked path could not be loaded. */
+  notFound(relativePath: string): string;
+  /** JSON snippet loaded but carries a non-null validationError. */
+  validationError(snippetPath: string, validationMessage: string): string;
+}
+
+export interface SnippetPickerRenderOptions extends RunnerFooterHost {
+  app: App;
+  snippetService: SnippetService;
+  /** Vault-relative root path (plugin.settings.snippetFolderPath). */
+  rootPath: string;
+  /** Host wrapper CSS hook. RunnerView: rp-stp-runner-host; Inline modal: rp-stp-inline-host. */
+  hostClass: SnippetPickerHostClass;
+  /** Copy locale (RU vs EN divergence preserved unless explicitly merged). */
+  copy: SnippetPickerCopy;
+  /** Returns the runner's current awaiting-snippet-pick nodeId, or null if the
+   *  state has changed (advanced/stepped-back/error/etc). T-30-04 stale-result guard. */
+  getCurrentNodeId(): string | null;
+  /** Optional DOM-attached guard. Inline modal returns
+   *  `document.body.contains(this.containerEl)`; RunnerView omits it. */
+  isStillMounted?(): boolean;
+  /** Host-controlled async error presentation. Default: empty `questionZone`
+   *  and append a `.rp-empty-state-body` paragraph in place. Inline modal
+   *  overrides to call its own `render()` first and write to the fresh zone. */
+  presentAsyncError?(message: string): void;
+  /** Called when a usable snippet is loaded. Host advances runner / autosaves /
+   *  appends accumulator delta / re-renders. */
+  onSnippetReady(snippet: Snippet): void | Promise<void>;
+  /** Footer back-button handler. Host owns picker.unmount + runner.stepBack +
+   *  any host-specific autosave + re-render. */
+  onBack(): void;
+}
+
+export function renderSnippetPicker(
+  questionZone: HTMLElement,
+  state: AwaitingSnippetPickState,
+  options: SnippetPickerRenderOptions,
+): SnippetTreePicker {
+  const { app, snippetService, rootPath, hostClass, copy } = options;
+  const nodeRootRel = state.subfolderPath ?? '';
+  const nodeRootAbs = nodeRootRel === '' ? rootPath : `${rootPath}/${nodeRootRel}`;
+
+  questionZone.empty();
+  const pickerHost = questionZone.createDiv({ cls: hostClass });
+
+  const capturedNodeId = state.nodeId;
+
+  const presentAsyncError = options.presentAsyncError ?? ((message: string) => {
+    questionZone.empty();
+    questionZone.createEl('p', { cls: 'rp-empty-state-body', text: message });
+  });
+
+  const picker = new SnippetTreePicker({
+    app,
+    snippetService,
+    container: pickerHost as unknown as HTMLElement,
+    mode: 'file-only',
+    rootPath: nodeRootAbs,
+    onSelect: (result) => {
+      void (async () => {
+        const absPath = result.relativePath === ''
+          ? nodeRootAbs
+          : `${nodeRootAbs}/${result.relativePath}`;
+        const snippet = await snippetService.load(absPath);
+
+        // T-30-04 stale-result guard: bail if runner advanced / stepped-back
+        // during the await.
+        if (options.getCurrentNodeId() !== capturedNodeId) return;
+        // CR-01 (inline-only): bail if the host DOM was detached.
+        if (options.isStillMounted !== undefined && !options.isStillMounted()) return;
+
+        if (snippet === null) {
+          presentAsyncError(copy.notFound(result.relativePath));
+          return;
+        }
+        if (snippet.kind === 'json' && snippet.validationError !== null) {
+          presentAsyncError(copy.validationError(snippet.path, snippet.validationError));
+          return;
+        }
+        await options.onSnippetReady(snippet);
+      })();
+    },
+  });
+  void picker.mount();
+
+  renderRunnerFooter(questionZone, options, {
+    showBack: state.canStepBack,
+    onBack: options.onBack,
+  });
+
+  return picker;
+}
