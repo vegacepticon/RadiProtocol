@@ -4,6 +4,7 @@ import type { ProtocolGraph, RPEdge } from '../../graph/graph-model';
 import { isExitEdge, nodeLabel, stripExitPrefix } from '../../graph/node-label';
 import type { RunnerState } from '../runner-state';
 import { renderRunnerFooter, type RunnerFooterHost } from './render-footer';
+import { createButton } from '../../utils/dom-helpers';
 
 export type AwaitingLoopPickState = Extract<RunnerState, { status: 'awaiting-loop-pick' }>;
 
@@ -53,7 +54,7 @@ export function renderLoopPicker(
       const target = graph.nodes.get(edge.toNodeId);
       caption = target !== undefined ? nodeLabel(target) : edge.toNodeId;
     }
-    const btn = list.createEl('button', {
+    const btn = createButton(list, {
       cls: exit ? 'rp-loop-exit-btn' : 'rp-loop-body-btn',
       text: caption,
     });

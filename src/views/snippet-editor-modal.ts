@@ -25,6 +25,7 @@ import { ConfirmModal } from './confirm-modal';
 import { SnippetTreePicker } from './snippet-tree-picker';
 import type RadiProtocolPlugin from '../main';
 import { CSS_CLASS } from '../constants/css-classes';
+import { createButton, createInput, createTextarea } from '../utils/dom-helpers';
 
 type SnippetEditorResult =
   | { saved: true; snippet: Snippet; movedFrom: string | null }
@@ -262,7 +263,7 @@ export class SnippetEditorModal extends Modal {
     toggleWrap.setAttribute('role', 'radiogroup');
 
     const makeOption = (value: 'json' | 'md', label: string): HTMLButtonElement => {
-      const btn = toggleWrap.createEl('button', { text: label });
+      const btn = createButton(toggleWrap, { text: label });
       btn.setAttribute('type', 'button');
       btn.setAttribute('role', 'radio');
       btn.setAttribute('data-kind', value);
@@ -363,7 +364,7 @@ export class SnippetEditorModal extends Modal {
     const row = container.createDiv({ cls: 'radi-snippet-editor-row' });
     row.createEl('label', { text: 'Имя' });
 
-    const input = row.createEl('input', { type: 'text' }) as HTMLInputElement;
+    const input = createInput(row, { type: 'text' });
     input.placeholder = 'Например: greeting-template';
     input.value = this.draft.name;
     this.nameInputEl = input;
@@ -398,7 +399,7 @@ export class SnippetEditorModal extends Modal {
       );
     } else {
       const mdDraft = this.draft as MdSnippet;
-      const ta = this.contentRegionEl.createEl('textarea') as HTMLTextAreaElement;
+      const ta = createTextarea(this.contentRegionEl);
       ta.placeholder = 'Введите текст сниппета…';
       ta.value = mdDraft.content;
       ta.rows = 10;
@@ -449,16 +450,16 @@ export class SnippetEditorModal extends Modal {
   private renderButtonRow(container: HTMLElement): void {
     const row = container.createDiv({ cls: 'modal-button-container' });
 
-    const cancelBtn = row.createEl('button', { text: 'Отмена' });
+    const cancelBtn = createButton(row, { text: 'Отмена' });
     cancelBtn.setAttribute('type', 'button');
     cancelBtn.addEventListener('click', () => {
       void this.handleCancel();
     });
 
-    const saveBtn = row.createEl('button', {
+    const saveBtn = createButton(row, {
       text: this.options.mode === 'create' ? 'Создать' : 'Сохранить',
       cls: 'mod-cta',
-    }) as HTMLButtonElement;
+    });
     saveBtn.setAttribute('type', 'button');
     saveBtn.addEventListener('click', () => {
       void this.handleSave();

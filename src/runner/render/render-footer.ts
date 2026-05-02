@@ -1,5 +1,6 @@
 // runner/render/render-footer.ts
 // Phase 75 DEDUP-01 — shared runner Back/Skip footer row.
+import { createButton } from '../../utils/dom-helpers';
 
 export interface RunnerFooterOptions {
   showBack: boolean;
@@ -21,7 +22,7 @@ export function renderRunnerFooter(
 
   const footerRow = zone.createDiv({ cls: 'rp-runner-footer-row' });
   if (options.showBack) {
-    const backBtn = footerRow.createEl('button', {
+    const backBtn = createButton(footerRow, {
       cls: 'rp-step-back-btn',
       text: 'Back',
     });
@@ -35,7 +36,7 @@ export function renderRunnerFooter(
     });
   }
   if (options.showSkip === true && options.onSkip !== undefined) {
-    const skipBtn = footerRow.createEl('button', {
+    const skipBtn = createButton(footerRow, {
       cls: 'rp-skip-btn',
       text: 'Skip',
     });

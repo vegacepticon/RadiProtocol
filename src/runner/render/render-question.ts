@@ -4,6 +4,7 @@ import type { AnswerNode, ProtocolGraph, SnippetNode } from '../../graph/graph-m
 import type { RunnerState } from '../runner-state';
 import { isFileBoundSnippetNode, snippetBranchLabel } from '../snippet-label';
 import { renderRunnerFooter, type RunnerFooterHost } from './render-footer';
+import { createButton } from '../../utils/dom-helpers';
 
 export type AtNodeState = Extract<RunnerState, { status: 'at-node' }>;
 
@@ -57,7 +58,7 @@ export function renderQuestionAtNode(
   if (answerNeighbors.length > 0) {
     const answerList = questionZone.createDiv({ cls: 'rp-answer-list rp-stack' });
     for (const answerNode of answerNeighbors) {
-      const btn = answerList.createEl('button', {
+      const btn = createButton(answerList, {
         cls: 'rp-answer-btn',
         text: answerNode.displayLabel ?? answerNode.answerText,
       });
@@ -72,7 +73,7 @@ export function renderQuestionAtNode(
     const snippetList = questionZone.createDiv({ cls: 'rp-snippet-branch-list' });
     for (const snippetNode of snippetNeighbors) {
       const isFileBound = isFileBoundSnippetNode(snippetNode);
-      const btn = snippetList.createEl('button', {
+      const btn = createButton(snippetList, {
         cls: 'rp-snippet-branch-btn',
         text: snippetBranchLabel(snippetNode),
       });

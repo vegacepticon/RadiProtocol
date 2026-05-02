@@ -6,6 +6,9 @@
 
 /** Minimal mock element returned by createEl/createDiv */
 function makeMockEl(): MockElement {
+  const classes = new Set<string>();
+  const attrs = new Map<string, string>();
+  const listeners = new Map<string, Array<unknown>>();
   const el: MockElement = {
     recordedCssProps: [],
     createEl: (_tag: string, _opts?: unknown) => makeMockEl(),
@@ -17,6 +20,39 @@ function makeMockEl(): MockElement {
     },
     type: '',
     min: '',
+    placeholder: '',
+    value: '',
+    rows: 10,
+    disabled: false,
+    title: '',
+    textContent: '',
+    addEventListener: (type: string, cb: unknown) => {
+      const existing = listeners.get(type) ?? [];
+      existing.push(cb);
+      listeners.set(type, existing);
+    },
+    setAttribute: (name: string, value: string) => {
+      attrs.set(name, value);
+    },
+    getAttribute: (name: string) => attrs.get(name) ?? null,
+    addClass: (cls: string) => {
+      classes.add(cls);
+    },
+    removeClass: (cls: string) => {
+      classes.delete(cls);
+    },
+    toggleClass: (cls: string, force?: boolean) => {
+      if (force === true) classes.add(cls);
+      else if (force === false) classes.delete(cls);
+      else if (classes.has(cls)) classes.delete(cls);
+      else classes.add(cls);
+    },
+    querySelectorAll: (_sel: string) => [],
+    click: () => {},
+    setCssStyles: (props: Record<string, string>) => {
+      el.recordedCssProps.push({ ...props });
+    },
+    getCssStyles: () => ({}),
   };
   return el;
 }
@@ -30,6 +66,22 @@ interface MockElement {
   setCssProps: (props: Record<string, string>) => void;
   type: string;
   min: string;
+  placeholder: string;
+  value: string;
+  rows: number;
+  disabled: boolean;
+  title: string;
+  textContent: string;
+  addEventListener: (type: string, cb: unknown) => void;
+  setAttribute: (name: string, value: string) => void;
+  getAttribute: (name: string) => string | null;
+  addClass: (cls: string) => void;
+  removeClass: (cls: string) => void;
+  toggleClass: (cls: string, force?: boolean) => void;
+  querySelectorAll: (sel: string) => MockElement[];
+  click: () => void;
+  setCssStyles: (props: Record<string, string>) => void;
+  getCssStyles: () => Record<string, string>;
 }
 
 interface MockInputEvent {

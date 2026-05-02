@@ -16,6 +16,7 @@
 import type { App } from 'obsidian';
 import type { SnippetService } from '../snippets/snippet-service';
 import type { Snippet } from '../snippets/snippet-model';
+import { createButton, createInput } from '../utils/dom-helpers';
 
 // ── Constants ────────────────────────────────────────────────────────────
 
@@ -111,10 +112,10 @@ export class SnippetTreePicker {
 
     // Search input row (always rendered above breadcrumb).
     const searchWrap = root.createDiv({ cls: 'rp-stp-search' });
-    const searchInput = searchWrap.createEl('input', {
+    const searchInput = createInput(searchWrap, {
       cls: 'rp-stp-search-input',
       type: 'text',
-    }) as HTMLInputElement;
+    });
     searchInput.placeholder = SEARCH_PLACEHOLDER;
     this.searchInputEl = searchInput;
     this.addListener(searchInput, 'input', () => {
@@ -214,10 +215,10 @@ export class SnippetTreePicker {
     breadcrumb.createEl('span', { cls: 'rp-stp-breadcrumb-label', text: crumbText });
 
     if (this.drillPath.length > 0) {
-      const upBtn = breadcrumb.createEl('button', {
+      const upBtn = createButton(breadcrumb, {
         cls: 'rp-stp-up-btn',
         text: UP_BUTTON_LABEL,
-      }) as HTMLButtonElement;
+      });
       this.addListener(upBtn, 'click', () => {
         this.drillPath.pop();
         void this.renderDrillView();
@@ -232,10 +233,10 @@ export class SnippetTreePicker {
     ) {
       const currentRel = this.drillPath.join('/');
       const isCommitted = this.committedRelativePath === currentRel;
-      const selectBtn = host.createEl('button', {
+      const selectBtn = createButton(host, {
         cls: isCommitted ? 'rp-stp-select-folder-btn is-committed' : 'rp-stp-select-folder-btn',
         text: isCommitted ? SELECT_FOLDER_COMMITTED_LABEL : SELECT_FOLDER_LABEL,
-      }) as HTMLButtonElement;
+      });
       this.addListener(selectBtn, 'click', () => {
         this.committedRelativePath = currentRel;
         this.options.onSelect({
@@ -288,7 +289,7 @@ export class SnippetTreePicker {
     folderName: string,
     isSearchResult: boolean,
   ): void {
-    const row = listEl.createEl('button', { cls: 'rp-stp-folder-row' }) as HTMLButtonElement;
+    const row = createButton(listEl, { cls: 'rp-stp-folder-row' });
     const nameEl = row.createEl('div', { cls: 'rp-stp-result-name' });
     nameEl.setText(`${GLYPH_FOLDER} ${folderName}`);
     if (isSearchResult) {
@@ -330,7 +331,7 @@ export class SnippetTreePicker {
       relativePath = snippetOrBasename.relativePath;
     }
 
-    const row = listEl.createEl('button', { cls: 'rp-stp-file-row' }) as HTMLButtonElement;
+    const row = createButton(listEl, { cls: 'rp-stp-file-row' });
     const nameEl = row.createEl('div', { cls: 'rp-stp-result-name' });
     nameEl.setText(`${fileGlyph(basename)} ${basename}`);
     if (isSearchResult) {
