@@ -1,19 +1,20 @@
 // runner/runner-state.ts
 // Pure module — zero Obsidian API imports (NFR-01)
 import type { LoopContext } from '../graph/graph-model';
+import { RUNNER_STATUS } from '../constants/runner-states';
 
 // --- Public state interfaces (returned by ProtocolRunner.getState()) ---
 
 /** Runner has not been started yet. */
 export interface IdleState {
-  status: 'idle';
+  status: typeof RUNNER_STATUS.IDLE;
 }
 
 /**
  * Runner is paused at a question node awaiting chooseAnswer.
  */
 export interface AtNodeState {
-  status: 'at-node';
+  status: typeof RUNNER_STATUS.AT_NODE;
   currentNodeId: string;
   accumulatedText: string;
   /** true when undoStack is non-empty — avoids exposing the stack itself (D-02) */
@@ -26,7 +27,7 @@ export interface AtNodeState {
  * 'awaiting-snippet-fill' via pickSnippet().
  */
 export interface AwaitingSnippetPickState {
-  status: 'awaiting-snippet-pick';
+  status: typeof RUNNER_STATUS.AWAITING_SNIPPET_PICK;
   nodeId: string;
   subfolderPath: string | undefined;
   accumulatedText: string;
@@ -39,7 +40,7 @@ export interface AwaitingSnippetPickState {
  * 'at-node' via chooseLoopBranch(edgeId).
  */
 export interface AwaitingLoopPickState {
-  status: 'awaiting-loop-pick';
+  status: typeof RUNNER_STATUS.AWAITING_LOOP_PICK;
   nodeId: string;                 // loop node id — RunnerView looks up headerText from graph
   accumulatedText: string;
   canStepBack: boolean;
@@ -51,7 +52,7 @@ export interface AwaitingLoopPickState {
  * The runner carries snippetId and nodeId so the caller can open the correct modal.
  */
 export interface AwaitingSnippetFillState {
-  status: 'awaiting-snippet-fill';
+  status: typeof RUNNER_STATUS.AWAITING_SNIPPET_FILL;
   snippetId: string;
   nodeId: string;
   accumulatedText: string;
@@ -60,7 +61,7 @@ export interface AwaitingSnippetFillState {
 
 /** All nodes have been traversed and there is no next node. */
 export interface CompleteState {
-  status: 'complete';
+  status: typeof RUNNER_STATUS.COMPLETE;
   finalText: string;
 }
 
@@ -69,7 +70,7 @@ export interface CompleteState {
  * reached in Phase 2). The runner cannot continue — caller should surface message to user.
  */
 export interface ErrorState {
-  status: 'error';
+  status: typeof RUNNER_STATUS.ERROR;
   message: string;
 }
 

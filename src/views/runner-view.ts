@@ -6,9 +6,6 @@ import { GraphValidator } from '../graph/graph-validator';
 import type { ProtocolGraph } from '../graph/graph-model';
 import { SnippetFillInModal } from './snippet-fill-in-modal';
 import type { Snippet } from '../snippets/snippet-model';
-import { ResumeSessionModal } from './resume-session-modal';
-import type { PersistedSession } from '../sessions/session-model';
-import { validateSessionNodeIds } from '../sessions/session-service';
 import { CanvasSelectorWidget } from './canvas-selector-widget';
 import { CanvasSwitchModal } from './canvas-switch-modal';
 import { SnippetTreePicker } from './snippet-tree-picker';
@@ -17,16 +14,20 @@ import { renderQuestionAtNode } from '../runner/render/render-question';
 import { renderSnippetPicker } from '../runner/render/render-snippet-picker';
 import { renderCompleteHeading } from '../runner/render/render-complete';
 import { renderErrorList } from '../runner/render/render-error';
+import { CSS_CLASS } from '../constants/css-classes';
 import {
   isFullSnippetPath,
   renderSnippetFillLoading,
   renderSnippetFillNotFound,
 } from '../runner/render/render-snippet-fill';
+import { SessionRecoveryCoordinator } from '../runner/session-recovery-coordinator';
 
 export const RUNNER_VIEW_TYPE = 'radiprotocol-runner';
 
 export class RunnerView extends ItemView {
   private readonly plugin: RadiProtocolPlugin;
+  // Phase 83: session recovery extracted to coordinator
+  private readonly sessionCoordinator: SessionRecoveryCoordinator;
   // Phase 15: runner is re-created in openCanvas() to pick up textSeparator
   private runner: ProtocolRunner = new ProtocolRunner();
   // Phase 51 D-04 (PICKER-01): validator is now stateful (carries snippet-file probe).
@@ -64,6 +65,7 @@ export class RunnerView extends ItemView {
   constructor(leaf: WorkspaceLeaf, plugin: RadiProtocolPlugin) {
     super(leaf);
     this.plugin = plugin;
+    this.sessionCoordinator = new SessionRecoveryCoordinator(plugin);
     // Phase 51 D-04 (PICKER-01): wire vault-backed snippet-file probe + snippet root.
     this.validator = new GraphValidator({
       snippetFileProbe: (absPath) => this.plugin.app.vault.getAbstractFileByPath(absPath) !== null,
@@ -149,50 +151,24 @@ export class RunnerView extends ItemView {
       return;
     }
 
-    // ── SESSION-02: check for existing incomplete session ─────────────────────
-    const session = await this.plugin.sessionService.load(filePath);
-
-    if (session !== null) {
-      // SESSION-03: validate that all saved node IDs still exist in the current graph
-      const missingIds = validateSessionNodeIds(session, graph);
-      if (missingIds.length > 0) {
-        // Hard failure — cannot resume safely; clear the session and show error
-        await this.plugin.sessionService.clear(filePath);
-        this.renderError([
-          `Cannot resume session: ${missingIds.length} node(s) referenced in the saved session no longer exist in the canvas.`,
-          'The canvas may have been edited since the session was saved.',
-          'Starting over. Run the protocol again to begin a fresh session.',
-        ]);
-        return;
-      }
-
-      // SESSION-04: check canvas mtime against the saved timestamp
-      const warnings: string[] = [];
-      if (file instanceof TFile && file.stat.mtime > session.canvasMtimeAtSave) {
-        warnings.push('The canvas file has been modified since this session was saved.');
-        warnings.push('Resuming may produce unexpected results if nodes or their content changed.');
-      }
-
-      // SESSION-06: present resume/start-over choice to the user
-      const modal = new ResumeSessionModal(this.app, warnings);
-      modal.open();
-      const choice = await modal.result;
-
-      if (choice === 'resume') {
-        // Restore the runner from the saved session snapshot
-        // Order is critical: setGraph first, then restoreFrom (Pitfall 2)
-        this.graph = graph;
-        this.runner.setGraph(graph);
-        this.runner.restoreFrom(session);
-        this.render();
-        return;
-      }
-
-      // 'start-over' — clear the stale session and fall through to normal start
-      await this.plugin.sessionService.clear(filePath);
+    // ── SESSION-02 → SESSION-06: delegate session resolution to Phase 83 coordinator
+    const resolution = await this.sessionCoordinator.resolveSession(
+      filePath,
+      graph,
+      file,
+      this.runner,
+    );
+    if (resolution.action === 'error') {
+      this.renderError(resolution.messages ?? []);
+      return;
+    }
+    if (resolution.action === 'resume') {
+      this.graph = graph;
+      this.render();
+      return;
     }
 
-    // Normal protocol start (no session, or user chose start-over)
+    // 'start-over' — normal protocol start
     // SESSION-01 Pitfall 3: clear any stale session file once per fresh run,
     // here in openCanvas() rather than inside render() (Pitfall 6).
     await this.plugin.sessionService.clear(filePath);
@@ -438,7 +414,7 @@ export class RunnerView extends ItemView {
 
     const root = this.contentEl.createDiv({ cls: 'rp-runner-view' });
     const previewZone = root.createDiv({ cls: 'rp-preview-zone' });
-    const questionZone = root.createDiv({ cls: 'rp-question-zone' });
+    const questionZone = root.createDiv({ cls: CSS_CLASS.QUESTION_ZONE });
     const outputToolbar = root.createDiv({ cls: 'rp-output-toolbar' });
 
     const state = this.runner.getState();
@@ -447,7 +423,7 @@ export class RunnerView extends ItemView {
       case 'idle': {
         questionZone.createEl('p', {
           text: 'Select a protocol above to get started.',
-          cls: 'rp-empty-state-body',
+          cls: CSS_CLASS.EMPTY_STATE_BODY,
         });
         this.renderPreviewZone(previewZone, '');
         this.renderOutputToolbar(outputToolbar, null, false);
@@ -518,7 +494,7 @@ export class RunnerView extends ItemView {
 
         questionZone.createEl('p', {
           text: 'Loading snippets...',
-          cls: 'rp-empty-state-body',
+          cls: CSS_CLASS.EMPTY_STATE_BODY,
         });
         void this.mountSnippetPicker(state, questionZone);
         break;
@@ -627,7 +603,7 @@ export class RunnerView extends ItemView {
       app: this.app,
       snippetService: this.plugin.snippetService,
       rootPath: this.plugin.settings.snippetFolderPath,
-      hostClass: 'rp-stp-runner-host',
+      hostClass: CSS_CLASS.STP_RUNNER_HOST,
       copy: {
         notFound: (relativePath) => `Сниппет не найден: ${relativePath}`,
         validationError: (snippetPath, validationMessage) =>
@@ -809,27 +785,7 @@ export class RunnerView extends ItemView {
    * Do NOT call this inside render() — only at explicit mutation sites (Pitfall 6).
    */
   private async autoSaveSession(): Promise<void> {
-    if (this.canvasFilePath === null) return;
-    const state = this.runner.getSerializableState();
-    if (state === null) return; // idle, complete, or error — not a valid save point
-
-    // Read canvas mtime for SESSION-04 change detection on resume
-    const file = this.app.vault.getAbstractFileByPath(this.canvasFilePath);
-    const mtime = (file instanceof TFile) ? file.stat.mtime : 0;
-
-    const session: PersistedSession = {
-      version: 1,
-      canvasFilePath: this.canvasFilePath,
-      canvasMtimeAtSave: mtime,
-      savedAt: Date.now(),
-      ...state,
-    };
-    try {
-      await this.plugin.sessionService.save(session);
-    } catch (err) {
-      // Log save errors so silent failures are visible in the developer console
-      console.error('[RadiProtocol] autoSaveSession failed:', err);
-    }
+    await this.sessionCoordinator.autoSave(this.canvasFilePath, this.runner);
   }
 
   // ── Sub-renders ───────────────────────────────────────────────────────────
@@ -917,7 +873,7 @@ export class RunnerView extends ItemView {
       this.contentEl.prepend(this.selectorBarEl);
     }
     const root = this.contentEl.createDiv({ cls: 'rp-runner-view' });
-    const questionZone = root.createDiv({ cls: 'rp-question-zone rp-validation-panel' });
+    const questionZone = root.createDiv({ cls: `${CSS_CLASS.QUESTION_ZONE} rp-validation-panel` });
     renderErrorList(questionZone, errors);
   }
 

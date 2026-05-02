@@ -111,7 +111,7 @@ export function renderFormImpl(
 ): void {
   host.contentEl.empty();
   const panel = host.contentEl.createDiv({ cls: 'rp-editor-panel' });
-  const formArea = panel.createDiv({ cls: 'rp-editor-form' });
+  const formArea = panel.createDiv({ cls: 'rp-editor-form rp-stack' });
 
   // Node type dropdown — always first
   new Setting(formArea)

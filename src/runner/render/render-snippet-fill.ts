@@ -1,5 +1,6 @@
 // runner/render/render-snippet-fill.ts
 // Phase 75 Plan 05 (DEDUP-01) — shared awaiting-snippet-fill renderer helpers.
+import { CSS_CLASS } from '../../constants/css-classes';
 //
 // Owns:
 //   - "Loading snippet..." placeholder paragraph rendered while host loads the
@@ -30,7 +31,7 @@ export function isFullSnippetPath(snippetId: string): boolean {
 export function renderSnippetFillLoading(zone: HTMLElement): void {
   zone.createEl('p', {
     text: 'Loading snippet...',
-    cls: 'rp-empty-state-body',
+    cls: CSS_CLASS.EMPTY_STATE_BODY,
   });
 }
 
@@ -51,6 +52,6 @@ export function renderSnippetFillNotFound(
   const trailer = options.trailer ?? '';
   zone.createEl('p', {
     text: `Snippet '${snippetId}' not found.${trailer}`,
-    cls: 'rp-empty-state-body',
+    cls: CSS_CLASS.EMPTY_STATE_BODY,
   });
 }

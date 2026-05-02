@@ -389,8 +389,8 @@ describe('SnippetManagerView — F2 inline rename (Phase 34 Plan 03)', () => {
       const { view } = makeTreeView();
       await view.onOpen();
       const row = findRow(view, `${root}/note.json`);
-      // Open context menu on the file row
-      (view as any).openContextMenu({ preventDefault() {}, stopPropagation() {} }, {
+      // Open context menu on the file row via the delegated treeRenderer
+      (view as any).treeRenderer['openContextMenu']({ preventDefault() {}, stopPropagation() {} }, {
         kind: 'file', path: `${root}/note.json`, name: 'note', snippetKind: 'json',
       });
       const renameItem = lastMenuItems.find((i) => i.title === 'Переименовать');

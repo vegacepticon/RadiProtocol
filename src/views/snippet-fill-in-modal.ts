@@ -85,7 +85,7 @@ export class SnippetFillInModal extends Modal {
 
   /** Render the appropriate input field for a single placeholder. */
   private renderField(placeholder: SnippetPlaceholder): void {
-    const fieldDiv = this.contentEl.createDiv({ cls: 'rp-snippet-modal-field' });
+    const fieldDiv = this.contentEl.createDiv({ cls: 'rp-snippet-modal-field rp-stack' });
     if (placeholder.type === 'free-text') {
       this.renderFreeTextField(fieldDiv, placeholder);
     } else if (placeholder.type === 'choice') {
@@ -121,7 +121,7 @@ export class SnippetFillInModal extends Modal {
     const legend = fieldset.createEl('legend', { cls: 'rp-snippet-modal-label' });
     legend.textContent = placeholder.label;
 
-    const optionsDiv = fieldset.createDiv({ cls: 'rp-snippet-modal-options' });
+    const optionsDiv = fieldset.createDiv({ cls: 'rp-snippet-modal-options rp-stack' });
     const options = placeholder.options ?? [];
 
     const checkboxEls: HTMLInputElement[] = [];

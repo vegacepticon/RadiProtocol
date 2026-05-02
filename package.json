@@ -7,7 +7,7 @@
     "dev": "node esbuild.config.mjs",
     "build": "tsc -noEmit -skipLibCheck && node esbuild.config.mjs production",
     "version": "node version-bump.mjs && git add manifest.json versions.json",
-    "lint": "eslint .",
+    "lint": "eslint . && stylelint 'src/styles/**/*.css'",
     "test": "vitest run"
   },
   "keywords": [],
@@ -23,6 +23,8 @@
     "eslint-plugin-obsidianmd": "0.1.9",
     "globals": "17.4.0",
     "knip": "^6.4.1",
+    "stylelint": "^17.9.1",
+    "stylelint-config-standard": "^40.0.0",
     "tslib": "2.4.0",
     "typescript": "6.0.2",
     "typescript-eslint": "8.58.0",

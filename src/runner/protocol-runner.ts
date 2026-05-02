@@ -4,6 +4,7 @@ import type { ProtocolGraph, LoopContext } from '../graph/graph-model';
 import type { RunnerState, UndoEntry } from './runner-state';
 import { TextAccumulator } from './text-accumulator';
 import { isExitEdge } from '../graph/node-label';
+import { RUNNER_STATUS } from '../constants/runner-states';
 
 interface ProtocolRunnerOptions {
   /** Hard maximum loop iteration count before transitioning to error state. Default: 50. (D-08, RUN-09) */
@@ -34,7 +35,7 @@ export class ProtocolRunner {
   private undoStack: UndoEntry[] = [];
   /** Phase 66 D-01: silently no-ops a second stepBack call in the same synchronous tick. */
   private _stepBackInFlight = false;
-  private runnerStatus: RunnerState['status'] = 'idle';
+  private runnerStatus: RunnerState['status'] = RUNNER_STATUS.IDLE;
 
   // Extra fields for non-at-node states
   private errorMessage: string | null = null;
@@ -69,7 +70,7 @@ export class ProtocolRunner {
     this.snippetId = null;
     this.snippetNodeId = null;
     this.loopContextStack = [];
-    this.runnerStatus = 'at-node';
+    this.runnerStatus = RUNNER_STATUS.AT_NODE;
     // Auto-advance from the explicit start or graph.startNodeId default
     this.advanceThrough(startNodeId ?? graph.startNodeId);
   }
@@ -80,7 +81,7 @@ export class ProtocolRunner {
    * Pushes undo entry BEFORE mutation (D-03, D-04).
    */
   chooseAnswer(answerId: string): void {
-    if (this.runnerStatus !== 'at-node') return;
+    if (this.runnerStatus !== RUNNER_STATUS.AT_NODE) return;
     if (this.graph === null || this.currentNodeId === null) return;
 
     const answerNode = this.graph.nodes.get(answerId);
@@ -123,7 +124,7 @@ export class ProtocolRunner {
    * which reflects any synced manual edit.
    */
   skip(): void {
-    if (this.runnerStatus !== 'at-node') return;
+    if (this.runnerStatus !== RUNNER_STATUS.AT_NODE) return;
     if (this.graph === null || this.currentNodeId === null) return;
 
     const currentNode = this.graph.nodes.get(this.currentNodeId);
@@ -167,7 +168,7 @@ export class ProtocolRunner {
    * later via completeSnippet().
    */
   chooseSnippetBranch(snippetNodeId: string): void {
-    if (this.runnerStatus !== 'at-node') return;
+    if (this.runnerStatus !== RUNNER_STATUS.AT_NODE) return;
     if (this.graph === null || this.currentNodeId === null) return;
 
     const currentNode = this.graph.nodes.get(this.currentNodeId);
@@ -205,7 +206,7 @@ export class ProtocolRunner {
     // Transition to picker at the snippet node — no accumulator mutation.
     this.currentNodeId = snippetNodeId;
     this.snippetNodeId = snippetNodeId;
-    this.runnerStatus = 'awaiting-snippet-pick';
+    this.runnerStatus = RUNNER_STATUS.AWAITING_SNIPPET_PICK;
   }
 
   /**
@@ -223,7 +224,7 @@ export class ProtocolRunner {
    * (D-10). The dispatch call site is unchanged; only the predicate semantics shifted.
    */
   chooseLoopBranch(edgeId: string): void {
-    if (this.runnerStatus !== 'awaiting-loop-pick') return;
+    if (this.runnerStatus !== RUNNER_STATUS.AWAITING_LOOP_PICK) return;
     if (this.graph === null || this.currentNodeId === null) return;
 
     const edge = this.graph.edges.find(e => e.id === edgeId);
@@ -239,7 +240,7 @@ export class ProtocolRunner {
       nodeId: this.currentNodeId,
       textSnapshot: this.accumulator.snapshot(),
       loopContextStack: this.loopContextStack.map(f => ({ ...f })),
-      restoreStatus: 'awaiting-loop-pick',
+      restoreStatus: RUNNER_STATUS.AWAITING_LOOP_PICK,
     });
 
     if (isExitEdge(edge)) {
@@ -261,7 +262,7 @@ export class ProtocolRunner {
     // iteration = 2*N + 1 after N picks — confusing and out of line with the
     // Plan 02b RUN-02 assertion expect(iteration).toBe(2).
 
-    this.runnerStatus = 'at-node';
+    this.runnerStatus = RUNNER_STATUS.AT_NODE;
     this.advanceThrough(edge.toNodeId);
   }
 
@@ -285,7 +286,7 @@ export class ProtocolRunner {
       this.currentNodeId = entry.nodeId;
       this.accumulator.restoreTo(entry.textSnapshot);
       this.loopContextStack = [...entry.loopContextStack];
-      this.runnerStatus = 'at-node';
+      this.runnerStatus = RUNNER_STATUS.AT_NODE;
       this.snippetId = null;
       this.snippetNodeId = null;
       this.errorMessage = null;
@@ -295,7 +296,7 @@ export class ProtocolRunner {
     this.currentNodeId = entry.nodeId;
     this.accumulator.restoreTo(entry.textSnapshot);
     this.loopContextStack = [...entry.loopContextStack]; // restore from snapshot (LOOP-05)
-    this.runnerStatus = entry.restoreStatus ?? 'at-node';
+    this.runnerStatus = entry.restoreStatus ?? RUNNER_STATUS.AT_NODE;
     this.errorMessage = null;
     this.snippetId = null;
     this.snippetNodeId = null;
@@ -310,7 +311,7 @@ export class ProtocolRunner {
    * directly (no placeholders, D-09).
    */
   pickSnippet(snippetId: string): void {
-    if (this.runnerStatus !== 'awaiting-snippet-pick') return;
+    if (this.runnerStatus !== RUNNER_STATUS.AWAITING_SNIPPET_PICK) return;
     if (this.currentNodeId === null) return;
 
     // Pattern A: undo-before-mutate. Deep-copy loopContextStack frames (LOOP-05).
@@ -318,12 +319,12 @@ export class ProtocolRunner {
       nodeId: this.currentNodeId,
       textSnapshot: this.accumulator.snapshot(),
       loopContextStack: this.loopContextStack.map(f => ({ ...f })),
-      restoreStatus: 'awaiting-snippet-pick',
+      restoreStatus: RUNNER_STATUS.AWAITING_SNIPPET_PICK,
     });
 
     this.snippetId = snippetId;
     this.snippetNodeId = this.currentNodeId;
-    this.runnerStatus = 'awaiting-snippet-fill';
+    this.runnerStatus = RUNNER_STATUS.AWAITING_SNIPPET_FILL;
   }
 
   /**
@@ -351,7 +352,7 @@ export class ProtocolRunner {
     snippetNodeId: string,
     snippetPath: string,
   ): void {
-    if (this.runnerStatus !== 'at-node') return;
+    if (this.runnerStatus !== RUNNER_STATUS.AT_NODE) return;
     if (this.currentNodeId !== questionNodeId) return;
 
     // D-15 undo-before-mutate — identical UndoEntry shape to pickSnippet (:305).
@@ -364,7 +365,7 @@ export class ProtocolRunner {
     this.snippetId = snippetPath;
     this.snippetNodeId = snippetNodeId;
     this.currentNodeId = snippetNodeId;
-    this.runnerStatus = 'awaiting-snippet-fill';
+    this.runnerStatus = RUNNER_STATUS.AWAITING_SNIPPET_FILL;
   }
 
   /**
@@ -373,7 +374,7 @@ export class ProtocolRunner {
    * Appends the pre-rendered text and advances past the snippet text-block node.
    */
   completeSnippet(renderedText: string): void {
-    if (this.runnerStatus !== 'awaiting-snippet-fill') return;
+    if (this.runnerStatus !== RUNNER_STATUS.AWAITING_SNIPPET_FILL) return;
     if (this.graph === null || this.snippetNodeId === null) return;
 
     const pendingNodeId = this.snippetNodeId;
@@ -385,7 +386,7 @@ export class ProtocolRunner {
     this.accumulator.appendWithSeparator(renderedText, snippetSep);
     this.snippetId = null;
     this.snippetNodeId = null;
-    this.runnerStatus = 'at-node'; // Reset before advanceThrough determines next state
+    this.runnerStatus = RUNNER_STATUS.AT_NODE; // Reset before advanceThrough determines next state
 
     // Advance from the node that had the snippetId.
     // Phase 44 UAT-fix: dead-end snippet inside a loop body returns to the owning picker
@@ -414,7 +415,7 @@ export class ProtocolRunner {
    * «выход» exit, back-edge re-entry, and dead-end return.
    */
   syncManualEdit(text: string): void {
-    if (this.runnerStatus !== 'at-node' && this.runnerStatus !== 'awaiting-loop-pick') return;
+    if (this.runnerStatus !== RUNNER_STATUS.AT_NODE && this.runnerStatus !== RUNNER_STATUS.AWAITING_LOOP_PICK) return;
     this.accumulator.overwrite(text);
   }
 
@@ -424,55 +425,55 @@ export class ProtocolRunner {
    */
   getState(): RunnerState {
     switch (this.runnerStatus) {
-      case 'idle':
-        return { status: 'idle' };
-      case 'at-node': {
+      case RUNNER_STATUS.IDLE:
+        return { status: RUNNER_STATUS.IDLE };
+      case RUNNER_STATUS.AT_NODE: {
         return {
-          status: 'at-node',
+          status: RUNNER_STATUS.AT_NODE,
           currentNodeId: this.currentNodeId ?? '',
           accumulatedText: this.accumulator.current,
           canStepBack: this.undoStack.length > 0,
         };
       }
-      case 'awaiting-snippet-pick': {
+      case RUNNER_STATUS.AWAITING_SNIPPET_PICK: {
         if (this.graph === null || this.currentNodeId === null) {
-          return { status: 'error', message: 'invalid awaiting-snippet-pick' };
+          return { status: RUNNER_STATUS.ERROR, message: 'invalid awaiting-snippet-pick' };
         }
         const node = this.graph.nodes.get(this.currentNodeId);
         const subfolderPath =
           node !== undefined && node.kind === 'snippet' ? node.subfolderPath : undefined;
         return {
-          status: 'awaiting-snippet-pick',
+          status: RUNNER_STATUS.AWAITING_SNIPPET_PICK,
           nodeId: this.currentNodeId,
           subfolderPath,
           accumulatedText: this.accumulator.current,
           canStepBack: this.undoStack.length > 0,
         };
       }
-      case 'awaiting-loop-pick':
+      case RUNNER_STATUS.AWAITING_LOOP_PICK:
         return {
-          status: 'awaiting-loop-pick',
+          status: RUNNER_STATUS.AWAITING_LOOP_PICK,
           nodeId: this.currentNodeId ?? '',
           accumulatedText: this.accumulator.current,
           canStepBack: this.undoStack.length > 0,
         };
-      case 'awaiting-snippet-fill':
+      case RUNNER_STATUS.AWAITING_SNIPPET_FILL:
         return {
-          status: 'awaiting-snippet-fill',
+          status: RUNNER_STATUS.AWAITING_SNIPPET_FILL,
           snippetId: this.snippetId ?? '',
           nodeId: this.snippetNodeId ?? '',
           accumulatedText: this.accumulator.current,
           canStepBack: this.undoStack.length > 0,
         };
-      case 'complete':
-        return { status: 'complete', finalText: this.accumulator.current };
-      case 'error':
-        return { status: 'error', message: this.errorMessage ?? 'Unknown error.' };
+      case RUNNER_STATUS.COMPLETE:
+        return { status: RUNNER_STATUS.COMPLETE, finalText: this.accumulator.current };
+      case RUNNER_STATUS.ERROR:
+        return { status: RUNNER_STATUS.ERROR, message: this.errorMessage ?? 'Unknown error.' };
       default: {
         // TypeScript exhaustiveness check
         const _exhaustive: never = this.runnerStatus;
         void _exhaustive;
-        return { status: 'error', message: 'Unknown runner status.' };
+        return { status: RUNNER_STATUS.ERROR, message: 'Unknown runner status.' };
       }
     }
   }
@@ -489,7 +490,7 @@ export class ProtocolRunner {
    * savedAt, and version to complete the PersistedSession shape before writing.
    */
   getSerializableState(): {
-    runnerStatus: 'at-node' | 'awaiting-snippet-pick' | 'awaiting-snippet-fill' | 'awaiting-loop-pick';
+    runnerStatus: typeof RUNNER_STATUS.AT_NODE | typeof RUNNER_STATUS.AWAITING_SNIPPET_PICK | typeof RUNNER_STATUS.AWAITING_SNIPPET_FILL | typeof RUNNER_STATUS.AWAITING_LOOP_PICK;
     currentNodeId: string;
     accumulatedText: string;
     undoStack: Array<{ nodeId: string; textSnapshot: string; loopContextStack: Array<{ loopNodeId: string; iteration: number; textBeforeLoop: string }>; returnToBranchList?: boolean }>;
@@ -498,10 +499,10 @@ export class ProtocolRunner {
     snippetNodeId: string | null;
   } | null {
     if (
-      this.runnerStatus !== 'at-node' &&
-      this.runnerStatus !== 'awaiting-snippet-fill' &&
-      this.runnerStatus !== 'awaiting-snippet-pick' &&
-      this.runnerStatus !== 'awaiting-loop-pick'
+      this.runnerStatus !== RUNNER_STATUS.AT_NODE &&
+      this.runnerStatus !== RUNNER_STATUS.AWAITING_SNIPPET_FILL &&
+      this.runnerStatus !== RUNNER_STATUS.AWAITING_SNIPPET_PICK &&
+      this.runnerStatus !== RUNNER_STATUS.AWAITING_LOOP_PICK
     ) {
       return null;
     }
@@ -547,7 +548,7 @@ export class ProtocolRunner {
    * is never in error state).
    */
   restoreFrom(session: {
-    runnerStatus: 'at-node' | 'awaiting-snippet-pick' | 'awaiting-snippet-fill' | 'awaiting-loop-pick';
+    runnerStatus: typeof RUNNER_STATUS.AT_NODE | typeof RUNNER_STATUS.AWAITING_SNIPPET_PICK | typeof RUNNER_STATUS.AWAITING_SNIPPET_FILL | typeof RUNNER_STATUS.AWAITING_LOOP_PICK;
     currentNodeId: string;
     accumulatedText: string;
     undoStack: Array<{ nodeId: string; textSnapshot: string; loopContextStack: Array<{ loopNodeId: string; iteration: number; textBeforeLoop: string }>; returnToBranchList?: boolean }>;
@@ -645,7 +646,7 @@ export class ProtocolRunner {
         case 'text-block': {
           if (node.snippetId !== undefined) {
             // D-06: transition to awaiting-snippet-fill for Phase 5 to handle
-            this.runnerStatus = 'awaiting-snippet-fill';
+            this.runnerStatus = RUNNER_STATUS.AWAITING_SNIPPET_FILL;
             this.snippetId = node.snippetId;
             this.snippetNodeId = cursor;
             return;
@@ -665,7 +666,7 @@ export class ProtocolRunner {
           // File-bound Snippet dispatch now flows through RunnerView click handler →
           // ProtocolRunner.pickFileBoundSnippet (see Task 2 of this plan).
           this.currentNodeId = cursor;
-          this.runnerStatus = 'at-node';
+          this.runnerStatus = RUNNER_STATUS.AT_NODE;
           return;
         }
         case 'answer': {
@@ -692,7 +693,7 @@ export class ProtocolRunner {
           if (top !== undefined && top.loopNodeId === cursor) {
             top.iteration += 1;
             this.currentNodeId = cursor;
-            this.runnerStatus = 'awaiting-loop-pick';
+            this.runnerStatus = RUNNER_STATUS.AWAITING_LOOP_PICK;
             return;
           }
 
@@ -712,7 +713,7 @@ export class ProtocolRunner {
             nodeId: previousCursor !== null ? previousCursor : cursor,
             textSnapshot: this.accumulator.snapshot(),
             loopContextStack: this.loopContextStack.map(f => ({ ...f })),
-            restoreStatus: 'awaiting-loop-pick',
+            restoreStatus: RUNNER_STATUS.AWAITING_LOOP_PICK,
           });
           this.loopContextStack.push({
             loopNodeId: cursor,
@@ -720,7 +721,7 @@ export class ProtocolRunner {
             textBeforeLoop: this.accumulator.snapshot(),
           });
           this.currentNodeId = cursor;
-          this.runnerStatus = 'awaiting-loop-pick';
+          this.runnerStatus = RUNNER_STATUS.AWAITING_LOOP_PICK;
           return;
         }
         case 'loop-start':
@@ -749,10 +750,10 @@ export class ProtocolRunner {
             // File-bound: direct dispatch — view's existing 'awaiting-snippet-fill' arm handles handleSnippetFill.
             this.snippetId = node.radiprotocol_snippetPath;
             this.snippetNodeId = cursor;
-            this.runnerStatus = 'awaiting-snippet-fill';
+            this.runnerStatus = RUNNER_STATUS.AWAITING_SNIPPET_FILL;
           } else {
             // Directory-bound (or unbound) — Phase 30 D-07 picker path preserved.
-            this.runnerStatus = 'awaiting-snippet-pick';
+            this.runnerStatus = RUNNER_STATUS.AWAITING_SNIPPET_PICK;
           }
           return;
         }
@@ -793,7 +794,7 @@ export class ProtocolRunner {
         // case 'loop' → B1 guard, which is a different code path and NOT this helper.
         frame.iteration += 1;
         this.currentNodeId = frame.loopNodeId;
-        this.runnerStatus = 'awaiting-loop-pick';
+        this.runnerStatus = RUNNER_STATUS.AWAITING_LOOP_PICK;
         return 'halted';
       }
     }
@@ -809,11 +810,11 @@ export class ProtocolRunner {
   }
 
   private transitionToComplete(): void {
-    this.runnerStatus = 'complete';
+    this.runnerStatus = RUNNER_STATUS.COMPLETE;
   }
 
   private transitionToError(message: string): void {
-    this.runnerStatus = 'error';
+    this.runnerStatus = RUNNER_STATUS.ERROR;
     this.errorMessage = message;
   }
 }

@@ -3,9 +3,7 @@
    removed in Phase 33 Plan 04 when the legacy layout was deleted). */
 
 .rp-snippet-form-section {
-  display: flex;
-  flex-direction: column;
-  gap: var(--size-2-1); /* 4px */
+  /* migrated to .rp-stack utility (Phase 80) */
 }
 
 .rp-snippet-form-section label {

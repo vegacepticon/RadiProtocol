@@ -330,8 +330,12 @@ describe('SnippetManagerView — tree rendering and interactions', () => {
     expect(source).not.toContain('rp-snippet-list-item');
     expect(source).not.toContain('renderListPanel');
     expect(source).not.toContain('renderFormPanel');
-    // And must contain the new tree class marker
-    expect(source).toContain('radi-snippet-tree-row');
+    // Phase 82: tree rendering extracted to tree-renderer.ts
+    const treeSource = fs.readFileSync(
+      path.join(__dirname, '..', 'views', 'snippet-manager', 'tree-renderer.ts'),
+      'utf8',
+    );
+    expect(treeSource).toContain('radi-snippet-tree-row');
   });
 
   it('TREE-03: clicking a file row opens SnippetEditorModal in edit mode', async () => {

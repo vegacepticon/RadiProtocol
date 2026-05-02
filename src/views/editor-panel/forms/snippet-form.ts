@@ -10,6 +10,7 @@
 import { Setting } from 'obsidian';
 import { SnippetTreePicker } from '../../snippet-tree-picker';
 import type { FormContext } from './_shared';
+import { CSS_CLASS } from '../../../constants/css-classes';
 
 export function renderSnippetForm(
   container: HTMLElement,
@@ -32,7 +33,7 @@ export function renderSnippetForm(
       'Папка и файл взаимно исключительны (D-01).'
     );
 
-  const pickerHost = container.createDiv({ cls: 'rp-stp-editor-host' });
+  const pickerHost = container.createDiv({ cls: CSS_CLASS.STP_EDITOR_HOST });
 
   const existingFilePath = nodeRecord['radiprotocol_snippetPath'];
   const existingFolderPath = nodeRecord['radiprotocol_subfolderPath'];

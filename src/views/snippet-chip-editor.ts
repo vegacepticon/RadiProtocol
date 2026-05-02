@@ -91,7 +91,7 @@ export function mountChipEditor(
   // Phase 33 gap-fix: skipped when mounted inside SnippetEditorModal (the modal
   // owns the «Имя» field). Standalone callers still get the Name input.
   if (!skipName) {
-    const nameSection = container.createDiv({ cls: 'rp-snippet-form-section' });
+    const nameSection = container.createDiv({ cls: 'rp-snippet-form-section rp-stack' });
     const nameLabel = nameSection.createEl('label');
     nameLabel.textContent = 'Name';
     nameLabel.htmlFor = 'rp-snippet-name-input';
@@ -106,7 +106,7 @@ export function mountChipEditor(
   }
 
   // --- Template section ---
-  const templateSection = container.createDiv({ cls: 'rp-snippet-form-section' });
+  const templateSection = container.createDiv({ cls: 'rp-snippet-form-section rp-stack' });
   const templateLabel = templateSection.createEl('label');
   templateLabel.textContent = 'Template';
   templateLabel.htmlFor = 'rp-snippet-template-input';
@@ -156,7 +156,7 @@ export function mountChipEditor(
   miniCancelBtn.setAttribute('type', 'button');
 
   // Placeholder list (built/rebuilt below)
-  const placeholderSection = container.createDiv({ cls: 'rp-snippet-form-section' });
+  const placeholderSection = container.createDiv({ cls: 'rp-snippet-form-section rp-stack' });
   const placeholderHeading = placeholderSection.createEl('label');
   placeholderHeading.textContent = 'Placeholders';
   const placeholderList = placeholderSection.createDiv({ cls: 'rp-placeholder-list' });
@@ -319,7 +319,7 @@ export function mountChipEditor(
     on(expanded, 'click', (e: MouseEvent) => { e.stopPropagation(); });
 
     // Label field
-    const labelSec = expanded.createDiv({ cls: 'rp-snippet-form-section' });
+    const labelSec = expanded.createDiv({ cls: 'rp-snippet-form-section rp-stack' });
     const labelLbl = labelSec.createEl('label');
     labelLbl.textContent = 'Label';
     labelLbl.htmlFor = `rp-ph-label-${ph.id}`;
@@ -333,7 +333,7 @@ export function mountChipEditor(
     });
 
     // Type dropdown
-    const typeSec = expanded.createDiv({ cls: 'rp-snippet-form-section' });
+    const typeSec = expanded.createDiv({ cls: 'rp-snippet-form-section rp-stack' });
     const typeLbl = typeSec.createEl('label');
     typeLbl.textContent = 'Type';
     typeLbl.htmlFor = `rp-ph-type-${ph.id}`;
@@ -363,7 +363,7 @@ export function mountChipEditor(
     });
 
     // Options list (D-06)
-    const optionsSec = expanded.createDiv({ cls: 'rp-snippet-form-section' });
+    const optionsSec = expanded.createDiv({ cls: 'rp-snippet-form-section rp-stack' });
     const optionsLbl = optionsSec.createEl('label');
     optionsLbl.textContent = 'Options';
     const optionList = optionsSec.createDiv({ cls: 'rp-option-list' });
@@ -409,7 +409,7 @@ export function mountChipEditor(
 
     // Phase 52 D-02/D-05: Разделитель rendered for all choice placeholders
     if (ph.type === 'choice') {
-      const sepSec = expanded.createDiv({ cls: 'rp-snippet-form-section' });
+      const sepSec = expanded.createDiv({ cls: 'rp-snippet-form-section rp-stack' });
       const sepLabel = sepSec.createEl('label');
       sepLabel.textContent = 'Разделитель';
       sepLabel.htmlFor = `rp-ph-sep-${ph.id}`;
