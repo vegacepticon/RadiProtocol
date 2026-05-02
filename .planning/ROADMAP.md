@@ -1,7 +1,7 @@
 # Roadmap: RadiProtocol
 
 **Project:** RadiProtocol
-**Last updated:** 2026-05-02 (v1.13 milestone opened — Phases 79–83 appended; v1.12 closed 2026-05-02 with 7/7 requirements satisfied per MILESTONE-AUDIT.md)
+**Last updated:** 2026-05-03 (v1.14 milestone opened — Phases 84–86 appended; v1.13 closed 2026-05-02 with 5/5 requirements satisfied per MILESTONE-AUDIT.md)
 
 ---
 
@@ -20,14 +20,28 @@
 - ✅ **v1.11 Inline Polish, Loop Hint, Donate & Canvas Library** — Phases 69-74 (shipped 2026-04-30)
 - ✅ **v1.12 Maintenance & Tech Debt** — Phases 75-78 (closed 2026-05-02, internal-only)
 - ✅ **v1.13 AI-Agent Friction Reduction & Codebase Health** — Phases 79-83 (closed 2026-05-02; 5/5 phases complete; internal-only, no release)
+- 🚧 **v1.14 Internationalization, Documentation & Infrastructure** — Phases 84-86 (opened 2026-05-03)
 
-_v1.12 closed 2026-05-02 — 7/7 requirements satisfied; internal-only, no GitHub Release. v1.13 opened 2026-05-02 — internal-only milestone, no GitHub Release planned for `1.13.0`._
+_v1.12 closed 2026-05-02 — 7/7 requirements satisfied; internal-only, no GitHub Release. v1.13 closed 2026-05-02 — 5/5 requirements satisfied; internal-only, no GitHub Release. v1.14 opened 2026-05-03 — user-facing milestone (i18n, docs, parallel inline runners, template library MVP)._
 
 ---
 
 ## Phases
 
 ### Archived milestones
+
+<details>
+<summary>🚧 v1.14 Internationalization, Documentation & Infrastructure (Phases 84-86) — OPEN 2026-05-03</summary>
+
+- [ ] Phase 84: i18n + Documentation (4 requirements: I18N-01, I18N-02, DOC-01, DOC-02) — planning
+- [ ] Phase 85: Multiple Inline Runners (2 requirements: INLINE-MULTI-01, INLINE-MULTI-02) — planning
+- [ ] Phase 86: Template Library MVP (2 requirements: TEMPLATE-LIB-01, TEMPLATE-LIB-02) — planning
+
+8/8 requirements active; 0 complete. Research completed at open: text-block bug (no root cause in engine), inline-multi (Stage 1 SMALL), template library (MVP SMALL).
+
+Full details: `.planning/REQUIREMENTS.md` (v1.14), `.planning/STATE.md` (v1.14 open).
+
+</details>
 
 <details>
 <summary>✅ v1.13 AI-Agent Friction Reduction & Codebase Health (Phases 79-83) — CLOSED 2026-05-02 (internal-only, no GitHub Release)</summary>
@@ -455,13 +469,57 @@ Full details: `.planning/archive/milestones/v1.10-ROADMAP.md`
 
 ---
 
+### Phase 84: i18n + Documentation
+**Goal**: Full internationalization infrastructure plus repository documentation. Extract all user-facing Russian strings into locale JSON files (`en.json`, `ru.json`) with English as the default for new installs; provide a type-safe `t()` translation service consumed by all UI modules; add a language dropdown to plugin Settings. Create a comprehensive README.md at repo root and two docs files (`PROTOCOL-AUTHORING.md`, `CONTRIBUTING.md`) to support future contributors and GitHub discoverability.
+**Depends on**: Nothing (new surface; no contract changes to runner, canvas parser, or snippet system)
+**Requirements**: I18N-01, I18N-02, DOC-01, DOC-02
+**Success Criteria** (what must be TRUE):
+  1. `src/i18n/locales/en.json` and `src/i18n/locales/ru.json` exist and contain every user-facing string currently hard-coded in Russian across `src/views/`, `src/settings.ts`, `src/donate/wallets.ts`, `src/graph/graph-validator.ts`, and `src/runner/protocol-runner.ts`; `git grep -n '[а-яА-Я]' src/ --exclude-dir=__tests__` returns zero matches outside locale files and test fixtures (I18N-01)
+  2. A type-safe `t(key: TranslationKey)` service exists at `src/i18n/translate.ts` (or equivalent); every call site in `src/` consumes it with compile-time key validation (no `as string` casts); changing the active locale at runtime updates all visible UI text without restart (I18N-01)
+  3. Plugin Settings contains a "Language / Язык" dropdown with two options: English (английский) and Russian (русский); selection persists via `PluginSettings` and applies on next `PluginSettingTab` render; default for new installs is English (I18N-02)
+  4. `README.md` at repo root includes: project description, feature list, BRAT + manual installation instructions, quick-start guide, screenshot placeholders, and a link to `docs/PROTOCOL-AUTHORING.md` (DOC-01)
+  5. `docs/PROTOCOL-AUTHORING.md` explains canvas node kinds, edge labels, loops, and snippets with examples; `docs/CONTRIBUTING.md` covers dev setup (`npm install`, `npm run build`, `npm test`), PR workflow, and the per-feature CSS architecture from CLAUDE.md (DOC-02)
+  6. `npm run build`, `npm run lint`, and `npm test` all exit 0 after the phase; no behavior regressions in runner, editor, or snippet manager (I18N-01, I18N-02, DOC-01, DOC-02)
+**Plans:** TBD
+**UI hint**: yes
+
+### Phase 85: Multiple Inline Runners
+**Goal**: Allow multiple concurrent Inline Runner sessions on different notes/canvas pairs by introducing a plugin-level registry (`Set<InlineRunnerModal>`), per-instance cleanup, and cascade positioning so modals don't stack on top of each other. Session recovery for inline runners is deferred — the scope is "open new sessions", not "resume old ones".
+**Depends on**: Nothing (new feature; no contract changes to existing runner state machine)
+**Requirements**: INLINE-MULTI-01, INLINE-MULTI-02
+**Success Criteria** (what must be TRUE):
+  1. Opening an Inline Runner on note A with canvas X, then opening another Inline Runner on note B with canvas Y, produces two visible modals — not one replacing the other (INLINE-MULTI-01)
+  2. Closing either modal cleans up only its own instance (DOM, listeners, `this.plugin.inlineRunner` reference) without affecting the other — verified by DOM inspection and `plugin.inlineRunners.size` (or equivalent registry) decrementing by exactly 1 (INLINE-MULTI-01)
+  3. Cascade positioning: the second modal opens at `(top + 24px, left + 24px)` relative to the most recently opened modal, capped at viewport bounds with wrap-around logic so modals never render off-screen (INLINE-MULTI-02)
+  4. `(canvasPath, notePath)` uniqueness: attempting to open an inline runner for an already-active pair focuses the existing modal rather than spawning a duplicate (INLINE-MULTI-02)
+  5. `npm test` exits 0; `npm run build` exits 0; `npm run lint` exits 0 (INLINE-MULTI-01, INLINE-MULTI-02)
+**Plans:** TBD
+**UI hint**: yes
+
+### Phase 86: Template Library MVP
+**Goal**: A minimal template library allowing users to browse and install community snippet canvases from a GitHub-hosted index. Phase scope: fetch a JSON index from a known GitHub raw URL, render a simple list in SnippetManagerView, and install selected items as `.canvas` files into the user's vault under `.radiprotocol/snippets/Library/`. No upload, no ratings, no search — browse + install only.
+**Depends on**: Nothing (new feature; reuses existing `SnippetService` CRUD and canvas parser)
+**Requirements**: TEMPLATE-LIB-01, TEMPLATE-LIB-02
+**Success Criteria** (what must be TRUE):
+  1. `LibraryService` exists at `src/snippets/library-service.ts` (or equivalent) and fetches a JSON index from a configurable GitHub raw URL via Obsidian's `requestUrl()`; index schema is versioned (v1) and validated before consumption (TEMPLATE-LIB-01)
+  2. SnippetManagerView renders a «🌐 Library» button (or tab) that opens a simple list of available templates; clicking an item downloads its `.canvas` file and any referenced `.md` snippet files into `.radiprotocol/snippets/Library/<template-name>/` (TEMPLATE-LIB-01)
+  3. Installed templates appear in the SnippetManagerView tree under a "Library" virtual folder and behave like user-created snippets (editable, deletable, runnable) (TEMPLATE-LIB-02)
+  4. `npm test` exits 0; `npm run build` exits 0; `npm run lint` exits 0 (TEMPLATE-LIB-01, TEMPLATE-LIB-02)
+**Plans:** TBD
+**UI hint**: yes
+
+---
+
 ## Progress
 
 **Execution Order (v1.12 — closed):**
 Phases 75, 76, 77 were independent; Phase 78 strictly depended on Phase 77. v1.12 closed 2026-05-02 with 7/7 requirements satisfied (Phase 75 work-tree-complete but uncommitted; see STATE.md "Open Tech Debt at v1.13 open"). Internal-only — no GitHub Release for `1.12.0`.
 
-**Execution Order (v1.13 — active):**
-Phases 79, 80, 81 are independent foundations and can run in any order or in parallel. Phases 82 and 83 are independent of each other and of the foundations, but **strongly benefit from Phases 79 and 81 landing first** (typed surfaces reduce double-rewrites of moved call sites). Phase 83 also strongly benefits from the v1.12 Phase 75 atomic-commit cleanup landing first. Recommended order: 79 → 81 → 80 → 82 → 83, with 80 (stylelint) interleaved wherever convenient. No hard dependencies between v1.13 phases. Internal-only — no GitHub Release for `1.13.0`.
+**Execution Order (v1.13 — closed):**
+Phases 79, 80, 81 are independent foundations and can run in any order or in parallel. Phases 82 and 83 are independent of each other and of the foundations, but **strongly benefit from Phases 79 and 81 landing first** (typed surfaces reduce double-rewrites of moved call sites). Phase 83 also strongly benefits from the v1.12 Phase 75 atomic-commit cleanup landing first. Recommended order: 79 → 81 → 80 → 82 → 83, with 80 (stylelint) interleaved wherever convenient. No hard dependencies between v1.13 phases. Internal-only — no GitHub Release for `1.13.0`. v1.13 closed 2026-05-02 with 5/5 requirements satisfied.
+
+**Execution Order (v1.14 — active):**
+Phases 84, 85, 86 are independent and can run in any order or in parallel. Recommended order: 84 → 85 → 86 because Phase 84's i18n changes touch many UI files that Phases 85 and 86 also modify; doing i18n first avoids double-translation work. Phase 85's inline-runner registry changes are localized to `InlineRunnerModal` + `main.ts` and do not conflict with Phase 86's SnippetManagerView changes. All three phases are user-facing and may warrant a GitHub Release if polished.
 
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
@@ -490,10 +548,13 @@ Phases 79, 80, 81 are independent foundations and can run in any order or in par
 | 81 | v1.13 | 5/5 | Complete | 2026-05-02 |
 | 82 | v1.13 | 5/5 | Complete | 2026-05-02 |
 | 83 | v1.13 | 5/5 | Complete | 2026-05-02 |
+| 84 | v1.14 | 0/0 | Planning | — |
+| 85 | v1.14 | 0/0 | Planning | — |
+| 86 | v1.14 | 0/0 | Planning | — |
 
 
 ---
 
 ## Backlog
 
-(empty — items promoted to v1.13 phases 79-83)
+(empty — all items promoted to v1.14 phases 84–86)

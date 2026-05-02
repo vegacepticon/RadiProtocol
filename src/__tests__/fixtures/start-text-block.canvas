@@ -1,0 +1,11 @@
+{
+  "nodes": [
+    { "id": "n-start", "type": "text", "text": "Start", "x": 0, "y": 0, "width": 200, "height": 60, "radiprotocol_nodeType": "start" },
+    { "id": "n-tb1", "type": "text", "text": "Hello from text-block", "x": 0, "y": 120, "width": 200, "height": 60, "radiprotocol_nodeType": "text-block" },
+    { "id": "n-q1", "type": "text", "text": "Q1", "x": 0, "y": 240, "width": 200, "height": 60, "radiprotocol_nodeType": "question", "radiprotocol_questionText": "Next question?" }
+  ],
+  "edges": [
+    { "id": "e1", "fromNode": "n-start", "toNode": "n-tb1" },
+    { "id": "e2", "fromNode": "n-tb1", "toNode": "n-q1" }
+  ]
+}

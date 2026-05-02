@@ -1,5 +1,30 @@
 # Milestones
 
+## v1.14 Internationalization, Documentation & Infrastructure (Opened: 2026-05-03)
+
+**Phases planned:** 3 phases (84–86), 8 requirements
+**Timeline:** 2026-05-03 → TBD
+**Git:** New branch `dev/v1.14-i18n-docs-infra` recommended; PR to `main` at milestone close
+**Release:** Optional — user-facing changes (i18n, parallel inline runners) may warrant a BRAT update if polished; otherwise internal-only like v1.12/v1.13.
+
+**Key targets:**
+
+- Phase 84: i18n + Documentation — locale files (`en.json`, `ru.json`), type-safe `t()` service, settings language dropdown; README.md at repo root; `docs/PROTOCOL-AUTHORING.md` and `docs/CONTRIBUTING.md`
+- Phase 85: Multiple Inline Runners — plugin registry (`Set<InlineRunnerModal>`), per-instance cleanup, cascade positioning (+24px offset), `(canvasPath, notePath)` uniqueness check
+- Phase 86: Template Library MVP — `LibraryService` fetching index from GitHub raw, `installSnippet()` via `requestUrl()`, SnippetManagerView «🌐 Library» button
+
+**Research completed at open:**
+
+- Text-block after start node: runner core handles correctly; tests added (`start-text-block.test.ts`). No bug in engine.
+- Multiple inline runners: MEDIUM complexity (Stage 1 SMALL). Registry + cleanup + cascade = 1–2 days. Session recovery deferred.
+- Template library: MVP SMALL (~1–2 days). GitHub raw + existing `SnippetService` CRUD.
+
+**Audit:** Pending at milestone close.
+
+**Archive:** Pending at milestone close.
+
+---
+
 ## v1.13 AI-Agent Friction Reduction & Codebase Health (Closed: 2026-05-02 — internal-only, no GitHub Release)
 
 **Phases completed:** 5 phases (79–83), 22 plans, 5/5 requirements satisfied

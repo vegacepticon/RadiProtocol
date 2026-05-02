@@ -12,11 +12,25 @@ A radiologist can generate a structured, accurate protocol in seconds by answeri
 
 **Last shipped:** v1.11 Inline Polish, Loop Hint, Donate & Canvas Library — ✅ SHIPPED 2026-04-30 (GitHub Release `1.11.0`, 3 loose assets, BRAT-installable via `vegacepticon/RadiProtocol`)
 
-**Active milestone:** v1.13 AI-Agent Friction Reduction & Codebase Health — started 2026-05-02
+**Active milestone:** v1.14 Internationalization, Documentation & Infrastructure — started 2026-05-03
 
-**Previous milestone:** v1.12 Maintenance & Tech Debt — ✅ CLOSED 2026-05-02 (internal-only, no GitHub Release; 7/7 requirements satisfied per MILESTONE-AUDIT.md)
+**Previous milestone:** v1.13 AI-Agent Friction Reduction & Codebase Health — ✅ CLOSED 2026-05-02 (internal-only, no GitHub Release; 5/5 requirements satisfied per MILESTONE-AUDIT.md)
 
-## Current Milestone: v1.13 AI-Agent Friction Reduction & Codebase Health
+**Older milestone:** v1.12 Maintenance & Tech Debt — ✅ CLOSED 2026-05-02 (internal-only, no GitHub Release; 7/7 requirements satisfied per MILESTONE-AUDIT.md)
+
+## Current Milestone: v1.14 Internationalization, Documentation & Infrastructure
+
+**Goal:** Deliver user-facing and infrastructure improvements: full English/Russian i18n with runtime locale switch, comprehensive README and contributor documentation, parallel inline runner sessions, and a template library MVP for community snippet sharing. Builds on v1.13's typed surfaces and decomposed views.
+
+**Target features:**
+- i18n infrastructure — locale files (`en.json`, `ru.json`), type-safe `t()` function, settings dropdown for language selection; all user-facing Russian strings extracted and English made default for new installs
+- README.md at repo root — features, BRAT/manual installation, quick-start guide, screenshot placeholders
+- `docs/` folder with `PROTOCOL-AUTHORING.md` and `CONTRIBUTING.md`
+- Multiple inline runners — plugin-level registry, per-instance cleanup, cascade positioning; allows parallel sessions on different notes
+- Template library MVP — `LibraryService` fetching index from GitHub raw, install into `.radiprotocol/snippets/Library/`, SnippetManagerView integration
+- No GitHub Release required for `1.14.0` unless user-facing polish warrants a BRAT update
+
+**Previous Milestone: v1.13 AI-Agent Friction Reduction & Codebase Health**
 
 **Goal:** Reduce the friction that AI executor agents (and future human contributors) hit when navigating shared files in `src/`. The recurring failure mode the v1.12 audit and CLAUDE.md flag is the same: agents accidentally delete code in unrelated sections of large shared files, or reach for `el.style.foo` / `as Type` casts when typed surfaces would have made the safe path obvious. v1.13 invests in **types, naming, and structure** so the next phase doesn't have to re-fight those battles. No new user-facing features; no canvas authoring; no new node kinds. Every requirement is internal — typed constants, reusable CSS utilities + a stylesheet linter, typed DOM helpers, and two further god-file decompositions (`SnippetManagerView`, `RunnerView`) following the v1.12 Phase 75/76 extraction template.
 
@@ -348,17 +362,16 @@ A radiologist can generate a structured, accurate protocol in seconds by answeri
 ## Current State (active milestone)
 
 **Shipped:** v1.11 Inline Polish, Loop Hint, Donate & Canvas Library (2026-04-30; GitHub Release `1.11.0`)
-**Last closed:** v1.12 Maintenance & Tech Debt (2026-05-02; internal-only, no Release; 7/7 requirements satisfied per MILESTONE-AUDIT.md)
-**Active milestone:** v1.13 AI-Agent Friction Reduction & Codebase Health — started 2026-05-02 (Phases 79–83)
-**v1.11 shipped:** 6 phases (69–74), 17 plans, 12/12 requirements satisfied, GitHub Release `1.11.0` live
+**Last closed:** v1.13 AI-Agent Friction Reduction & Codebase Health (2026-05-02; internal-only, no Release; 5/5 requirements satisfied per MILESTONE-AUDIT.md)
+**Active milestone:** v1.14 Internationalization, Documentation & Infrastructure — started 2026-05-03 (Phases 84–86)
+**v1.13 closed:** 5 phases (79–83), 22 plans, 5/5 requirements satisfied, internal-only
 
-**Key v1.11 deliverables:**
+**Key v1.14 targets:**
 
-- Inline Runner redundant button cleanup — removed Insert/Copy/Save from all 6 Inline states; sidebar/tab unaffected; 6-state absence regression tests + cross-mode presence test (Phase 69)
-- Loop-exit picker visual hint — desaturated green `.rp-loop-exit-btn.rp-loop-exit-btn` specificity-doubled selector; hover dim; Phase 44 body-btn preserved byte-for-byte (Phase 70)
-- Settings donate section — "Помочь разработке" with 9 wallet rows (EVM shared across 6 networks + BTC + SOL + TRX); copy-to-clipboard with Notice; zero persistence (Phase 71)
-- Canvas Library — 8 algorithmic canvases (ГМ, ОБП, ОЗП, ОМТ, ПКОП full + ОГК/ОБП/ОМТ short) hand-built in author's vault and verified end-to-end (Phases 72–73)
-- GitHub Release `1.11.0` — version aligned; annotated tag pushed; 3 loose assets; BRAT smoke verified on clean vault (Phase 74)
+- i18n — locale files, typed `t()`, settings language dropdown; English default, Russian preserved
+- README + docs — repo README, `docs/PROTOCOL-AUTHORING.md`, `docs/CONTRIBUTING.md`
+- Multiple inline runners — registry, per-instance cleanup, cascade positioning
+- Template library MVP — `LibraryService`, GitHub raw fetch, SnippetManagerView integration
 
 ## Context
 
