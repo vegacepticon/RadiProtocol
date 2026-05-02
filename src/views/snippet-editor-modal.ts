@@ -24,6 +24,7 @@ import { mountChipEditor, type ChipEditorHandle } from './snippet-chip-editor';
 import { ConfirmModal } from './confirm-modal';
 import { SnippetTreePicker } from './snippet-tree-picker';
 import type RadiProtocolPlugin from '../main';
+import { CSS_CLASS } from '../constants/css-classes';
 
 type SnippetEditorResult =
   | { saved: true; snippet: Snippet; movedFrom: string | null }
@@ -303,7 +304,7 @@ export class SnippetEditorModal extends Modal {
     }) as unknown as HTMLSpanElement;
     this.folderUnsavedDotEl.setAttribute('aria-label', 'Несохранённые изменения');
     this.updateFolderUnsavedDot();
-    const pickerHost = row.createDiv({ cls: 'rp-stp-editor-host' });
+    const pickerHost = row.createDiv({ cls: CSS_CLASS.STP_EDITOR_HOST });
 
     const rootPath = this.plugin.settings.snippetFolderPath;
     // Compute relative initialSelection from absolute currentFolder.

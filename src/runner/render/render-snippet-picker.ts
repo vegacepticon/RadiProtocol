@@ -20,12 +20,13 @@ import type { App } from 'obsidian';
 import type { Snippet } from '../../snippets/snippet-model';
 import type { SnippetService } from '../../snippets/snippet-service';
 import type { RunnerState } from '../runner-state';
+import { CSS_CLASS } from '../../constants/css-classes';
 import { SnippetTreePicker } from '../../views/snippet-tree-picker';
 import { renderRunnerFooter, type RunnerFooterHost } from './render-footer';
 
 export type AwaitingSnippetPickState = Extract<RunnerState, { status: 'awaiting-snippet-pick' }>;
 
-export type SnippetPickerHostClass = 'rp-stp-runner-host' | 'rp-stp-inline-host';
+export type SnippetPickerHostClass = typeof CSS_CLASS.STP_RUNNER_HOST | typeof CSS_CLASS.STP_INLINE_HOST;
 
 /** Host-supplied copy for async errors surfaced by the picker. RunnerView ships RU,
  *  InlineRunnerModal ships EN — divergence preserved per Phase 75 CONTEXT. */
@@ -79,7 +80,7 @@ export function renderSnippetPicker(
 
   const presentAsyncError = options.presentAsyncError ?? ((message: string) => {
     questionZone.empty();
-    questionZone.createEl('p', { cls: 'rp-empty-state-body', text: message });
+    questionZone.createEl('p', { cls: CSS_CLASS.EMPTY_STATE_BODY, text: message });
   });
 
   const picker = new SnippetTreePicker({

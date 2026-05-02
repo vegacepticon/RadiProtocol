@@ -13,6 +13,7 @@ import { renderQuestionAtNode } from '../runner/render/render-question';
 import { renderSnippetPicker } from '../runner/render/render-snippet-picker';
 import { renderCompleteHeading } from '../runner/render/render-complete';
 import { renderErrorList } from '../runner/render/render-error';
+import { CSS_CLASS } from '../constants/css-classes';
 import {
   isFullSnippetPath,
   renderSnippetFillLoading,
@@ -339,13 +340,13 @@ export class InlineRunnerModal {
 
     this.contentEl.empty();
 
-    const questionZone = this.contentEl.createDiv({ cls: 'rp-question-zone' });
+    const questionZone = this.contentEl.createDiv({ cls: CSS_CLASS.QUESTION_ZONE });
 
     switch (state.status) {
       case 'idle': {
         questionZone.createEl('p', {
           text: 'Starting protocol…',
-          cls: 'rp-empty-state-body',
+          cls: CSS_CLASS.EMPTY_STATE_BODY,
         });
         break;
       }
@@ -378,7 +379,7 @@ export class InlineRunnerModal {
         if (result === 'not-question') {
           questionZone.createEl('p', {
             text: 'Processing...',
-            cls: 'rp-empty-state-body',
+            cls: CSS_CLASS.EMPTY_STATE_BODY,
           });
         }
 
@@ -388,7 +389,7 @@ export class InlineRunnerModal {
       case 'awaiting-snippet-pick': {
         questionZone.createEl('p', {
           text: 'Loading snippets...',
-          cls: 'rp-empty-state-body',
+          cls: CSS_CLASS.EMPTY_STATE_BODY,
         });
         void this.mountSnippetPicker(state, questionZone);
         break;
@@ -823,7 +824,7 @@ export class InlineRunnerModal {
       app: this.app,
       snippetService: this.plugin.snippetService,
       rootPath: this.plugin.settings.snippetFolderPath,
-      hostClass: 'rp-stp-inline-host',
+      hostClass: CSS_CLASS.STP_INLINE_HOST,
       copy: {
         notFound: (relativePath) => `Snippet not found: ${relativePath}`,
         validationError: (snippetPath, validationMessage) =>
@@ -845,7 +846,7 @@ export class InlineRunnerModal {
         if (freshZone) {
           freshZone.empty();
           (freshZone as HTMLElement).createEl('p', {
-            cls: 'rp-empty-state-body',
+            cls: CSS_CLASS.EMPTY_STATE_BODY,
             text: message,
           });
         }
@@ -1000,6 +1001,6 @@ export class InlineRunnerModal {
   private renderError(zone: HTMLElement, errors: string[]): void {
     zone.empty();
     const errorPanel = zone.createDiv({ cls: 'rp-error-panel' });
-    renderErrorList(errorPanel, errors, { titleClass: 'rp-error-title' });
+    renderErrorList(errorPanel, errors, { titleClass: CSS_CLASS.ERROR_TITLE });
   }
 }

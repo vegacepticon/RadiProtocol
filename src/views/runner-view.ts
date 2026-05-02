@@ -17,6 +17,7 @@ import { renderQuestionAtNode } from '../runner/render/render-question';
 import { renderSnippetPicker } from '../runner/render/render-snippet-picker';
 import { renderCompleteHeading } from '../runner/render/render-complete';
 import { renderErrorList } from '../runner/render/render-error';
+import { CSS_CLASS } from '../constants/css-classes';
 import {
   isFullSnippetPath,
   renderSnippetFillLoading,
@@ -438,7 +439,7 @@ export class RunnerView extends ItemView {
 
     const root = this.contentEl.createDiv({ cls: 'rp-runner-view' });
     const previewZone = root.createDiv({ cls: 'rp-preview-zone' });
-    const questionZone = root.createDiv({ cls: 'rp-question-zone' });
+    const questionZone = root.createDiv({ cls: CSS_CLASS.QUESTION_ZONE });
     const outputToolbar = root.createDiv({ cls: 'rp-output-toolbar' });
 
     const state = this.runner.getState();
@@ -447,7 +448,7 @@ export class RunnerView extends ItemView {
       case 'idle': {
         questionZone.createEl('p', {
           text: 'Select a protocol above to get started.',
-          cls: 'rp-empty-state-body',
+          cls: CSS_CLASS.EMPTY_STATE_BODY,
         });
         this.renderPreviewZone(previewZone, '');
         this.renderOutputToolbar(outputToolbar, null, false);
@@ -518,7 +519,7 @@ export class RunnerView extends ItemView {
 
         questionZone.createEl('p', {
           text: 'Loading snippets...',
-          cls: 'rp-empty-state-body',
+          cls: CSS_CLASS.EMPTY_STATE_BODY,
         });
         void this.mountSnippetPicker(state, questionZone);
         break;
@@ -627,7 +628,7 @@ export class RunnerView extends ItemView {
       app: this.app,
       snippetService: this.plugin.snippetService,
       rootPath: this.plugin.settings.snippetFolderPath,
-      hostClass: 'rp-stp-runner-host',
+      hostClass: CSS_CLASS.STP_RUNNER_HOST,
       copy: {
         notFound: (relativePath) => `Сниппет не найден: ${relativePath}`,
         validationError: (snippetPath, validationMessage) =>
@@ -917,7 +918,7 @@ export class RunnerView extends ItemView {
       this.contentEl.prepend(this.selectorBarEl);
     }
     const root = this.contentEl.createDiv({ cls: 'rp-runner-view' });
-    const questionZone = root.createDiv({ cls: 'rp-question-zone rp-validation-panel' });
+    const questionZone = root.createDiv({ cls: `${CSS_CLASS.QUESTION_ZONE} rp-validation-panel` });
     renderErrorList(questionZone, errors);
   }
 

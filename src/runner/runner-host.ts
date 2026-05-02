@@ -4,6 +4,7 @@
 import type { App } from 'obsidian';
 import type RadiProtocolPlugin from '../main';
 import type { Snippet } from '../snippets/snippet-model';
+import { CSS_CLASS } from '../constants/css-classes';
 
 export type RunnerHostKind = 'runner-view' | 'inline-modal';
 export type SnippetCopyLocale = 'ru' | 'en';
@@ -17,7 +18,7 @@ export interface RunnerHost {
   bindClick(el: HTMLElement, handler: (ev: MouseEvent) => void): void;
 
   /** CSS hook for SnippetTreePicker host layout. */
-  readonly snippetPickerHostClass: 'rp-stp-runner-host' | 'rp-stp-inline-host';
+  readonly snippetPickerHostClass: typeof CSS_CLASS.STP_RUNNER_HOST | typeof CSS_CLASS.STP_INLINE_HOST;
 
   /** Preserves current RunnerView RU vs InlineRunnerModal EN copy divergence. */
   readonly snippetCopyLocale: SnippetCopyLocale;
