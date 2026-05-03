@@ -86,14 +86,14 @@ export class RadiProtocolSettingsTab extends PluginSettingTab {
       );
 
     // Group 1 — Runner
-    new Setting(containerEl).setName('Runner').setHeading();
+    new Setting(containerEl).setName(this.plugin.i18n.t('settings.runnerHeading')).setHeading();
 
     new Setting(containerEl)
-      .setName('Runner view mode')
-      .setDesc('Choose where the protocol runner opens. Changes take effect the next time you invoke the runner.')
+      .setName(this.plugin.i18n.t('settings.runnerViewMode'))
+      .setDesc(this.plugin.i18n.t('settings.runnerViewModeDesc'))
       .addDropdown(drop => drop
-        .addOption('sidebar', 'Sidebar panel')
-        .addOption('tab', 'Editor tab')
+        .addOption('sidebar', this.plugin.i18n.t('settings.sidebar'))
+        .addOption('tab', this.plugin.i18n.t('settings.tab'))
         .setValue(this.plugin.settings.runnerViewMode)
         .onChange(async (value) => {
           this.plugin.settings.runnerViewMode = value as 'sidebar' | 'tab';
@@ -102,12 +102,12 @@ export class RadiProtocolSettingsTab extends PluginSettingTab {
       );
 
     new Setting(containerEl)
-      .setName('Text separator')
-      .setDesc('How accumulated report text is joined between nodes. "newline" adds a line break before each new chunk; "space" adds a single space.')
+      .setName(this.plugin.i18n.t('settings.textSeparator'))
+      .setDesc(this.plugin.i18n.t('settings.textSeparatorDesc'))
       .addDropdown(drop => {
         drop
-          .addOption('newline', 'Newline (default)')
-          .addOption('space', 'Space')
+          .addOption('newline', this.plugin.i18n.t('settings.newline'))
+          .addOption('space', this.plugin.i18n.t('settings.space'))
           .setValue(this.plugin.settings.textSeparator)
           .onChange(value => {
             this.plugin.settings.textSeparator = value as 'newline' | 'space';
@@ -116,15 +116,11 @@ export class RadiProtocolSettingsTab extends PluginSettingTab {
       });
 
     // Group 2 — Protocol
-    new Setting(containerEl).setName('Protocol').setHeading();
+    new Setting(containerEl).setName(this.plugin.i18n.t('settings.protocolHeading')).setHeading();
 
     new Setting(containerEl)
-      .setName('Protocol canvas folder')
-      .setDesc(
-        'Vault-relative folder containing your .canvas protocol files. ' +
-        'The canvas selector in the runner panel scans this folder. ' +
-        'Leave empty to disable the selector.'
-      )
+      .setName(this.plugin.i18n.t('settings.protocolFolder'))
+      .setDesc(this.plugin.i18n.t('settings.protocolFolderDesc'))
       .addText(text => {
         new FolderSuggest(this.app, text.inputEl);
         text
@@ -137,15 +133,15 @@ export class RadiProtocolSettingsTab extends PluginSettingTab {
       });
 
     // Group 3 — Output
-    new Setting(containerEl).setName('Output').setHeading();
+    new Setting(containerEl).setName(this.plugin.i18n.t('settings.outputHeading')).setHeading();
 
     new Setting(containerEl)
-      .setName('Output destination')
-      .setDesc('Where to send the completed protocol report.')
+      .setName(this.plugin.i18n.t('settings.outputDestination'))
+      .setDesc(this.plugin.i18n.t('settings.outputDestinationDesc'))
       .addDropdown(drop => drop
-        .addOption('clipboard', 'Copy to clipboard')
-        .addOption('new-note', 'Save to note')
-        .addOption('both', 'Both')
+        .addOption('clipboard', this.plugin.i18n.t('settings.copyToClipboard'))
+        .addOption('new-note', this.plugin.i18n.t('settings.saveToNote'))
+        .addOption('both', this.plugin.i18n.t('settings.both'))
         .setValue(this.plugin.settings.outputDestination)
         .onChange(async (value) => {
           this.plugin.settings.outputDestination = value as RadiProtocolSettings['outputDestination'];
@@ -154,8 +150,8 @@ export class RadiProtocolSettingsTab extends PluginSettingTab {
       );
 
     new Setting(containerEl)
-      .setName('Output folder')
-      .setDesc("Vault-relative folder for saved reports. Used when destination is 'save to note' or 'both'.")
+      .setName(this.plugin.i18n.t('settings.outputFolder'))
+      .setDesc(this.plugin.i18n.t('settings.outputFolderDesc'))
       .addText(text => {
         new FolderSuggest(this.app, text.inputEl);
         text
@@ -168,11 +164,11 @@ export class RadiProtocolSettingsTab extends PluginSettingTab {
       });
 
     // Group 5 — Storage
-    new Setting(containerEl).setName('Storage').setHeading();
+    new Setting(containerEl).setName(this.plugin.i18n.t('settings.storageHeading')).setHeading();
 
     new Setting(containerEl)
-      .setName('Snippet folder')
-      .setDesc('Vault-relative path for snippet JSON files. Default: .radiprotocol/snippets')
+      .setName(this.plugin.i18n.t('settings.snippetFolder'))
+      .setDesc(this.plugin.i18n.t('settings.snippetFolderDesc'))
       .addText(text => {
         new FolderSuggest(this.app, text.inputEl);
         text
@@ -185,8 +181,8 @@ export class RadiProtocolSettingsTab extends PluginSettingTab {
       });
 
     new Setting(containerEl)
-      .setName('Session folder')
-      .setDesc('Vault-relative path for session JSON files. Default: .radiprotocol/sessions')
+      .setName(this.plugin.i18n.t('settings.sessionFolder'))
+      .setDesc(this.plugin.i18n.t('settings.sessionFolderDesc'))
       .addText(text => text
         .setPlaceholder('.radiprotocol/sessions')
         .setValue(this.plugin.settings.sessionFolderPath)
