@@ -33,7 +33,7 @@ _v1.12 closed 2026-05-02 — 7/7 requirements satisfied; internal-only, no GitHu
 <details>
 <summary>🚧 v1.14 Internationalization, Documentation & Infrastructure (Phases 84-86) — OPEN 2026-05-03</summary>
 
-- [ ] Phase 84: i18n + Documentation (4 requirements: I18N-01, I18N-02, DOC-01, DOC-02) — planning
+- [x] Phase 84: i18n + Documentation (4 requirements: I18N-01, I18N-02, DOC-01, DOC-02) — completed 2026-05-03
 - [ ] Phase 85: Multiple Inline Runners (2 requirements: INLINE-MULTI-01, INLINE-MULTI-02) — planning
 - [ ] Phase 86: Template Library MVP (2 requirements: TEMPLATE-LIB-01, TEMPLATE-LIB-02) — planning
 

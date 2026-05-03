@@ -2,15 +2,16 @@
 gsd_state_version: 1.0
 milestone: v1.14
 milestone_name: Internationalization, Documentation & Infrastructure
-status: open
+status: completed
 started_at: 2026-05-03
-last_updated: "2026-05-03T05:44:00.000Z"
-last_activity: 2026-05-03 — Phase 84 Plan 01 completed: i18n service scaffolded (src/i18n/i18n-service.ts, en.json, ru.json), settings locale dropdown added, donate strings extracted and i18n-ized, build/lint/test green
+completed_at: 2026-05-03
+last_updated: "2026-05-03T10:35:00.000Z"
+last_activity: 2026-05-03 — Phase 84 complete: i18n extracted across all layers (views, snippets, graph, runner, runner-view), README.md and docs/CONTRIBUTING.md + docs/PROTOCOL-AUTHORING.md written
 progress:
   total_phases: 3
-  completed_phases: 0
-  total_plans: 1
-  completed_plans: 1
+  completed_phases: 1
+  total_plans: 5
+  completed_plans: 5
 ---
 
 # RadiProtocol — Project State
@@ -19,14 +20,14 @@ progress:
 **Milestone:** v1.14 Internationalization, Documentation & Infrastructure — **OPEN**
 **Status:** Opened 2026-05-03 — 0/3 phases complete, 0/8 requirements satisfied; awaiting Phase 84 planning
 
----
+**Status:** Phase 84 completed 2026-05-03 — 1/3 phases complete, 5/5 plans done; awaiting Phase 85 planning
 
 ## Current Position
 
-Phase: 84 — i18n + Documentation (planning)
+Phase: 85 — Multiple Inline Runners (planning)
 Plan: none active
-Status: v1.14 opened — research complete for inline-multi and template-library; awaiting implementation
-Last activity: 2026-05-03 — parallel research subagents completed for text-block bug, inline-multi, template-library
+Status: Phase 84 landed — all i18n extracted, docs written; research for inline-multi completed at v1.14 open
+Last activity: 2026-05-03 — Phase 84 complete (plans 01-05)
 
 ## Project Reference
 
