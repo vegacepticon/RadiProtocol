@@ -16,6 +16,7 @@ import type {
   SnippetNode,  // Phase 29
   LoopNode,     // Phase 43 D-05 — unified loop kind (LOOP-01, LOOP-02)
 } from './graph-model';
+import { defaultT, type Translator } from '../i18n';
 
 // Minimal canvas JSON shape we need from the JSON Canvas v1.0 spec.
 // We do NOT import from 'obsidian/canvas' here — that would require
@@ -51,6 +52,15 @@ function getString(obj: Record<string, unknown>, key: string, fallback = ''): st
 }
 
 export class CanvasParser {
+  /** Phase 84 (I18N-02): translator for parser-emitted error messages. Defaults
+   *  to English (defaultT) for pure-test sites and internal call sites that
+   *  don't surface errors directly to the user. */
+  private readonly t: Translator;
+
+  constructor(t: Translator = defaultT) {
+    this.t = t;
+  }
+
   /**
    * Parse a canvas JSON string into a ProtocolGraph.
    * Returns { success: false, error: string } on parse failure — never throws.
@@ -157,11 +167,12 @@ export class CanvasParser {
       'loop',  // Phase 43 D-05 — unified loop (LOOP-01, LOOP-02)
     ];
 
-    // Phase 46 CLEAN-02 — legacy free-text-input канвасы отвергаются на parse-time.
-    // Kind удалён из RPNodeKind (Phase 46 D-46-01-A); отдельная ветка даёт автору
-    // осмысленное русское сообщение вместо generic "unknown radiprotocol_nodeType".
+    // Phase 46 CLEAN-02 — legacy free-text-input canvases are rejected at parse-time.
+    // Kind removed from RPNodeKind (Phase 46 D-46-01-A); a dedicated branch gives the
+    // author a meaningful message instead of a generic "unknown radiprotocol_nodeType".
+    // Phase 84 I18N-02: localized via injected translator (canvasParser.legacyFreeTextInput).
     if (kind === 'free-text-input') {
-      return { parseError: `Узел "${raw.id}" использует устаревший тип "free-text-input". Этот тип был удалён. Замените узел на question или text-block и перестройте ветвь вручную.` };
+      return { parseError: this.t('canvasParser.legacyFreeTextInput', { id: raw.id }) };
     }
 
     if (!(validKinds as string[]).includes(kind)) {
@@ -274,8 +285,8 @@ export class CanvasParser {
       }
       case 'loop': {
         // Phase 43 D-05 — unified loop node (LOOP-01, LOOP-02, LOOP-03).
-        // headerText нормализуется в '' если radiprotocol_headerText отсутствует/undefined
-        // (симметрия с TextBlockNode.content, НЕ SnippetNode.subfolderPath?: string | undefined).
+        // headerText normalises to '' when radiprotocol_headerText is missing/undefined
+        // (symmetric with TextBlockNode.content, NOT SnippetNode.subfolderPath?: string | undefined).
         const node: LoopNode = {
           ...base,
           kind: 'loop',

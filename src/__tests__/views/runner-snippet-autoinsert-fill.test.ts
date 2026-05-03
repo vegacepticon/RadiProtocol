@@ -64,6 +64,7 @@ vi.mock('../../views/snippet-fill-in-modal', () => {
 import { RunnerView } from '../../views/runner-view';
 import type RadiProtocolPlugin from '../../main';
 import type { Snippet, JsonSnippet, MdSnippet } from '../../snippets/snippet-model';
+import { I18nService } from '../../i18n';
 
 // ── FakeNode — DOM-ish stub ───────────────────────────────────────────────
 
@@ -149,8 +150,11 @@ function makeMdSnippet(partial: Partial<MdSnippet> = {}): MdSnippet {
 
 function mountHarness(loadResult: Snippet | null): Harness {
   const loadSpy = vi.fn(async () => loadResult);
+  // Phase 84 I18N-02: real I18nService so RunnerView constructor's
+  // `this.plugin.i18n.t.bind(this.plugin.i18n)` does not throw.
+  const i18n = new I18nService('ru');
   const plugin = {
-    settings: { snippetFolderPath: '.radiprotocol/snippets', textSeparator: 'newline' },
+    settings: { snippetFolderPath: '.radiprotocol/snippets', textSeparator: 'newline', locale: 'ru' },
     snippetService: {
       load: loadSpy,
       listFolder: vi.fn(async () => ({ folders: [], snippets: [] })),
@@ -162,6 +166,7 @@ function mountHarness(loadResult: Snippet | null): Harness {
     canvasParser: { parse: vi.fn() },
     saveOutputToNote: vi.fn(),
     insertIntoCurrentNote: vi.fn(),
+    i18n,
   } as unknown as RadiProtocolPlugin;
 
   const leaf = {} as unknown as import('obsidian').WorkspaceLeaf;

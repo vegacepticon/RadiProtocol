@@ -1,5 +1,6 @@
 // Shared host fixtures for inline runner modal tests.
 import { vi } from 'vitest';
+import { I18nService } from '../../i18n';
 
 // MockEl harness
 export interface MockEl {
@@ -292,12 +293,16 @@ export function makeBasePlugin(opts: { textSeparator?: string; snippetFolderPath
       textSeparator: opts.textSeparator ?? 'newline',
       snippetFolderPath: opts.snippetFolderPath ?? 'Snippets',
       protocolFolderPath: 'Protocols',
+      locale: 'ru',
     },
     snippetService: { load: vi.fn(async (_absPath: string) => null) },
     insertMutex: { runExclusive: vi.fn(async (_path: string, fn: () => Promise<void>) => fn()) },
     activateRunnerView: vi.fn(),
     canvasLiveEditor: { getCanvasJSON: () => null },
     _vaultModifyCalls: [] as Array<[string, string]>,
+    // Phase 84 I18N-02: real I18nService so InlineRunnerModal/RunnerView constructors'
+    // `this.plugin.i18n.t.bind(this.plugin.i18n)` does not throw.
+    i18n: new I18nService('ru'),
   };
 }
 

@@ -67,9 +67,11 @@ export class RunnerView extends ItemView {
     this.plugin = plugin;
     this.sessionCoordinator = new SessionRecoveryCoordinator(plugin);
     // Phase 51 D-04 (PICKER-01): wire vault-backed snippet-file probe + snippet root.
+    // Phase 84 (I18N-02): inject translator so validator messages follow the active locale.
     this.validator = new GraphValidator({
       snippetFileProbe: (absPath) => this.plugin.app.vault.getAbstractFileByPath(absPath) !== null,
       snippetFolderPath: this.plugin.settings.snippetFolderPath,
+      t: this.plugin.i18n.t.bind(this.plugin.i18n),
     });
   }
 
@@ -98,8 +100,10 @@ export class RunnerView extends ItemView {
 
   async openCanvas(filePath: string, startNodeId?: string): Promise<void> {
     // Phase 15: re-create runner to pick up the current textSeparator setting
+    // Phase 84 (I18N-02): inject translator so runtime error messages follow the active locale.
     this.runner = new ProtocolRunner({
       defaultSeparator: this.plugin.settings.textSeparator,
+      t: this.plugin.i18n.t.bind(this.plugin.i18n),
     });
 
     this.canvasFilePath = filePath;
@@ -361,8 +365,10 @@ export class RunnerView extends ItemView {
     // 2. Re-create the runner to match openCanvas's pattern (lines 93-97) so that
     //    getState().status === 'idle' post-reset. defaultSeparator pulled from
     //    plugin settings, same as openCanvas.
+    // Phase 84 (I18N-02): inject translator so runtime error messages follow the active locale.
     this.runner = new ProtocolRunner({
       defaultSeparator: this.plugin.settings.textSeparator,
+      t: this.plugin.i18n.t.bind(this.plugin.i18n),
     });
 
     // 3. Null out runner-local state.
@@ -605,9 +611,14 @@ export class RunnerView extends ItemView {
       rootPath: this.plugin.settings.snippetFolderPath,
       hostClass: CSS_CLASS.STP_RUNNER_HOST,
       copy: {
-        notFound: (relativePath) => `Сниппет не найден: ${relativePath}`,
+        // Phase 84 I18N-02: localized via plugin i18n (runnerView.snippetNotFound / snippetCannotBeUsed).
+        notFound: (relativePath) =>
+          this.plugin.i18n.t('runnerView.snippetNotFound', { path: relativePath }),
         validationError: (snippetPath, validationMessage) =>
-          `Сниппет «${snippetPath}» не может быть использован. ${validationMessage}`,
+          this.plugin.i18n.t('runnerView.snippetCannotBeUsed', {
+            path: snippetPath,
+            error: validationMessage,
+          }),
       },
       bindClick: (el, handler) => this.registerDomEvent(el, 'click', handler),
       getCurrentNodeId: () => {
@@ -641,8 +652,12 @@ export class RunnerView extends ItemView {
     // capture — a rejected snippet never advances, so no scroll preservation is
     // needed.
     if (snippet.kind === 'json' && snippet.validationError !== null) {
+      // Phase 84 I18N-02: localized via plugin i18n (runnerView.snippetCannotBeUsed).
       new Notice(
-        `Сниппет «${snippet.path}» не может быть использован. ${snippet.validationError}`,
+        this.plugin.i18n.t('runnerView.snippetCannotBeUsed', {
+          path: snippet.path,
+          error: snippet.validationError,
+        }),
       );
       return;
     }
@@ -723,8 +738,12 @@ export class RunnerView extends ItemView {
     // AFTER the null-check and BEFORE the md-kind branch — Phase 51 D-14 path-
     // shape detection at :788-795 remains upstream and unchanged.
     if (snippet.kind === 'json' && snippet.validationError !== null) {
+      // Phase 84 I18N-02: localized via plugin i18n (runnerView.snippetCannotBeUsed).
       new Notice(
-        `Сниппет «${snippet.path}» не может быть использован. ${snippet.validationError}`,
+        this.plugin.i18n.t('runnerView.snippetCannotBeUsed', {
+          path: snippet.path,
+          error: snippet.validationError,
+        }),
       );
       this.runner.stepBack();
       void this.autoSaveSession();

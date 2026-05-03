@@ -132,7 +132,8 @@ export default class RadiProtocolPlugin extends Plugin {
     this.i18n = new I18nService(this.settings.locale);
 
     // Instantiate pure modules (no Obsidian dependency)
-    this.canvasParser = new CanvasParser();
+    // Phase 84 (I18N-02): inject the i18n translator so parse-time error messages follow the active locale.
+    this.canvasParser = new CanvasParser(this.i18n.t.bind(this.i18n));
 
     // Instantiate services
     // Phase 84 (I18N-01): SnippetService takes the plugin's i18n translator so
@@ -482,6 +483,8 @@ export default class RadiProtocolPlugin extends Plugin {
     const validator = new GraphValidator({
       snippetFileProbe: (absPath) => this.app.vault.getAbstractFileByPath(absPath) !== null,
       snippetFolderPath: this.settings.snippetFolderPath,
+      // Phase 84 (I18N-02): localized validator messages.
+      t: this.i18n.t.bind(this.i18n),
     });
     const errors = validator.validate(parseResult.graph);
     if (errors.length > 0) {

@@ -145,12 +145,15 @@ export class InlineRunnerModal {
     this.canvasFilePath = canvasFilePath;
     this.targetNote = targetNote;
     this.startNodeId = startNodeId;
+    // Phase 84 (I18N-02): inject translator so runtime / validator messages follow the active locale.
     this.runner = new ProtocolRunner({
       defaultSeparator: this.plugin.settings.textSeparator,
+      t: this.plugin.i18n.t.bind(this.plugin.i18n),
     });
     this.validator = new GraphValidator({
       snippetFileProbe: (absPath) => this.app.vault.getAbstractFileByPath(absPath) !== null,
       snippetFolderPath: this.plugin.settings.snippetFolderPath,
+      t: this.plugin.i18n.t.bind(this.plugin.i18n),
     });
   }
 

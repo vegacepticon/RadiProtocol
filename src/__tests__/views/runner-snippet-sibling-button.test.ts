@@ -33,6 +33,7 @@ vi.mock('../../views/snippet-tree-picker', () => {
 import { RunnerView } from '../../views/runner-view';
 import type RadiProtocolPlugin from '../../main';
 import type { AnswerNode, SnippetNode, ProtocolGraph } from '../../graph/graph-model';
+import { I18nService } from '../../i18n';
 
 // ── FakeNode — DOM-ish stub ───────────────────────────────────────────────
 
@@ -166,8 +167,11 @@ function buildGraph(opts: FixtureOpts): ProtocolGraph {
 }
 
 function makePlugin(): RadiProtocolPlugin {
+  // Phase 84 I18N-02: real I18nService so RunnerView constructor's
+  // `this.plugin.i18n.t.bind(this.plugin.i18n)` does not throw.
+  const i18n = new I18nService('ru');
   return {
-    settings: { snippetFolderPath: '.radiprotocol/snippets', textSeparator: 'newline' },
+    settings: { snippetFolderPath: '.radiprotocol/snippets', textSeparator: 'newline', locale: 'ru' },
     snippetService: {
       load: vi.fn(),
       listFolder: vi.fn(async () => ({ folders: [], snippets: [] })),
@@ -179,6 +183,7 @@ function makePlugin(): RadiProtocolPlugin {
     canvasParser: { parse: vi.fn() },
     saveOutputToNote: vi.fn(),
     insertIntoCurrentNote: vi.fn(),
+    i18n,
   } as unknown as RadiProtocolPlugin;
 }
 

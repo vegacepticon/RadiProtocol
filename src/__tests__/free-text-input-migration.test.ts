@@ -3,10 +3,10 @@
 // buildNodeOptions-style pure test — no Obsidian mock directive required; the project's vitest
 // config aliases 'obsidian' to the __mocks__ stub automatically.
 //
-// Mandatory acceptance tokens asserted by Task 1:
-//   «устаревший» — rejection vocabulary (Phase 46 D-46-01-B)
+// Mandatory acceptance tokens asserted by Task 1 (Phase 84 I18N-02 — defaultT/English fallback):
+//   «deprecated» — rejection vocabulary (Phase 46 D-46-01-B, English form)
 //   «free-text-input» — literal kind identifier
-//   node id — author-facing locator in the Russian error
+//   node id — author-facing locator in the error
 //
 // Test 3 is a negative control: a happy-path canvas (text-block.canvas) MUST still parse,
 // proving the rejection branch added in Task 2 is narrowly scoped to free-text-input.
@@ -19,14 +19,15 @@ import { CanvasParser } from '../graph/canvas-parser';
 const fixturesDir = path.join(__dirname, 'fixtures');
 
 describe('CanvasParser — Phase 46 CLEAN-02 rejection of legacy free-text-input canvases', () => {
-  it('rejects src/__tests__/fixtures/free-text.canvas with Russian error containing the node id and the literal «free-text-input» token', () => {
+  it('rejects src/__tests__/fixtures/free-text.canvas with English error containing the node id and the literal «free-text-input» token', () => {
     const parser = new CanvasParser();
     const json = fs.readFileSync(path.join(fixturesDir, 'free-text.canvas'), 'utf-8');
     const result = parser.parse(json, 'free-text.canvas');
 
     expect(result.success).toBe(false);
     if (result.success) return; // type-narrow for TS
-    expect(result.error).toContain('устаревший');
+    // Phase 84 I18N-02: defaultT (English) is in effect for zero-arg CanvasParser construction.
+    expect(result.error).toContain('deprecated');
     expect(result.error).toContain('free-text-input');
     expect(result.error).toContain('n-ft1');
   });
@@ -38,7 +39,8 @@ describe('CanvasParser — Phase 46 CLEAN-02 rejection of legacy free-text-input
 
     expect(result.success).toBe(false);
     if (result.success) return;
-    expect(result.error).toContain('устаревший');
+    // Phase 84 I18N-02: defaultT (English) is in effect for zero-arg CanvasParser construction.
+    expect(result.error).toContain('deprecated');
     expect(result.error).toContain('free-text-input');
     expect(result.error).toContain('ft-x');
   });

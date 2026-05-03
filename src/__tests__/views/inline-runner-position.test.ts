@@ -3,6 +3,7 @@ import { TFile } from 'obsidian';
 import type RadiProtocolPlugin from '../../main';
 import { clampInlineRunnerPosition, InlineRunnerModal } from '../../views/inline-runner-modal';
 import type { InlineRunnerLayout } from '../../settings';
+import { I18nService } from '../../i18n';
 
 vi.mock('obsidian');
 
@@ -129,7 +130,7 @@ function makePlugin(saved: InlineRunnerLayout | null = null): RadiProtocolPlugin
     saveSpy: vi.fn(async (position: InlineRunnerLayout | null) => {
       plugin.saved = position;
     }),
-    settings: { textSeparator: 'newline', snippetFolderPath: '.radiprotocol/snippets' },
+    settings: { textSeparator: 'newline', snippetFolderPath: '.radiprotocol/snippets', locale: 'ru' },
     getInlineRunnerPosition: () => plugin.saved,
     saveInlineRunnerPosition: (position: InlineRunnerLayout | null) => plugin.saveSpy(position),
     canvasLiveEditor: { getCanvasJSON: () => null },
@@ -137,6 +138,9 @@ function makePlugin(saved: InlineRunnerLayout | null = null): RadiProtocolPlugin
     snippetService: { load: vi.fn() },
     saveOutputToNote: vi.fn(),
     insertIntoCurrentNote: vi.fn(),
+    // Phase 84 I18N-02: real I18nService so InlineRunnerModal constructor's
+    // `this.plugin.i18n.t.bind(this.plugin.i18n)` does not throw.
+    i18n: new I18nService('ru'),
   };
   return plugin as unknown as RadiProtocolPlugin & { saved: InlineRunnerLayout | null; saveSpy: ReturnType<typeof vi.fn> };
 }

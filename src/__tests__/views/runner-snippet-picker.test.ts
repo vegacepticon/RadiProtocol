@@ -55,6 +55,7 @@ vi.mock('../../views/snippet-tree-picker', () => {
 import { RunnerView } from '../../views/runner-view';
 import type RadiProtocolPlugin from '../../main';
 import type { Snippet } from '../../snippets/snippet-model';
+import { I18nService } from '../../i18n';
 
 // ── FakeNode — minimal DOM-ish stub for questionZone and children ─────────
 
@@ -156,8 +157,11 @@ interface FakeRunnerState {
 
 function makePlugin(): RadiProtocolPlugin {
   const loadMock = vi.fn<(path: string) => Promise<Snippet | null>>();
+  // Phase 84 I18N-02: real I18nService instance (locale='ru') so RunnerView's
+  // plugin.i18n.t calls produce Russian copy matching the existing assertions.
+  const i18n = new I18nService('ru');
   return {
-    settings: { snippetFolderPath: '.radiprotocol/snippets', textSeparator: 'newline' },
+    settings: { snippetFolderPath: '.radiprotocol/snippets', textSeparator: 'newline', locale: 'ru' },
     snippetService: {
       load: loadMock,
       listFolder: vi.fn<(p: string) => Promise<{ folders: string[]; snippets: Snippet[] }>>(
@@ -171,6 +175,7 @@ function makePlugin(): RadiProtocolPlugin {
     canvasParser: { parse: vi.fn() },
     saveOutputToNote: vi.fn(),
     insertIntoCurrentNote: vi.fn(),
+    i18n,
   } as unknown as RadiProtocolPlugin;
 }
 

@@ -199,16 +199,18 @@ describe('GraphValidator — snippet node (Phase 29, D-12)', () => {
 describe('GraphValidator — Phase 43: unified loop + migration (LOOP-04, MIGRATE-01)', () => {
 
   // ── LOOP-04 happy path (Phase 50.1 EDGE-03) ─────────────────────────────────
+  // Phase 84 I18N-02: defaultT (English) is in effect for these zero-arg validators;
+  // assertions match the English forms of the validator messages.
   it('unified-loop-valid.canvas passes LOOP-04 checks (no +-prefix/body errors under Phase 50.1 convention)', () => {
-    // Fixture (post-Plan-04): один loop узел с одним "+выход" ребром и одним непомеченным body-ребром.
+    // Fixture (post-Plan-04): one loop node with one "+exit" edge and one unlabeled body edge.
     const graph = parseFixture('unified-loop-valid.canvas');
     const validator = new GraphValidator();
     const errors = validator.validate(graph);
-    expect(errors.some(e => e.includes('не имеет выхода'))).toBe(false);
-    expect(errors.some(e => e.includes('"+"-рёбер'))).toBe(false);       // D-06 wording
-    expect(errors.some(e => e.includes('не имеет тела'))).toBe(false);    // D-07 fragment
-    expect(errors.some(e => e.includes('не имеет подписи'))).toBe(false); // D-08 fragment
-    expect(errors.some(e => e.includes('устаревшие узлы loop-start/loop-end'))).toBe(false);
+    expect(errors.some(e => e.includes('has no exit'))).toBe(false);
+    expect(errors.some(e => e.includes('multiple "+" edges'))).toBe(false);   // D-06 wording
+    expect(errors.some(e => e.includes('has no body'))).toBe(false);           // D-07 fragment
+    expect(errors.some(e => e.includes('has no caption'))).toBe(false);        // D-08 fragment
+    expect(errors.some(e => e.includes('deprecated loop-start/loop-end'))).toBe(false);
   });
 
   // ── LOOP-04 D-04 — zero "+"-edges, no other labeled edges ───────────────────
@@ -216,11 +218,11 @@ describe('GraphValidator — Phase 43: unified loop + migration (LOOP-04, MIGRAT
     const graph = parseFixture('unified-loop-missing-exit.canvas');
     const validator = new GraphValidator();
     const errors = validator.validate(graph);
-    const d04 = errors.find(e => e.includes('не имеет выхода. Пометьте ровно одно исходящее ребро префиксом "+"'));
+    const d04 = errors.find(e => e.includes('has no exit. Mark exactly one outgoing edge with a "+" prefix'));
     expect(d04).toBeDefined();
     if (d04 === undefined) return;
     expect(d04).toContain('"Lesion loop"');
-    expect(d04).toContain('текст после "+" станет подписью кнопки выхода');
+    expect(d04).toContain('the text after "+" becomes the exit-button caption');
   });
 
   // ── LOOP-04 D-05 — zero "+"-edges, ≥1 legacy labeled edge ───────────────────
@@ -228,13 +230,13 @@ describe('GraphValidator — Phase 43: unified loop + migration (LOOP-04, MIGRAT
     const graph = parseFixture('unified-loop-legacy-vyhod.canvas');
     const validator = new GraphValidator();
     const errors = validator.validate(graph);
-    const d05 = errors.find(e => e.includes('не имеет выхода с префиксом "+"'));
+    const d05 = errors.find(e => e.includes('has no exit edge with a "+" prefix'));
     expect(d05).toBeDefined();
     if (d05 === undefined) return;
     expect(d05).toContain('"Lesion loop"');
-    expect(d05).toContain('Добавьте "+" к одному из помеченных рёбер');
-    expect(d05).toContain('текст после "+" станет подписью кнопки выхода');
-    // {edgeIds} — fixture from Plan 04 has edge id e3 on the legacy-"выход" edge.
+    expect(d05).toContain('Add "+" to one of the labeled edges');
+    expect(d05).toContain('the text after "+" becomes the exit-button caption');
+    // {edgeIds} — fixture from Plan 04 has edge id e3 on the legacy-exit edge.
     expect(d05).toMatch(/\(e3\)|\(e3, /);
   });
 
@@ -243,12 +245,12 @@ describe('GraphValidator — Phase 43: unified loop + migration (LOOP-04, MIGRAT
     const graph = parseFixture('unified-loop-duplicate-exit.canvas');
     const validator = new GraphValidator();
     const errors = validator.validate(graph);
-    const d06 = errors.find(e => e.includes('имеет несколько "+"-рёбер'));
+    const d06 = errors.find(e => e.includes('has multiple "+" edges'));
     expect(d06).toBeDefined();
     if (d06 === undefined) return;
     expect(d06).toContain('"Lesion loop"');
-    expect(d06).toContain('Должно быть ровно одно выходное ребро');
-    expect(d06).toContain('уберите "+" с остальных');
+    expect(d06).toContain('Exactly one exit edge is required');
+    expect(d06).toContain('remove "+" from the others');
     // Plan 04 fixture assigns "+"-prefix to e3 and e4 (the two exits). edgeIds comma-joined.
     expect(d06).toMatch(/e3.*e4|e4.*e3/);
   });
@@ -258,7 +260,7 @@ describe('GraphValidator — Phase 43: unified loop + migration (LOOP-04, MIGRAT
     const graph = parseFixture('unified-loop-no-body.canvas');
     const validator = new GraphValidator();
     const errors = validator.validate(graph);
-    const d07 = errors.find(e => e.includes('не имеет тела — добавьте исходящее ребро без префикса "+"'));
+    const d07 = errors.find(e => e.includes('has no body — add an outgoing edge without a "+" prefix'));
     expect(d07).toBeDefined();
     if (d07 === undefined) return;
     expect(d07).toContain('"Lesion loop"');
@@ -269,16 +271,16 @@ describe('GraphValidator — Phase 43: unified loop + migration (LOOP-04, MIGRAT
     const graph = parseFixture('unified-loop-empty-plus.canvas');
     const validator = new GraphValidator();
     const errors = validator.validate(graph);
-    const d08 = errors.find(e => e.includes('не имеет подписи — добавьте текст после "+"'));
+    const d08 = errors.find(e => e.includes('has no caption — add text after "+"'));
     expect(d08).toBeDefined();
     if (d08 === undefined) return;
     expect(d08).toContain('"Lesion loop"');
-    expect(d08).toMatch(/"\+"-ребро \w+ не имеет подписи/);
+    expect(d08).toMatch(/"\+" edge \w+ has no caption/);
   });
 
   // ── LOOP-04 Phase 49↔50 conflict regression: labeled body edge + "+"-exit ───
   it('unified-loop-labeled-body.canvas VALIDATES — labeled body edge + "+"-exit coexist (Phase 49↔50 conflict resolved)', () => {
-    // Fixture: loop node with one "+выход" exit AND a body edge pointing to an Answer node
+    // Fixture: loop node with one "+exit" exit AND a body edge pointing to an Answer node
     // that carries displayLabel — Phase 50 reconciler legitimately labels the body edge.
     // Under Phase 49 this broke validation (body edge counted as a second exit). Under
     // Phase 50.1 the body edge has no "+" prefix so it is a body, not an exit.
@@ -286,39 +288,40 @@ describe('GraphValidator — Phase 43: unified loop + migration (LOOP-04, MIGRAT
     const validator = new GraphValidator();
     const errors = validator.validate(graph);
     // No LOOP-04 errors:
-    expect(errors.some(e => e.includes('не имеет выхода'))).toBe(false);
-    expect(errors.some(e => e.includes('"+"-рёбер'))).toBe(false);
-    expect(errors.some(e => e.includes('не имеет тела'))).toBe(false);
-    expect(errors.some(e => e.includes('не имеет подписи'))).toBe(false);
+    expect(errors.some(e => e.includes('has no exit'))).toBe(false);
+    expect(errors.some(e => e.includes('multiple "+" edges'))).toBe(false);
+    expect(errors.some(e => e.includes('has no body'))).toBe(false);
+    expect(errors.some(e => e.includes('has no caption'))).toBe(false);
   });
 
   // ── LOOP-04 — stray non-"+" body label is accepted under Phase 50.1 ─────────
   it('unified-loop-stray-body-label.canvas VALIDATES under 50.1 — non-"+" body label is allowed', () => {
-    // Plan 04 migration: e3 → "+выход" (legit exit); e2 "проверка" preserved as a labeled body edge.
+    // Plan 04 migration: e3 → "+exit" (legit exit); e2 labeled body edge preserved.
     // Under Phase 50.1 labeled body edges are legal (body = any edge without "+"), so this fixture
     // now validates cleanly rather than firing Phase 49 D-02.
     const graph = parseFixture('unified-loop-stray-body-label.canvas');
     const validator = new GraphValidator();
     const errors = validator.validate(graph);
-    expect(errors.some(e => e.includes('"+"-рёбер'))).toBe(false);
+    expect(errors.some(e => e.includes('multiple "+" edges'))).toBe(false);
   });
 
   // ── MIGRATE-01 (D-07) — legacy loop-body.canvas ─────────────────────────────
+  // Phase 84 I18N-02: defaultT (English) is in effect for these zero-arg validators.
   it('legacy loop-body.canvas returns migration-error with required literals (MIGRATE-01, D-07)', () => {
     const graph = parseFixture('loop-body.canvas');
     const validator = new GraphValidator();
     const errors = validator.validate(graph);
-    // Должна быть ровно одна сводная migration-строка, содержащая все обязательные лексемы.
+    // There must be exactly one consolidated migration message containing the required tokens.
     const migrationErr = errors.find(e =>
       e.includes('loop-start') &&
       e.includes('loop-end') &&
       e.includes('loop') &&
-      e.includes('«выход»'),
+      e.includes('«exit»'),
     );
     expect(migrationErr).toBeDefined();
     if (migrationErr === undefined) return;
-    // Русская формулировка: «устаревшие узлы» или эквивалент из Plan 05.
-    expect(migrationErr).toMatch(/устаревш/);
+    // English wording: "deprecated loop-start/loop-end nodes".
+    expect(migrationErr).toMatch(/deprecated/);
   });
 
   // ── MIGRATE-01 (D-07) — legacy loop-start.canvas ────────────────────────────
@@ -330,28 +333,28 @@ describe('GraphValidator — Phase 43: unified loop + migration (LOOP-04, MIGRAT
       e.includes('loop-start') &&
       e.includes('loop-end') &&
       e.includes('loop') &&
-      e.includes('«выход»'),
+      e.includes('«exit»'),
     );
     expect(migrationErr).toBeDefined();
   });
 
   // ── D-CL-02 order: migration check runs BEFORE LOOP-04 (early-return) ───────
   it('legacy canvas with 0 outgoing edges gives migration-error, NOT LOOP-04 exit error (D-CL-02 order, Phase 49)', () => {
-    // loop-start.canvas содержит loop-start без continue-edge. Без early-return
-    // в Migration Check, LOOP-04 сгенерировал бы D-01 «не имеет выхода» поверх.
-    // Правильный порядок (D-CL-02): migration check срабатывает первым и делает return.
+    // loop-start.canvas contains loop-start without a continue-edge. Without the early-return
+    // in Migration Check, LOOP-04 would emit D-01 "has no exit" on top.
+    // Correct ordering (D-CL-02): the migration check runs first and returns.
     const graph = parseFixture('loop-start.canvas');
     const validator = new GraphValidator();
     const errors = validator.validate(graph);
-    // Migration-error присутствует:
-    expect(errors.some(e => e.includes('устаревш'))).toBe(true);
-    // НЕТ Phase 49 D-01 / Phase 50.1 D-04 «не имеет выхода» ошибки:
-    expect(errors.some(e => e.includes('не имеет выхода'))).toBe(false);
-    // И старое Phase 43 D-08.1 сообщение «не имеет ребра «выход»» больше нигде не выпускается
-    // валидатором (гарантия чистоты Phase 49 rewrite — literal removed from LOOP-04 block):
-    expect(errors.some(e => e.includes('не имеет ребра'))).toBe(false);
-    // Phase 50.1 guard: no D-06 «"+"-рёбер» wording leaks into a legacy-migration canvas.
-    expect(errors.some(e => e.includes('"+"-рёбер'))).toBe(false);
+    // Migration-error present:
+    expect(errors.some(e => e.includes('deprecated'))).toBe(true);
+    // NO Phase 49 D-01 / Phase 50.1 D-04 "has no exit" error:
+    expect(errors.some(e => e.includes('has no exit'))).toBe(false);
+    // The old Phase 43 D-08.1 message «has no edge "exit"» is no longer emitted by the
+    // validator (purity guarantee from the Phase 49 rewrite — literal removed from LOOP-04 block):
+    expect(errors.some(e => e.includes('has no edge'))).toBe(false);
+    // Phase 50.1 guard: no D-06 «multiple "+" edges» wording leaks into a legacy-migration canvas.
+    expect(errors.some(e => e.includes('multiple "+" edges'))).toBe(false);
   });
 
   // ── D-09: cycle through unified loop node is NOT flagged as unintentional ───
@@ -418,8 +421,9 @@ describe('Phase 51 — D-04 snippet missing-file check (PICKER-01)', () => {
       snippetFolderPath: ROOT,
     });
     const errors = validator.validate(graph);
-    expect(errors.some(e => e.includes('не найден'))).toBe(false);
-    expect(errors.some(e => e.includes('Snippet-узел'))).toBe(false);
+    // Phase 84 I18N-02: defaultT (English) is in effect; assert against English wording.
+    expect(errors.some(e => e.includes('not found'))).toBe(false);
+    expect(errors.some(e => e.includes('Snippet node'))).toBe(false);
   });
 
   it('Test 2 — missing file: emits one error with label, relative path, and snippetFolderPath echo', () => {
@@ -433,7 +437,7 @@ describe('Phase 51 — D-04 snippet missing-file check (PICKER-01)', () => {
       snippetFolderPath: ROOT,
     });
     const errors = validator.validate(graph);
-    const d04 = errors.find(e => e.includes('Snippet-узел') && e.includes('не найден'));
+    const d04 = errors.find(e => e.includes('Snippet node') && e.includes('not found'));
     expect(d04).toBeDefined();
     if (d04 === undefined) return;
     // nodeLabel() surfaces snippetLabel → label-as-id for test-identifiability.
@@ -442,7 +446,7 @@ describe('Phase 51 — D-04 snippet missing-file check (PICKER-01)', () => {
     expect(d04).toContain('missing/file.md');
     expect(d04).toContain(ROOT);
     // Only one D-04 error for one offending node
-    const d04Count = errors.filter(e => e.includes('Snippet-узел') && e.includes('не найден')).length;
+    const d04Count = errors.filter(e => e.includes('Snippet node') && e.includes('not found')).length;
     expect(d04Count).toBe(1);
   });
 
@@ -456,7 +460,8 @@ describe('Phase 51 — D-04 snippet missing-file check (PICKER-01)', () => {
       snippetFolderPath: ROOT,
     });
     const errors = validator.validate(graph);
-    expect(errors.some(e => e.includes('не найден'))).toBe(false);
+    // Phase 84 I18N-02: defaultT (English) is in effect; assert against English wording.
+    expect(errors.some(e => e.includes('not found'))).toBe(false);
   });
 
   it('Test 4 — back-compat directory binding: no snippetPath → probe never decides; no D-04 error regardless', () => {
@@ -467,7 +472,7 @@ describe('Phase 51 — D-04 snippet missing-file check (PICKER-01)', () => {
       snippetFolderPath: ROOT,
     });
     const errors = validator.validate(graph);
-    expect(errors.some(e => e.includes('Snippet-узел') && e.includes('не найден'))).toBe(false);
+    expect(errors.some(e => e.includes('Snippet node') && e.includes('not found'))).toBe(false);
     expect(probeCalls).toBe(0);
   });
 
@@ -478,14 +483,14 @@ describe('Phase 51 — D-04 snippet missing-file check (PICKER-01)', () => {
       snippetFolderPath: ROOT,
     });
     const errors = validator.validate(graph);
-    expect(errors.some(e => e.includes('Snippet-узел') && e.includes('не найден'))).toBe(false);
+    expect(errors.some(e => e.includes('Snippet node') && e.includes('not found'))).toBe(false);
   });
 
   it('Test 6 — no probe configured: legacy zero-arg construction skips D-04 silently even with snippetPath set', () => {
     const graph = buildGraphWithSnippet({ radiprotocol_snippetPath: 'x.md' });
     const validator = new GraphValidator(); // zero-arg, legacy
     const errors = validator.validate(graph);
-    expect(errors.some(e => e.includes('Snippet-узел') && e.includes('не найден'))).toBe(false);
+    expect(errors.some(e => e.includes('Snippet node') && e.includes('not found'))).toBe(false);
   });
 
   it('Test 7 — multiple snippet nodes: exactly one error, naming only the missing file path', () => {
@@ -498,7 +503,7 @@ describe('Phase 51 — D-04 snippet missing-file check (PICKER-01)', () => {
       snippetFolderPath: ROOT,
     });
     const errors = validator.validate(graph);
-    const d04Errors = errors.filter(e => e.includes('Snippet-узел') && e.includes('не найден'));
+    const d04Errors = errors.filter(e => e.includes('Snippet node') && e.includes('not found'));
     expect(d04Errors.length).toBe(1);
     const d04 = d04Errors[0]!;
     expect(d04).toContain('bad/absent.md');

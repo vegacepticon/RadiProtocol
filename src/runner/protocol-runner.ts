@@ -5,12 +5,16 @@ import type { RunnerState, UndoEntry } from './runner-state';
 import { TextAccumulator } from './text-accumulator';
 import { isExitEdge } from '../graph/node-label';
 import { RUNNER_STATUS } from '../constants/runner-states';
+import { defaultT, type Translator } from '../i18n';
 
 interface ProtocolRunnerOptions {
   /** Hard maximum loop iteration count before transitioning to error state. Default: 50. (D-08, RUN-09) */
   maxIterations?: number;
   /** Separator inserted between text chunks when no per-node override is set. Default: 'newline'. (D-08, SEP-01) */
   defaultSeparator?: 'newline' | 'space';
+  /** Phase 84 I18N-02: translator for runner-emitted runtime error messages. Defaults to English
+   *  (defaultT) for pure-test sites that don't carry a plugin reference. */
+  t?: Translator;
 }
 
 /**
@@ -28,6 +32,8 @@ interface ProtocolRunnerOptions {
 export class ProtocolRunner {
   private readonly maxIterations: number;
   private readonly defaultSeparator: 'newline' | 'space';
+  /** Phase 84 I18N-02: translator (defaults to English defaultT). */
+  private readonly t: Translator;
 
   private graph: ProtocolGraph | null = null;
   private currentNodeId: string | null = null;
@@ -46,6 +52,7 @@ export class ProtocolRunner {
   constructor(options: ProtocolRunnerOptions = {}) {
     this.maxIterations = options.maxIterations ?? 50;
     this.defaultSeparator = options.defaultSeparator ?? 'newline';
+    this.t = options.t ?? defaultT;
   }
 
   // ── Public API ──────────────────────────────────────────────────────────────
@@ -412,7 +419,7 @@ export class ProtocolRunner {
    * the undo snapshot from the accumulator the instant after this call returns. Without
    * the awaiting-loop-pick gate the call was a no-op and the undo snapshot recorded
    * pre-edit text, so manual textarea edits were silently discarded on body-branch entry,
-   * «выход» exit, back-edge re-entry, and dead-end return.
+   * exit-edge transition, back-edge re-entry, and dead-end return.
    */
   syncManualEdit(text: string): void {
     if (this.runnerStatus !== RUNNER_STATUS.AT_NODE && this.runnerStatus !== RUNNER_STATUS.AWAITING_LOOP_PICK) return;
@@ -683,7 +690,7 @@ export class ProtocolRunner {
         case 'loop': {
           // B1 re-entry guard — check top-of-stack BEFORE pushing a new frame.
           // If the top frame's loopNodeId === cursor, this call is a re-entry via a body
-          // back-edge (e.g. n-a1 → n-loop in unified-loop-valid.canvas) OR an inner «выход»
+          // back-edge (e.g. n-a1 → n-loop in unified-loop-valid.canvas) OR an inner exit
           // that lands on the outer loop node (e.g. e5: n-inner → n-outer in
           // unified-loop-nested.canvas). In both cases the frame already exists — increment
           // iteration in-place and halt at the picker WITHOUT pushing a second frame and
@@ -726,12 +733,10 @@ export class ProtocolRunner {
         }
         case 'loop-start':
         case 'loop-end': {
-          // Phase 43 D-14 — legacy kinds парсируются (D-06) для migration-error через GraphValidator.
-          // В runtime не доходят: validator отвергает канвас до старта runner'а.
-          this.transitionToError(
-            'Обнаружен устаревший узел loop-start/loop-end. Канвас должен быть отклонён validator-ом; ' +
-            'если вы видите это сообщение — это программная ошибка, сообщите автору плагина.',
-          );
+          // Phase 43 D-14 — legacy kinds are parsed (D-06) so GraphValidator can emit a migration error.
+          // They never reach runtime: the validator rejects the canvas before the runner starts.
+          // Phase 84 I18N-02: localized via injected translator (protocolRunner.legacyLoopRuntime).
+          this.transitionToError(this.t('protocolRunner.legacyLoopRuntime'));
           return;
         }
         case 'snippet': {

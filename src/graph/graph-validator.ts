@@ -5,6 +5,7 @@
 
 import type { ProtocolGraph, RPNode } from './graph-model';
 import { nodeLabel as sharedNodeLabel, isLabeledEdge, isExitEdge, stripExitPrefix } from './node-label';
+import { defaultT, type Translator } from '../i18n';
 
 /**
  * Phase 51 D-04 (PICKER-01) — options bag for GraphValidator.
@@ -19,15 +20,20 @@ interface GraphValidatorOptions {
   /** Phase 51 D-04: snippet root from settings.snippetFolderPath; required for absolute-path
    *  composition and for the error message. When undefined, the D-04 check is skipped silently. */
   snippetFolderPath?: string;
+  /** Phase 84 I18N-02: translator for validator-emitted error messages. Defaults to English
+   *  (defaultT) for pure-test sites that don't carry a plugin reference. */
+  t?: Translator;
 }
 
 export class GraphValidator {
   private readonly snippetFileProbe?: (absPath: string) => boolean;
   private readonly snippetFolderPath?: string;
+  private readonly t: Translator;
 
   constructor(options?: GraphValidatorOptions) {
     this.snippetFileProbe = options?.snippetFileProbe;
     this.snippetFolderPath = options?.snippetFolderPath;
+    this.t = options?.t ?? defaultT;
   }
   /**
    * Validates a ProtocolGraph and returns human-readable error strings (PARSE-08).
@@ -58,9 +64,10 @@ export class GraphValidator {
     const startNodeId = startNodes[0];
     if (startNodeId === undefined) return errors; // Guard for noUncheckedIndexedAccess
 
-    // Check (migration): Legacy loop-start and loop-end узлы (Phase 43 D-07, MIGRATE-01).
-    // Если найдены — возвращаем одну сводную ошибку на русском и прекращаем валидацию,
-    // иначе LOOP-04 и cycle-check выдают ошибки поверх, что сбивает автора (D-CL-02).
+    // Check (migration): Legacy loop-start and loop-end nodes (Phase 43 D-07, MIGRATE-01).
+    // If any are found, return a single consolidated error and stop validation,
+    // otherwise LOOP-04 and the cycle-check would emit errors on top, which confuses
+    // the author (D-CL-02).
     const legacyLoopNodes: string[] = [];
     for (const [, node] of graph.nodes) {
       if (node.kind === 'loop-start' || node.kind === 'loop-end') {
@@ -68,11 +75,8 @@ export class GraphValidator {
       }
     }
     if (legacyLoopNodes.length > 0) {
-      errors.push(
-        `Канвас содержит устаревшие узлы loop-start/loop-end: ${legacyLoopNodes.join(', ')}. ` +
-        `Пересоберите цикл с единым узлом loop: метка «выход» на одном из исходящих рёбер ` +
-        `обозначает ветвь выхода, остальные исходящие рёбра — тело цикла.`
-      );
+      // Phase 84 I18N-02: localized via injected translator (graphValidator.legacyLoopNodes).
+      errors.push(this.t('graphValidator.legacyLoopNodes', { ids: legacyLoopNodes.join(', ') }));
       return errors;
     }
 
@@ -113,12 +117,12 @@ export class GraphValidator {
       }
     }
 
-    // Check (LOOP-04): каждый unified loop-узел под Phase 50.1 EDGE-03:
-    //  (D-04) 0 "+"-edges AND 0 non-"+" labeled edges → "не имеет выхода" с подсказкой "+"-префикса
-    //  (D-05) 0 "+"-edges AND ≥1 non-"+" labeled edges → legacy-hint с {edgeIds}
-    //  (D-06) ≥2 "+"-edges → список offending edge ids, уберите "+"
+    // Check (LOOP-04): each unified loop node under Phase 50.1 EDGE-03:
+    //  (D-04) 0 "+"-edges AND 0 non-"+" labeled edges → "no exit" with a "+"-prefix hint
+    //  (D-05) 0 "+"-edges AND ≥1 non-"+" labeled edges → legacy hint with {edgeIds}
+    //  (D-06) ≥2 "+"-edges → list of offending edge ids, remove "+" from the rest
     //  (D-08) iterate "+"-edges, stripExitPrefix(label) === '' → per-offending-edge error
-    //  (D-07) 0 non-"+" outgoing edges → нет тела
+    //  (D-07) 0 non-"+" outgoing edges → no body
     // Error-check ordering: D-04/D-05 → D-06 → D-08 → D-07. Multiple errors per loop node
     // accumulate (see RunnerView Error panel). `isExitEdge` and `stripExitPrefix` live in
     // `src/graph/node-label.ts` (Phase 50.1 D-09/D-10). `isLabeledEdge` is still used below
@@ -132,43 +136,37 @@ export class GraphValidator {
       const label = this.nodeLabel(node);
 
       // D-04 / D-05 — zero "+"-edges
+      // Phase 84 I18N-02: localized via injected translator (graphValidator.loopNoExit / loopNoExitWithLegacy).
       if (exitEdges.length === 0) {
         if (legacyLabeledEdges.length === 0) {
           // D-04: clean zero-exit — no labeled edges at all
-          errors.push(
-            `Loop-узел "${label}" не имеет выхода. Пометьте ровно одно исходящее ребро префиксом "+" — текст после "+" станет подписью кнопки выхода.`
-          );
+          errors.push(this.t('graphValidator.loopNoExit', { label }));
         } else {
           // D-05: legacy hint — list the labeled non-"+" candidates
           const edgeIds = legacyLabeledEdges.map(e => e.id).join(', ');
-          errors.push(
-            `Loop-узел "${label}" не имеет выхода с префиксом "+". Добавьте "+" к одному из помеченных рёбер (${edgeIds}) — текст после "+" станет подписью кнопки выхода.`
-          );
+          errors.push(this.t('graphValidator.loopNoExitWithLegacy', { label, ids: edgeIds }));
         }
       }
 
       // D-06 — ≥2 "+"-edges
+      // Phase 84 I18N-02: localized via injected translator (graphValidator.loopMultipleExits).
       if (exitEdges.length > 1) {
         const dupIds = exitEdges.map(e => e.id).join(', ');
-        errors.push(
-          `Loop-узел "${label}" имеет несколько "+"-рёбер: ${dupIds}. Должно быть ровно одно выходное ребро — уберите "+" с остальных.`
-        );
+        errors.push(this.t('graphValidator.loopMultipleExits', { label, ids: dupIds }));
       }
 
       // D-08 — per-offending-edge, "+"-edge with empty caption post-strip
+      // Phase 84 I18N-02: localized via injected translator (graphValidator.loopExitNoLabel).
       for (const edge of exitEdges) {
         if (stripExitPrefix(edge.label ?? '').length === 0) {
-          errors.push(
-            `Loop-узел "${label}": "+"-ребро ${edge.id} не имеет подписи — добавьте текст после "+".`
-          );
+          errors.push(this.t('graphValidator.loopExitNoLabel', { label, edgeId: edge.id }));
         }
       }
 
       // D-07 — zero non-"+" outgoing edges (no body)
+      // Phase 84 I18N-02: localized via injected translator (graphValidator.loopNoBody).
       if (bodyEdges.length === 0) {
-        errors.push(
-          `Loop-узел "${label}" не имеет тела — добавьте исходящее ребро без префикса "+".`
-        );
+        errors.push(this.t('graphValidator.loopNoBody', { label }));
       }
     }
 
@@ -186,16 +184,19 @@ export class GraphValidator {
         const absPath = `${this.snippetFolderPath}/${relPath}`;
         if (!this.snippetFileProbe(absPath)) {
           const label = this.nodeLabel(node);
-          errors.push(
-            `Snippet-узел "${label}" ссылается на несуществующий файл "${relPath}" — файл не найден в ${this.snippetFolderPath}. Проверьте путь или восстановите файл.`
-          );
+          // Phase 84 I18N-02: localized via injected translator (graphValidator.snippetFileMissing).
+          errors.push(this.t('graphValidator.snippetFileMissing', {
+            label,
+            relPath,
+            folder: this.snippetFolderPath,
+          }));
         }
       }
     }
 
-    // Check 6 (orphaned loop-end) удалён в Phase 43 D-10 — LoopEndNode больше не существует
-    // как живой kind в валидных канвасах. Legacy loop-end узлы отклоняются Migration Check'ом
-    // (см. выше, Phase 43 D-07), до достижения этой точки.
+    // Check 6 (orphaned loop-end) was removed in Phase 43 D-10 — LoopEndNode no longer exists
+    // as a live kind in valid canvases. Legacy loop-end nodes are rejected by Migration Check
+    // (see above, Phase 43 D-07) before reaching this point.
 
     // TODO: Phase 5 — Check 7: Snippet reference existence
     // for (const [id, node] of graph.nodes) {
@@ -261,8 +262,8 @@ export class GraphValidator {
           const cycleStart = pathStack.indexOf(neighborId);
           const cycleNodes = pathStack.slice(cycleStart);
 
-          // Phase 43 D-09 — намеренный цикл теперь проходит через unified loop node
-          // (ранее проходил через loop-end). Имя переменной обновлено.
+          // Phase 43 D-09 — an intentional cycle now passes through a unified loop node
+          // (previously through loop-end). Variable name updated accordingly.
           const passesViaLoopNode = cycleNodes.some(id => {
             const n = graph.nodes.get(id);
             return n?.kind === 'loop';
