@@ -1,27 +1,28 @@
 # Milestones
 
-## v1.14 Internationalization, Documentation & Infrastructure (Opened: 2026-05-03)
+## v1.14 Internationalization, Documentation & Infrastructure (Closed: 2026-05-03)
 
-**Phases planned:** 3 phases (84–86), 8 requirements
-**Timeline:** 2026-05-03 → TBD
-**Git:** New branch `dev/v1.14-i18n-docs-infra` recommended; PR to `main` at milestone close
-**Release:** Optional — user-facing changes (i18n, parallel inline runners) may warrant a BRAT update if polished; otherwise internal-only like v1.12/v1.13.
+**Phases completed:** 3 phases (84–86), 8 requirements satisfied
+**Timeline:** 2026-05-03 (single day)
+**Git:** TBD commits on `dev/v1.14` branch
+**Release:** Optional — user-facing changes (i18n, parallel inline runners, template library MVP) may warrant a BRAT update if polished; otherwise internal-only like v1.12/v1.13.
 
-**Key targets:**
+**Key targets achieved:**
 
 - Phase 84: i18n + Documentation — locale files (`en.json`, `ru.json`), type-safe `t()` service, settings language dropdown; README.md at repo root; `docs/PROTOCOL-AUTHORING.md` and `docs/CONTRIBUTING.md`
 - Phase 85: Multiple Inline Runners — plugin registry (`Set<InlineRunnerModal>`), per-instance cleanup, cascade positioning (+24px offset), `(canvasPath, notePath)` uniqueness check
-- Phase 86: Template Library MVP — `LibraryService` fetching index from GitHub raw, `installSnippet()` via `requestUrl()`, SnippetManagerView «🌐 Library» button
+- Phase 86: Template Library MVP — `LibraryService` fetching index from GitHub raw, `installSnippet()` via `requestUrl()`, SnippetManagerView «Библиотека» button
 
-**Research completed at open:**
+**Final gate:** `npm test` 861/1 skipped, `npm run build` exit 0, `npm run lint` 0 errors / 2 pre-existing warnings
 
-- Text-block after start node: runner core handles correctly; tests added (`start-text-block.test.ts`). No bug in engine.
-- Multiple inline runners: MEDIUM complexity (Stage 1 SMALL). Registry + cleanup + cascade = 1–2 days. Session recovery deferred.
-- Template library: MVP SMALL (~1–2 days). GitHub raw + existing `SnippetService` CRUD.
+**Known deferred items at close:**
 
-**Audit:** Pending at milestone close.
+- 2 lint warnings — `obsidianmd/prefer-file-manager-trash-file` in `src/snippets/snippet-service.ts:240,283` (documented out-of-scope since v1.12)
+- Verification backfill — Phases 64/66/67/68 still lack formal `VERIFICATION.md`; Nyquist `VALIDATION.md` for Phases 63–86 missing (project-wide tech debt)
 
-**Archive:** Pending at milestone close.
+**Audit:** `.planning/MILESTONE-AUDIT.md` (Path A — close with documented tech debt, no blockers).
+
+**Archive:** `.planning/milestones/v1.14-phases/` (84/85/86 directory tree).
 
 ---
 

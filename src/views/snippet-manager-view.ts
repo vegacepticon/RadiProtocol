@@ -11,6 +11,7 @@ import type RadiProtocolPlugin from '../main';
 import type { Snippet } from '../snippets/snippet-model';
 import { SnippetEditorModal } from './snippet-editor-modal';
 import { ConfirmModal } from './confirm-modal';
+import { LibraryBrowserModal } from './library-browser-modal';
 import { SnippetTreePicker } from './snippet-tree-picker';
 import { rewriteCanvasRefs } from '../snippets/canvas-ref-sync';
 import { toCanvasKey } from '../snippets/snippet-service';
@@ -82,6 +83,15 @@ export class SnippetManagerView extends ItemView {
     folderBtn.createSpan({ text: this.plugin.i18n.t('snippetManager.folderButton') });
     this.registerDomEvent(folderBtn, 'click', () => {
       void this.handleCreateSubfolder(this.plugin.settings.snippetFolderPath);
+    });
+
+    // Phase 86 (TEMPLATE-LIB-02): Library browser button
+    const libBtn = header.createEl('button', { cls: 'radi-snippet-tree-new-btn' });
+    const libIcon = libBtn.createSpan({ cls: 'radi-snippet-tree-new-icon' });
+    setIcon(libIcon, 'globe');
+    libBtn.createSpan({ text: this.plugin.i18n.t('snippetManager.libraryButton') });
+    this.registerDomEvent(libBtn, 'click', () => {
+      void this.openLibraryBrowser();
     });
 
     // Tree container
@@ -545,5 +555,10 @@ export class SnippetManagerView extends ItemView {
       }
     }
     if (mutated) await this.plugin.saveSettings();
+  }
+
+  // Phase 86 (TEMPLATE-LIB-02): open the external snippet library browser.
+  private openLibraryBrowser(): void {
+    new LibraryBrowserModal(this.app, this.plugin).open();
   }
 }

@@ -80,7 +80,7 @@ describe('Settings folder autocomplete (SETTINGS-01)', () => {
   it('attaches folder suggesters to Protocol, Output, and Snippet fields only', () => {
     const { textComponents, suggesters } = renderSettings();
 
-    expect(textComponents).toHaveLength(4);
+    expect(textComponents).toHaveLength(5);
     expect(suggesters).toHaveLength(3);
     expect(suggesters.map((suggester: { textInputEl: unknown }) => suggester.textInputEl)).toEqual([
       textComponents[0]!.inputEl,
@@ -88,6 +88,7 @@ describe('Settings folder autocomplete (SETTINGS-01)', () => {
       textComponents[2]!.inputEl,
     ]);
     expect(suggesters.map((suggester: { textInputEl: unknown }) => suggester.textInputEl)).not.toContain(textComponents[3]!.inputEl);
+    expect(suggesters.map((suggester: { textInputEl: unknown }) => suggester.textInputEl)).not.toContain(textComponents[4]!.inputEl);
   });
 
   it('typing wired fields still persists through field-specific save handlers', async () => {

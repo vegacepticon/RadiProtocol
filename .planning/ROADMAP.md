@@ -545,13 +545,10 @@ Phases 84, 85, 86 are independent and can run in any order or in parallel. Recom
 | 78 | v1.12 | 2/2 | Complete | 2026-05-01 |
 | 79 | v1.13 | 2/2 | Complete | 2026-05-02 |
 | 80 | v1.13 | 5/5 | Complete | 2026-05-02 |
-| 81 | v1.13 | 5/5 | Complete | 2026-05-02 |
-| 82 | v1.13 | 5/5 | Complete | 2026-05-02 |
-| 83 | v1.13 | 5/5 | Complete | 2026-05-02 |
-| 84 | v1.14 | 0/0 | Planning | — |
-| 85 | v1.14 | 0/0 | Planning | — |
-| 86 | v1.14 | 0/0 | Planning | — |
-
+|| 83 | v1.13 | 5/5 | Complete | 2026-05-02 |
+|| 84 | v1.14 | 0/0 | Complete | 2026-05-03 |
+|| 85 | v1.14 | 0/0 | Complete | 2026-05-03 |
+|| 86 | v1.14 | 0/0 | Complete | 2026-05-03 |
 
 ---
 

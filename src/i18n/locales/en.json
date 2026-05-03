@@ -5,7 +5,9 @@
     "languageDesc": "Select the interface language. / Выберите язык интерфейса.",
     "russian": "Русский",
     "donateHeading": "Support development",
-    "showWalletAddresses": "Show wallet addresses"
+    "showWalletAddresses": "Show wallet addresses",
+    "libraryUrlLabel": "Library URL",
+    "libraryUrlDesc": "URL of the external snippet library index JSON. Leave empty to disable."
   },
   "donate": {
     "invitation": "Thank you for your support! If RadiProtocol saves you time, any donation is appreciated.",
@@ -47,6 +49,7 @@
   "snippetManager": {
     "newButton": "New",
     "folderButton": "Folder",
+    "libraryButton": "Library",
     "redrawError": "Failed to refresh the snippet list. See console for details.",
     "notFound": "Snippet not found.",
     "subfolderNameLabel": "Subfolder name",
@@ -137,5 +140,16 @@
   "runnerView": {
     "snippetNotFound": "Snippet not found: {path}",
     "snippetCannotBeUsed": "Snippet «{path}» cannot be used. {error}"
+  },
+  "library": {
+    "title": "Snippet Library",
+    "noUrl": "Library URL is not configured. Set it in plugin settings.",
+    "loadError": "Failed to load library index. Check the URL and your network connection.",
+    "install": "Install",
+    "installing": "Installing…",
+    "installed": "Installed: {name}",
+    "installedLabel": "Installed",
+    "installFailed": "Failed to install",
+    "networkError": "Network error. Check your connection and the library URL."
   }
 }

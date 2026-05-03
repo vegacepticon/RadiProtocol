@@ -5,7 +5,9 @@
     "languageDesc": "Select the interface language. / Выберите язык интерфейса.",
     "russian": "Русский",
     "donateHeading": "Помочь разработке",
-    "showWalletAddresses": "Показать адреса кошельков"
+    "showWalletAddresses": "Показать адреса кошельков",
+    "libraryUrlLabel": "URL библиотеки",
+    "libraryUrlDesc": "URL индексного JSON внешней библиотеки сниппетов. Оставьте пустым, чтобы отключить."
   },
   "donate": {
     "invitation": "Спасибо за поддержку! Если RadiProtocol экономит вам время — буду рад любому переводу.",
@@ -47,6 +49,7 @@
   "snippetManager": {
     "newButton": "Новый",
     "folderButton": "Папка",
+    "libraryButton": "Библиотека",
     "redrawError": "Не удалось обновить список сниппетов. Подробности в консоли.",
     "notFound": "Сниппет не найден.",
     "subfolderNameLabel": "Имя подпапки",
@@ -137,5 +140,16 @@
   "runnerView": {
     "snippetNotFound": "Сниппет не найден: {path}",
     "snippetCannotBeUsed": "Сниппет «{path}» не может быть использован. {error}"
+  },
+  "library": {
+    "title": "Библиотека сниппетов",
+    "noUrl": "URL библиотеки не настроен. Укажите его в настройках плагина.",
+    "loadError": "Не удалось загрузить индекс библиотеки. Проверьте URL и подключение к сети.",
+    "install": "Установить",
+    "installing": "Установка…",
+    "installed": "Установлено: {name}",
+    "installedLabel": "Установлено",
+    "installFailed": "Ошибка установки",
+    "networkError": "Ошибка сети. Проверьте подключение и URL библиотеки."
   }
 }

@@ -189,7 +189,23 @@ vi.mock('obsidian', () => {
     renderSuggestion(_item: T, _el: unknown): void {}
     onChooseSuggestion(_item: T, _evt: unknown): void {}
   }
-  return { ItemView, WorkspaceLeaf, Notice, setIcon, Menu, SuggestModal };
+  // Phase 86: Modal / requestUrl stubs — library-browser-modal.ts imports them
+  class Modal {
+    app: unknown;
+    contentEl: MockEl;
+    titleEl: MockEl;
+    constructor(app: unknown) {
+      this.app = app;
+      this.contentEl = makeEl('div');
+      this.titleEl = makeEl('div');
+    }
+    open(): void {}
+    close(): void {}
+    onOpen(): void {}
+    onClose(): void {}
+  }
+  const requestUrl = vi.fn();
+  return { ItemView, WorkspaceLeaf, Notice, setIcon, Menu, SuggestModal, Modal, requestUrl };
 });
 
 interface CapturedMenuItem { title: string; icon?: string; cb: () => void }

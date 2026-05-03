@@ -80,6 +80,7 @@ const settings = {
   protocolFolderPath: '',
   textSeparator: 'newline' as const,
   locale: 'en' as const,
+  libraryUrl: '',
 };
 
 const ROOT = '.radiprotocol/snippets';

@@ -564,3 +564,45 @@
   pointer-events: none;
   opacity: 0.5;
 }
+
+/* Phase 86: Library browser modal */
+.rp-library-category-heading {
+  margin-top: var(--size-4-4);
+  margin-bottom: var(--size-4-2);
+  font-size: var(--font-ui-medium);
+  font-weight: 600;
+  border-bottom: 1px solid var(--background-modifier-border);
+  padding-bottom: var(--size-4-1);
+}
+
+.rp-library-entry {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--size-4-2) 0;
+  border-bottom: 1px solid var(--background-modifier-border);
+}
+
+.rp-library-entry-info {
+  flex: 1 1 auto;
+  min-width: 0;
+  padding-right: var(--size-4-2);
+}
+
+.rp-library-entry-name {
+  font-weight: var(--font-medium);
+}
+
+.rp-library-entry-desc {
+  font-size: var(--font-ui-smaller);
+  color: var(--text-muted);
+}
+
+.rp-library-install-btn {
+  flex-shrink: 0;
+}
+
+.rp-library-error {
+  color: var(--text-error);
+  padding: var(--size-4-4) 0;
+}

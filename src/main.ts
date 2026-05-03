@@ -13,6 +13,7 @@ import { I18nService } from './i18n';
 import { CanvasLiveEditor } from './canvas/canvas-live-editor';
 import { CanvasNodeFactory } from './canvas/canvas-node-factory';
 import { EdgeLabelSyncService } from './canvas/edge-label-sync-service';
+import { LibraryService } from './snippets/library-service';
 // Phase 45 (LOOP-06): start-from-node command dependencies
 import { NodePickerModal, buildNodeOptions } from './views/node-picker-modal';
 import { GraphValidator } from './graph/graph-validator';
@@ -113,6 +114,7 @@ export default class RadiProtocolPlugin extends Plugin {
   canvasParser!: CanvasParser;
   snippetService!: SnippetService;
   sessionService!: SessionService;
+  libraryService!: LibraryService;
   canvasLiveEditor!: CanvasLiveEditor;
   canvasNodeFactory!: CanvasNodeFactory;
   edgeLabelSyncService!: EdgeLabelSyncService;
@@ -144,6 +146,9 @@ export default class RadiProtocolPlugin extends Plugin {
 
     // Instantiate session persistence service (SESSION-01)
     this.sessionService = new SessionService(this.app, this.settings.sessionFolderPath);
+
+    // Phase 86 (TEMPLATE-LIB-01): template library service
+    this.libraryService = new LibraryService(this.app, this.settings, this.snippetService, this.i18n.t.bind(this.i18n));
 
     // Instantiate live canvas editor (LIVE-01)
     this.canvasLiveEditor = new CanvasLiveEditor(this.app);

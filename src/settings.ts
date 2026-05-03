@@ -36,6 +36,8 @@ export interface RadiProtocolSettings {
   inlineRunnerPosition?: InlineRunnerLayout | null;
   /** Phase 84 (I18N-01): UI language. Default 'en' for new installs; existing installs without this key default to 'ru' for backward compat. */
   locale: 'en' | 'ru';
+  /** Phase 86 (TEMPLATE-LIB-01): URL of the external snippet library index JSON. */
+  libraryUrl: string;
 }
 
 export const DEFAULT_SETTINGS: RadiProtocolSettings = {
@@ -49,6 +51,7 @@ export const DEFAULT_SETTINGS: RadiProtocolSettings = {
   textSeparator: 'newline',
   inlineRunnerPosition: null,
   locale: 'en',
+  libraryUrl: '',
 };
 
 export class RadiProtocolSettingsTab extends PluginSettingTab {
@@ -189,6 +192,19 @@ export class RadiProtocolSettingsTab extends PluginSettingTab {
         .setValue(this.plugin.settings.sessionFolderPath)
         .onChange(async (value) => {
           this.plugin.settings.sessionFolderPath = value.trim() || '.radiprotocol/sessions';
+          await this.plugin.saveSettings();
+        })
+      );
+
+    // Phase 86 (TEMPLATE-LIB-01): library URL setting
+    new Setting(containerEl)
+      .setName(this.plugin.i18n.t('settings.libraryUrlLabel'))
+      .setDesc(this.plugin.i18n.t('settings.libraryUrlDesc'))
+      .addText(text => text
+        .setPlaceholder('https://raw.githubusercontent.com/user/repo/main/index.json')
+        .setValue(this.plugin.settings.libraryUrl)
+        .onChange(async (value) => {
+          this.plugin.settings.libraryUrl = value.trim();
           await this.plugin.saveSettings();
         })
       );

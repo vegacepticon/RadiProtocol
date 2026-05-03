@@ -2,14 +2,14 @@
 gsd_state_version: 1.0
 milestone: v1.14
 milestone_name: Internationalization, Documentation & Infrastructure
-status: in_progress
+status: completed
 started_at: 2026-05-03
-completed_at: null
-last_updated: "2026-05-03T12:58:00.000Z"
-last_activity: 2026-05-03 — Phase 85 complete: inline runner registry, cascade positioning, onunload cleanup; 6 new tests added; build/lint/test green
+completed_at: 2026-05-03
+last_updated: "2026-05-03T15:15:00.000Z"
+last_activity: 2026-05-03 — Phase 86 complete: Template Library MVP (LibraryService, LibraryBrowserModal, CSS, i18n keys, settings field); 857 tests passed, build/lint green
 progress:
   total_phases: 3
-  completed_phases: 2
+  completed_phases: 3
   total_plans: 5
   completed_plans: 5
 ---
