@@ -3,12 +3,7 @@ import type { App } from 'obsidian';
 import { PluginSettingTab, Setting, Notice } from 'obsidian';
 import type RadiProtocolPlugin from './main';
 import { FolderSuggest } from './views/folder-suggest';
-import {
-  DONATE_WALLETS,
-  DONATE_INVITATION_TEXT,
-  DONATE_NOTICE_TEXT,
-  DONATE_TOOLTIP_TEXT,
-} from './donate/wallets';
+import { DONATE_WALLETS } from './donate/wallets';
 
 /** Phase 67 (D-05): renamed from InlineRunnerPosition; width/height optional for back-compat (D-06).
  *  Existing on-disk records have only {left, top}; missing width/height fall back to
@@ -39,6 +34,8 @@ export interface RadiProtocolSettings {
   textSeparator: 'newline' | 'space';
   /** Phase 60 (D-01): Last dragged inline runner position; Phase 67 (D-05/D-06) extended with optional width/height. */
   inlineRunnerPosition?: InlineRunnerLayout | null;
+  /** Phase 84 (I18N-01): UI language. Default 'en' for new installs; existing installs without this key default to 'ru' for backward compat. */
+  locale: 'en' | 'ru';
 }
 
 export const DEFAULT_SETTINGS: RadiProtocolSettings = {
@@ -51,6 +48,7 @@ export const DEFAULT_SETTINGS: RadiProtocolSettings = {
   protocolFolderPath: '',
   textSeparator: 'newline',
   inlineRunnerPosition: null,
+  locale: 'en',
 };
 
 export class RadiProtocolSettingsTab extends PluginSettingTab {
@@ -64,6 +62,25 @@ export class RadiProtocolSettingsTab extends PluginSettingTab {
   display(): void {
     const { containerEl } = this;
     containerEl.empty();
+
+    // Group 0 — Language (Phase 84 I18N-01)
+    new Setting(containerEl).setName(this.plugin.i18n.t('settings.language', undefined, 'Language')).setHeading();
+
+    new Setting(containerEl)
+      .setName(this.plugin.i18n.t('settings.languageLabel'))
+      .setDesc(this.plugin.i18n.t('settings.languageDesc'))
+      .addDropdown(drop => drop
+        .addOption('en', 'English')
+        .addOption('ru', this.plugin.i18n.t('settings.russian'))
+        .setValue(this.plugin.settings.locale)
+        .onChange(async (value) => {
+          this.plugin.settings.locale = value as 'en' | 'ru';
+          this.plugin.i18n.setLocale(this.plugin.settings.locale);
+          await this.plugin.saveSettings();
+          // Refresh the settings tab so all headings re-render in the new language.
+          this.display();
+        })
+      );
 
     // Group 1 — Runner
     new Setting(containerEl).setName('Runner').setHeading();
@@ -178,17 +195,17 @@ export class RadiProtocolSettingsTab extends PluginSettingTab {
 
     // Quick 260430-s48: relocated to bottom; addresses collapsed behind <details>.
     // Stateless: addresses are hard-coded constants in ./donate/wallets, no settings persistence.
-    new Setting(containerEl).setName('Помочь разработке').setHeading();
+    new Setting(containerEl).setName(this.plugin.i18n.t('settings.donateHeading')).setHeading();
 
     containerEl.createEl('p', {
-      text: DONATE_INVITATION_TEXT,
+      text: this.plugin.i18n.t('donate.invitation'),
       cls: 'rp-donate-intro',
     });
 
     // Quick 260430-s48: addresses collapsed by default to reduce settings-tab clutter.
     const detailsEl = containerEl.createEl('details', { cls: 'rp-donate-details' });
     detailsEl.createEl('summary', {
-      text: 'Показать адреса кошельков',
+      text: this.plugin.i18n.t('settings.showWalletAddresses'),
       cls: 'rp-donate-summary',
     });
 
@@ -204,10 +221,10 @@ export class RadiProtocolSettingsTab extends PluginSettingTab {
       });
       setting.addExtraButton(btn => btn
         .setIcon('copy')
-        .setTooltip(DONATE_TOOLTIP_TEXT)
+        .setTooltip(this.plugin.i18n.t('donate.copyAddress'))
         .onClick(() => {
           void navigator.clipboard.writeText(address).then(() => {
-            new Notice(DONATE_NOTICE_TEXT);
+            new Notice(this.plugin.i18n.t('donate.addressCopied'));
           });
         })
       );

@@ -79,6 +79,7 @@ const settings = {
   runnerViewMode: 'sidebar' as const,
   protocolFolderPath: '',
   textSeparator: 'newline' as const,
+  locale: 'en' as const,
 };
 
 const ROOT = '.radiprotocol/snippets';

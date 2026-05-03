@@ -34,6 +34,11 @@ function makePlugin(settings: Partial<RadiProtocolSettings> = {}) {
     async saveSettings() {
       this.saveSettingsCalls += 1;
     },
+    i18n: {
+      t: (key: string, _params?: Record<string, string>, fallback?: string) => fallback ?? key,
+      setLocale: () => {},
+      getLocale: () => 'en' as const,
+    },
   };
 }
 

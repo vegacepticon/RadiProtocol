@@ -1,5 +1,5 @@
 // src/donate/wallets.ts
-// Phase 71 (DONATE-01) — hard-coded crypto wallet constants for the Settings → "Помочь разработке" section.
+// Phase 71 (DONATE-01) — hard-coded crypto wallet constants for the Settings → donate section.
 //
 // Source of truth: .planning/REQUIREMENTS.md DONATE-01 (literal addresses) and
 // 71-CONTEXT.md decisions Row-D-02, EVM-D-02, EVM-D-03, NTC-D-01..03.
@@ -38,10 +38,5 @@ export const DONATE_WALLETS: ReadonlyArray<DonateWallet> = [
   },
 ];
 
-// User-facing strings (NTC-D-01, NTC-D-02, Row-D-03). Russian per CONTEXT.md "симметрия русского".
-export const DONATE_INVITATION_TEXT =
-  'Спасибо за поддержку! Если RadiProtocol экономит вам время — буду рад любому переводу.';
-
-export const DONATE_NOTICE_TEXT = 'Адрес скопирован';
-
-export const DONATE_TOOLTIP_TEXT = 'Скопировать адрес';
+// Phase 84 (I18N-01): user-facing strings moved to src/i18n/locales/*.json.
+// Consumers should use plugin.i18n.t('donate.invitation') etc.

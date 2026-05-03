@@ -4,13 +4,13 @@ milestone: v1.14
 milestone_name: Internationalization, Documentation & Infrastructure
 status: open
 started_at: 2026-05-03
-last_updated: "2026-05-03T00:00:00.000Z"
-last_activity: 2026-05-03 — Milestone v1.14 opened; Phase 84 planning started
+last_updated: "2026-05-03T05:44:00.000Z"
+last_activity: 2026-05-03 — Phase 84 Plan 01 completed: i18n service scaffolded (src/i18n/i18n-service.ts, en.json, ru.json), settings locale dropdown added, donate strings extracted and i18n-ized, build/lint/test green
 progress:
   total_phases: 3
   completed_phases: 0
-  total_plans: 0
-  completed_plans: 0
+  total_plans: 1
+  completed_plans: 1
 ---
 
 # RadiProtocol — Project State

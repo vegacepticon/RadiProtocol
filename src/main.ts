@@ -9,6 +9,7 @@ import { SnippetManagerView, SNIPPET_MANAGER_VIEW_TYPE } from './views/snippet-m
 import { SnippetService } from './snippets/snippet-service';
 import { SessionService } from './sessions/session-service';
 import { WriteMutex } from './utils/write-mutex';
+import { I18nService } from './i18n';
 import { CanvasLiveEditor } from './canvas/canvas-live-editor';
 import { CanvasNodeFactory } from './canvas/canvas-node-factory';
 import { EdgeLabelSyncService } from './canvas/edge-label-sync-service';
@@ -108,6 +109,7 @@ class CanvasPickerSuggestModal extends SuggestModal<CanvasPickerSuggestion> {
 
 export default class RadiProtocolPlugin extends Plugin {
   settings!: RadiProtocolSettings;
+  i18n!: I18nService;
   canvasParser!: CanvasParser;
   snippetService!: SnippetService;
   sessionService!: SessionService;
@@ -120,6 +122,14 @@ export default class RadiProtocolPlugin extends Plugin {
   async onload(): Promise<void> {
     // Load settings with defaults guard (NFR-08)
     this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());
+
+    // Phase 84 (I18N-01): init i18n. Backward-compat: existing installs without locale key default to 'ru'.
+    const loadedLocale = (this.settings as unknown as Record<string, unknown>).locale;
+    if (loadedLocale === undefined || loadedLocale === null) {
+      this.settings.locale = 'ru';
+      await this.saveSettings();
+    }
+    this.i18n = new I18nService(this.settings.locale);
 
     // Instantiate pure modules (no Obsidian dependency)
     this.canvasParser = new CanvasParser();
