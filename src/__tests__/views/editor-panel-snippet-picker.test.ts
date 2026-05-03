@@ -166,6 +166,7 @@ function makePlugin(): RadiProtocolPlugin {
     settings: { snippetFolderPath: '.radiprotocol/snippets' },
     snippetService: { _isFakeSnippetService: true },
     app: {} as unknown,
+    i18n: { t: (key: string, _params?: Record<string, string>, fallback?: string) => fallback ?? key, setLocale: () => {}, getLocale: () => 'en' as const },
   } as unknown as RadiProtocolPlugin;
 }
 

@@ -244,6 +244,8 @@ vi.mock('../../snippets/canvas-ref-sync', () => ({
 
 // --- Import SUT --------------------------------------------------------
 import { SnippetManagerView } from '../../views/snippet-manager-view';
+// Phase 84 (I18N-02): SnippetManagerView reads plugin.i18n.t(...) at render time.
+import { I18nService } from '../../i18n';
 
 // --- Plugin factory ----------------------------------------------------
 interface MockService {
@@ -288,6 +290,7 @@ function makePlugin(opts: {
     },
     snippetService: service,
     saveSettings: vi.fn().mockResolvedValue(undefined),
+    i18n: new I18nService('en'),
   };
   return { plugin, service };
 }
@@ -320,7 +323,7 @@ describe('Phase 51 Plan 04 — SnippetManager «Переместить в…» u
     // A Modal was opened
     expect(modalInstances.length).toBe(1);
     expect(modalInstances[0]!.isOpen).toBe(true);
-    expect(modalInstances[0]!.title).toBe('Переместить в…');
+    expect(modalInstances[0]!.title).toBe('Move to…');
 
     // A SnippetTreePicker was mounted inside the modal
     expect(pickerInstances.length).toBe(1);
@@ -380,7 +383,7 @@ describe('Phase 51 Plan 04 — SnippetManager «Переместить в…» u
     expect(pickerUnmountSpy).toHaveBeenCalledTimes(1);
   });
 
-  it('Test 5: selecting the source folder itself → Russian Notice, performMove NOT called', async () => {
+  it('Test 5: selecting the source folder itself → guard Notice, performMove NOT called (Phase 84 I18N-02: locale-agnostic)', async () => {
     const { plugin, service } = makePlugin({ allFolders: [root, `${root}/a`, `${root}/b`] });
     const view = makeView(plugin);
 
@@ -396,12 +399,11 @@ describe('Phase 51 Plan 04 — SnippetManager «Переместить в…» u
     expect(service.moveFolder).not.toHaveBeenCalled();
     // Modal stays open
     expect(modalInstances[0]!.isOpen).toBe(true);
-    // A Russian Notice was fired
+    // A guard Notice was fired (Phase 84 I18N-02: copy is now i18n-keyed; assert non-empty)
     expect(lastNoticeMessage.length).toBeGreaterThan(0);
-    expect(/[А-Яа-я]/.test(lastNoticeMessage)).toBe(true);
   });
 
-  it('Test 6: selecting a descendant of the source folder → Russian Notice, performMove NOT called', async () => {
+  it('Test 6: selecting a descendant of the source folder → guard Notice, performMove NOT called (Phase 84 I18N-02: locale-agnostic)', async () => {
     const { plugin, service } = makePlugin({
       allFolders: [root, `${root}/a`, `${root}/a/sub`, `${root}/b`],
     });
@@ -418,7 +420,7 @@ describe('Phase 51 Plan 04 — SnippetManager «Переместить в…» u
 
     expect(service.moveFolder).not.toHaveBeenCalled();
     expect(modalInstances[0]!.isOpen).toBe(true);
+    // A guard Notice was fired (Phase 84 I18N-02: copy is now i18n-keyed; assert non-empty)
     expect(lastNoticeMessage.length).toBeGreaterThan(0);
-    expect(/[А-Яа-я]/.test(lastNoticeMessage)).toBe(true);
   });
 });

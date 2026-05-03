@@ -1,13 +1,13 @@
 // views/snippet-editor-modal.ts
 // Phase 33 (MODAL-01..08, D-05..D-12, D-09): Unified create/edit modal for
 // snippets. The single create/edit surface used by the new tree view — every
-// click row, "+ Новый", and context-menu "Редактировать / Создать сниппет
-// здесь" routes through this class.
+// click row, "+ New", and context-menu "Edit / Create snippet here"
+// routes through this class.
 //
 // Responsibilities:
 //   - Create or edit a Snippet (JsonSnippet | MdSnippet)
 //   - JSON ↔ Markdown type toggle (create only; locked in edit mode per D-06)
-//   - «Папка» dropdown populated from listFolderDescendants(root)
+//   - Folder dropdown populated from listFolderDescendants(root)
 //   - Name collision pre-flight via snippetService.exists (debounced, D-12)
 //   - Unsaved-changes 3-button guard via ConfirmModal (D-08)
 //   - Phase 34 (MOVE-04 cleanup): move-on-save uses atomic snippetService.moveSnippet
@@ -33,7 +33,7 @@ type SnippetEditorResult =
 
 interface SnippetEditorOptions {
   mode: 'create' | 'edit';
-  /** Pre-fill «Папка» (create mode); edit mode derives from snippet.path */
+  /** Pre-fill folder (create mode); edit mode derives from snippet.path */
   initialFolder: string;
   /** Required when mode === 'edit' */
   snippet?: Snippet;
@@ -41,8 +41,9 @@ interface SnippetEditorOptions {
   initialKind?: 'json' | 'md';
 }
 
-const COLLISION_ERROR_TEXT = 'Файл с таким именем уже существует в этой папке.';
-const UNSAVED_GUARD_TITLE = 'Несохранённые изменения';
+// Phase 84 (I18N-02): copy keys; resolved at render time via this.plugin.i18n.t().
+const COLLISION_ERROR_KEY = 'snippetEditor.collisionError';
+const UNSAVED_GUARD_TITLE_KEY = 'snippetEditor.unsavedTitle';
 
 function dirname(path: string): string {
   const i = path.lastIndexOf('/');
@@ -81,7 +82,7 @@ export class SnippetEditorModal extends Modal {
   private draft: JsonSnippet | MdSnippet;
   private draftKind: 'json' | 'md';
   private currentFolder: string;
-  /** Phase 56 D-08 — baseline against which the «Папка» unsaved-dot is computed.
+  /** Phase 56 D-08 — baseline against which the folder-row unsaved-dot is computed.
    *  Initialised to the same value as currentFolder; advanced to the new
    *  currentFolder on every successful save commit. */
   private savedFolder: string;
@@ -96,7 +97,7 @@ export class SnippetEditorModal extends Modal {
   private saveErrorEl!: HTMLElement;
   /** Phase 52 D-04: banner shown when the loaded snippet carries a validationError. */
   private validationBannerEl: HTMLElement | null = null;
-  /** Phase 56 D-08 — bullet («•») rendered inside the «Папка» label; toggles
+  /** Phase 56 D-08 — bullet ("•") rendered inside the folder label; toggles
    *  via the .is-visible modifier whenever currentFolder !== savedFolder. */
   private folderUnsavedDotEl: HTMLSpanElement | null = null;
   /** @deprecated Phase 51 D-07 — superseded by snippetTreePicker (folder-only
@@ -105,7 +106,7 @@ export class SnippetEditorModal extends Modal {
    *  no new writes occur to this field. */
   private folderSelectEl!: HTMLSelectElement;
 
-  /** Phase 51 D-07 — SnippetTreePicker instance for the «Папка» row.
+  /** Phase 51 D-07 — SnippetTreePicker instance for the folder row.
    *  Replaces the legacy <select> dropdown; null until renderFolderDropdown mounts it. */
   private snippetTreePicker: SnippetTreePicker | null = null;
 
@@ -153,9 +154,11 @@ export class SnippetEditorModal extends Modal {
 
     // Title (copy contract)
     if (this.options.mode === 'create') {
-      titleEl.setText('Новый сниппет');
+      titleEl.setText(this.plugin.i18n.t('snippetEditor.newTitle'));
     } else {
-      titleEl.setText('Редактирование: ' + (this.options.snippet?.name ?? ''));
+      titleEl.setText(this.plugin.i18n.t('snippetEditor.editTitle', {
+        name: this.options.snippet?.name ?? '',
+      }));
     }
 
     // Type toggle (create only — D-06)
@@ -164,7 +167,7 @@ export class SnippetEditorModal extends Modal {
     } else {
       // Edit mode: static type label (kind locked)
       const typeRow = contentEl.createDiv({ cls: 'radi-snippet-editor-row' });
-      typeRow.createEl('label', { text: 'Тип' });
+      typeRow.createEl('label', { text: this.plugin.i18n.t('snippetEditor.type') });
       typeRow.createEl('span', {
         text: this.draftKind === 'json' ? 'JSON' : 'Markdown',
         cls: 'radi-snippet-editor-type-static',
@@ -189,7 +192,7 @@ export class SnippetEditorModal extends Modal {
     }
 
     // Content region (chip editor or textarea)
-    // Phase 33 gap-fix: no separate «Содержимое» label above — the chip editor
+    // Phase 33 gap-fix: no separate content label above — the chip editor
     // has its own Template/Placeholders sections, and Markdown mode uses a
     // single textarea whose placeholder text is self-explanatory.
     this.contentRegionEl = contentEl.createDiv({ cls: 'radi-snippet-editor-content' });
@@ -211,7 +214,7 @@ export class SnippetEditorModal extends Modal {
       this.saveBtnEl.disabled = true;
       this.saveBtnEl.setAttribute(
         'title',
-        'Сниппет содержит ошибку — исправьте источник и откройте заново.',
+        this.plugin.i18n.t('snippetEditor.validationLockTitle'),
       );
       this.contentRegionEl.setAttribute('aria-disabled', 'true');
       this.contentRegionEl.toggleClass('rp-snippet-form-locked', true);
@@ -257,7 +260,7 @@ export class SnippetEditorModal extends Modal {
 
   private renderTypeToggle(container: HTMLElement): void {
     const row = container.createDiv({ cls: 'radi-snippet-editor-row' });
-    row.createEl('label', { text: 'Тип' });
+    row.createEl('label', { text: this.plugin.i18n.t('snippetEditor.type') });
 
     const toggleWrap = row.createDiv({ cls: 'radi-snippet-editor-type-toggle' });
     toggleWrap.setAttribute('role', 'radiogroup');
@@ -296,14 +299,14 @@ export class SnippetEditorModal extends Modal {
     // (owned by Plan 02). This plan does NOT modify CSS.
     // See `.planning/notes/snippet-node-binding-and-picker.md`.
     const row = container.createDiv({ cls: 'radi-snippet-editor-row' });
-    const folderLabel = row.createEl('label', { text: 'Папка' });
+    const folderLabel = row.createEl('label', { text: this.plugin.i18n.t('snippetEditor.folder') });
     // Phase 56 D-08: bullet indicator inside the label; toggled by
     // updateFolderUnsavedDot() whenever currentFolder !== savedFolder.
     this.folderUnsavedDotEl = folderLabel.createEl('span', {
       cls: 'rp-snippet-editor-unsaved-dot',
       text: '\u2022',
     }) as unknown as HTMLSpanElement;
-    this.folderUnsavedDotEl.setAttribute('aria-label', 'Несохранённые изменения');
+    this.folderUnsavedDotEl.setAttribute('aria-label', this.plugin.i18n.t('snippetEditor.unsavedAriaLabel'));
     this.updateFolderUnsavedDot();
     const pickerHost = row.createDiv({ cls: CSS_CLASS.STP_EDITOR_HOST });
 
@@ -341,7 +344,7 @@ export class SnippetEditorModal extends Modal {
     void this.snippetTreePicker.mount();
   }
 
-  /** Phase 56 D-08 — toggle the «Папка»-label bullet based on whether the
+  /** Phase 56 D-08 — toggle the folder-label bullet based on whether the
    *  current pending folder selection differs from the saved baseline. */
   private updateFolderUnsavedDot(): void {
     if (this.folderUnsavedDotEl === null) return;
@@ -362,16 +365,16 @@ export class SnippetEditorModal extends Modal {
 
   private renderNameInput(container: HTMLElement): void {
     const row = container.createDiv({ cls: 'radi-snippet-editor-row' });
-    row.createEl('label', { text: 'Имя' });
+    row.createEl('label', { text: this.plugin.i18n.t('snippetEditor.name') });
 
     const input = createInput(row, { type: 'text' });
-    input.placeholder = 'Например: greeting-template';
+    input.placeholder = this.plugin.i18n.t('snippetEditor.namePlaceholder');
     input.value = this.draft.name;
     this.nameInputEl = input;
 
     this.collisionErrorEl = row.createDiv({ cls: 'radi-snippet-editor-collision-error rp-snippet-editor-save-error' });
     this.collisionErrorEl.toggleClass('rp-snippet-banner-hidden', true);
-    this.collisionErrorEl.textContent = COLLISION_ERROR_TEXT;
+    this.collisionErrorEl.textContent = this.plugin.i18n.t(COLLISION_ERROR_KEY);
 
     input.addEventListener('input', () => {
       this.draft.name = input.value;
@@ -395,12 +398,12 @@ export class SnippetEditorModal extends Modal {
         () => {
           this.hasUnsavedChanges = true;
         },
-        { skipName: true },
+        { skipName: true, t: this.plugin.i18n.t.bind(this.plugin.i18n) },
       );
     } else {
       const mdDraft = this.draft as MdSnippet;
       const ta = createTextarea(this.contentRegionEl);
-      ta.placeholder = 'Введите текст сниппета…';
+      ta.placeholder = this.plugin.i18n.t('snippetEditor.contentPlaceholder');
       ta.value = mdDraft.content;
       ta.rows = 10;
       ta.addClass('radi-snippet-editor-md-textarea');
@@ -429,7 +432,7 @@ export class SnippetEditorModal extends Modal {
     // `_text`) so the msg must live on the banner node itself, not on a
     // child element.
     banner.textContent =
-      'Этот сниппет не может быть использован:\n' + msg;
+      this.plugin.i18n.t('snippetEditor.validationBannerHeader') + '\n' + msg;
     this.validationBannerEl = banner;
   }
 
@@ -450,14 +453,16 @@ export class SnippetEditorModal extends Modal {
   private renderButtonRow(container: HTMLElement): void {
     const row = container.createDiv({ cls: 'modal-button-container' });
 
-    const cancelBtn = createButton(row, { text: 'Отмена' });
+    const cancelBtn = createButton(row, { text: this.plugin.i18n.t('snippetEditor.cancel') });
     cancelBtn.setAttribute('type', 'button');
     cancelBtn.addEventListener('click', () => {
       void this.handleCancel();
     });
 
     const saveBtn = createButton(row, {
-      text: this.options.mode === 'create' ? 'Создать' : 'Сохранить',
+      text: this.options.mode === 'create'
+        ? this.plugin.i18n.t('snippetEditor.create')
+        : this.plugin.i18n.t('snippetEditor.save'),
       cls: 'mod-cta',
     });
     saveBtn.setAttribute('type', 'button');
@@ -517,7 +522,7 @@ export class SnippetEditorModal extends Modal {
       this.saveBtnEl.disabled = true;
       this.saveBtnEl.setAttribute(
         'title',
-        'Устраните конфликт имени, чтобы сохранить.',
+        this.plugin.i18n.t('snippetEditor.collisionTitle'),
       );
     } else {
       this.collisionErrorEl.toggleClass('rp-snippet-banner-hidden', true);
@@ -538,7 +543,7 @@ export class SnippetEditorModal extends Modal {
     if (this.hasCollision) return;
     const name = this.draft.name.trim();
     if (name === '') {
-      this.showSaveError('Введите имя сниппета.');
+      this.showSaveError(this.plugin.i18n.t('snippetEditor.emptyName'));
       return;
     }
 
@@ -611,13 +616,13 @@ export class SnippetEditorModal extends Modal {
           : { ...(this.draft as MdSnippet), path: currentPath };
 
       // Phase 34 MOVE-04 regression guard: folder-only change still emits the
-      // exact string «Сниппет перемещён.» (asserted by the move-on-save test).
+      // i18n-keyed «Snippet moved» notice (asserted by the move-on-save test).
       if (folderChanged && !basenameChanged) {
-        new Notice('Сниппет перемещён.');
+        new Notice(this.plugin.i18n.t('snippetEditor.movedNotice'));
       } else if (basenameChanged && !folderChanged) {
-        new Notice('Сниппет переименован.');
+        new Notice(this.plugin.i18n.t('snippetEditor.renamedNotice'));
       } else {
-        new Notice('Сниппет перемещён и переименован.');
+        new Notice(this.plugin.i18n.t('snippetEditor.movedAndRenamedNotice'));
       }
       this.savedFolder = this.currentFolder; // Phase 56 D-08 — commit baseline
       this.updateFolderUnsavedDot();
@@ -625,7 +630,7 @@ export class SnippetEditorModal extends Modal {
       super.close();
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
-      this.showSaveError('Не удалось сохранить: ' + msg + '. Попробуйте ещё раз.');
+      this.showSaveError(this.plugin.i18n.t('snippetEditor.saveError', { error: msg }));
     }
   }
 
@@ -646,20 +651,20 @@ export class SnippetEditorModal extends Modal {
 
   /**
    * D-08 unsaved-changes guard. Opens a ConfirmModal with the 3-button variant:
-   *   - Сохранить (confirm)    → runs handleSave(); closes only if save succeeds
-   *   - Не сохранять (discard) → resolves { saved: false }, closes
-   *   - Отмена (cancel)        → stays in the editor
+   *   - Save (confirm)    → runs handleSave(); closes only if save succeeds
+   *   - Discard           → resolves { saved: false }, closes
+   *   - Cancel            → stays in the editor
    *
    * Safe to call from either close() or handleCancel().
    */
   private async runUnsavedGuard(): Promise<void> {
     const name = this.draft.name || (this.options.snippet?.name ?? '');
     const guard = new ConfirmModal(this.app, {
-      title: UNSAVED_GUARD_TITLE,
-      body: 'Изменения в сниппете «' + name + '» не сохранены. Что сделать?',
-      confirmLabel: 'Сохранить',
-      cancelLabel: 'Отмена',
-      discardLabel: 'Не сохранять',
+      title: this.plugin.i18n.t(UNSAVED_GUARD_TITLE_KEY),
+      body: this.plugin.i18n.t('snippetEditor.unsavedBody', { name }),
+      confirmLabel: this.plugin.i18n.t('snippetEditor.save'),
+      cancelLabel: this.plugin.i18n.t('snippetEditor.cancel'),
+      discardLabel: this.plugin.i18n.t('snippetEditor.discard'),
     });
     guard.open();
     const decision = await guard.result;

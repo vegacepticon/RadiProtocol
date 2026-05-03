@@ -223,6 +223,8 @@ vi.mock('../views/confirm-modal', () => ({
 // --- Now import the module under test ------------------------------------
 import { SnippetManagerView } from '../views/snippet-manager-view';
 import type { Snippet } from '../snippets/snippet-model';
+// Phase 84 (I18N-02): SnippetManagerView reads plugin.i18n.t(...) for copy.
+import { I18nService } from '../i18n';
 
 // --- Mock plugin factory --------------------------------------------------
 interface MockService {
@@ -273,6 +275,7 @@ function makePlugin(opts: {
     },
     snippetService: service,
     saveSettings: vi.fn().mockResolvedValue(undefined),
+    i18n: new I18nService('en'),
   };
   return { plugin, service };
 }
@@ -380,8 +383,8 @@ describe('SnippetManagerView — tree rendering and interactions', () => {
     const rows = walkRows((view as any).contentEl as MockEl);
     const placeholder = rows.find((r) => r.classList.has('radi-snippet-tree-empty-placeholder'));
     expect(placeholder).toBeDefined();
-    // Its child span should read «(пусто)»
-    const label = placeholder!.children.find((c) => c._text === '(пусто)');
+    // Its child span should read the empty placeholder (Phase 84 I18N-02: English)
+    const label = placeholder!.children.find((c) => c._text === '(empty)');
     expect(label).toBeDefined();
   });
 
@@ -445,7 +448,7 @@ describe('SnippetManagerView — tree rendering and interactions', () => {
     expect(iconSpan).toBeDefined();
 
     // Check label text
-    const labelSpan = folderBtn!.children.find((c: MockEl) => c._text === 'Папка');
+    const labelSpan = folderBtn!.children.find((c: MockEl) => c._text === 'Folder');
     expect(labelSpan).toBeDefined();
   });
 
@@ -473,7 +476,7 @@ describe('SnippetManagerView — tree rendering and interactions', () => {
     expect(options.title).toContain('big');
     expect(options.destructive).toBe(true);
     const bodyText = JSON.stringify(collectTextNodes(options.body as MockEl));
-    expect(bodyText).toContain('…и ещё 2 элементов.');
+    expect(bodyText).toContain('…and 2 more items.');
     // First 10 items listed
     for (let i = 0; i < 10; i++) {
       expect(bodyText).toContain(`f${i}.json`);
@@ -521,7 +524,7 @@ describe('SnippetManagerView — tree rendering and interactions', () => {
 
     expect(confirmModalCtorSpy).toHaveBeenCalled();
     const options = confirmModalCtorSpy.mock.calls[0]![0] as any;
-    expect(options.title).toBe('Удалить сниппет?');
+    expect(options.title).toBe('Delete snippet?');
     expect(String(options.body)).toContain('gone');
     expect(options.destructive).toBe(true);
     expect(service.delete).toHaveBeenCalledWith(`${root}/gone.json`);

@@ -65,12 +65,12 @@ export class SnippetManagerView extends ItemView {
     contentEl.empty();
     contentEl.addClass('radi-snippet-tree-root');
 
-    // Header strip with global "+ Новый" button
+    // Header strip with global "+ New" button
     const header = contentEl.createDiv({ cls: 'radi-snippet-tree-header' });
     const newBtn = header.createEl('button', { cls: 'mod-cta radi-snippet-tree-new-btn' });
     const newIcon = newBtn.createSpan({ cls: 'radi-snippet-tree-new-icon' });
     setIcon(newIcon, 'plus');
-    newBtn.createSpan({ text: 'Новый' });
+    newBtn.createSpan({ text: this.plugin.i18n.t('snippetManager.newButton') });
     this.registerDomEvent(newBtn, 'click', () => {
       void this.openCreateModal(this.plugin.settings.snippetFolderPath);
     });
@@ -79,7 +79,7 @@ export class SnippetManagerView extends ItemView {
     const folderBtn = header.createEl('button', { cls: 'radi-snippet-tree-new-btn' });
     const folderIcon = folderBtn.createSpan({ cls: 'radi-snippet-tree-new-icon' });
     setIcon(folderIcon, 'folder-plus');
-    folderBtn.createSpan({ text: 'Папка' });
+    folderBtn.createSpan({ text: this.plugin.i18n.t('snippetManager.folderButton') });
     this.registerDomEvent(folderBtn, 'click', () => {
       void this.handleCreateSubfolder(this.plugin.settings.snippetFolderPath);
     });
@@ -152,7 +152,7 @@ export class SnippetManagerView extends ItemView {
         await this.rebuildTreeModel();
         this.renderTree();
       } catch (e) {
-        new Notice('Не удалось обновить список сниппетов. Подробности в консоли.');
+        new Notice(this.plugin.i18n.t('snippetManager.redrawError'));
         console.error('[RadiProtocol] snippet tree redraw failed', e);
       }
     }, 120);
@@ -213,7 +213,7 @@ export class SnippetManagerView extends ItemView {
   private async openEditModal(path: string): Promise<void> {
     const snippet = await this.plugin.snippetService.load(path);
     if (snippet === null) {
-      new Notice('Сниппет не найден.');
+      new Notice(this.plugin.i18n.t('snippetManager.notFound'));
       await this.rebuildTreeModel();
       this.renderTree();
       return;
@@ -254,19 +254,20 @@ export class SnippetManagerView extends ItemView {
   // Folder operations
   // -------------------------------------------------------------------------
   private async handleCreateSubfolder(parentPath: string): Promise<void> {
+    const t = this.plugin.i18n.t.bind(this.plugin.i18n);
     // Build a small form body with a text input for the subfolder name.
     const body = document.createElement('div');
     body.addClass('radi-snippet-subfolder-form');
-    const label = body.createEl('label', { text: 'Имя подпапки' });
+    const label = body.createEl('label', { text: t('snippetManager.subfolderNameLabel') });
     const input = body.createEl('input', { type: 'text' });
-    input.placeholder = 'например: обследования';
+    input.placeholder = t('snippetManager.subfolderNamePlaceholder');
     label.appendChild(input);
 
     const modal = new ConfirmModal(this.app, {
-      title: 'Создать подпапку',
+      title: t('snippetManager.createSubfolderTitle'),
       body,
-      confirmLabel: 'Создать',
-      cancelLabel: 'Отмена',
+      confirmLabel: t('snippetManager.createSubfolderConfirm'),
+      cancelLabel: t('snippetManager.cancel'),
       destructive: false,
     });
     modal.open();
@@ -277,11 +278,11 @@ export class SnippetManagerView extends ItemView {
 
     const trimmed = (input.value || '').trim();
     if (trimmed === '') {
-      new Notice('Имя подпапки не может быть пустым.');
+      new Notice(t('snippetManager.subfolderEmptyName'));
       return;
     }
     if (/[\\/]/.test(trimmed) || trimmed === '..' || trimmed === '.') {
-      new Notice('Имя подпапки не должно содержать «/», «\\», «.» или «..».');
+      new Notice(t('snippetManager.subfolderInvalidName'));
       return;
     }
     const newPath = parentPath + '/' + trimmed;
@@ -295,16 +296,18 @@ export class SnippetManagerView extends ItemView {
       await this.rebuildTreeModel();
       this.renderTree();
     } catch (e) {
-      new Notice('Не удалось создать папку: ' + ((e as Error)?.message ?? 'неизвестная ошибка'));
+      const error = (e as Error)?.message ?? t('snippetManager.unknownError');
+      new Notice(t('snippetManager.createFolderError', { error }));
     }
   }
 
   private async handleDeleteSnippet(path: string, name: string): Promise<void> {
+    const t = this.plugin.i18n.t.bind(this.plugin.i18n);
     const modal = new ConfirmModal(this.app, {
-      title: 'Удалить сниппет?',
-      body: `Сниппет «${name}» будет перемещён в корзину Obsidian. Его можно восстановить через системный файловый менеджер.`,
-      confirmLabel: 'Удалить',
-      cancelLabel: 'Отмена',
+      title: t('snippetManager.deleteSnippetTitle'),
+      body: t('snippetManager.deleteSnippetBody', { name }),
+      confirmLabel: t('snippetManager.deleteConfirm'),
+      cancelLabel: t('snippetManager.cancel'),
       destructive: true,
     });
     modal.open();
@@ -312,15 +315,17 @@ export class SnippetManagerView extends ItemView {
     if (result !== 'confirm') return;
     try {
       await this.plugin.snippetService.delete(path);
-      new Notice('Сниппет перемещён в корзину.');
+      new Notice(t('snippetManager.deletedNotice'));
       await this.rebuildTreeModel();
       this.renderTree();
     } catch (e) {
-      new Notice('Не удалось удалить: ' + ((e as Error)?.message ?? 'неизвестная ошибка'));
+      const error = (e as Error)?.message ?? t('snippetManager.unknownError');
+      new Notice(t('snippetManager.deleteError', { error }));
     }
   }
 
   private async handleDeleteFolder(path: string, name: string): Promise<void> {
+    const t = this.plugin.i18n.t.bind(this.plugin.i18n);
     const descendants = await this.plugin.snippetService.listFolderDescendants(path);
     const total = descendants.total;
 
@@ -329,8 +334,8 @@ export class SnippetManagerView extends ItemView {
     const intro = body.createEl('p');
     intro.setText(
       total === 0
-        ? 'Папка пуста и будет перемещена в корзину.'
-        : `В папке находится ${total} элементов. Все они будут перемещены в корзину:`,
+        ? t('snippetManager.emptyFolderBody')
+        : t('snippetManager.folderItemsBody', { count: String(total) }),
     );
     if (total > 0) {
       const allPaths = [...descendants.files, ...descendants.folders];
@@ -344,15 +349,15 @@ export class SnippetManagerView extends ItemView {
       }
       if (total > 10) {
         const more = body.createEl('p', { cls: 'radi-muted' });
-        more.setText(`…и ещё ${total - 10} элементов.`);
+        more.setText(t('snippetManager.moreItems', { count: String(total - 10) }));
       }
     }
 
     const modal = new ConfirmModal(this.app, {
-      title: `Удалить папку ${name}?`,
+      title: t('snippetManager.deleteFolderTitle', { name }),
       body,
-      confirmLabel: 'Удалить папку',
-      cancelLabel: 'Отмена',
+      confirmLabel: t('snippetManager.deleteFolderConfirm'),
+      cancelLabel: t('snippetManager.cancel'),
       destructive: true,
     });
     modal.open();
@@ -360,7 +365,7 @@ export class SnippetManagerView extends ItemView {
     if (result !== 'confirm') return;
     try {
       await this.plugin.snippetService.deleteFolder(path);
-      new Notice('Папка перемещена в корзину.');
+      new Notice(t('snippetManager.folderDeletedNotice'));
       // Drop the folder path from expanded state so the cached tree does not
       // try to re-expand a now-missing node on next render.
       const expanded = this.plugin.settings.snippetTreeExpandedPaths;
@@ -372,19 +377,22 @@ export class SnippetManagerView extends ItemView {
       await this.rebuildTreeModel();
       this.renderTree();
     } catch (e) {
-      new Notice('Не удалось удалить папку: ' + ((e as Error)?.message ?? 'неизвестная ошибка'));
+      const error = (e as Error)?.message ?? t('snippetManager.unknownError');
+      new Notice(t('snippetManager.deleteFolderError', { error }));
     }
   }
 
   // -------------------------------------------------------------------------
-  // Phase 34 Plan 01 — «Переместить в…» flow
+  // Phase 34 Plan 01 — move-to flow
   // -------------------------------------------------------------------------
   private async openMovePicker(node: TreeNode): Promise<void> {
+    const t = this.plugin.i18n.t.bind(this.plugin.i18n);
     let allFolders: string[];
     try {
       allFolders = await this.plugin.snippetService.listAllFolders();
     } catch (e) {
-      new Notice('Не удалось получить список папок: ' + ((e as Error)?.message ?? 'неизвестная ошибка'));
+      const error = (e as Error)?.message ?? t('snippetManager.unknownError');
+      new Notice(t('snippetManager.listFoldersError', { error }));
       console.error('[RadiProtocol] openMovePicker listAllFolders failed', e);
       return;
     }
@@ -407,7 +415,8 @@ export class SnippetManagerView extends ItemView {
       try {
         await this.performMove(node.path, node.kind, chosen);
       } catch (e) {
-        new Notice('Не удалось переместить: ' + ((e as Error)?.message ?? 'неизвестная ошибка'));
+        const error = (e as Error)?.message ?? t('snippetManager.unknownError');
+        new Notice(t('snippetManager.moveError', { error }));
         console.error('[RadiProtocol] openMovePicker move failed', e);
       }
     };
@@ -424,23 +433,23 @@ export class SnippetManagerView extends ItemView {
     const allowedSet = new Set(folders);
 
     const modal = new Modal(this.app);
-    modal.setTitle('Переместить в…');
+    modal.setTitle(t('snippetManager.moveTitle'));
     let pickerInstance: SnippetTreePicker | null = null;
 
     const handleSelect = async (result: { kind: 'folder' | 'file'; relativePath: string }): Promise<void> => {
       const absPath = result.relativePath === '' ? rootPath : `${rootPath}/${result.relativePath}`;
       // Move-target safety guard (D-07): block source-self and source-descendant targets.
       if (absPath === node.path && node.kind === 'folder') {
-        new Notice('Нельзя переместить папку в саму себя.');
+        new Notice(t('snippetManager.moveSelfError'));
         return;
       }
       if (node.kind === 'folder' && absPath.startsWith(node.path + '/')) {
-        new Notice('Нельзя переместить в подпапку самого себя.');
+        new Notice(t('snippetManager.moveSelfDescendantError'));
         return;
       }
       // Whitelist membership: target must be in the allow-list of valid destinations.
       if (!allowedSet.has(absPath)) {
-        new Notice('Эта папка недоступна как цель перемещения.');
+        new Notice(t('snippetManager.invalidTargetError'));
         return;
       }
       modal.close();
@@ -456,6 +465,7 @@ export class SnippetManagerView extends ItemView {
         mode: 'folder-only',
         rootPath,
         onSelect: (result) => { void handleSelect(result); },
+        t,
       });
       void pickerInstance.mount();
     };
@@ -470,7 +480,7 @@ export class SnippetManagerView extends ItemView {
 
   // -------------------------------------------------------------------------
   // Phase 34 Plan 02 — shared move orchestrator. Used by both context-menu
-  // «Переместить в…» (Plan 01) and DnD drop handler (Plan 02). Throws on
+  // move-to (Plan 01) and DnD drop handler (Plan 02). Throws on
   // failure; callers are responsible for Notice/console.error on rejection.
   // -------------------------------------------------------------------------
   private async performMove(
@@ -478,13 +488,14 @@ export class SnippetManagerView extends ItemView {
     srcKind: 'file' | 'folder',
     dstFolder: string,
   ): Promise<void> {
+    const t = this.plugin.i18n.t.bind(this.plugin.i18n);
     if (srcKind === 'file') {
       // No-op: already in the target folder.
       if (dirname(srcPath) === dstFolder) return;
-      // D-03 следствие 2: file rename/move is canvas-invisible — no
-      // rewriteCanvasRefs, no «Обновлено канвасов» Notice.
+      // D-03 corollary 2: file rename/move is canvas-invisible — no
+      // rewriteCanvasRefs, no canvases-updated Notice.
       await this.plugin.snippetService.moveSnippet(srcPath, dstFolder);
-      new Notice('Сниппет перемещён.');
+      new Notice(t('snippetManager.snippetMovedNotice'));
       await this.rebuildTreeModel();
       this.renderTree();
       return;
@@ -492,7 +503,7 @@ export class SnippetManagerView extends ItemView {
 
     // Folder branch — self/descendant guard BEFORE any I/O.
     if (srcPath === dstFolder || dstFolder.startsWith(srcPath + '/')) {
-      throw new Error('Нельзя переместить папку внутрь самой себя.');
+      throw new Error(t('snippetManager.cannotMoveIntoSelf'));
     }
     const oldPath = srcPath;
     const newPath = await this.plugin.snippetService.moveFolder(oldPath, dstFolder);
@@ -505,10 +516,10 @@ export class SnippetManagerView extends ItemView {
     // D-07: expand-state prefix rewrite.
     await this.rewriteExpandState(oldPath, newPath);
 
-    new Notice(
-      'Папка перемещена. Обновлено канвасов: ' + result.updated.length +
-        ', пропущено: ' + result.skipped.length + '.',
-    );
+    new Notice(t('snippetManager.movedFolderNotice', {
+      updated: String(result.updated.length),
+      skipped: String(result.skipped.length),
+    }));
     await this.rebuildTreeModel();
     this.renderTree();
   }

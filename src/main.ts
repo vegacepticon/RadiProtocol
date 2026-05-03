@@ -135,7 +135,9 @@ export default class RadiProtocolPlugin extends Plugin {
     this.canvasParser = new CanvasParser();
 
     // Instantiate services
-    this.snippetService = new SnippetService(this.app, this.settings);
+    // Phase 84 (I18N-01): SnippetService takes the plugin's i18n translator so
+    // its error messages and validatePlaceholders output follow the active locale.
+    this.snippetService = new SnippetService(this.app, this.settings, this.i18n.t.bind(this.i18n));
 
     // Instantiate session persistence service (SESSION-01)
     this.sessionService = new SessionService(this.app, this.settings.sessionFolderPath);

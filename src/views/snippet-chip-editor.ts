@@ -13,6 +13,7 @@
 //   - insertAtCursor and PH_COLOR are module-local helpers (not exported).
 
 import type { JsonSnippet, SnippetPlaceholder } from '../snippets/snippet-model';
+import { defaultT, type Translator } from '../i18n';
 
 // --- Module-local helpers (copied verbatim from legacy snippet-manager-view.ts) ---
 
@@ -41,10 +42,16 @@ export interface ChipEditorHandle {
 interface MountChipEditorOptions {
   /**
    * Phase 33 gap-fix: when mounted inside SnippetEditorModal the modal owns
-   * the name field («Имя»). Set true to skip the chip editor's own Name
-   * section so there's no duplicated input.
+   * the Name field. Set true to skip the chip editor's own Name section so
+   * there's no duplicated input.
    */
   skipName?: boolean;
+  /**
+   * Phase 84 (I18N-02): translator used for any user-facing copy emitted by
+   * the chip editor (currently the choice-placeholder separator label).
+   * Optional so existing standalone callers keep working with English.
+   */
+  t?: Translator;
 }
 
 type ListenerTuple = {
@@ -72,6 +79,7 @@ export function mountChipEditor(
   container.empty();
   const listeners: ListenerTuple[] = [];
   const skipName = options.skipName === true;
+  const t: Translator = options.t ?? defaultT;
 
   // Local helper: track listeners for destroy()
   const on = <K extends keyof HTMLElementEventMap>(
@@ -89,7 +97,7 @@ export function mountChipEditor(
 
   // --- Name section ---
   // Phase 33 gap-fix: skipped when mounted inside SnippetEditorModal (the modal
-  // owns the «Имя» field). Standalone callers still get the Name input.
+  // owns the Name field). Standalone callers still get the Name input.
   if (!skipName) {
     const nameSection = container.createDiv({ cls: 'rp-snippet-form-section rp-stack' });
     const nameLabel = nameSection.createEl('label');
@@ -407,11 +415,11 @@ export function mountChipEditor(
       onChange();
     });
 
-    // Phase 52 D-02/D-05: Разделитель rendered for all choice placeholders
+    // Phase 52 D-02/D-05: separator label rendered for all choice placeholders
     if (ph.type === 'choice') {
       const sepSec = expanded.createDiv({ cls: 'rp-snippet-form-section rp-stack' });
       const sepLabel = sepSec.createEl('label');
-      sepLabel.textContent = 'Разделитель';
+      sepLabel.textContent = t('snippetChip.separator');
       sepLabel.htmlFor = `rp-ph-sep-${ph.id}`;
       const sepInput = sepSec.createEl('input', { type: 'text' });
       sepInput.id = `rp-ph-sep-${ph.id}`;

@@ -75,8 +75,9 @@ describe('SnippetService.load — Phase 52 D-03 validationError', () => {
     if (snippet?.kind !== 'json') return;
     const validated = snippet as typeof snippet & { validationError: string | null };
     expect(validated.validationError).not.toBeNull();
-    expect(validated.validationError).toMatch(/удалённый тип "number"/);
-    expect(validated.validationError).toMatch(/Плейсхолдер "sz"/);
+    // Phase 84 (I18N-02): SnippetService falls back to defaultT (English) when no translator is passed.
+    expect(validated.validationError).toMatch(/removed type "number"/);
+    expect(validated.validationError).toMatch(/Placeholder "sz"/);
   });
 
   it('returns validationError citing "multichoice" for legacy multichoice type', async () => {
@@ -90,7 +91,7 @@ describe('SnippetService.load — Phase 52 D-03 validationError', () => {
     const snippet = await svc.load(path);
     if (snippet?.kind !== 'json') return;
     const validated = snippet as typeof snippet & { validationError: string | null };
-    expect(validated.validationError).toMatch(/удалённый тип "multichoice"/);
+    expect(validated.validationError).toMatch(/removed type "multichoice"/);
   });
 
   it('returns validationError citing "multi-choice" for legacy hyphenated multi-choice type', async () => {
@@ -104,7 +105,7 @@ describe('SnippetService.load — Phase 52 D-03 validationError', () => {
     const snippet = await svc.load(path);
     if (snippet?.kind !== 'json') return;
     const validated = snippet as typeof snippet & { validationError: string | null };
-    expect(validated.validationError).toMatch(/удалённый тип "multi-choice"/);
+    expect(validated.validationError).toMatch(/removed type "multi-choice"/);
   });
 
   it('returns validationError for choice placeholder with empty options array', async () => {
@@ -118,8 +119,8 @@ describe('SnippetService.load — Phase 52 D-03 validationError', () => {
     const snippet = await svc.load(path);
     if (snippet?.kind !== 'json') return;
     const validated = snippet as typeof snippet & { validationError: string | null };
-    expect(validated.validationError).toMatch(/не содержит ни одного варианта/);
-    expect(validated.validationError).toMatch(/Плейсхолдер "f"/);
+    expect(validated.validationError).toMatch(/has no options/);
+    expect(validated.validationError).toMatch(/Placeholder "f"/);
   });
 
   it('returns null for syntax-broken JSON (preserves silent-skip)', async () => {
@@ -168,7 +169,7 @@ describe('SnippetService.listFolder — Phase 52 D-03 validationError', () => {
     }
     if (bad?.kind === 'json') {
       const badValidated = bad as typeof bad & { validationError: string | null };
-      expect(badValidated.validationError).toMatch(/удалённый тип "number"/);
+      expect(badValidated.validationError).toMatch(/removed type "number"/);
     }
   });
 

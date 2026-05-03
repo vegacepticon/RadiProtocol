@@ -11,5 +11,131 @@
     "invitation": "Thank you for your support! If RadiProtocol saves you time, any donation is appreciated.",
     "addressCopied": "Address copied",
     "copyAddress": "Copy address"
+  },
+  "snippetEditor": {
+    "newTitle": "New snippet",
+    "editTitle": "Editing: {name}",
+    "type": "Type",
+    "folder": "Folder",
+    "name": "Name",
+    "namePlaceholder": "E.g. greeting-template",
+    "contentPlaceholder": "Enter snippet text…",
+    "cancel": "Cancel",
+    "create": "Create",
+    "save": "Save",
+    "discard": "Discard",
+    "unsavedTitle": "Unsaved changes",
+    "unsavedAriaLabel": "Unsaved changes",
+    "unsavedBody": "Changes to snippet «{name}» were not saved. What would you like to do?",
+    "collisionError": "A file with this name already exists in this folder.",
+    "collisionTitle": "Resolve the name conflict before saving.",
+    "emptyName": "Enter a snippet name.",
+    "saveError": "Failed to save: {error}. Try again.",
+    "movedNotice": "Snippet moved.",
+    "renamedNotice": "Snippet renamed.",
+    "movedAndRenamedNotice": "Snippet moved and renamed.",
+    "validationLockTitle": "Snippet has an error — fix the source and reopen.",
+    "validationBannerHeader": "This snippet cannot be used:"
+  },
+  "snippetTreePicker": {
+    "selectFolder": "Select this folder",
+    "selectFolderCommitted": "✓ Selected",
+    "emptyResults": "No matches found",
+    "emptyFolder": "Empty here",
+    "searchPlaceholder": "Search…"
+  },
+  "snippetManager": {
+    "newButton": "New",
+    "folderButton": "Folder",
+    "redrawError": "Failed to refresh the snippet list. See console for details.",
+    "notFound": "Snippet not found.",
+    "subfolderNameLabel": "Subfolder name",
+    "subfolderNamePlaceholder": "e.g. examinations",
+    "createSubfolderTitle": "Create subfolder",
+    "createSubfolderConfirm": "Create",
+    "cancel": "Cancel",
+    "subfolderEmptyName": "Subfolder name cannot be empty.",
+    "subfolderInvalidName": "Subfolder name must not contain «/», «\\», «.» or «..».",
+    "createFolderError": "Failed to create folder: {error}",
+    "unknownError": "unknown error",
+    "deleteSnippetTitle": "Delete snippet?",
+    "deleteSnippetBody": "Snippet «{name}» will be moved to Obsidian trash. You can restore it via your system file manager.",
+    "deleteConfirm": "Delete",
+    "deletedNotice": "Snippet moved to trash.",
+    "deleteError": "Failed to delete: {error}",
+    "emptyFolderBody": "The folder is empty and will be moved to trash.",
+    "folderItemsBody": "The folder contains {count} items. All will be moved to trash:",
+    "moreItems": "…and {count} more items.",
+    "deleteFolderTitle": "Delete folder {name}?",
+    "deleteFolderConfirm": "Delete folder",
+    "folderDeletedNotice": "Folder moved to trash.",
+    "deleteFolderError": "Failed to delete folder: {error}",
+    "listFoldersError": "Failed to fetch folder list: {error}",
+    "moveError": "Failed to move: {error}",
+    "moveTitle": "Move to…",
+    "moveSelfError": "Cannot move a folder into itself.",
+    "moveSelfDescendantError": "Cannot move into a subfolder of itself.",
+    "invalidTargetError": "This folder is not available as a move target.",
+    "movedFolderNotice": "Folder moved. Canvases updated: {updated}, skipped: {skipped}.",
+    "cannotMoveIntoSelf": "Cannot move folder into itself.",
+    "snippetMovedNotice": "Snippet moved.",
+    "emptyStateTitle": "Snippet library is empty",
+    "emptyStateBody": "Create your first snippet to insert text fragments while running protocols.",
+    "emptyStateButton": "+ New snippet",
+    "createInThisFolder": "Create in this folder",
+    "emptyFolderPlaceholder": "(empty)",
+    "ctxEdit": "Edit",
+    "ctxRename": "Rename",
+    "ctxMove": "Move to…",
+    "ctxDelete": "Delete",
+    "ctxCreateSnippetHere": "Create snippet here",
+    "ctxCreateSubfolder": "Create subfolder",
+    "ctxDeleteFolder": "Delete folder",
+    "snippetRenamedNotice": "Snippet renamed.",
+    "folderRenamedNotice": "Folder renamed. Canvases updated: {updated}, skipped: {skipped}.",
+    "renameError": "Failed to rename: {error}"
+  },
+  "nodePicker": {
+    "question": "Question",
+    "textBlock": "Text",
+    "snippet": "Snippet",
+    "loop": "Loop",
+    "rootSnippets": "(snippets root)"
+  },
+  "snippetForm": {
+    "targetDesc": "Choose a folder (the node will offer all its snippets) or a specific snippet file. Folder and file are mutually exclusive (D-01)."
+  },
+  "snippetChip": {
+    "separator": "Separator"
+  },
+  "snippetModel": {
+    "legacyTypeError": "Placeholder \"{id}\" uses removed type \"{type}\". Recreate the placeholder manually — automatic migration is not performed.",
+    "invalidChoiceError": "Placeholder \"{id}\" of type \"choice\" has no options. Add options or delete the placeholder."
+  },
+  "snippetService": {
+    "invalidName": "Name cannot be empty and must not contain «/» or «\\».",
+    "pathExists": "Path already exists: {path}",
+    "fileNotFound": "File not found: {path}",
+    "folderNotFound": "Folder not found: {path}",
+    "cannotMoveIntoSelf": "Cannot move folder into itself."
+  },
+  "canvasParser": {
+    "legacyFreeTextInput": "Node \"{id}\" uses the deprecated type \"free-text-input\". This type was removed. Replace the node with question or text-block and rebuild the branch manually."
+  },
+  "graphValidator": {
+    "legacyLoopNodes": "Canvas contains deprecated loop-start/loop-end nodes: {ids}. Rebuild the loop with a unified loop node: an «exit» label on one of the outgoing edges marks the exit branch; the rest form the loop body.",
+    "loopNoExit": "Loop node \"{label}\" has no exit. Mark exactly one outgoing edge with a \"+\" prefix — the text after \"+\" becomes the exit-button caption.",
+    "loopNoExitWithLegacy": "Loop node \"{label}\" has no exit edge with a \"+\" prefix. Add \"+\" to one of the labeled edges ({ids}) — the text after \"+\" becomes the exit-button caption.",
+    "loopMultipleExits": "Loop node \"{label}\" has multiple \"+\" edges: {ids}. Exactly one exit edge is required — remove \"+\" from the others.",
+    "loopExitNoLabel": "Loop node \"{label}\": \"+\" edge {edgeId} has no caption — add text after \"+\".",
+    "loopNoBody": "Loop node \"{label}\" has no body — add an outgoing edge without a \"+\" prefix.",
+    "snippetFileMissing": "Snippet node \"{label}\" references a missing file \"{relPath}\" — file not found in {folder}. Check the path or restore the file."
+  },
+  "protocolRunner": {
+    "legacyLoopRuntime": "Encountered a deprecated loop-start/loop-end node. The canvas should have been rejected by the validator; if you see this message, this is a bug — please contact the plugin author."
+  },
+  "runnerView": {
+    "snippetNotFound": "Snippet not found: {path}",
+    "snippetCannotBeUsed": "Snippet «{path}» cannot be used. {error}"
   }
 }

@@ -416,7 +416,7 @@ describe('moveFolder (Phase 34 MOVE-02 / MOVE-05 service)', () => {
     const { vault } = makeVault({ folders: [ROOT, old] });
     const svc = new SnippetService({ vault } as never, settings);
 
-    await expect(svc.moveFolder(old, old)).rejects.toThrow(/сам/i);
+    await expect(svc.moveFolder(old, old)).rejects.toThrow(/cannot move folder into itself/i);
     expect(vault.rename).toHaveBeenCalledTimes(0);
     errSpy.mockRestore();
   });
@@ -427,7 +427,7 @@ describe('moveFolder (Phase 34 MOVE-02 / MOVE-05 service)', () => {
     const { vault } = makeVault({ folders: [ROOT, old, sub] });
     const svc = new SnippetService({ vault } as never, settings);
 
-    await expect(svc.moveFolder(old, sub)).rejects.toThrow(/сам/i);
+    await expect(svc.moveFolder(old, sub)).rejects.toThrow(/itself/i);
     expect(vault.rename).toHaveBeenCalledTimes(0);
     errSpy.mockRestore();
   });

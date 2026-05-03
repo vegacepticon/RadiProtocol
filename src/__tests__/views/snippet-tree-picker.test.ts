@@ -626,7 +626,7 @@ describe('Tree-wide search (D-09, D-10, D-11)', () => {
     expect(pathEl?.textContent).toBe('abdomen/ct/ct-routine.md');
   });
 
-  it('empty results shows Ничего не найдено', async () => {
+  it('empty results shows the no-matches label (Phase 84 I18N-02: defaultT → English)', async () => {
     svc.listFolder.mockResolvedValue({ folders: [], snippets: [] });
     svc.listFolderDescendants.mockResolvedValue({ files: [], folders: [], total: 0 });
     const { picker, container } = makePicker({ mode: 'file-only' }, svc);
@@ -637,7 +637,7 @@ describe('Tree-wide search (D-09, D-10, D-11)', () => {
     await flushDebounce();
 
     const empty = findFirst(container, (el) => el.classList.has('rp-stp-empty'));
-    expect(empty?.textContent).toBe('Ничего не найдено');
+    expect(empty?.textContent).toBe('No matches found');
   });
 });
 
@@ -827,10 +827,10 @@ describe('Committed-state «Выбрать эту папку» button (Phase 56 
     const selectBtn = findFirst(container, (el) => el.classList.has('rp-stp-select-folder-btn'));
     expect(selectBtn).not.toBeNull();
     expect(selectBtn!.classList.has('is-committed')).toBe(false);
-    expect(selectBtn!.textContent).toBe('Выбрать эту папку');
+    expect(selectBtn!.textContent).toBe('Select this folder');
   });
 
-  it('after clicking select-folder button, button renders with is-committed class and «✓ Выбрано» label', async () => {
+  it('after clicking select-folder button, button renders with is-committed class and committed-state label (Phase 84 I18N-02: defaultT → English)', async () => {
     svc.listFolder
       .mockResolvedValueOnce({ folders: ['abdomen'], snippets: [] })
       .mockResolvedValueOnce({ folders: [], snippets: [] })
@@ -847,7 +847,7 @@ describe('Committed-state «Выбрать эту папку» button (Phase 56 
 
     const after = findFirst(container, (el) => el.classList.has('rp-stp-select-folder-btn'))!;
     expect(after.classList.has('is-committed')).toBe(true);
-    expect(after.textContent).toBe('\u2713 Выбрано');
+    expect(after.textContent).toBe('\u2713 Selected');
   });
 
   it('drilling into a different folder clears the committed visual state (button reverts to default)', async () => {
@@ -880,7 +880,7 @@ describe('Committed-state «Выбрать эту папку» button (Phase 56 
 
     const newSelectBtn = findFirst(container, (el) => el.classList.has('rp-stp-select-folder-btn'))!;
     expect(newSelectBtn.classList.has('is-committed')).toBe(false);
-    expect(newSelectBtn.textContent).toBe('Выбрать эту папку');
+    expect(newSelectBtn.textContent).toBe('Select this folder');
   });
 
   it('navigating up out of the committed folder via up-button clears the committed visual state', async () => {
@@ -936,7 +936,7 @@ describe('Committed-state «Выбрать эту папку» button (Phase 56 
 
     const selectBtn = findFirst(container, (el) => el.classList.has('rp-stp-select-folder-btn'))!;
     expect(selectBtn.classList.has('is-committed')).toBe(false);
-    expect(selectBtn.textContent).toBe('Выбрать эту папку');
+    expect(selectBtn.textContent).toBe('Select this folder');
   });
 
   it('committed state persists at the same drillPath across additional re-renders triggered by clicking select-folder again', async () => {
@@ -960,7 +960,7 @@ describe('Committed-state «Выбрать эту папку» button (Phase 56 
 
     const selectBtn = findFirst(container, (el) => el.classList.has('rp-stp-select-folder-btn'))!;
     expect(selectBtn.classList.has('is-committed')).toBe(true);
-    expect(selectBtn.textContent).toBe('\u2713 Выбрано');
+    expect(selectBtn.textContent).toBe('\u2713 Selected');
   });
 });
 

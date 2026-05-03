@@ -2,6 +2,8 @@
 // Implements the "Start from specific node" picker (RUN-10 / D-06)
 import { App, SuggestModal } from 'obsidian';
 import type { ProtocolGraph, QuestionNode, TextBlockNode, SnippetNode, LoopNode } from '../graph/graph-model';
+import type RadiProtocolPlugin from '../main';
+import { defaultT, type Translator } from '../i18n';
 
 export interface NodeOption {
   id: string;
@@ -10,15 +12,27 @@ export interface NodeOption {
 }
 
 /**
- * Phase 45 (LOOP-06, D-10): Russian kind badges rendered by renderSuggestion().
- * Exhaustive over NodeOption['kind'] — TypeScript will complain if a new kind
- * is added to the union without updating this map.
+ * Phase 84 (I18N-02): kind-badge label keys rendered by renderSuggestion().
+ * Each entry is an i18n key under nodePicker.* — resolved at render time
+ * against the active locale. Exhaustive over NodeOption['kind'].
+ */
+export const KIND_LABEL_KEYS: Record<NodeOption['kind'], string> = {
+  'question': 'nodePicker.question',
+  'text-block': 'nodePicker.textBlock',
+  'snippet': 'nodePicker.snippet',
+  'loop': 'nodePicker.loop',
+};
+
+/**
+ * Phase 84 (I18N-02): English-resolved KIND_LABELS retained for callers that
+ * still expect a literal string (notably tests). Production rendering uses
+ * KIND_LABEL_KEYS + the plugin's translator for live-locale output.
  */
 export const KIND_LABELS: Record<NodeOption['kind'], string> = {
-  'question': 'Вопрос',
-  'text-block': 'Текст',
-  'snippet': 'Сниппет',
-  'loop': 'Цикл',
+  'question': defaultT('nodePicker.question'),
+  'text-block': defaultT('nodePicker.textBlock'),
+  'snippet': defaultT('nodePicker.snippet'),
+  'loop': defaultT('nodePicker.loop'),
 };
 
 /**
@@ -43,7 +57,7 @@ const KIND_ORDER: Record<NodeOption['kind'], number> = {
  * Build a sorted list of NodeOption values from a ProtocolGraph.
  * Includes question, text-block, snippet, and loop nodes (Phase 45 LOOP-06, D-06).
  *
- * Excluded by design (D-06 — осознанное отклонение от ROADMAP SC #3):
+ * Excluded by design (D-06 — deliberate deviation from ROADMAP SC #3):
  *   - answer (renders as button under question, not a self-starting point)
  *   - start (implicit entry node, not author-picked)
  *   - loop-start, loop-end (legacy parseable kinds — validator rejects canvases
@@ -52,8 +66,11 @@ const KIND_ORDER: Record<NodeOption['kind'], number> = {
  * Label fallback (D-07): every option carries a non-empty label — text field or node.id.
  * Sort order (D-08): kind-group entry order (see KIND_ORDER), alphabetical within group
  * via toLowerCase().localeCompare().
+ *
+ * Phase 84 (I18N-02): the snippet-row fallback label ("(snippets root)") is
+ * resolved through the optional translator so it follows the active locale.
  */
-export function buildNodeOptions(graph: ProtocolGraph): NodeOption[] {
+export function buildNodeOptions(graph: ProtocolGraph, t: Translator = defaultT): NodeOption[] {
   const options: NodeOption[] = [];
 
   for (const [id, node] of graph.nodes) {
@@ -66,14 +83,14 @@ export function buildNodeOptions(graph: ProtocolGraph): NodeOption[] {
       options.push({ id, label: preview || id, kind: 'text-block' });
     } else if (node.kind === 'snippet') {
       const s = node as SnippetNode;
-      // D-07 + D-CL-05: subfolderPath может быть undefined → fallback '(корень snippets)';
-      // id — последний fallback (defense-in-depth, не должен срабатывать так как '(корень snippets)' truthy).
-      options.push({ id, label: s.subfolderPath || '(корень snippets)', kind: 'snippet' });
+      // D-07 + D-CL-05: subfolderPath may be undefined → fallback "(snippets root)" (i18n-keyed);
+      // id — final fallback (defense-in-depth; should never fire because the i18n key resolves truthy).
+      options.push({ id, label: s.subfolderPath || t('nodePicker.rootSnippets'), kind: 'snippet' });
     } else if (node.kind === 'loop') {
       const l = node as LoopNode;
       options.push({ id, label: l.headerText || id, kind: 'loop' });
     }
-    // answer, start, loop-start, loop-end — сознательно исключены (D-06)
+    // answer, start, loop-start, loop-end — deliberately excluded (D-06)
   }
 
   // D-08: kind-group entry order via KIND_ORDER lookup, alphabetical within group.
@@ -103,11 +120,21 @@ export function buildNodeOptions(graph: ProtocolGraph): NodeOption[] {
 export class NodePickerModal extends SuggestModal<NodeOption> {
   private readonly options: NodeOption[];
   private readonly onChooseCb: (option: NodeOption) => void;
+  /** Phase 84 (I18N-02): translator used for the kind-badge label rendered on
+   *  each suggestion row. Optional so existing two-arg callers keep working
+   *  with the English-default fallback. */
+  private readonly t: Translator;
 
-  constructor(app: App, options: NodeOption[], onChoose: (option: NodeOption) => void) {
+  constructor(
+    app: App,
+    options: NodeOption[],
+    onChoose: (option: NodeOption) => void,
+    plugin?: RadiProtocolPlugin,
+  ) {
     super(app);
     this.options = options;
     this.onChooseCb = onChoose;
+    this.t = plugin ? plugin.i18n.t.bind(plugin.i18n) : defaultT;
     this.setPlaceholder('Search nodes by label\u2026');
   }
 
@@ -119,7 +146,7 @@ export class NodePickerModal extends SuggestModal<NodeOption> {
 
   renderSuggestion(option: NodeOption, el: HTMLElement): void {
     el.createEl('div', { text: option.label });
-    el.createEl('small', { text: KIND_LABELS[option.kind], cls: 'rp-node-kind-badge' });
+    el.createEl('small', { text: this.t(KIND_LABEL_KEYS[option.kind]), cls: 'rp-node-kind-badge' });
   }
 
   onChooseSuggestion(option: NodeOption, _evt: MouseEvent | KeyboardEvent): void {

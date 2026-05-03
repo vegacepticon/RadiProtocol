@@ -328,10 +328,10 @@ describe('snippet-chip-editor Phase 52 — narrowing probes (RED pre-Plan-03)', 
     const chip = container.querySelectorAll('.rp-placeholder-chip')[0];
     if (!chip) throw new Error('chip missing');
     chip.dispatchEvent({ type: 'click' });
-    // Look for the separator label — Phase 52 locks the copy to 'Разделитель'
+    // Look for the separator label — Phase 84 I18N-02: key resolves to English "Separator"
     const labels = container.querySelectorAll('label');
     const sepLabel = labels.find(
-      (l) => (l as unknown as { _text: string })._text === 'Разделитель',
+      (l) => (l as unknown as { _text: string })._text === 'Separator',
     );
     expect(sepLabel).toBeTruthy();
     // And the separator input should carry the draft.separator value

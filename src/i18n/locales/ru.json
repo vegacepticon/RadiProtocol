@@ -11,5 +11,131 @@
     "invitation": "Спасибо за поддержку! Если RadiProtocol экономит вам время — буду рад любому переводу.",
     "addressCopied": "Адрес скопирован",
     "copyAddress": "Скопировать адрес"
+  },
+  "snippetEditor": {
+    "newTitle": "Новый сниппет",
+    "editTitle": "Редактирование: {name}",
+    "type": "Тип",
+    "folder": "Папка",
+    "name": "Имя",
+    "namePlaceholder": "Например: greeting-template",
+    "contentPlaceholder": "Введите текст сниппета…",
+    "cancel": "Отмена",
+    "create": "Создать",
+    "save": "Сохранить",
+    "discard": "Не сохранять",
+    "unsavedTitle": "Несохранённые изменения",
+    "unsavedAriaLabel": "Несохранённые изменения",
+    "unsavedBody": "Изменения в сниппете «{name}» не сохранены. Что сделать?",
+    "collisionError": "Файл с таким именем уже существует в этой папке.",
+    "collisionTitle": "Устраните конфликт имени, чтобы сохранить.",
+    "emptyName": "Введите имя сниппета.",
+    "saveError": "Не удалось сохранить: {error}. Попробуйте ещё раз.",
+    "movedNotice": "Сниппет перемещён.",
+    "renamedNotice": "Сниппет переименован.",
+    "movedAndRenamedNotice": "Сниппет перемещён и переименован.",
+    "validationLockTitle": "Сниппет содержит ошибку — исправьте источник и откройте заново.",
+    "validationBannerHeader": "Этот сниппет не может быть использован:"
+  },
+  "snippetTreePicker": {
+    "selectFolder": "Выбрать эту папку",
+    "selectFolderCommitted": "✓ Выбрано",
+    "emptyResults": "Ничего не найдено",
+    "emptyFolder": "Здесь пусто",
+    "searchPlaceholder": "Поиск…"
+  },
+  "snippetManager": {
+    "newButton": "Новый",
+    "folderButton": "Папка",
+    "redrawError": "Не удалось обновить список сниппетов. Подробности в консоли.",
+    "notFound": "Сниппет не найден.",
+    "subfolderNameLabel": "Имя подпапки",
+    "subfolderNamePlaceholder": "например: обследования",
+    "createSubfolderTitle": "Создать подпапку",
+    "createSubfolderConfirm": "Создать",
+    "cancel": "Отмена",
+    "subfolderEmptyName": "Имя подпапки не может быть пустым.",
+    "subfolderInvalidName": "Имя подпапки не должно содержать «/», «\\», «.» или «..».",
+    "createFolderError": "Не удалось создать папку: {error}",
+    "unknownError": "неизвестная ошибка",
+    "deleteSnippetTitle": "Удалить сниппет?",
+    "deleteSnippetBody": "Сниппет «{name}» будет перемещён в корзину Obsidian. Его можно восстановить через системный файловый менеджер.",
+    "deleteConfirm": "Удалить",
+    "deletedNotice": "Сниппет перемещён в корзину.",
+    "deleteError": "Не удалось удалить: {error}",
+    "emptyFolderBody": "Папка пуста и будет перемещена в корзину.",
+    "folderItemsBody": "В папке находится {count} элементов. Все они будут перемещены в корзину:",
+    "moreItems": "…и ещё {count} элементов.",
+    "deleteFolderTitle": "Удалить папку {name}?",
+    "deleteFolderConfirm": "Удалить папку",
+    "folderDeletedNotice": "Папка перемещена в корзину.",
+    "deleteFolderError": "Не удалось удалить папку: {error}",
+    "listFoldersError": "Не удалось получить список папок: {error}",
+    "moveError": "Не удалось переместить: {error}",
+    "moveTitle": "Переместить в…",
+    "moveSelfError": "Нельзя переместить папку в саму себя.",
+    "moveSelfDescendantError": "Нельзя переместить в подпапку самого себя.",
+    "invalidTargetError": "Эта папка недоступна как цель перемещения.",
+    "movedFolderNotice": "Папка перемещена. Обновлено канвасов: {updated}, пропущено: {skipped}.",
+    "cannotMoveIntoSelf": "Нельзя переместить папку внутрь самой себя.",
+    "snippetMovedNotice": "Сниппет перемещён.",
+    "emptyStateTitle": "Библиотека сниппетов пуста",
+    "emptyStateBody": "Создайте первый сниппет, чтобы вставлять фрагменты текста при прохождении протоколов.",
+    "emptyStateButton": "+ Новый сниппет",
+    "createInThisFolder": "Создать в этой папке",
+    "emptyFolderPlaceholder": "(пусто)",
+    "ctxEdit": "Редактировать",
+    "ctxRename": "Переименовать",
+    "ctxMove": "Переместить в…",
+    "ctxDelete": "Удалить",
+    "ctxCreateSnippetHere": "Создать сниппет здесь",
+    "ctxCreateSubfolder": "Создать подпапку",
+    "ctxDeleteFolder": "Удалить папку",
+    "snippetRenamedNotice": "Сниппет переименован.",
+    "folderRenamedNotice": "Папка переименована. Обновлено канвасов: {updated}, пропущено: {skipped}.",
+    "renameError": "Не удалось переименовать: {error}"
+  },
+  "nodePicker": {
+    "question": "Вопрос",
+    "textBlock": "Текст",
+    "snippet": "Сниппет",
+    "loop": "Цикл",
+    "rootSnippets": "(корень snippets)"
+  },
+  "snippetForm": {
+    "targetDesc": "Выберите папку (узел предложит все её сниппеты) или конкретный файл сниппета. Папка и файл взаимно исключительны (D-01)."
+  },
+  "snippetChip": {
+    "separator": "Разделитель"
+  },
+  "snippetModel": {
+    "legacyTypeError": "Плейсхолдер \"{id}\" использует удалённый тип \"{type}\". Пересоздайте плейсхолдер вручную — автоматическая миграция не выполняется.",
+    "invalidChoiceError": "Плейсхолдер \"{id}\" типа \"choice\" не содержит ни одного варианта. Добавьте варианты или удалите плейсхолдер."
+  },
+  "snippetService": {
+    "invalidName": "Имя не может быть пустым и не должно содержать «/» или «\\».",
+    "pathExists": "Путь уже существует: {path}",
+    "fileNotFound": "Файл не найден: {path}",
+    "folderNotFound": "Папка не найдена: {path}",
+    "cannotMoveIntoSelf": "Нельзя переместить папку внутрь самой себя."
+  },
+  "canvasParser": {
+    "legacyFreeTextInput": "Узел \"{id}\" использует устаревший тип \"free-text-input\". Этот тип был удалён. Замените узел на question или text-block и перестройте ветвь вручную."
+  },
+  "graphValidator": {
+    "legacyLoopNodes": "Канвас содержит устаревшие узлы loop-start/loop-end: {ids}. Пересоберите цикл с единым узлом loop: метка «выход» на одном из исходящих рёбер обозначает ветвь выхода, остальные исходящие рёбра — тело цикла.",
+    "loopNoExit": "Loop-узел \"{label}\" не имеет выхода. Пометьте ровно одно исходящее ребро префиксом \"+\" — текст после \"+\" станет подписью кнопки выхода.",
+    "loopNoExitWithLegacy": "Loop-узел \"{label}\" не имеет выхода с префиксом \"+\". Добавьте \"+\" к одному из помеченных рёбер ({ids}) — текст после \"+\" станет подписью кнопки выхода.",
+    "loopMultipleExits": "Loop-узел \"{label}\" имеет несколько \"+\"-рёбер: {ids}. Должно быть ровно одно выходное ребро — уберите \"+\" с остальных.",
+    "loopExitNoLabel": "Loop-узел \"{label}\": \"+\"-ребро {edgeId} не имеет подписи — добавьте текст после \"+\".",
+    "loopNoBody": "Loop-узел \"{label}\" не имеет тела — добавьте исходящее ребро без префикса \"+\".",
+    "snippetFileMissing": "Snippet-узел \"{label}\" ссылается на несуществующий файл \"{relPath}\" — файл не найден в {folder}. Проверьте путь или восстановите файл."
+  },
+  "protocolRunner": {
+    "legacyLoopRuntime": "Обнаружен устаревший узел loop-start/loop-end. Канвас должен быть отклонён validator-ом; если вы видите это сообщение — это программная ошибка, сообщите автору плагина."
+  },
+  "runnerView": {
+    "snippetNotFound": "Сниппет не найден: {path}",
+    "snippetCannotBeUsed": "Сниппет «{path}» не может быть использован. {error}"
   }
 }

@@ -262,6 +262,8 @@ vi.mock('../views/confirm-modal', () => ({
 // --- Module under test ---------------------------------------------------
 import { SnippetManagerView } from '../views/snippet-manager-view';
 import type { Snippet } from '../snippets/snippet-model';
+// Phase 84 (I18N-02): plugin.i18n required by SnippetManagerView at render time.
+import { I18nService } from '../i18n';
 
 // --- Plugin factory ------------------------------------------------------
 interface MockService {
@@ -314,6 +316,7 @@ function makePlugin(opts: {
     },
     snippetService: service,
     saveSettings: vi.fn().mockResolvedValue(undefined),
+    i18n: new I18nService('en'),
   };
   return { plugin, service };
 }

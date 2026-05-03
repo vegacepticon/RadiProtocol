@@ -118,14 +118,15 @@ export class SnippetManagerTreeRenderer {
   // ——— Empty state ———
 
   private renderEmptyState(container: HTMLElement): void {
+    const t = this.plugin.i18n.t.bind(this.plugin.i18n);
     const wrap = container.createDiv({ cls: 'radi-snippet-tree-empty-state' });
-    wrap.createEl('h3', { text: 'Библиотека сниппетов пуста' });
+    wrap.createEl('h3', { text: t('snippetManager.emptyStateTitle') });
     wrap.createEl('p', {
-      text: 'Создайте первый сниппет, чтобы вставлять фрагменты текста при прохождении протоколов.',
+      text: t('snippetManager.emptyStateBody'),
     });
     const ghost = createButton(wrap, {
       cls: 'mod-cta',
-      text: '+ Новый сниппет',
+      text: t('snippetManager.emptyStateButton'),
     });
     ghost.addEventListener('click', () => {
       void this.callbacks.openCreateModal(this.plugin.settings.snippetFolderPath);
@@ -227,9 +228,10 @@ export class SnippetManagerTreeRenderer {
 
     if (node.kind === 'folder') {
       const actions = row.createSpan({ cls: 'radi-snippet-tree-actions' });
+      const ariaLabel = this.plugin.i18n.t('snippetManager.createInThisFolder');
       const addBtn = createButton(actions, {
         cls: 'radi-snippet-tree-add-btn',
-        attr: { 'aria-label': 'Создать в этой папке', title: 'Создать в этой папке' },
+        attr: { 'aria-label': ariaLabel, title: ariaLabel },
       });
       setIcon(addBtn, 'plus');
       addBtn.addEventListener('click', (ev) => {
@@ -288,7 +290,7 @@ export class SnippetManagerTreeRenderer {
         const empty = container.createDiv({ cls: 'radi-snippet-tree-row radi-snippet-tree-empty-placeholder' });
         const emptyIndent = empty.createSpan({ cls: 'radi-snippet-tree-indent rp-snippet-tree-indent-inline' });
         emptyIndent.style.width = `${(depth + 1) * 16}px`;
-        empty.createSpan({ text: '(пусто)', cls: 'radi-snippet-tree-empty-label' });
+        empty.createSpan({ text: this.plugin.i18n.t('snippetManager.emptyFolderPlaceholder'), cls: 'radi-snippet-tree-empty-label' });
       } else {
         for (const child of node.children) {
           this.renderNode(container, child, depth + 1);
@@ -300,17 +302,18 @@ export class SnippetManagerTreeRenderer {
   // ——— Context menu ———
 
   private openContextMenu(ev: MouseEvent, node: TreeNode): void {
+    const t = this.plugin.i18n.t.bind(this.plugin.i18n);
     const menu = new Menu();
     if (node.kind === 'file') {
       menu.addItem((item) =>
         item
-          .setTitle('Редактировать')
+          .setTitle(t('snippetManager.ctxEdit'))
           .setIcon('pencil')
           .onClick(() => { void this.callbacks.openEditModal(node.path); }),
       );
       menu.addItem((item) =>
         item
-          .setTitle('Переименовать')
+          .setTitle(t('snippetManager.ctxRename'))
           .setIcon('pencil-line')
           .onClick(() => {
             const labelEl = this.rowLabelEls.get(node.path);
@@ -319,33 +322,33 @@ export class SnippetManagerTreeRenderer {
       );
       menu.addItem((item) =>
         item
-          .setTitle('Переместить в…')
+          .setTitle(t('snippetManager.ctxMove'))
           .setIcon('folder-input')
           .onClick(() => { void this.callbacks.openMovePicker(node); }),
       );
       menu.addSeparator();
       menu.addItem((item) =>
         item
-          .setTitle('Удалить')
+          .setTitle(t('snippetManager.ctxDelete'))
           .setIcon('trash')
           .onClick(() => { void this.callbacks.handleDeleteSnippet(node.path, node.name); }),
       );
     } else {
       menu.addItem((item) =>
         item
-          .setTitle('Создать сниппет здесь')
+          .setTitle(t('snippetManager.ctxCreateSnippetHere'))
           .setIcon('plus')
           .onClick(() => { void this.callbacks.openCreateModal(node.path); }),
       );
       menu.addItem((item) =>
         item
-          .setTitle('Создать подпапку')
+          .setTitle(t('snippetManager.ctxCreateSubfolder'))
           .setIcon('folder-plus')
           .onClick(() => { void this.callbacks.handleCreateSubfolder(node.path); }),
       );
       menu.addItem((item) =>
         item
-          .setTitle('Переименовать')
+          .setTitle(t('snippetManager.ctxRename'))
           .setIcon('pencil-line')
           .onClick(() => {
             const labelEl = this.rowLabelEls.get(node.path);
@@ -354,14 +357,14 @@ export class SnippetManagerTreeRenderer {
       );
       menu.addItem((item) =>
         item
-          .setTitle('Переместить в…')
+          .setTitle(t('snippetManager.ctxMove'))
           .setIcon('folder-input')
           .onClick(() => { void this.callbacks.openMovePicker(node); }),
       );
       menu.addSeparator();
       menu.addItem((item) =>
         item
-          .setTitle('Удалить папку')
+          .setTitle(t('snippetManager.ctxDeleteFolder'))
           .setIcon('trash')
           .onClick(() => { void this.callbacks.handleDeleteFolder(node.path, node.name); }),
       );
@@ -446,7 +449,9 @@ export class SnippetManagerTreeRenderer {
     try {
       await this.callbacks.performMove(src.path, src.kind, target);
     } catch (e) {
-      new Notice('Не удалось переместить: ' + ((e as Error)?.message ?? 'неизвестная ошибка'));
+      const t = this.plugin.i18n.t.bind(this.plugin.i18n);
+      const error = (e as Error)?.message ?? t('snippetManager.unknownError');
+      new Notice(t('snippetManager.moveError', { error }));
       console.error('[RadiProtocol] drop move failed', e);
     }
   }
@@ -548,10 +553,11 @@ export class SnippetManagerTreeRenderer {
       cleanup();
       return;
     }
+    const t = this.plugin.i18n.t.bind(this.plugin.i18n);
     try {
       if (node.kind === 'file') {
         await this.plugin.snippetService.renameSnippet(node.path, newValue);
-        new Notice('Сниппет переименован.');
+        new Notice(t('snippetManager.snippetRenamedNotice'));
       } else {
         const oldPath = node.path;
         const newPath = await this.plugin.snippetService.renameFolder(oldPath, newValue);
@@ -561,16 +567,17 @@ export class SnippetManagerTreeRenderer {
         ]);
         const result = await rewriteCanvasRefs(this.plugin.app, mapping, this.plugin.canvasLiveEditor);
         await this.callbacks.rewriteExpandState(oldPath, newPath);
-        new Notice(
-          'Папка переименована. Обновлено канвасов: ' + result.updated.length +
-            ', пропущено: ' + result.skipped.length + '.',
-        );
+        new Notice(t('snippetManager.folderRenamedNotice', {
+          updated: String(result.updated.length),
+          skipped: String(result.skipped.length),
+        }));
       }
       cleanup();
       await this.callbacks.rebuildTreeModel();
       this.render(await this.getTreeData());
     } catch (e) {
-      new Notice('Не удалось переименовать: ' + ((e as Error)?.message ?? 'неизвестная ошибка'));
+      const error = (e as Error)?.message ?? t('snippetManager.unknownError');
+      new Notice(t('snippetManager.renameError', { error }));
       cleanup();
     }
   }

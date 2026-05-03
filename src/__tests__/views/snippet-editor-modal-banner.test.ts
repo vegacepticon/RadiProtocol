@@ -257,6 +257,8 @@ vi.mock('../../views/snippet-tree-picker', () => ({
 
 import { SnippetEditorModal } from '../../views/snippet-editor-modal';
 import type { JsonSnippet } from '../../snippets/snippet-model';
+// Phase 84 (I18N-02): SnippetEditorModal now reads plugin.i18n.t(...) for copy.
+import { I18nService } from '../../i18n';
 
 type BrokenSnippet = JsonSnippet & { validationError: string | null };
 
@@ -285,6 +287,7 @@ function makePlugin() {
       moveSnippet: vi.fn(),
       renameSnippet: vi.fn(),
     },
+    i18n: new I18nService('en'),
   } as unknown as ConstructorParameters<typeof SnippetEditorModal>[1];
 }
 
@@ -328,7 +331,7 @@ describe('SnippetEditorModal Phase 52 D-04 — broken snippet banner + disabled 
     const contentEl = (modal as unknown as { contentEl: MockEl }).contentEl;
     const saveBtn = contentEl
       .querySelectorAll('button')
-      .find((b) => (b as unknown as { _text: string })._text === 'Сохранить');
+      .find((b) => (b as unknown as { _text: string })._text === 'Save');
     expect(saveBtn).toBeTruthy();
     expect((saveBtn as unknown as { _disabled: boolean })._disabled).toBe(true);
   });
@@ -446,7 +449,7 @@ describe('SnippetEditorModal Phase 52 D-04 — broken snippet banner + disabled 
     // Locate the «Папка» label among all rendered <label> nodes.
     const labels = contentEl.querySelectorAll('label');
     const folderLabel = labels.find(
-      (l) => (l as unknown as { _text: string })._text === 'Папка',
+      (l) => (l as unknown as { _text: string })._text === 'Folder',
     );
     expect(folderLabel).toBeTruthy();
     const dotInLabel = folderLabel!.querySelector('.rp-snippet-editor-unsaved-dot');
@@ -467,7 +470,7 @@ describe('SnippetEditorModal Phase 52 D-04 — broken snippet banner + disabled 
     expect(banner).toBeNull();
     const saveBtn = contentEl
       .querySelectorAll('button')
-      .find((b) => (b as unknown as { _text: string })._text === 'Сохранить');
+      .find((b) => (b as unknown as { _text: string })._text === 'Save');
     if (saveBtn) {
       // The snippet is valid so Save must NOT be disabled due to validation.
       // (Collision error may still disable Save; for B5 we assert the known

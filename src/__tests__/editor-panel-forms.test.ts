@@ -156,6 +156,7 @@ function makeView(): EditorPanelView {
     app: { vault: { adapter: { list: vi.fn(), exists: vi.fn() } } },
     settings: { snippetFolderPath: '.radiprotocol/snippets' },
     snippetService: {},
+    i18n: { t: (key: string, _params?: Record<string, string>, fallback?: string) => fallback ?? key, setLocale: () => {}, getLocale: () => 'en' as const },
   } as unknown as RadiProtocolPlugin;
   const view = new EditorPanelView(leaf, plugin);
   (view as unknown as { contentEl: unknown }).contentEl = fakeNode();

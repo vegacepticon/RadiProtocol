@@ -28,10 +28,7 @@ export function renderSnippetForm(
   // CSS. See `.planning/notes/snippet-node-binding-and-picker.md`.
   new Setting(container)
     .setName('Target')
-    .setDesc(
-      'Выберите папку (узел предложит все её сниппеты) или конкретный файл сниппета. ' +
-      'Папка и файл взаимно исключительны (D-01).'
-    );
+    .setDesc(ctx.plugin.i18n.t('snippetForm.targetDesc'));
 
   const pickerHost = container.createDiv({ cls: CSS_CLASS.STP_EDITOR_HOST });
 

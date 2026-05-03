@@ -224,6 +224,8 @@ vi.mock('../views/confirm-modal', () => ({
 // --- Module under test ---------------------------------------------------
 import { SnippetManagerView } from '../views/snippet-manager-view';
 import type { Snippet } from '../snippets/snippet-model';
+// Phase 84 (I18N-02): plugin.i18n required by SnippetManagerView/tree-renderer.
+import { I18nService } from '../i18n';
 
 function makeSnippet(kind: 'json' | 'md', p: string, name: string): Snippet {
   if (kind === 'json') return { kind: 'json', path: p, name, template: '', placeholders: [], validationError: null };
@@ -279,6 +281,7 @@ function makePlugin(opts: {
     },
     snippetService: service,
     saveSettings: vi.fn().mockResolvedValue(undefined),
+    i18n: new I18nService('en'),
   };
   return { plugin, service };
 }
@@ -393,7 +396,7 @@ describe('SnippetManagerView — F2 inline rename (Phase 34 Plan 03)', () => {
       (view as any).treeRenderer['openContextMenu']({ preventDefault() {}, stopPropagation() {} }, {
         kind: 'file', path: `${root}/note.json`, name: 'note', snippetKind: 'json',
       });
-      const renameItem = lastMenuItems.find((i) => i.title === 'Переименовать');
+      const renameItem = lastMenuItems.find((i) => i.title === 'Rename');
       expect(renameItem).toBeDefined();
       renameItem!.cb();
       const input = findInputInRow(row!);

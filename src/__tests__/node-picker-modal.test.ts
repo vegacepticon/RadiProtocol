@@ -98,14 +98,14 @@ describe('buildNodeOptions (Phase 45 LOOP-06 / D-06..D-08)', () => {
     const g = makeGraph([
       question('q-empty', ''),          // questionText пустой → label === id
       textBlock('t-empty', ''),         // content пустой → label === id
-      snippet('s-empty'),               // subfolderPath undefined → label === '(корень snippets)'
+      snippet('s-empty'),               // subfolderPath undefined → label === '(snippets root)'
       loop('l-empty', ''),              // headerText пустой → label === id
     ]);
     const opts = buildNodeOptions(g);
     const byKind = Object.fromEntries(opts.map(o => [o.kind, o]));
     expect(byKind['question']?.label).toBe('q-empty');
     expect(byKind['text-block']?.label).toBe('t-empty');
-    expect(byKind['snippet']?.label).toBe('(корень snippets)');
+    expect(byKind['snippet']?.label).toBe('(snippets root)');
     expect(byKind['loop']?.label).toBe('l-empty');
   });
 
@@ -156,10 +156,10 @@ describe('KIND_LABELS (Phase 45 LOOP-06 / D-10)', () => {
     expect(keys).toEqual(['loop', 'question', 'snippet', 'text-block']);
   });
 
-  it('maps each kind to its locked Russian badge text', () => {
-    expect(KIND_LABELS.question).toBe('Вопрос');
-    expect(KIND_LABELS['text-block']).toBe('Текст');
-    expect(KIND_LABELS.snippet).toBe('Сниппет');
-    expect(KIND_LABELS.loop).toBe('Цикл');
+  it('maps each kind to its locked English badge text', () => {
+    expect(KIND_LABELS.question).toBe('Question');
+    expect(KIND_LABELS['text-block']).toBe('Text');
+    expect(KIND_LABELS.snippet).toBe('Snippet');
+    expect(KIND_LABELS.loop).toBe('Loop');
   });
 });

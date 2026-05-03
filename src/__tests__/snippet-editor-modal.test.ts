@@ -325,6 +325,10 @@ vi.mock('../views/snippet-tree-picker', () => ({
 // --- Now import the module under test -------------------------------------
 import { SnippetEditorModal } from '../views/snippet-editor-modal';
 import type { JsonSnippet, MdSnippet, Snippet } from '../snippets/snippet-model';
+// Phase 84 (I18N-02): SnippetEditorModal calls plugin.i18n.t(...) at render
+// time. Tests mount it with a real I18nService('en'), so the rendered copy is
+// the canonical English locale (not stubs); assertions assert on those strings.
+import { I18nService } from '../i18n';
 
 // --- Factories ------------------------------------------------------------
 
@@ -340,7 +344,7 @@ function makeMockPlugin(opts: {
   existsReturns?: (path: string) => boolean;
   descendants?: { files: string[]; folders: string[]; total: number };
   moveSnippetImpl?: (oldPath: string, newFolder: string) => Promise<string>;
-} = {}): { plugin: { app: unknown; settings: { snippetFolderPath: string }; snippetService: MockSnippetService }; service: MockSnippetService } {
+} = {}): { plugin: { app: unknown; settings: { snippetFolderPath: string }; snippetService: MockSnippetService; i18n: I18nService }; service: MockSnippetService } {
   const defaultMove = async (oldPath: string, newFolder: string): Promise<string> => {
     const basename = oldPath.slice(oldPath.lastIndexOf('/') + 1);
     return newFolder === '' ? basename : `${newFolder}/${basename}`;
@@ -360,6 +364,7 @@ function makeMockPlugin(opts: {
     app: {},
     settings: { snippetFolderPath: '.radiprotocol/snippets' },
     snippetService: service,
+    i18n: new I18nService('en'),
   };
   return { plugin, service };
 }
@@ -419,8 +424,8 @@ describe('SnippetEditorModal', () => {
       { mode: 'create', initialFolder: '.radiprotocol/snippets' },
     );
     await modal.onOpen();
-    // Title
-    expect((modal.titleEl as unknown as MockEl)._text).toBe('Новый сниппет');
+    // Title (Phase 84 I18N-02: English locale)
+    expect((modal.titleEl as unknown as MockEl)._text).toBe('New snippet');
     // Type toggle buttons (JSON + Markdown) exist
     const toggleBtns = findAll(
       modal.contentEl as unknown as MockEl,
@@ -439,7 +444,7 @@ describe('SnippetEditorModal', () => {
       snippet,
     });
     await modal.onOpen();
-    expect((modal.titleEl as unknown as MockEl)._text).toBe('Редактирование: sample');
+    expect((modal.titleEl as unknown as MockEl)._text).toBe('Editing: sample');
     const input = findEl(
       modal.contentEl as unknown as MockEl,
       (el) => el.tagName === 'INPUT' && (el as MockEl)._type === 'text',
@@ -513,10 +518,10 @@ describe('SnippetEditorModal', () => {
     // Phase 51 D-07 — change the folder via the picker's onSelect callback.
     expect(lastPickerOnSelect).not.toBeNull();
     lastPickerOnSelect!({ kind: 'folder', relativePath: 'b' });
-    // Click Save button (find button with text "Создать")
+    // Click Save button (Phase 84 I18N-02: English locale → "Create")
     const saveBtn = findEl(
       modal.contentEl as unknown as MockEl,
-      (el) => el.tagName === 'BUTTON' && el._text === 'Создать',
+      (el) => el.tagName === 'BUTTON' && el._text === 'Create',
     )!;
     saveBtn.dispatchEvent({ type: 'click' });
     // Let microtasks settle
@@ -579,10 +584,10 @@ describe('SnippetEditorModal', () => {
     )!;
     nameInput.value = 'edited';
     nameInput.dispatchEvent({ type: 'input' });
-    // Click «Отмена»
+    // Click Cancel (Phase 84 I18N-02: English)
     const cancelBtn = findEl(
       modal.contentEl as unknown as MockEl,
-      (el) => el.tagName === 'BUTTON' && el._text === 'Отмена',
+      (el) => el.tagName === 'BUTTON' && el._text === 'Cancel',
     )!;
     cancelBtn.dispatchEvent({ type: 'click' });
     await new Promise((r) => setTimeout(r, 20));
@@ -593,10 +598,10 @@ describe('SnippetEditorModal', () => {
       confirmLabel: string;
       cancelLabel: string;
     };
-    expect(opts.title).toBe('Несохранённые изменения');
-    expect(opts.discardLabel).toBe('Не сохранять');
-    expect(opts.confirmLabel).toBe('Сохранить');
-    expect(opts.cancelLabel).toBe('Отмена');
+    expect(opts.title).toBe('Unsaved changes');
+    expect(opts.discardLabel).toBe('Discard');
+    expect(opts.confirmLabel).toBe('Save');
+    expect(opts.cancelLabel).toBe('Cancel');
   });
 
   it('Phase 34 MOVE-04: edit-mode save with folder change calls moveSnippet (atomic), NOT delete+rewriteCanvasRefs', async () => {
@@ -625,10 +630,10 @@ describe('SnippetEditorModal', () => {
     // Phase 51 D-07 — change folder via picker onSelect callback
     expect(lastPickerOnSelect).not.toBeNull();
     lastPickerOnSelect!({ kind: 'folder', relativePath: 'b' });
-    // Click «Сохранить»
+    // Click Save (Phase 84 I18N-02: English)
     const saveBtn = findEl(
       modal.contentEl as unknown as MockEl,
-      (el) => el.tagName === 'BUTTON' && el._text === 'Сохранить',
+      (el) => el.tagName === 'BUTTON' && el._text === 'Save',
     )!;
     saveBtn.dispatchEvent({ type: 'click' });
     await new Promise((r) => setTimeout(r, 20));
@@ -646,7 +651,7 @@ describe('SnippetEditorModal', () => {
     expect(rewriteCanvasRefsSpy).not.toHaveBeenCalled();
   });
 
-  it('Phase 34 MOVE-04: move-on-save Notice is exactly «Сниппет перемещён.» (no canvas-count suffix)', async () => {
+  it('Phase 34 MOVE-04: move-on-save Notice is exactly the moved-notice copy with no canvas-count suffix (Phase 84 I18N-02: English)', async () => {
     const noticeMessages: string[] = [];
     // Re-hook Notice constructor to capture messages
      
@@ -685,12 +690,12 @@ describe('SnippetEditorModal', () => {
       lastPickerOnSelect!({ kind: 'folder', relativePath: 'b' });
       const saveBtn = findEl(
         modal.contentEl as unknown as MockEl,
-        (el) => el.tagName === 'BUTTON' && el._text === 'Сохранить',
+        (el) => el.tagName === 'BUTTON' && el._text === 'Save',
       )!;
       saveBtn.dispatchEvent({ type: 'click' });
       await new Promise((r) => setTimeout(r, 20));
-      expect(noticeMessages).toContain('Сниппет перемещён.');
-      expect(noticeMessages.some((m) => m.includes('Обновлено канвасов'))).toBe(false);
+      expect(noticeMessages).toContain('Snippet moved.');
+      expect(noticeMessages.some((m) => m.includes('Canvases updated'))).toBe(false);
     } finally {
       (obsidianMod as unknown as { Notice: new (msg: string) => unknown }).Notice = OrigNotice;
     }
@@ -704,7 +709,7 @@ describe('SnippetEditorModal', () => {
         total: 2,
       },
       moveSnippetImpl: async () => {
-        throw new Error('Путь уже существует: .radiprotocol/snippets/b/note.json');
+        throw new Error('Path already exists: .radiprotocol/snippets/b/note.json');
       },
     });
     const snippet: JsonSnippet = {
@@ -731,19 +736,19 @@ describe('SnippetEditorModal', () => {
     lastPickerOnSelect!({ kind: 'folder', relativePath: 'b' });
     const saveBtn = findEl(
       modal.contentEl as unknown as MockEl,
-      (el) => el.tagName === 'BUTTON' && el._text === 'Сохранить',
+      (el) => el.tagName === 'BUTTON' && el._text === 'Save',
     )!;
     saveBtn.dispatchEvent({ type: 'click' });
     await new Promise((r) => setTimeout(r, 20));
     // moveSnippet was attempted
     expect(service.moveSnippet).toHaveBeenCalled();
-    // An error is surfaced via the in-modal save-error element
+    // An error is surfaced via the in-modal save-error element (Phase 84 I18N-02: English)
     const errorEl = findEl(
       modal.contentEl as unknown as MockEl,
       (el) => el.classList.has('radi-snippet-editor-save-error'),
     );
     expect(errorEl).not.toBeNull();
-    expect(errorEl!._text).toContain('Не удалось сохранить');
+    expect(errorEl!._text).toContain('Failed to save');
     expect(errorEl!.style['display']).not.toBe('none');
     // Modal has NOT resolved (still open — result promise unresolved)
     expect(resolved).toBe(false);
@@ -771,7 +776,7 @@ describe('SnippetEditorModal', () => {
     await new Promise((r) => setTimeout(r, 220));
     const saveBtn = findEl(
       modal.contentEl as unknown as MockEl,
-      (el) => el.tagName === 'BUTTON' && el._text === 'Создать',
+      (el) => el.tagName === 'BUTTON' && el._text === 'Create',
     )!;
     expect(saveBtn.disabled).toBe(true);
     const errorEl = findEl(
@@ -779,7 +784,7 @@ describe('SnippetEditorModal', () => {
       (el) => el.classList.has('radi-snippet-editor-collision-error'),
     );
     expect(errorEl).not.toBeNull();
-    expect(errorEl!._text).toBe('Файл с таким именем уже существует в этой папке.');
+    expect(errorEl!._text).toBe('A file with this name already exists in this folder.');
     // Error should be shown, not display:none
     expect(errorEl!.style['display']).not.toBe('none');
   });
@@ -806,10 +811,10 @@ describe('SnippetEditorModal', () => {
     )!;
     nameInput.value = 'doc';
     nameInput.dispatchEvent({ type: 'input' });
-    // Save
+    // Save (Phase 84 I18N-02: English)
     const saveBtn = findEl(
       modal.contentEl as unknown as MockEl,
-      (el) => el.tagName === 'BUTTON' && el._text === 'Создать',
+      (el) => el.tagName === 'BUTTON' && el._text === 'Create',
     )!;
     saveBtn.dispatchEvent({ type: 'click' });
     await new Promise((r) => setTimeout(r, 20));

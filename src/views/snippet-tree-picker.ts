@@ -1,7 +1,7 @@
 // views/snippet-tree-picker.ts
 // Phase 51 PICKER-02 — unified hierarchical navigator for snippet/folder selection.
 // Replaces flat-list pickers in Node Editor (case 'snippet'), Snippet Manager
-// («Переместить в…»), Snippet Editor («Папка»), and Runner (awaiting-snippet-pick).
+// (move-to flow), Snippet Editor (folder field), and Runner (awaiting-snippet-pick).
 //
 // Design contract: `.planning/notes/snippet-node-binding-and-picker.md` (Shared Pattern H).
 // Decisions: D-08 surface, D-09 mode-filtered search, D-10 substring matcher, D-11 two-line rows,
@@ -17,16 +17,20 @@ import type { App } from 'obsidian';
 import type { SnippetService } from '../snippets/snippet-service';
 import type { Snippet } from '../snippets/snippet-model';
 import { createButton, createInput } from '../utils/dom-helpers';
+import { defaultT, type Translator } from '../i18n';
 
 // ── Constants ────────────────────────────────────────────────────────────
 
 const SEARCH_DEBOUNCE_MS = 120;
-const SELECT_FOLDER_LABEL = 'Выбрать эту папку';
-const SELECT_FOLDER_COMMITTED_LABEL = '\u2713 Выбрано'; // ✓ Выбрано — Phase 56 D-10
-const EMPTY_RESULTS_LABEL = 'Ничего не найдено';
-const EMPTY_FOLDER_LABEL = 'Здесь пусто';
 const UP_BUTTON_LABEL = 'Up';
-const SEARCH_PLACEHOLDER = 'Поиск…';
+// Phase 84 (I18N-02): user-visible copy is resolved at render time via the
+// picker's translator (defaults to defaultT for English). Keys live in
+// snippetTreePicker.* of the i18n locale files.
+const SELECT_FOLDER_KEY = 'snippetTreePicker.selectFolder';
+const SELECT_FOLDER_COMMITTED_KEY = 'snippetTreePicker.selectFolderCommitted';
+const EMPTY_RESULTS_KEY = 'snippetTreePicker.emptyResults';
+const EMPTY_FOLDER_KEY = 'snippetTreePicker.emptyFolder';
+const SEARCH_PLACEHOLDER_KEY = 'snippetTreePicker.searchPlaceholder';
 
 // Phase 35 MD-01 preservation — extension-based glyph dispatch.
 const GLYPH_FOLDER = '\uD83D\uDCC1';  // 📁
@@ -65,6 +69,9 @@ export interface SnippetTreePickerOptions {
   rootPath: string;
   initialSelection?: string;
   onSelect: (result: SnippetTreePickerResult) => void;
+  /** Phase 84 (I18N-02): translator for user-visible copy. Optional —
+   *  unit tests and standalone callers fall back to the English defaultT. */
+  t?: Translator;
 }
 
 // ── Implementation ───────────────────────────────────────────────────────
@@ -77,6 +84,8 @@ interface TrackedListener {
 
 export class SnippetTreePicker {
   private readonly options: SnippetTreePickerOptions;
+  /** Phase 84 (I18N-02): resolved translator (options.t ?? defaultT). */
+  private readonly t: Translator;
 
   // Instance-private state — reset on each mount().
   private drillPath: string[] = [];
@@ -87,13 +96,14 @@ export class SnippetTreePicker {
   private searchInputEl: HTMLInputElement | null = null;
 
   /** Phase 56 D-10 (PICKER-01 follow-up): relative path (drillPath.join('/'))
-   *  of the folder the user has "committed" via the «Выбрать эту папку» button.
+   *  of the folder the user has "committed" via the select-folder button.
    *  null when no commit has occurred in the current drill session, or when
    *  drillPath no longer equals this value (drilled elsewhere / navigated up). */
   private committedRelativePath: string | null = null;
 
   constructor(options: SnippetTreePickerOptions) {
     this.options = options;
+    this.t = options.t ?? defaultT;
   }
 
   async mount(): Promise<void> {
@@ -116,7 +126,7 @@ export class SnippetTreePicker {
       cls: 'rp-stp-search-input',
       type: 'text',
     });
-    searchInput.placeholder = SEARCH_PLACEHOLDER;
+    searchInput.placeholder = this.t(SEARCH_PLACEHOLDER_KEY);
     this.searchInputEl = searchInput;
     this.addListener(searchInput, 'input', () => {
       const value = searchInput.value;
@@ -235,7 +245,7 @@ export class SnippetTreePicker {
       const isCommitted = this.committedRelativePath === currentRel;
       const selectBtn = createButton(host, {
         cls: isCommitted ? 'rp-stp-select-folder-btn is-committed' : 'rp-stp-select-folder-btn',
-        text: isCommitted ? SELECT_FOLDER_COMMITTED_LABEL : SELECT_FOLDER_LABEL,
+        text: isCommitted ? this.t(SELECT_FOLDER_COMMITTED_KEY) : this.t(SELECT_FOLDER_KEY),
       });
       this.addListener(selectBtn, 'click', () => {
         this.committedRelativePath = currentRel;
@@ -271,7 +281,7 @@ export class SnippetTreePicker {
     }
 
     if (listEl.children.length === 0) {
-      listEl.createEl('div', { cls: 'rp-stp-empty', text: EMPTY_FOLDER_LABEL });
+      listEl.createEl('div', { cls: 'rp-stp-empty', text: this.t(EMPTY_FOLDER_KEY) });
     }
   }
 
@@ -427,7 +437,7 @@ export class SnippetTreePicker {
     }
 
     if (listEl.children.length === 0) {
-      listEl.createEl('div', { cls: 'rp-stp-empty', text: EMPTY_RESULTS_LABEL });
+      listEl.createEl('div', { cls: 'rp-stp-empty', text: this.t(EMPTY_RESULTS_KEY) });
     }
   }
 }

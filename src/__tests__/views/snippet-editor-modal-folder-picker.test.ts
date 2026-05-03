@@ -257,6 +257,8 @@ vi.mock('../../snippets/canvas-ref-sync', () => ({
 // --- Import SUT ----------------------------------------------------------
 import { SnippetEditorModal } from '../../views/snippet-editor-modal';
 import type { JsonSnippet } from '../../snippets/snippet-model';
+// Phase 84 (I18N-02): SnippetEditorModal calls plugin.i18n.t(...) at render time.
+import { I18nService } from '../../i18n';
 
 // --- Plugin factory ------------------------------------------------------
 interface MockSnippetService {
@@ -267,7 +269,7 @@ interface MockSnippetService {
   renameSnippet: ReturnType<typeof vi.fn>;
 }
 
-function makeMockPlugin(): { plugin: { app: unknown; settings: { snippetFolderPath: string }; snippetService: MockSnippetService }; service: MockSnippetService } {
+function makeMockPlugin(): { plugin: { app: unknown; settings: { snippetFolderPath: string }; snippetService: MockSnippetService; i18n: I18nService }; service: MockSnippetService } {
   const service: MockSnippetService = {
     save: vi.fn().mockResolvedValue(undefined),
     exists: vi.fn().mockResolvedValue(false),
@@ -279,6 +281,7 @@ function makeMockPlugin(): { plugin: { app: unknown; settings: { snippetFolderPa
     app: {},
     settings: { snippetFolderPath: '.radiprotocol/snippets' },
     snippetService: service,
+    i18n: new I18nService('en'),
   };
   return { plugin, service };
 }
@@ -430,7 +433,7 @@ describe('Phase 51 Plan 04 — SnippetEditorModal «Папка» uses SnippetTre
 
     const contentEl = modal.contentEl as unknown as MockEl;
     // Locate the «Папка» row by its label.
-    const label = findFirst(contentEl, (el) => el.tagName === 'LABEL' && el.textContent === 'Папка');
+    const label = findFirst(contentEl, (el) => el.tagName === 'LABEL' && el.textContent === 'Folder');
     expect(label).not.toBeNull();
     const folderRow = label!.parent!;
     // Within this row there must be zero <select> elements.

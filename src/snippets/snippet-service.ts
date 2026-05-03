@@ -6,6 +6,7 @@ import type { Snippet, JsonSnippet } from './snippet-model';
 import { validatePlaceholders } from './snippet-model';
 import { WriteMutex } from '../utils/write-mutex';
 import { ensureFolderPath } from '../utils/vault-utils';
+import { defaultT, type Translator } from '../i18n';
 
 /**
  * Phase 34 (D-03): Build a canvas-ref mapping key from a vault-relative path.
@@ -34,10 +35,15 @@ export class SnippetService {
   private readonly app: App;
   private readonly settings: RadiProtocolSettings;
   private readonly mutex = new WriteMutex();
+  /** Phase 84 (I18N-01): translator used for thrown error messages and
+   *  validatePlaceholders forwarding. Defaults to English (defaultT) so the
+   *  service can be constructed without a plugin reference in unit tests. */
+  private readonly t: Translator;
 
-  constructor(app: App, settings: RadiProtocolSettings) {
+  constructor(app: App, settings: RadiProtocolSettings, t: Translator = defaultT) {
     this.app = app;
     this.settings = settings;
+    this.t = t;
   }
 
   /**
@@ -121,7 +127,7 @@ export class SnippetService {
           // Phase 52 D-03: hard-validation — surface legacy placeholder types
           // and empty-choice options as validationError so Editor/Runner can
           // block rendering. Syntax-broken JSON still silently skipped via catch.
-          const validationError = validatePlaceholders(parsed.placeholders);
+          const validationError = validatePlaceholders(parsed.placeholders, this.t);
           snippets.push({
             kind: 'json',
             path: filePath,
@@ -169,7 +175,7 @@ export class SnippetService {
       if (normalized.endsWith('.json')) {
         const parsed = JSON.parse(raw) as Partial<JsonSnippet>;
         // Phase 52 D-03: populate validationError on every JsonSnippet return.
-        const validationError = validatePlaceholders(parsed.placeholders);
+        const validationError = validatePlaceholders(parsed.placeholders, this.t);
         return {
           kind: 'json',
           path: normalized,
@@ -330,7 +336,7 @@ export class SnippetService {
       throw new Error(`[RadiProtocol] renameSnippet rejected unsafe path: ${oldPath}`);
     }
     if (/[\\/]/.test(newBasename) || newBasename.trim() === '') {
-      throw new Error('Имя не может быть пустым и не должно содержать «/» или «\\».');
+      throw new Error(this.t('snippetService.invalidName'));
     }
     const lastSlash = normalizedOld.lastIndexOf('/');
     const parent = lastSlash > 0 ? normalizedOld.slice(0, lastSlash) : '';
@@ -343,11 +349,11 @@ export class SnippetService {
     }
     if (normalizedOld === normalizedNew) return normalizedNew;
     if (await this.app.vault.adapter.exists(normalizedNew)) {
-      throw new Error(`Путь уже существует: ${normalizedNew}`);
+      throw new Error(this.t('snippetService.pathExists', { path: normalizedNew }));
     }
     await this.mutex.runExclusive(normalizedOld, async () => {
       const file = this.app.vault.getAbstractFileByPath(normalizedOld);
-      if (file === null) throw new Error(`Файл не найден: ${normalizedOld}`);
+      if (file === null) throw new Error(this.t('snippetService.fileNotFound', { path: normalizedOld }));
       await this.app.vault.rename(file, normalizedNew);
     });
     return normalizedNew;
@@ -372,12 +378,12 @@ export class SnippetService {
       normalizedFolder === '' ? basename : `${normalizedFolder}/${basename}`;
     if (normalizedOld === normalizedNew) return normalizedNew;
     if (await this.app.vault.adapter.exists(normalizedNew)) {
-      throw new Error(`Путь уже существует: ${normalizedNew}`);
+      throw new Error(this.t('snippetService.pathExists', { path: normalizedNew }));
     }
     await this.mutex.runExclusive(normalizedOld, async () => {
       await ensureFolderPath(this.app.vault, normalizedFolder);
       const file = this.app.vault.getAbstractFileByPath(normalizedOld);
-      if (file === null) throw new Error(`Файл не найден: ${normalizedOld}`);
+      if (file === null) throw new Error(this.t('snippetService.fileNotFound', { path: normalizedOld }));
       await this.app.vault.rename(file, normalizedNew);
     });
     return normalizedNew;
@@ -393,7 +399,7 @@ export class SnippetService {
       throw new Error(`[RadiProtocol] renameFolder rejected unsafe path: ${oldPath}`);
     }
     if (/[\\/]/.test(newBasename) || newBasename.trim() === '') {
-      throw new Error('Имя не может быть пустым и не должно содержать «/» или «\\».');
+      throw new Error(this.t('snippetService.invalidName'));
     }
     const lastSlash = normalizedOld.lastIndexOf('/');
     const parent = lastSlash > 0 ? normalizedOld.slice(0, lastSlash) : '';
@@ -409,14 +415,14 @@ export class SnippetService {
       normalizedNew === normalizedOld ||
       normalizedNew.startsWith(normalizedOld + '/')
     ) {
-      throw new Error('Нельзя переместить папку внутрь самой себя.');
+      throw new Error(this.t('snippetService.cannotMoveIntoSelf'));
     }
     if (await this.app.vault.adapter.exists(normalizedNew)) {
-      throw new Error(`Путь уже существует: ${normalizedNew}`);
+      throw new Error(this.t('snippetService.pathExists', { path: normalizedNew }));
     }
     await this.mutex.runExclusive(normalizedOld, async () => {
       const folder = this.app.vault.getAbstractFileByPath(normalizedOld);
-      if (folder === null) throw new Error(`Папка не найдена: ${normalizedOld}`);
+      if (folder === null) throw new Error(this.t('snippetService.folderNotFound', { path: normalizedOld }));
       await this.app.vault.rename(folder, normalizedNew);
     });
     return normalizedNew;
@@ -448,15 +454,15 @@ export class SnippetService {
       normalizedNew === normalizedOld ||
       normalizedNew.startsWith(normalizedOld + '/')
     ) {
-      throw new Error('Нельзя переместить папку внутрь самой себя.');
+      throw new Error(this.t('snippetService.cannotMoveIntoSelf'));
     }
     if (await this.app.vault.adapter.exists(normalizedNew)) {
-      throw new Error(`Путь уже существует: ${normalizedNew}`);
+      throw new Error(this.t('snippetService.pathExists', { path: normalizedNew }));
     }
     await this.mutex.runExclusive(normalizedOld, async () => {
       await ensureFolderPath(this.app.vault, normalizedParent);
       const folder = this.app.vault.getAbstractFileByPath(normalizedOld);
-      if (folder === null) throw new Error(`Папка не найдена: ${normalizedOld}`);
+      if (folder === null) throw new Error(this.t('snippetService.folderNotFound', { path: normalizedOld }));
       await this.app.vault.rename(folder, normalizedNew);
     });
     return normalizedNew;
@@ -464,7 +470,7 @@ export class SnippetService {
 
   /**
    * Phase 34 (D-06): Return the sorted list of every folder under the snippet
-   * root, including the root itself. Used by SnippetEditorModal's "Папка" field
+   * root, including the root itself. Used by SnippetEditorModal's folder field
    * and SnippetTreePicker. Delegates to listFolderDescendants.
    */
   async listAllFolders(): Promise<string[]> {

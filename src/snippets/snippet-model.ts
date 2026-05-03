@@ -1,6 +1,8 @@
 // snippets/snippet-model.ts
 // Pure module — zero Obsidian API imports (NFR-01)
 
+import { defaultT, type Translator } from '../i18n';
+
 export interface SnippetPlaceholder {
   id: string;
   label: string;
@@ -39,7 +41,9 @@ export interface JsonSnippet {
   name: string;
   template: string;
   placeholders: SnippetPlaceholder[];
-  /** Phase 52 D-03: null on valid snippet; Russian error string on legacy. */
+  /** Phase 52 D-03: null on valid snippet; localized error string on legacy.
+   *  Phase 84 (I18N-01): message language follows the translator passed to
+   *  validatePlaceholders (defaults to English via defaultT). */
   validationError: string | null;
   /** @deprecated D-02: basename is source of truth; tolerated on disk only.
    *  Not `readonly` to preserve legacy snippet-manager-view write behavior
@@ -80,16 +84,20 @@ export type SnippetFile = JsonSnippet;
 
 /**
  * Phase 52 D-03: scan an untyped placeholder array for legacy types or
- * invalid choice configurations. Returns the first violation as a Russian
+ * invalid choice configurations. Returns the first violation as a localized
  * error string, or null when all placeholders pass.
  *
- * Locked copy (matches Plan 01 test assertions verbatim):
- *   Legacy type → `Плейсхолдер "{id}" использует удалённый тип "{type}". Пересоздайте плейсхолдер вручную — автоматическая миграция не выполняется.`
- *   Invalid choice → `Плейсхолдер "{id}" типа "choice" не содержит ни одного варианта. Добавьте варианты или удалите плейсхолдер.`
+ * Phase 84 (I18N-01): message text comes from the i18n locale configured by
+ * the caller. The optional `t` translator defaults to English (defaultT).
+ * Production callers (snippet-service) forward `plugin.i18n.t.bind(...)` to
+ * keep messages aligned with the active UI locale.
  *
  * Input treated as `unknown` — no trust on shape (T-52-04).
  */
-export function validatePlaceholders(placeholders: unknown): string | null {
+export function validatePlaceholders(
+  placeholders: unknown,
+  t: Translator = defaultT,
+): string | null {
   if (!Array.isArray(placeholders)) return null;
   const legacyTypes = new Set(['number', 'multichoice', 'multi-choice']);
   for (const p of placeholders) {
@@ -98,10 +106,10 @@ export function validatePlaceholders(placeholders: unknown): string | null {
     const id = typeof ph.id === 'string' ? ph.id : '<unknown>';
     const type = ph.type;
     if (typeof type === 'string' && legacyTypes.has(type)) {
-      return `Плейсхолдер "${id}" использует удалённый тип "${type}". Пересоздайте плейсхолдер вручную — автоматическая миграция не выполняется.`;
+      return t('snippetModel.legacyTypeError', { id, type });
     }
     if (type === 'choice' && (!Array.isArray(ph.options) || (ph.options as unknown[]).length === 0)) {
-      return `Плейсхолдер "${id}" типа "choice" не содержит ни одного варианта. Добавьте варианты или удалите плейсхолдер.`;
+      return t('snippetModel.invalidChoiceError', { id });
     }
   }
   return null;
@@ -134,7 +142,7 @@ export function renderSnippet(
  * Convert a human-readable label to a valid placeholder id slug (D-04).
  * "Patient age"    → "patient-age"
  * "Size (mm)"      → "size-mm"
- * "Возраст пациента" → "возраст-пациента"
+ * Cyrillic input is preserved (e.g. "Patient age" Cyrillic → kebab-case Cyrillic).
  */
 export function slugifyLabel(label: string): string {
   return label
