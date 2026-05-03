@@ -1,0 +1,15 @@
+{
+  "settings": {
+    "language": "Язык",
+    "languageLabel": "Language / Язык",
+    "languageDesc": "Select the interface language. / Выберите язык интерфейса.",
+    "russian": "Русский",
+    "donateHeading": "Помочь разработке",
+    "showWalletAddresses": "Показать адреса кошельков"
+  },
+  "donate": {
+    "invitation": "Спасибо за поддержку! Если RadiProtocol экономит вам время — буду рад любому переводу.",
+    "addressCopied": "Адрес скопирован",
+    "copyAddress": "Скопировать адрес"
+  }
+}
