@@ -116,15 +116,30 @@ interface ModalInternals {
   buildContainer: () => void;
   restoreOrDefaultPosition: () => void;
   reclampCurrentPosition: (persist: boolean) => Promise<void>;
+  applyInitialLayout: () => void;
+  getAppliedLayout: () => InlineRunnerLayout | null;
   close: () => void;
   containerEl: FakeElement | null;
   headerEl: FakeElement | null;
 }
 
-function makePlugin(saved: InlineRunnerLayout | null = null): RadiProtocolPlugin & {
+// Phase 85 INLINE-MULTI-02: shared registry so two mount() calls in a single
+// test can simulate two open inline runners against the same plugin.
+// Cast to RadiProtocolPlugin for the InlineRunnerModal constructor only —
+// the registry/saveSpy/inlineRunners surface intentionally aliases the
+// private members on the real plugin (necessary for cascade observability).
+type TestPlugin = Omit<RadiProtocolPlugin, 'inlineRunners'> & {
   saved: InlineRunnerLayout | null;
   saveSpy: ReturnType<typeof vi.fn>;
-} {
+  inlineRunners: Map<string, unknown>;
+  registerInlineRunner: (key: string, modal: unknown) => void;
+  unregisterInlineRunner: (key: string) => void;
+  getInlineRunner: (key: string) => unknown;
+  getOpenInlineRunners: () => unknown[];
+};
+
+function makePlugin(saved: InlineRunnerLayout | null = null): TestPlugin {
+  const inlineRunners = new Map<string, unknown>();
   const plugin = {
     saved,
     saveSpy: vi.fn(async (position: InlineRunnerLayout | null) => {
@@ -141,15 +156,22 @@ function makePlugin(saved: InlineRunnerLayout | null = null): RadiProtocolPlugin
     // Phase 84 I18N-02: real I18nService so InlineRunnerModal constructor's
     // `this.plugin.i18n.t.bind(this.plugin.i18n)` does not throw.
     i18n: new I18nService('ru'),
+    // Phase 85 INLINE-MULTI-01: registry mock — `applyInitialLayout` reads
+    // `getOpenInlineRunners()` to drive the cascade-vs-default branch.
+    inlineRunners,
+    registerInlineRunner: (key: string, modal: unknown) => { inlineRunners.set(key, modal); },
+    unregisterInlineRunner: (key: string) => { inlineRunners.delete(key); },
+    getInlineRunner: (key: string) => inlineRunners.get(key) ?? null,
+    getOpenInlineRunners: () => Array.from(inlineRunners.values()),
   };
-  return plugin as unknown as RadiProtocolPlugin & { saved: InlineRunnerLayout | null; saveSpy: ReturnType<typeof vi.fn> };
+  return plugin as unknown as TestPlugin;
 }
 
 function fakeTFile(path: string): TFile {
   return Object.assign(new TFile(), { path, name: path.split('/').pop() ?? path, extension: path.split('.').pop() ?? '', basename: path.replace(/\.md$/, '') });
 }
 
-function mount(saved: InlineRunnerLayout | null = null): { modal: ModalInternals; plugin: ReturnType<typeof makePlugin>; doc: FakeDocument } {
+function stubGlobals(): FakeDocument {
   const doc = new FakeDocument();
   vi.stubGlobal('document', doc);
   vi.stubGlobal('window', {
@@ -159,10 +181,30 @@ function mount(saved: InlineRunnerLayout | null = null): { modal: ModalInternals
     removeEventListener: vi.fn(),
   });
   vi.stubGlobal('ResizeObserver', class { observe(): void {} disconnect(): void {} });
+  return doc;
+}
 
-  const plugin = makePlugin(saved);
-  const app = { vault: { getAbstractFileByPath: vi.fn(), read: vi.fn(), modify: vi.fn(), on: vi.fn() }, workspace: { on: vi.fn(), offref: vi.fn(), getActiveFile: vi.fn(() => fakeTFile('note.md')), iterateAllLeaves: vi.fn() } };
-  const modal = new InlineRunnerModal(app as never, plugin, 'protocol.canvas', fakeTFile('note.md')) as unknown as ModalInternals;
+interface MountOpts {
+  saved?: InlineRunnerLayout | null;
+  plugin?: TestPlugin;
+  canvasPath?: string;
+  notePath?: string;
+}
+
+function mount(arg: InlineRunnerLayout | null | MountOpts = null): { modal: ModalInternals; plugin: TestPlugin; doc: FakeDocument } {
+  // Phase 85 INLINE-MULTI-02: overloaded signature — the legacy form passes a
+  // saved layout (or null); the new form passes { plugin, canvasPath, ... } so
+  // a single plugin instance can back two modals for cascade tests.
+  const opts: MountOpts = (arg !== null && typeof arg === 'object' && ('plugin' in arg || 'saved' in arg || 'canvasPath' in arg || 'notePath' in arg))
+    ? arg as MountOpts
+    : { saved: arg as InlineRunnerLayout | null };
+
+  const doc = stubGlobals();
+  const plugin = opts.plugin ?? makePlugin(opts.saved ?? null);
+  const canvasPath = opts.canvasPath ?? 'protocol.canvas';
+  const notePath = opts.notePath ?? 'note.md';
+  const app = { vault: { getAbstractFileByPath: vi.fn(), read: vi.fn(), modify: vi.fn(), on: vi.fn() }, workspace: { on: vi.fn(), offref: vi.fn(), getActiveFile: vi.fn(() => fakeTFile(notePath)), iterateAllLeaves: vi.fn() } };
+  const modal = new InlineRunnerModal(app as never, plugin as unknown as RadiProtocolPlugin, canvasPath, fakeTFile(notePath)) as unknown as ModalInternals;
   modal.buildContainer();
   return { modal, plugin, doc };
 }
@@ -231,5 +273,75 @@ describe('Phase 60 D-01/D-02 inline runner position persistence', () => {
     // Phase 67 D-11: reclamp now persists full layout (position + size).
     // Width/height in the persisted payload come from inline styles; defaults are 420x320.
     expect(plugin.saveSpy).toHaveBeenCalledWith({ left: 864, top: 728, width: 420, height: 320 });
+  });
+});
+
+// Phase 85 INLINE-MULTI-02: cascade-positioning regression coverage.
+// applyInitialLayout() (called from open() before subscriptions) chooses
+// between the saved-or-default position and a +24/+24 offset from the most
+// recently opened inline runner already in the registry.
+describe('Phase 85 INLINE-MULTI-02 cascade positioning', () => {
+  beforeEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it('(a) first instance — empty registry — uses the saved position', () => {
+    const { modal, plugin } = mount({ left: 220, top: 180 });
+    expect(plugin.getOpenInlineRunners()).toHaveLength(0);
+
+    modal.applyInitialLayout();
+
+    expect(modal.containerEl?.style.left).toBe('220px');
+    expect(modal.containerEl?.style.top).toBe('180px');
+  });
+
+  it('(b) second instance — offsets +24/+24 from last opened runner', () => {
+    const plugin = makePlugin({ left: 220, top: 180 });
+    const { modal: first } = mount({ plugin, canvasPath: 'a.canvas', notePath: 'a.md' });
+    first.applyInitialLayout();
+    plugin.registerInlineRunner('a.canvas#a.md', first);
+    expect(first.containerEl?.style.left).toBe('220px');
+    expect(first.containerEl?.style.top).toBe('180px');
+
+    const { modal: second } = mount({ plugin, canvasPath: 'b.canvas', notePath: 'b.md' });
+    second.applyInitialLayout();
+
+    expect(second.containerEl?.style.left).toBe('244px');
+    expect(second.containerEl?.style.top).toBe('204px');
+  });
+
+  it('(c) cascade is clamped — second instance cannot go off-screen past viewport bounds', () => {
+    const plugin = makePlugin({ left: 864, top: 728 });
+    const { modal: first } = mount({ plugin, canvasPath: 'a.canvas', notePath: 'a.md' });
+    first.applyInitialLayout();
+    plugin.registerInlineRunner('a.canvas#a.md', first);
+    // Pre-condition: first sits at the maxLeft / maxTop allowed by clampInlineRunnerPosition
+    // for a 1024x768 viewport (maxLeft = viewport.width - MIN_VISIBLE_WIDTH=160 = 864;
+    // maxTop = viewport.height - MIN_VISIBLE_HEADER_HEIGHT=40 = 728).
+    expect(first.containerEl?.style.left).toBe('864px');
+    expect(first.containerEl?.style.top).toBe('728px');
+
+    const { modal: second } = mount({ plugin, canvasPath: 'b.canvas', notePath: 'b.md' });
+    second.applyInitialLayout();
+
+    // +24/+24 would land at (888, 752); both axes are clamped back to (864, 728).
+    expect(second.containerEl?.style.left).toBe('864px');
+    expect(second.containerEl?.style.top).toBe('728px');
+  });
+
+  it('(d) cascade applies default width/height — does NOT persist to settings', () => {
+    const plugin = makePlugin({ left: 200, top: 200, width: 600, height: 500 });
+    const { modal: first } = mount({ plugin, canvasPath: 'a.canvas', notePath: 'a.md' });
+    first.applyInitialLayout();
+    plugin.registerInlineRunner('a.canvas#a.md', first);
+
+    const { modal: second } = mount({ plugin, canvasPath: 'b.canvas', notePath: 'b.md' });
+    second.applyInitialLayout();
+
+    // Cascade overrides any saved width/height with the defaults.
+    expect(second.containerEl?.style.width).toBe('420px');
+    expect(second.containerEl?.style.height).toBe('320px');
+    // The cascade itself must not call saveInlineRunnerPosition — only drag/resize do.
+    expect(plugin.saveSpy).not.toHaveBeenCalled();
   });
 });

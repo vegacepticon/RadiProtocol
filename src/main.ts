@@ -118,6 +118,8 @@ export default class RadiProtocolPlugin extends Plugin {
   edgeLabelSyncService!: EdgeLabelSyncService;
   private readonly insertMutex = new WriteMutex();
   private pickerModal: SuggestModal<{ file: TFile; name: string }> | null = null;
+  // Phase 85 INLINE-MULTI-01: registry of open inline runners keyed by `${canvasPath}#${notePath}`.
+  private inlineRunners = new Map<string, InlineRunnerModal>();
 
   async onload(): Promise<void> {
     // Load settings with defaults guard (NFR-08)
@@ -256,10 +258,35 @@ export default class RadiProtocolPlugin extends Plugin {
       this.pickerModal.close();
       this.pickerModal = null;
     }
+    // Phase 85 INLINE-MULTI-01: close any open inline runners to prevent DOM leaks.
+    for (const modal of this.inlineRunners.values()) {
+      modal.close();
+    }
+    this.inlineRunners.clear();
     this.canvasLiveEditor.destroy();
     this.canvasNodeFactory.destroy();
     this.edgeLabelSyncService.destroy();
     console.debug('[RadiProtocol] Plugin unloaded');
+  }
+
+  // Phase 85 INLINE-MULTI-01: registry API for inline runner instances. Key is
+  // `${canvasPath}#${notePath}`. Each instance unregisters itself on close().
+  registerInlineRunner(key: string, modal: InlineRunnerModal): void {
+    this.inlineRunners.set(key, modal);
+  }
+
+  unregisterInlineRunner(key: string): void {
+    this.inlineRunners.delete(key);
+  }
+
+  getInlineRunner(key: string): InlineRunnerModal | null {
+    return this.inlineRunners.get(key) ?? null;
+  }
+
+  // Phase 85 INLINE-MULTI-02: returns currently-open inline runners in registry order
+  // so the cascade-position logic can offset the new instance from the last one opened.
+  getOpenInlineRunners(): InlineRunnerModal[] {
+    return Array.from(this.inlineRunners.values());
   }
 
   async saveSettings(): Promise<void> {
@@ -564,9 +591,18 @@ export default class RadiProtocolPlugin extends Plugin {
     this.pickerModal.open();
   }
 
-  /** Open the InlineRunnerModal for a selected canvas and target note. */
+  /** Open the InlineRunnerModal for a selected canvas and target note.
+   *  Phase 85 INLINE-MULTI-01: if a runner for the same (canvasPath, notePath) is
+   *  already open, focus the existing instance instead of spawning a duplicate. */
   private async openInlineRunner(canvasFile: TFile, targetNote: TFile): Promise<void> {
+    const key = `${canvasFile.path}#${targetNote.path}`;
+    const existing = this.getInlineRunner(key);
+    if (existing !== null) {
+      existing.focus();
+      return;
+    }
     const modal = new InlineRunnerModal(this.app, this, canvasFile.path, targetNote);
     await modal.open();
+    this.registerInlineRunner(key, modal);
   }
 }

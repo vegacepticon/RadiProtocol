@@ -157,6 +157,28 @@ export class InlineRunnerModal {
     });
   }
 
+  // ── Phase 85 INLINE-MULTI-01 — Registry accessors ────────────────────────
+
+  /** Identifier for the canvas file driving this runner (without `.canvas` strip). */
+  getCanvasFilePath(): string | null {
+    return this.canvasFilePath;
+  }
+
+  /** The markdown note this runner appends answers/snippets into. */
+  getTargetNote(): TFile {
+    return this.targetNote;
+  }
+
+  /** Bring an already-open inline runner to the foreground.
+   *  Re-appends the container to document.body (so it stacks above sibling
+   *  runners) and clears the D1 `is-hidden` class if previously hidden. */
+  focus(): void {
+    if (this.containerEl === null) return;
+    document.body.appendChild(this.containerEl);
+    this.containerEl.removeClass('is-hidden');
+    this.isHidden = false;
+  }
+
   // ── Lifecycle ─────────────────────────────────────────────────────────────
 
   async open(): Promise<void> {
@@ -220,8 +242,8 @@ export class InlineRunnerModal {
     // Initial visibility check
     this.handleActiveLeafChange();
 
-    // Phase 60: restore saved compact position or apply compact default.
-    this.restoreOrDefaultPosition();
+    // Phase 85 INLINE-MULTI-02: cascade-or-default position decision.
+    this.applyInitialLayout();
 
     // Re-clamp on layout changes without resetting to note-width anchoring.
     this.workspaceLayoutRef = this.app.workspace.on('layout-change', () => {
@@ -289,6 +311,13 @@ export class InlineRunnerModal {
     }
     this.isResizing = false;
     this.removeDragListeners();
+
+    // Phase 85 INLINE-MULTI-01: unregister from the plugin's registry. Computed
+    // BEFORE we null out canvasFilePath/containerEl so the key is still derivable.
+    if (this.canvasFilePath !== null) {
+      const key = `${this.canvasFilePath}#${this.targetNote.path}`;
+      this.plugin.unregisterInlineRunner(key);
+    }
 
     // Remove from DOM
     if (this.containerEl !== null) {
@@ -553,7 +582,46 @@ export class InlineRunnerModal {
     this.applyLayout(clamped);
   }
 
-  private getAppliedLayout(): InlineRunnerLayout | null {
+  /** Phase 85 INLINE-MULTI-02: cascade-or-default position decision.
+   *  When opened with no other open inline runners, restores the saved
+   *  position (or falls back to the default). When opened while at least one
+   *  other inline runner is already open, offsets +24/+24 from the most
+   *  recently opened instance, clamped to the viewport, and applies default
+   *  width/height — without persisting the cascade position to settings
+   *  (the saved global default belongs to drag/resize gestures only). */
+  private applyInitialLayout(): void {
+    const others = this.plugin.getOpenInlineRunners();
+    if (others.length === 0) {
+      this.restoreOrDefaultPosition();
+      return;
+    }
+    const last = others[others.length - 1]!;
+    const lastLayout = last.getAppliedLayout();
+    if (lastLayout === null) {
+      this.restoreOrDefaultPosition();
+      return;
+    }
+    const viewport = this.getViewport();
+    const containerSize = this.getContainerSize();
+    const next = clampInlineRunnerPosition(
+      { left: lastLayout.left + 24, top: lastLayout.top + 24 },
+      viewport,
+      containerSize,
+    );
+    if (next === null) {
+      this.restoreOrDefaultPosition();
+      return;
+    }
+    this.applyPosition(next);
+    if (this.containerEl !== null) {
+      this.containerEl.style.width = `${INLINE_RUNNER_DEFAULT_WIDTH}px`;
+      this.containerEl.style.height = `${INLINE_RUNNER_DEFAULT_HEIGHT}px`;
+    }
+  }
+
+  /** Phase 85 INLINE-MULTI-02: public so the cascade logic in another modal's
+   *  open() can read this instance's current applied position. */
+  getAppliedLayout(): InlineRunnerLayout | null {
     if (this.containerEl === null) return null;
     const left = Number.parseFloat(this.containerEl.style.left);
     const top = Number.parseFloat(this.containerEl.style.top);

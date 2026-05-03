@@ -34,10 +34,10 @@ _v1.12 closed 2026-05-02 — 7/7 requirements satisfied; internal-only, no GitHu
 <summary>🚧 v1.14 Internationalization, Documentation & Infrastructure (Phases 84-86) — OPEN 2026-05-03</summary>
 
 - [x] Phase 84: i18n + Documentation (4 requirements: I18N-01, I18N-02, DOC-01, DOC-02) — completed 2026-05-03
-- [ ] Phase 85: Multiple Inline Runners (2 requirements: INLINE-MULTI-01, INLINE-MULTI-02) — planning
+- [x] Phase 85: Multiple Inline Runners (2 requirements: INLINE-MULTI-01, INLINE-MULTI-02) — completed 2026-05-03
 - [ ] Phase 86: Template Library MVP (2 requirements: TEMPLATE-LIB-01, TEMPLATE-LIB-02) — planning
 
-8/8 requirements active; 0 complete. Research completed at open: text-block bug (no root cause in engine), inline-multi (Stage 1 SMALL), template library (MVP SMALL).
+8/8 requirements active; 2 phases complete, 4 requirements satisfied (I18N-01/02, DOC-01/02, INLINE-MULTI-01/02). Research completed at open: text-block bug (no root cause in engine), inline-multi (Stage 1 SMALL), template library (MVP SMALL).
 
 Full details: `.planning/REQUIREMENTS.md` (v1.14), `.planning/STATE.md` (v1.14 open).
 

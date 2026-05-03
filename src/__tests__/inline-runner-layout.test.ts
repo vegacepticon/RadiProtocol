@@ -169,6 +169,9 @@ function makePlugin(saved: InlineRunnerLayout | null = null): RadiProtocolPlugin
   saved: InlineRunnerLayout | null;
   saveSpy: ReturnType<typeof vi.fn>;
 } {
+  // Phase 85 INLINE-MULTI-01: registry mock so close() can call
+  // unregisterInlineRunner without TypeError.
+  const inlineRunners = new Map<string, unknown>();
   const plugin = {
     saved,
     saveSpy: vi.fn(async (layout: InlineRunnerLayout | null) => {
@@ -185,6 +188,10 @@ function makePlugin(saved: InlineRunnerLayout | null = null): RadiProtocolPlugin
     // Phase 84 I18N-02: real I18nService so InlineRunnerModal constructor's
     // `this.plugin.i18n.t.bind(this.plugin.i18n)` does not throw.
     i18n: new I18nService('ru'),
+    registerInlineRunner: (key: string, modal: unknown): void => { inlineRunners.set(key, modal); },
+    unregisterInlineRunner: (key: string): void => { inlineRunners.delete(key); },
+    getInlineRunner: (key: string): unknown => inlineRunners.get(key) ?? null,
+    getOpenInlineRunners: (): unknown[] => Array.from(inlineRunners.values()),
   };
   return plugin as unknown as RadiProtocolPlugin & { saved: InlineRunnerLayout | null; saveSpy: ReturnType<typeof vi.fn> };
 }

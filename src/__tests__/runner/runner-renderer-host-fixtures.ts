@@ -288,6 +288,10 @@ export function createSnippetTreePickerMock(mountSpy: () => void): Record<string
 // InlineRunnerModal harness helpers
 
 export function makeBasePlugin(opts: { textSeparator?: string; snippetFolderPath?: string } = {}) {
+  // Phase 85 INLINE-MULTI-01: shared registry backing the registerInlineRunner /
+  // unregisterInlineRunner / getInlineRunner / getOpenInlineRunners mocks. Tests
+  // can inspect `plugin.inlineRunners` directly to assert registry state.
+  const inlineRunners = new Map<string, unknown>();
   return {
     settings: {
       textSeparator: opts.textSeparator ?? 'newline',
@@ -303,6 +307,12 @@ export function makeBasePlugin(opts: { textSeparator?: string; snippetFolderPath
     // Phase 84 I18N-02: real I18nService so InlineRunnerModal/RunnerView constructors'
     // `this.plugin.i18n.t.bind(this.plugin.i18n)` does not throw.
     i18n: new I18nService('ru'),
+    // Phase 85 INLINE-MULTI-01: registry mock methods.
+    inlineRunners,
+    registerInlineRunner: vi.fn((key: string, modal: unknown) => { inlineRunners.set(key, modal); }),
+    unregisterInlineRunner: vi.fn((key: string) => { inlineRunners.delete(key); }),
+    getInlineRunner: vi.fn((key: string) => inlineRunners.get(key) ?? null),
+    getOpenInlineRunners: vi.fn(() => Array.from(inlineRunners.values())),
   };
 }
 

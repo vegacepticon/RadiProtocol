@@ -302,3 +302,44 @@ describe('InlineRunnerModal — INLINE-FIX-04 (c) JSON with-placeholder + separa
     );
   });
 });
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Phase 85 INLINE-MULTI-01 — registry integration tests.
+// Verifies that close() unregisters the modal from the plugin registry, and
+// that focus() unhides + reattaches the container so the modal stacks on top.
+describe('InlineRunnerModal — Phase 85 INLINE-MULTI-01 registry integration', () => {
+  it('close() calls plugin.unregisterInlineRunner with `${canvasPath}#${notePath}` key', () => {
+    const { modal, plugin, targetNote } = setupModal();
+    const expectedKey = `test.canvas#${targetNote.path}`;
+    // Pre-populate registry as if openInlineRunner had completed.
+    plugin.registerInlineRunner(expectedKey, modal as unknown as never);
+    expect(plugin.inlineRunners.has(expectedKey)).toBe(true);
+
+    modal.close();
+
+    expect(plugin.unregisterInlineRunner).toHaveBeenCalledWith(expectedKey);
+    expect(plugin.inlineRunners.has(expectedKey)).toBe(false);
+  });
+
+  it('focus() removes is-hidden class and re-appends container to document.body', () => {
+    const { modal } = setupModal();
+    const container = makeEl('div');
+    container.addClass('is-hidden');
+    (modal as any).containerEl = container;
+    (modal as any).isHidden = true;
+
+    // Mock document.body.appendChild — node env has no DOM.
+    const appendChildSpy = vi.fn();
+    const fakeDocument = { body: { appendChild: appendChildSpy } };
+    vi.stubGlobal('document', fakeDocument);
+    try {
+      (modal as any).focus();
+    } finally {
+      vi.unstubAllGlobals();
+    }
+
+    expect(container.hasClass('is-hidden')).toBe(false);
+    expect(appendChildSpy).toHaveBeenCalledWith(container);
+    expect((modal as any).isHidden).toBe(false);
+  });
+});

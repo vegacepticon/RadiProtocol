@@ -2,14 +2,14 @@
 gsd_state_version: 1.0
 milestone: v1.14
 milestone_name: Internationalization, Documentation & Infrastructure
-status: completed
+status: in_progress
 started_at: 2026-05-03
-completed_at: 2026-05-03
-last_updated: "2026-05-03T10:35:00.000Z"
-last_activity: 2026-05-03 — Phase 84 complete: i18n extracted across all layers (views, snippets, graph, runner, runner-view), README.md and docs/CONTRIBUTING.md + docs/PROTOCOL-AUTHORING.md written
+completed_at: null
+last_updated: "2026-05-03T12:58:00.000Z"
+last_activity: 2026-05-03 — Phase 85 complete: inline runner registry, cascade positioning, onunload cleanup; 6 new tests added; build/lint/test green
 progress:
   total_phases: 3
-  completed_phases: 1
+  completed_phases: 2
   total_plans: 5
   completed_plans: 5
 ---
