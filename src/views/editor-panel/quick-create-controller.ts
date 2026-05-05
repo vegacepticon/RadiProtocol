@@ -34,7 +34,7 @@ export interface QuickCreateDeps {
   renderForm: (record: Record<string, unknown>, kind: RPNodeKind | null) => void;
 }
 
-export function getActiveCanvasPath(plugin: RadiProtocolPlugin): string | undefined {
+function getActiveCanvasPath(plugin: RadiProtocolPlugin): string | undefined {
   const canvasLeaves = plugin.app.workspace.getLeavesOfType('canvas');
   const activeLeaf = plugin.app.workspace.getMostRecentLeaf();
   const canvasLeaf = canvasLeaves.find(l => l === activeLeaf) ?? canvasLeaves[0];

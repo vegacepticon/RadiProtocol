@@ -2,8 +2,6 @@
 // Phase 81 TYPE-SAFETY-01 — typed wrappers over Obsidian DOM helpers.
 // Reduces `as HTMLButtonElement` casts at hot-path call sites.
 
-import type { Component } from 'obsidian';
-
 interface ButtonOpts {
   cls?: string;
   text?: string;
@@ -53,17 +51,4 @@ export function createTextarea(parent: HTMLElement, opts: TextareaOpts = {}): HT
     attr: opts.attr,
   });
   return ta as HTMLTextAreaElement;
-}
-
-/**
- * Typed wrapper over `Component.registerDomEvent`.
- * Narrows the event type by event name so handlers are correctly typed.
- */
-export function registerEvent<K extends keyof HTMLElementEventMap>(
-  scope: Component,
-  target: HTMLElement,
-  event: K,
-  handler: (this: HTMLElement, ev: HTMLElementEventMap[K]) => unknown,
-): void {
-  scope.registerDomEvent(target, event, handler);
 }

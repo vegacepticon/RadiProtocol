@@ -7,8 +7,10 @@
     "dev": "node esbuild.config.mjs",
     "build": "tsc -noEmit -skipLibCheck && node esbuild.config.mjs production",
     "version": "node version-bump.mjs && git add manifest.json versions.json",
-    "lint": "eslint . && stylelint 'src/styles/**/*.css'",
-    "test": "vitest run"
+    "lint": "eslint . --max-warnings 0 && stylelint 'src/styles/**/*.css'",
+    "lint:strict": "npm run lint",
+    "test": "vitest run",
+    "check": "npm run build && npm run lint && npm test"
   },
   "keywords": [],
   "author": "",

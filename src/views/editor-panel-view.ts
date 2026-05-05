@@ -387,7 +387,4 @@ export class EditorPanelView extends ItemView {
     });
   }
 
-  // Phase 76 (SPLIT-01 G9) — `listSnippetSubfolders` relocated to
-  // ./editor-panel/legacy/list-snippet-subfolders.ts (Shared Pattern G —
-  // not deleted, zero callers in src/ as of Phase 51-03).
 }
