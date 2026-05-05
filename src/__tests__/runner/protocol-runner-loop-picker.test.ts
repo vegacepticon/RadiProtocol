@@ -272,6 +272,52 @@ describe('ProtocolRunner loop picker (RUN-01..RUN-05)', () => {
     runner2.chooseLoopBranch(exitEdge.id);
     expect(runner2.getState().status).toBe('complete');
   });
+
+  it('RUN-QUICK-EXIT: answer inside loop body wired to the same target as the "+" exit edge pops the frame and completes', () => {
+    // Graph: start → loop → (body: answer 'n-a1' → n-end) / (exit: '+done' → n-end)
+    // Choosing body branch auto-advances through n-a1 (pass-through), quick-exit pops frame,
+    // and runner completes at n-end instead of returning to loop picker.
+    const graph: ProtocolGraph = {
+      canvasFilePath: 'test:quick-exit.canvas',
+      nodes: new Map<string, RPNode>([
+        ['n-start', { id: 'n-start', kind: 'start', x: 0, y: 0, width: 100, height: 60 }],
+        ['n-loop',  { id: 'n-loop',  kind: 'loop',  x: 0, y: 100, width: 100, height: 60, headerText: 'Loop' }],
+        ['n-a1',    { id: 'n-a1',    kind: 'answer', x: 100, y: 100, width: 100, height: 60, answerText: 'Quick' }],
+        ['n-end',   { id: 'n-end',   kind: 'text-block', x: 0, y: 200, width: 100, height: 60, content: 'Done' }],
+      ]),
+      edges: [
+        { id: 'e1', fromNodeId: 'n-start', toNodeId: 'n-loop' },
+        { id: 'e2', fromNodeId: 'n-loop',  toNodeId: 'n-a1' },
+        { id: 'e3', fromNodeId: 'n-loop',  toNodeId: 'n-end',  label: '+done' },
+        { id: 'e4', fromNodeId: 'n-a1',    toNodeId: 'n-end' },
+      ],
+      adjacency: new Map<string, string[]>([
+        ['n-start', ['n-loop']],
+        ['n-loop',  ['n-a1', 'n-end']],
+        ['n-a1',    ['n-end']],
+        ['n-end',   []],
+      ]),
+      reverseAdjacency: new Map<string, string[]>([
+        ['n-start', []],
+        ['n-loop',  ['n-start']],
+        ['n-a1',    ['n-loop']],
+        ['n-end',   ['n-loop', 'n-a1']],
+      ]),
+      startNodeId: 'n-start',
+    };
+    const runner = new ProtocolRunner();
+    runner.start(graph);
+    expect(runner.getState().status).toBe('awaiting-loop-pick');
+
+    // Body branch auto-advances: n-a1 (answer pass-through) → n-end (text-block) → complete
+    // Quick-exit pops the loop frame at n-a1 so runner completes instead of returning to picker.
+    runner.chooseLoopBranch('e2');
+    const state = runner.getState();
+    expect(state.status).toBe('complete');
+    if (state.status !== 'complete') return;
+    expect(state.finalText).toContain('Quick');
+    expect(state.finalText).toContain('Done');
+  });
 });
 
 // Phase 66 D-13 — four scripted loop-boundary scenarios for stepBack correctness.

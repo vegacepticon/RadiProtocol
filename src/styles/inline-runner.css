@@ -219,6 +219,13 @@
 .rp-inline-runner-content .rp-skip-btn {
   padding: var(--size-2-3) var(--size-4-2);
   min-height: 28px;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  height: auto;
+  align-items: flex-start;
+  max-width: 100%;
+  box-sizing: border-box;
 }
 
 /* Phase 67: resizable inline runner */

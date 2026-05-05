@@ -681,6 +681,23 @@ export class ProtocolRunner {
           // This handles answer → text-block → question chains correctly.
           this.accumulator.appendWithSeparator(node.answerText, this.resolveSeparator(node));
           const next = this.firstNeighbour(cursor);
+
+          // Quick-exit from loop body: if an answer node inside a loop body is wired
+          // directly to the same target as the loop's '+' exit edge, pop the loop frame
+          // so the runner continues past the loop instead of returning to the picker
+          // when the branch eventually hits a dead-end.
+          if (this.graph !== null && this.loopContextStack.length > 0 && next !== undefined) {
+            const topLoop = this.loopContextStack[this.loopContextStack.length - 1];
+            if (topLoop !== undefined) {
+              const exitEdge = this.graph.edges.find(
+                e => e.fromNodeId === topLoop.loopNodeId && isExitEdge(e)
+              );
+              if (exitEdge !== undefined && exitEdge.toNodeId === next) {
+                this.loopContextStack.pop();
+              }
+            }
+          }
+
           if (this.advanceOrReturnToLoop(next) === 'halted') return;
           previousCursor = cursor;   // B2 threading
           cursor = next!;
