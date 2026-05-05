@@ -82,57 +82,6 @@
   margin-bottom: var(--size-4-3);
 }
 
-/* Snippet fill-in form (D6) */
-.rp-inline-runner-content .rp-snippet-fill-form {
-  display: flex;
-  flex-direction: column;
-  gap: var(--size-4-3);
-}
-
-.rp-inline-runner-content .rp-snippet-fill-title {
-  font-weight: var(--font-semibold);
-  margin: 0;
-}
-
-.rp-inline-runner-content .rp-snippet-fill-row {
-  display: flex;
-  flex-direction: column;
-  gap: var(--size-4-1);
-}
-
-.rp-inline-runner-content .rp-snippet-fill-label {
-  font-weight: var(--font-medium);
-  font-size: var(--font-ui-small);
-}
-
-.rp-inline-runner-content .rp-snippet-fill-input {
-  width: 100%;
-  padding: var(--size-4-2) var(--size-4-3);
-  border: 1px solid var(--background-modifier-border);
-  border-radius: var(--radius-s);
-  background: var(--background-modifier-form);
-}
-
-.rp-inline-runner-content .rp-snippet-fill-choices {
-  display: flex;
-  flex-direction: column;
-  gap: var(--size-4-1);
-}
-
-.rp-inline-runner-content .rp-snippet-fill-choice-label {
-  display: flex;
-  align-items: center;
-  gap: var(--size-4-2);
-  cursor: pointer;
-}
-
-.rp-inline-runner-content .rp-snippet-fill-buttons {
-  display: flex;
-  gap: var(--size-4-2);
-  justify-content: flex-end;
-  margin-top: var(--size-4-2);
-}
-
 /* Error panel */
 .rp-inline-runner-content .rp-error-panel {
   background: var(--background-modifier-error);
@@ -205,8 +154,7 @@
 
 .rp-inline-runner-content .rp-answer-list,
 .rp-inline-runner-content .rp-snippet-branch-list,
-.rp-inline-runner-content .rp-loop-picker-list,
-.rp-inline-runner-content .rp-snippet-fill-form {
+.rp-inline-runner-content .rp-loop-picker-list {
   gap: var(--size-2-3);
   margin-bottom: var(--size-4-2);
 }
@@ -240,6 +188,21 @@
 
 .rp-inline-runner-container.is-resizing {
   box-shadow: var(--shadow-xl);                       /* D-02: exact mirror of Phase 60 `.is-dragging` */
+}
+
+/* Phase 75: runner footer row */
+.rp-runner-footer-row {
+  display: flex;
+  gap: var(--size-4-2);
+  justify-content: flex-end;
+  margin-top: var(--size-4-2);
+}
+
+/* Phase 75: complete heading */
+.rp-complete-heading {
+  font-size: var(--font-ui-medium);
+  font-weight: var(--font-semibold);
+  margin: 0 0 var(--size-4-2) 0;
 }
 
 /* Phase 77: applyPosition/applyLayout reset right/bottom/maxWidth/transform when explicit left/top is applied (Phase 60/67 drag+resize, LINT-01) */

@@ -74,6 +74,13 @@
   padding: var(--size-4-3);
 }
 
+/* Empty state body text (render-snippet-picker.ts) */
+.rp-empty-state-body {
+  color: var(--text-muted);
+  font-style: italic;
+  padding: var(--size-4-2);
+}
+
 /* Phase 51 Plan 03 — Node Editor inline mount host (consumed by editor-panel-view.ts). */
 /* Caps height + scroll inside the editor panel so the picker doesn't dominate. */
 .rp-stp-editor-host {

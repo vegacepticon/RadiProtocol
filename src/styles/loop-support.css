@@ -1,50 +1,6 @@
-/* Phase 6: Loop Support ─────────────────────────────────────────────────── */
+/* Phase 6: Loop Support — styles for loop picker buttons used by inline runner */
 
-.rp-loop-iteration-label {
-  font-size: var(--font-ui-small);
-  font-weight: var(--font-semibold);
-  color: var(--color-yellow);
-  margin-bottom: var(--size-2-3); /* 8px */
-  letter-spacing: 0.02em;
-}
-
-.rp-loop-btn-row {
-  display: flex;
-  gap: var(--size-2-3); /* 8px */
-  flex-wrap: wrap;
-  margin-top: var(--size-2-3);
-}
-
-.rp-loop-again-btn {
-  background: var(--interactive-accent);
-  color: var(--text-on-accent);
-  border: none;
-  border-radius: var(--radius-s);
-  padding: var(--size-2-2) var(--size-4-2);
-  cursor: pointer;
-  font-size: var(--font-ui-small);
-}
-
-.rp-loop-again-btn:hover {
-  background: var(--interactive-accent-hover);
-}
-
-.rp-loop-done-btn {
-  background: var(--background-modifier-border);
-  color: var(--text-normal);
-  border: none;
-  border-radius: var(--radius-s);
-  padding: var(--size-2-2) var(--size-4-2);
-  cursor: pointer;
-  font-size: var(--font-ui-small);
-}
-
-.rp-loop-done-btn:hover {
-  background: var(--background-modifier-border-hover, var(--background-modifier-border));
-  opacity: 0.8;
-}
-
-/* Phase 44: Unified loop picker (RUN-01) ────────────────────────────────── */
+/* Phase 44: Unified loop picker (RUN-01) ———————————————————————————————————— */
 
 .rp-loop-header-text {
   font-size: var(--font-ui-medium);
@@ -88,10 +44,7 @@
 }
 
 /* Phase 47: RUNFIX-03 — loop picker button typography + narrow-sidebar overflow +
- * Obsidian default-button defeat. Parallel to the runner-view.css consolidation; loop
- * buttons additionally need width: 100% + min-width: 0 because they sit inside a
- * flex-column .rp-loop-picker-list (answer buttons do not need this). Do NOT compress
- * further without testing Cyrillic descenders in a narrow sidebar. */
+ * Obsidian default-button defeat. */
 .rp-loop-body-btn,
 .rp-loop-exit-btn {
   height: auto;
@@ -108,19 +61,11 @@
   max-width: 100%;
 }
 
-/* Phase 70: Loop-exit picker visual hint (LOOP-EXIT-01) ─────────────────── *
- * D-01/D-03: solid `--color-green` background marks the '+'-prefix exit
- *   button as the «finish/выход» control, distinct from body-branch
- *   buttons which keep the Phase 44 `--interactive-accent` blue.
- * D-04: `--text-on-accent` reused for text colour (no `--text-on-color-green`
- *   token exists in Obsidian; pragmatic re-use, contrast covered by UAT).
- * D-05: hover = `filter: brightness(0.92)` — no `--color-green-hover` token.
- * D-06/D-07: focus-visible relies on Obsidian default ring; no `:disabled`
- *   rule (loop picker always renders enabled buttons).
- * D-08: selector `.rp-loop-exit-btn` (unprefixed) covers sidebar / tab /
- *   inline runner modes — DOM is identical across the three. Phase 60
- *   inline padding override (`inline-runner.css:218-224`) is orthogonal
- *   and remains untouched. */
+/* Phase 70: Loop-exit picker visual hint (LOOP-EXIT-01) ————————————————— */
+/* D-01/D-03: solid `--color-green` background marks the '+'-prefix exit
+ *   button as the «finish/выход» control, distinct from body-branch buttons.
+ * D-08: selector `.rp-loop-exit-btn` covers inline runner mode — DOM is
+ *   identical; Phase 60 inline padding override is orthogonal. */
 .rp-loop-exit-btn.rp-loop-exit-btn {
   background: var(--color-green);
   color: var(--text-on-accent);

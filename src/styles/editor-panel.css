@@ -312,3 +312,11 @@
 .rp-growable-textarea {
   height: var(--rp-textarea-height, auto);
 }
+
+/* Node kind badge (node-picker-modal.ts) */
+.rp-node-kind-badge {
+  font-size: var(--font-ui-smaller);
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}

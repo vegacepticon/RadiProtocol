@@ -39,34 +39,6 @@
   gap: var(--size-2-1); /* 4px */
 }
 
-.rp-placeholder-row {
-  display: flex;
-  flex-direction: column;
-  gap: var(--size-2-1);
-  padding: var(--size-2-1) var(--size-4-1);
-  border: 1px solid var(--background-modifier-border);
-  border-radius: var(--radius-s);
-  cursor: pointer;
-}
-
-.rp-placeholder-row.is-expanded {
-  cursor: default;
-  background: var(--background-secondary);
-}
-
-.rp-placeholder-row-header {
-  display: flex;
-  flex-direction: row;
-  align-items: center;
-  gap: var(--size-4-1); /* 8px */
-  min-height: 32px;
-}
-
-.rp-placeholder-type-badge {
-  font-size: var(--font-smaller);
-  color: var(--text-muted);
-}
-
 .rp-placeholder-orphan-badge {
   font-size: var(--font-smaller);
   color: var(--text-warning);
@@ -75,9 +47,8 @@
   border-radius: var(--radius-s);
 }
 
-/* ── Phase 27: Chip-based placeholder list ─────────────────────── */
+/* —— Phase 27: Chip-based placeholder list —————————————————————————————— */
 
-/* Chip row — replaces .rp-placeholder-row */
 .rp-placeholder-chip {
   display: flex;
   flex-direction: row;
@@ -133,7 +104,7 @@
   white-space: nowrap;
 }
 
-/* Type badge — reuses .rp-placeholder-type-badge token */
+/* Type badge */
 .rp-placeholder-chip-badge {
   font-size: var(--font-smaller);
   color: var(--text-muted);

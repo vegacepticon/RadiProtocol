@@ -23,43 +23,9 @@
   gap: var(--size-2-2); /* 6px */
 }
 
-/* Horizontal row (centered, standard gap) */
-.rp-row {
-  display: flex;
-  flex-direction: row;
-  align-items: center;
-  gap: var(--size-4-1); /* 8px */
-}
-
-/* Horizontal row (small gap) */
-.rp-row-sm {
-  display: flex;
-  flex-direction: row;
-  align-items: center;
-  gap: var(--size-2-1); /* 4px */
-}
-
-/* Horizontal row with wrap */
-.rp-row-wrap {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--size-2-3); /* 8px */
-}
-
 /* Centered flex (both axes) */
 .rp-center {
   display: flex;
   align-items: center;
   justify-content: center;
-}
-
-/* Hidden state utility */
-.rp-hidden {
-  display: none !important;
-}
-
-/* Disabled state utility */
-.rp-disabled {
-  opacity: 0.5;
-  pointer-events: none;
 }
