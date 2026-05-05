@@ -68,19 +68,22 @@ There are two pre-existing warnings in `src/snippets/snippet-service.ts`
 about `Vault.trash()` vs `FileManager.trashFile()` — those are tracked
 separately and acceptable in current PRs.
 
-## Pre-commit hook
+## Git hooks
 
-A pre-commit hook lives at `.githooks/pre-commit` and runs lint + the full
-test suite on every commit. To enable it for your clone, point Git's
-`hooks-path` config at the repo's `.githooks/` directory once:
+Repository hooks live under `.githooks/`. To enable them for your clone, point
+Git's `hooks-path` config at the repo's `.githooks/` directory once:
 
 ```bash
 git config core.hooksPath .githooks
 ```
 
-The hook short-circuits when no `*.ts` or `*.css` files are staged, so docs-
-only commits skip the test suite. Bypass with `git commit --no-verify` only
-when you have a good reason (and explain it in the PR).
+The pre-commit hook is a fast gate for staged `*.ts` and `*.css` files: ESLint,
+Stylelint, and affected Vitest tests via `vitest --changed`. Docs-only commits
+skip this gate.
+
+The pre-push hook is the full local regression gate: ESLint, Stylelint, and the
+entire Vitest suite. Bypass with `git commit --no-verify` or `git push --no-verify`
+only when you have a good reason (and explain it in the PR).
 
 ## Branch naming
 
