@@ -493,8 +493,7 @@ export class ProtocolRunner {
    * The returned object is JSON-safe: all values are strings, numbers, arrays of those,
    * or null. No Set values are present (SESSION-07 — verified by RESEARCH.md audit).
    *
-   * Legacy session-capable callers add canvasFilePath, canvasMtimeAtSave,
-   * savedAt, and version to complete the PersistedSession shape before writing.
+   * Returns a JSON-safe snapshot for tests and internal handoff code.
    */
   getSerializableState(): {
     runnerStatus: typeof RUNNER_STATUS.AT_NODE | typeof RUNNER_STATUS.AWAITING_SNIPPET_PICK | typeof RUNNER_STATUS.AWAITING_SNIPPET_FILL | typeof RUNNER_STATUS.AWAITING_LOOP_PICK;
@@ -535,10 +534,10 @@ export class ProtocolRunner {
    * Must be called BEFORE restoreFrom() so subsequent runner method calls have a valid
    * graph to traverse (Pitfall 2 in RESEARCH.md — restoreFrom before setGraph causes silent no-ops).
    *
-   * Correct call order for any session-capable host:
+   * Correct call order for snapshot restoration:
    *   1. runner.setGraph(parsedGraph)
-   *   2. runner.restoreFrom(session)
-   *   3. this.render()
+   *   2. runner.restoreFrom(snapshot)
+   *   3. render the host
    */
   setGraph(graph: ProtocolGraph): void {
     this.graph = graph;

@@ -342,4 +342,35 @@ describe('InlineRunnerModal — Phase 85 INLINE-MULTI-01 registry integration', 
     expect(appendChildSpy).toHaveBeenCalledWith(container);
     expect((modal as any).isHidden).toBe(false);
   });
+
+  it('keeps parallel inline runner progress isolated by canvas#note registry key', async () => {
+    const plugin = makeBasePlugin();
+    const app = makeBaseApp(plugin, { vaultContent: '' });
+    const noteA = new (TFile as any)('notes/a.md');
+    const noteB = new (TFile as any)('notes/b.md');
+    (app.vault.read as any).mockImplementation(async (file: { path: string }) => {
+      if (file.path === 'notes/a.md') return 'A progress';
+      if (file.path === 'notes/b.md') return 'B progress';
+      return '';
+    });
+    const first = new InlineRunnerModal(app as any, plugin as any, 'test.canvas', noteA);
+    const second = new InlineRunnerModal(app as any, plugin as any, 'test.canvas', noteB);
+
+    plugin.registerInlineRunner('test.canvas#notes/a.md', first);
+    plugin.registerInlineRunner('test.canvas#notes/b.md', second);
+    expect(plugin.inlineRunners.size).toBe(2);
+    expect(plugin.getInlineRunner('test.canvas#notes/a.md')).toBe(first);
+    expect(plugin.getInlineRunner('test.canvas#notes/b.md')).toBe(second);
+
+    spyRunnerState(first, 'awaiting-snippet-pick', 'A progress', '\n');
+    spyRunnerState(second, 'awaiting-snippet-pick', 'B progress', '\n');
+
+    await (first as any).handleSnippetPickerSelection({ kind: 'md', path: 'Snippets/a.md', content: 'Alpha' });
+    await (second as any).handleSnippetPickerSelection({ kind: 'md', path: 'Snippets/b.md', content: 'Beta' });
+
+    expect(app._modifyCalls).toEqual([
+      ['notes/a.md', 'A progress\nAlpha'],
+      ['notes/b.md', 'B progress\nBeta'],
+    ]);
+  });
 });

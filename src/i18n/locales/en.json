@@ -14,8 +14,6 @@
     "storageHeading": "Storage",
     "snippetFolder": "Snippet folder",
     "snippetFolderDesc": "Vault-relative path for snippet JSON files. Default: .radiprotocol/snippets",
-    "sessionFolder": "Session folder",
-    "sessionFolderDesc": "Vault-relative path for session JSON files. Default: .radiprotocol/sessions",
     "donateHeading": "Support development",
     "showWalletAddresses": "Show wallet addresses",
     "libraryUrlLabel": "Library URL",

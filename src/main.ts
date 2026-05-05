@@ -6,7 +6,6 @@ import { CanvasParser } from './graph/canvas-parser';
 import { EditorPanelView, EDITOR_PANEL_VIEW_TYPE } from './views/editor-panel-view';
 import { SnippetManagerView, SNIPPET_MANAGER_VIEW_TYPE } from './views/snippet-manager-view';
 import { SnippetService } from './snippets/snippet-service';
-import { SessionService } from './sessions/session-service';
 import { WriteMutex } from './utils/write-mutex';
 import { I18nService } from './i18n';
 import { CanvasLiveEditor } from './canvas/canvas-live-editor';
@@ -112,7 +111,6 @@ export default class RadiProtocolPlugin extends Plugin {
   i18n!: I18nService;
   canvasParser!: CanvasParser;
   snippetService!: SnippetService;
-  sessionService!: SessionService;
   libraryService!: LibraryService;
   canvasLiveEditor!: CanvasLiveEditor;
   canvasNodeFactory!: CanvasNodeFactory;
@@ -142,9 +140,6 @@ export default class RadiProtocolPlugin extends Plugin {
     // Phase 84 (I18N-01): SnippetService takes the plugin's i18n translator so
     // its error messages and validatePlaceholders output follow the active locale.
     this.snippetService = new SnippetService(this.app, this.settings, this.i18n.t.bind(this.i18n));
-
-    // Instantiate session persistence service (SESSION-01)
-    this.sessionService = new SessionService(this.app, this.settings.sessionFolderPath);
 
     // Phase 86 (TEMPLATE-LIB-01): template library service
     this.libraryService = new LibraryService(this.app, this.settings, this.snippetService, this.i18n.t.bind(this.i18n));
@@ -428,9 +423,6 @@ export default class RadiProtocolPlugin extends Plugin {
       new Notice('Open a Markdown note first, then run this command.');
       return;
     }
-
-    // Clear any existing session for this canvas
-    await this.sessionService.clear(canvasPath);
 
     // Open node picker; on pick, launch InlineRunnerModal at the chosen node
     new NodePickerModal(this.app, options, (opt) => {

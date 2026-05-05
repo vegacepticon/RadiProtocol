@@ -73,7 +73,6 @@ function makeVault(opts: MockVaultOptions = {}) {
 const settings = {
   snippetFolderPath: '.radiprotocol/snippets',
   snippetTreeExpandedPaths: [] as string[],
-  sessionFolderPath: '.radiprotocol/sessions',
   protocolFolderPath: '',
   textSeparator: 'newline' as const,
   locale: 'en' as const,
