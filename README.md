@@ -27,11 +27,11 @@ snippet templates.
 - **Loops for multi-lesion / multi-iteration workflows.** A unified loop node uses
   a `+`-prefixed exit edge and one or more body edges. Iterations accumulate text
   cleanly across passes; nested loops are supported.
-- **Inline, sidebar, and tab runner modes.** Run a protocol in the right sidebar
-  (default), as a workspace tab, or as a draggable inline modal anchored to a
-  target note.
+- **Inline, note-anchored runner.** Run a protocol as a draggable inline panel
+  against the active Markdown note. Multiple inline runners can be open at once;
+  the plugin reuses an existing runner for the same canvas/note pair.
 
-<!-- screenshot: runner-sidebar.png — Runner view in the right sidebar with a question and step-back button -->
+<!-- screenshot: inline-runner.png — Draggable inline runner over a Markdown note with a question and step-back button -->
 <!-- screenshot: canvas-authoring.png — A protocol canvas with question/answer/loop nodes -->
 <!-- screenshot: snippet-fill-modal.png — Dynamic snippet placeholder fill-in modal -->
 
@@ -45,8 +45,8 @@ snippet templates.
 
 ### Manual
 
-1. Download `main.js` and `manifest.json` from the latest GitHub release.
-2. Copy both files into `<your-vault>/.obsidian/plugins/radiprotocol/`.
+1. Download `main.js`, `styles.css`, and `manifest.json` from the latest GitHub release.
+2. Copy those files into `<your-vault>/.obsidian/plugins/radiprotocol/`.
 3. Reload Obsidian and enable "RadiProtocol" in Community plugins.
 
 ## Quick start
@@ -57,14 +57,16 @@ snippet templates.
    command to insert a typed node directly).
 3. Connect the nodes with edges. The `start` node has no incoming edges; each
    `question` should have at least one outgoing edge to an `answer`.
-4. Run the protocol via the ribbon icon (activity dial) or the "Run protocol"
-   command. Pick the canvas you just authored. The runner walks you through one
-   node at a time and accumulates text in the preview pane.
+4. Open or create the Markdown note that should receive the generated protocol text.
+5. Run the protocol via the "Run protocol in inline" command. Pick the canvas you
+   just authored. The inline runner walks you through one node at a time and
+   appends accumulated output to the active note.
 
 For a deeper guide to the node and edge model, see
 [`docs/PROTOCOL-AUTHORING.md`](docs/PROTOCOL-AUTHORING.md). For dev-environment
 setup and contribution guidelines, see
-[`docs/CONTRIBUTING.md`](docs/CONTRIBUTING.md).
+[`docs/CONTRIBUTING.md`](docs/CONTRIBUTING.md). The inline-only runner decision is
+recorded in [`docs/adr/0001-inline-runner-only.md`](docs/adr/0001-inline-runner-only.md).
 
 ## License
 

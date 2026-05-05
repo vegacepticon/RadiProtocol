@@ -1,5 +1,5 @@
 // Phase 75 Plan 05 — focused tests for the shared awaiting-snippet-fill helpers.
-// Pin only what's shared between RunnerView and InlineRunnerModal: the loading
+// Pin the shared awaiting-snippet-fill helper behavior: the loading
 // placeholder, the not-found copy with optional trailer, and the path-shape
 // detection. Host-specific path resolution / WR-03 / fillModal lifecycle stays
 // covered by the existing host test suites.
@@ -87,7 +87,7 @@ describe('renderSnippetFillNotFound', () => {
     expect(zone.children[0]!.cls).toBe('rp-empty-state-body');
   });
 
-  it('appends the trailer when provided (RunnerView legacy copy)', () => {
+  it('appends the trailer when provided (legacy host copy)', () => {
     const zone = makeFakeNode();
     renderSnippetFillNotFound(asHtml(zone), 'foo', {
       trailer: ' The snippet may have been deleted. Use step-back to continue.',

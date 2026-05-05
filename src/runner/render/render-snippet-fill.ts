@@ -10,16 +10,12 @@ import { CSS_CLASS } from '../../constants/css-classes';
 //     (Phase 32/35) from full-vault-path callers (Phase 51 auto-insert).
 //
 // Hosts retain:
-//   - Snippet path resolution (RunnerView simple, InlineRunnerModal WR-03 +
-//     basename fallback scan).
-//   - SnippetFillInModal lifecycle (`fillModal`/`isFillModalOpen` gate is
-//     inline-only; RunnerView calls modal directly).
-//   - Validation-error chrome (RunnerView RU Notice + stepBack/autosave/render;
-//     inline modal EN Notice + stepBack/render).
+//   - Snippet path resolution (InlineRunnerModal WR-03 + basename fallback scan).
+//   - SnippetFillInModal lifecycle (`fillModal`/`isFillModalOpen` gate is host-owned).
+//   - Validation-error chrome (Notice copy + stepBack/render policy is host-owned).
 //   - completeSnippet dispatch + autosave / accumulator-delta append + re-render.
 
-/** Phase 51 D-14 path-shape detection (lifted unchanged from RunnerView /
- *  InlineRunnerModal handleSnippetFill). */
+/** Phase 51 D-14 path-shape detection shared with InlineRunnerModal handleSnippetFill. */
 export function isFullSnippetPath(snippetId: string): boolean {
   return snippetId.includes('/') ||
     snippetId.endsWith('.md') ||
@@ -37,7 +33,7 @@ export function renderSnippetFillLoading(zone: HTMLElement): void {
 
 export interface SnippetFillNotFoundOptions {
   /** Optional trailing copy appended to the base "Snippet '{id}' not found." line.
-   *  RunnerView passes the legacy " The snippet may have been deleted. Use
+   *  Legacy hosts may pass the " The snippet may have been deleted. Use
    *  step-back to continue." trailer; inline modal omits it. */
   trailer?: string;
 }

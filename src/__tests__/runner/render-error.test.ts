@@ -1,6 +1,5 @@
 // Phase 75 Plan 05 — focused tests for the shared error-list renderer.
-// The host wrapping (selector bar rebuild for RunnerView, zone-local panel for
-// InlineRunnerModal) stays host-owned; this test pins only the title + list
+// The host wrapping stays host-owned; this test pins only the title + list
 // body shape and the optional title-class divergence.
 
 import { describe, expect, it } from 'vitest';
@@ -32,7 +31,7 @@ function makeFakeNode(tag = 'div'): FakeNode {
 function asHtml(n: FakeNode): HTMLElement { return n as unknown as HTMLElement; }
 
 describe('renderErrorList', () => {
-  it('renders title without class when titleClass is omitted (RunnerView shape)', () => {
+  it('renders title without class when titleClass is omitted (default shape)', () => {
     const zone = makeFakeNode();
     renderErrorList(asHtml(zone), ['boom', 'kaboom']);
 

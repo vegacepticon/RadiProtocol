@@ -22,8 +22,6 @@ export interface RadiProtocolSettings {
   snippetFolderPath: string;
   /** Phase 33 (D-17): Tree-view expanded-folder paths, persisted across sessions. */
   snippetTreeExpandedPaths: string[];
-  /** Vault-relative path for session JSON files (SESSION-01). Default: .radiprotocol/sessions */
-  sessionFolderPath: string;
   /** Vault-relative folder scanned for .canvas protocol files (SELECTOR-01). Default: '' (empty) */
   protocolFolderPath: string;
   /** Separator inserted before each new text chunk in the runner (D-08, SEP-01). Default: 'newline'. */
@@ -39,7 +37,6 @@ export interface RadiProtocolSettings {
 export const DEFAULT_SETTINGS: RadiProtocolSettings = {
   snippetFolderPath: '.radiprotocol/snippets',
   snippetTreeExpandedPaths: [],
-  sessionFolderPath: '.radiprotocol/sessions',
   protocolFolderPath: '',
   textSeparator: 'newline',
   inlineRunnerPosition: null,
@@ -125,18 +122,6 @@ export class RadiProtocolSettingsTab extends PluginSettingTab {
             await this.plugin.saveSettings();
           });
       });
-
-    new Setting(containerEl)
-      .setName(this.plugin.i18n.t('settings.sessionFolder'))
-      .setDesc(this.plugin.i18n.t('settings.sessionFolderDesc'))
-      .addText(text => text
-        .setPlaceholder('.radiprotocol/sessions')
-        .setValue(this.plugin.settings.sessionFolderPath)
-        .onChange(async (value) => {
-          this.plugin.settings.sessionFolderPath = value.trim() || '.radiprotocol/sessions';
-          await this.plugin.saveSettings();
-        })
-      );
 
     // Phase 86 (TEMPLATE-LIB-01): library URL setting
     new Setting(containerEl)

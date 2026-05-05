@@ -15,9 +15,9 @@ function loadGraph(name: string): ProtocolGraph {
   return result.graph;
 }
 
-// ── getSerializableState() — SESSION-01 ──────────────────────────────────────
+// ── getSerializableState() — runner snapshot ────────────────────────────────
 
-describe('ProtocolRunner.getSerializableState() (SESSION-01)', () => {
+describe('ProtocolRunner.getSerializableState() snapshot', () => {
   it('returns null when runner is idle (before start)', () => {
     const runner = new ProtocolRunner();
     expect(runner.getSerializableState()).toBeNull();
@@ -46,9 +46,9 @@ describe('ProtocolRunner.getSerializableState() (SESSION-01)', () => {
 
 });
 
-// ── Snippet picker round-trip — SESSION-01 / D-22 ────────────────────────────
+// ── Snippet picker snapshot round-trip — D-22 ────────────────────────────────
 
-describe('session — awaiting-snippet-pick (D-22)', () => {
+describe('snapshot — awaiting-snippet-pick (D-22)', () => {
   it('serializes awaiting-snippet-pick state with snippet node id', () => {
     const runner = new ProtocolRunner();
     runner.start(loadGraph('snippet-node-with-exit.canvas'));
@@ -85,7 +85,7 @@ describe('session — awaiting-snippet-pick (D-22)', () => {
   });
 });
 
-describe('Phase 31 D-09: branch-entered picker session round-trip', () => {
+describe('Phase 31 D-09: branch-entered picker snapshot round-trip', () => {
   type RPNode = import('../../graph/graph-model').RPNode;
 
   function buildBranchFixture(): ProtocolGraph {
@@ -189,9 +189,9 @@ describe('Phase 31 D-09: branch-entered picker session round-trip', () => {
   });
 });
 
-// ── Session round-trip for awaiting-loop-pick — SESSION-05 / RUN-06 ─────────
+// ── Snapshot round-trip for awaiting-loop-pick — RUN-06 ─────────────────────
 
-describe('session — awaiting-loop-pick (RUN-06)', () => {
+describe('snapshot — awaiting-loop-pick (RUN-06)', () => {
   it('returns non-null at awaiting-loop-pick state with loop node id', () => {
     const runner = new ProtocolRunner();
     runner.start(loadGraph('unified-loop-valid.canvas'));
@@ -203,7 +203,7 @@ describe('session — awaiting-loop-pick (RUN-06)', () => {
     expect(serialized.currentNodeId).toBe('n-loop');
   });
 
-  it('serialized awaiting-loop-pick state has all required PersistedSession fields', () => {
+  it('serialized awaiting-loop-pick snapshot has all required runner fields', () => {
     const runner = new ProtocolRunner();
     runner.start(loadGraph('unified-loop-valid.canvas'));
     const serialized = runner.getSerializableState();
@@ -293,7 +293,7 @@ describe('session — awaiting-loop-pick (RUN-06)', () => {
     const saved = runner.getSerializableState();
     if (saved === null) return;
     const json = JSON.stringify(saved);
-    expect(json).not.toContain('[object Set]');  // SESSION-07 guard
+    expect(json).not.toContain('[object Set]');  // JSON-safe snapshot guard
 
     const deserialized = JSON.parse(json) as typeof saved;
     const restored = new ProtocolRunner();
@@ -309,7 +309,7 @@ describe('session — awaiting-loop-pick (RUN-06)', () => {
     }
   });
 
-  it('loopContextStack with iteration=2 survives JSON round-trip (SESSION-05)', () => {
+  it('loopContextStack with iteration=2 survives JSON round-trip', () => {
     const graph = loadGraph('unified-loop-valid.canvas');
     const runner = new ProtocolRunner();
     runner.start(graph);

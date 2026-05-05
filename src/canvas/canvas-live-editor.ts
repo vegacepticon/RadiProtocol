@@ -58,7 +58,7 @@ export class CanvasLiveEditor {
    * is open and exposes the internal Pattern B API. Returns null when the canvas
    * is closed or the API is unavailable.
    *
-   * Used by RunnerView.openCanvas() to read live in-memory state instead of
+   * Used by canvas-backed commands to read live in-memory state instead of
    * potentially stale vault.read() data (BUG-02, BUG-03).
    */
   getCanvasJSON(filePath: string): string | null {

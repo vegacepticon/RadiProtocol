@@ -5,11 +5,11 @@
 //   - "Protocol complete" `<h2 class="rp-complete-heading">` heading.
 //
 // Hosts retain:
-//   - Run-again button (RunnerView only — inline modal has no equivalent).
+//   - Any host-specific completion controls.
 //   - Preview zone / output toolbar wiring around the heading.
 
 /** Render the shared "Protocol complete" heading. Returns the heading element
- *  so hosts can append host-specific chrome (e.g. RunnerView's Run again button)
+ *  so hosts can append host-specific chrome
  *  alongside it. */
 export function renderCompleteHeading(zone: HTMLElement): HTMLElement {
   return zone.createEl('h2', {

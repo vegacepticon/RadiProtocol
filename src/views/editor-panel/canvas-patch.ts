@@ -128,7 +128,7 @@ export function registerFieldRefImpl(
 // handler would have done is mirrored manually so the textarea visually
 // matches the new content. NEVER dispatches synthetic input events (Pitfall
 // 1) and NEVER writes to pendingEdits (Pitfall 6).
-export function patchTextareaValue(
+function patchTextareaValue(
   el: HTMLInputElement | HTMLTextAreaElement,
   value: string,
 ): void {

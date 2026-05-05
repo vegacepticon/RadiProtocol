@@ -3,17 +3,16 @@
 //
 // Owns:
 //   - "Protocol error" title paragraph (cls optional — preserves divergence
-//     between RunnerView's no-class title and inline modal's `rp-error-title`).
+//     between the default no-class title and inline modal's `rp-error-title`).
 //   - `<ul class="rp-error-list">` of `<li>` messages.
 //
 // Hosts retain:
-//   - Outer chrome divergence: RunnerView rebuilds the entire view (selector
-//     bar + `.rp-runner-view` + `.rp-question-zone.rp-validation-panel`).
-//     InlineRunnerModal renders zone-locally inside `.rp-error-panel`.
+//   - Outer chrome divergence: hosts decide whether to render whole-view or
+//     zone-local error panels. InlineRunnerModal renders inside `.rp-error-panel`.
 
 export interface ErrorListOptions {
-  /** Optional class for the "Protocol error" title paragraph. RunnerView omits
-   *  it; inline modal passes 'rp-error-title'. */
+  /** Optional class for the "Protocol error" title paragraph. When omitted,
+   *  the title uses the default no-class shape; inline modal passes 'rp-error-title'. */
   titleClass?: string;
 }
 

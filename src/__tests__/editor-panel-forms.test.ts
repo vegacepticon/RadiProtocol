@@ -248,7 +248,7 @@ describe('NODEUI-03: answer form renders Display label before Answer text', () =
 
 describe('NODEUI-04: question form custom DOM + auto-grow textarea', () => {
   // vitest node environment does not define requestAnimationFrame — install a
-  // synchronous polyfill (same pattern as RunnerView.test.ts:114-134) so the
+  // synchronous polyfill for textarea recorder behavior so the
   // deferred height block runs inside the same tick, then tear it down.
   let originalRaf: typeof globalThis.requestAnimationFrame | undefined;
 

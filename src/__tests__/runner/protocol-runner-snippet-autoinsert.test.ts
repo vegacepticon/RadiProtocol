@@ -14,7 +14,7 @@
 // BEFORE any mutation (D-15 — Pattern A) with nodeId = question id and
 // returnToBranchList omitted (falls through standard stepBack restoration).
 //
-// Pure-runner tests — no Obsidian API, no RunnerView. Mirror the inline-graph
+// Pure-runner tests — no Obsidian API, no view host. Mirror the inline-graph
 // factory pattern used in protocol-runner.test.ts & runner-snippet-sibling-button.test.ts.
 
 import { describe, it, expect } from 'vitest';
@@ -99,7 +99,7 @@ describe('Phase 51 Plan 06 — ProtocolRunner D-13/D-14/D-15 auto-insert dispatc
 
   it('Test 1 (Phase 56 D-02): Question → file-bound .md Snippet HALTS at Question (no auto-advance); pickFileBoundSnippet then transitions to awaiting-snippet-fill', () => {
     // Phase 56 D-02 inversion: D-13 auto-advance REMOVED. The single-edge Question
-    // now halts at-node and dispatch is driven by RunnerView click handler →
+    // now halts at-node and dispatch is driven by the inline runner click handler →
     // ProtocolRunner.pickFileBoundSnippet (Plan 01).
     const graph = buildGraph(
       [

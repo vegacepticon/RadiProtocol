@@ -41,7 +41,7 @@ describe('renderCompleteHeading', () => {
     expect(zone.children[0]!.text).toBe('Protocol complete');
     expect(zone.children[0]!.cls).toBe('rp-complete-heading');
     // Returns the heading element for hosts that need to attach Run-again
-    // chrome (RunnerView). Identity check via reference equality.
+    // chrome. Identity check via reference equality.
     expect(heading as unknown as FakeNode).toBe(zone.children[0]!);
   });
 });

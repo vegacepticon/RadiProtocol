@@ -8,7 +8,7 @@ import { renderSnippet } from '../snippets/snippet-model';
 // Previously typed as `SnippetFile`, which is now an alias for `JsonSnippet`.
 
 /**
- * SnippetFillInModal — presented by RunnerView when the runner reaches a text-block
+ * SnippetFillInModal — presented by a runner host when the runner reaches a text-block
  * node with a snippetId attached.
  *
  * Usage:

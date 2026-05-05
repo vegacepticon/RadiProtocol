@@ -278,7 +278,6 @@ function makePlugin() {
     settings: {
       snippetFolderPath: 'Protocols/Snippets',
       snippetTreeExpandedPaths: [],
-      sessionFolderPath: '.radiprotocol/sessions',
     },
     snippetService: {
       exists: vi.fn().mockResolvedValue(false),

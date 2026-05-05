@@ -102,10 +102,18 @@ function makeVault(opts: MockVaultOptions = {}) {
   return { vault, files, folderSet, abstractFiles };
 }
 
+function makeSnippetServiceApp(vault: ReturnType<typeof makeVault>['vault']) {
+  return {
+    vault,
+    fileManager: {
+      trashFile: vi.fn(async (file: unknown) => vault.trash(file, false)),
+    },
+  };
+}
+
 const settings = {
   snippetFolderPath: '.radiprotocol/snippets',
   snippetTreeExpandedPaths: [] as string[],
-  sessionFolderPath: '.radiprotocol/sessions',
   protocolFolderPath: '',
   textSeparator: 'newline' as const,
   locale: 'en' as const,
@@ -155,7 +163,7 @@ describe('renameSnippet (Phase 34 RENAME-03 service)', () => {
       files: { [old]: '{}' },
       folders: [ROOT, `${ROOT}/a`],
     });
-    const svc = new SnippetService({ vault } as never, settings);
+    const svc = new SnippetService(makeSnippetServiceApp(vault) as never, settings);
 
     const result = await svc.renameSnippet(old, 'new');
 
@@ -172,7 +180,7 @@ describe('renameSnippet (Phase 34 RENAME-03 service)', () => {
       files: { [old]: 'raw' },
       folders: [ROOT, `${ROOT}/a`],
     });
-    const svc = new SnippetService({ vault } as never, settings);
+    const svc = new SnippetService(makeSnippetServiceApp(vault) as never, settings);
 
     const result = await svc.renameSnippet(old, 'renamed');
     expect(result).toBe(`${ROOT}/a/renamed.md`);
@@ -182,7 +190,7 @@ describe('renameSnippet (Phase 34 RENAME-03 service)', () => {
   it('rejects basename containing a slash', async () => {
     const old = `${ROOT}/a/x.json`;
     const { vault } = makeVault({ files: { [old]: '{}' }, folders: [ROOT, `${ROOT}/a`] });
-    const svc = new SnippetService({ vault } as never, settings);
+    const svc = new SnippetService(makeSnippetServiceApp(vault) as never, settings);
 
     await expect(svc.renameSnippet(old, 'a/b')).rejects.toThrow();
     expect(vault.rename).toHaveBeenCalledTimes(0);
@@ -192,7 +200,7 @@ describe('renameSnippet (Phase 34 RENAME-03 service)', () => {
   it('rejects empty / whitespace basename', async () => {
     const old = `${ROOT}/a/x.json`;
     const { vault } = makeVault({ files: { [old]: '{}' }, folders: [ROOT, `${ROOT}/a`] });
-    const svc = new SnippetService({ vault } as never, settings);
+    const svc = new SnippetService(makeSnippetServiceApp(vault) as never, settings);
 
     await expect(svc.renameSnippet(old, '   ')).rejects.toThrow();
     expect(vault.rename).toHaveBeenCalledTimes(0);
@@ -201,7 +209,7 @@ describe('renameSnippet (Phase 34 RENAME-03 service)', () => {
 
   it('rejects unsafe source path', async () => {
     const { vault } = makeVault();
-    const svc = new SnippetService({ vault } as never, settings);
+    const svc = new SnippetService(makeSnippetServiceApp(vault) as never, settings);
 
     await expect(svc.renameSnippet(`${ROOT}/../escape.json`, 'new')).rejects.toThrow();
     expect(vault.rename).toHaveBeenCalledTimes(0);
@@ -211,7 +219,7 @@ describe('renameSnippet (Phase 34 RENAME-03 service)', () => {
   it('no-op when new path equals old', async () => {
     const old = `${ROOT}/a/same.json`;
     const { vault } = makeVault({ files: { [old]: '{}' }, folders: [ROOT, `${ROOT}/a`] });
-    const svc = new SnippetService({ vault } as never, settings);
+    const svc = new SnippetService(makeSnippetServiceApp(vault) as never, settings);
 
     const result = await svc.renameSnippet(old, 'same');
     expect(result).toBe(old);
@@ -226,7 +234,7 @@ describe('renameSnippet (Phase 34 RENAME-03 service)', () => {
       files: { [old]: '{"old":1}', [collide]: '{"keep":1}' },
       folders: [ROOT, `${ROOT}/a`],
     });
-    const svc = new SnippetService({ vault } as never, settings);
+    const svc = new SnippetService(makeSnippetServiceApp(vault) as never, settings);
 
     await expect(svc.renameSnippet(old, 'new')).rejects.toThrow();
     expect(vault.rename).toHaveBeenCalledTimes(0);
@@ -246,7 +254,7 @@ describe('renameSnippet (Phase 34 RENAME-03 service)', () => {
       order.push('end:' + np);
       await origRename(file, np);
     }) as unknown as typeof vault.rename;
-    const svc = new SnippetService({ vault } as never, settings);
+    const svc = new SnippetService(makeSnippetServiceApp(vault) as never, settings);
 
     // Two sequential (awaited) calls — second one fails after the first renames,
     // but mutex ensures first completes before second begins. Assert start/end pairs are contiguous.
@@ -280,7 +288,7 @@ describe('moveSnippet (Phase 34 MOVE-01 / MOVE-05 service)', () => {
       files: { [old]: '{}' },
       folders: [ROOT, `${ROOT}/a`, `${ROOT}/b`],
     });
-    const svc = new SnippetService({ vault } as never, settings);
+    const svc = new SnippetService(makeSnippetServiceApp(vault) as never, settings);
 
     const result = await svc.moveSnippet(old, `${ROOT}/b`);
     expect(result).toBe(`${ROOT}/b/x.json`);
@@ -296,7 +304,7 @@ describe('moveSnippet (Phase 34 MOVE-01 / MOVE-05 service)', () => {
       files: { [old]: '{}' },
       folders: [ROOT, `${ROOT}/a`],
     });
-    const svc = new SnippetService({ vault } as never, settings);
+    const svc = new SnippetService(makeSnippetServiceApp(vault) as never, settings);
 
     await svc.moveSnippet(old, `${ROOT}/fresh`);
     expect(folderSet.has(`${ROOT}/fresh`)).toBe(true);
@@ -310,7 +318,7 @@ describe('moveSnippet (Phase 34 MOVE-01 / MOVE-05 service)', () => {
       files: { [old]: '{"a":1}', [collide]: '{"b":1}' },
       folders: [ROOT, `${ROOT}/a`, `${ROOT}/b`],
     });
-    const svc = new SnippetService({ vault } as never, settings);
+    const svc = new SnippetService(makeSnippetServiceApp(vault) as never, settings);
 
     await expect(svc.moveSnippet(old, `${ROOT}/b`)).rejects.toThrow();
     expect(vault.rename).toHaveBeenCalledTimes(0);
@@ -320,7 +328,7 @@ describe('moveSnippet (Phase 34 MOVE-01 / MOVE-05 service)', () => {
   it('rejects destination folder outside root', async () => {
     const old = `${ROOT}/a/x.json`;
     const { vault } = makeVault({ files: { [old]: '{}' }, folders: [ROOT, `${ROOT}/a`] });
-    const svc = new SnippetService({ vault } as never, settings);
+    const svc = new SnippetService(makeSnippetServiceApp(vault) as never, settings);
 
     await expect(svc.moveSnippet(old, '../elsewhere')).rejects.toThrow();
     expect(vault.rename).toHaveBeenCalledTimes(0);
@@ -343,7 +351,7 @@ describe('renameFolder (Phase 34 RENAME-03 service)', () => {
     const { vault, folderSet } = makeVault({
       folders: [ROOT, `${ROOT}/a`, old],
     });
-    const svc = new SnippetService({ vault } as never, settings);
+    const svc = new SnippetService(makeSnippetServiceApp(vault) as never, settings);
 
     const result = await svc.renameFolder(old, 'new');
     expect(result).toBe(`${ROOT}/a/new`);
@@ -356,7 +364,7 @@ describe('renameFolder (Phase 34 RENAME-03 service)', () => {
   it('rejects basename containing a slash', async () => {
     const old = `${ROOT}/a/old`;
     const { vault } = makeVault({ folders: [ROOT, `${ROOT}/a`, old] });
-    const svc = new SnippetService({ vault } as never, settings);
+    const svc = new SnippetService(makeSnippetServiceApp(vault) as never, settings);
 
     await expect(svc.renameFolder(old, 'a/b')).rejects.toThrow();
     expect(vault.rename).toHaveBeenCalledTimes(0);
@@ -367,7 +375,7 @@ describe('renameFolder (Phase 34 RENAME-03 service)', () => {
     const old = `${ROOT}/a/old`;
     const collide = `${ROOT}/a/new`;
     const { vault } = makeVault({ folders: [ROOT, `${ROOT}/a`, old, collide] });
-    const svc = new SnippetService({ vault } as never, settings);
+    const svc = new SnippetService(makeSnippetServiceApp(vault) as never, settings);
 
     await expect(svc.renameFolder(old, 'new')).rejects.toThrow();
     expect(vault.rename).toHaveBeenCalledTimes(0);
@@ -390,7 +398,7 @@ describe('moveFolder (Phase 34 MOVE-02 / MOVE-05 service)', () => {
     const { vault, folderSet } = makeVault({
       folders: [ROOT, old, `${ROOT}/b`],
     });
-    const svc = new SnippetService({ vault } as never, settings);
+    const svc = new SnippetService(makeSnippetServiceApp(vault) as never, settings);
 
     const result = await svc.moveFolder(old, `${ROOT}/b`);
     expect(result).toBe(`${ROOT}/b/a`);
@@ -402,7 +410,7 @@ describe('moveFolder (Phase 34 MOVE-02 / MOVE-05 service)', () => {
   it('ensures new parent exists before rename', async () => {
     const old = `${ROOT}/a`;
     const { vault, folderSet } = makeVault({ folders: [ROOT, old] });
-    const svc = new SnippetService({ vault } as never, settings);
+    const svc = new SnippetService(makeSnippetServiceApp(vault) as never, settings);
 
     await svc.moveFolder(old, `${ROOT}/fresh`);
     expect(folderSet.has(`${ROOT}/fresh/a`)).toBe(true);
@@ -412,7 +420,7 @@ describe('moveFolder (Phase 34 MOVE-02 / MOVE-05 service)', () => {
   it('SELF guard: moveFolder(a, a) throws', async () => {
     const old = `${ROOT}/a`;
     const { vault } = makeVault({ folders: [ROOT, old] });
-    const svc = new SnippetService({ vault } as never, settings);
+    const svc = new SnippetService(makeSnippetServiceApp(vault) as never, settings);
 
     await expect(svc.moveFolder(old, old)).rejects.toThrow(/cannot move folder into itself/i);
     expect(vault.rename).toHaveBeenCalledTimes(0);
@@ -423,7 +431,7 @@ describe('moveFolder (Phase 34 MOVE-02 / MOVE-05 service)', () => {
     const old = `${ROOT}/a`;
     const sub = `${ROOT}/a/sub`;
     const { vault } = makeVault({ folders: [ROOT, old, sub] });
-    const svc = new SnippetService({ vault } as never, settings);
+    const svc = new SnippetService(makeSnippetServiceApp(vault) as never, settings);
 
     await expect(svc.moveFolder(old, sub)).rejects.toThrow(/itself/i);
     expect(vault.rename).toHaveBeenCalledTimes(0);
@@ -435,7 +443,7 @@ describe('moveFolder (Phase 34 MOVE-02 / MOVE-05 service)', () => {
     const dstParent = `${ROOT}/b`;
     const collide = `${ROOT}/b/a`;
     const { vault } = makeVault({ folders: [ROOT, old, dstParent, collide] });
-    const svc = new SnippetService({ vault } as never, settings);
+    const svc = new SnippetService(makeSnippetServiceApp(vault) as never, settings);
 
     await expect(svc.moveFolder(old, dstParent)).rejects.toThrow();
     expect(vault.rename).toHaveBeenCalledTimes(0);
@@ -445,7 +453,7 @@ describe('moveFolder (Phase 34 MOVE-02 / MOVE-05 service)', () => {
   it('rejects destination parent outside root', async () => {
     const old = `${ROOT}/a`;
     const { vault } = makeVault({ folders: [ROOT, old] });
-    const svc = new SnippetService({ vault } as never, settings);
+    const svc = new SnippetService(makeSnippetServiceApp(vault) as never, settings);
 
     await expect(svc.moveFolder(old, '../elsewhere')).rejects.toThrow();
     expect(vault.rename).toHaveBeenCalledTimes(0);
@@ -462,7 +470,7 @@ describe('listAllFolders (Phase 34 D-06)', () => {
     const { vault } = makeVault({
       folders: [ROOT, `${ROOT}/zeta`, `${ROOT}/alpha`, `${ROOT}/alpha/beta`],
     });
-    const svc = new SnippetService({ vault } as never, settings);
+    const svc = new SnippetService(makeSnippetServiceApp(vault) as never, settings);
 
     const folders = await svc.listAllFolders();
     expect(folders).toContain(ROOT);
@@ -476,7 +484,7 @@ describe('listAllFolders (Phase 34 D-06)', () => {
 
   it('returns only the root when no descendants exist', async () => {
     const { vault } = makeVault({ folders: [ROOT] });
-    const svc = new SnippetService({ vault } as never, settings);
+    const svc = new SnippetService(makeSnippetServiceApp(vault) as never, settings);
 
     const folders = await svc.listAllFolders();
     expect(folders).toEqual([ROOT]);

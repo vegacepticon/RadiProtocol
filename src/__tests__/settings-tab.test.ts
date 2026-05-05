@@ -11,6 +11,10 @@ describe('Settings defaults (RUN-07)', () => {
     expect('maxLoopIterations' in DEFAULT_SETTINGS).toBe(false);
   });
 
+  it('does not expose dead session persistence settings', () => {
+    expect('sessionFolderPath' in DEFAULT_SETTINGS).toBe(false);
+  });
+
   it('SettingsTab has display method (stub check)', async () => {
     // Full settings tab test requires Obsidian environment — manual only.
     // This stub verifies the class is importable and has the display method.
@@ -72,14 +76,13 @@ describe('Settings folder autocomplete (SETTINGS-01)', () => {
   it('attaches folder suggesters to Protocol and Snippet fields only', () => {
     const { textComponents, suggesters } = renderSettings();
 
-    expect(textComponents).toHaveLength(4);
+    expect(textComponents).toHaveLength(3);
     expect(suggesters).toHaveLength(2);
     expect(suggesters.map((suggester: { textInputEl: unknown }) => suggester.textInputEl)).toEqual([
       textComponents[0]!.inputEl,
       textComponents[1]!.inputEl,
     ]);
     expect(suggesters.map((suggester: { textInputEl: unknown }) => suggester.textInputEl)).not.toContain(textComponents[2]!.inputEl);
-    expect(suggesters.map((suggester: { textInputEl: unknown }) => suggester.textInputEl)).not.toContain(textComponents[3]!.inputEl);
   });
 
   it('typing wired fields still persists through field-specific save handlers', async () => {

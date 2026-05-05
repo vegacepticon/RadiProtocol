@@ -232,8 +232,8 @@ export class SnippetService {
 
   /**
    * Phase 32 (D-03, D-08, D-11): Delete a snippet file by path.
-   * Uses `vault.trash(file, false)` — file goes to Obsidian's `.trash/`,
-   * never permanent-destroy. No-op on unsafe path or missing file.
+   * Uses `fileManager.trashFile(file)` so Obsidian respects the user's
+   * configured deletion preference. No-op on unsafe path or missing file.
    * Wrapped in WriteMutex per-path.
    */
   async delete(path: string): Promise<void> {
@@ -242,8 +242,8 @@ export class SnippetService {
     await this.mutex.runExclusive(normalized, async () => {
       const file = this.app.vault.getAbstractFileByPath(normalized);
       if (file === null) return;
-      // D-08: Obsidian trash (.trash/), not system trash.
-      await this.app.vault.trash(file, false);
+      // D-08: route deletion through Obsidian FileManager user preference.
+      await this.app.fileManager.trashFile(file);
     });
   }
 
@@ -274,7 +274,7 @@ export class SnippetService {
   }
 
   /**
-   * Phase 33 (D-16, D-17): Trash a folder (recursive) via a single vault.trash call.
+   * Phase 33 (D-16, D-17): Trash a folder recursively via FileManager.
    * Path-safety gated; unsafe path or missing folder → silent no-op (no throw).
    * Per D-17 refined: does NOT call rewriteCanvasRefs — deletes leave canvas refs broken.
    * Wrapped in WriteMutex per normalized path.
@@ -285,8 +285,8 @@ export class SnippetService {
     await this.mutex.runExclusive(normalized, async () => {
       const folder = this.app.vault.getAbstractFileByPath(normalized);
       if (folder === null) return;
-      // D-08: Obsidian trash (.trash/), not system trash. Recursive = single call.
-      await this.app.vault.trash(folder, false);
+      // D-08: route deletion through Obsidian FileManager user preference.
+      await this.app.fileManager.trashFile(folder);
     });
   }
 

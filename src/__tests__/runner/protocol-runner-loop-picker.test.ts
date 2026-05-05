@@ -229,7 +229,7 @@ describe('ProtocolRunner loop picker (RUN-01..RUN-05)', () => {
   });
 
   it('Phase 50.1 D-09/D-11: exit-button caption strips the "+" prefix (stripExitPrefix wiring)', () => {
-    // RunnerView caption expression changed from (edge.label ?? '').trim() to
+    // Loop-picker caption expression changed from (edge.label ?? '').trim() to
     // stripExitPrefix(edge.label ?? ''). This test asserts the pure-module
     // wiring — the DOM-level rendering is covered by Phase 50.1 Plan 05 UAT.
     expect(stripExitPrefix('+готово')).toBe('готово');
@@ -474,7 +474,7 @@ describe('Phase 66 D-13 — scripted loop-boundary scenarios for stepBack', () =
 // «выход» exit, dead-end return via back-edge to picker, undo snapshot capture).
 //
 // Root cause: syncManualEdit() gate was `runnerStatus !== 'at-node'` only — so the call
-// from runner-view.ts:479 (fired BEFORE chooseLoopBranch) was a silent no-op while halted
+// from the host handler (fired BEFORE chooseLoopBranch) was a silent no-op while halted
 // at the loop picker. The undo snapshot captured inside chooseLoopBranch (line 190) then
 // recorded the pre-edit accumulator text, and every post-transition render showed stale text.
 //

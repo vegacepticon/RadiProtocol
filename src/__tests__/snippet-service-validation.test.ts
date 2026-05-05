@@ -37,7 +37,6 @@ function makeMockApp(
 const settings = {
   snippetFolderPath: 'Protocols/Snippets',
   snippetTreeExpandedPaths: [] as string[],
-  sessionFolderPath: '.radiprotocol/sessions',
   protocolFolderPath: '',
   textSeparator: 'newline' as const,
 };

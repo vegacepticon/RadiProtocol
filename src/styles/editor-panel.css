@@ -308,7 +308,7 @@
   filter: none;
 }
 
-/* Phase 77: shared auto-grow textarea height driven by --rp-textarea-height (single source of truth shared with runner-view.css Plan 06) (LINT-01) */
+/* Phase 77: shared auto-grow textarea height driven by --rp-textarea-height (LINT-01) */
 .rp-growable-textarea {
   height: var(--rp-textarea-height, auto);
 }

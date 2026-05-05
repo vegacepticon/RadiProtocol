@@ -70,10 +70,18 @@ function makeVault(opts: MockVaultOptions = {}) {
   return { vault, files, folderSet, abstractFiles };
 }
 
+function makeSnippetServiceApp(vault: ReturnType<typeof makeVault>['vault']) {
+  return {
+    vault,
+    fileManager: {
+      trashFile: vi.fn(async (file: unknown) => vault.trash(file, false)),
+    },
+  };
+}
+
 const settings = {
   snippetFolderPath: '.radiprotocol/snippets',
   snippetTreeExpandedPaths: [] as string[],
-  sessionFolderPath: '.radiprotocol/sessions',
   protocolFolderPath: '',
   textSeparator: 'newline' as const,
   locale: 'en' as const,
@@ -89,7 +97,7 @@ const ROOT = '.radiprotocol/snippets';
 describe('SnippetService API surface (Phase 32 D-03)', () => {
   it('exposes listFolder / load / save / delete / exists', () => {
     const { vault } = makeVault();
-    const svc = new SnippetService({ vault } as never, settings);
+    const svc = new SnippetService(makeSnippetServiceApp(vault) as never, settings);
     expect(typeof svc.listFolder).toBe('function');
     expect(typeof svc.load).toBe('function');
     expect(typeof svc.save).toBe('function');
@@ -99,7 +107,7 @@ describe('SnippetService API surface (Phase 32 D-03)', () => {
 
   it('does NOT expose removed legacy list() method', () => {
     const { vault } = makeVault();
-    const svc = new SnippetService({ vault } as never, settings);
+    const svc = new SnippetService(makeSnippetServiceApp(vault) as never, settings);
     // Phase 32: legacy flat-list `list()` is removed.
     expect((svc as unknown as { list?: unknown }).list).toBeUndefined();
   });
@@ -120,7 +128,7 @@ describe('listFolder (D-18..D-21, T-30-01)', () => {
       },
       folders: [`${ROOT}/CT`, `${ROOT}/CT/kidney`, `${ROOT}/CT/adrenal`],
     });
-    const svc = new SnippetService({ vault } as never, settings);
+    const svc = new SnippetService(makeSnippetServiceApp(vault) as never, settings);
 
     const result = await svc.listFolder(`${ROOT}/CT`);
 
@@ -134,7 +142,7 @@ describe('listFolder (D-18..D-21, T-30-01)', () => {
 
   it('missing folder returns empty and does not call adapter.list', async () => {
     const { vault } = makeVault();
-    const svc = new SnippetService({ vault } as never, settings);
+    const svc = new SnippetService(makeSnippetServiceApp(vault) as never, settings);
 
     const result = await svc.listFolder(`${ROOT}/CT`);
 
@@ -152,7 +160,7 @@ describe('listFolder (D-18..D-21, T-30-01)', () => {
       },
       folders: [`${ROOT}/CT`],
     });
-    const svc = new SnippetService({ vault } as never, settings);
+    const svc = new SnippetService(makeSnippetServiceApp(vault) as never, settings);
 
     const result = await svc.listFolder(`${ROOT}/CT`);
 
@@ -162,7 +170,7 @@ describe('listFolder (D-18..D-21, T-30-01)', () => {
 
   it('rejects path with .. segments before any disk I/O', async () => {
     const { vault } = makeVault({ folders: [ROOT] });
-    const svc = new SnippetService({ vault } as never, settings);
+    const svc = new SnippetService(makeSnippetServiceApp(vault) as never, settings);
     const errSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
 
     const result = await svc.listFolder(`${ROOT}/../../etc`);
@@ -179,7 +187,7 @@ describe('listFolder (D-18..D-21, T-30-01)', () => {
 
   it('rejects absolute path outside root', async () => {
     const { vault } = makeVault({ folders: [ROOT] });
-    const svc = new SnippetService({ vault } as never, settings);
+    const svc = new SnippetService(makeSnippetServiceApp(vault) as never, settings);
     const errSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
 
     const result = await svc.listFolder('/etc/passwd');
@@ -196,7 +204,7 @@ describe('listFolder (D-18..D-21, T-30-01)', () => {
 
   it('rejects sibling-prefix match (e.g. .radiprotocol/snippets-evil)', async () => {
     const { vault } = makeVault();
-    const svc = new SnippetService({ vault } as never, settings);
+    const svc = new SnippetService(makeSnippetServiceApp(vault) as never, settings);
     const errSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
 
     const result = await svc.listFolder('.radiprotocol/snippets-evil');
@@ -224,7 +232,7 @@ describe('listFolder extension routing (MD-05)', () => {
       },
       folders: [`${ROOT}/CT`],
     });
-    const svc = new SnippetService({ vault } as never, settings);
+    const svc = new SnippetService(makeSnippetServiceApp(vault) as never, settings);
 
     const { snippets } = await svc.listFolder(`${ROOT}/CT`);
 
@@ -245,7 +253,7 @@ describe('listFolder extension routing (MD-05)', () => {
       files: { [p]: raw },
       folders: [`${ROOT}/CT`],
     });
-    const svc = new SnippetService({ vault } as never, settings);
+    const svc = new SnippetService(makeSnippetServiceApp(vault) as never, settings);
 
     const { snippets } = await svc.listFolder(`${ROOT}/CT`);
 
@@ -267,7 +275,7 @@ describe('listFolder extension routing (MD-05)', () => {
       },
       folders: [`${ROOT}/CT`],
     });
-    const svc = new SnippetService({ vault } as never, settings);
+    const svc = new SnippetService(makeSnippetServiceApp(vault) as never, settings);
 
     const { snippets } = await svc.listFolder(`${ROOT}/CT`);
 
@@ -288,7 +296,7 @@ describe('listFolder extension routing (MD-05)', () => {
       },
       folders: [`${ROOT}/CT`],
     });
-    const svc = new SnippetService({ vault } as never, settings);
+    const svc = new SnippetService(makeSnippetServiceApp(vault) as never, settings);
 
     const { snippets } = await svc.listFolder(`${ROOT}/CT`);
 
@@ -309,7 +317,7 @@ describe('load(path) routing (D-03)', () => {
         [p]: JSON.stringify({ name: 'Alpha', template: 't', placeholders: [] }),
       },
     });
-    const svc = new SnippetService({ vault } as never, settings);
+    const svc = new SnippetService(makeSnippetServiceApp(vault) as never, settings);
 
     const snippet = await svc.load(p);
 
@@ -324,7 +332,7 @@ describe('load(path) routing (D-03)', () => {
     const p = `${ROOT}/CT/note.md`;
     const raw = 'body\nwith\nlines';
     const { vault } = makeVault({ files: { [p]: raw } });
-    const svc = new SnippetService({ vault } as never, settings);
+    const svc = new SnippetService(makeSnippetServiceApp(vault) as never, settings);
 
     const snippet = await svc.load(p);
 
@@ -336,7 +344,7 @@ describe('load(path) routing (D-03)', () => {
 
   it('returns null for missing file', async () => {
     const { vault } = makeVault();
-    const svc = new SnippetService({ vault } as never, settings);
+    const svc = new SnippetService(makeSnippetServiceApp(vault) as never, settings);
 
     const snippet = await svc.load(`${ROOT}/missing.json`);
     expect(snippet).toBeNull();
@@ -344,7 +352,7 @@ describe('load(path) routing (D-03)', () => {
 
   it('returns null for out-of-root path (path-safety D-10)', async () => {
     const { vault } = makeVault();
-    const svc = new SnippetService({ vault } as never, settings);
+    const svc = new SnippetService(makeSnippetServiceApp(vault) as never, settings);
     const errSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
 
     const snippet = await svc.load(`${ROOT}/../../etc/passwd`);
@@ -357,7 +365,7 @@ describe('load(path) routing (D-03)', () => {
   it('returns null for corrupt JSON', async () => {
     const p = `${ROOT}/bad.json`;
     const { vault } = makeVault({ files: { [p]: '{not json' } });
-    const svc = new SnippetService({ vault } as never, settings);
+    const svc = new SnippetService(makeSnippetServiceApp(vault) as never, settings);
 
     const snippet = await svc.load(p);
     expect(snippet).toBeNull();
@@ -372,7 +380,7 @@ describe('save(Snippet) branching (D-03, D-11)', () => {
   it('JSON save writes serialised JSON without runtime-only kind/path fields', async () => {
     const p = `${ROOT}/CT/a.json`;
     const { vault, files } = makeVault({ folders: [ROOT, `${ROOT}/CT`] });
-    const svc = new SnippetService({ vault } as never, settings);
+    const svc = new SnippetService(makeSnippetServiceApp(vault) as never, settings);
 
     const snippet: JsonSnippet = {
       kind: 'json',
@@ -402,7 +410,7 @@ describe('save(Snippet) branching (D-03, D-11)', () => {
   it('MD save writes raw content verbatim', async () => {
     const p = `${ROOT}/CT/raw.md`;
     const { vault, files } = makeVault({ folders: [ROOT, `${ROOT}/CT`] });
-    const svc = new SnippetService({ vault } as never, settings);
+    const svc = new SnippetService(makeSnippetServiceApp(vault) as never, settings);
 
     const content = '# H1\n\nLine 1\nLine 2';
     const snippet: MdSnippet = {
@@ -438,7 +446,7 @@ describe('save(Snippet) branching (D-03, D-11)', () => {
       await origWrite(path, data);
     }) as unknown as typeof origWrite;
 
-    const svc = new SnippetService({ vault } as never, settings);
+    const svc = new SnippetService(makeSnippetServiceApp(vault) as never, settings);
     const s1: JsonSnippet = {
       kind: 'json',
       path: p,
@@ -471,7 +479,7 @@ describe('save(Snippet) branching (D-03, D-11)', () => {
   it('JSON save strips control characters (sanitise, T-5-01)', async () => {
     const p = `${ROOT}/CT/ctrl.json`;
     const { vault, files } = makeVault({ folders: [ROOT, `${ROOT}/CT`] });
-    const svc = new SnippetService({ vault } as never, settings);
+    const svc = new SnippetService(makeSnippetServiceApp(vault) as never, settings);
 
     const snippet: JsonSnippet = {
       kind: 'json',
@@ -493,7 +501,7 @@ describe('save(Snippet) branching (D-03, D-11)', () => {
 
   it('save rejects unsafe path (D-10)', async () => {
     const { vault } = makeVault();
-    const svc = new SnippetService({ vault } as never, settings);
+    const svc = new SnippetService(makeSnippetServiceApp(vault) as never, settings);
 
     const snippet: JsonSnippet = {
       kind: 'json',
@@ -514,12 +522,12 @@ describe('save(Snippet) branching (D-03, D-11)', () => {
 // ---------------------------------------------------------------------------
 
 describe('delete(path) uses Obsidian trash (DEL-01, D-08)', () => {
-  it('calls vault.trash(file, false) exactly once', async () => {
+  it('routes deletion through FileManager trash once', async () => {
     const p = `${ROOT}/CT/victim.json`;
     const { vault } = makeVault({
       files: { [p]: JSON.stringify({ name: 'v', template: 't', placeholders: [] }) },
     });
-    const svc = new SnippetService({ vault } as never, settings);
+    const svc = new SnippetService(makeSnippetServiceApp(vault) as never, settings);
 
     await svc.delete(p);
 
@@ -533,7 +541,7 @@ describe('delete(path) uses Obsidian trash (DEL-01, D-08)', () => {
   it('no-op when file missing (no throw, trash not called)', async () => {
     const p = `${ROOT}/CT/ghost.json`;
     const { vault } = makeVault(); // no abstract file
-    const svc = new SnippetService({ vault } as never, settings);
+    const svc = new SnippetService(makeSnippetServiceApp(vault) as never, settings);
 
     await expect(svc.delete(p)).resolves.toBeUndefined();
     expect(vault.trash).toHaveBeenCalledTimes(0);
@@ -541,7 +549,7 @@ describe('delete(path) uses Obsidian trash (DEL-01, D-08)', () => {
 
   it('rejects out-of-root path — trash NOT called', async () => {
     const { vault } = makeVault();
-    const svc = new SnippetService({ vault } as never, settings);
+    const svc = new SnippetService(makeSnippetServiceApp(vault) as never, settings);
     const errSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
 
     await svc.delete(`${ROOT}/../../etc/passwd`);
@@ -560,19 +568,19 @@ describe('exists(path) (D-03)', () => {
   it('returns true for existing safe path', async () => {
     const p = `${ROOT}/CT/a.json`;
     const { vault } = makeVault({ files: { [p]: '{}' } });
-    const svc = new SnippetService({ vault } as never, settings);
+    const svc = new SnippetService(makeSnippetServiceApp(vault) as never, settings);
     expect(await svc.exists(p)).toBe(true);
   });
 
   it('returns false for missing safe path', async () => {
     const { vault } = makeVault();
-    const svc = new SnippetService({ vault } as never, settings);
+    const svc = new SnippetService(makeSnippetServiceApp(vault) as never, settings);
     expect(await svc.exists(`${ROOT}/missing.json`)).toBe(false);
   });
 
   it('returns false for out-of-root path without touching adapter', async () => {
     const { vault } = makeVault();
-    const svc = new SnippetService({ vault } as never, settings);
+    const svc = new SnippetService(makeSnippetServiceApp(vault) as never, settings);
     const errSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
 
     const r = await svc.exists(`${ROOT}/../../etc/passwd`);
@@ -603,7 +611,7 @@ describe('path-safety gate applies to every entry point (D-10)', () => {
   for (const bad of unsafePaths) {
     it(`load() rejects ${bad}`, async () => {
       const { vault } = makeVault();
-      const svc = new SnippetService({ vault } as never, settings);
+      const svc = new SnippetService(makeSnippetServiceApp(vault) as never, settings);
       const r = await svc.load(bad);
       expect(r).toBeNull();
       expect(vault.adapter.exists).toHaveBeenCalledTimes(0);
@@ -611,7 +619,7 @@ describe('path-safety gate applies to every entry point (D-10)', () => {
 
     it(`save() rejects ${bad}`, async () => {
       const { vault } = makeVault();
-      const svc = new SnippetService({ vault } as never, settings);
+      const svc = new SnippetService(makeSnippetServiceApp(vault) as never, settings);
       const snippet: JsonSnippet = {
         kind: 'json',
         path: bad,
@@ -627,7 +635,7 @@ describe('path-safety gate applies to every entry point (D-10)', () => {
 
     it(`delete() rejects ${bad}`, async () => {
       const { vault } = makeVault();
-      const svc = new SnippetService({ vault } as never, settings);
+      const svc = new SnippetService(makeSnippetServiceApp(vault) as never, settings);
       await svc.delete(bad);
       expect(vault.trash).toHaveBeenCalledTimes(0);
       expect(vault.getAbstractFileByPath).toHaveBeenCalledTimes(0);
@@ -635,7 +643,7 @@ describe('path-safety gate applies to every entry point (D-10)', () => {
 
     it(`exists() rejects ${bad}`, async () => {
       const { vault } = makeVault();
-      const svc = new SnippetService({ vault } as never, settings);
+      const svc = new SnippetService(makeSnippetServiceApp(vault) as never, settings);
       const r = await svc.exists(bad);
       expect(r).toBe(false);
       expect(vault.adapter.exists).toHaveBeenCalledTimes(0);
@@ -643,7 +651,7 @@ describe('path-safety gate applies to every entry point (D-10)', () => {
 
     it(`listFolder() rejects ${bad}`, async () => {
       const { vault } = makeVault();
-      const svc = new SnippetService({ vault } as never, settings);
+      const svc = new SnippetService(makeSnippetServiceApp(vault) as never, settings);
       const r = await svc.listFolder(bad);
       expect(r).toEqual({ folders: [], snippets: [] });
       expect(vault.adapter.exists).toHaveBeenCalledTimes(0);
@@ -658,7 +666,7 @@ describe('path-safety gate applies to every entry point (D-10)', () => {
 describe('createFolder (Phase 33 D-17)', () => {
   it('creates the folder via ensureFolderPath inside the root', async () => {
     const { vault, folderSet } = makeVault();
-    const svc = new SnippetService({ vault } as never, settings);
+    const svc = new SnippetService(makeSnippetServiceApp(vault) as never, settings);
     await svc.createFolder(`${ROOT}/new-folder`);
     expect(folderSet.has(`${ROOT}/new-folder`)).toBe(true);
     expect(vault.createFolder).toHaveBeenCalledTimes(1);
@@ -666,14 +674,14 @@ describe('createFolder (Phase 33 D-17)', () => {
 
   it('is idempotent — a second call does not throw', async () => {
     const { vault } = makeVault();
-    const svc = new SnippetService({ vault } as never, settings);
+    const svc = new SnippetService(makeSnippetServiceApp(vault) as never, settings);
     await svc.createFolder(`${ROOT}/x`);
     await expect(svc.createFolder(`${ROOT}/x`)).resolves.toBeUndefined();
   });
 
   it('rejects a path outside the root', async () => {
     const { vault } = makeVault();
-    const svc = new SnippetService({ vault } as never, settings);
+    const svc = new SnippetService(makeSnippetServiceApp(vault) as never, settings);
     const errSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
     await expect(svc.createFolder('../escape')).rejects.toThrow(/createFolder rejected/);
     expect(vault.createFolder).toHaveBeenCalledTimes(0);
@@ -682,13 +690,13 @@ describe('createFolder (Phase 33 D-17)', () => {
 });
 
 describe('deleteFolder (Phase 33 D-17)', () => {
-  it('trashes the folder via vault.trash(folder, false)', async () => {
+  it('routes folder deletion through FileManager trash once', async () => {
     const sub = `${ROOT}/sub`;
     const { vault } = makeVault({
       folders: [ROOT, sub],
       abstractFiles: { [sub]: { path: sub } },
     });
-    const svc = new SnippetService({ vault } as never, settings);
+    const svc = new SnippetService(makeSnippetServiceApp(vault) as never, settings);
     await svc.deleteFolder(sub);
     expect(vault.trash).toHaveBeenCalledTimes(1);
     expect(vault.trash.mock.calls[0]![1]).toBe(false);
@@ -696,7 +704,7 @@ describe('deleteFolder (Phase 33 D-17)', () => {
 
   it('is a no-op for unsafe paths', async () => {
     const { vault } = makeVault();
-    const svc = new SnippetService({ vault } as never, settings);
+    const svc = new SnippetService(makeSnippetServiceApp(vault) as never, settings);
     const errSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
     await svc.deleteFolder('../escape');
     expect(vault.trash).toHaveBeenCalledTimes(0);
@@ -705,7 +713,7 @@ describe('deleteFolder (Phase 33 D-17)', () => {
 
   it('is a no-op when the folder does not exist', async () => {
     const { vault } = makeVault();
-    const svc = new SnippetService({ vault } as never, settings);
+    const svc = new SnippetService(makeSnippetServiceApp(vault) as never, settings);
     await svc.deleteFolder(`${ROOT}/missing`);
     expect(vault.trash).toHaveBeenCalledTimes(0);
   });
@@ -720,7 +728,7 @@ describe('listFolderDescendants (Phase 33 D-15)', () => {
       },
       folders: [ROOT, `${ROOT}/a`, `${ROOT}/a/b`],
     });
-    const svc = new SnippetService({ vault } as never, settings);
+    const svc = new SnippetService(makeSnippetServiceApp(vault) as never, settings);
     const result = await svc.listFolderDescendants(`${ROOT}/a`);
     expect(result.total).toBe(result.files.length + result.folders.length);
     expect(result.files).toEqual(
@@ -734,7 +742,7 @@ describe('listFolderDescendants (Phase 33 D-15)', () => {
 
   it('returns empty for unsafe path', async () => {
     const { vault } = makeVault();
-    const svc = new SnippetService({ vault } as never, settings);
+    const svc = new SnippetService(makeSnippetServiceApp(vault) as never, settings);
     const errSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
     const result = await svc.listFolderDescendants('../escape');
     expect(result).toEqual({ files: [], folders: [], total: 0 });

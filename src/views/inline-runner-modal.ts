@@ -976,7 +976,7 @@ export class InlineRunnerModal {
    * Phase 59 INLINE-FIX-05 — Load snippet and dispatch fill-in modal (parity with sidebar).
    *
    * Reverses Phase 54 D6: instead of rendering an in-panel form via the old fill-in method,
-   * this now instantiates the stacked SnippetFillInModal — same as runner-view.ts:997.
+   * this now instantiates the stacked SnippetFillInModal using the shared snippet-fill flow.
    * The modal mounts to document.body (via Obsidian Modal); the inline container stays
    * visible underneath (gated by isFillModalOpen in handleActiveLeafChange).
    */
