@@ -9,7 +9,7 @@
 //   4. Flip runnerStatus to 'awaiting-snippet-fill'.
 //   5. stepBack() restores Question + pre-pick accumulator (existing path, no new branch).
 //
-// Pure-runner tests — no Obsidian API, no RunnerView. Mirrors the inline-graph
+// Pure-runner tests — no Obsidian API, no view host. Mirrors the inline-graph
 // factory pattern used in protocol-runner-snippet-autoinsert.test.ts.
 
 import { describe, it, expect } from 'vitest';

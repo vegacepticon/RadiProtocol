@@ -4,7 +4,7 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 // Import the stub (will be replaced by full implementation in Plan 01)
 import { EditorPanelView, EDITOR_PANEL_VIEW_TYPE } from '../views/editor-panel-view';
 
-// Mock obsidian module (same pattern as RunnerView.test.ts)
+// Mock obsidian module with the same textarea recorder behavior used by view tests
 vi.mock('obsidian');
 
 describe('EditorPanelView', () => {

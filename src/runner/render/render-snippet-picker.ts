@@ -15,7 +15,7 @@
 //   - snippet placeholder modal flow (handleSnippetPickerSelection)
 //   - re-render entry point
 //
-// See `.planning/phases/75-runner-view-inline-runner-deduplication/75-04-PLAN.md`.
+// Historical Phase 75 shared picker extraction plan.
 import type { App } from 'obsidian';
 import type { Snippet } from '../../snippets/snippet-model';
 import type { SnippetService } from '../../snippets/snippet-service';
@@ -28,8 +28,7 @@ export type AwaitingSnippetPickState = Extract<RunnerState, { status: 'awaiting-
 
 export type SnippetPickerHostClass = typeof CSS_CLASS.STP_INLINE_HOST;
 
-/** Host-supplied copy for async errors surfaced by the picker. RunnerView ships RU,
- *  InlineRunnerModal ships EN — divergence preserved per Phase 75 CONTEXT. */
+/** Host-supplied copy for async errors surfaced by the picker. */
 export interface SnippetPickerCopy {
   /** Snippet at the picked path could not be loaded. */
   notFound(relativePath: string): string;
@@ -50,7 +49,7 @@ export interface SnippetPickerRenderOptions extends RunnerFooterHost {
    *  state has changed (advanced/stepped-back/error/etc). T-30-04 stale-result guard. */
   getCurrentNodeId(): string | null;
   /** Optional DOM-attached guard. Inline modal returns
-   *  `document.body.contains(this.containerEl)`; RunnerView omits it. */
+   *  `document.body.contains(this.containerEl)`. */
   isStillMounted?(): boolean;
   /** Host-controlled async error presentation. Default: empty `questionZone`
    *  and append a `.rp-empty-state-body` paragraph in place. Inline modal

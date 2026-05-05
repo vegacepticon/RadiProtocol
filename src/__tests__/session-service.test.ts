@@ -143,7 +143,7 @@ describe('validateSessionNodeIds() (SESSION-03)', () => {
 
   // Phase 43 D-20 — graceful reject сессии со ссылкой на legacy loop ID.
   // Старый канвас с loop-start/loop-end теперь отклоняется GraphValidator'ом ДО runner'а,
-  // но backstop-path через validateSessionNodeIds → missing IDs → RunnerView.sessionService.clear()
+  // но backstop-path через validateSessionNodeIds → missing IDs → sessionService.clear()
   // должен работать без throw (D-13 graceful reject).
   it('gracefully returns missing legacy loop node ID without throwing (D-20, D-13)', () => {
     const session = makeSession({
@@ -167,7 +167,7 @@ describe('canvas mtime comparison logic (SESSION-04)', () => {
   it('detects canvas modification when current mtime is greater than saved mtime', () => {
     const savedMtime = 1700000000000;
     const currentMtime = 1700000001000;
-    // The logic RunnerView uses: mtime > session.canvasMtimeAtSave
+    // The legacy session-recovery logic used: mtime > session.canvasMtimeAtSave
     expect(currentMtime > savedMtime).toBe(true);
   });
 

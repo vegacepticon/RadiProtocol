@@ -41,7 +41,7 @@ export interface AwaitingSnippetPickState {
  */
 export interface AwaitingLoopPickState {
   status: typeof RUNNER_STATUS.AWAITING_LOOP_PICK;
-  nodeId: string;                 // loop node id — RunnerView looks up headerText from graph
+  nodeId: string;                 // loop node id — host looks up headerText from graph
   accumulatedText: string;
   canStepBack: boolean;
 }

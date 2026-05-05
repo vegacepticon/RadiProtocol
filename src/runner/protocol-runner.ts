@@ -126,7 +126,7 @@ export class ProtocolRunner {
    * answer-kind neighbor WITHOUT appending the answer's text to the accumulator.
    * Pushes an UndoEntry BEFORE mutation so stepBack returns to the question.
    * Snippet neighbors are ignored (D-09). No-op outside at-node + question context.
-   * BUG-01 / D-11 is enforced by the caller (RunnerView click handler) via
+   * BUG-01 / D-11 is enforced by the caller (currently InlineRunnerModal click handler) via
    * syncManualEdit before invoking skip() — this method uses accumulator.snapshot()
    * which reflects any synced manual edit.
    */
@@ -313,7 +313,7 @@ export class ProtocolRunner {
    * Phase 30 D-08: user picks a snippet at the current snippet node.
    * Valid only in 'awaiting-snippet-pick'. Pushes UndoEntry BEFORE any
    * mutation so stepBack reverts to the snippet node's predecessor.
-   * Transitions to 'awaiting-snippet-fill'; RunnerView then either opens
+   * Transitions to 'awaiting-snippet-fill'; the host then either opens
    * SnippetFillInModal (placeholders) or calls completeSnippet(template)
    * directly (no placeholders, D-09).
    */
@@ -336,7 +336,7 @@ export class ProtocolRunner {
 
   /**
    * Phase 56 D-03 (PICKER-01 reversal) — click-driven entry point for file-bound
-   * Snippet insertion. Called by RunnerView sibling-button click handler when the
+   * Snippet insertion. Called by the inline runner sibling-button click handler when the
    * clicked Snippet node is file-bound (radiprotocol_snippetPath non-empty,
    * radiprotocol_subfolderPath empty/absent). Mirrors pickSnippet's undo-before-mutate
    * pattern but is triggered from a user click at at-node instead of from
@@ -346,7 +346,7 @@ export class ProtocolRunner {
    *   1. Guard: runnerStatus must be 'at-node' and currentNodeId must equal questionNodeId.
    *   2. Push UndoEntry keyed on the Question node (D-15 undo-before-mutate).
    *   3. Set snippetId = snippetPath, snippetNodeId = snippetNodeId, currentNodeId = snippetNodeId.
-   *   4. Flip runnerStatus to 'awaiting-snippet-fill' — existing arm in RunnerView
+   *   4. Flip runnerStatus to 'awaiting-snippet-fill' — host render arm
    *      dispatches .md insert / .json fill-in modal / .json no-placeholder insert.
    *
    * stepBack() from awaiting-snippet-fill restores the Question with pre-insertion
@@ -414,7 +414,7 @@ export class ProtocolRunner {
    * No-op if runner is not in 'at-node' or 'awaiting-loop-pick' state.
    *
    * Phase 47 RUNFIX-01: the awaiting-loop-pick gate extension keeps the BUG-01
-   * capture-before-advance invariant alive on every loop transition — runner-view.ts:479
+   * capture-before-advance invariant alive on every loop transition — the host handler
    * calls syncManualEdit before chooseLoopBranch, and chooseLoopBranch (line 190) takes
    * the undo snapshot from the accumulator the instant after this call returns. Without
    * the awaiting-loop-pick gate the call was a no-op and the undo snapshot recorded
@@ -493,7 +493,7 @@ export class ProtocolRunner {
    * The returned object is JSON-safe: all values are strings, numbers, arrays of those,
    * or null. No Set values are present (SESSION-07 — verified by RESEARCH.md audit).
    *
-   * Callers (RunnerView.autoSaveSession) add canvasFilePath, canvasMtimeAtSave,
+   * Legacy session-capable callers add canvasFilePath, canvasMtimeAtSave,
    * savedAt, and version to complete the PersistedSession shape before writing.
    */
   getSerializableState(): {
@@ -535,7 +535,7 @@ export class ProtocolRunner {
    * Must be called BEFORE restoreFrom() so subsequent runner method calls have a valid
    * graph to traverse (Pitfall 2 in RESEARCH.md — restoreFrom before setGraph causes silent no-ops).
    *
-   * Correct call order in RunnerView.openCanvas():
+   * Correct call order for any session-capable host:
    *   1. runner.setGraph(parsedGraph)
    *   2. runner.restoreFrom(session)
    *   3. this.render()
@@ -670,7 +670,7 @@ export class ProtocolRunner {
           // Default Question behaviour — halt at at-node.
           // Phase 56 D-02: Phase 51 D-13 auto-insert block removed per CONTEXT D-02
           // (explicit exception to CLAUDE.md never-remove rule — this is the phase mandate).
-          // File-bound Snippet dispatch now flows through RunnerView click handler →
+          // File-bound Snippet dispatch now flows through the host click handler →
           // ProtocolRunner.pickFileBoundSnippet (see Task 2 of this plan).
           this.currentNodeId = cursor;
           this.runnerStatus = RUNNER_STATUS.AT_NODE;

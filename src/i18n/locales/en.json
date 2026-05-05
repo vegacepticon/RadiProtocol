@@ -10,7 +10,7 @@
     "space": "Space",
     "protocolHeading": "Protocol",
     "protocolFolder": "Protocol canvas folder",
-    "protocolFolderDesc": "Vault-relative folder containing your .canvas protocol files. The canvas selector in the runner panel scans this folder. Leave empty to disable the selector.",
+    "protocolFolderDesc": "Vault-relative folder containing your .canvas protocol files. The inline runner canvas picker scans this folder. Leave empty to disable the picker.",
     "storageHeading": "Storage",
     "snippetFolder": "Snippet folder",
     "snippetFolderDesc": "Vault-relative path for snippet JSON files. Default: .radiprotocol/snippets",

@@ -32,7 +32,7 @@ export interface SnippetPlaceholder {
  * file on disk declared a removed placeholder type ('number', 'multichoice',
  * 'multi-choice') or a 'choice' placeholder with invalid options. Consumers
  * MUST check before rendering in Editor or Runner — see SnippetEditorModal
- * banner surface and RunnerView handleSnippetFill guard.
+ * banner surface and inline-runner snippet-fill guard.
  */
 export interface JsonSnippet {
   readonly kind: 'json';

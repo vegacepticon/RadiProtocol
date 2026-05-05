@@ -5,7 +5,7 @@
 // Lifecycle mirrors CanvasLiveEditor (main.ts:23, :41, :135): instantiated in onload,
 // destroy() called in onunload. Subscription attached via this.plugin.registerEvent(...)
 // so Obsidian auto-detaches on plugin unload (snippet-manager-view.ts:135 /
-// runner-view.ts:200 canonical pattern).
+// other workspace-service registration sites).
 //
 // Debounce per filePath: 250ms — below Obsidian's own 500ms canvas requestSave cap
 // (canvas-live-editor.ts:298-306) so keystrokes feel responsive. (Claude's Discretion

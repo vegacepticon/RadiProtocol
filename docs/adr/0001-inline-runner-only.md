@@ -54,6 +54,7 @@ Negative / trade-offs:
 - Agent instructions must not mention deleted CSS files such as `runner-view.css` or `canvas-selector.css`.
 - `.planning/` remains local historical GSD context and is intentionally gitignored; architectural decisions that need to survive outside that local context belong in tracked ADRs under `docs/adr/`.
 - Do not restore `RunnerView` to solve inline-runner issues. Fix the inline host or add a new explicitly scoped host behind a separate ADR.
+- `SessionService` is retained as a legacy/future-compatible session utility while `start-from-node` still clears stale canvas sessions. Full removal or inline session recovery must be handled by a separate behavior phase.
 
 ## Alternatives considered
 

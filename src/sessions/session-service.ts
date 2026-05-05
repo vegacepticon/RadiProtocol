@@ -106,8 +106,9 @@ export class SessionService {
  * Validate that all node IDs referenced in a saved session still exist in the current
  * graph. Returns a deduplicated array of missing IDs (SESSION-03).
  *
- * Exported as a pure function (not a SessionService method) so RunnerView can call it
- * without going through the service. No vault I/O — purely structural.
+ * Exported as a pure function (not a SessionService method) so session-capable
+ * hosts can validate IDs without going through the service. No vault I/O —
+ * purely structural.
  *
  * Checks: currentNodeId, all nodeIds in undoStack, all loopNodeIds in undoStack
  * loopContextStacks, and all loopNodeIds in the top-level loopContextStack.
@@ -121,7 +122,7 @@ export function validateSessionNodeIds(
 
   // Phase 43 D-04 / D-13: loopStartId → loopNodeId (unified loop, LOOP-01).
   // Old sessions referencing removed legacy loop IDs surface here as missing;
-  // RunnerView.sessionService.clear() handles graceful reset.
+  // sessionService.clear() handles graceful reset for session-capable hosts.
 
   // Check currentNodeId
   if (!graph.nodes.has(session.currentNodeId)) {

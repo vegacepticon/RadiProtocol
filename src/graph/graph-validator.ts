@@ -124,7 +124,7 @@ export class GraphValidator {
     //  (D-08) iterate "+"-edges, stripExitPrefix(label) === '' → per-offending-edge error
     //  (D-07) 0 non-"+" outgoing edges → no body
     // Error-check ordering: D-04/D-05 → D-06 → D-08 → D-07. Multiple errors per loop node
-    // accumulate (see RunnerView Error panel). `isExitEdge` and `stripExitPrefix` live in
+    // accumulate for host error panels. `isExitEdge` and `stripExitPrefix` live in
     // `src/graph/node-label.ts` (Phase 50.1 D-09/D-10). `isLabeledEdge` is still used below
     // to detect the legacy "labeled but non-'+' prefix" case (D-05 branch).
     for (const [id, node] of graph.nodes) {
@@ -306,7 +306,7 @@ export class GraphValidator {
   /**
    * Returns a human-readable label for a node (for use in error messages).
    * Phase 49 D-13: delegates to the shared src/graph/node-label.ts so validator
-   * error text and RunnerView loop-picker captions stay in lock-step.
+   * error text and loop-picker captions stay in lock-step.
    */
   private nodeLabel(node: RPNode): string {
     return sharedNodeLabel(node);
