@@ -1,10 +1,9 @@
 // main.ts
 import { Plugin, Notice, Menu, TFile, TFolder, SuggestModal } from 'obsidian';
-import type { App, WorkspaceLeaf } from 'obsidian';
+import type { App } from 'obsidian';
 import { RadiProtocolSettings, DEFAULT_SETTINGS, RadiProtocolSettingsTab, type InlineRunnerLayout } from './settings';
 import { CanvasParser } from './graph/canvas-parser';
 import { EditorPanelView, EDITOR_PANEL_VIEW_TYPE } from './views/editor-panel-view';
-import { RunnerView, RUNNER_VIEW_TYPE } from './views/runner-view';
 import { SnippetManagerView, SNIPPET_MANAGER_VIEW_TYPE } from './views/snippet-manager-view';
 import { SnippetService } from './snippets/snippet-service';
 import { SessionService } from './sessions/session-service';
@@ -162,28 +161,10 @@ export default class RadiProtocolPlugin extends Plugin {
     this.edgeLabelSyncService = new EdgeLabelSyncService(this.app, this);
     this.edgeLabelSyncService.register();
 
-    this.addRibbonIcon('activity', 'Radiprotocol', () => { void this.activateRunnerView(); });
-
     // Commands — IDs intentionally omit plugin name prefix (NFR-06)
-    this.addCommand({
-      id: 'run-protocol',
-      name: 'Run protocol',
-      callback: () => { void this.activateRunnerView(); },
-    });
-
-    this.addCommand({
-      id: 'validate-protocol',
-      name: 'Validate protocol',
-      callback: () => {
-        new Notice('Protocol validator coming in phase 3.');
-      },
-    });
 
     // Register EditorPanelView ItemView (EDIT-01)
     this.registerView(EDITOR_PANEL_VIEW_TYPE, (leaf) => new EditorPanelView(leaf, this));
-
-    // Register RunnerView ItemView (UI-01)
-    this.registerView(RUNNER_VIEW_TYPE, (leaf) => new RunnerView(leaf, this));
 
     // Register SnippetManagerView ItemView (SNIP-01)
     this.registerView(SNIPPET_MANAGER_VIEW_TYPE, (leaf) => new SnippetManagerView(leaf, this));
@@ -351,95 +332,6 @@ export default class RadiProtocolPlugin extends Plugin {
     }
   }
 
-  async activateRunnerView(): Promise<void> {
-    const { workspace } = this.app;
-    const existingLeaves = workspace.getLeavesOfType(RUNNER_VIEW_TYPE);
-
-    if (existingLeaves.length > 0 && existingLeaves[0] !== undefined) {
-      const existingLeaf = existingLeaves[0];
-      // Detect whether the existing leaf is in the sidebar or main tab area.
-      // leaf.getRoot() === workspace.rightSplit is true for sidebar leaves.
-      // Do NOT use leaf.parent instanceof WorkspaceSidedock — parent is WorkspaceTabs.
-      const leafIsInSidebar = existingLeaf.getRoot() === workspace.rightSplit;
-      const targetIsSidebar = this.settings.runnerViewMode === 'sidebar';
-
-      if (leafIsInSidebar === targetIsSidebar) {
-        // RUNTAB-03: mode unchanged — reveal existing leaf, no duplicate
-        void workspace.revealLeaf(existingLeaf);
-        return;
-      }
-
-      // Mode changed — close the old leaf, fall through to open fresh in new mode
-      existingLeaf.detach();
-    }
-
-    // Open in the configured mode
-    let leaf: WorkspaceLeaf | null;
-    if (this.settings.runnerViewMode === 'tab') {
-      // RUNTAB-02: open in main workspace tab strip
-      leaf = workspace.getLeaf('tab');
-    } else {
-      // RUNTAB-01 sidebar default: v1.0 behavior preserved
-      leaf = workspace.getRightLeaf(false);
-    }
-
-    if (leaf !== null) {
-      await leaf.setViewState({ type: RUNNER_VIEW_TYPE, active: true });
-      void workspace.revealLeaf(leaf);
-    } else {
-      new Notice('Could not open runner view: no available leaf.');
-    }
-
-    // After opening, trigger openCanvas on the active canvas file if any (preserved from v1.0)
-    const canvasLeaves = workspace.getLeavesOfType('canvas');
-    // Prefer the most-recently-active canvas leaf; fall back to the first in the list (WR-03)
-    const mostRecentCanvasLeaf = canvasLeaves.find(l => l === workspace.getMostRecentLeaf());
-    const activeCanvas = mostRecentCanvasLeaf ?? canvasLeaves[0];
-    if (activeCanvas !== undefined) {
-      const filePath = (activeCanvas.view as { file?: { path: string } } | undefined)?.file?.path;
-      if (filePath !== undefined) {
-        const runnerLeaves = workspace.getLeavesOfType(RUNNER_VIEW_TYPE);
-        const runnerLeaf = runnerLeaves[0];
-        if (runnerLeaf !== undefined) {
-          const view = runnerLeaf.view as RunnerView;
-          void view.openCanvas(filePath);
-        }
-      }
-    }
-  }
-
-  async saveOutputToNote(text: string): Promise<void> {
-    const { workspace, vault } = this.app;
-    const folderPath = this.settings.outputFolderPath;
-    // Ensure output folder exists (T-5-14: vault paths scoped to vault root)
-    const folderExists = await vault.adapter.exists(folderPath);
-    if (!folderExists) {
-      await vault.createFolder(folderPath);
-    }
-    const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-    const notePath = `${folderPath}/Report-${timestamp}.md`;
-    await vault.create(notePath, text);
-    const file = vault.getAbstractFileByPath(notePath);
-    if (file instanceof TFile) {
-      await workspace.getLeaf('tab').openFile(file);
-    }
-  }
-
-  async insertIntoCurrentNote(text: string, file: TFile): Promise<void> {
-    const { vault } = this.app;
-    try {
-      await this.insertMutex.runExclusive(file.path, async () => {
-        const existing = await vault.read(file);
-        const separator = existing.trim().length === 0 ? '' : '\n\n---\n\n';
-        await vault.modify(file, existing + separator + text);
-      });
-      new Notice(`Inserted into ${file.name}.`);
-    } catch (err) {
-      console.error('[RadiProtocol] insertIntoCurrentNote failed:', err);
-      new Notice(`Failed to insert into ${file.name}. See console for details.`);
-    }
-  }
-
   async openEditorPanelForNode(filePath: string, nodeId: string): Promise<void> {
     await this.activateEditorPanelView();
     const leaves = this.app.workspace.getLeavesOfType(EDITOR_PANEL_VIEW_TYPE);
@@ -461,9 +353,7 @@ export default class RadiProtocolPlugin extends Plugin {
    *   4. Any parse/validate error -> Notice + abort (D-CL-06 - validator blocks start
    *      including MIGRATE-01 on legacy loop-start/loop-end).
    *   5. buildNodeOptions produces 4-kind picker list (Plan 45-01).
-   *   6. Activate RunnerView (D-15), then open NodePickerModal. User's pick
-   *      routes through RunnerView.openCanvas(path, startNodeId) which bypasses
-   *      session resume and starts at the chosen node (Plan 45-03 Task 1).
+   *   6. Check active file is a markdown note. On pick, open InlineRunnerModal.
    */
   private async handleStartFromNode(): Promise<void> {
     // 1. Find active canvas leaf — same pattern as editor-panel-view.ts:54-57
@@ -532,24 +422,20 @@ export default class RadiProtocolPlugin extends Plugin {
       return;
     }
 
-    // 6. Open RunnerView (D-15) then picker modal.
-    // Phase 45 WR-01 fix: clear the session BEFORE activating the runner view.
-    // activateRunnerView() fires an implicit `void view.openCanvas(filePath)` without
-    // a startNodeId (main.ts ~L239), which calls sessionService.load(filePath) and
-    // can open ResumeSessionModal on top of / underneath NodePickerModal. Clearing
-    // the session first makes that implicit load find nothing and keeps the picker
-    // the only modal on screen. The picker callback then calls
-    // openCanvas(canvasPath, opt.id), which bypasses session resume (runner-view.ts:108).
+    // 6. Active file must be a markdown note
+    const activeFile = this.app.workspace.getActiveFile();
+    if (activeFile === null || activeFile.extension !== 'md') {
+      new Notice('Open a Markdown note first, then run this command.');
+      return;
+    }
+
+    // Clear any existing session for this canvas
     await this.sessionService.clear(canvasPath);
 
-    await this.activateRunnerView();
-    const runnerLeaves = this.app.workspace.getLeavesOfType(RUNNER_VIEW_TYPE);
-    const runnerLeaf = runnerLeaves[0];
-    if (runnerLeaf === undefined) return;
-    const runnerView = runnerLeaf.view as RunnerView;
-
+    // Open node picker; on pick, launch InlineRunnerModal at the chosen node
     new NodePickerModal(this.app, options, (opt) => {
-      void runnerView.openCanvas(canvasPath, opt.id);
+      const modal = new InlineRunnerModal(this.app, this, canvasPath, activeFile, opt.id);
+      void modal.open();
     }).open();
   }
 

@@ -18,16 +18,12 @@ export interface InlineRunnerLayout {
 }
 
 export interface RadiProtocolSettings {
-  outputDestination: 'clipboard' | 'new-note' | 'both';
-  outputFolderPath: string;
   /** Vault-relative path for snippet JSON files (D-15, SNIP-08). Default: .radiprotocol/snippets */
   snippetFolderPath: string;
   /** Phase 33 (D-17): Tree-view expanded-folder paths, persisted across sessions. */
   snippetTreeExpandedPaths: string[];
   /** Vault-relative path for session JSON files (SESSION-01). Default: .radiprotocol/sessions */
   sessionFolderPath: string;
-  /** Runner opens in sidebar panel or full editor tab (RUNTAB-01). Default: 'sidebar' */
-  runnerViewMode: 'sidebar' | 'tab';
   /** Vault-relative folder scanned for .canvas protocol files (SELECTOR-01). Default: '' (empty) */
   protocolFolderPath: string;
   /** Separator inserted before each new text chunk in the runner (D-08, SEP-01). Default: 'newline'. */
@@ -41,12 +37,9 @@ export interface RadiProtocolSettings {
 }
 
 export const DEFAULT_SETTINGS: RadiProtocolSettings = {
-  outputDestination: 'clipboard',
-  outputFolderPath: 'RadiProtocol Output',
   snippetFolderPath: '.radiprotocol/snippets',
   snippetTreeExpandedPaths: [],
   sessionFolderPath: '.radiprotocol/sessions',
-  runnerViewMode: 'sidebar',
   protocolFolderPath: '',
   textSeparator: 'newline',
   inlineRunnerPosition: null,
@@ -85,22 +78,6 @@ export class RadiProtocolSettingsTab extends PluginSettingTab {
         })
       );
 
-    // Group 1 — Runner
-    new Setting(containerEl).setName(this.plugin.i18n.t('settings.runnerHeading')).setHeading();
-
-    new Setting(containerEl)
-      .setName(this.plugin.i18n.t('settings.runnerViewMode'))
-      .setDesc(this.plugin.i18n.t('settings.runnerViewModeDesc'))
-      .addDropdown(drop => drop
-        .addOption('sidebar', this.plugin.i18n.t('settings.sidebar'))
-        .addOption('tab', this.plugin.i18n.t('settings.tab'))
-        .setValue(this.plugin.settings.runnerViewMode)
-        .onChange(async (value) => {
-          this.plugin.settings.runnerViewMode = value as 'sidebar' | 'tab';
-          await this.plugin.saveSettings();
-        })
-      );
-
     new Setting(containerEl)
       .setName(this.plugin.i18n.t('settings.textSeparator'))
       .setDesc(this.plugin.i18n.t('settings.textSeparatorDesc'))
@@ -128,37 +105,6 @@ export class RadiProtocolSettingsTab extends PluginSettingTab {
           .setValue(this.plugin.settings.protocolFolderPath)
           .onChange(async (value) => {
             this.plugin.settings.protocolFolderPath = value.trim();
-            await this.plugin.saveSettings();
-          });
-      });
-
-    // Group 3 — Output
-    new Setting(containerEl).setName(this.plugin.i18n.t('settings.outputHeading')).setHeading();
-
-    new Setting(containerEl)
-      .setName(this.plugin.i18n.t('settings.outputDestination'))
-      .setDesc(this.plugin.i18n.t('settings.outputDestinationDesc'))
-      .addDropdown(drop => drop
-        .addOption('clipboard', this.plugin.i18n.t('settings.copyToClipboard'))
-        .addOption('new-note', this.plugin.i18n.t('settings.saveToNote'))
-        .addOption('both', this.plugin.i18n.t('settings.both'))
-        .setValue(this.plugin.settings.outputDestination)
-        .onChange(async (value) => {
-          this.plugin.settings.outputDestination = value as RadiProtocolSettings['outputDestination'];
-          await this.plugin.saveSettings();
-        })
-      );
-
-    new Setting(containerEl)
-      .setName(this.plugin.i18n.t('settings.outputFolder'))
-      .setDesc(this.plugin.i18n.t('settings.outputFolderDesc'))
-      .addText(text => {
-        new FolderSuggest(this.app, text.inputEl);
-        text
-          .setPlaceholder(DEFAULT_SETTINGS.outputFolderPath)
-          .setValue(this.plugin.settings.outputFolderPath)
-          .onChange(async (value) => {
-            this.plugin.settings.outputFolderPath = value.trim() || 'RadiProtocol Output';
             await this.plugin.saveSettings();
           });
       });

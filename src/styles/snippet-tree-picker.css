@@ -98,14 +98,6 @@
   max-height: 480px;
 }
 
-/* Phase 51 Plan 05 — Runner host (consumed by runner-view.ts awaiting-snippet-pick). */
-.rp-stp-runner-host {
-  width: 100%;
-}
-.rp-stp-runner-host .rp-stp-list {
-  max-height: 50vh;
-}
-
 /* Phase 56 D-10 (PICKER-01 follow-up): committed-state variant for the
  * «Выбрать эту папку» button. Applied by SnippetTreePicker when the
  * current drillPath equals committedRelativePath. Persistent (not an

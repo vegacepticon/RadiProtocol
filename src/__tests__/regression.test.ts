@@ -33,21 +33,6 @@ function hasSymbol(src: string, symbol: string): boolean {
 
 // ── CSS regressions ───────────────────────────────────────────────────────────
 
-describe('CSS regression: runner-view.css', () => {
-  let css: string;
-  beforeAll(() => { css = cssFile('runner-view'); });
-
-  // Regressed in phase-27 commit 96022c2 — textarea turned gray on hover
-  it('has .rp-preview-textarea:hover rule pinning background to primary', () => {
-    expect(css).toContain('.rp-preview-textarea:hover');
-    expect(css).toContain('background: var(--background-primary)');
-  });
-
-  it('has .rp-preview-textarea base rule', () => {
-    expect(hasRule(css, '.rp-preview-textarea')).toBe(true);
-  });
-});
-
 describe('CSS regression: editor-panel.css', () => {
   let css: string;
   beforeAll(() => { css = cssFile('editor-panel'); });

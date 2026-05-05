@@ -301,10 +301,9 @@ export function makeBasePlugin(opts: { textSeparator?: string; snippetFolderPath
     },
     snippetService: { load: vi.fn(async (_absPath: string) => null) },
     insertMutex: { runExclusive: vi.fn(async (_path: string, fn: () => Promise<void>) => fn()) },
-    activateRunnerView: vi.fn(),
     canvasLiveEditor: { getCanvasJSON: () => null },
     _vaultModifyCalls: [] as Array<[string, string]>,
-    // Phase 84 I18N-02: real I18nService so InlineRunnerModal/RunnerView constructors'
+    // Phase 84 I18N-02: real I18nService so InlineRunnerModal constructors'
     // `this.plugin.i18n.t.bind(this.plugin.i18n)` does not throw.
     i18n: new I18nService('ru'),
     // Phase 85 INLINE-MULTI-01: registry mock methods.

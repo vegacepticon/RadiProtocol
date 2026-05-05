@@ -30,8 +30,6 @@ const prod = process.argv[2] === 'production';
  */
 const CSS_FILES = [
   '_utilities',
-  'runner-view',
-  'canvas-selector',
   'editor-panel',
   'snippet-manager',
   'snippet-fill-modal',

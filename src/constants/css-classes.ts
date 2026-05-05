@@ -9,7 +9,6 @@ export const CSS_CLASS = {
   ERROR_TITLE: 'rp-error-title',
 
   // Snippet tree picker host wrappers
-  STP_RUNNER_HOST: 'rp-stp-runner-host',
   STP_INLINE_HOST: 'rp-stp-inline-host',
   STP_EDITOR_HOST: 'rp-stp-editor-host',
 } as const;

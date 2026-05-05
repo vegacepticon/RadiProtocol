@@ -1,9 +1,6 @@
-// Phase 75 Plan 04 (DEDUP-01) — focused unit tests for the shared snippet
-// picker renderer. These tests pin the behavior shared between RunnerView and
-// InlineRunnerModal: host-class wrapper, mode/rootPath, stale-result guard,
-// optional DOM guard, copy locale dispatch, and back-button wiring. Host-side
-// autosave / accumulator-delta flows continue to be covered by the existing
-// runner-snippet-picker / inline-runner-modal test suites.
+// Phase 75 Plan 04 (DEDUP-01) — focused unit tests for the snippet
+// picker renderer used by InlineRunnerModal: host-class wrapper, mode/rootPath, stale-result guard,
+// optional DOM guard, copy locale dispatch, and back-button wiring.
 
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import type { Snippet } from '../../snippets/snippet-model';
@@ -138,7 +135,7 @@ describe('renderSnippetPicker (Phase 75 Plan 04)', () => {
       app: {} as never,
       snippetService: { load, listFolder: vi.fn(), listFolderDescendants: vi.fn() } as never,
       rootPath: '.radiprotocol/snippets',
-      hostClass: 'rp-stp-runner-host',
+      hostClass: 'rp-stp-inline-host',
       copy: RU_COPY,
       bindClick: (el, handler) => { (el as unknown as FakeNode).clickHandler = handler; },
       getCurrentNodeId: () => 'n1',
@@ -152,7 +149,7 @@ describe('renderSnippetPicker (Phase 75 Plan 04)', () => {
     expect(opts.mode).toBe('file-only');
     expect(opts.rootPath).toBe('.radiprotocol/snippets/abdomen');
 
-    const hostDivs = findByClass(zone, 'rp-stp-runner-host');
+    const hostDivs = findByClass(zone, 'rp-stp-inline-host');
     expect(hostDivs.length).toBe(1);
 
     // Footer back button rendered when canStepBack === true.
@@ -196,7 +193,7 @@ describe('renderSnippetPicker (Phase 75 Plan 04)', () => {
       app: {} as never,
       snippetService: { load, listFolder: vi.fn(), listFolderDescendants: vi.fn() } as never,
       rootPath: '.radiprotocol/snippets',
-      hostClass: 'rp-stp-runner-host',
+      hostClass: 'rp-stp-inline-host',
       copy: RU_COPY,
       bindClick: (el, handler) => { (el as unknown as FakeNode).clickHandler = handler; },
       getCurrentNodeId: () => 'n1',
@@ -223,7 +220,7 @@ describe('renderSnippetPicker (Phase 75 Plan 04)', () => {
       app: {} as never,
       snippetService: { load, listFolder: vi.fn(), listFolderDescendants: vi.fn() } as never,
       rootPath: '.radiprotocol/snippets',
-      hostClass: 'rp-stp-runner-host',
+      hostClass: 'rp-stp-inline-host',
       copy: RU_COPY,
       bindClick: (el, handler) => { (el as unknown as FakeNode).clickHandler = handler; },
       getCurrentNodeId: () => 'n1',
@@ -298,7 +295,7 @@ describe('renderSnippetPicker (Phase 75 Plan 04)', () => {
       app: {} as never,
       snippetService: { load, listFolder: vi.fn(), listFolderDescendants: vi.fn() } as never,
       rootPath: '.radiprotocol/snippets',
-      hostClass: 'rp-stp-runner-host',
+      hostClass: 'rp-stp-inline-host',
       copy: RU_COPY,
       bindClick: (el, handler) => { (el as unknown as FakeNode).clickHandler = handler; },
       getCurrentNodeId: () => currentNodeId,
@@ -358,7 +355,7 @@ describe('renderSnippetPicker (Phase 75 Plan 04)', () => {
       app: {} as never,
       snippetService: { load: vi.fn(), listFolder: vi.fn(), listFolderDescendants: vi.fn() } as never,
       rootPath: '.radiprotocol/snippets',
-      hostClass: 'rp-stp-runner-host',
+      hostClass: 'rp-stp-inline-host',
       copy: RU_COPY,
       bindClick: (el, handler) => { (el as unknown as FakeNode).clickHandler = handler; },
       getCurrentNodeId: () => 'n1',
@@ -378,7 +375,7 @@ describe('renderSnippetPicker (Phase 75 Plan 04)', () => {
         app: {} as never,
         snippetService: { load: vi.fn(), listFolder: vi.fn(), listFolderDescendants: vi.fn() } as never,
         rootPath: '.radiprotocol/snippets',
-        hostClass: 'rp-stp-runner-host',
+        hostClass: 'rp-stp-inline-host',
         copy: RU_COPY,
         bindClick: (el, handler) => { (el as unknown as FakeNode).clickHandler = handler; },
         getCurrentNodeId: () => 'n1',

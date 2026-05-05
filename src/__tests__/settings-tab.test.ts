@@ -6,20 +6,12 @@ import {
   __resetObsidianMocks,
 } from '../__mocks__/obsidian';
 
-describe('Settings defaults (UI-10, UI-11, RUN-07)', () => {
-  it('UI-10: DEFAULT_SETTINGS.outputDestination is clipboard', () => {
-    expect(DEFAULT_SETTINGS.outputDestination).toBe('clipboard');
-  });
-
-  it('UI-11: DEFAULT_SETTINGS.outputFolderPath is RadiProtocol Output', () => {
-    expect(DEFAULT_SETTINGS.outputFolderPath).toBe('RadiProtocol Output');
-  });
-
+describe('Settings defaults (RUN-07)', () => {
   it('RUN-07: no legacy loop-iteration-cap field on DEFAULT_SETTINGS', () => {
     expect('maxLoopIterations' in DEFAULT_SETTINGS).toBe(false);
   });
 
-  it('UI-10/D-10: RadiProtocolSettingsTab has display method (stub check)', async () => {
+  it('SettingsTab has display method (stub check)', async () => {
     // Full settings tab test requires Obsidian environment — manual only.
     // This stub verifies the class is importable and has the display method.
     const { RadiProtocolSettingsTab } = await import('../settings');
@@ -77,53 +69,46 @@ describe('Settings folder autocomplete (SETTINGS-01)', () => {
     __resetObsidianMocks();
   });
 
-  it('attaches folder suggesters to Protocol, Output, and Snippet fields only', () => {
+  it('attaches folder suggesters to Protocol and Snippet fields only', () => {
     const { textComponents, suggesters } = renderSettings();
 
-    expect(textComponents).toHaveLength(5);
-    expect(suggesters).toHaveLength(3);
+    expect(textComponents).toHaveLength(4);
+    expect(suggesters).toHaveLength(2);
     expect(suggesters.map((suggester: { textInputEl: unknown }) => suggester.textInputEl)).toEqual([
       textComponents[0]!.inputEl,
       textComponents[1]!.inputEl,
-      textComponents[2]!.inputEl,
     ]);
+    expect(suggesters.map((suggester: { textInputEl: unknown }) => suggester.textInputEl)).not.toContain(textComponents[2]!.inputEl);
     expect(suggesters.map((suggester: { textInputEl: unknown }) => suggester.textInputEl)).not.toContain(textComponents[3]!.inputEl);
-    expect(suggesters.map((suggester: { textInputEl: unknown }) => suggester.textInputEl)).not.toContain(textComponents[4]!.inputEl);
   });
 
   it('typing wired fields still persists through field-specific save handlers', async () => {
     const { plugin, textComponents } = renderSettings({
       protocolFolderPath: 'Old Protocols',
-      outputFolderPath: 'Old Output',
       snippetFolderPath: 'Old Snippets',
     });
-    const [protocolText, outputText, snippetText] = textComponents;
+    const [protocolText, snippetText] = textComponents;
 
     protocolText!.inputEl.value = ' Protocols/CT ';
     protocolText!.inputEl.dispatchEvent({ type: 'input', bubbles: true });
-    outputText!.inputEl.value = '   ';
-    outputText!.inputEl.dispatchEvent({ type: 'input', bubbles: true });
     snippetText!.inputEl.value = '';
     snippetText!.inputEl.dispatchEvent({ type: 'input', bubbles: true });
     await Promise.resolve();
 
     expect(plugin.settings.protocolFolderPath).toBe('Protocols/CT');
-    expect(plugin.settings.outputFolderPath).toBe('RadiProtocol Output');
     expect(plugin.settings.snippetFolderPath).toBe('.radiprotocol/snippets');
-    expect(plugin.saveSettingsCalls).toBe(3);
+    expect(plugin.saveSettingsCalls).toBe(2);
   });
 
   it('selecting suggestions reaches the same save-on-change pathway as typing', async () => {
     const { plugin, suggesters } = renderSettings();
 
     suggesters[0]!.selectSuggestion('Protocols/MR', {} as KeyboardEvent);
-    suggesters[1]!.selectSuggestion('Reports', {} as KeyboardEvent);
-    suggesters[2]!.selectSuggestion('.radiprotocol/snippets/CT', {} as KeyboardEvent);
+    suggesters[1]!.selectSuggestion('.radiprotocol/snippets/CT', {} as KeyboardEvent);
     await Promise.resolve();
 
     expect(plugin.settings.protocolFolderPath).toBe('Protocols/MR');
-    expect(plugin.settings.outputFolderPath).toBe('Reports');
     expect(plugin.settings.snippetFolderPath).toBe('.radiprotocol/snippets/CT');
-    expect(plugin.saveSettingsCalls).toBe(3);
+    expect(plugin.saveSettingsCalls).toBe(2);
   });
 });

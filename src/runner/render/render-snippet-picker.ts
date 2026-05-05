@@ -26,7 +26,7 @@ import { renderRunnerFooter, type RunnerFooterHost } from './render-footer';
 
 export type AwaitingSnippetPickState = Extract<RunnerState, { status: 'awaiting-snippet-pick' }>;
 
-export type SnippetPickerHostClass = typeof CSS_CLASS.STP_RUNNER_HOST | typeof CSS_CLASS.STP_INLINE_HOST;
+export type SnippetPickerHostClass = typeof CSS_CLASS.STP_INLINE_HOST;
 
 /** Host-supplied copy for async errors surfaced by the picker. RunnerView ships RU,
  *  InlineRunnerModal ships EN — divergence preserved per Phase 75 CONTEXT. */
@@ -42,9 +42,9 @@ export interface SnippetPickerRenderOptions extends RunnerFooterHost {
   snippetService: SnippetService;
   /** Vault-relative root path (plugin.settings.snippetFolderPath). */
   rootPath: string;
-  /** Host wrapper CSS hook. RunnerView: rp-stp-runner-host; Inline modal: rp-stp-inline-host. */
+  /** Host wrapper CSS hook. Inline modal: rp-stp-inline-host. */
   hostClass: SnippetPickerHostClass;
-  /** Copy locale (RU vs EN divergence preserved unless explicitly merged). */
+  /** Copy locale (EN divergence preserved unless explicitly merged). */
   copy: SnippetPickerCopy;
   /** Returns the runner's current awaiting-snippet-pick nodeId, or null if the
    *  state has changed (advanced/stepped-back/error/etc). T-30-04 stale-result guard. */

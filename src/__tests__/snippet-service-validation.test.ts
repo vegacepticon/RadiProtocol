@@ -38,9 +38,6 @@ const settings = {
   snippetFolderPath: 'Protocols/Snippets',
   snippetTreeExpandedPaths: [] as string[],
   sessionFolderPath: '.radiprotocol/sessions',
-  outputDestination: 'clipboard' as const,
-  outputFolderPath: '',
-  runnerViewMode: 'sidebar' as const,
   protocolFolderPath: '',
   textSeparator: 'newline' as const,
 };

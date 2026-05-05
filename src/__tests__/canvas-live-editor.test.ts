@@ -4,7 +4,6 @@
 
 import { describe, it, expect, vi } from 'vitest';
 import { CanvasLiveEditor } from '../canvas/canvas-live-editor';
-import { RunnerView } from '../views/runner-view';
 import type { App } from 'obsidian';
 import type { CanvasData } from '../types/canvas-internal';
 
@@ -94,15 +93,5 @@ describe('CanvasLiveEditor.getCanvasJSON()', () => {
     const result = editor.getCanvasJSON('test.canvas');
 
     expect(result).toBeNull();
-  });
-});
-
-// ── Describe: RunnerView.openCanvas() structural contract ────────────────────
-describe('RunnerView.openCanvas() live-data contract (BUG-02, BUG-03)', () => {
-  it('Test 4: RunnerView.prototype.openCanvas exists (regression guard for live-data integration)', () => {
-    // Structural check: openCanvas() method must exist on RunnerView prototype.
-    // The method body is updated in Task 2 to call getCanvasJSON() before vault.read().
-    // Integration is verified via UAT; this guards against accidental removal of the method.
-    expect(typeof (RunnerView.prototype as unknown as Record<string, unknown>)['openCanvas']).toBe('function');
   });
 });
