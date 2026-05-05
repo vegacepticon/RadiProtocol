@@ -13,3 +13,6 @@ src/styles.css
 # OS files
 .DS_Store
 Thumbs.db
+
+# Planning artifacts (GSD) — kept locally, not committed
+.planning/
