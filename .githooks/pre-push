@@ -1,0 +1,22 @@
+#!/usr/bin/env bash
+# Pre-push hook — full test suite + lint gate.
+# Blocks push if lint errors or tests fail.
+# Bypass: git push --no-verify
+
+set -e
+
+echo "╭─ RadiProtocol pre-push gate ────────────────────────────────────────────"
+
+echo "│ Running eslint…"
+npx eslint .
+echo "│ ✓ ESLint passed"
+
+echo "│ Running stylelint…"
+npx stylelint 'src/styles/**/*.css'
+echo "│ ✓ Stylelint passed"
+
+echo "│ Running full test suite…"
+npm test
+
+echo "│ ✓ Tests passed"
+echo "╰────────────────────────────────────────────────────────────────────────"

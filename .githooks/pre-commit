@@ -1,82 +1,37 @@
 #!/usr/bin/env bash
-# Phase 78 + 80: Pre-commit hook — lint (ESLint + Stylelint) + test gate
-# Blocks commit if staged files have lint errors or tests fail.
+# Pre-commit hook — fast gate: lint only (ESLint + Stylelint).
+# Full test suite runs on pre-push to keep commits snappy.
 # Bypass: git commit --no-verify
 
 set -e
 
-echo "╭─ RadiProtocol pre-commit gate ──────────────────────────────────────────"
+echo "╭— RadiProtocol pre-commit gate ———————————————————————————————————————————————————————"
 
-# 1. Collect staged files
 STAGED_TS=$(git diff --cached --name-only --diff-filter=ACM | grep '\.ts$' || true)
 STAGED_CSS=$(git diff --cached --name-only --diff-filter=ACM | grep '\.css$' || true)
 
 if [ -z "$STAGED_TS" ] && [ -z "$STAGED_CSS" ]; then
-  echo "│ No staged *.ts / *.css files — skipping lint + test."
-  echo "╰──────────────────────────────────────────────────────────────────────"
+  echo "│ No staged *.ts / *.css files — skipping."
+  echo "╰—————————————————————————————————————————————————————————————————————————————————————"
   exit 0
 fi
 
-# 2. ESLint on staged *.ts files
 if [ -n "$STAGED_TS" ]; then
-  echo "│ Checking ${STAGED_TS#*$'\n'}"
-  echo "│"
   echo "│ Running eslint on staged files…"
-  LINT_OUTPUT=$(npx eslint $STAGED_TS 2>&1) && LINT_EXIT=0 || LINT_EXIT=$?
-
-  if [ "$LINT_EXIT" -ne 0 ]; then
-    echo "│ ✖ ESLINT FAILED"
-    echo "│"
-    echo "$LINT_OUTPUT" | while IFS= read -r line; do
-      echo "│   $line"
-    done
-    echo "│"
-    echo "│ Fix the errors or use: git commit --no-verify"
-    echo "╰──────────────────────────────────────────────────────────────────────"
-    exit 1
-  fi
-
+  npx eslint $STAGED_TS
   echo "│ ✓ ESLint passed"
-  echo "│"
 fi
 
-# 3. Stylelint on staged *.css files
 if [ -n "$STAGED_CSS" ]; then
   echo "│ Running stylelint on staged CSS files…"
-  SL_OUTPUT=$(npx stylelint $STAGED_CSS 2>&1) && SL_EXIT=0 || SL_EXIT=$?
-
-  if [ "$SL_EXIT" -ne 0 ]; then
-    echo "│ ✖ STYLELINT FAILED"
-    echo "│"
-    echo "$SL_OUTPUT" | while IFS= read -r line; do
-      echo "│   $line"
-    done
-    echo "│"
-    echo "│ Fix the errors or use: git commit --no-verify"
-    echo "╰──────────────────────────────────────────────────────────────────────"
-    exit 1
-  fi
-
+  npx stylelint $STAGED_CSS
   echo "│ ✓ Stylelint passed"
-  echo "│"
 fi
 
-# 4. Run full test suite
-echo "│ Running test suite…"
-TEST_OUTPUT=$(npm test 2>&1) && TEST_EXIT=0 || TEST_EXIT=$?
+# Fast affected-test gate (vitest --changed) — runs only tests impacted by
+# staged files. Full suite is enforced by pre-push.
+echo "│ Running affected tests (vitest --changed)…"
+npx vitest run --changed
 
-if [ "$TEST_EXIT" -ne 0 ]; then
-  echo "│ ✖ TESTS FAILED"
-  echo "│"
-  echo "$TEST_OUTPUT" | tail -30 | while IFS= read -r line; do
-    echo "│   $line"
-  done
-  echo "│"
-  echo "│ Fix the tests or use: git commit --no-verify"
-  echo "╰──────────────────────────────────────────────────────────────────────"
-  exit 1
-fi
-
-echo "│ ✓ Tests passed"
-echo "│"
-echo "╰──────────────────────────────────────────────────────────────────────"
+echo "│ ✓ Affected tests passed"
+echo "╰—————————————————————————————————————————————————————————————————————————————————————"
