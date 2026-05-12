@@ -14,6 +14,7 @@ import { ConfirmModal } from './confirm-modal';
 import { LibraryBrowserModal } from './library-browser-modal';
 import { SnippetTreePicker } from './snippet-tree-picker';
 import { rewriteCanvasRefs } from '../snippets/canvas-ref-sync';
+import { rewriteProtocolSnippetRefs } from '../snippets/protocol-ref-sync';
 import { toCanvasKey } from '../snippets/snippet-service';
 import { SnippetManagerTreeRenderer } from './snippet-manager/tree-renderer';
 import type { TreeNode, TreeNodeFolder, TreeNodeFile } from './snippet-manager/tree-renderer';
@@ -502,10 +503,17 @@ export class SnippetManagerView extends ItemView {
     if (srcKind === 'file') {
       // No-op: already in the target folder.
       if (dirname(srcPath) === dstFolder) return;
-      // D-03 corollary 2: file rename/move is canvas-invisible — no
-      // rewriteCanvasRefs, no canvases-updated Notice.
-      await this.plugin.snippetService.moveSnippet(srcPath, dstFolder);
-      new Notice(t('snippetManager.snippetMovedNotice'));
+      const newPath = await this.plugin.snippetService.moveSnippet(srcPath, dstFolder);
+      const snippetRoot = this.plugin.settings.snippetFolderPath;
+      const mapping = new Map<string, string>([
+        [toCanvasKey(srcPath, snippetRoot), toCanvasKey(newPath, snippetRoot)],
+      ]);
+      const canvasResult = await rewriteCanvasRefs(this.app, mapping, this.plugin.canvasLiveEditor);
+      const protocolResult = await rewriteProtocolSnippetRefs(this.app, mapping);
+      new Notice(t('snippetManager.movedFileNotice', {
+        canvasCount: String(canvasResult.updated.length),
+        protocolCount: String(protocolResult.updated.length),
+      }));
       await this.rebuildTreeModel();
       this.renderTree();
       return;
@@ -521,14 +529,15 @@ export class SnippetManagerView extends ItemView {
     const mapping = new Map<string, string>([
       [toCanvasKey(oldPath, snippetRoot), toCanvasKey(newPath, snippetRoot)],
     ]);
-    const result = await rewriteCanvasRefs(this.app, mapping, this.plugin.canvasLiveEditor);
+    const canvasResult = await rewriteCanvasRefs(this.app, mapping, this.plugin.canvasLiveEditor);
+    const protocolResult = await rewriteProtocolSnippetRefs(this.app, mapping);
 
     // D-07: expand-state prefix rewrite.
     await this.rewriteExpandState(oldPath, newPath);
 
     new Notice(t('snippetManager.movedFolderNotice', {
-      updated: String(result.updated.length),
-      skipped: String(result.skipped.length),
+      canvasCount: String(canvasResult.updated.length),
+      protocolCount: String(protocolResult.updated.length),
     }));
     await this.rebuildTreeModel();
     this.renderTree();

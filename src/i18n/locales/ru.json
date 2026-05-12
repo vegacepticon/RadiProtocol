@@ -141,7 +141,8 @@
     "selectFolderCommitted": "✓ Выбрано",
     "emptyResults": "Ничего не найдено",
     "emptyFolder": "Здесь пусто",
-    "searchPlaceholder": "Поиск…"
+    "searchPlaceholder": "Поиск…",
+    "upBtnLabel": "Родительская папка"
   },
   "snippetManager": {
     "newButton": "Новый",
@@ -176,8 +177,9 @@
     "moveSelfError": "Нельзя переместить папку в саму себя.",
     "moveSelfDescendantError": "Нельзя переместить в подпапку самого себя.",
     "invalidTargetError": "Эта папка недоступна как цель перемещения.",
-    "movedFolderNotice": "Папка перемещена. Обновлено канвасов: {updated}, пропущено: {skipped}.",
+    "movedFolderNotice": "Папка перемещена. Обновлено {canvasCount} канвас(ов), {protocolCount} протокол(ов).",
     "cannotMoveIntoSelf": "Нельзя переместить папку внутрь самой себя.",
+    "movedFileNotice": "Сниппет перемещён. Обновлено {canvasCount} канвас(ов), {protocolCount} протокол(ов).",
     "snippetMovedNotice": "Сниппет перемещён.",
     "emptyStateTitle": "Библиотека сниппетов пуста",
     "emptyStateBody": "Создайте первый сниппет, чтобы вставлять фрагменты текста при прохождении протоколов.",

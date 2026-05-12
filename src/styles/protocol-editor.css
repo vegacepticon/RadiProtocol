@@ -28,9 +28,17 @@
   color: var(--text-muted);
 }
 
-.rp-protocol-editor-viewport {
+.rp-protocol-editor-workspace {
   position: relative;
   flex: 1 1 auto;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.rp-protocol-editor-viewport {
+  position: relative;
+  width: 100%;
+  height: 100%;
   min-height: 0;
   overflow: hidden;
   background-color: var(--background-secondary);

@@ -13,7 +13,7 @@
 // Public API: SnippetTreePicker class. Owns drill-state + search-state — reset on each mount().
 // No global state. No localStorage. No singleton.
 
-import type { App } from 'obsidian';
+import { setIcon, type App } from 'obsidian';
 import type { SnippetService } from '../snippets/snippet-service';
 import type { Snippet } from '../snippets/snippet-model';
 import { createButton, createInput } from '../utils/dom-helpers';
@@ -22,7 +22,6 @@ import { defaultT, type Translator } from '../i18n';
 // ── Constants ────────────────────────────────────────────────────────────
 
 const SEARCH_DEBOUNCE_MS = 120;
-const UP_BUTTON_LABEL = 'Up';
 // Phase 84 (I18N-02): user-visible copy is resolved at render time via the
 // picker's translator (defaults to defaultT for English). Keys live in
 // snippetTreePicker.* of the i18n locale files.
@@ -219,21 +218,40 @@ export class SnippetTreePicker {
     this.removeListenersExceptSearch();
     this.removeBody(host);
 
-    // Breadcrumb row.
+    // Compact breadcrumb row. Segment clicks navigate directly; parent icon replaces the old text "Up" button.
     const breadcrumb = host.createDiv({ cls: 'rp-stp-breadcrumb' });
-    const crumbText = this.drillPath.length === 0 ? '/' : this.drillPath.join('/');
-    breadcrumb.createEl('span', { cls: 'rp-stp-breadcrumb-label', text: crumbText });
-
+    breadcrumb.createEl('span', {
+      cls: 'rp-stp-breadcrumb-label',
+      text: this.drillPath.length === 0 ? '/' : this.drillPath.join('/'),
+    });
     if (this.drillPath.length > 0) {
-      const upBtn = createButton(breadcrumb, {
-        cls: 'rp-stp-up-btn',
-        text: UP_BUTTON_LABEL,
-      });
+      const upBtn = createButton(breadcrumb, { cls: 'rp-stp-up-btn', attr: { 'aria-label': 'Parent folder', title: 'Parent folder' } });
+      setIcon(upBtn, 'arrow-up');
       this.addListener(upBtn, 'click', () => {
         this.drillPath.pop();
         void this.renderDrillView();
       });
     }
+
+    const rootCrumb = createButton(breadcrumb, {
+      cls: 'rp-stp-crumb',
+      text: this.drillPath.length === 0 ? '/' : '⌂',
+    });
+    this.addListener(rootCrumb, 'click', () => {
+      this.drillPath = [];
+      void this.renderDrillView();
+    });
+    this.drillPath.forEach((segment, index) => {
+      breadcrumb.createEl('span', { cls: 'rp-stp-crumb-separator', text: '/' });
+      const crumb = createButton(breadcrumb, {
+        cls: 'rp-stp-crumb',
+        text: segment,
+      });
+      this.addListener(crumb, 'click', () => {
+        this.drillPath = this.drillPath.slice(0, index + 1);
+        void this.renderDrillView();
+      });
+    });
 
     // "Select this folder" button — only in folder-only / both modes, and only when drilled in
     // (we don't emit folder-of-root selection from the button; rootPath selection is not in scope).
@@ -301,7 +319,10 @@ export class SnippetTreePicker {
   ): void {
     const row = createButton(listEl, { cls: 'rp-stp-folder-row' });
     const nameEl = row.createEl('div', { cls: 'rp-stp-result-name' });
-    nameEl.setText(`${GLYPH_FOLDER} ${folderName}`);
+    nameEl.setText(`${GLYPH_FOLDER} ${basenameOf(folderName)}`);
+    nameEl.empty();
+    nameEl.createEl('span', { cls: 'rp-stp-row-glyph', text: GLYPH_FOLDER });
+    nameEl.createEl('span', { cls: 'rp-stp-row-title', text: basenameOf(folderName) });
     if (isSearchResult) {
       // Secondary line: full relative-from-rootPath path.
       // folderName here is the relative path from rootPath (for search-result rows).
@@ -344,6 +365,9 @@ export class SnippetTreePicker {
     const row = createButton(listEl, { cls: 'rp-stp-file-row' });
     const nameEl = row.createEl('div', { cls: 'rp-stp-result-name' });
     nameEl.setText(`${fileGlyph(basename)} ${basename}`);
+    nameEl.empty();
+    nameEl.createEl('span', { cls: 'rp-stp-row-glyph', text: fileGlyph(basename) });
+    nameEl.createEl('span', { cls: 'rp-stp-row-title', text: basename });
     if (isSearchResult) {
       const pathEl = row.createEl('div', { cls: 'rp-stp-result-path' });
       pathEl.setText(relativePath);

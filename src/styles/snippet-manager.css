@@ -183,7 +183,7 @@
 .radi-snippet-tree-body {
   flex: 1 1 auto;
   overflow-y: auto;
-  padding: var(--size-4-1) 0;
+  padding: var(--size-2-2) 0;
 }
 
 /* --- Tree rows -------------------------------------------------------- */
@@ -191,13 +191,15 @@
   display: flex;
   flex-direction: row;
   align-items: center;
-  gap: var(--size-2-1);
-  padding: var(--size-4-1) var(--size-4-2);
-  min-height: 28px;
+  gap: var(--size-2-2);
+  padding: 3px var(--size-2-3);
+  min-height: 24px;
   cursor: pointer;
   color: var(--text-normal);
-  font-size: var(--font-ui-small);
+  font-size: var(--font-ui-smaller);
   user-select: none;
+  border-radius: var(--radius-s);
+  margin: 0 var(--size-2-1);
 }
 
 .radi-snippet-tree-row:hover {
@@ -222,8 +224,8 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 12px;
-  height: 12px;
+  width: 14px;
+  height: 14px;
   color: var(--text-muted);
   flex-shrink: 0;
 }
@@ -237,6 +239,8 @@
   align-items: center;
   justify-content: center;
   color: var(--text-muted);
+  width: 15px;
+  height: 15px;
   flex-shrink: 0;
 }
 
@@ -251,7 +255,7 @@
 .radi-snippet-tree-actions {
   display: inline-flex;
   align-items: center;
-  gap: var(--size-2-1);
+  gap: 1px;
   opacity: 0;
   transition: opacity 150ms ease-out;
 }
@@ -264,10 +268,10 @@
   background: transparent;
   border: none;
   color: var(--text-muted);
-  padding: var(--size-2-1);
+  padding: 0;
   cursor: pointer;
-  min-width: 24px;
-  min-height: 24px;
+  min-width: 20px;
+  min-height: 20px;
   display: inline-flex;
   align-items: center;
   justify-content: center;

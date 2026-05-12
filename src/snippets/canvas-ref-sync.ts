@@ -33,9 +33,8 @@ const canvasMutex = new WriteMutex();
  *     nodes is not written (avoids churn and mtime bumps).
  *
  * @param app Obsidian App
- * @param mapping old folder path → new folder path (paths are in the same format
- *   as SnippetNode.subfolderPath, i.e. relative to settings.snippetFolderPath,
- *   without leading slash)
+ * @param mapping old path → new path (paths are relative to
+ *   settings.snippetFolderPath, without leading slash)
  */
 export async function rewriteCanvasRefs(
   app: App,
@@ -69,27 +68,42 @@ export async function rewriteCanvasRefs(
                 for (const node of liveParsed.nodes as Array<Record<string, unknown>>) {
                   if (!node || typeof node !== 'object') continue;
                   if (node['radiprotocol_nodeType'] !== 'snippet') continue;
-                  const current = node['radiprotocol_subfolderPath'];
-                  if (typeof current !== 'string' || current === '') continue;
-                  const rewritten = applyMapping(current, mapping);
-                  if (rewritten !== null && rewritten !== current) {
-                    // WR-02: guard node.id — malformed canvases may have missing or
-                    // non-string ids. Without this guard, saveLive would receive
-                    // `undefined` and either mutate the wrong node or return false.
-                    const id = node['id'];
-                    if (typeof id !== 'string' || id === '') continue;
-                    const nodeEdits: Record<string, unknown> = {
-                      radiprotocol_subfolderPath: rewritten,
-                    };
-                    const currentText = node['text'];
-                    if (typeof currentText === 'string' && currentText !== '') {
-                      const rewrittenText = applyMapping(currentText, mapping);
-                      if (rewrittenText !== null && rewrittenText !== currentText) {
-                        nodeEdits['text'] = rewrittenText;
+
+                  const nodeEdits: Record<string, unknown> = {};
+
+                  // subfolderPath arm
+                  const currentSubfolder = node['radiprotocol_subfolderPath'];
+                  if (typeof currentSubfolder === 'string' && currentSubfolder !== '') {
+                    const rewritten = applyMapping(currentSubfolder, mapping);
+                    if (rewritten !== null && rewritten !== currentSubfolder) {
+                      nodeEdits['radiprotocol_subfolderPath'] = rewritten;
+                      const currentText = node['text'];
+                      if (typeof currentText === 'string' && currentText !== '') {
+                        const rewrittenText = applyMapping(currentText, mapping);
+                        if (rewrittenText !== null && rewrittenText !== currentText) {
+                          nodeEdits['text'] = rewrittenText;
+                        }
                       }
                     }
-                    editsToApply.push({ nodeId: id, edits: nodeEdits });
                   }
+
+                  // snippetPath arm
+                  const currentSnippetPath = node['radiprotocol_snippetPath'];
+                  if (typeof currentSnippetPath === 'string' && currentSnippetPath !== '') {
+                    const rewritten = applyMapping(currentSnippetPath, mapping);
+                    if (rewritten !== null && rewritten !== currentSnippetPath) {
+                      nodeEdits['radiprotocol_snippetPath'] = rewritten;
+                    }
+                  }
+
+                  if (Object.keys(nodeEdits).length === 0) continue;
+
+                  // WR-02: guard node.id — malformed canvases may have missing or
+                  // non-string ids. Without this guard, saveLive would receive
+                  // `undefined` and either mutate the wrong node or return false.
+                  const id = node['id'];
+                  if (typeof id !== 'string' || id === '') continue;
+                  editsToApply.push({ nodeId: id, edits: nodeEdits });
                 }
 
                 if (editsToApply.length === 0) return; // No matching nodes
@@ -132,24 +146,35 @@ export async function rewriteCanvasRefs(
         for (const node of parsed.nodes as Array<Record<string, unknown>>) {
           if (!node || typeof node !== 'object') continue;
           if (node['radiprotocol_nodeType'] !== 'snippet') continue;
-          const current = node['radiprotocol_subfolderPath'];
-          // WR-02: treat null/empty/missing as "root" — no rewrite possible
-          if (typeof current !== 'string' || current === '') continue;
 
-          const rewritten = applyMapping(current, mapping);
-          if (rewritten !== null && rewritten !== current) {
-            node['radiprotocol_subfolderPath'] = rewritten;
-            // Phase 37 gap fix: also update text field so canvas displays new name.
-            // Canvas nodes store subfolderPath in both `text` (visual) and
-            // `radiprotocol_subfolderPath` (logical). Apply the same mapping to text.
-            const currentText = node['text'];
-            if (typeof currentText === 'string' && currentText !== '') {
-              const rewrittenText = applyMapping(currentText, mapping);
-              if (rewrittenText !== null && rewrittenText !== currentText) {
-                node['text'] = rewrittenText;
+          // subfolderPath arm
+          const currentSubfolder = node['radiprotocol_subfolderPath'];
+          if (typeof currentSubfolder === 'string' && currentSubfolder !== '') {
+            const rewritten = applyMapping(currentSubfolder, mapping);
+            if (rewritten !== null && rewritten !== currentSubfolder) {
+              node['radiprotocol_subfolderPath'] = rewritten;
+              // Phase 37 gap fix: also update text field so canvas displays new name.
+              // Canvas nodes store subfolderPath in both `text` (visual) and
+              // `radiprotocol_subfolderPath` (logical). Apply the same mapping to text.
+              const currentText = node['text'];
+              if (typeof currentText === 'string' && currentText !== '') {
+                const rewrittenText = applyMapping(currentText, mapping);
+                if (rewrittenText !== null && rewrittenText !== currentText) {
+                  node['text'] = rewrittenText;
+                }
               }
+              mutated = true;
             }
-            mutated = true;
+          }
+
+          // snippetPath arm
+          const currentSnippetPath = node['radiprotocol_snippetPath'];
+          if (typeof currentSnippetPath === 'string' && currentSnippetPath !== '') {
+            const rewritten = applyMapping(currentSnippetPath, mapping);
+            if (rewritten !== null && rewritten !== currentSnippetPath) {
+              node['radiprotocol_snippetPath'] = rewritten;
+              mutated = true;
+            }
           }
         }
 

@@ -177,7 +177,8 @@ vi.mock('obsidian', () => {
   class Notice { constructor(_m: string) {} }
   class TFile { path = ''; }
   class Plugin { app: unknown = {}; manifest: unknown = {}; }
-  return { ItemView, WorkspaceLeaf, Modal, SuggestModal, Setting, Notice, TFile, Plugin };
+  const setIcon = (el: { textContent?: string }, icon: string): void => { el.textContent = icon; };
+  return { ItemView, WorkspaceLeaf, Modal, SuggestModal, Setting, Notice, TFile, Plugin, setIcon };
 });
 
 // --- Now import the module under test ------------------------------------

@@ -256,19 +256,28 @@ export class ProtocolEditorView extends ItemView {
     const zoomIndicator = actions.createDiv({ cls: 'rp-protocol-editor-zoom-indicator' });
     zoomIndicator.setText(`${Math.round(this.zoom * 100)}%`);
 
-    this.viewportEl = this.rootEl.createDiv({ cls: 'rp-protocol-editor-viewport' });
+    const workspace = this.rootEl.createDiv({ cls: 'rp-protocol-editor-workspace' });
+    this.viewportEl = workspace.createDiv({ cls: 'rp-protocol-editor-viewport' });
     this.viewportEl.setAttr('data-zoom', String(this.zoom));
     this.surfaceEl = this.viewportEl.createDiv({ cls: 'rp-protocol-editor-surface' });
     this.svgEl = this.viewportEl.createSvg('svg', { cls: 'rp-protocol-editor-edges' });
-    this.minimapEl = this.viewportEl.createDiv({ cls: 'rp-protocol-editor-minimap' });
-    this.minimapEl.setAttr('role', 'button');
-    this.minimapEl.setAttr('aria-label', this.plugin.i18n.t('protocolEditor.minimapLabel'));
-    this.minimapSvgEl = this.minimapEl.createSvg('svg', {
-      attr: {
-        class: 'rp-protocol-editor-minimap-svg',
-        viewBox: `0 0 ${DEFAULT_VIEWPORT_WIDTH} ${DEFAULT_VIEWPORT_HEIGHT}`,
-      },
-    }) as SVGSVGElement;
+
+    if (this.doc !== null) {
+      this.minimapEl = workspace.createDiv({ cls: 'rp-protocol-editor-minimap' });
+      this.minimapEl.setAttr('role', 'button');
+      this.minimapEl.setAttr('aria-label', this.plugin.i18n.t('protocolEditor.minimapLabel'));
+      this.minimapSvgEl = this.minimapEl.createSvg('svg', {
+        attr: {
+          class: 'rp-protocol-editor-minimap-svg',
+          viewBox: `0 0 ${DEFAULT_VIEWPORT_WIDTH} ${DEFAULT_VIEWPORT_HEIGHT}`,
+        },
+      }) as SVGSVGElement;
+    } else {
+      this.minimapEl = null;
+      this.minimapSvgEl = null;
+      this.minimapViewportEl = null;
+    }
+
     this.applyZoom();
     this.bindViewportControls();
     this.bindMinimapControls();

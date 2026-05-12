@@ -141,7 +141,8 @@
     "selectFolderCommitted": "✓ Selected",
     "emptyResults": "No matches found",
     "emptyFolder": "Empty here",
-    "searchPlaceholder": "Search…"
+    "searchPlaceholder": "Search…",
+    "upBtnLabel": "Parent folder"
   },
   "snippetManager": {
     "newButton": "New",
@@ -176,8 +177,9 @@
     "moveSelfError": "Cannot move a folder into itself.",
     "moveSelfDescendantError": "Cannot move into a subfolder of itself.",
     "invalidTargetError": "This folder is not available as a move target.",
-    "movedFolderNotice": "Folder moved. Canvases updated: {updated}, skipped: {skipped}.",
+    "movedFolderNotice": "Folder moved. Updated {canvasCount} canvas(s), {protocolCount} protocol(s).",
     "cannotMoveIntoSelf": "Cannot move folder into itself.",
+    "movedFileNotice": "Snippet moved. Updated {canvasCount} canvas(s), {protocolCount} protocol(s).",
     "snippetMovedNotice": "Snippet moved.",
     "emptyStateTitle": "Snippet library is empty",
     "emptyStateBody": "Create your first snippet to insert text fragments while running protocols.",

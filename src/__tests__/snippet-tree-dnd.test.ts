@@ -241,6 +241,15 @@ vi.mock('../snippets/canvas-ref-sync', () => ({
   rewriteCanvasRefs: (app: unknown, mapping: Map<string, string>) => rewriteCanvasRefsSpy(app, mapping),
 }));
 
+// --- Spy on rewriteProtocolSnippetRefs ------------------------------------
+const rewriteProtocolSnippetRefsSpy = vi.fn(async (_app: unknown, _mapping: Map<string, string>) => ({
+  updated: ['protocol-a.rp.json'],
+  skipped: [],
+}));
+vi.mock('../snippets/protocol-ref-sync', () => ({
+  rewriteProtocolSnippetRefs: (app: unknown, mapping: Map<string, string>) => rewriteProtocolSnippetRefsSpy(app, mapping),
+}));
+
 // --- Stub other modal imports referenced in snippet-manager-view ---------
 vi.mock('../views/snippet-editor-modal', () => ({
   SnippetEditorModal: class {
@@ -309,7 +318,7 @@ function makePlugin(opts: {
     })),
   };
   const plugin = {
-    app: { vault: { on: vi.fn((_ev: string) => ({ ref: _ev })) } },
+    app: { vault: { on: vi.fn((_ev: string) => ({ ref: _ev })), getFiles: vi.fn(() => []) } },
     settings: {
       snippetFolderPath: '.radiprotocol/snippets',
       snippetTreeExpandedPaths: opts.expanded ?? [],
@@ -391,6 +400,7 @@ describe('SnippetManagerView — drag-and-drop (Phase 34 Plan 02)', () => {
 
   beforeEach(() => {
     rewriteCanvasRefsSpy.mockClear();
+    rewriteProtocolSnippetRefsSpy.mockClear();
     _lastMenuItems = [];
   });
 
@@ -497,7 +507,8 @@ describe('SnippetManagerView — drag-and-drop (Phase 34 Plan 02)', () => {
       await Promise.resolve();
       expect(service.moveSnippet).toHaveBeenCalledWith(`${root}/note.json`, `${root}/b`);
       expect(service.moveFolder).not.toHaveBeenCalled();
-      expect(rewriteCanvasRefsSpy).not.toHaveBeenCalled();
+      expect(rewriteCanvasRefsSpy).toHaveBeenCalledTimes(1);
+      expect(rewriteProtocolSnippetRefsSpy).toHaveBeenCalledTimes(1);
       expect(ev.defaultPrevented).toBe(true);
     });
 
@@ -513,6 +524,7 @@ describe('SnippetManagerView — drag-and-drop (Phase 34 Plan 02)', () => {
       await Promise.resolve();
       expect(service.moveFolder).toHaveBeenCalledWith(`${root}/a`, `${root}/b`);
       expect(rewriteCanvasRefsSpy).toHaveBeenCalledTimes(1);
+      expect(rewriteProtocolSnippetRefsSpy).toHaveBeenCalledTimes(1);
     });
 
     it('folder dropped on itself → rejected, no service call', async () => {
@@ -562,6 +574,7 @@ describe('SnippetManagerView — drag-and-drop (Phase 34 Plan 02)', () => {
 
     beforeEach(() => {
       rewriteCanvasRefsSpy.mockClear();
+      rewriteProtocolSnippetRefsSpy.mockClear();
       _lastMenuItems = [];
       // Phase 51 Plan 04 D-07 — new Modal + SnippetTreePicker instrumentation
       modalInstances.length = 0;
@@ -589,7 +602,7 @@ describe('SnippetManagerView — drag-and-drop (Phase 34 Plan 02)', () => {
       await Promise.resolve();
     }
 
-    it('file branch: selecting folder in picker calls moveSnippet; rewriteCanvasRefs NOT called', async () => {
+    it('file branch: selecting folder in picker calls moveSnippet; rewriteCanvasRefs and rewriteProtocolSnippetRefs called', async () => {
       const { plugin, service } = makePlugin({
         listings: {
           [root]: { folders: ['dst'], snippets: [makeSnippet('json', `${root}/note.json`, 'note')] },
@@ -613,10 +626,11 @@ describe('SnippetManagerView — drag-and-drop (Phase 34 Plan 02)', () => {
 
       expect(service.moveSnippet).toHaveBeenCalledWith(`${root}/note.json`, `${root}/dst`);
       expect(service.moveFolder).not.toHaveBeenCalled();
-      expect(rewriteCanvasRefsSpy).not.toHaveBeenCalled();
+      expect(rewriteCanvasRefsSpy).toHaveBeenCalledTimes(1);
+      expect(rewriteProtocolSnippetRefsSpy).toHaveBeenCalledTimes(1);
     });
 
-    it('folder branch: selecting target calls moveFolder then rewriteCanvasRefs with snippet-root-relative keys', async () => {
+    it('folder branch: selecting target calls moveFolder then rewriteCanvasRefs and rewriteProtocolSnippetRefs with snippet-root-relative keys', async () => {
       const { plugin, service } = makePlugin({
         listings: {
           [root]: { folders: ['a', 'b'], snippets: [] },
@@ -635,9 +649,13 @@ describe('SnippetManagerView — drag-and-drop (Phase 34 Plan 02)', () => {
 
       expect(service.moveFolder).toHaveBeenCalledWith(`${root}/a`, `${root}/b`);
       expect(rewriteCanvasRefsSpy).toHaveBeenCalledTimes(1);
+      expect(rewriteProtocolSnippetRefsSpy).toHaveBeenCalledTimes(1);
       // Keys must be snippet-root-relative (D-03): oldKey 'a' → newKey 'b/a'
       const mapping = rewriteCanvasRefsSpy.mock.calls[0]![1] as Map<string, string>;
       expect(Array.from(mapping.entries())).toEqual([['a', 'b/a']]);
+      // Protocol ref sync must receive the same mapping
+      const protocolMapping = rewriteProtocolSnippetRefsSpy.mock.calls[0]![1] as Map<string, string>;
+      expect(Array.from(protocolMapping.entries())).toEqual([['a', 'b/a']]);
     });
 
     it('folder branch: move-target safety guards reject source-self and descendants with Russian Notices', async () => {
