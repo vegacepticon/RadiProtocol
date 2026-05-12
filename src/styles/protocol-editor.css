@@ -1,0 +1,343 @@
+/* Phase 4A — independent .rp.json protocol visual editor skeleton */
+
+.rp-protocol-editor {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+  background: var(--background-primary);
+}
+
+.rp-protocol-editor-toolbar {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: baseline;
+  gap: var(--size-4-2);
+  padding: var(--size-4-2);
+  border-bottom: 1px solid var(--background-modifier-border);
+}
+
+.rp-protocol-editor-title {
+  font-weight: var(--font-semibold);
+  color: var(--text-normal);
+}
+
+.rp-protocol-editor-path {
+  font-size: var(--font-ui-small);
+  color: var(--text-muted);
+}
+
+.rp-protocol-editor-viewport {
+  position: relative;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: auto;
+  background-color: var(--background-secondary);
+  background-image:
+    linear-gradient(var(--background-modifier-border) 1px, transparent 1px),
+    linear-gradient(90deg, var(--background-modifier-border) 1px, transparent 1px);
+  background-size: calc(24px * var(--rp-protocol-editor-zoom, 1)) calc(24px * var(--rp-protocol-editor-zoom, 1));
+  cursor: grab;
+}
+
+.rp-protocol-editor-viewport.is-panning {
+  cursor: grabbing;
+}
+
+.rp-protocol-editor-viewport::after {
+  content: '';
+  display: block;
+  width: var(--rp-protocol-editor-scaled-width, 2400px);
+  height: var(--rp-protocol-editor-scaled-height, 1600px);
+  pointer-events: none;
+}
+
+.rp-protocol-editor-surface,
+.rp-protocol-editor-edges {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 2400px;
+  height: 1600px;
+  transform-origin: 0 0;
+}
+
+.rp-protocol-editor-edges {
+  overflow: visible;
+  pointer-events: none;
+}
+
+.rp-protocol-editor-empty {
+  position: absolute;
+  top: var(--size-4-6);
+  left: var(--size-4-6);
+  color: var(--text-muted);
+  font-size: var(--font-ui-medium);
+}
+
+.rp-protocol-editor-edge {
+  fill: none;
+  stroke: var(--interactive-accent);
+  stroke-width: 2;
+}
+
+.rp-protocol-editor-edge-preview {
+  stroke-dasharray: 6 4;
+  opacity: 0.75;
+}
+
+.rp-protocol-editor-edge-label {
+  fill: var(--text-muted);
+  font-size: var(--font-ui-smaller);
+  paint-order: stroke;
+  stroke: var(--background-secondary);
+  stroke-width: 4;
+}
+
+.rp-protocol-editor-node {
+  position: absolute;
+  box-sizing: border-box;
+  padding: var(--size-2-3);
+  border: 1px solid var(--background-modifier-border);
+  border-radius: var(--radius-m);
+  background: var(--rp-node-color, var(--background-primary));
+  box-shadow: var(--shadow-s);
+  color: var(--text-normal);
+  overflow: visible;
+}
+
+.rp-protocol-editor-node.is-untyped {
+  border-style: dashed;
+  color: var(--text-muted);
+}
+
+.rp-protocol-editor-node-kind {
+  margin-bottom: var(--size-2-1);
+  font-size: var(--font-ui-smaller);
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.rp-protocol-editor-node-title {
+  font-size: var(--font-ui-small);
+  white-space: pre-wrap;
+}
+
+/* Phase 4E — edge connection ports */
+.rp-protocol-editor-port {
+  position: absolute;
+  top: 50%;
+  z-index: 2;
+  width: 12px;
+  height: 12px;
+  border: 2px solid var(--interactive-accent);
+  border-radius: 50%;
+  background: var(--background-primary);
+  transform: translateY(-50%);
+  cursor: crosshair;
+}
+
+.rp-protocol-editor-port:hover {
+  background: var(--interactive-accent);
+}
+
+.rp-protocol-editor-port-input {
+  left: -8px;
+}
+
+.rp-protocol-editor-port-output {
+  right: -8px;
+}
+
+.rp-protocol-editor-zoom-indicator {
+  display: inline-flex;
+  align-items: center;
+  padding: 0 var(--size-4-2);
+  color: var(--text-muted);
+  font-size: var(--font-ui-smaller);
+  white-space: nowrap;
+}
+
+/* Phase 4D — toolbar node-add buttons */
+.rp-protocol-editor-toolbar-actions {
+  display: flex;
+  flex: 0 0 auto;
+  gap: var(--size-4-1);
+  margin-left: auto;
+}
+
+.rp-protocol-editor-add-btn {
+  padding: var(--size-4-1) var(--size-4-2);
+  font-size: var(--font-ui-smaller);
+  border: 1px solid var(--background-modifier-border);
+  border-radius: var(--radius-s);
+  background: var(--background-secondary);
+  color: var(--text-normal);
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.rp-protocol-editor-add-btn:hover {
+  background: var(--interactive-accent);
+  color: var(--text-on-accent);
+  border-color: var(--interactive-accent);
+}
+
+/* Phase 4D — draggable node cursor */
+.rp-protocol-editor-node {
+  cursor: grab;
+}
+
+.rp-protocol-editor-node.rp-node-dragging {
+  cursor: grabbing;
+  opacity: 0.85;
+  z-index: 100;
+  box-shadow: var(--shadow-l);
+}
+
+/* Phase 4D — edit modal */
+.rp-protocol-editor-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.5);
+}
+
+.rp-protocol-editor-modal {
+  display: flex;
+  flex-direction: column;
+  width: min(520px, 90vw);
+  max-height: 80vh;
+  background: var(--background-primary);
+  border: 1px solid var(--background-modifier-border);
+  border-radius: var(--radius-m);
+  box-shadow: var(--shadow-l);
+  overflow: hidden;
+}
+
+.rp-protocol-editor-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--size-4-3) var(--size-4-4);
+  border-bottom: 1px solid var(--background-modifier-border);
+}
+
+.rp-protocol-editor-modal-header h3 {
+  margin: 0;
+  font-size: var(--font-ui-medium);
+  color: var(--text-normal);
+}
+
+.rp-protocol-editor-modal-close {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  font-size: var(--font-ui-medium);
+  cursor: pointer;
+  padding: var(--size-4-1);
+  line-height: 1;
+}
+
+.rp-protocol-editor-modal-close:hover {
+  color: var(--text-normal);
+}
+
+.rp-protocol-editor-modal-body {
+  flex: 1 1 auto;
+  overflow-y: auto;
+  padding: var(--size-4-4);
+}
+
+.rp-protocol-editor-modal-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--size-4-3) var(--size-4-4);
+  border-top: 1px solid var(--background-modifier-border);
+  gap: var(--size-4-2);
+}
+
+.rp-protocol-editor-modal-footer .modal-actions {
+  display: flex;
+  gap: var(--size-4-2);
+}
+
+.rp-protocol-editor-modal-btn {
+  padding: var(--size-4-1) var(--size-4-3);
+  font-size: var(--font-ui-small);
+  border: 1px solid var(--background-modifier-border);
+  border-radius: var(--radius-s);
+  cursor: pointer;
+}
+
+.rp-protocol-editor-modal-btn-primary {
+  background: var(--interactive-accent);
+  color: var(--text-on-accent);
+  border-color: var(--interactive-accent);
+}
+
+.rp-protocol-editor-modal-btn-primary:hover {
+  opacity: 0.9;
+}
+
+.rp-protocol-editor-modal-btn-danger {
+  background: var(--background-modifier-error);
+  color: var(--text-on-accent);
+  border-color: var(--background-modifier-error);
+}
+
+.rp-protocol-editor-modal-btn-danger:hover {
+  opacity: 0.9;
+}
+
+/* Phase 4D — modal form fields */
+.rp-protocol-editor-modal-field {
+  margin-bottom: var(--size-4-3);
+}
+
+.rp-protocol-editor-modal-field label {
+  display: block;
+  margin-bottom: var(--size-4-1);
+  font-size: var(--font-ui-small);
+  font-weight: var(--font-medium);
+  color: var(--text-normal);
+}
+
+.rp-protocol-editor-modal-field input,
+.rp-protocol-editor-modal-field textarea {
+  width: 100%;
+  padding: var(--size-4-1) var(--size-4-2);
+  font-size: var(--font-ui-small);
+  font-family: var(--font-monospace);
+  border: 1px solid var(--background-modifier-border);
+  border-radius: var(--radius-s);
+  background: var(--background-secondary);
+  color: var(--text-normal);
+  box-sizing: border-box;
+}
+
+.rp-protocol-editor-modal-field textarea {
+  min-height: 60px;
+  resize: vertical;
+}
+
+.rp-protocol-editor-modal-field input[type="color"] {
+  width: 60px;
+  height: 32px;
+  padding: 2px;
+  cursor: pointer;
+}
+
+.rp-protocol-editor-modal-field .field-row {
+  display: flex;
+  gap: var(--size-4-2);
+}
+
+.rp-protocol-editor-modal-field .field-row > * {
+  flex: 1;
+}
