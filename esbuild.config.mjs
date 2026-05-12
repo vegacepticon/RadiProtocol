@@ -36,6 +36,7 @@ const CSS_FILES = [
   'loop-support',
   'snippet-tree-picker',
   'inline-runner',
+  'protocol-editor',
   'donate-section',
 ];
 

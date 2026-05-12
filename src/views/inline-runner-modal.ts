@@ -187,29 +187,35 @@ export class InlineRunnerModal {
     // Build DOM shell
     this.buildContainer();
 
-    // Parse and validate canvas
-    const file = this.app.vault.getAbstractFileByPath(this.canvasFilePath!);
+    // Parse and validate protocol. .rp.json is the primary format; .canvas remains
+    // supported here for transitional tests and legacy direct constructor usage.
+    const protocolPath = this.canvasFilePath!;
+    const file = this.app.vault.getAbstractFileByPath(protocolPath);
     if (!(file instanceof TFile)) {
-      new Notice(`Canvas file not found: "${this.canvasFilePath}".`);
+      new Notice(`Protocol file not found: "${protocolPath}".`);
       this.close();
       return;
     }
 
     let content: string;
-    const liveJson = this.plugin.canvasLiveEditor.getCanvasJSON(this.canvasFilePath!);
+    const liveJson = protocolPath.endsWith('.canvas')
+      ? this.plugin.canvasLiveEditor.getCanvasJSON(protocolPath)
+      : null;
     if (liveJson !== null) {
       content = liveJson;
     } else {
       try {
         content = await this.app.vault.read(file);
       } catch {
-        new Notice(`Could not read canvas file: "${this.canvasFilePath}".`);
+        new Notice(`Could not read protocol file: "${protocolPath}".`);
         this.close();
         return;
       }
     }
 
-    const parseResult = this.plugin.canvasParser.parse(content, this.canvasFilePath!);
+    const parseResult = protocolPath.endsWith('.rp.json')
+      ? this.plugin.protocolDocumentParser.parse(content, protocolPath)
+      : this.plugin.canvasParser.parse(content, protocolPath);
     if (!parseResult.success) {
       new Notice(parseResult.error);
       this.close();

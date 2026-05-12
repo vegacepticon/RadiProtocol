@@ -22,7 +22,7 @@ export interface RadiProtocolSettings {
   snippetFolderPath: string;
   /** Phase 33 (D-17): Tree-view expanded-folder paths, persisted across sessions. */
   snippetTreeExpandedPaths: string[];
-  /** Vault-relative folder scanned for .canvas protocol files (SELECTOR-01). Default: '' (empty) */
+  /** Vault-relative folder scanned for .rp.json protocol files. Default: '' (empty). */
   protocolFolderPath: string;
   /** Separator inserted before each new text chunk in the runner (D-08, SEP-01). Default: 'newline'. */
   textSeparator: 'newline' | 'space';

@@ -3,6 +3,8 @@ import { Plugin, Notice, Menu, TFile, TFolder, SuggestModal } from 'obsidian';
 import type { App } from 'obsidian';
 import { RadiProtocolSettings, DEFAULT_SETTINGS, RadiProtocolSettingsTab, type InlineRunnerLayout } from './settings';
 import { CanvasParser } from './graph/canvas-parser';
+import { ProtocolDocumentParser } from './protocol/protocol-document-parser';
+import { ProtocolDocumentStore } from './protocol/protocol-document-store';
 import { EditorPanelView, EDITOR_PANEL_VIEW_TYPE } from './views/editor-panel-view';
 import { SnippetManagerView, SNIPPET_MANAGER_VIEW_TYPE } from './views/snippet-manager-view';
 import { SnippetService } from './snippets/snippet-service';
@@ -17,6 +19,7 @@ import { NodePickerModal, buildNodeOptions } from './views/node-picker-modal';
 import { GraphValidator } from './graph/graph-validator';
 // Phase 54: inline protocol display mode
 import { InlineRunnerModal } from './views/inline-runner-modal';
+import { ProtocolEditorView, PROTOCOL_EDITOR_VIEW_TYPE } from './views/protocol-editor-view';
 
 /**
  * Phase 59 INLINE-FIX-01 — Nested-path-safe protocol folder enumeration.
@@ -37,16 +40,22 @@ import { InlineRunnerModal } from './views/inline-runner-modal';
  * Exported (not a private method) so it can be unit-tested from
  * `src/__tests__/main-inline-command.test.ts` without instrumenting the plugin class.
  */
-export function resolveProtocolCanvasFiles(
-  vault: import('obsidian').Vault,
-  folderPath: string,
-): TFile[] {
-  const normalized = folderPath
+function normalizeProtocolFolderPath(folderPath: string): string {
+  return folderPath
     .trim()
     .replace(/\\/g, '/')          // Windows backslash → forward slash (Pitfall 5 / A1)
     .replace(/^\/+|\/+$/g, '');   // strip leading/trailing slashes
+}
+
+function resolveProtocolFilesBySuffix(
+  vault: import('obsidian').Vault,
+  folderPath: string,
+  suffix: string,
+  debugLabel: string,
+): TFile[] {
+  const normalized = normalizeProtocolFolderPath(folderPath);
   if (normalized === '') {
-    console.debug('[RadiProtocol][INLINE-FIX-01] folderPath normalized to empty — skipping resolution.');
+    console.debug(`[RadiProtocol][${debugLabel}] folderPath normalized to empty — skipping resolution.`);
     return [];
   }
 
@@ -57,12 +66,12 @@ export function resolveProtocolCanvasFiles(
     const walk = (f: TFolder): void => {
       for (const child of f.children) {
         if (child instanceof TFolder) walk(child);
-        else if (child instanceof TFile && child.extension === 'canvas') out.push(child);
+        else if (child instanceof TFile && child.path.endsWith(suffix)) out.push(child);
       }
     };
     walk(folder);
     console.debug(
-      `[RadiProtocol][INLINE-FIX-01] Resolved '${folderPath}' → '${normalized}' via TFolder walk; ${out.length} canvas file(s).`,
+      `[RadiProtocol][${debugLabel}] Resolved '${folderPath}' → '${normalized}' via TFolder walk; ${out.length} file(s).`,
     );
     return out;
   }
@@ -70,39 +79,109 @@ export function resolveProtocolCanvasFiles(
   // Fallback — getAbstractFileByPath returned null or non-folder. Scan all vault files.
   const prefix = normalized + '/';
   for (const f of vault.getFiles()) {
-    if (f.extension !== 'canvas') continue;
+    if (!f.path.endsWith(suffix)) continue;
     if (f.path === normalized || f.path.startsWith(prefix)) out.push(f);
   }
   console.debug(
-    `[RadiProtocol][INLINE-FIX-01] Resolved '${folderPath}' → '${normalized}' via getFiles() fallback; ${out.length} canvas file(s). (getAbstractFileByPath returned ${folder === null ? 'null' : typeof folder})`,
+    `[RadiProtocol][${debugLabel}] Resolved '${folderPath}' → '${normalized}' via getFiles() fallback; ${out.length} file(s). (getAbstractFileByPath returned ${folder === null ? 'null' : typeof folder})`,
   );
   return out;
 }
 
-type CanvasPickerSuggestion = { file: TFile; name: string };
+export function resolveProtocolDocumentFiles(
+  vault: import('obsidian').Vault,
+  folderPath: string,
+): TFile[] {
+  return resolveProtocolFilesBySuffix(vault, folderPath, '.rp.json', 'PROTOCOL-DOC');
+}
 
-class CanvasPickerSuggestModal extends SuggestModal<CanvasPickerSuggestion> {
+export function resolveProtocolCanvasFiles(
+  vault: import('obsidian').Vault,
+  folderPath: string,
+): TFile[] {
+  return resolveProtocolFilesBySuffix(vault, folderPath, '.canvas', 'INLINE-FIX-01');
+}
+
+type ProtocolPickerSuggestion = { file: TFile; name: string };
+type ProtocolEditorPickerSuggestion =
+  | { kind: 'existing'; file: TFile; name: string }
+  | { kind: 'create'; title: string };
+
+function protocolDisplayName(file: TFile): string {
+  return file.basename.replace(/\.rp$/, '');
+}
+
+function protocolDocumentId(): string {
+  return `protocol-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+}
+
+class ProtocolPickerSuggestModal extends SuggestModal<ProtocolPickerSuggestion> {
   constructor(
     app: App,
-    private readonly canvasFiles: TFile[],
-    private readonly onChoose: (item: CanvasPickerSuggestion) => void,
+    private readonly protocolFiles: TFile[],
+    private readonly onChoose: (item: ProtocolPickerSuggestion) => void,
   ) {
     super(app);
   }
 
-  getSuggestions(query: string): CanvasPickerSuggestion[] {
+  getSuggestions(query: string): ProtocolPickerSuggestion[] {
     const q = query.toLowerCase();
-    return this.canvasFiles
-      .map(f => ({ file: f, name: f.basename }))
+    return this.protocolFiles
+      .map(f => ({ file: f, name: protocolDisplayName(f) }))
       .filter(item => item.name.toLowerCase().includes(q));
   }
 
-  renderSuggestion(item: CanvasPickerSuggestion, el: HTMLElement): void {
+  renderSuggestion(item: ProtocolPickerSuggestion, el: HTMLElement): void {
     el.createEl('div', { text: item.name });
   }
 
-  onChooseSuggestion(item: CanvasPickerSuggestion): void {
+  onChooseSuggestion(item: ProtocolPickerSuggestion): void {
     this.onChoose(item);
+  }
+}
+
+class ProtocolEditorPickerModal extends SuggestModal<ProtocolEditorPickerSuggestion> {
+  private lastQuery = '';
+
+  constructor(
+    app: App,
+    private readonly protocolFiles: TFile[],
+    private readonly t: (key: string, vars?: Record<string, string>) => string,
+    private readonly onOpenExisting: (file: TFile) => void,
+    private readonly onCreate: (title: string) => void,
+  ) {
+    super(app);
+    this.setPlaceholder(this.t('protocolEditor.openPickerPlaceholder'));
+  }
+
+  getSuggestions(query: string): ProtocolEditorPickerSuggestion[] {
+    this.lastQuery = query.trim();
+    const q = this.lastQuery.toLowerCase();
+    const existing = this.protocolFiles
+      .map(file => ({ kind: 'existing' as const, file, name: protocolDisplayName(file) }))
+      .filter(item => item.name.toLowerCase().includes(q));
+
+    if (this.lastQuery === '') return existing;
+    if (existing.some(item => item.name.toLowerCase() === q)) return existing;
+    return [{ kind: 'create', title: this.lastQuery }, ...existing];
+  }
+
+  renderSuggestion(item: ProtocolEditorPickerSuggestion, el: HTMLElement): void {
+    if (item.kind === 'create') {
+      el.createEl('div', { text: this.t('protocolEditor.createProtocolSuggestion', { title: item.title }) });
+      el.createEl('small', { text: this.t('protocolEditor.createProtocolHint') });
+      return;
+    }
+    el.createEl('div', { text: item.name });
+    el.createEl('small', { text: item.file.path });
+  }
+
+  onChooseSuggestion(item: ProtocolEditorPickerSuggestion): void {
+    if (item.kind === 'create') {
+      this.onCreate(item.title);
+      return;
+    }
+    this.onOpenExisting(item.file);
   }
 }
 
@@ -110,14 +189,16 @@ export default class RadiProtocolPlugin extends Plugin {
   settings!: RadiProtocolSettings;
   i18n!: I18nService;
   canvasParser!: CanvasParser;
+  protocolDocumentParser!: ProtocolDocumentParser;
+  protocolDocumentStore!: ProtocolDocumentStore;
   snippetService!: SnippetService;
   libraryService!: LibraryService;
   canvasLiveEditor!: CanvasLiveEditor;
   canvasNodeFactory!: CanvasNodeFactory;
   edgeLabelSyncService!: EdgeLabelSyncService;
   private readonly insertMutex = new WriteMutex();
-  private pickerModal: SuggestModal<{ file: TFile; name: string }> | null = null;
-  // Phase 85 INLINE-MULTI-01: registry of open inline runners keyed by `${canvasPath}#${notePath}`.
+  private pickerModal: SuggestModal<ProtocolPickerSuggestion | ProtocolEditorPickerSuggestion> | null = null;
+  // Phase 85 INLINE-MULTI-01: registry of open inline runners keyed by `${protocolPath}#${notePath}`.
   private inlineRunners = new Map<string, InlineRunnerModal>();
 
   async onload(): Promise<void> {
@@ -135,6 +216,8 @@ export default class RadiProtocolPlugin extends Plugin {
     // Instantiate pure modules (no Obsidian dependency)
     // Phase 84 (I18N-02): inject the i18n translator so parse-time error messages follow the active locale.
     this.canvasParser = new CanvasParser(this.i18n.t.bind(this.i18n));
+    this.protocolDocumentParser = new ProtocolDocumentParser(this.i18n.t.bind(this.i18n));
+    this.protocolDocumentStore = new ProtocolDocumentStore(this.app);
 
     // Instantiate services
     // Phase 84 (I18N-01): SnippetService takes the plugin's i18n translator so
@@ -161,6 +244,9 @@ export default class RadiProtocolPlugin extends Plugin {
     // Register EditorPanelView ItemView (EDIT-01)
     this.registerView(EDITOR_PANEL_VIEW_TYPE, (leaf) => new EditorPanelView(leaf, this));
 
+    // Register ProtocolEditorView ItemView (.rp.json visual editor)
+    this.registerView(PROTOCOL_EDITOR_VIEW_TYPE, (leaf) => new ProtocolEditorView(leaf, this));
+
     // Register SnippetManagerView ItemView (SNIP-01)
     this.registerView(SNIPPET_MANAGER_VIEW_TYPE, (leaf) => new SnippetManagerView(leaf, this));
 
@@ -176,6 +262,13 @@ export default class RadiProtocolPlugin extends Plugin {
       id: 'open-node-editor',
       name: 'Open node editor',
       callback: () => { void this.activateEditorPanelView(); },
+    });
+
+    // Command: open-protocol-editor — prompts for a .rp.json target, then opens the independent visual editor.
+    this.addCommand({
+      id: 'open-protocol-editor',
+      name: 'Open protocol editor',
+      callback: () => { void this.handleOpenProtocolEditor(); },
     });
 
     // Phase 45 (LOOP-06): start-from-node command (NFR-06: no plugin name prefix)
@@ -251,7 +344,7 @@ export default class RadiProtocolPlugin extends Plugin {
   }
 
   // Phase 85 INLINE-MULTI-01: registry API for inline runner instances. Key is
-  // `${canvasPath}#${notePath}`. Each instance unregisters itself on close().
+  // `${protocolPath}#${notePath}`. Each instance unregisters itself on close().
   registerInlineRunner(key: string, modal: InlineRunnerModal): void {
     this.inlineRunners.set(key, modal);
   }
@@ -311,6 +404,61 @@ export default class RadiProtocolPlugin extends Plugin {
       if (newLeaves[0] !== undefined) {
         void workspace.revealLeaf(newLeaves[0]);
       }
+    }
+  }
+
+  async activateProtocolEditorView(protocolPath?: string): Promise<void> {
+    const { workspace } = this.app;
+    const existing = workspace.getLeavesOfType(PROTOCOL_EDITOR_VIEW_TYPE)[0];
+    const leaf = existing ?? workspace.getLeaf(false);
+    if (leaf === null) return;
+
+    if (existing === undefined) {
+      await leaf.setViewState({ type: PROTOCOL_EDITOR_VIEW_TYPE, active: true });
+    }
+    void workspace.revealLeaf(leaf);
+
+    if (protocolPath !== undefined) {
+      const view = leaf.view;
+      if (view instanceof ProtocolEditorView) {
+        await view.loadProtocol(protocolPath);
+      }
+    }
+  }
+
+  private async handleOpenProtocolEditor(): Promise<void> {
+    const folderPath = normalizeProtocolFolderPath(this.settings.protocolFolderPath);
+    if (folderPath === '') {
+      new Notice(this.i18n.t('protocolEditor.setProtocolFolderFirst'));
+      await this.activateProtocolEditorView();
+      return;
+    }
+
+    const protocolFiles = resolveProtocolDocumentFiles(this.app.vault, folderPath);
+    const modal = new ProtocolEditorPickerModal(
+      this.app,
+      protocolFiles,
+      this.i18n.t.bind(this.i18n),
+      (file) => {
+        this.pickerModal = null;
+        void this.activateProtocolEditorView(file.path);
+      },
+      (title) => {
+        this.pickerModal = null;
+        void this.createAndOpenProtocol(folderPath, title);
+      },
+    );
+    this.pickerModal = modal;
+    modal.open();
+  }
+
+  private async createAndOpenProtocol(folderPath: string, title: string): Promise<void> {
+    try {
+      const { file } = await this.protocolDocumentStore.create(folderPath, title, protocolDocumentId());
+      new Notice(this.i18n.t('protocolEditor.protocolCreated', { title: protocolDisplayName(file) }));
+      await this.activateProtocolEditorView(file.path);
+    } catch (err) {
+      new Notice(this.i18n.t('protocolEditor.createProtocolFailed', { error: String(err) }));
     }
   }
 
@@ -455,18 +603,18 @@ export default class RadiProtocolPlugin extends Plugin {
       return;
     }
 
-    // INLINE-FIX-01: delegate enumeration to resolveProtocolCanvasFiles. Handles
-    // trailing/leading slashes, Windows backslash, and vault-index null fallback.
-    const canvasFiles = resolveProtocolCanvasFiles(this.app.vault, folderPath);
+    // Protocol document enumeration. Handles trailing/leading slashes, Windows
+    // backslash, and vault-index null fallback.
+    const protocolFiles = resolveProtocolDocumentFiles(this.app.vault, folderPath);
 
     // D8 guard: empty list
-    if (canvasFiles.length === 0) {
-      new Notice(`No protocol canvases found in '${folderPath}'.`);
+    if (protocolFiles.length === 0) {
+      new Notice(`No protocol files found in '${folderPath}'.`);
       return;
     }
 
-    // Canvas picker via SuggestModal
-    this.pickerModal = new CanvasPickerSuggestModal(this.app, canvasFiles, (item) => {
+    // Protocol picker via SuggestModal
+    this.pickerModal = new ProtocolPickerSuggestModal(this.app, protocolFiles, (item) => {
       this.pickerModal = null;
       void this.openInlineRunner(item.file, activeFile);
     });
@@ -474,17 +622,17 @@ export default class RadiProtocolPlugin extends Plugin {
     this.pickerModal.open();
   }
 
-  /** Open the InlineRunnerModal for a selected canvas and target note.
-   *  Phase 85 INLINE-MULTI-01: if a runner for the same (canvasPath, notePath) is
+  /** Open the InlineRunnerModal for a selected protocol and target note.
+   *  Phase 85 INLINE-MULTI-01: if a runner for the same (protocolPath, notePath) is
    *  already open, focus the existing instance instead of spawning a duplicate. */
-  private async openInlineRunner(canvasFile: TFile, targetNote: TFile): Promise<void> {
-    const key = `${canvasFile.path}#${targetNote.path}`;
+  private async openInlineRunner(protocolFile: TFile, targetNote: TFile): Promise<void> {
+    const key = `${protocolFile.path}#${targetNote.path}`;
     const existing = this.getInlineRunner(key);
     if (existing !== null) {
       existing.focus();
       return;
     }
-    const modal = new InlineRunnerModal(this.app, this, canvasFile.path, targetNote);
+    const modal = new InlineRunnerModal(this.app, this, protocolFile.path, targetNote);
     await modal.open();
     this.registerInlineRunner(key, modal);
   }
