@@ -166,9 +166,6 @@ export class ProtocolEditorView extends ItemView {
   private viewportEl: HTMLElement | null = null;
   private surfaceEl: HTMLElement | null = null;
   private svgEl: SVGSVGElement | null = null;
-  private minimapEl: HTMLElement | null = null;
-  private minimapSvgEl: SVGSVGElement | null = null;
-  private minimapViewportEl: SVGRectElement | null = null;
   private zoom = 1;
   private panState: PanState | null = null;
   private connectionDragState: ConnectionDragState | null = null;
@@ -193,9 +190,6 @@ export class ProtocolEditorView extends ItemView {
     this.viewportEl = null;
     this.surfaceEl = null;
     this.svgEl = null;
-    this.minimapEl = null;
-    this.minimapSvgEl = null;
-    this.minimapViewportEl = null;
     this.doc = null;
     this.protocolPath = null;
     this.panState = null;
@@ -260,18 +254,8 @@ export class ProtocolEditorView extends ItemView {
     this.viewportEl.setAttr('data-zoom', String(this.zoom));
     this.surfaceEl = this.viewportEl.createDiv({ cls: 'rp-protocol-editor-surface' });
     this.svgEl = this.viewportEl.createSvg('svg', { cls: 'rp-protocol-editor-edges' });
-    this.minimapEl = this.viewportEl.createDiv({ cls: 'rp-protocol-editor-minimap' });
-    this.minimapEl.setAttr('role', 'button');
-    this.minimapEl.setAttr('aria-label', this.plugin.i18n.t('protocolEditor.minimapLabel'));
-    this.minimapSvgEl = this.minimapEl.createSvg('svg', {
-      attr: {
-        class: 'rp-protocol-editor-minimap-svg',
-        viewBox: `0 0 ${DEFAULT_VIEWPORT_WIDTH} ${DEFAULT_VIEWPORT_HEIGHT}`,
-      },
-    }) as SVGSVGElement;
     this.applyZoom();
     this.bindViewportControls();
-    this.bindMinimapControls();
     this.restoreViewportState();
 
     if (this.doc === null) {
@@ -296,8 +280,8 @@ export class ProtocolEditorView extends ItemView {
     const newNode: ProtocolNodeRecord = {
       id: nodeUid(),
       kind: defaults.kind,
-      x: Math.round(cx),
-      y: Math.round(cy),
+      x: Math.max(0, Math.round(cx)),
+      y: Math.max(0, Math.round(cy)),
       width: DEFAULT_NODE_WIDTH,
       height: DEFAULT_NODE_HEIGHT,
       color: defaults.color ?? defaultColorForProtocolEditorNodeKind(defaults.kind),
@@ -327,7 +311,6 @@ export class ProtocolEditorView extends ItemView {
         cls: 'rp-protocol-editor-empty',
         text: this.plugin.i18n.t('protocolEditor.noNodes'),
       });
-      this.renderMinimap();
       return;
     }
 
@@ -368,8 +351,6 @@ export class ProtocolEditorView extends ItemView {
         this.openEditModal(node);
       });
     }
-
-    this.renderMinimap();
   }
 
   private renderEdges(): void {
@@ -451,97 +432,6 @@ export class ProtocolEditorView extends ItemView {
         label.textContent = labelText.length > 28 ? `${labelText.slice(0, 27)}…` : labelText;
       }
     }
-  }
-
-  private renderMinimap(): void {
-    if (this.doc === null || this.minimapSvgEl === null) return;
-    this.minimapSvgEl.empty();
-
-    this.minimapSvgEl.createSvg('rect', {
-      attr: {
-        x: '0',
-        y: '0',
-        width: String(DEFAULT_VIEWPORT_WIDTH),
-        height: String(DEFAULT_VIEWPORT_HEIGHT),
-        class: 'rp-protocol-editor-minimap-bg',
-      },
-    });
-
-    const nodeById = new Map(this.doc.nodes.map(node => [node.id, node]));
-    for (const edge of this.doc.edges) {
-      const from = nodeById.get(edge.fromNodeId);
-      const to = nodeById.get(edge.toNodeId);
-      if (from === undefined || to === undefined) continue;
-      this.minimapSvgEl.createSvg('line', {
-        attr: {
-          x1: String(worldXToSurfaceX(from.x + from.width / 2)),
-          y1: String(worldYToSurfaceY(from.y + from.height / 2)),
-          x2: String(worldXToSurfaceX(to.x + to.width / 2)),
-          y2: String(worldYToSurfaceY(to.y + to.height / 2)),
-          class: 'rp-protocol-editor-minimap-edge',
-        },
-      });
-    }
-
-    for (const node of this.doc.nodes) {
-      this.minimapSvgEl.createSvg('rect', {
-        attr: {
-          x: String(worldXToSurfaceX(node.x)),
-          y: String(worldYToSurfaceY(node.y)),
-          width: String(node.width),
-          height: String(node.height),
-          rx: '24',
-          class: `rp-protocol-editor-minimap-node rp-protocol-editor-minimap-node-${node.kind ?? 'untyped'}`,
-        },
-      });
-    }
-
-    this.minimapViewportEl = this.minimapSvgEl.createSvg('rect', {
-      attr: {
-        class: 'rp-protocol-editor-minimap-viewport',
-        x: '0',
-        y: '0',
-        width: '0',
-        height: '0',
-      },
-    }) as SVGRectElement;
-    this.updateMinimapViewport();
-  }
-
-  private updateMinimapViewport(): void {
-    if (this.viewportEl === null || this.minimapViewportEl === null) return;
-    const x = this.viewportEl.scrollLeft / this.zoom;
-    const y = this.viewportEl.scrollTop / this.zoom;
-    const width = this.viewportEl.clientWidth / this.zoom;
-    const height = this.viewportEl.clientHeight / this.zoom;
-    this.minimapViewportEl.setAttr('x', String(x));
-    this.minimapViewportEl.setAttr('y', String(y));
-    this.minimapViewportEl.setAttr('width', String(width));
-    this.minimapViewportEl.setAttr('height', String(height));
-  }
-
-  private centerViewportOnSurfacePoint(surfaceX: number, surfaceY: number): void {
-    if (this.viewportEl === null) return;
-    this.viewportEl.scrollLeft = surfaceX * this.zoom - this.viewportEl.clientWidth / 2;
-    this.viewportEl.scrollTop = surfaceY * this.zoom - this.viewportEl.clientHeight / 2;
-    this.updateMinimapViewport();
-    this.scheduleViewportSave();
-  }
-
-  private minimapClientPointToSurfacePoint(clientX: number, clientY: number): { x: number; y: number } | null {
-    if (this.minimapSvgEl === null) return null;
-    const rect = this.minimapSvgEl.getBoundingClientRect();
-    if (rect.width <= 0 || rect.height <= 0) return null;
-    return {
-      x: ((clientX - rect.left) / rect.width) * DEFAULT_VIEWPORT_WIDTH,
-      y: ((clientY - rect.top) / rect.height) * DEFAULT_VIEWPORT_HEIGHT,
-    };
-  }
-
-  private panViewportFromMinimapPointer(clientX: number, clientY: number): void {
-    const point = this.minimapClientPointToSurfacePoint(clientX, clientY);
-    if (point === null) return;
-    this.centerViewportOnSurfacePoint(point.x, point.y);
   }
 
   private async deleteEdge(edgeId: string): Promise<void> {
@@ -792,7 +682,6 @@ export class ProtocolEditorView extends ItemView {
     this.viewportEl.addEventListener('mousedown', (e: MouseEvent) => {
       if (e.button !== 0) return;
       const target = e.target as Element;
-      if (target.closest('.rp-protocol-editor-minimap') !== null) return;
       if (target.closest('.rp-protocol-editor-node') !== null) return;
       if (target.closest('.rp-protocol-editor-port') !== null) return;
       if (target.closest('.rp-protocol-editor-edge-group') !== null) return;
@@ -810,7 +699,6 @@ export class ProtocolEditorView extends ItemView {
         if (this.viewportEl === null || this.panState === null) return;
         this.viewportEl.scrollLeft = this.panState.startScrollLeft - (ev.clientX - this.panState.startClientX);
         this.viewportEl.scrollTop = this.panState.startScrollTop - (ev.clientY - this.panState.startClientY);
-        this.updateMinimapViewport();
       };
       const onUp = () => {
         document.removeEventListener('mousemove', onMove);
@@ -844,39 +732,10 @@ export class ProtocolEditorView extends ItemView {
       this.applyZoom();
       this.viewportEl.scrollLeft = docX * nextZoom - (e.clientX - rect.left);
       this.viewportEl.scrollTop = docY * nextZoom - (e.clientY - rect.top);
-      this.updateMinimapViewport();
       this.scheduleViewportSave();
     }, { passive: false });
 
-    this.viewportEl.addEventListener('scroll', () => {
-      this.updateMinimapViewport();
-      this.scheduleViewportSave();
-    });
-  }
-
-  private bindMinimapControls(): void {
-    if (this.minimapEl === null) return;
-
-    this.minimapEl.addEventListener('mousedown', (e: MouseEvent) => {
-      if (e.button !== 0) return;
-      e.preventDefault();
-      e.stopPropagation();
-      this.minimapEl?.addClass('is-dragging');
-      this.panViewportFromMinimapPointer(e.clientX, e.clientY);
-
-      const onMove = (ev: MouseEvent) => {
-        ev.preventDefault();
-        this.panViewportFromMinimapPointer(ev.clientX, ev.clientY);
-      };
-      const onUp = () => {
-        document.removeEventListener('mousemove', onMove);
-        document.removeEventListener('mouseup', onUp);
-        this.minimapEl?.removeClass('is-dragging');
-        void this.persistViewportState();
-      };
-      document.addEventListener('mousemove', onMove);
-      document.addEventListener('mouseup', onUp);
-    });
+    this.viewportEl.addEventListener('scroll', () => this.scheduleViewportSave());
   }
 
   private applyZoom(): void {
@@ -931,7 +790,6 @@ export class ProtocolEditorView extends ItemView {
       if (this.viewportEl === null) return;
       this.viewportEl.scrollLeft = Math.max(0, viewport.x + PROTOCOL_EDITOR_ORIGIN_X * this.zoom);
       this.viewportEl.scrollTop = Math.max(0, viewport.y + PROTOCOL_EDITOR_ORIGIN_Y * this.zoom);
-      this.updateMinimapViewport();
     });
   }
 

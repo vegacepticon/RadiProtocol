@@ -240,19 +240,14 @@ describe('GraphValidator — Phase 43: unified loop + migration (LOOP-04, MIGRAT
     expect(d05).toMatch(/\(e3\)|\(e3, /);
   });
 
-  // ── LOOP-04 D-06 — ≥2 "+"-edges ─────────────────────────────────────────────
-  it('unified-loop-duplicate-exit.canvas flags D-06 (≥2 "+"-edges)', () => {
+  // ── LOOP-04 beta.7 — ≥2 "+"-edges are allowed ───────────────────────────────
+  it('unified-loop-duplicate-exit.canvas validates multiple "+" exit edges', () => {
     const graph = parseFixture('unified-loop-duplicate-exit.canvas');
     const validator = new GraphValidator();
     const errors = validator.validate(graph);
-    const d06 = errors.find(e => e.includes('has multiple "+" edges'));
-    expect(d06).toBeDefined();
-    if (d06 === undefined) return;
-    expect(d06).toContain('"Lesion loop"');
-    expect(d06).toContain('Exactly one exit edge is required');
-    expect(d06).toContain('remove "+" from the others');
-    // Plan 04 fixture assigns "+"-prefix to e3 and e4 (the two exits). edgeIds comma-joined.
-    expect(d06).toMatch(/e3.*e4|e4.*e3/);
+    expect(errors.some(e => e.includes('has multiple "+" edges'))).toBe(false);
+    expect(errors.some(e => e.includes('has no exit'))).toBe(false);
+    expect(errors.some(e => e.includes('has no caption'))).toBe(false);
   });
 
   // ── LOOP-04 D-07 — zero non-"+" outgoing edges ──────────────────────────────

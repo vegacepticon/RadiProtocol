@@ -465,6 +465,88 @@
 
 .rp-protocol-editor-checkbox-field.is-disabled {
   opacity: 0.65;
+  cursor: not-allowed;
+}
+
+/* Beta 4 — minimap in the viewport */
+.rp-protocol-editor-minimap {
+  position: absolute;
+  bottom: var(--size-4-3);
+  right: var(--size-4-3);
+  width: 200px;
+  height: 150px;
+  z-index: 5;
+  border: 1px solid var(--background-modifier-border);
+  border-radius: var(--radius-m);
+  background: var(--background-primary);
+  cursor: crosshair;
+  overflow: hidden;
+}
+
+.rp-protocol-editor-minimap.is-dragging {
+  cursor: grabbing;
+}
+
+.rp-protocol-editor-minimap-svg {
+  width: 100%;
+  height: 100%;
+}
+
+.rp-protocol-editor-minimap-bg {
+  fill: var(--background-secondary);
+}
+
+.rp-protocol-editor-minimap-edge {
+  stroke: var(--interactive-accent);
+  stroke-width: 1;
+  stroke-opacity: 0.4;
+  fill: none;
+}
+
+.rp-protocol-editor-minimap-node {
+  fill: var(--interactive-accent);
+  fill-opacity: 0.25;
+  stroke: var(--interactive-accent);
+  stroke-width: 1;
+  stroke-opacity: 0.6;
+}
+
+.rp-protocol-editor-minimap-node-start {
+  fill: rgba(76, 175, 80, 0.3);
+  stroke: rgba(76, 175, 80, 0.7);
+}
+
+.rp-protocol-editor-minimap-node-question {
+  fill: rgba(33, 150, 243, 0.3);
+  stroke: rgba(33, 150, 243, 0.7);
+}
+
+.rp-protocol-editor-minimap-node-answer {
+  fill: rgba(255, 193, 7, 0.3);
+  stroke: rgba(255, 193, 7, 0.7);
+}
+
+.rp-protocol-editor-minimap-node-text-block {
+  fill: rgba(255, 235, 59, 0.3);
+  stroke: rgba(255, 235, 59, 0.7);
+}
+
+.rp-protocol-editor-minimap-node-loop {
+  fill: rgba(233, 30, 99, 0.3);
+  stroke: rgba(233, 30, 99, 0.7);
+}
+
+.rp-protocol-editor-minimap-node-snippet {
+  fill: rgba(156, 39, 176, 0.3);
+  stroke: rgba(156, 39, 176, 0.7);
+}
+
+.rp-protocol-editor-minimap-viewport {
+  fill: var(--background-primary);
+  fill-opacity: 0.15;
+  stroke: var(--interactive-accent);
+  stroke-width: 1;
+  stroke-opacity: 0.6;
 }
 
 .rp-protocol-editor-checkbox-field.is-disabled label {

@@ -318,6 +318,57 @@ describe('ProtocolRunner loop picker (RUN-01..RUN-05)', () => {
     expect(state.finalText).toContain('Quick');
     expect(state.finalText).toContain('Done');
   });
+
+  it('RUN-MULTI-EXIT: loop picker supports multiple distinct "+" exit branches', () => {
+    const graph: ProtocolGraph = {
+      canvasFilePath: 'test:multi-exit.canvas',
+      nodes: new Map<string, RPNode>([
+        ['n-start', { id: 'n-start', kind: 'start', x: 0, y: 0, width: 100, height: 60 }],
+        ['n-loop',  { id: 'n-loop',  kind: 'loop',  x: 0, y: 100, width: 100, height: 60, headerText: 'Loop' }],
+        ['n-body',  { id: 'n-body',  kind: 'text-block', x: 120, y: 100, width: 100, height: 60, content: 'Body' }],
+        ['n-end-a', { id: 'n-end-a', kind: 'text-block', x: 0, y: 200, width: 100, height: 60, content: 'Exit A' }],
+        ['n-end-b', { id: 'n-end-b', kind: 'text-block', x: 120, y: 200, width: 100, height: 60, content: 'Exit B' }],
+      ]),
+      edges: [
+        { id: 'e1', fromNodeId: 'n-start', toNodeId: 'n-loop' },
+        { id: 'e2', fromNodeId: 'n-loop', toNodeId: 'n-body' },
+        { id: 'e3', fromNodeId: 'n-loop', toNodeId: 'n-end-a', label: '+primary' },
+        { id: 'e4', fromNodeId: 'n-loop', toNodeId: 'n-end-b', label: '+secondary' },
+        { id: 'e5', fromNodeId: 'n-body', toNodeId: 'n-loop' },
+      ],
+      adjacency: new Map<string, string[]>([
+        ['n-start', ['n-loop']],
+        ['n-loop', ['n-body', 'n-end-a', 'n-end-b']],
+        ['n-body', ['n-loop']],
+        ['n-end-a', []],
+        ['n-end-b', []],
+      ]),
+      reverseAdjacency: new Map<string, string[]>([
+        ['n-start', []],
+        ['n-loop', ['n-start', 'n-body']],
+        ['n-body', ['n-loop']],
+        ['n-end-a', ['n-loop']],
+        ['n-end-b', ['n-loop']],
+      ]),
+      startNodeId: 'n-start',
+    };
+
+    const runnerA = new ProtocolRunner();
+    runnerA.start(graph);
+    runnerA.chooseLoopBranch('e3');
+    const stateA = runnerA.getState();
+    expect(stateA.status).toBe('complete');
+    if (stateA.status !== 'complete') return;
+    expect(stateA.finalText).toContain('Exit A');
+
+    const runnerB = new ProtocolRunner();
+    runnerB.start(graph);
+    runnerB.chooseLoopBranch('e4');
+    const stateB = runnerB.getState();
+    expect(stateB.status).toBe('complete');
+    if (stateB.status !== 'complete') return;
+    expect(stateB.finalText).toContain('Exit B');
+  });
 });
 
 // Phase 66 D-13 — four scripted loop-boundary scenarios for stepBack correctness.

@@ -219,7 +219,7 @@ export class ProtocolRunner {
   /**
    * Phase 44 (RUN-01, RUN-03): user picks a branch at the loop picker.
    * Valid only in 'awaiting-loop-pick'. Dispatches by edge label:
-   *   - labeled edge (Phase 49 EDGE-01) → pop the current loop frame, advance along the exit edge
+   *   - "+"-prefixed edge → pop the current loop frame, advance along the selected exit edge
    *   - other    → walk the body branch (B1 re-entry guard inside case 'loop'
    *                handles the iteration increment on return to picker)
    *
@@ -251,11 +251,8 @@ export class ProtocolRunner {
     });
 
     if (isExitEdge(edge)) {
-      // RUN-03: pop frame (top-of-stack, nested-safe). Phase 50.1 EDGE-03:
-      // the sole "+"-prefixed outgoing edge (D-06 uniqueness + D-08 non-empty caption
-      // enforced by GraphValidator LOOP-04) is the exit. isExitEdge is the Phase 50.1
-      // D-10 predicate (label.trim().startsWith('+')); Phase 49's alias to
-      // isLabeledEdge is removed — see `src/graph/node-label.ts`.
+      // RUN-03: pop frame (top-of-stack, nested-safe). Beta.7 allows several
+      // "+"-prefixed outgoing edges; the selected edge is the concrete exit branch.
       this.loopContextStack.pop();
     }
     // Body branch: DO NOT increment iteration here. The B1 re-entry guard inside
@@ -682,16 +679,16 @@ export class ProtocolRunner {
           const next = this.firstNeighbour(cursor);
 
           // Quick-exit from loop body: if an answer node inside a loop body is wired
-          // directly to the same target as the loop's '+' exit edge, pop the loop frame
+          // directly to the same target as any of the loop's '+' exit edges, pop the loop frame
           // so the runner continues past the loop instead of returning to the picker
           // when the branch eventually hits a dead-end.
           if (this.graph !== null && this.loopContextStack.length > 0 && next !== undefined) {
             const topLoop = this.loopContextStack[this.loopContextStack.length - 1];
             if (topLoop !== undefined) {
-              const exitEdge = this.graph.edges.find(
-                e => e.fromNodeId === topLoop.loopNodeId && isExitEdge(e)
+              const exitsToNext = this.graph.edges.some(
+                e => e.fromNodeId === topLoop.loopNodeId && isExitEdge(e) && e.toNodeId === next
               );
-              if (exitEdge !== undefined && exitEdge.toNodeId === next) {
+              if (exitsToNext) {
                 this.loopContextStack.pop();
               }
             }

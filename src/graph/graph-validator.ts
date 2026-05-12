@@ -117,13 +117,13 @@ export class GraphValidator {
       }
     }
 
-    // Check (LOOP-04): each unified loop node under Phase 50.1 EDGE-03:
+    // Check (LOOP-04): each unified loop node under Phase 50.1 EDGE-03 / beta.7 multi-exit UX:
     //  (D-04) 0 "+"-edges AND 0 non-"+" labeled edges → "no exit" with a "+"-prefix hint
     //  (D-05) 0 "+"-edges AND ≥1 non-"+" labeled edges → legacy hint with {edgeIds}
-    //  (D-06) ≥2 "+"-edges → list of offending edge ids, remove "+" from the rest
     //  (D-08) iterate "+"-edges, stripExitPrefix(label) === '' → per-offending-edge error
     //  (D-07) 0 non-"+" outgoing edges → no body
-    // Error-check ordering: D-04/D-05 → D-06 → D-08 → D-07. Multiple errors per loop node
+    // Multiple "+"-prefixed exit edges are valid: one loop picker may offer several distinct
+    // exit branches. Error-check ordering: D-04/D-05 → D-08 → D-07. Multiple errors per loop node
     // accumulate for host error panels. `isExitEdge` and `stripExitPrefix` live in
     // `src/graph/node-label.ts` (Phase 50.1 D-09/D-10). `isLabeledEdge` is still used below
     // to detect the legacy "labeled but non-'+' prefix" case (D-05 branch).
@@ -146,13 +146,6 @@ export class GraphValidator {
           const edgeIds = legacyLabeledEdges.map(e => e.id).join(', ');
           errors.push(this.t('graphValidator.loopNoExitWithLegacy', { label, ids: edgeIds }));
         }
-      }
-
-      // D-06 — ≥2 "+"-edges
-      // Phase 84 I18N-02: localized via injected translator (graphValidator.loopMultipleExits).
-      if (exitEdges.length > 1) {
-        const dupIds = exitEdges.map(e => e.id).join(', ');
-        errors.push(this.t('graphValidator.loopMultipleExits', { label, ids: dupIds }));
       }
 
       // D-08 — per-offending-edge, "+"-edge with empty caption post-strip
