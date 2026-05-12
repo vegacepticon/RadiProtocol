@@ -32,7 +32,7 @@
   position: relative;
   flex: 1 1 auto;
   min-height: 0;
-  overflow: auto;
+  overflow: hidden;
   background-color: var(--background-secondary);
   background-image:
     linear-gradient(var(--background-modifier-border) 1px, transparent 1px),
@@ -63,24 +63,44 @@
   transform-origin: 0 0;
 }
 
+.rp-protocol-editor-surface {
+  z-index: 1;
+  pointer-events: none;
+}
+
+.rp-protocol-editor-node {
+  pointer-events: auto;
+}
+
 .rp-protocol-editor-edges {
+  z-index: 2;
   overflow: visible;
   pointer-events: none;
 }
 
-.rp-protocol-editor-edge {
-  pointer-events: stroke;
+.rp-protocol-editor-edge-group {
+  pointer-events: visiblepainted;
   cursor: pointer;
 }
 
-.rp-protocol-editor-edge:focus,
-.rp-protocol-editor-edge:hover {
-  stroke-width: 4;
+.rp-protocol-editor-edge-hitbox {
+  fill: none;
+  stroke: transparent;
+  stroke-width: 18;
+  pointer-events: stroke;
+}
+
+.rp-protocol-editor-edge-group:focus {
   outline: none;
 }
 
-.rp-protocol-editor-edge-label {
-  pointer-events: none;
+.rp-protocol-editor-edge-group:hover .rp-protocol-editor-edge,
+.rp-protocol-editor-edge-group:focus .rp-protocol-editor-edge {
+  stroke-width: 4;
+}
+
+.rp-protocol-editor-edge-label-group {
+  pointer-events: all;
 }
 
 .rp-protocol-editor-empty {
@@ -102,12 +122,18 @@
   opacity: 0.75;
 }
 
+.rp-protocol-editor-edge-label-bg {
+  fill: var(--background-primary);
+  stroke: var(--background-modifier-border);
+  stroke-width: 1;
+  opacity: 0.95;
+}
+
 .rp-protocol-editor-edge-label {
-  fill: var(--text-muted);
+  fill: var(--text-normal);
   font-size: var(--font-ui-smaller);
-  paint-order: stroke;
-  stroke: var(--background-secondary);
-  stroke-width: 4;
+  dominant-baseline: middle;
+  user-select: none;
 }
 
 .rp-protocol-editor-node {
@@ -424,4 +450,23 @@
   background: var(--background-secondary);
   color: var(--text-normal);
   box-sizing: border-box;
+}
+
+
+/* Protocol editor UX fixes — canvas-like viewport and edge modal visibility */
+.rp-protocol-editor-viewport::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+}
+
+.rp-protocol-editor-viewport {
+  scrollbar-width: none;
+}
+
+.rp-protocol-editor-checkbox-field.is-disabled {
+  opacity: 0.65;
+}
+
+.rp-protocol-editor-checkbox-field.is-disabled label {
+  cursor: not-allowed;
 }

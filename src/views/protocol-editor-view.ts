@@ -82,6 +82,27 @@ function nodeTitle(node: ProtocolNodeRecord): string {
   return node.kind ?? 'untyped';
 }
 
+export function defaultProtocolEditorEdgeLabelForTarget(node: ProtocolNodeRecord | undefined): string | undefined {
+  if (node === undefined) return undefined;
+  const candidates = [
+    node.fields['displayLabel'],
+    node.fields['answerText'],
+    node.text,
+  ];
+  for (const candidate of candidates) {
+    if (typeof candidate === 'string' && candidate.trim() !== '') return candidate.trim();
+  }
+  return undefined;
+}
+
+export function deriveProtocolEditorEdgeLabel(
+  targetNode: ProtocolNodeRecord | undefined,
+  currentLabel: string | undefined,
+): string | undefined {
+  if (currentLabel !== undefined && currentLabel.trim() !== '') return currentLabel;
+  return defaultProtocolEditorEdgeLabelForTarget(targetNode);
+}
+
 /* Phase 4D/4E — generate unique IDs */
 function nodeUid(): string {
   return `node-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
@@ -222,8 +243,8 @@ export class ProtocolEditorView extends ItemView {
 
     this.viewportEl = this.rootEl.createDiv({ cls: 'rp-protocol-editor-viewport' });
     this.viewportEl.setAttr('data-zoom', String(this.zoom));
-    this.svgEl = this.viewportEl.createSvg('svg', { cls: 'rp-protocol-editor-edges' });
     this.surfaceEl = this.viewportEl.createDiv({ cls: 'rp-protocol-editor-surface' });
+    this.svgEl = this.viewportEl.createSvg('svg', { cls: 'rp-protocol-editor-edges' });
     this.applyZoom();
     this.bindViewportControls();
 
@@ -334,36 +355,71 @@ export class ProtocolEditorView extends ItemView {
       const y1 = from.y + from.height / 2;
       const x2 = to.x;
       const y2 = to.y + to.height / 2;
-      const path = this.svgEl.createSvg('path', {
+      const d = edgePath(x1, y1, x2, y2);
+      const group = this.svgEl.createSvg('g', {
         attr: {
-          d: edgePath(x1, y1, x2, y2),
-          class: 'rp-protocol-editor-edge',
+          class: 'rp-protocol-editor-edge-group',
           'data-edge-id': edge.id,
           role: 'button',
           tabindex: '0',
           'aria-label': this.plugin.i18n.t('protocolEditor.editEdge'),
         },
-      }) as SVGPathElement;
-      path.addEventListener('dblclick', (e) => {
+      }) as SVGGElement;
+      const openEdge = (e: Event) => {
         e.preventDefault();
         e.stopPropagation();
         this.openEdgeModal(edge);
-      });
-      path.addEventListener('keydown', (e: KeyboardEvent) => {
+      };
+      group.addEventListener('click', openEdge);
+      group.addEventListener('dblclick', openEdge);
+      group.addEventListener('keydown', (e: KeyboardEvent) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          openEdge(e);
+          return;
+        }
         if (e.key !== 'Delete' && e.key !== 'Backspace') return;
         e.preventDefault();
         e.stopPropagation();
         void this.deleteEdge(edge.id);
       });
-      if (edge.label !== undefined && edge.label.trim() !== '') {
-        const label = this.svgEl.createSvg('text', {
+      group.createSvg('path', {
+        attr: {
+          d,
+          class: 'rp-protocol-editor-edge-hitbox',
+        },
+      });
+       group.createSvg('path', {
+        attr: {
+          d,
+          class: 'rp-protocol-editor-edge',
+        },
+      }) as SVGPathElement;
+      const effectiveLabel = deriveProtocolEditorEdgeLabel(to, edge.label);
+      if (effectiveLabel !== undefined && effectiveLabel.trim() !== '') {
+        const labelGroup = group.createSvg('g', { attr: { class: 'rp-protocol-editor-edge-label-group' } });
+        const labelText = displayProtocolEditorEdgeLabel(effectiveLabel);
+        const labelX = (x1 + x2) / 2;
+        const labelY = (y1 + y2) / 2 - 8;
+        const approxWidth = Math.min(220, Math.max(48, labelText.length * 7 + 18));
+        labelGroup.createSvg('rect', {
           attr: {
-            x: String((x1 + x2) / 2),
-            y: String((y1 + y2) / 2 - 6),
-            class: 'rp-protocol-editor-edge-label',
+            x: String(labelX - approxWidth / 2),
+            y: String(labelY - 15),
+            width: String(approxWidth),
+            height: '22',
+            rx: '11',
+            class: 'rp-protocol-editor-edge-label-bg',
           },
         });
-        label.textContent = displayProtocolEditorEdgeLabel(edge.label);
+        const label = labelGroup.createSvg('text', {
+          attr: {
+            x: String(labelX),
+            y: String(labelY),
+            class: 'rp-protocol-editor-edge-label',
+            'text-anchor': 'middle',
+          },
+        });
+        label.textContent = labelText.length > 28 ? `${labelText.slice(0, 27)}…` : labelText;
       }
     }
   }
@@ -473,10 +529,12 @@ export class ProtocolEditorView extends ItemView {
       return;
     }
 
+    const targetNode = this.doc.nodes.find((node) => node.id === toNodeId);
     const newEdge: ProtocolEdgeRecord = {
       id: edgeUid(),
       fromNodeId: state.fromNodeId,
       toNodeId,
+      label: defaultProtocolEditorEdgeLabelForTarget(targetNode),
     };
 
     try {
@@ -613,8 +671,10 @@ export class ProtocolEditorView extends ItemView {
 
     this.viewportEl.addEventListener('mousedown', (e: MouseEvent) => {
       if (e.button !== 0) return;
-      if ((e.target as HTMLElement).closest('.rp-protocol-editor-node') !== null) return;
-      if ((e.target as HTMLElement).closest('.rp-protocol-editor-port') !== null) return;
+      const target = e.target as Element;
+      if (target.closest('.rp-protocol-editor-node') !== null) return;
+      if (target.closest('.rp-protocol-editor-port') !== null) return;
+      if (target.closest('.rp-protocol-editor-edge-group') !== null) return;
       e.preventDefault();
       if (this.viewportEl === null) return;
       this.viewportEl.addClass('is-panning');
@@ -786,8 +846,13 @@ export class ProtocolEditorView extends ItemView {
     const labelField = body.createDiv({ cls: 'rp-protocol-editor-modal-field' });
     labelField.createEl('label', { text: t('protocolEditor.edgeLabelLabel') });
     const labelInput = labelField.createEl('input', {
-      attr: { type: 'text', value: displayProtocolEditorEdgeLabel(edge.label) },
+      attr: {
+        type: 'text',
+        value: displayProtocolEditorEdgeLabel(edge.label),
+        placeholder: t('protocolEditor.edgeLabelPlaceholder'),
+      },
     }) as HTMLInputElement;
+    labelField.createDiv({ cls: 'rp-protocol-editor-modal-help', text: t('protocolEditor.edgeLabelHelp') });
     const exitField = body.createDiv({ cls: 'rp-protocol-editor-modal-field rp-protocol-editor-checkbox-field' });
     const exitLabel = exitField.createEl('label');
     const exitCheckbox = exitLabel.createEl('input', { attr: { type: 'checkbox' } }) as HTMLInputElement;
@@ -795,8 +860,10 @@ export class ProtocolEditorView extends ItemView {
     exitCheckbox.checked = isProtocolEditorLoopExitLabel(edge.label);
     const syncExitVisibility = () => {
       const fromNode = nodes.find((node) => node.id === fromSelect.value);
-      exitField.toggleClass('is-hidden', fromNode?.kind !== 'loop');
-      if (fromNode?.kind !== 'loop') exitCheckbox.checked = false;
+      const isLoopSource = fromNode?.kind === 'loop';
+      exitCheckbox.disabled = !isLoopSource;
+      exitField.toggleClass('is-disabled', !isLoopSource);
+      if (!isLoopSource) exitCheckbox.checked = false;
     };
     fromSelect.addEventListener('change', syncExitVisibility);
     syncExitVisibility();
@@ -817,7 +884,9 @@ export class ProtocolEditorView extends ItemView {
       const duplicate = this.doc?.edges.some((candidate) => candidate.id !== edge.id && candidate.fromNodeId === nextFrom && candidate.toNodeId === nextTo) ?? false;
       if (nextFrom === nextTo) { new Notice(t('protocolEditor.selfEdgeRejected')); return; }
       if (duplicate) { new Notice(t('protocolEditor.duplicateEdgeRejected')); return; }
-      const nextLabel = normalizeProtocolEditorEdgeLabel(labelInput.value, exitCheckbox.checked);
+      const selectedTarget = nodes.find((node) => node.id === nextTo);
+      const typedLabel = normalizeProtocolEditorEdgeLabel(labelInput.value, exitCheckbox.checked);
+      const nextLabel = typedLabel ?? defaultProtocolEditorEdgeLabelForTarget(selectedTarget);
       try {
         await this.plugin.protocolDocumentStore.update(this.protocolPath!, (existing) => {
           if (existing === null) throw new Error('Protocol file disappeared');
@@ -957,9 +1026,9 @@ export class ProtocolEditorView extends ItemView {
         addInput('questionText', t('protocolEditor.questionTextLabel'), node.fields['questionText'] ?? node.text, true);
         break;
       case 'answer':
-        addInput('displayLabel', t('protocolEditor.displayLabelLabel'), node.fields['displayLabel']);
+        addInput('displayLabel', t('protocolEditor.answerButtonLabelLabel'), node.fields['displayLabel']);
         addInput('answerText', t('protocolEditor.answerTextLabel'), node.fields['answerText'] ?? node.text, true);
-        addSeparator('separator', t('protocolEditor.textSeparatorLabel'), node.fields['separator']);
+        addSeparator('separator', t('protocolEditor.answerSeparatorLabel'), node.fields['separator']);
         break;
       case 'text-block':
         addInput('content', t('protocolEditor.contentLabel'), node.fields['content'] ?? node.text, true);
@@ -1035,7 +1104,17 @@ export class ProtocolEditorView extends ItemView {
         await this.plugin.protocolDocumentStore.update(this.protocolPath!, (existing) => {
           if (existing === null) throw new Error('Protocol file disappeared');
           const nodes = existing.nodes.map((n) => n.id === updatedNode.id ? updatedNode : n);
-          return { ...existing, nodes, viewport: this.currentViewportState(), updatedAt: new Date().toISOString() };
+          const edges = updatedNode.kind === 'answer'
+            ? existing.edges.map((candidate) => {
+              if (candidate.toNodeId !== updatedNode.id) return candidate;
+              const previousAutoLabel = defaultProtocolEditorEdgeLabelForTarget(node);
+              const shouldRefresh = candidate.label === undefined || candidate.label.trim() === '' || candidate.label === previousAutoLabel;
+              if (!shouldRefresh) return candidate;
+              const nextAutoLabel = defaultProtocolEditorEdgeLabelForTarget(updatedNode);
+              return { ...candidate, label: nextAutoLabel };
+            })
+            : existing.edges;
+          return { ...existing, nodes, edges, viewport: this.currentViewportState(), updatedAt: new Date().toISOString() };
         });
         closeModal();
         new Notice(t('protocolEditor.nodeSaved'));
