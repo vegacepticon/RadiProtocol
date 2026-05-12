@@ -8,8 +8,10 @@ export const PROTOCOL_EDITOR_VIEW_TYPE = 'radiprotocol-protocol-editor';
 /* Phase 4D — default node dimensions and kind-specific defaults */
 const DEFAULT_NODE_WIDTH = 200;
 const DEFAULT_NODE_HEIGHT = 80;
-const DEFAULT_VIEWPORT_WIDTH = 2400;
-const DEFAULT_VIEWPORT_HEIGHT = 1600;
+const DEFAULT_VIEWPORT_WIDTH = 8000;
+const DEFAULT_VIEWPORT_HEIGHT = 6000;
+const MIN_NODE_WIDTH = 120;
+const MIN_NODE_HEIGHT = 50;
 const MIN_ZOOM = 0.4;
 const MAX_ZOOM = 2;
 const ZOOM_STEP = 0.1;
@@ -245,33 +247,7 @@ export class ProtocolEditorView extends ItemView {
       return;
     }
 
-    const nodeById = new Map(this.doc.nodes.map(node => [node.id, node]));
-
-    for (const edge of this.doc.edges) {
-      const from = nodeById.get(edge.fromNodeId);
-      const to = nodeById.get(edge.toNodeId);
-      if (from === undefined || to === undefined) continue;
-      const x1 = from.x + from.width;
-      const y1 = from.y + from.height / 2;
-      const x2 = to.x;
-      const y2 = to.y + to.height / 2;
-      this.svgEl.createSvg('path', {
-        attr: {
-          d: edgePath(x1, y1, x2, y2),
-          class: 'rp-protocol-editor-edge',
-        },
-      });
-      if (edge.label !== undefined && edge.label.trim() !== '') {
-        const label = this.svgEl.createSvg('text', {
-          attr: {
-            x: String((x1 + x2) / 2),
-            y: String((y1 + y2) / 2 - 6),
-            class: 'rp-protocol-editor-edge-label',
-          },
-        });
-        label.textContent = edge.label;
-      }
-    }
+    this.renderEdges();
 
     for (const node of this.doc.nodes) {
       const nodeEl = this.surfaceEl.createDiv({ cls: 'rp-protocol-editor-node' });
@@ -292,9 +268,12 @@ export class ProtocolEditorView extends ItemView {
 
       nodeEl.createDiv({ cls: 'rp-protocol-editor-node-kind', text: node.kind ?? 'untyped' });
       nodeEl.createDiv({ cls: 'rp-protocol-editor-node-title', text: nodeTitle(node) });
+      const resizeHandle = nodeEl.createDiv({ cls: 'rp-protocol-editor-resize-handle' });
+      resizeHandle.setAttr('aria-label', 'Resize node');
 
       this.bindConnectionDrag(outputPort, node);
       this.bindDrag(nodeEl, node);
+      this.bindResize(resizeHandle, nodeEl, node);
 
       /* Phase 4D — double-click to edit */
       nodeEl.addEventListener('dblclick', (e) => {
@@ -303,6 +282,38 @@ export class ProtocolEditorView extends ItemView {
         e.stopPropagation();
         this.openEditModal(node);
       });
+    }
+  }
+
+  private renderEdges(): void {
+    if (this.doc === null || this.svgEl === null) return;
+    this.svgEl.empty();
+    const nodeById = new Map(this.doc.nodes.map(node => [node.id, node]));
+    for (const edge of this.doc.edges) {
+      const from = nodeById.get(edge.fromNodeId);
+      const to = nodeById.get(edge.toNodeId);
+      if (from === undefined || to === undefined) continue;
+      const x1 = from.x + from.width;
+      const y1 = from.y + from.height / 2;
+      const x2 = to.x;
+      const y2 = to.y + to.height / 2;
+      this.svgEl.createSvg('path', {
+        attr: {
+          d: edgePath(x1, y1, x2, y2),
+          class: 'rp-protocol-editor-edge',
+          'data-edge-id': edge.id,
+        },
+      });
+      if (edge.label !== undefined && edge.label.trim() !== '') {
+        const label = this.svgEl.createSvg('text', {
+          attr: {
+            x: String((x1 + x2) / 2),
+            y: String((y1 + y2) / 2 - 6),
+            class: 'rp-protocol-editor-edge-label',
+          },
+        });
+        label.textContent = edge.label;
+      }
     }
   }
 
@@ -349,14 +360,34 @@ export class ProtocolEditorView extends ItemView {
     ));
   }
 
+  private findInputPortAt(clientX: number, clientY: number): HTMLElement | null {
+    const target = document.elementFromPoint(clientX, clientY) as HTMLElement | null;
+    const direct = target?.closest('.rp-protocol-editor-port-input') as HTMLElement | null;
+    if (direct !== null) return direct;
+
+    let best: HTMLElement | null = null;
+    let bestDistance = Number.POSITIVE_INFINITY;
+    const tolerance = 32;
+    for (const port of Array.from(document.querySelectorAll('.rp-protocol-editor-port-input')) as HTMLElement[]) {
+      const rect = port.getBoundingClientRect();
+      const cx = rect.left + rect.width / 2;
+      const cy = rect.top + rect.height / 2;
+      const distance = Math.hypot(clientX - cx, clientY - cy);
+      if (distance < bestDistance) {
+        bestDistance = distance;
+        best = port;
+      }
+    }
+    return bestDistance <= tolerance ? best : null;
+  }
+
   private async finishConnectionDrag(ev: MouseEvent): Promise<void> {
     const state = this.connectionDragState;
     this.connectionDragState = null;
     state?.previewPath.remove();
     if (state === null || this.doc === null || this.protocolPath === null) return;
 
-    const target = document.elementFromPoint(ev.clientX, ev.clientY) as HTMLElement | null;
-    const inputPort = target?.closest('.rp-protocol-editor-port-input') as HTMLElement | null;
+    const inputPort = this.findInputPortAt(ev.clientX, ev.clientY);
     const toNodeId = inputPort?.getAttr('data-node-id');
     if (toNodeId === undefined || toNodeId === null) return;
 
@@ -410,7 +441,10 @@ export class ProtocolEditorView extends ItemView {
         const dy = screenDeltaToProtocolEditorDelta(ev.clientY - startY, this.zoom);
         const newX = Math.max(0, origX + dx);
         const newY = Math.max(0, origY + dy);
+        node.x = newX;
+        node.y = newY;
         nodeEl.setAttr('style', `left:${newX}px;top:${newY}px;width:${node.width}px;min-height:${node.height}px;${node.color !== undefined ? `--rp-node-color:${node.color};` : ''}`);
+        this.renderEdges();
       };
 
       const onUp = (ev: MouseEvent) => {
@@ -423,11 +457,11 @@ export class ProtocolEditorView extends ItemView {
         const newX = Math.max(0, Math.round(origX + dx));
         const newY = Math.max(0, Math.round(origY + dy));
 
-        if (newX === node.x && newY === node.y) return;
+        if (newX === origX && newY === origY) return;
 
         node.x = newX;
         node.y = newY;
-        void this.savePosition(node);
+        void this.saveNodeGeometry(node);
       };
 
       document.addEventListener('mousemove', onMove);
@@ -435,14 +469,58 @@ export class ProtocolEditorView extends ItemView {
     });
   }
 
-  /* Phase 4D — persist node position change */
-  private async savePosition(node: ProtocolNodeRecord): Promise<void> {
+  private bindResize(handleEl: HTMLElement, nodeEl: HTMLElement, node: ProtocolNodeRecord): void {
+    handleEl.addEventListener('mousedown', (e: MouseEvent) => {
+      if (e.button !== 0) return;
+      e.preventDefault();
+      e.stopPropagation();
+
+      const startX = e.clientX;
+      const startY = e.clientY;
+      const origWidth = node.width;
+      const origHeight = node.height;
+
+      nodeEl.addClass('rp-node-resizing');
+
+      const onMove = (ev: MouseEvent) => {
+        const dx = screenDeltaToProtocolEditorDelta(ev.clientX - startX, this.zoom);
+        const dy = screenDeltaToProtocolEditorDelta(ev.clientY - startY, this.zoom);
+        node.width = Math.max(MIN_NODE_WIDTH, origWidth + dx);
+        node.height = Math.max(MIN_NODE_HEIGHT, origHeight + dy);
+        this.applyNodePosition(nodeEl, node);
+        this.renderEdges();
+      };
+
+      const onUp = (ev: MouseEvent) => {
+        document.removeEventListener('mousemove', onMove);
+        document.removeEventListener('mouseup', onUp);
+        nodeEl.removeClass('rp-node-resizing');
+
+        const dx = screenDeltaToProtocolEditorDelta(ev.clientX - startX, this.zoom);
+        const dy = screenDeltaToProtocolEditorDelta(ev.clientY - startY, this.zoom);
+        const newWidth = Math.max(MIN_NODE_WIDTH, Math.round(origWidth + dx));
+        const newHeight = Math.max(MIN_NODE_HEIGHT, Math.round(origHeight + dy));
+        if (newWidth === origWidth && newHeight === origHeight) return;
+        node.width = newWidth;
+        node.height = newHeight;
+        this.applyNodePosition(nodeEl, node);
+        this.renderEdges();
+        void this.saveNodeGeometry(node);
+      };
+
+      document.addEventListener('mousemove', onMove);
+      document.addEventListener('mouseup', onUp);
+    });
+  }
+
+  /* Phase 4D — persist node position/size change */
+  private async saveNodeGeometry(node: ProtocolNodeRecord): Promise<void> {
     if (this.protocolPath === null) return;
     try {
       await this.plugin.protocolDocumentStore.update(this.protocolPath, (existing) => {
         if (existing === null) throw new Error('Protocol file disappeared');
         const nodes = existing.nodes.map((n) =>
-          n.id === node.id ? { ...n, x: node.x, y: node.y } : n,
+          n.id === node.id ? { ...n, x: Math.round(node.x), y: Math.round(node.y), width: Math.round(node.width), height: Math.round(node.height) } : n,
         );
         return { ...existing, nodes, viewport: this.currentViewportState(), updatedAt: new Date().toISOString() };
       });
@@ -599,57 +677,80 @@ export class ProtocolEditorView extends ItemView {
     const modalEl = document.body.createDiv({ cls: 'rp-protocol-editor-modal-backdrop' });
     const modal = modalEl.createDiv({ cls: 'rp-protocol-editor-modal' });
 
-    /* Header */
     const header = modal.createDiv({ cls: 'rp-protocol-editor-modal-header' });
     header.createEl('h3', { text: t('protocolEditor.editNode') });
     const closeBtn = header.createEl('button', { cls: 'rp-protocol-editor-modal-close', text: '✕' });
     const closeModal = () => modalEl.remove();
     closeBtn.addEventListener('click', closeModal);
 
-    /* Body — form fields */
     const body = modal.createDiv({ cls: 'rp-protocol-editor-modal-body' });
 
-    /* Kind (read-only) */
     const kindField = body.createDiv({ cls: 'rp-protocol-editor-modal-field' });
     kindField.createEl('label', { text: t('protocolEditor.kindLabel') });
     kindField.createEl('input', {
       attr: { type: 'text', value: node.kind ?? 'untyped', readonly: 'readonly' },
     });
 
-    /* Text */
-    const textField = body.createDiv({ cls: 'rp-protocol-editor-modal-field' });
-    textField.createEl('label', { text: t('protocolEditor.textLabel') });
-    const textInput = textField.createEl('textarea', { text: node.text ?? '' }) as HTMLTextAreaElement;
+    const textControls: Array<{ key: string; value: () => string | undefined }> = [];
+    const addInput = (key: string, label: string, value: unknown, multiline = false) => {
+      const field = body.createDiv({ cls: 'rp-protocol-editor-modal-field' });
+      field.createEl('label', { text: label });
+      if (multiline) {
+        const input = field.createEl('textarea', { text: typeof value === 'string' ? value : '' }) as HTMLTextAreaElement;
+        textControls.push({ key, value: () => input.value || undefined });
+      } else {
+        const input = field.createEl('input', { attr: { type: 'text', value: typeof value === 'string' ? value : '' } }) as HTMLInputElement;
+        textControls.push({ key, value: () => input.value || undefined });
+      }
+    };
+    const addSeparator = (key: string, label: string, value: unknown) => {
+      const field = body.createDiv({ cls: 'rp-protocol-editor-modal-field' });
+      field.createEl('label', { text: label });
+      const select = field.createEl('select') as HTMLSelectElement;
+      const options: Array<[string, string]> = [['', 'Use global'], ['newline', 'Newline'], ['space', 'Space']];
+      for (const [optionValue, optionLabel] of options) {
+        select.createEl('option', { attr: { value: optionValue }, text: optionLabel });
+      }
+      select.value = value === 'newline' || value === 'space' ? value : '';
+      textControls.push({ key, value: () => (select.value === 'newline' || select.value === 'space') ? select.value : undefined });
+    };
 
-    /* Position row */
-    const posField = body.createDiv({ cls: 'rp-protocol-editor-modal-field' });
-    posField.createEl('label', { text: `${t('protocolEditor.xLabel')} / ${t('protocolEditor.yLabel')}` });
-    const posRow = posField.createDiv({ cls: 'field-row' });
-    const xInput = posRow.createEl('input', { attr: { type: 'number', value: String(node.x) } }) as HTMLInputElement;
-    const yInput = posRow.createEl('input', { attr: { type: 'number', value: String(node.y) } }) as HTMLInputElement;
+    switch (node.kind) {
+      case 'question':
+        addInput('questionText', 'Question text', node.fields['questionText'] ?? node.text, true);
+        break;
+      case 'answer':
+        addInput('displayLabel', 'Display label', node.fields['displayLabel']);
+        addInput('answerText', 'Answer text', node.fields['answerText'] ?? node.text, true);
+        addSeparator('separator', 'Text separator', node.fields['separator']);
+        break;
+      case 'text-block':
+        addInput('content', 'Content', node.fields['content'] ?? node.text, true);
+        addSeparator('separator', 'Text separator', node.fields['separator']);
+        break;
+      case 'loop':
+        addInput('headerText', 'Header text', node.fields['headerText'] ?? node.text, true);
+        break;
+      case 'snippet':
+        addInput('subfolderPath', 'Snippet folder path', node.fields['subfolderPath']);
+        addInput('snippetPath', 'Snippet file path', node.fields['snippetPath']);
+        addInput('snippetLabel', 'Branch label', node.fields['snippetLabel']);
+        addSeparator('snippetSeparator', 'Snippet separator', node.fields['snippetSeparator']);
+        break;
+      case 'start':
+      case 'loop-start':
+      case 'loop-end':
+      case null:
+        body.createDiv({ cls: 'rp-protocol-editor-modal-help', text: 'No editable content fields for this node kind.' });
+        break;
+    }
 
-    /* Size row */
     const sizeField = body.createDiv({ cls: 'rp-protocol-editor-modal-field' });
     sizeField.createEl('label', { text: `${t('protocolEditor.widthLabel')} / ${t('protocolEditor.heightLabel')}` });
     const sizeRow = sizeField.createDiv({ cls: 'field-row' });
-    const wInput = sizeRow.createEl('input', { attr: { type: 'number', value: String(node.width) } }) as HTMLInputElement;
-    const hInput = sizeRow.createEl('input', { attr: { type: 'number', value: String(node.height) } }) as HTMLInputElement;
+    const wInput = sizeRow.createEl('input', { attr: { type: 'number', value: String(node.width), min: String(MIN_NODE_WIDTH) } }) as HTMLInputElement;
+    const hInput = sizeRow.createEl('input', { attr: { type: 'number', value: String(node.height), min: String(MIN_NODE_HEIGHT) } }) as HTMLInputElement;
 
-    /* Color */
-    const colorField = body.createDiv({ cls: 'rp-protocol-editor-modal-field' });
-    colorField.createEl('label', { text: t('protocolEditor.colorLabel') });
-    const colorInput = colorField.createEl('input', {
-      attr: { type: 'color', value: node.color ?? '#000000' },
-    }) as HTMLInputElement;
-
-    /* Fields JSON */
-    const fieldsField = body.createDiv({ cls: 'rp-protocol-editor-modal-field' });
-    fieldsField.createEl('label', { text: t('protocolEditor.fieldsLabel') });
-    const fieldsInput = fieldsField.createEl('textarea', {
-      text: JSON.stringify(node.fields, null, 2),
-    }) as HTMLTextAreaElement;
-
-    /* Footer */
     const footer = modal.createDiv({ cls: 'rp-protocol-editor-modal-footer' });
     const deleteBtn = footer.createEl('button', {
       cls: 'rp-protocol-editor-modal-btn rp-protocol-editor-modal-btn-danger',
@@ -667,33 +768,40 @@ export class ProtocolEditorView extends ItemView {
 
     cancelBtn.addEventListener('click', closeModal);
 
-    /* Phase 4D — save handler */
     saveBtn.addEventListener('click', async () => {
-      let parsedFields: Record<string, unknown>;
-      try {
-        parsedFields = JSON.parse(fieldsInput.value);
-      } catch {
-        new Notice(t('protocolEditor.invalidFieldsJson'));
-        return;
+      const nextFields: Record<string, unknown> = { ...node.fields };
+      for (const control of textControls) {
+        const value = control.value();
+        if (value === undefined) delete nextFields[control.key];
+        else nextFields[control.key] = value;
       }
 
       const updatedNode: ProtocolNodeRecord = {
         ...node,
-        text: textInput.value || undefined,
-        x: parseInt(xInput.value, 10) || 0,
-        y: parseInt(yInput.value, 10) || 0,
-        width: parseInt(wInput.value, 10) || DEFAULT_NODE_WIDTH,
-        height: parseInt(hInput.value, 10) || DEFAULT_NODE_HEIGHT,
-        color: colorInput.value !== '#000000' ? colorInput.value : undefined,
-        fields: parsedFields,
+        width: Math.max(MIN_NODE_WIDTH, parseInt(wInput.value, 10) || DEFAULT_NODE_WIDTH),
+        height: Math.max(MIN_NODE_HEIGHT, parseInt(hInput.value, 10) || DEFAULT_NODE_HEIGHT),
+        fields: nextFields,
       };
+
+      const titleKey = node.kind === 'question'
+        ? 'questionText'
+        : node.kind === 'answer'
+          ? 'answerText'
+          : node.kind === 'text-block'
+            ? 'content'
+            : node.kind === 'loop'
+              ? 'headerText'
+              : node.kind === 'snippet'
+                ? 'snippetLabel'
+                : null;
+      if (titleKey !== null && typeof nextFields[titleKey] === 'string') {
+        updatedNode.text = nextFields[titleKey] as string;
+      }
 
       try {
         await this.plugin.protocolDocumentStore.update(this.protocolPath!, (existing) => {
           if (existing === null) throw new Error('Protocol file disappeared');
-          const nodes = existing.nodes.map((n) =>
-            n.id === updatedNode.id ? updatedNode : n,
-          );
+          const nodes = existing.nodes.map((n) => n.id === updatedNode.id ? updatedNode : n);
           return { ...existing, nodes, viewport: this.currentViewportState(), updatedAt: new Date().toISOString() };
         });
         closeModal();
@@ -704,16 +812,13 @@ export class ProtocolEditorView extends ItemView {
       }
     });
 
-    /* Phase 4D — delete handler */
     deleteBtn.addEventListener('click', async () => {
       if (!confirm(t('protocolEditor.deleteNodeConfirm'))) return;
       try {
         await this.plugin.protocolDocumentStore.update(this.protocolPath!, (existing) => {
           if (existing === null) throw new Error('Protocol file disappeared');
           const nodes = existing.nodes.filter((n) => n.id !== node.id);
-          const edges = existing.edges.filter(
-            (e) => e.fromNodeId !== node.id && e.toNodeId !== node.id,
-          );
+          const edges = existing.edges.filter((e) => e.fromNodeId !== node.id && e.toNodeId !== node.id);
           return { ...existing, nodes, edges, viewport: this.currentViewportState(), updatedAt: new Date().toISOString() };
         });
         closeModal();
@@ -724,9 +829,9 @@ export class ProtocolEditorView extends ItemView {
       }
     });
 
-    /* Close on backdrop click */
     modalEl.addEventListener('click', (e) => {
       if (e.target === modalEl) closeModal();
     });
   }
+
 }

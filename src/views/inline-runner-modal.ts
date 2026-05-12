@@ -112,6 +112,7 @@ export class InlineRunnerModal {
   private activeFileEventRef: import('obsidian').EventRef | null = null;
   private fileDeleteEventRef: import('obsidian').EventRef | null = null;
   private isHidden = false;
+  private openedSuccessfully = false;
 
   private snippetTreePicker: SnippetTreePicker | null = null;
   private resizeObserver: ResizeObserver | null = null;
@@ -169,6 +170,10 @@ export class InlineRunnerModal {
     return this.targetNote;
   }
 
+  isOpen(): boolean {
+    return this.openedSuccessfully && this.containerEl !== null;
+  }
+
   /** Bring an already-open inline runner to the foreground.
    *  Re-appends the container to document.body (so it stacks above sibling
    *  runners) and clears the D1 `is-hidden` class if previously hidden. */
@@ -192,7 +197,9 @@ export class InlineRunnerModal {
     const protocolPath = this.canvasFilePath!;
     const file = this.app.vault.getAbstractFileByPath(protocolPath);
     if (!(file instanceof TFile)) {
-      new Notice(`Protocol file not found: "${protocolPath}".`);
+      const reason = `Protocol file not found: "${protocolPath}".`;
+      console.warn('[RadiProtocol] InlineRunnerModal.open() failed:', reason);
+      new Notice(reason);
       this.close();
       return;
     }
@@ -207,7 +214,9 @@ export class InlineRunnerModal {
       try {
         content = await this.app.vault.read(file);
       } catch {
-        new Notice(`Could not read protocol file: "${protocolPath}".`);
+        const reason = `Could not read protocol file: "${protocolPath}".`;
+        console.warn('[RadiProtocol] InlineRunnerModal.open() failed:', reason);
+        new Notice(reason);
         this.close();
         return;
       }
@@ -217,6 +226,7 @@ export class InlineRunnerModal {
       ? this.plugin.protocolDocumentParser.parse(content, protocolPath)
       : this.plugin.canvasParser.parse(content, protocolPath);
     if (!parseResult.success) {
+      console.warn('[RadiProtocol] InlineRunnerModal.open() parse failed:', parseResult.error);
       new Notice(parseResult.error);
       this.close();
       return;
@@ -224,6 +234,7 @@ export class InlineRunnerModal {
 
     const validationErrors = this.validator.validate(parseResult.graph);
     if (validationErrors.length > 0) {
+      console.warn('[RadiProtocol] InlineRunnerModal.open() validation failed:', validationErrors);
       new Notice(validationErrors.join('\n'));
       this.close();
       return;
@@ -232,6 +243,7 @@ export class InlineRunnerModal {
     this.graph = parseResult.graph;
     this.runner.start(this.graph, this.startNodeId);
     this.render();
+    this.openedSuccessfully = true;
 
     // D1: freeze/resume on note switch
     this.activeFileEventRef = this.app.workspace.on('active-leaf-change', () => {
@@ -269,6 +281,7 @@ export class InlineRunnerModal {
 
   close(): void {
     console.debug('[RadiProtocol] InlineRunnerModal.close()');
+    this.openedSuccessfully = false;
 
     // Unmount picker if active
     if (this.snippetTreePicker !== null) {

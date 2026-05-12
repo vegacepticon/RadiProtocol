@@ -35,18 +35,24 @@ const VALID_KINDS: RPNodeKind[] = [
   'loop',
 ];
 
-function getString(obj: Record<string, unknown>, key: string, fallback = ''): string {
+function getCompatValue(obj: Record<string, unknown>, key: string, legacyKey?: string): unknown {
   const v = obj[key];
+  if (typeof v !== 'undefined') return v;
+  return legacyKey !== undefined ? obj[legacyKey] : undefined;
+}
+
+function getString(obj: Record<string, unknown>, key: string, fallback = '', legacyKey?: string): string {
+  const v = getCompatValue(obj, key, legacyKey);
   return typeof v === 'string' ? v : fallback;
 }
 
-function getOptionalString(obj: Record<string, unknown>, key: string): string | undefined {
-  const v = obj[key];
+function getOptionalString(obj: Record<string, unknown>, key: string, legacyKey?: string): string | undefined {
+  const v = getCompatValue(obj, key, legacyKey);
   return typeof v === 'string' && v !== '' ? v : undefined;
 }
 
-function getSeparator(obj: Record<string, unknown>, key: string): 'newline' | 'space' | undefined {
-  const v = obj[key];
+function getSeparator(obj: Record<string, unknown>, key: string, legacyKey?: string): 'newline' | 'space' | undefined {
+  const v = getCompatValue(obj, key, legacyKey);
   return v === 'newline' || v === 'space' ? v : undefined;
 }
 
@@ -190,7 +196,7 @@ export class ProtocolDocumentParser {
         const node: QuestionNode = {
           ...base,
           kind: 'question',
-          questionText: getString(fields, 'questionText', raw.text ?? ''),
+          questionText: getString(fields, 'questionText', raw.text ?? '', 'radiprotocol_questionText'),
         };
         return node;
       }
@@ -198,9 +204,9 @@ export class ProtocolDocumentParser {
         const node: AnswerNode = {
           ...base,
           kind: 'answer',
-          answerText: getString(fields, 'answerText', raw.text ?? ''),
-          displayLabel: getOptionalString(fields, 'displayLabel'),
-          radiprotocol_separator: getSeparator(fields, 'separator'),
+          answerText: getString(fields, 'answerText', raw.text ?? '', 'radiprotocol_answerText'),
+          displayLabel: getOptionalString(fields, 'displayLabel', 'radiprotocol_displayLabel'),
+          radiprotocol_separator: getSeparator(fields, 'separator', 'radiprotocol_separator'),
         };
         return node;
       }
@@ -208,9 +214,9 @@ export class ProtocolDocumentParser {
         const node: TextBlockNode = {
           ...base,
           kind: 'text-block',
-          content: getString(fields, 'content', raw.text ?? ''),
-          snippetId: getOptionalString(fields, 'snippetId'),
-          radiprotocol_separator: getSeparator(fields, 'separator'),
+          content: getString(fields, 'content', raw.text ?? '', 'radiprotocol_content'),
+          snippetId: getOptionalString(fields, 'snippetId', 'radiprotocol_snippetId'),
+          radiprotocol_separator: getSeparator(fields, 'separator', 'radiprotocol_separator'),
         };
         return node;
       }
@@ -218,13 +224,13 @@ export class ProtocolDocumentParser {
         const node: LoopStartNode = {
           ...base,
           kind: 'loop-start',
-          loopLabel: getString(fields, 'loopLabel', 'Loop'),
-          exitLabel: getString(fields, 'exitLabel', 'Done'),
+          loopLabel: getString(fields, 'loopLabel', 'Loop', 'radiprotocol_loopLabel'),
+          exitLabel: getString(fields, 'exitLabel', 'Done', 'radiprotocol_exitLabel'),
         };
         return node;
       }
       case 'loop-end': {
-        const loopStartId = getString(fields, 'loopStartId');
+        const loopStartId = getString(fields, 'loopStartId', '', 'radiprotocol_loopStartId');
         if (!loopStartId) {
           return { parseError: `Loop-end node "${raw.id}" is missing loopStartId` };
         }
@@ -239,10 +245,10 @@ export class ProtocolDocumentParser {
         const node: SnippetNode = {
           ...base,
           kind: 'snippet',
-          subfolderPath: getOptionalString(fields, 'subfolderPath'),
-          snippetLabel: getOptionalString(fields, 'snippetLabel'),
-          radiprotocol_snippetSeparator: getSeparator(fields, 'snippetSeparator'),
-          radiprotocol_snippetPath: getOptionalString(fields, 'snippetPath'),
+          subfolderPath: getOptionalString(fields, 'subfolderPath', 'radiprotocol_subfolderPath'),
+          snippetLabel: getOptionalString(fields, 'snippetLabel', 'radiprotocol_snippetLabel'),
+          radiprotocol_snippetSeparator: getSeparator(fields, 'snippetSeparator', 'radiprotocol_snippetSeparator'),
+          radiprotocol_snippetPath: getOptionalString(fields, 'snippetPath', 'radiprotocol_snippetPath'),
         };
         return node;
       }
@@ -250,7 +256,7 @@ export class ProtocolDocumentParser {
         const node: LoopNode = {
           ...base,
           kind: 'loop',
-          headerText: getString(fields, 'headerText', ''),
+          headerText: getString(fields, 'headerText', '', 'radiprotocol_headerText'),
         };
         return node;
       }

@@ -634,6 +634,8 @@ export default class RadiProtocolPlugin extends Plugin {
     }
     const modal = new InlineRunnerModal(this.app, this, protocolFile.path, targetNote);
     await modal.open();
-    this.registerInlineRunner(key, modal);
+    if (modal.isOpen()) {
+      this.registerInlineRunner(key, modal);
+    }
   }
 }

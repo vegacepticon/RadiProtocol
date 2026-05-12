@@ -120,6 +120,45 @@ describe('ProtocolDocumentParser — node types', () => {
     }
   });
 
+  it('parses legacy radiprotocol_* field keys in .rp.json and prefers camelCase', () => {
+    const doc = docWithNodes([{
+      id: 'n1', kind: 'question',
+      fields: { radiprotocol_questionText: 'Legacy question?' },
+    }, {
+      id: 'n2', kind: 'answer',
+      fields: {
+        radiprotocol_answerText: 'Legacy answer',
+        radiprotocol_displayLabel: 'Legacy label',
+        radiprotocol_separator: 'space',
+        answerText: 'Modern answer',
+      },
+    }, {
+      id: 'n3', kind: 'snippet',
+      fields: {
+        radiprotocol_subfolderPath: 'legacy/folder',
+        radiprotocol_snippetPath: 'legacy/file.json',
+        radiprotocol_snippetLabel: 'Legacy snippet',
+        radiprotocol_snippetSeparator: 'newline',
+      },
+    }, {
+      id: 'n4', kind: 'loop',
+      fields: { radiprotocol_headerText: 'Legacy loop' },
+    }]);
+    const result = parser.parse(JSON.stringify(doc), 'test.rp.json');
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect((result.graph.nodes.get('n1') as any).questionText).toBe('Legacy question?');
+      expect((result.graph.nodes.get('n2') as any).answerText).toBe('Modern answer');
+      expect((result.graph.nodes.get('n2') as any).displayLabel).toBe('Legacy label');
+      expect((result.graph.nodes.get('n2') as any).radiprotocol_separator).toBe('space');
+      expect((result.graph.nodes.get('n3') as any).subfolderPath).toBe('legacy/folder');
+      expect((result.graph.nodes.get('n3') as any).radiprotocol_snippetPath).toBe('legacy/file.json');
+      expect((result.graph.nodes.get('n3') as any).snippetLabel).toBe('Legacy snippet');
+      expect((result.graph.nodes.get('n3') as any).radiprotocol_snippetSeparator).toBe('newline');
+      expect((result.graph.nodes.get('n4') as any).headerText).toBe('Legacy loop');
+    }
+  });
+
   it('parses text-block node with content', () => {
     const doc = docWithNodes([{
       id: 'n1', kind: 'text-block',
