@@ -103,6 +103,17 @@ export function resolveProtocolCanvasFiles(
 }
 
 type ProtocolPickerSuggestion = { file: TFile; name: string };
+type ProtocolEditorPickerSuggestion =
+  | { kind: 'existing'; file: TFile; name: string }
+  | { kind: 'create'; title: string };
+
+function protocolDisplayName(file: TFile): string {
+  return file.basename.replace(/\.rp$/, '');
+}
+
+function protocolDocumentId(): string {
+  return `protocol-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+}
 
 class ProtocolPickerSuggestModal extends SuggestModal<ProtocolPickerSuggestion> {
   constructor(
@@ -116,7 +127,7 @@ class ProtocolPickerSuggestModal extends SuggestModal<ProtocolPickerSuggestion> 
   getSuggestions(query: string): ProtocolPickerSuggestion[] {
     const q = query.toLowerCase();
     return this.protocolFiles
-      .map(f => ({ file: f, name: f.basename.replace(/\.rp$/, '') }))
+      .map(f => ({ file: f, name: protocolDisplayName(f) }))
       .filter(item => item.name.toLowerCase().includes(q));
   }
 
@@ -126,6 +137,51 @@ class ProtocolPickerSuggestModal extends SuggestModal<ProtocolPickerSuggestion> 
 
   onChooseSuggestion(item: ProtocolPickerSuggestion): void {
     this.onChoose(item);
+  }
+}
+
+class ProtocolEditorPickerModal extends SuggestModal<ProtocolEditorPickerSuggestion> {
+  private lastQuery = '';
+
+  constructor(
+    app: App,
+    private readonly protocolFiles: TFile[],
+    private readonly t: (key: string, vars?: Record<string, string>) => string,
+    private readonly onOpenExisting: (file: TFile) => void,
+    private readonly onCreate: (title: string) => void,
+  ) {
+    super(app);
+    this.setPlaceholder(this.t('protocolEditor.openPickerPlaceholder'));
+  }
+
+  getSuggestions(query: string): ProtocolEditorPickerSuggestion[] {
+    this.lastQuery = query.trim();
+    const q = this.lastQuery.toLowerCase();
+    const existing = this.protocolFiles
+      .map(file => ({ kind: 'existing' as const, file, name: protocolDisplayName(file) }))
+      .filter(item => item.name.toLowerCase().includes(q));
+
+    if (this.lastQuery === '') return existing;
+    if (existing.some(item => item.name.toLowerCase() === q)) return existing;
+    return [{ kind: 'create', title: this.lastQuery }, ...existing];
+  }
+
+  renderSuggestion(item: ProtocolEditorPickerSuggestion, el: HTMLElement): void {
+    if (item.kind === 'create') {
+      el.createEl('div', { text: this.t('protocolEditor.createProtocolSuggestion', { title: item.title }) });
+      el.createEl('small', { text: this.t('protocolEditor.createProtocolHint') });
+      return;
+    }
+    el.createEl('div', { text: item.name });
+    el.createEl('small', { text: item.file.path });
+  }
+
+  onChooseSuggestion(item: ProtocolEditorPickerSuggestion): void {
+    if (item.kind === 'create') {
+      this.onCreate(item.title);
+      return;
+    }
+    this.onOpenExisting(item.file);
   }
 }
 
@@ -141,7 +197,7 @@ export default class RadiProtocolPlugin extends Plugin {
   canvasNodeFactory!: CanvasNodeFactory;
   edgeLabelSyncService!: EdgeLabelSyncService;
   private readonly insertMutex = new WriteMutex();
-  private pickerModal: SuggestModal<{ file: TFile; name: string }> | null = null;
+  private pickerModal: SuggestModal<ProtocolPickerSuggestion | ProtocolEditorPickerSuggestion> | null = null;
   // Phase 85 INLINE-MULTI-01: registry of open inline runners keyed by `${protocolPath}#${notePath}`.
   private inlineRunners = new Map<string, InlineRunnerModal>();
 
@@ -208,11 +264,11 @@ export default class RadiProtocolPlugin extends Plugin {
       callback: () => { void this.activateEditorPanelView(); },
     });
 
-    // Command: open-protocol-editor — opens the independent .rp.json visual editor.
+    // Command: open-protocol-editor — prompts for a .rp.json target, then opens the independent visual editor.
     this.addCommand({
       id: 'open-protocol-editor',
       name: 'Open protocol editor',
-      callback: () => { void this.activateProtocolEditorView(); },
+      callback: () => { void this.handleOpenProtocolEditor(); },
     });
 
     // Phase 45 (LOOP-06): start-from-node command (NFR-06: no plugin name prefix)
@@ -367,6 +423,42 @@ export default class RadiProtocolPlugin extends Plugin {
       if (view instanceof ProtocolEditorView) {
         await view.loadProtocol(protocolPath);
       }
+    }
+  }
+
+  private async handleOpenProtocolEditor(): Promise<void> {
+    const folderPath = normalizeProtocolFolderPath(this.settings.protocolFolderPath);
+    if (folderPath === '') {
+      new Notice(this.i18n.t('protocolEditor.setProtocolFolderFirst'));
+      await this.activateProtocolEditorView();
+      return;
+    }
+
+    const protocolFiles = resolveProtocolDocumentFiles(this.app.vault, folderPath);
+    const modal = new ProtocolEditorPickerModal(
+      this.app,
+      protocolFiles,
+      this.i18n.t.bind(this.i18n),
+      (file) => {
+        this.pickerModal = null;
+        void this.activateProtocolEditorView(file.path);
+      },
+      (title) => {
+        this.pickerModal = null;
+        void this.createAndOpenProtocol(folderPath, title);
+      },
+    );
+    this.pickerModal = modal;
+    modal.open();
+  }
+
+  private async createAndOpenProtocol(folderPath: string, title: string): Promise<void> {
+    try {
+      const { file } = await this.protocolDocumentStore.create(folderPath, title, protocolDocumentId());
+      new Notice(this.i18n.t('protocolEditor.protocolCreated', { title: protocolDisplayName(file) }));
+      await this.activateProtocolEditorView(file.path);
+    } catch (err) {
+      new Notice(this.i18n.t('protocolEditor.createProtocolFailed', { error: String(err) }));
     }
   }
 

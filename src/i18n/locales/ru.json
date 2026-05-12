@@ -57,7 +57,13 @@
     "duplicateEdgeRejected": "Такая связь уже существует.",
     "inputPortLabel": "Входной порт",
     "outputPortLabel": "Выходной порт",
-    "invalidFieldsJson": "Некорректный JSON в полях."
+    "invalidFieldsJson": "Некорректный JSON в полях.",
+    "openPickerPlaceholder": "Открыть или создать протокол…",
+    "createProtocolSuggestion": "Создать протокол: {title}",
+    "createProtocolHint": "Нажмите Enter, чтобы создать новый .rp.json файл в настроенной папке протоколов.",
+    "setProtocolFolderFirst": "Сначала укажите папку протоколов в настройках.",
+    "protocolCreated": "Протокол создан: {title}",
+    "createProtocolFailed": "Не удалось создать протокол: {error}"
   },
   "donate": {
     "invitation": "Спасибо за поддержку! Если RadiProtocol экономит вам время — буду рад любому переводу.",

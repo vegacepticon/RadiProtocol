@@ -57,7 +57,13 @@
     "duplicateEdgeRejected": "This edge already exists.",
     "inputPortLabel": "Input port",
     "outputPortLabel": "Output port",
-    "invalidFieldsJson": "Invalid JSON in fields."
+    "invalidFieldsJson": "Invalid JSON in fields.",
+    "openPickerPlaceholder": "Open or create a protocol…",
+    "createProtocolSuggestion": "Create protocol: {title}",
+    "createProtocolHint": "Press Enter to create a new .rp.json file in the configured protocol folder.",
+    "setProtocolFolderFirst": "Set a protocol folder in settings before creating protocols.",
+    "protocolCreated": "Protocol created: {title}",
+    "createProtocolFailed": "Failed to create protocol: {error}"
   },
   "donate": {
     "invitation": "Thank you for your support! If RadiProtocol saves you time, any donation is appreciated.",
