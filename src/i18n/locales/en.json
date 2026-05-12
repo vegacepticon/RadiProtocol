@@ -63,7 +63,19 @@
     "createProtocolHint": "Press Enter to create a new .rp.json file in the configured protocol folder.",
     "setProtocolFolderFirst": "Set a protocol folder in settings before creating protocols.",
     "protocolCreated": "Protocol created: {title}",
-    "createProtocolFailed": "Failed to create protocol: {error}"
+    "createProtocolFailed": "Failed to create protocol: {error}",
+    "questionTextLabel": "Question text",
+    "displayLabelLabel": "Display label",
+    "answerTextLabel": "Answer text",
+    "contentLabel": "Content",
+    "headerTextLabel": "Header text",
+    "snippetFilePathLabel": "Snippet file path",
+    "branchLabelLabel": "Branch label",
+    "snippetSeparatorLabel": "Snippet separator",
+    "noEditableFields": "No editable content fields for this node kind.",
+    "snippetRootPlaceholder": "Select snippet folder...",
+    "resizeNodeLabel": "Resize node",
+    "deleteEdgeLabel": "Delete edge"
   },
   "donate": {
     "invitation": "Thank you for your support! If RadiProtocol saves you time, any donation is appreciated.",

@@ -63,7 +63,19 @@
     "createProtocolHint": "Нажмите Enter, чтобы создать новый .rp.json файл в настроенной папке протоколов.",
     "setProtocolFolderFirst": "Сначала укажите папку протоколов в настройках.",
     "protocolCreated": "Протокол создан: {title}",
-    "createProtocolFailed": "Не удалось создать протокол: {error}"
+    "createProtocolFailed": "Не удалось создать протокол: {error}",
+    "questionTextLabel": "Question text",
+    "displayLabelLabel": "Display label",
+    "answerTextLabel": "Answer text",
+    "contentLabel": "Content",
+    "headerTextLabel": "Header text",
+    "snippetFilePathLabel": "Snippet file path",
+    "branchLabelLabel": "Branch label",
+    "snippetSeparatorLabel": "Snippet separator",
+    "noEditableFields": "No editable content fields for this node kind.",
+    "snippetRootPlaceholder": "Select snippet folder...",
+    "resizeNodeLabel": "Resize node",
+    "deleteEdgeLabel": "Delete edge"
   },
   "donate": {
     "invitation": "Спасибо за поддержку! Если RadiProtocol экономит вам время — буду рад любому переводу.",
