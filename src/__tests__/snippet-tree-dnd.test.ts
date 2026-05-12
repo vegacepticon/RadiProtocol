@@ -628,6 +628,10 @@ describe('SnippetManagerView — drag-and-drop (Phase 34 Plan 02)', () => {
       expect(service.moveFolder).not.toHaveBeenCalled();
       expect(rewriteCanvasRefsSpy).toHaveBeenCalledTimes(1);
       expect(rewriteProtocolSnippetRefsSpy).toHaveBeenCalledTimes(1);
+      const canvasMapping = rewriteCanvasRefsSpy.mock.calls[0]![1] as Map<string, string>;
+      expect(Array.from(canvasMapping.entries())).toEqual([['note', 'dst/note']]);
+      const protocolMapping = rewriteProtocolSnippetRefsSpy.mock.calls[0]![1] as Map<string, string>;
+      expect(Array.from(protocolMapping.entries())).toEqual([['note.json', 'dst/note.json']]);
     });
 
     it('folder branch: selecting target calls moveFolder then rewriteCanvasRefs and rewriteProtocolSnippetRefs with snippet-root-relative keys', async () => {

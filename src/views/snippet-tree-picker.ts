@@ -218,29 +218,20 @@ export class SnippetTreePicker {
     this.removeListenersExceptSearch();
     this.removeBody(host);
 
-    // Compact breadcrumb row. Segment clicks navigate directly; parent icon replaces the old text "Up" button.
+    // Compact breadcrumb row. Home icon + segment path buttons.
     const breadcrumb = host.createDiv({ cls: 'rp-stp-breadcrumb' });
     breadcrumb.createEl('span', {
       cls: 'rp-stp-breadcrumb-label',
       text: this.drillPath.length === 0 ? '/' : this.drillPath.join('/'),
     });
     if (this.drillPath.length > 0) {
-      const upBtn = createButton(breadcrumb, { cls: 'rp-stp-up-btn', attr: { 'aria-label': 'Parent folder', title: 'Parent folder' } });
+      const upBtn = createButton(breadcrumb, { cls: 'rp-stp-up-btn', attr: { 'aria-label': 'Root (parent)', title: 'Root' } });
       setIcon(upBtn, 'arrow-up');
       this.addListener(upBtn, 'click', () => {
-        this.drillPath.pop();
+        this.drillPath = [];
         void this.renderDrillView();
       });
     }
-
-    const rootCrumb = createButton(breadcrumb, {
-      cls: 'rp-stp-crumb',
-      text: this.drillPath.length === 0 ? '/' : '⌂',
-    });
-    this.addListener(rootCrumb, 'click', () => {
-      this.drillPath = [];
-      void this.renderDrillView();
-    });
     this.drillPath.forEach((segment, index) => {
       breadcrumb.createEl('span', { cls: 'rp-stp-crumb-separator', text: '/' });
       const crumb = createButton(breadcrumb, {

@@ -171,7 +171,9 @@
   max-width: 100%;
 }
 .rp-stp-modal-host .rp-stp-list {
+  min-height: 240px;
   max-height: 480px;
+  overflow-y: auto;
 }
 
 /* Phase 56 D-10 (PICKER-01 follow-up): committed-state variant for the

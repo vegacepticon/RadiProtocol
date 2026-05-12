@@ -169,6 +169,7 @@ export class ProtocolEditorView extends ItemView {
   private minimapEl: HTMLElement | null = null;
   private minimapSvgEl: SVGSVGElement | null = null;
   private minimapViewportEl: SVGRectElement | null = null;
+  private minimapWorldBounds: { x: number; y: number; width: number; height: number } | null = null;
   private zoom = 1;
   private panState: PanState | null = null;
   private connectionDragState: ConnectionDragState | null = null;
@@ -196,6 +197,7 @@ export class ProtocolEditorView extends ItemView {
     this.minimapEl = null;
     this.minimapSvgEl = null;
     this.minimapViewportEl = null;
+    this.minimapWorldBounds = null;
     this.doc = null;
     this.protocolPath = null;
     this.panState = null;
@@ -276,6 +278,7 @@ export class ProtocolEditorView extends ItemView {
       this.minimapEl = null;
       this.minimapSvgEl = null;
       this.minimapViewportEl = null;
+      this.minimapWorldBounds = null;
     }
 
     this.applyZoom();
@@ -466,40 +469,88 @@ export class ProtocolEditorView extends ItemView {
     if (this.doc === null || this.minimapSvgEl === null) return;
     this.minimapSvgEl.empty();
 
+    const nodeById = new Map(this.doc.nodes.map(node => [node.id, node]));
+
+    // Compute content bounds so the viewBox fits all nodes with some padding.
+    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+    for (const node of this.doc.nodes) {
+      if (node.x < minX) minX = node.x;
+      if (node.y < minY) minY = node.y;
+      const right = node.x + node.width;
+      const bottom = node.y + node.height;
+      if (right > maxX) maxX = right;
+      if (bottom > maxY) maxY = bottom;
+    }
+    // Include edges in bounds
+    for (const edge of this.doc.edges) {
+      const from = nodeById.get(edge.fromNodeId);
+      const to = nodeById.get(edge.toNodeId);
+      if (from === undefined || to === undefined) continue;
+      const x1 = from.x + from.width;
+      const x2 = to.x;
+      if (x1 < minX) minX = x1;
+      if (x2 < minX) minX = x2;
+      if (x1 > maxX) maxX = x1;
+      if (x2 > maxX) maxX = x2;
+      const y1 = from.y + from.height / 2;
+      const y2 = to.y + to.height / 2;
+      if (y1 < minY) minY = y1;
+      if (y2 < minY) minY = y2;
+      if (y1 > maxY) maxY = y1;
+      if (y2 > maxY) maxY = y2;
+    }
+
+    if (!Number.isFinite(minX) || !Number.isFinite(minY) || !Number.isFinite(maxX) || !Number.isFinite(maxY)) {
+      minX = -100;
+      minY = -100;
+      maxX = 100;
+      maxY = 100;
+    }
+
+    const PADDING = 80;
+    const vbWidth = Math.max(maxX - minX + PADDING * 2, 300);
+    const vbHeight = Math.max(maxY - minY + PADDING * 2, 220);
+    const vbX = minX - PADDING;
+    const vbY = minY - PADDING;
+    this.minimapWorldBounds = { x: vbX, y: vbY, width: vbWidth, height: vbHeight };
+    this.minimapSvgEl.setAttr('viewBox', `${vbX} ${vbY} ${vbWidth} ${vbHeight}`);
+
+    // Background
     this.minimapSvgEl.createSvg('rect', {
       attr: {
-        x: '0',
-        y: '0',
-        width: String(DEFAULT_VIEWPORT_WIDTH),
-        height: String(DEFAULT_VIEWPORT_HEIGHT),
+        x: String(vbX),
+        y: String(vbY),
+        width: String(vbWidth),
+        height: String(vbHeight),
         class: 'rp-protocol-editor-minimap-bg',
       },
     });
 
-    const nodeById = new Map(this.doc.nodes.map(node => [node.id, node]));
+    // Edges
     for (const edge of this.doc.edges) {
       const from = nodeById.get(edge.fromNodeId);
       const to = nodeById.get(edge.toNodeId);
       if (from === undefined || to === undefined) continue;
       this.minimapSvgEl.createSvg('line', {
         attr: {
-          x1: String(worldXToSurfaceX(from.x + from.width / 2)),
-          y1: String(worldYToSurfaceY(from.y + from.height / 2)),
-          x2: String(worldXToSurfaceX(to.x + to.width / 2)),
-          y2: String(worldYToSurfaceY(to.y + to.height / 2)),
+          x1: String(from.x + from.width / 2),
+          y1: String(from.y + from.height / 2),
+          x2: String(to.x + to.width / 2),
+          y2: String(to.y + to.height / 2),
           class: 'rp-protocol-editor-minimap-edge',
         },
       });
     }
 
+    // Nodes
     for (const node of this.doc.nodes) {
       this.minimapSvgEl.createSvg('rect', {
         attr: {
-          x: String(worldXToSurfaceX(node.x)),
-          y: String(worldYToSurfaceY(node.y)),
+          x: String(node.x),
+          y: String(node.y),
           width: String(node.width),
           height: String(node.height),
-          rx: '24',
+          rx: '4',
           class: `rp-protocol-editor-minimap-node rp-protocol-editor-minimap-node-${node.kind ?? 'untyped'}`,
         },
       });
@@ -519,8 +570,8 @@ export class ProtocolEditorView extends ItemView {
 
   private updateMinimapViewport(): void {
     if (this.viewportEl === null || this.minimapViewportEl === null) return;
-    const x = this.viewportEl.scrollLeft / this.zoom;
-    const y = this.viewportEl.scrollTop / this.zoom;
+    const x = this.viewportEl.scrollLeft / this.zoom - PROTOCOL_EDITOR_ORIGIN_X;
+    const y = this.viewportEl.scrollTop / this.zoom - PROTOCOL_EDITOR_ORIGIN_Y;
     const width = this.viewportEl.clientWidth / this.zoom;
     const height = this.viewportEl.clientHeight / this.zoom;
     this.minimapViewportEl.setAttr('x', String(x));
@@ -531,19 +582,19 @@ export class ProtocolEditorView extends ItemView {
 
   private centerViewportOnSurfacePoint(surfaceX: number, surfaceY: number): void {
     if (this.viewportEl === null) return;
-    this.viewportEl.scrollLeft = surfaceX * this.zoom - this.viewportEl.clientWidth / 2;
-    this.viewportEl.scrollTop = surfaceY * this.zoom - this.viewportEl.clientHeight / 2;
+    this.viewportEl.scrollLeft = (surfaceX + PROTOCOL_EDITOR_ORIGIN_X) * this.zoom - this.viewportEl.clientWidth / 2;
+    this.viewportEl.scrollTop = (surfaceY + PROTOCOL_EDITOR_ORIGIN_Y) * this.zoom - this.viewportEl.clientHeight / 2;
     this.updateMinimapViewport();
     this.scheduleViewportSave();
   }
 
   private minimapClientPointToSurfacePoint(clientX: number, clientY: number): { x: number; y: number } | null {
-    if (this.minimapSvgEl === null) return null;
+    if (this.minimapSvgEl === null || this.minimapWorldBounds === null) return null;
     const rect = this.minimapSvgEl.getBoundingClientRect();
     if (rect.width <= 0 || rect.height <= 0) return null;
     return {
-      x: ((clientX - rect.left) / rect.width) * DEFAULT_VIEWPORT_WIDTH,
-      y: ((clientY - rect.top) / rect.height) * DEFAULT_VIEWPORT_HEIGHT,
+      x: this.minimapWorldBounds.x + ((clientX - rect.left) / rect.width) * this.minimapWorldBounds.width,
+      y: this.minimapWorldBounds.y + ((clientY - rect.top) / rect.height) * this.minimapWorldBounds.height,
     };
   }
 

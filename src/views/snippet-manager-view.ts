@@ -27,6 +27,12 @@ function dirname(path: string): string {
   return i > 0 ? path.slice(0, i) : '';
 }
 
+function toSnippetRelativePath(vaultPath: string, snippetRoot: string): string {
+  if (vaultPath === snippetRoot) return '';
+  const prefix = `${snippetRoot}/`;
+  return vaultPath.startsWith(prefix) ? vaultPath.slice(prefix.length) : vaultPath;
+}
+
 // ---------------------------------------------------------------------------
 // SnippetManagerView
 // ---------------------------------------------------------------------------
@@ -505,11 +511,14 @@ export class SnippetManagerView extends ItemView {
       if (dirname(srcPath) === dstFolder) return;
       const newPath = await this.plugin.snippetService.moveSnippet(srcPath, dstFolder);
       const snippetRoot = this.plugin.settings.snippetFolderPath;
-      const mapping = new Map<string, string>([
+      const canvasMapping = new Map<string, string>([
         [toCanvasKey(srcPath, snippetRoot), toCanvasKey(newPath, snippetRoot)],
       ]);
-      const canvasResult = await rewriteCanvasRefs(this.app, mapping, this.plugin.canvasLiveEditor);
-      const protocolResult = await rewriteProtocolSnippetRefs(this.app, mapping);
+      const protocolMapping = new Map<string, string>([
+        [toSnippetRelativePath(srcPath, snippetRoot), toSnippetRelativePath(newPath, snippetRoot)],
+      ]);
+      const canvasResult = await rewriteCanvasRefs(this.app, canvasMapping, this.plugin.canvasLiveEditor);
+      const protocolResult = await rewriteProtocolSnippetRefs(this.app, protocolMapping);
       new Notice(t('snippetManager.movedFileNotice', {
         canvasCount: String(canvasResult.updated.length),
         protocolCount: String(protocolResult.updated.length),
@@ -526,11 +535,14 @@ export class SnippetManagerView extends ItemView {
     const oldPath = srcPath;
     const newPath = await this.plugin.snippetService.moveFolder(oldPath, dstFolder);
     const snippetRoot = this.plugin.settings.snippetFolderPath;
-    const mapping = new Map<string, string>([
+    const canvasMapping = new Map<string, string>([
       [toCanvasKey(oldPath, snippetRoot), toCanvasKey(newPath, snippetRoot)],
     ]);
-    const canvasResult = await rewriteCanvasRefs(this.app, mapping, this.plugin.canvasLiveEditor);
-    const protocolResult = await rewriteProtocolSnippetRefs(this.app, mapping);
+    const protocolMapping = new Map<string, string>([
+      [toSnippetRelativePath(oldPath, snippetRoot), toSnippetRelativePath(newPath, snippetRoot)],
+    ]);
+    const canvasResult = await rewriteCanvasRefs(this.app, canvasMapping, this.plugin.canvasLiveEditor);
+    const protocolResult = await rewriteProtocolSnippetRefs(this.app, protocolMapping);
 
     // D-07: expand-state prefix rewrite.
     await this.rewriteExpandState(oldPath, newPath);
