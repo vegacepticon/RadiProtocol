@@ -75,7 +75,30 @@
     "noEditableFields": "No editable content fields for this node kind.",
     "snippetRootPlaceholder": "Select snippet folder...",
     "resizeNodeLabel": "Resize node",
-    "deleteEdgeLabel": "Delete edge"
+    "deleteEdgeLabel": "Delete edge",
+    "editEdge": "Edit edge",
+    "edgeSaved": "Edge saved.",
+    "edgeDeleted": "Edge deleted.",
+    "edgeFromLabel": "From node",
+    "edgeToLabel": "To node",
+    "edgeLabelLabel": "Edge label",
+    "loopExitLabel": "Loop exit edge",
+    "confirmDelete": "Confirm delete",
+    "snippetFolderPathLabel": "Snippet folder path",
+    "snippetTargetLabel": "Snippet target",
+    "snippetFolderPlaceholder": "Selected folder",
+    "snippetFilePlaceholder": "Selected file",
+    "clearSnippetTarget": "Clear snippet target",
+    "snippetNodeLabelLabel": "Snippet button label",
+    "useGlobalSeparator": "Use global separator",
+    "nodeKind": {
+      "start": "Start",
+      "question": "Question",
+      "answer": "Answer",
+      "text-block": "Text block",
+      "loop": "Loop",
+      "snippet": "Snippet"
+    }
   },
   "donate": {
     "invitation": "Thank you for your support! If RadiProtocol saves you time, any donation is appreciated.",

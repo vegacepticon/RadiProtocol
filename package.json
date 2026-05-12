@@ -1,6 +1,6 @@
 {
   "name": "radiprotocol",
-  "version": "1.16.0-beta.4",
+  "version": "1.16.0-beta.5",
   "description": "Canvas-based guided protocol runner for Obsidian",
   "main": "main.js",
   "scripts": {

@@ -2,6 +2,13 @@ import { describe, expect, it } from 'vitest';
 import {
   canCreateProtocolEditorEdge,
   clampProtocolEditorZoom,
+  defaultColorForProtocolEditorNodeKind,
+  displayProtocolEditorEdgeLabel,
+  fieldsForProtocolEditorNodeKind,
+  isProtocolEditorLoopExitLabel,
+  normalizeProtocolEditorEdgeLabel,
+  normalizeProtocolEditorSnippetFolderSelection,
+  removeProtocolEditorEdge,
   screenDeltaToProtocolEditorDelta,
 } from '../views/protocol-editor-view';
 
@@ -21,6 +28,40 @@ describe('protocol editor helper functions', () => {
 
     it('allows reverse direction as a distinct edge', () => {
       expect(canCreateProtocolEditorEdge([{ fromNodeId: 'a', toNodeId: 'b' }], 'b', 'a')).toBe('ok');
+    });
+  });
+
+  describe('edge helpers', () => {
+    it('removes an edge by id without mutating the rest', () => {
+      expect(removeProtocolEditorEdge([
+        { id: 'e1', fromNodeId: 'a', toNodeId: 'b' },
+        { id: 'e2', fromNodeId: 'b', toNodeId: 'c' },
+      ], 'e1')).toEqual([{ id: 'e2', fromNodeId: 'b', toNodeId: 'c' }]);
+    });
+
+    it('normalizes loop exit labels with a leading plus', () => {
+      expect(normalizeProtocolEditorEdgeLabel(' Exit ', true)).toBe('+Exit');
+      expect(normalizeProtocolEditorEdgeLabel('+ Exit ', true)).toBe('+Exit');
+      expect(displayProtocolEditorEdgeLabel('+ Exit')).toBe('Exit');
+      expect(isProtocolEditorLoopExitLabel('+ Exit')).toBe(true);
+      expect(isProtocolEditorLoopExitLabel('Body')).toBe(false);
+    });
+
+    it('removes leading plus when loop exit is disabled', () => {
+      expect(normalizeProtocolEditorEdgeLabel('+ Exit ', false)).toBe('Exit');
+      expect(normalizeProtocolEditorEdgeLabel('   ', false)).toBeUndefined();
+    });
+  });
+
+  describe('node and snippet helpers', () => {
+    it('normalizes snippet folder/file selections', () => {
+      expect(normalizeProtocolEditorSnippetFolderSelection('/ct/chest/')).toBe('ct/chest');
+      expect(normalizeProtocolEditorSnippetFolderSelection('   ')).toBeUndefined();
+    });
+
+    it('returns kind-specific defaults for node type changes', () => {
+      expect(fieldsForProtocolEditorNodeKind('question')).toEqual({ questionText: '' });
+      expect(defaultColorForProtocolEditorNodeKind('snippet')).toContain('156');
     });
   });
 

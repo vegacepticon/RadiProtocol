@@ -2,15 +2,15 @@ import { ItemView, Notice, TFile, WorkspaceLeaf } from 'obsidian';
 import type RadiProtocolPlugin from '../main';
 import type { ProtocolDocumentV1, ProtocolEdgeRecord, ProtocolNodeRecord } from '../protocol/protocol-document';
 import type { RPNodeKind } from '../graph/graph-model';
-import { SnippetTreePicker } from './snippet-tree-picker';
+import { SnippetTreePicker, type SnippetTreePickerResult } from './snippet-tree-picker';
 
 export const PROTOCOL_EDITOR_VIEW_TYPE = 'radiprotocol-protocol-editor';
 
 /* Phase 4D — default node dimensions and kind-specific defaults */
 const DEFAULT_NODE_WIDTH = 200;
 const DEFAULT_NODE_HEIGHT = 80;
-const DEFAULT_VIEWPORT_WIDTH = 8000;
-const DEFAULT_VIEWPORT_HEIGHT = 6000;
+const DEFAULT_VIEWPORT_WIDTH = 20000;
+const DEFAULT_VIEWPORT_HEIGHT = 16000;
 const MIN_NODE_WIDTH = 120;
 const MIN_NODE_HEIGHT = 50;
 const MIN_ZOOM = 0.4;
@@ -39,13 +39,39 @@ interface PanState {
 }
 
 const NODE_KIND_DEFAULTS: Record<string, NodeKindDefault> = {
-  start: { kind: 'start', fields: {}, color: 'var(--color-green)' },
-  question: { kind: 'question', fields: { questionText: '' }, text: 'New question' },
-  answer: { kind: 'answer', fields: { answerText: '' }, text: 'New answer' },
-  'text-block': { kind: 'text-block', fields: { content: '' }, text: 'New text block' },
-  loop: { kind: 'loop', fields: { headerText: '' }, text: 'New loop' },
-  snippet: { kind: 'snippet', fields: {}, text: 'New snippet' },
+  start: { kind: 'start', fields: {}, color: 'rgba(76, 175, 80, 0.28)' },
+  question: { kind: 'question', fields: { questionText: '' }, text: 'New question', color: 'rgba(33, 150, 243, 0.24)' },
+  answer: { kind: 'answer', fields: { answerText: '' }, text: 'New answer', color: 'rgba(255, 193, 7, 0.28)' },
+  'text-block': { kind: 'text-block', fields: { content: '' }, text: 'New text block', color: 'rgba(255, 235, 59, 0.24)' },
+  loop: { kind: 'loop', fields: { headerText: '' }, text: 'New loop', color: 'rgba(233, 30, 99, 0.24)' },
+  snippet: { kind: 'snippet', fields: {}, text: 'New snippet', color: 'rgba(156, 39, 176, 0.24)' },
 };
+
+const EDITABLE_NODE_KINDS: RPNodeKind[] = ['start', 'question', 'answer', 'text-block', 'loop', 'snippet'];
+
+export function defaultColorForProtocolEditorNodeKind(kind: RPNodeKind | null): string | undefined {
+  if (kind === null) return undefined;
+  return NODE_KIND_DEFAULTS[kind]?.color;
+}
+
+export function fieldsForProtocolEditorNodeKind(kind: RPNodeKind | null): Record<string, unknown> {
+  if (kind === null) return {};
+  return { ...(NODE_KIND_DEFAULTS[kind]?.fields ?? {}) };
+}
+
+export function normalizeProtocolEditorEdgeLabel(label: string, isLoopExit: boolean): string | undefined {
+  const withoutPrefix = label.trim().replace(/^\+\s*/, '').trim();
+  if (isLoopExit) return `+${withoutPrefix}`;
+  return withoutPrefix === '' ? undefined : withoutPrefix;
+}
+
+export function displayProtocolEditorEdgeLabel(label: string | undefined): string {
+  return (label ?? '').trim().replace(/^\+\s*/, '').trim();
+}
+
+export function isProtocolEditorLoopExitLabel(label: string | undefined): boolean {
+  return (label ?? '').trim().startsWith('+');
+}
 
 function nodeTitle(node: ProtocolNodeRecord): string {
   if (typeof node.text === 'string' && node.text.trim() !== '') return node.text.trim();
@@ -173,11 +199,6 @@ export class ProtocolEditorView extends ItemView {
       cls: 'rp-protocol-editor-title',
       text: this.doc?.title ?? this.plugin.i18n.t('protocolEditor.emptyTitle'),
     });
-    toolbar.createEl('div', {
-      cls: 'rp-protocol-editor-path',
-      text: this.protocolPath ?? this.plugin.i18n.t('protocolEditor.noFileLoaded'),
-    });
-
     /* Phase 4D — toolbar action buttons for each node kind */
     const actions = toolbar.createDiv({ cls: 'rp-protocol-editor-toolbar-actions' });
     const kinds: Array<{ key: string; label: string }> = [
@@ -232,7 +253,7 @@ export class ProtocolEditorView extends ItemView {
       y: Math.max(0, Math.round(cy)),
       width: DEFAULT_NODE_WIDTH,
       height: DEFAULT_NODE_HEIGHT,
-      color: defaults.color,
+      color: defaults.color ?? defaultColorForProtocolEditorNodeKind(defaults.kind),
       text: defaults.text,
       fields: { ...defaults.fields },
     };
@@ -269,6 +290,7 @@ export class ProtocolEditorView extends ItemView {
       nodeEl.toggleClass('is-untyped', node.kind === null);
       nodeEl.setAttr('data-node-id', node.id);
       nodeEl.setAttr('data-node-kind', node.kind ?? 'untyped');
+      if (node.color === undefined) node.color = defaultColorForProtocolEditorNodeKind(node.kind);
       this.applyNodePosition(nodeEl, node);
 
       const inputPort = nodeEl.createDiv({ cls: 'rp-protocol-editor-port rp-protocol-editor-port-input' });
@@ -319,13 +341,13 @@ export class ProtocolEditorView extends ItemView {
           'data-edge-id': edge.id,
           role: 'button',
           tabindex: '0',
-          'aria-label': this.plugin.i18n.t('protocolEditor.deleteEdgeLabel'),
+          'aria-label': this.plugin.i18n.t('protocolEditor.editEdge'),
         },
       }) as SVGPathElement;
       path.addEventListener('dblclick', (e) => {
         e.preventDefault();
         e.stopPropagation();
-        void this.deleteEdge(edge.id);
+        this.openEdgeModal(edge);
       });
       path.addEventListener('keydown', (e: KeyboardEvent) => {
         if (e.key !== 'Delete' && e.key !== 'Backspace') return;
@@ -341,7 +363,7 @@ export class ProtocolEditorView extends ItemView {
             class: 'rp-protocol-editor-edge-label',
           },
         });
-        label.textContent = edge.label;
+        label.textContent = displayProtocolEditorEdgeLabel(edge.label);
       }
     }
   }
@@ -735,6 +757,91 @@ export class ProtocolEditorView extends ItemView {
     }
   }
 
+  private openEdgeModal(edge: ProtocolEdgeRecord): void {
+    if (this.protocolPath === null || this.doc === null) return;
+    const t = this.plugin.i18n.t.bind(this.plugin.i18n);
+    const modalEl = document.body.createDiv({ cls: 'rp-protocol-editor-modal-backdrop' });
+    const modal = modalEl.createDiv({ cls: 'rp-protocol-editor-modal' });
+    const header = modal.createDiv({ cls: 'rp-protocol-editor-modal-header' });
+    header.createEl('h3', { text: t('protocolEditor.editEdge') });
+    const closeBtn = header.createEl('button', { cls: 'rp-protocol-editor-modal-close', text: '✕' });
+    const closeModal = () => { modalEl.remove(); this.restoreEditorFocus(); };
+    closeBtn.addEventListener('click', closeModal);
+
+    const body = modal.createDiv({ cls: 'rp-protocol-editor-modal-body' });
+    const nodes = this.doc.nodes;
+    const nodeLabelForSelect = (node: ProtocolNodeRecord) => `${nodeTitle(node)} (${node.kind ?? 'untyped'})`;
+    const addNodeSelect = (label: string, initial: string) => {
+      const field = body.createDiv({ cls: 'rp-protocol-editor-modal-field' });
+      field.createEl('label', { text: label });
+      const select = field.createEl('select') as HTMLSelectElement;
+      for (const node of nodes) {
+        select.createEl('option', { attr: { value: node.id }, text: nodeLabelForSelect(node) });
+      }
+      select.value = initial;
+      return select;
+    };
+    const fromSelect = addNodeSelect(t('protocolEditor.edgeFromLabel'), edge.fromNodeId);
+    const toSelect = addNodeSelect(t('protocolEditor.edgeToLabel'), edge.toNodeId);
+    const labelField = body.createDiv({ cls: 'rp-protocol-editor-modal-field' });
+    labelField.createEl('label', { text: t('protocolEditor.edgeLabelLabel') });
+    const labelInput = labelField.createEl('input', {
+      attr: { type: 'text', value: displayProtocolEditorEdgeLabel(edge.label) },
+    }) as HTMLInputElement;
+    const exitField = body.createDiv({ cls: 'rp-protocol-editor-modal-field rp-protocol-editor-checkbox-field' });
+    const exitLabel = exitField.createEl('label');
+    const exitCheckbox = exitLabel.createEl('input', { attr: { type: 'checkbox' } }) as HTMLInputElement;
+    exitLabel.appendText(` ${t('protocolEditor.loopExitLabel')}`);
+    exitCheckbox.checked = isProtocolEditorLoopExitLabel(edge.label);
+    const syncExitVisibility = () => {
+      const fromNode = nodes.find((node) => node.id === fromSelect.value);
+      exitField.toggleClass('is-hidden', fromNode?.kind !== 'loop');
+      if (fromNode?.kind !== 'loop') exitCheckbox.checked = false;
+    };
+    fromSelect.addEventListener('change', syncExitVisibility);
+    syncExitVisibility();
+
+    const footer = modal.createDiv({ cls: 'rp-protocol-editor-modal-footer' });
+    const deleteBtn = footer.createEl('button', {
+      cls: 'rp-protocol-editor-modal-btn rp-protocol-editor-modal-btn-danger',
+      text: t('protocolEditor.deleteEdgeLabel'),
+    });
+    const actionBtns = footer.createDiv({ cls: 'modal-actions' });
+    const cancelBtn = actionBtns.createEl('button', { cls: 'rp-protocol-editor-modal-btn', text: t('protocolEditor.cancel') });
+    const saveBtn = actionBtns.createEl('button', { cls: 'rp-protocol-editor-modal-btn rp-protocol-editor-modal-btn-primary', text: t('protocolEditor.save') });
+    cancelBtn.addEventListener('click', closeModal);
+
+    saveBtn.addEventListener('click', async () => {
+      const nextFrom = fromSelect.value;
+      const nextTo = toSelect.value;
+      const duplicate = this.doc?.edges.some((candidate) => candidate.id !== edge.id && candidate.fromNodeId === nextFrom && candidate.toNodeId === nextTo) ?? false;
+      if (nextFrom === nextTo) { new Notice(t('protocolEditor.selfEdgeRejected')); return; }
+      if (duplicate) { new Notice(t('protocolEditor.duplicateEdgeRejected')); return; }
+      const nextLabel = normalizeProtocolEditorEdgeLabel(labelInput.value, exitCheckbox.checked);
+      try {
+        await this.plugin.protocolDocumentStore.update(this.protocolPath!, (existing) => {
+          if (existing === null) throw new Error('Protocol file disappeared');
+          const edges = existing.edges.map((candidate) => candidate.id === edge.id
+            ? { ...candidate, fromNodeId: nextFrom, toNodeId: nextTo, label: nextLabel }
+            : candidate);
+          return { ...existing, edges, viewport: this.currentViewportState(), updatedAt: new Date().toISOString() };
+        });
+        closeModal();
+        new Notice(t('protocolEditor.edgeSaved'));
+        await this.loadProtocol(this.protocolPath!);
+      } catch (err) {
+        new Notice(t('protocolEditor.saveFailed', { error: String(err) }));
+      }
+    });
+
+    deleteBtn.addEventListener('click', async () => {
+      closeModal();
+      await this.deleteEdge(edge.id);
+    });
+
+    modalEl.addEventListener('click', (e) => { if (e.target === modalEl) closeModal(); });
+  }
+
   /* Phase 4D — open edit modal for a node */
   private openEditModal(node: ProtocolNodeRecord): void {
     if (this.protocolPath === null) return;
@@ -756,9 +863,11 @@ export class ProtocolEditorView extends ItemView {
 
     const kindField = body.createDiv({ cls: 'rp-protocol-editor-modal-field' });
     kindField.createEl('label', { text: t('protocolEditor.kindLabel') });
-    kindField.createEl('input', {
-      attr: { type: 'text', value: node.kind ?? 'untyped', readonly: 'readonly' },
-    });
+    const kindSelect = kindField.createEl('select') as HTMLSelectElement;
+    for (const kind of EDITABLE_NODE_KINDS) {
+      kindSelect.createEl('option', { attr: { value: kind }, text: t(`protocolEditor.nodeKind.${kind}`) });
+    }
+    kindSelect.value = (node.kind !== null && EDITABLE_NODE_KINDS.includes(node.kind)) ? node.kind : 'question';
 
     const textControls: Array<{ key: string; value: () => string | undefined }> = [];
     const addInput = (key: string, label: string, value: unknown, multiline = false) => {
@@ -784,32 +893,63 @@ export class ProtocolEditorView extends ItemView {
       textControls.push({ key, value: () => (select.value === 'newline' || select.value === 'space') ? select.value : undefined });
     };
 
-    const addSnippetFolderPicker = (key: string, label: string, value: unknown) => {
+    const addSnippetTargetPicker = (folderValue: unknown, fileValue: unknown) => {
+      let selectedFolder = normalizeProtocolEditorSnippetFolderSelection(typeof folderValue === 'string' ? folderValue : '');
+      let selectedFile = normalizeProtocolEditorSnippetFolderSelection(typeof fileValue === 'string' ? fileValue : '');
       const field = body.createDiv({ cls: 'rp-protocol-editor-modal-field' });
-      field.createEl('label', { text: label });
-      const selected = field.createEl('input', {
+      field.createEl('label', { text: t('protocolEditor.snippetTargetLabel') });
+      const folderInput = field.createEl('input', {
         attr: {
           type: 'text',
-          value: typeof value === 'string' ? value : '',
+          value: selectedFolder ?? '',
           readonly: 'readonly',
-          placeholder: t('protocolEditor.snippetRootPlaceholder'),
+          placeholder: t('protocolEditor.snippetFolderPlaceholder'),
         },
       }) as HTMLInputElement;
+      const fileInput = field.createEl('input', {
+        attr: {
+          type: 'text',
+          value: selectedFile ?? '',
+          readonly: 'readonly',
+          placeholder: t('protocolEditor.snippetFilePlaceholder'),
+        },
+      }) as HTMLInputElement;
+      const clearBtn = field.createEl('button', {
+        cls: 'rp-protocol-editor-modal-btn',
+        text: t('protocolEditor.clearSnippetTarget'),
+      });
       const pickerHost = field.createDiv({ cls: 'rp-protocol-editor-snippet-folder-picker' });
+      const applySelection = (result: SnippetTreePickerResult) => {
+        const normalized = normalizeProtocolEditorSnippetFolderSelection(result.relativePath);
+        if (result.kind === 'folder') {
+          selectedFolder = normalized;
+          selectedFile = undefined;
+        } else {
+          selectedFile = normalized;
+          selectedFolder = undefined;
+        }
+        folderInput.value = selectedFolder ?? '';
+        fileInput.value = selectedFile ?? '';
+      };
+      clearBtn.addEventListener('click', () => {
+        selectedFolder = undefined;
+        selectedFile = undefined;
+        folderInput.value = '';
+        fileInput.value = '';
+      });
       const picker = new SnippetTreePicker({
         app: this.app,
         snippetService: this.plugin.snippetService,
         container: pickerHost,
-        mode: 'folder-only',
+        mode: 'both',
         rootPath: this.plugin.settings.snippetFolderPath,
-        initialSelection: typeof value === 'string' ? value : undefined,
+        initialSelection: selectedFile ?? selectedFolder,
         t,
-        onSelect: (result) => {
-          selected.value = normalizeProtocolEditorSnippetFolderSelection(result.relativePath) ?? '';
-        },
+        onSelect: applySelection,
       });
       void picker.mount();
-      textControls.push({ key, value: () => normalizeProtocolEditorSnippetFolderSelection(selected.value) });
+      textControls.push({ key: 'subfolderPath', value: () => selectedFolder });
+      textControls.push({ key: 'snippetPath', value: () => selectedFile });
     };
 
     switch (node.kind) {
@@ -829,9 +969,8 @@ export class ProtocolEditorView extends ItemView {
         addInput('headerText', t('protocolEditor.headerTextLabel'), node.fields['headerText'] ?? node.text, true);
         break;
       case 'snippet':
-        addSnippetFolderPicker('subfolderPath', t('protocolEditor.snippetFolderPathLabel'), node.fields['subfolderPath']);
-        addInput('snippetPath', t('protocolEditor.snippetFilePathLabel'), node.fields['snippetPath']);
-        addInput('snippetLabel', t('protocolEditor.branchLabelLabel'), node.fields['snippetLabel']);
+        addSnippetTargetPicker(node.fields['subfolderPath'], node.fields['snippetPath']);
+        addInput('snippetLabel', t('protocolEditor.snippetNodeLabelLabel'), node.fields['snippetLabel']);
         addSeparator('snippetSeparator', t('protocolEditor.snippetSeparatorLabel'), node.fields['snippetSeparator']);
         break;
       case 'start':
@@ -860,8 +999,10 @@ export class ProtocolEditorView extends ItemView {
     cancelBtn.addEventListener('click', closeModal);
 
     saveBtn.addEventListener('click', async () => {
-      const nextFields: Record<string, unknown> = { ...node.fields };
-      for (const control of textControls) {
+      const nextKind = kindSelect.value as RPNodeKind;
+      const kindChanged = nextKind !== node.kind;
+      const nextFields: Record<string, unknown> = kindChanged ? fieldsForProtocolEditorNodeKind(nextKind) : { ...node.fields };
+      if (!kindChanged) for (const control of textControls) {
         const value = control.value();
         if (value === undefined) delete nextFields[control.key];
         else nextFields[control.key] = value;
@@ -869,18 +1010,21 @@ export class ProtocolEditorView extends ItemView {
 
       const updatedNode: ProtocolNodeRecord = {
         ...node,
+        kind: nextKind,
+        color: kindChanged || node.color === undefined ? defaultColorForProtocolEditorNodeKind(nextKind) : node.color,
         fields: nextFields,
       };
 
-      const titleKey = node.kind === 'question'
+      const titleKind = updatedNode.kind;
+      const titleKey = titleKind === 'question'
         ? 'questionText'
-        : node.kind === 'answer'
+        : titleKind === 'answer'
           ? 'answerText'
-          : node.kind === 'text-block'
+          : titleKind === 'text-block'
             ? 'content'
-            : node.kind === 'loop'
+            : titleKind === 'loop'
               ? 'headerText'
-              : node.kind === 'snippet'
+              : titleKind === 'snippet'
                 ? 'snippetLabel'
                 : null;
       if (titleKey !== null && typeof nextFields[titleKey] === 'string') {
@@ -901,9 +1045,16 @@ export class ProtocolEditorView extends ItemView {
       }
     });
 
-    deleteBtn.addEventListener('click', async () => {
-      if (!confirm(t('protocolEditor.deleteNodeConfirm'))) return;
-      try {
+    deleteBtn.addEventListener('click', () => {
+      deleteBtn.setAttr('disabled', 'disabled');
+      const confirmWrap = footer.createDiv({ cls: 'rp-protocol-editor-confirm' });
+      confirmWrap.createSpan({ text: t('protocolEditor.deleteNodeConfirm') });
+      const confirmBtn = confirmWrap.createEl('button', {
+        cls: 'rp-protocol-editor-modal-btn rp-protocol-editor-modal-btn-danger',
+        text: t('protocolEditor.confirmDelete'),
+      });
+      confirmBtn.addEventListener('click', async () => {
+        try {
         await this.plugin.protocolDocumentStore.update(this.protocolPath!, (existing) => {
           if (existing === null) throw new Error('Protocol file disappeared');
           const nodes = existing.nodes.filter((n) => n.id !== node.id);
@@ -914,8 +1065,9 @@ export class ProtocolEditorView extends ItemView {
         new Notice(t('protocolEditor.nodeDeleted'));
         void this.loadProtocol(this.protocolPath!);
       } catch (err) {
-        new Notice(t('protocolEditor.deleteFailed', { error: String(err) }));
-      }
+          new Notice(t('protocolEditor.deleteFailed', { error: String(err) }));
+        }
+      });
     });
 
     modalEl.addEventListener('click', (e) => {
@@ -924,4 +1076,3 @@ export class ProtocolEditorView extends ItemView {
   }
 
 }
-
