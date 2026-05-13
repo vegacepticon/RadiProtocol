@@ -6,8 +6,6 @@ import type {
   RPNode,
   AnswerNode,
   TextBlockNode,
-  LoopStartNode,
-  LoopEndNode,
   SnippetNode,
   LoopNode,
 } from '../graph/graph-model';
@@ -41,19 +39,6 @@ function fieldsForNode(node: RPNode): Record<string, unknown> {
         separator: n.radiprotocol_separator,
       });
     }
-    case 'loop-start': {
-      const n = node as LoopStartNode;
-      return stripUndefined({
-        loopLabel: n.loopLabel,
-        exitLabel: n.exitLabel,
-      });
-    }
-    case 'loop-end': {
-      const n = node as LoopEndNode;
-      return stripUndefined({
-        loopStartId: n.loopStartId,
-      });
-    }
     case 'snippet': {
       const n = node as SnippetNode;
       return stripUndefined({
@@ -67,6 +52,8 @@ function fieldsForNode(node: RPNode): Record<string, unknown> {
       const n = node as LoopNode;
       return { headerText: n.headerText };
     }
+    default:
+      return {};
   }
 }
 
