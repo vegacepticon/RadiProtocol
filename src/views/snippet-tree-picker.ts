@@ -218,8 +218,11 @@ export class SnippetTreePicker {
     this.removeListenersExceptSearch();
     this.removeBody(host);
 
+    // ── Body wrapper (stabilises layout across folder changes) ───────────
+    const body = host.createDiv({ cls: 'rp-stp-body' });
+
     // Compact breadcrumb row. Home icon + segment path buttons.
-    const breadcrumb = host.createDiv({ cls: 'rp-stp-breadcrumb' });
+    const breadcrumb = body.createDiv({ cls: 'rp-stp-breadcrumb' });
     breadcrumb.createEl('span', {
       cls: 'rp-stp-breadcrumb-label',
       text: this.drillPath.length === 0 ? '/' : this.drillPath.join('/'),
@@ -252,7 +255,7 @@ export class SnippetTreePicker {
     ) {
       const currentRel = this.drillPath.join('/');
       const isCommitted = this.committedRelativePath === currentRel;
-      const selectBtn = createButton(host, {
+      const selectBtn = createButton(body, {
         cls: isCommitted ? 'rp-stp-select-folder-btn is-committed' : 'rp-stp-select-folder-btn',
         text: isCommitted ? this.t(SELECT_FOLDER_COMMITTED_KEY) : this.t(SELECT_FOLDER_KEY),
       });
@@ -267,7 +270,7 @@ export class SnippetTreePicker {
     }
 
     // Listing.
-    const listEl = host.createDiv({ cls: 'rp-stp-list' });
+    const listEl = body.createDiv({ cls: 'rp-stp-list' });
 
     const listing = await this.options.snippetService.listFolder(this.currentAbsPath());
 

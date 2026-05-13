@@ -486,7 +486,7 @@
   z-index: 5;
   border: 1px solid var(--background-modifier-border);
   border-radius: var(--radius-m);
-  background: var(--background-primary);
+  background: var(--background-secondary);
   cursor: crosshair;
   overflow: hidden;
 }
@@ -498,6 +498,8 @@
 .rp-protocol-editor-minimap-svg {
   width: 100%;
   height: 100%;
+  display: block;
+  background: var(--background-secondary);
 }
 
 .rp-protocol-editor-minimap-bg {
@@ -552,7 +554,7 @@
 }
 
 .rp-protocol-editor-minimap-viewport {
-  fill: rgba(var(--color-accent-rgb), 0.12);
+  fill: transparent;
   stroke: var(--interactive-accent);
   stroke-width: 2.5;
   stroke-opacity: 1;

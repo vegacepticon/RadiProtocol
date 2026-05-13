@@ -272,6 +272,7 @@ export class ProtocolEditorView extends ItemView {
         attr: {
           class: 'rp-protocol-editor-minimap-svg',
           viewBox: `0 0 ${DEFAULT_VIEWPORT_WIDTH} ${DEFAULT_VIEWPORT_HEIGHT}`,
+          preserveAspectRatio: 'none',
         },
       }) as SVGSVGElement;
     } else {

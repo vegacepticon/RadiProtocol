@@ -8,6 +8,28 @@
   gap: var(--size-2-3);
 }
 
+/* Beta 9 follow-up — keep drill navigation from resizing inline/modals when
+ * switching between folders with different folder/file counts. */
+.rp-stp-body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--size-2-3);
+  min-height: 280px;
+}
+
+.rp-stp-inline-host .rp-stp-body,
+.rp-stp-modal-host .rp-stp-body {
+  height: 360px;
+}
+
+.rp-stp-editor-host .rp-stp-body {
+  min-height: 240px;
+}
+
+.rp-stp-body .rp-stp-list {
+  flex: 1 1 auto;
+}
+
 .rp-stp-search {
   display: flex;
   align-items: center;
