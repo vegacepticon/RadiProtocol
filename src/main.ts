@@ -24,18 +24,19 @@ import { ProtocolEditorView, PROTOCOL_EDITOR_VIEW_TYPE } from './views/protocol-
 /**
  * Phase 59 INLINE-FIX-01 — Nested-path-safe protocol folder enumeration.
  *
- * Called by {@link RadiProtocolPlugin.handleRunProtocolInline} to resolve the
- * configured `protocolFolderPath` setting to a flat list of `.canvas` files.
+ * Called by {@link RadiProtocolPlugin.handleRunProtocolInline} and the protocol
+ * editor picker to resolve the configured `protocolFolderPath` setting to a
+ * flat list of protocol files.
  *
  * Handles three known failure modes in the pre-Phase-59 implementation:
  *   1. Trailing / leading slashes in the stored setting — stripped via regex.
  *   2. Windows backslash path separators — replaced with forward slash.
  *   3. Obsidian vault-index returning null for an otherwise-valid nested folder —
- *      fallback to a `vault.getFiles()` prefix scan filtered to `.canvas` extension.
+ *      fallback to a `vault.getFiles()` prefix scan filtered by suffix.
  *
- * Returns an empty array when the folder does not exist, has no canvases, or the
- * path is blank. The caller is responsible for the D8 "No protocol canvases found"
- * Notice when the result is empty.
+ * Returns an empty array when the folder does not exist, has no matching files,
+ * or the path is blank. The caller is responsible for the "No protocol files
+ * found" Notice when the result is empty.
  *
  * Exported (not a private method) so it can be unit-tested from
  * `src/__tests__/main-inline-command.test.ts` without instrumenting the plugin class.
@@ -585,7 +586,7 @@ export default class RadiProtocolPlugin extends Plugin {
    * Flow:
    *   1. D9 guard — check active file is a markdown note.
    *   2. Protocol folder enumeration — D8 guard.
-   *   3. Canvas picker via SuggestModal.
+   *   3. .rp.json protocol picker via SuggestModal.
    *   4. Instantiate InlineRunnerModal + open().
    */
   private async handleRunProtocolInline(): Promise<void> {
