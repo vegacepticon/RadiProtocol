@@ -14,9 +14,7 @@ import type {
   TextBlockNode,
   LoopNode,
   SnippetNode,
-  LoopStartNode,
-  LoopEndNode,
-} from '../graph/graph-model';
+  } from '../graph/graph-model';
 import { defaultT, type Translator } from '../i18n';
 import {
   isProtocolDocumentV1,
@@ -29,8 +27,6 @@ const VALID_KINDS: RPNodeKind[] = [
   'question',
   'answer',
   'text-block',
-  'loop-start',
-  'loop-end',
   'snippet',
   'loop',
 ];
@@ -159,11 +155,8 @@ export class ProtocolDocumentParser {
       return { parseError: `Node "${raw.id}" has non-string kind` };
     }
 
-    // free-text-input was removed from RPNodeKind in Phase 46;
-    // reject it explicitly so authors get a clear message.
-    if ((raw.kind as string) === 'free-text-input') {
-      return { parseError: this.t('canvasParser.legacyFreeTextInput', { id: raw.id }) };
-    }
+// free-text-input was removed from RPNodeKind in Phase 46 and never
+    // appears in .rp.json documents; the VALID_KINDS gate handles it.
 
     if (!(VALID_KINDS as string[]).includes(raw.kind)) {
       return { parseError: `Node "${raw.id}" has unknown kind: "${raw.kind}"` };
@@ -220,27 +213,6 @@ export class ProtocolDocumentParser {
         };
         return node;
       }
-      case 'loop-start': {
-        const node: LoopStartNode = {
-          ...base,
-          kind: 'loop-start',
-          loopLabel: getString(fields, 'loopLabel', 'Loop', 'radiprotocol_loopLabel'),
-          exitLabel: getString(fields, 'exitLabel', 'Done', 'radiprotocol_exitLabel'),
-        };
-        return node;
-      }
-      case 'loop-end': {
-        const loopStartId = getString(fields, 'loopStartId', '', 'radiprotocol_loopStartId');
-        if (!loopStartId) {
-          return { parseError: `Loop-end node "${raw.id}" is missing loopStartId` };
-        }
-        const node: LoopEndNode = {
-          ...base,
-          kind: 'loop-end',
-          loopStartId,
-        };
-        return node;
-      }
       case 'snippet': {
         const node: SnippetNode = {
           ...base,
@@ -260,6 +232,8 @@ export class ProtocolDocumentParser {
         };
         return node;
       }
+      default:
+        return null;
     }
   }
 }
