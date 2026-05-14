@@ -38,6 +38,9 @@ jobs:
       - name: Planning freshness
         run: npm run check:planning
 
+      - name: Consistency check
+        run: npm run check:consistency
+
   release:
     needs: check
     if: startsWith(github.ref, 'refs/tags/')

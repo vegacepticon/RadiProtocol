@@ -11,7 +11,8 @@
     "lint:strict": "npm run lint",
     "test": "vitest run",
     "check:planning": "node scripts/check-planning-freshness.mjs",
-    "check": "npm run build && npm run lint && npm test && npm run check:planning"
+    "check:consistency": "node scripts/check-consistency.mjs",
+    "check": "npm run build && npm run lint && npm test && npm run check:planning && npm run check:consistency"
   },
   "keywords": [],
   "author": "",
