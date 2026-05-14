@@ -15,7 +15,7 @@ const PROTOCOL_EDITOR_ORIGIN_X = DEFAULT_VIEWPORT_WIDTH / 2;
 const PROTOCOL_EDITOR_ORIGIN_Y = DEFAULT_VIEWPORT_HEIGHT / 2;
 const MIN_NODE_WIDTH = 120;
 const MIN_NODE_HEIGHT = 50;
-const MIN_ZOOM = 0.4;
+const MIN_ZOOM = 0.1;
 const MAX_ZOOM = 2;
 const ZOOM_STEP = 0.1;
 
@@ -252,6 +252,7 @@ export class ProtocolEditorView extends ItemView {
         cls: 'rp-protocol-editor-add-btn',
         text: label,
       });
+      btn.setAttr('data-node-kind', key);
       btn.addEventListener('click', () => this.addNodeAtCenter(key as RPNodeKind | null));
     }
 

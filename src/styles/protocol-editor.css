@@ -220,7 +220,7 @@
 }
 
 .rp-protocol-editor-add-btn {
-  padding: var(--size-4-1) var(--size-4-2);
+  padding: var(--size-4-1) var(--size-4-2) var(--size-4-1) calc(var(--size-4-2) + 18px);
   font-size: var(--font-ui-smaller);
   border: 1px solid var(--background-modifier-border);
   border-radius: var(--radius-s);
@@ -228,12 +228,60 @@
   color: var(--text-normal);
   cursor: pointer;
   white-space: nowrap;
+  position: relative;
+  transition: background-color 0.15s, border-color 0.15s, color 0.15s;
+}
+
+/* Добавляем цветные превью слева от текста */
+.rp-protocol-editor-add-btn::before {
+  content: '';
+  position: absolute;
+  left: var(--size-4-1);
+  top: 50%;
+  transform: translateY(-50%);
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  border: 2px solid var(--text-normal);
+  opacity: 0.8;
+}
+
+/* Привязываем цвет каждого типа узла через data-attr */
+.rp-protocol-editor-add-btn[data-node-kind="start"]::before {
+  background: rgba(76, 175, 80, 0.28);
+}
+.rp-protocol-editor-add-btn[data-node-kind="question"]::before {
+  background: rgba(33, 150, 243, 0.24);
+}
+.rp-protocol-editor-add-btn[data-node-kind="answer"]::before {
+  background: rgba(255, 193, 7, 0.28);
+}
+.rp-protocol-editor-add-btn[data-node-kind="text-block"]::before {
+  background: rgba(255, 235, 59, 0.24);
+}
+.rp-protocol-editor-add-btn[data-node-kind="loop"]::before {
+  background: rgba(233, 30, 99, 0.24);
+}
+.rp-protocol-editor-add-btn[data-node-kind="snippet"]::before {
+  background: rgba(156, 39, 176, 0.24);
+}
+
+/* Для пустых узлов (если нужно) */
+.rp-protocol-editor-add-btn[data-node-kind="null"]::before,
+.rp-protocol-editor-add-btn[data-node-kind=""]::before {
+  background: var(--background-primary);
 }
 
 .rp-protocol-editor-add-btn:hover {
   background: var(--interactive-accent);
   color: var(--text-on-accent);
   border-color: var(--interactive-accent);
+}
+
+/* При наведении усилить границу превью */
+.rp-protocol-editor-add-btn:hover::before {
+  border-color: var(--text-on-accent);
+  opacity: 1;
 }
 
 /* Phase 4D — draggable node cursor */

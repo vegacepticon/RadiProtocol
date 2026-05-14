@@ -67,7 +67,7 @@ describe('protocol editor helper functions', () => {
 
   describe('zoom helpers', () => {
     it('clamps zoom to editor bounds', () => {
-      expect(clampProtocolEditorZoom(0.1)).toBe(0.4);
+      expect(clampProtocolEditorZoom(0.1)).toBe(0.1);
       expect(clampProtocolEditorZoom(3)).toBe(2);
       expect(clampProtocolEditorZoom(1.25)).toBe(1.25);
     });
