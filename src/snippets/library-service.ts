@@ -59,7 +59,7 @@ export class LibraryService {
 
   /** Install a single library snippet into the vault.
    *  Target path: snippetFolderPath/Library/<category>/<name>.json
-   *  Overwrites silently if already present (MVP — TODO: confirm modal). */
+   *  Overwrites silently if already present. */
   async installSnippet(entry: LibrarySnippetEntry): Promise<boolean> {
     const baseUrl = this.getBaseUrl();
     const rawUrl = baseUrl + entry.path;

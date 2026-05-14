@@ -191,14 +191,7 @@ export class GraphValidator {
     // as a live kind in valid canvases. Legacy loop-end nodes are rejected by Migration Check
     // (see above, Phase 43 D-07) before reaching this point.
 
-    // TODO: Phase 5 — Check 7: Snippet reference existence
-    // for (const [id, node] of graph.nodes) {
-    //   if (node.kind === 'text-block' && node.snippetId) {
-    //     if (!snippetService.exists(node.snippetId)) {
-    //       errors.push(`Snippet "${node.snippetId}" referenced by node "${id}" was not found.`);
-    //     }
-    //   }
-    // }
+// Check 7: Snippet reference existence (deferred — handled at build/import time)
 
     return errors;
   }

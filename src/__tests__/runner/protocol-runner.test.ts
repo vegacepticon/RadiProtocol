@@ -212,10 +212,8 @@ describe('ProtocolRunner', () => {
     });
   });
 
-  // TODO Phase 45: rewrite for unified loop if a runtime-level missing-«выход» check is desired.
-  // GraphValidator already covers this via LOOP-04 (see graph-validator.test.ts). RUN-08 is not
-  // in Phase 44's requirement list; scheduled for a future phase only if validator-level coverage
-  // proves insufficient. Phase 43 D-CL-05 variant b keeps legacy kinds parseable so this skip compiles.
+  // Note: RUN-08 (loop-start missing continue edge) is covered by GraphValidator LOOP-04.
+  // The runtime-level test is skipped — validator rejects the malformed graph before runner starts.
   describe.skip('loop-start missing continue edge (RUN-08)', () => {
     it('transitions to error state when loop-start has no continue edge', () => {
       // loop-start.canvas: start → n-ls1 (loop-start, no outgoing edges with label 'continue')
