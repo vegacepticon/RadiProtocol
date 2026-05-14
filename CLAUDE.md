@@ -1,5 +1,7 @@
 # RadiProtocol — Agent Instructions
 
+**Development workflow:** see [`docs/DEVELOPMENT-WORKFLOW.md`](docs/DEVELOPMENT-WORKFLOW.md) for the authoritative process.
+
 ## Build Process
 
 - Source: TypeScript in `src/`, compiled by esbuild → `main.js`

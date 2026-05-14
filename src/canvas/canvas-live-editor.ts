@@ -152,7 +152,7 @@ export class CanvasLiveEditor {
     // Phase 50 D-14: optional edge-label edits applied in the SAME Pattern B
     // write so node + incoming-edge updates land in one setData/requestSave
     // cycle. undefined label ≡ delete the 'label' key (D-08 symmetry with
-    // canvas-parser.ts:207-209). Design source: .planning/notes/answer-label-edge-sync.md
+    // canvas-parser.ts:207-209). Design source: docs/ARCHITECTURE-NOTES.md#answer-label-and-edge-sync
     edgeEdits?: Array<{ edgeId: string; label: string | undefined }>
   ): Promise<boolean> {
     const view = this.getCanvasView(filePath);
@@ -248,7 +248,7 @@ export class CanvasLiveEditor {
    * undefined label ≡ delete 'label' key (D-08 symmetry with
    * canvas-parser.ts:207-209).
    *
-   * Design source: .planning/notes/answer-label-edge-sync.md
+   * Design source: docs/ARCHITECTURE-NOTES.md#answer-label-and-edge-sync
    */
   async saveLiveEdges(
     filePath: string,

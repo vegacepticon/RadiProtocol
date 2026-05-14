@@ -186,7 +186,7 @@ describe('CanvasParser — snippet node extra fields (Phase 31)', () => {
 describe('Phase 51 — radiprotocol_snippetPath parsing (PICKER-01)', () => {
   // Local factory mirroring the Phase 31 `buildSnippetCanvas` / `parseSnippet` pair
   // so the new tests remain independent from those of the earlier phase.
-  // See `.planning/notes/snippet-node-binding-and-picker.md` (D-01/D-02/D-03).
+  // See `docs/ARCHITECTURE-NOTES.md#snippet-node-binding-and-picker` (D-01/D-02/D-03).
   function buildSnippetCanvas(extraProps: Record<string, unknown>): string {
     return JSON.stringify({
       nodes: [

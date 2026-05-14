@@ -10,7 +10,8 @@
     "lint": "eslint . --max-warnings 0 && stylelint 'src/styles/**/*.css'",
     "lint:strict": "npm run lint",
     "test": "vitest run",
-    "check": "npm run build && npm run lint && npm test"
+    "check:planning": "node scripts/check-planning-freshness.mjs",
+    "check": "npm run build && npm run lint && npm test && npm run check:planning"
   },
   "keywords": [],
   "author": "",

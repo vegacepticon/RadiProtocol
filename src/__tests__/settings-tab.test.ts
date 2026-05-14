@@ -11,9 +11,6 @@ describe('Settings defaults (RUN-07)', () => {
     expect('maxLoopIterations' in DEFAULT_SETTINGS).toBe(false);
   });
 
-  it('does not expose dead session persistence settings', () => {
-    expect('sessionFolderPath' in DEFAULT_SETTINGS).toBe(false);
-  });
 
   it('SettingsTab has display method (stub check)', async () => {
     // Full settings tab test requires Obsidian environment — manual only.

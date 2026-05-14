@@ -19,7 +19,7 @@ export interface CanvasNodeData {
 // canvas JSON edge shape parsed by CanvasParser (src/graph/canvas-parser.ts:36-41)
 // and Obsidian's internal canvas model. Index signature keeps the interface
 // forward-compat with fromSide / toSide / color / etc. — same escape hatch
-// CanvasNodeData uses above. Design source: .planning/notes/answer-label-edge-sync.md
+// CanvasNodeData uses above. Design source: docs/ARCHITECTURE-NOTES.md#answer-label-and-edge-sync
 export interface CanvasEdgeData {
   id: string;
   fromNode: string;

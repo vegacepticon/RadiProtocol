@@ -3,7 +3,7 @@ import type { RPNodeKind } from '../graph/graph-model';
 import type RadiProtocolPlugin from '../main';
 import type { CanvasChangedForNodeDetail } from '../canvas/edge-label-sync-service';
 // Phase 51 Plan 03 (PICKER-02 D-05): inline hierarchical snippet/folder picker for Snippet nodes.
-// See `.planning/notes/snippet-node-binding-and-picker.md` (Shared Pattern H).
+// See `docs/ARCHITECTURE-NOTES.md#snippet-node-binding-and-picker` (Shared Pattern H).
 import { SnippetTreePicker } from './snippet-tree-picker';
 // Phase 76 (SPLIT-01) — extracted helper modules. Class methods below are thin
 // wrappers that delegate to these so test access patterns (view['renderForm'],

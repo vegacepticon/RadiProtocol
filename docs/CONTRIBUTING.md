@@ -57,6 +57,9 @@ tests in `src/__tests__/fixtures/`.
 
 ## Full local check
 
+The development workflow is documented in
+[`docs/DEVELOPMENT-WORKFLOW.md`](docs/DEVELOPMENT-WORKFLOW.md).
+
 ```bash
 npm run check
 ```

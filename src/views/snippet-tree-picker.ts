@@ -3,7 +3,7 @@
 // Replaces flat-list pickers in Node Editor (case 'snippet'), Snippet Manager
 // (move-to flow), Snippet Editor (folder field), and Runner (awaiting-snippet-pick).
 //
-// Design contract: `.planning/notes/snippet-node-binding-and-picker.md` (Shared Pattern H).
+// Design contract: `docs/ARCHITECTURE-NOTES.md#snippet-node-binding-and-picker` (Shared Pattern H).
 // Decisions: D-08 surface, D-09 mode-filtered search, D-10 substring matcher, D-11 two-line rows,
 // D-12 search-row click semantics + clearing-search-restores-drillPath.
 //

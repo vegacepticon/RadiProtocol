@@ -297,7 +297,7 @@ export class SnippetEditorModal extends Modal {
     // hasUnsavedChanges + scheduling collision check.
     // Host wrapper class `rp-stp-editor-host` is defined in src/styles/snippet-tree-picker.css
     // (owned by Plan 02). This plan does NOT modify CSS.
-    // See `.planning/notes/snippet-node-binding-and-picker.md`.
+    // See `docs/ARCHITECTURE-NOTES.md#snippet-node-binding-and-picker`.
     const row = container.createDiv({ cls: 'radi-snippet-editor-row' });
     const folderLabel = row.createEl('label', { text: this.plugin.i18n.t('snippetEditor.folder') });
     // Phase 56 D-08: bullet indicator inside the label; toggled by

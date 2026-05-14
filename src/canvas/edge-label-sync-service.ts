@@ -16,7 +16,7 @@
 // follow-up modify event) self-terminates after one reentrant pass. No mutable
 // suppress flags or in-flight counters.
 //
-// Design source: .planning/notes/answer-label-edge-sync.md (Phase 50 D-10 + D-16)
+// Design source: docs/ARCHITECTURE-NOTES.md#answer-label-and-edge-sync (Phase 50 D-10 + D-16)
 
 import { TFile } from 'obsidian';
 import type { App } from 'obsidian';

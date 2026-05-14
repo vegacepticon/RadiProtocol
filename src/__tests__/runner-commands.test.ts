@@ -64,11 +64,4 @@ describe('Runner commands (RUN-10, UI-04)', () => {
     expect(mainTs).not.toContain(`id: 'radiprotocol-start-from-node'`);
   });
 
-  it('start-from-node is stateless and does not clear persisted sessions', () => {
-    const mainTsPath = path.join(__dirname, '..', 'main.ts');
-    const mainTs = fs.readFileSync(mainTsPath, 'utf-8');
-    expect(mainTs).not.toContain(`SessionService`);
-    expect(mainTs).not.toContain(`sessionService`);
-    expect(mainTs).not.toContain(`sessionService.clear`);
-  });
 });

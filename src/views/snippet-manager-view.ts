@@ -442,7 +442,7 @@ export class SnippetManagerView extends ItemView {
     // replaces the legacy flat-list picker.
     // Host wrapper class `rp-stp-modal-host` is defined in src/styles/snippet-tree-picker.css
     // (owned by Plan 02). This plan does NOT modify CSS.
-    // See `.planning/notes/snippet-node-binding-and-picker.md`.
+    // See `docs/ARCHITECTURE-NOTES.md#snippet-node-binding-and-picker`.
     const rootPath = this.plugin.settings.snippetFolderPath;
     // `folders` is the whitelist of valid move destinations (verified at
     // snippet-manager-view.ts:642-654). Membership check: target is valid iff included

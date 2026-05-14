@@ -4,7 +4,7 @@
 // incoming Question→Answer edge label. Multi-incoming Answer nodes share ONE
 // label across all incoming edges — per-edge override is explicitly out of scope
 // for v1.8 (REQUIREMENTS.md Out-of-Scope row 1).
-// Design source: .planning/notes/answer-label-edge-sync.md (Phase 50 D-16)
+// Design source: docs/ARCHITECTURE-NOTES.md#answer-label-and-edge-sync (Phase 50 D-16)
 
 import type { ProtocolGraph, RPEdge, AnswerNode, SnippetNode } from './graph-model'; // Phase 63: discriminated union
 import { isLabeledEdge } from './node-label';

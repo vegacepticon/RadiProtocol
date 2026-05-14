@@ -67,7 +67,7 @@ export function isLabeledEdge(edge: RPEdge): boolean {
  * distinguishes exit edges from body edges so a loop node can carry any number
  * of labeled body branches (Phase 50 reconciler legitimately labels body edges
  * that point to Answer nodes with displayLabel — see
- * .planning/notes/loop-node-exit-edge-convention.md).
+ * docs/ARCHITECTURE-NOTES.md#loop-node-exit-edge-convention).
  *
  * Supersedes the Phase 49 alias `isExitEdge = isLabeledEdge`. The two
  * predicates are now semantically distinct:

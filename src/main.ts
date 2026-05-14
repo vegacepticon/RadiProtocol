@@ -236,7 +236,7 @@ export default class RadiProtocolPlugin extends Plugin {
 
     // Phase 50 D-01: own the vault.on('modify') subscription for bi-directional
     // Answer.displayLabel ↔ incoming-edge label sync. Design source:
-    // .planning/notes/answer-label-edge-sync.md
+    // docs/ARCHITECTURE-NOTES.md#answer-label-and-edge-sync
     this.edgeLabelSyncService = new EdgeLabelSyncService(this.app, this);
     this.edgeLabelSyncService.register();
 
@@ -545,7 +545,7 @@ export default class RadiProtocolPlugin extends Plugin {
     // Phase 51 D-04 (PICKER-01): inject snippet-file probe so specific-bound
     // SnippetNode references are verified at canvas-open. Legacy directory-bound
     // snippets are unaffected (probe never invoked when radiprotocol_snippetPath is absent).
-    // See `.planning/notes/snippet-node-binding-and-picker.md`.
+    // See `docs/ARCHITECTURE-NOTES.md#snippet-node-binding-and-picker`.
     const validator = new GraphValidator({
       snippetFileProbe: (absPath) => this.app.vault.getAbstractFileByPath(absPath) !== null,
       snippetFolderPath: this.settings.snippetFolderPath,

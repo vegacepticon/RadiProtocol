@@ -1,7 +1,7 @@
 // graph/graph-validator.ts
 // Pure module — zero Obsidian API imports (PARSE-07, NFR-01)
 // Phase 51 D-04 (PICKER-01): optional snippet-file probe injected via constructor.
-// See `.planning/notes/snippet-node-binding-and-picker.md`.
+// See `docs/ARCHITECTURE-NOTES.md#snippet-node-binding-and-picker`.
 
 import type { ProtocolGraph, RPNode } from './graph-model';
 import { nodeLabel as sharedNodeLabel, isLabeledEdge, isExitEdge, stripExitPrefix } from './node-label';
@@ -168,7 +168,7 @@ export class GraphValidator {
     // hard Russian error if not. Skipped silently when no probe is injected (legacy
     // zero-arg construction in pure tests). Directory-bound snippets (no snippetPath)
     // are exempt — Pitfall #11 back-compat.
-    // See `.planning/notes/snippet-node-binding-and-picker.md`.
+    // See `docs/ARCHITECTURE-NOTES.md#snippet-node-binding-and-picker`.
     if (this.snippetFileProbe !== undefined && this.snippetFolderPath !== undefined) {
       for (const [, node] of graph.nodes) {
         if (node.kind !== 'snippet') continue;

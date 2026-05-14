@@ -25,7 +25,7 @@ export function renderSnippetForm(
   // file (new file binding via radiprotocol_snippetPath, D-01 mutual exclusivity on
   // write). Host wrapper class `rp-stp-editor-host` is defined in
   // src/styles/snippet-tree-picker.css (owned by Plan 02). This plan does NOT modify
-  // CSS. See `.planning/notes/snippet-node-binding-and-picker.md`.
+  // CSS. See `docs/ARCHITECTURE-NOTES.md#snippet-node-binding-and-picker`.
   new Setting(container)
     .setName('Target')
     .setDesc(ctx.plugin.i18n.t('snippetForm.targetDesc'));

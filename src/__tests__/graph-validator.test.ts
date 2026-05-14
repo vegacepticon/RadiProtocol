@@ -379,7 +379,7 @@ describe('GraphValidator — Phase 43: unified loop + migration (LOOP-04, MIGRAT
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Phase 51 — D-04 snippet missing-file check (PICKER-01)
-// See `.planning/notes/snippet-node-binding-and-picker.md`.
+// See `docs/ARCHITECTURE-NOTES.md#snippet-node-binding-and-picker`.
 // ─────────────────────────────────────────────────────────────────────────────
 describe('Phase 51 — D-04 snippet missing-file check (PICKER-01)', () => {
   /** Map-backed fake probe. Keys are absolute paths; `true` = file exists. */

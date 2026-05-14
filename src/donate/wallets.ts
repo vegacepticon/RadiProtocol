@@ -1,7 +1,7 @@
 // src/donate/wallets.ts
 // Phase 71 (DONATE-01) — hard-coded crypto wallet constants for the Settings → donate section.
 //
-// Source of truth: .planning/REQUIREMENTS.md DONATE-01 (literal addresses) and
+// Source of truth: docs/ARCHITECTURE-NOTES.md#donate-wallet-constants (literal addresses) and
 // 71-CONTEXT.md decisions Row-D-02, EVM-D-02, EVM-D-03, NTC-D-01..03.
 //
 // IMPORTANT: Addresses are copied byte-for-byte from REQUIREMENTS.md.

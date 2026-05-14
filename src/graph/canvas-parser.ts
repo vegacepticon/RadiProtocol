@@ -262,7 +262,7 @@ export class CanvasParser {
         // Phase 51 D-01/D-02/D-03 — optional file-binding path relative to
         // settings.snippetFolderPath. Empty string / null / non-string normalise
         // to undefined (WR-02 pattern). Extension kept verbatim per D-03.
-        // See `.planning/notes/snippet-node-binding-and-picker.md`.
+        // See `docs/ARCHITECTURE-NOTES.md#snippet-node-binding-and-picker`.
         const rawSnippetPath = props['radiprotocol_snippetPath'];
         const node: SnippetNode = {
           ...base,

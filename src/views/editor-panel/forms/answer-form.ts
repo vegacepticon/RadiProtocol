@@ -18,7 +18,7 @@ export function renderAnswerForm(
   // radiprotocol_displayLabel + every incoming edge.label land in ONE saveLiveBatch
   // or ONE vault.modify call. Undefined displayLabel strips the 'label' key on
   // every incoming edge (D-08 symmetry with canvas-parser.ts:207-209).
-  // Design source: .planning/notes/answer-label-edge-sync.md
+  // Design source: docs/ARCHITECTURE-NOTES.md#answer-label-and-edge-sync
   // Phase 48 NODEUI-03: Display label renders BEFORE Answer text (swapped from original order).
   new Setting(container)
     .setName('Display label (optional)')
