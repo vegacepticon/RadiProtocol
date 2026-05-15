@@ -139,7 +139,10 @@
     "renamedNotice": "Snippet renamed.",
     "movedAndRenamedNotice": "Snippet moved and renamed.",
     "validationLockTitle": "Snippet has an error — fix the source and reopen.",
-    "validationBannerHeader": "This snippet cannot be used:"
+    "validationBannerHeader": "This snippet cannot be used:",
+    "duplicate": "Duplicate snippet",
+    "duplicateTitle": "Create a copy of this snippet",
+    "duplicateError": "Failed to duplicate snippet: {error}"
   },
   "insertSnippet": {
     "title": "Insert snippet",
