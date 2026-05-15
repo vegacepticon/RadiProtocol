@@ -89,6 +89,7 @@
     "textSeparatorLabel": "How to separate this text block from previous text",
     "loopExitLabel": "This edge exits the loop",
     "minimapLabel": "Minimap — click or drag to pan",
+    "toggleMinimap": "Toggle minimap",
     "confirmDelete": "Confirm delete",
     "snippetFolderPathLabel": "Snippet folder path",
     "snippetTargetLabel": "Snippet target",

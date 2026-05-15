@@ -628,4 +628,8 @@
 .rp-protocol-editor-self-check-row input[type='text'] {
   flex: 1 1 auto;
 }
+/* Beta D: minimap visibility toggle */
+.rp-protocol-editor-minimap.is-hidden {
+  display: none;
+}
 

@@ -89,6 +89,7 @@
     "textSeparatorLabel": "Как отделять этот текстовый блок от предыдущего текста",
     "loopExitLabel": "Эта связь выходит из цикла",
     "minimapLabel": "Миникарта — кликните или перетащите для панорамирования",
+    "toggleMinimap": "Скрыть/показать миникарту",
     "confirmDelete": "Подтвердить удаление",
     "snippetFolderPathLabel": "Папка сниппетов",
     "snippetTargetLabel": "Цель сниппета",

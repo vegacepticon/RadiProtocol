@@ -283,6 +283,12 @@ export class ProtocolEditorView extends ItemView {
     });
     selfCheckBtn.addEventListener('click', () => this.openSelfCheckModal());
 
+    const minimapToggleBtn = actions.createEl('button', {
+      cls: 'rp-protocol-editor-add-btn',
+      text: this.plugin.i18n.t('protocolEditor.toggleMinimap'),
+    });
+    minimapToggleBtn.addEventListener('click', () => this.toggleMinimap());
+
     const zoomIndicator = actions.createDiv({ cls: 'rp-protocol-editor-zoom-indicator' });
     zoomIndicator.setText(`${Math.round(this.zoom * 100)}%`);
 
@@ -1026,6 +1032,11 @@ export class ProtocolEditorView extends ItemView {
       this.updateMinimapViewport();
       this.scheduleViewportSave();
     });
+  }
+
+  private toggleMinimap(): void {
+    if (this.minimapEl === null) return;
+    this.minimapEl.toggleClass('is-hidden', !this.minimapEl.hasClass('is-hidden'));
   }
 
   private bindMinimapControls(): void {
