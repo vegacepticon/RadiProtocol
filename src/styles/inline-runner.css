@@ -237,3 +237,16 @@
   max-width: none;
   transform: none;
 }
+.rp-inline-runner-self-check {
+  display: flex;
+  flex-direction: column;
+  gap: var(--size-2-2);
+}
+
+.rp-inline-runner-self-check-item {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--size-2-2);
+  line-height: 1.4;
+}
+

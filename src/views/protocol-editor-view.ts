@@ -277,6 +277,12 @@ export class ProtocolEditorView extends ItemView {
       btn.addEventListener('click', () => this.addNodeAtCenter(key as RPNodeKind | null));
     }
 
+    const selfCheckBtn = actions.createEl('button', {
+      cls: 'rp-protocol-editor-add-btn',
+      text: this.plugin.i18n.t('selfCheck.title'),
+    });
+    selfCheckBtn.addEventListener('click', () => this.openSelfCheckModal());
+
     const zoomIndicator = actions.createDiv({ cls: 'rp-protocol-editor-zoom-indicator' });
     zoomIndicator.setText(`${Math.round(this.zoom * 100)}%`);
 
@@ -760,6 +766,83 @@ export class ProtocolEditorView extends ItemView {
     } catch (err) {
       new Notice(this.plugin.i18n.t('protocolEditor.saveFailed', { error: String(err) }));
     }
+  }
+
+  private openSelfCheckModal(): void {
+    if (this.doc === null || this.protocolPath === null) return;
+    const t = this.plugin.i18n.t.bind(this.plugin.i18n);
+    const backdrop = document.body.createDiv({ cls: 'rp-protocol-editor-modal-backdrop' });
+    const modal = backdrop.createDiv({ cls: 'rp-protocol-editor-modal rp-protocol-editor-self-check-modal' });
+    modal.createEl('h3', { text: t('selfCheck.title') });
+    const body = modal.createDiv({ cls: 'rp-protocol-editor-modal-body' });
+    const enabledRow = body.createEl('label', { cls: 'rp-protocol-editor-self-check-enabled' });
+    const enabledCheckbox = enabledRow.createEl('input', { type: 'checkbox' });
+    enabledCheckbox.checked = this.doc.selfCheckEnabled === true;
+    enabledRow.createSpan({ text: t('selfCheck.enabled') });
+    const rows = body.createDiv({ cls: 'rp-protocol-editor-self-check-list' });
+    const values = [...(this.doc.selfCheckItems ?? []), ''];
+    let enabled = enabledCheckbox.checked;
+
+    const closeModal = () => backdrop.remove();
+    const persist = async () => {
+      const items = values.map(value => value.trim()).filter(value => value.length > 0);
+      await this.plugin.protocolDocumentStore.update(this.protocolPath!, (existing) => {
+        if (existing === null) throw new Error('Protocol file disappeared');
+        return { ...existing, selfCheckEnabled: enabled, selfCheckItems: items, updatedAt: new Date().toISOString() };
+      });
+      if (this.doc !== null) this.doc = { ...this.doc, selfCheckEnabled: enabled, selfCheckItems: items };
+    };
+    const ensureTrailingEmpty = () => {
+      const lastValue = values[values.length - 1];
+      if (lastValue === undefined || lastValue.trim().length > 0) values.push('');
+    };
+    const renderRows = () => {
+      ensureTrailingEmpty();
+      rows.empty();
+      rows.toggle(enabled);
+      if (!enabled) return;
+      for (let index = 0; index < values.length; index += 1) {
+        const row = rows.createDiv({ cls: 'rp-protocol-editor-self-check-row' });
+        const input = row.createEl('input', {
+          type: 'text',
+          value: values[index],
+          attr: { placeholder: t('selfCheck.addItem') },
+        });
+        const removeBtn = row.createEl('button', {
+          cls: 'rp-protocol-editor-modal-btn',
+          text: '×',
+          attr: { title: t('selfCheck.removeItem') },
+        });
+        input.addEventListener('input', () => {
+          values[index] = input.value;
+          if (index === values.length - 1 && input.value.trim().length > 0) renderRows();
+          void persist();
+        });
+        removeBtn.addEventListener('click', () => {
+          values.splice(index, 1);
+          renderRows();
+          void persist();
+        });
+      }
+    };
+    enabledCheckbox.addEventListener('change', () => {
+      enabled = enabledCheckbox.checked;
+      renderRows();
+      void persist();
+    });
+    renderRows();
+
+    const footer = modal.createDiv({ cls: 'rp-protocol-editor-modal-footer' });
+    const doneBtn = footer.createEl('button', {
+      cls: 'rp-protocol-editor-modal-btn rp-protocol-editor-modal-btn-primary',
+      text: t('protocolEditor.save'),
+    });
+    doneBtn.addEventListener('click', () => {
+      void persist().then(closeModal);
+    });
+    backdrop.addEventListener('click', (e) => {
+      if (e.target === backdrop) closeModal();
+    });
   }
 
   /* Phase 4D — bind mouse drag events to a node element */

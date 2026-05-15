@@ -37,6 +37,10 @@ export interface ProtocolDocumentV1 {
   nodes: ProtocolNodeRecord[];
   /** All protocol edges. Order is not semantically significant. */
   edges: ProtocolEdgeRecord[];
+  /** Whether final runner self-check checklist is enabled. */
+  selfCheckEnabled?: boolean;
+  /** Optional final runner self-check checklist items. */
+  selfCheckItems?: string[];
   /** Optional viewport state for visual editor persistence. */
   viewport?: {
     x: number;

@@ -111,6 +111,8 @@ export class InlineRunnerModal {
   private readonly validator: GraphValidator;
   private graph: ProtocolGraph | null = null;
   private canvasFilePath: string | null = null;
+  private selfCheckItems: string[] = [];
+  private selfCheckEnabled = false;
 
   private activeFileEventRef: import('obsidian').EventRef | null = null;
   private fileDeleteEventRef: import('obsidian').EventRef | null = null;
@@ -222,6 +224,24 @@ export class InlineRunnerModal {
         new Notice(reason);
         this.close();
         return;
+      }
+    }
+
+    this.selfCheckItems = [];
+    this.selfCheckEnabled = false;
+    if (protocolPath.endsWith('.rp.json')) {
+      try {
+        const rawDoc = JSON.parse(content) as { selfCheckItems?: unknown; selfCheckEnabled?: unknown };
+        if (Array.isArray(rawDoc.selfCheckItems)) {
+          this.selfCheckItems = rawDoc.selfCheckItems
+            .filter((item): item is string => typeof item === 'string')
+            .map(item => item.trim())
+            .filter(item => item.length > 0);
+        }
+        if (rawDoc.selfCheckEnabled === true) this.selfCheckEnabled = true;
+      } catch {
+        this.selfCheckItems = [];
+        this.selfCheckEnabled = false;
       }
     }
 
@@ -501,7 +521,17 @@ export class InlineRunnerModal {
       }
 
       case 'complete': {
-        renderCompleteHeading(questionZone);
+        if (!this.selfCheckEnabled) {
+          const scheduleClose = typeof window !== 'undefined' ? window.setTimeout.bind(window) : globalThis.setTimeout;
+          scheduleClose(() => this.close(), 0);
+          break;
+        }
+        if (this.selfCheckItems.length === 0) {
+          const scheduleClose = typeof window !== 'undefined' ? window.setTimeout.bind(window) : globalThis.setTimeout;
+          scheduleClose(() => this.close(), 0);
+          break;
+        }
+        this.renderSelfCheckCompletion(questionZone);
         break;
       }
 
@@ -516,6 +546,26 @@ export class InlineRunnerModal {
         break;
       }
     }
+  }
+
+  private renderSelfCheckCompletion(container: HTMLElement): void {
+    renderCompleteHeading(container);
+    const checklist = container.createDiv({ cls: 'rp-inline-runner-self-check' });
+    checklist.createEl('h4', { text: this.plugin.i18n.t('selfCheck.title') });
+    const checked = new Set<number>();
+    const updateCompletion = () => {
+      if (checked.size === this.selfCheckItems.length) this.close();
+    };
+    this.selfCheckItems.forEach((item, index) => {
+      const label = checklist.createEl('label', { cls: 'rp-inline-runner-self-check-item' });
+      const checkbox = label.createEl('input', { type: 'checkbox' });
+      label.createSpan({ text: item });
+      checkbox.addEventListener('change', () => {
+        if (checkbox.checked) checked.add(index);
+        else checked.delete(index);
+        updateCompletion();
+      });
+    });
   }
 
   // ── Event Handlers ────────────────────────────────────────────────────────

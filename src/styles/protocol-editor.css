@@ -613,3 +613,19 @@
 .rp-protocol-editor-checkbox-field.is-disabled label {
   cursor: not-allowed;
 }
+.rp-protocol-editor-self-check-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--size-2-2);
+}
+
+.rp-protocol-editor-self-check-row {
+  display: flex;
+  gap: var(--size-2-2);
+  align-items: center;
+}
+
+.rp-protocol-editor-self-check-row input[type='text'] {
+  flex: 1 1 auto;
+}
+

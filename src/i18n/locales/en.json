@@ -212,6 +212,13 @@
   "startFromNode": {
     "noStartPoints": "This protocol has no nodes enabled for “start from node”. Enable the checkbox in node settings first."
   },
+  "selfCheck": {
+    "addItem": "Add item",
+    "removeItem": "Remove",
+    "title": "Self-check checklist",
+    "enabled": "Enable self-check checklist",
+    "empty": "No checklist items yet. Add some below."
+  },
   "nodePicker": {
     "start": "Start",
     "question": "Question",
