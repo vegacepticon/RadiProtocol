@@ -409,16 +409,43 @@ export class InlineRunnerModal {
     if (this.graph === null) return 0;
     if (state.status === 'complete') return 100;
     if (state.status === 'idle' || state.status === 'error') return 0;
-    const visitedNodeIds = new Set<string>();
-    const session = this.runner.getSerializableState();
-    if (session !== null) {
-      for (const entry of session.undoStack) visitedNodeIds.add(entry.nodeId);
-      if (session.currentNodeId !== '') visitedNodeIds.add(session.currentNodeId);
+
+    const currentNodeId = state.status === 'at-node' ? state.currentNodeId : state.nodeId;
+    const globalDistances = this.calculateShortestDistances(this.graph.startNodeId);
+    const globalMaxDistance = Math.max(1, ...globalDistances.values());
+    const sessionStartNodeId = this.startNodeId ?? this.graph.startNodeId;
+    const baselineDistance = globalDistances.get(sessionStartNodeId) ?? 0;
+    const baselinePercent = Math.round((baselineDistance / globalMaxDistance) * 99);
+
+    const sessionDistances = this.calculateShortestDistances(sessionStartNodeId);
+    const currentSessionDistance = sessionDistances.get(currentNodeId);
+    if (currentSessionDistance === undefined) return Math.min(99, Math.max(0, baselinePercent));
+
+    const sessionMaxDistance = Math.max(1, ...sessionDistances.values());
+    const remainingPercent = 99 - baselinePercent;
+    const sessionPercent = Math.round((currentSessionDistance / sessionMaxDistance) * remainingPercent);
+    return Math.min(99, Math.max(0, baselinePercent + sessionPercent));
+  }
+
+  private calculateShortestDistances(startNodeId: string): Map<string, number> {
+    const distances = new Map<string, number>();
+    if (this.graph === null) return distances;
+
+    const queue: string[] = [startNodeId];
+    distances.set(startNodeId, 0);
+
+    while (queue.length > 0) {
+      const current = queue.shift();
+      if (current === undefined) break;
+      const currentDistance = distances.get(current) ?? 0;
+      for (const next of this.graph.adjacency.get(current) ?? []) {
+        if (distances.has(next)) continue;
+        distances.set(next, currentDistance + 1);
+        queue.push(next);
+      }
     }
-    if (state.status === 'at-node') visitedNodeIds.add(state.currentNodeId);
-    else visitedNodeIds.add(state.nodeId);
-    const totalNodes = Math.max(1, this.graph.nodes.size);
-    return Math.min(99, Math.max(0, Math.round((visitedNodeIds.size / totalNodes) * 100)));
+
+    return distances;
   }
 
   private updateProgress(state: RunnerState): void {

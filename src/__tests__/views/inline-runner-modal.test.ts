@@ -374,3 +374,50 @@ describe('InlineRunnerModal — Phase 85 INLINE-MULTI-01 registry integration', 
     ]);
   });
 });
+
+describe('InlineRunnerModal — progress calculation (v1.17.1)', () => {
+  function makeProgressGraph() {
+    const node = (id: string, kind: any = 'question') => ({ id, kind, x: 0, y: 0, width: 100, height: 60, questionText: id });
+    const nodes = new Map<string, any>([
+      ['start', { id: 'start', kind: 'start', x: 0, y: 0, width: 100, height: 60 }],
+      ['q1', node('q1')],
+      ['q2', node('q2')],
+      ['q3', node('q3')],
+      ['q4', node('q4')],
+    ]);
+    return {
+      canvasFilePath: 'test.canvas',
+      nodes,
+      edges: [],
+      adjacency: new Map([
+        ['start', ['q1']],
+        ['q1', ['q2']],
+        ['q2', ['q3']],
+        ['q3', ['q4']],
+        ['q4', []],
+      ]),
+      reverseAdjacency: new Map(),
+      startNodeId: 'start',
+    };
+  }
+
+  it('uses graph distance instead of visited/all-nodes ratio', () => {
+    const { modal } = setupModal();
+    (modal as any).graph = makeProgressGraph();
+
+    expect((modal as any).calculateProgressPercent({ status: 'at-node', currentNodeId: 'q4' })).toBe(99);
+  });
+
+  it('starts from selected node with matching baseline progress', () => {
+    const targetNote = makeTargetNote();
+    const plugin = makeBasePlugin();
+    const app = makeBaseApp(plugin, { vaultContent: '' });
+    const modal = new InlineRunnerModal(app as any, plugin as any, 'test.canvas', targetNote, 'q2');
+    (modal as any).graph = makeProgressGraph();
+
+    const percent = (modal as any).calculateProgressPercent({ status: 'at-node', currentNodeId: 'q2' });
+    expect(percent).toBeGreaterThan(0);
+    expect(percent).toBeLessThan(99);
+  });
+});
+

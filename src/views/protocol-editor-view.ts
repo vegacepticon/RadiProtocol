@@ -798,38 +798,38 @@ export class ProtocolEditorView extends ItemView {
       });
       if (this.doc !== null) this.doc = { ...this.doc, selfCheckEnabled: enabled, selfCheckItems: items };
     };
-    const ensureTrailingEmpty = () => {
-      const lastValue = values[values.length - 1];
-      if (lastValue === undefined || lastValue.trim().length > 0) values.push('');
+    const createSelfCheckRow = (index: number) => {
+      const row = rows.createDiv({ cls: 'rp-protocol-editor-self-check-row' });
+      const input = row.createEl('input', {
+        type: 'text',
+        value: values[index] ?? '',
+        attr: { placeholder: t('selfCheck.addItem') },
+      });
+      const removeBtn = row.createEl('button', {
+        cls: 'rp-protocol-editor-modal-btn',
+        text: '×',
+        attr: { title: t('selfCheck.removeItem') },
+      });
+      input.addEventListener('input', () => {
+        values[index] = input.value;
+        if (index === values.length - 1 && input.value.trim().length > 0) {
+          values.push('');
+          createSelfCheckRow(values.length - 1);
+        }
+        void persist();
+      });
+      removeBtn.addEventListener('click', () => {
+        values[index] = '';
+        row.remove();
+        void persist();
+      });
     };
     const renderRows = () => {
-      ensureTrailingEmpty();
       rows.empty();
       rows.toggle(enabled);
       if (!enabled) return;
-      for (let index = 0; index < values.length; index += 1) {
-        const row = rows.createDiv({ cls: 'rp-protocol-editor-self-check-row' });
-        const input = row.createEl('input', {
-          type: 'text',
-          value: values[index],
-          attr: { placeholder: t('selfCheck.addItem') },
-        });
-        const removeBtn = row.createEl('button', {
-          cls: 'rp-protocol-editor-modal-btn',
-          text: '×',
-          attr: { title: t('selfCheck.removeItem') },
-        });
-        input.addEventListener('input', () => {
-          values[index] = input.value;
-          if (index === values.length - 1 && input.value.trim().length > 0) renderRows();
-          void persist();
-        });
-        removeBtn.addEventListener('click', () => {
-          values.splice(index, 1);
-          renderRows();
-          void persist();
-        });
-      }
+      if (values.length === 0 || values[values.length - 1]?.trim().length !== 0) values.push('');
+      for (let index = 0; index < values.length; index += 1) createSelfCheckRow(index);
     };
     enabledCheckbox.addEventListener('change', () => {
       enabled = enabledCheckbox.checked;
@@ -1314,11 +1314,11 @@ export class ProtocolEditorView extends ItemView {
       }
     };
     const addStartPointCheckbox = () => {
-      const field = body.createDiv({ cls: 'rp-protocol-editor-modal-field rp-protocol-editor-modal-checkbox-field' });
+      const field = body.createDiv({ cls: 'rp-protocol-editor-modal-field rp-protocol-editor-modal-checkbox-field rp-protocol-editor-modal-start-point-field' });
       const label = field.createEl('label');
       const input = label.createEl('input', { attr: { type: 'checkbox' } }) as HTMLInputElement;
       input.checked = node.fields['startPointEnabled'] === true;
-      label.appendText(t('protocolEditor.startPointEnabledLabel'));
+      label.createSpan({ text: t('protocolEditor.startPointEnabledLabel') });
       textControls.push({ key: 'startPointEnabled', value: () => input.checked ? true : undefined });
     };
 
@@ -1393,8 +1393,6 @@ export class ProtocolEditorView extends ItemView {
       textControls.push({ key: 'snippetPath', value: () => selectedFile });
     };
 
-    addStartPointCheckbox();
-
     switch (node.kind) {
       case 'question':
         addInput('questionText', t('protocolEditor.questionTextLabel'), node.fields['questionText'] ?? node.text, true);
@@ -1423,6 +1421,8 @@ export class ProtocolEditorView extends ItemView {
         body.createDiv({ cls: 'rp-protocol-editor-modal-help', text: t('protocolEditor.noEditableFields') });
         break;
     }
+
+    addStartPointCheckbox();
 
     const footer = modal.createDiv({ cls: 'rp-protocol-editor-modal-footer' });
     const deleteBtn = footer.createEl('button', {

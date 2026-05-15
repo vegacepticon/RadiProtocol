@@ -139,7 +139,10 @@
     "renamedNotice": "Сниппет переименован.",
     "movedAndRenamedNotice": "Сниппет перемещён и переименован.",
     "validationLockTitle": "Сниппет содержит ошибку — исправьте источник и откройте заново.",
-    "validationBannerHeader": "Этот сниппет не может быть использован:"
+    "validationBannerHeader": "Этот сниппет не может быть использован:",
+    "duplicate": "Дублировать сниппет",
+    "duplicateTitle": "Создать копию этого сниппета",
+    "duplicateError": "Ошибка дублирования сниппета: {error}"
   },
   "insertSnippet": {
     "title": "Вставить сниппет",
