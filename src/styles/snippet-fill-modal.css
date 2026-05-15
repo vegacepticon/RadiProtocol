@@ -21,12 +21,39 @@
   /* migrated to .rp-stack utility (Phase 80) */
 }
 
+.rp-snippet-modal-custom-wrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--size-2-1); /* 4px */
+  margin-top: var(--size-2-1); /* 4px — separates custom controls from predefined options */
+}
+
+.rp-snippet-modal-custom-toggle {
+  width: 28px;
+  height: 28px;
+  min-width: 28px;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0.75;
+}
+
+.rp-snippet-modal-custom-toggle[aria-expanded="true"] {
+  opacity: 1;
+}
+
 .rp-snippet-modal-custom-row {
   display: flex;
   flex-direction: row;
   align-items: center;
   gap: var(--size-2-1); /* 4px */
-  margin-top: var(--size-2-1); /* 4px — separates custom row from predefined options */
+  width: 100%;
+}
+
+.rp-snippet-modal-custom-row[hidden] {
+  display: none;
 }
 
 .rp-snippet-modal-custom-row label {
@@ -48,7 +75,7 @@
 
 .rp-snippet-preview {
   width: 100%;
-  resize: none;
+  overflow: hidden;
   font-family: var(--font-monospace);
   font-size: var(--font-text-size); /* 14px */
   font-weight: var(--font-normal); /* 400 */
@@ -58,6 +85,7 @@
   padding: var(--size-4-2); /* 16px */
   box-sizing: border-box;
   min-height: 80px;
+  height: var(--rp-preview-height, auto);
 }
 
 .rp-snippet-modal-btn-row {

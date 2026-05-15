@@ -32,7 +32,9 @@ interface MockEl {
   name: string;
   inputMode: string;
   readOnly: boolean;
+  scrollHeight: number;
   dataset: Record<string, string>;
+  style: Record<string, string>;
   // accessor-backed: textContent, value, disabled, type, checked, style
   createEl: (tag: string, opts?: { text?: string; cls?: string; type?: string }) => MockEl;
   createDiv: (opts?: { cls?: string; text?: string }) => MockEl;
@@ -44,7 +46,9 @@ interface MockEl {
   toggleClass: (c: string, on?: boolean) => void;
   hasClass: (c: string) => boolean;
   setAttribute: (k: string, v: string) => void;
+  removeAttribute: (k: string) => void;
   getAttribute: (k: string) => string | null;
+  focus: () => void;
   addEventListener: (type: string, handler: (ev: unknown) => void) => void;
   removeEventListener: (type: string, handler: (ev: unknown) => void) => void;
   dispatchEvent: (event: { type: string; target?: MockEl }) => void;
@@ -76,6 +80,7 @@ function makeEl(tag = 'div'): MockEl {
     name: '',
     inputMode: '',
     readOnly: false,
+    scrollHeight: 0,
     dataset,
     createEl(subtag: string, opts?: { text?: string; cls?: string; type?: string }): MockEl {
       const child = makeEl(subtag);
@@ -107,7 +112,9 @@ function makeEl(tag = 'div'): MockEl {
     },
     hasClass(cls: string): boolean { return classSet.has(cls); },
     setAttribute(k: string, v: string): void { attrs[k] = v; },
+    removeAttribute(k: string): void { delete attrs[k]; },
     getAttribute(k: string): string | null { return attrs[k] ?? null; },
+    focus(): void {},
     addEventListener(type: string, handler: (ev: unknown) => void): void {
       if (!listeners.has(type)) listeners.set(type, []);
       listeners.get(type)!.push(handler);
@@ -386,6 +393,24 @@ describe('SnippetFillInModal Phase 52 D-05 — unified choice renders as checkbo
 });
 
 describe('SnippetFillInModal Phase 52 D-06 — Custom override preserved', () => {
+  it('keeps custom text rows collapsed by default behind a compact toggle', () => {
+    const snippet = makeSnippet([
+      { id: 'f', label: 'F', type: 'choice', options: ['a', 'b'] },
+    ]);
+    const modal = new SnippetFillInModal(app, snippet);
+    modal.onOpen();
+    const root = (modal as unknown as { contentEl: MockEl }).contentEl;
+    const customRow = root.querySelectorAll('.rp-snippet-modal-custom-row')[0];
+    const customToggle = root.querySelectorAll('.rp-snippet-modal-custom-toggle')[0];
+    if (!customRow || !customToggle) throw new Error('Custom controls missing');
+    expect(customRow.getAttribute('hidden')).toBe('true');
+    expect(customToggle.getAttribute('aria-expanded')).toBe('false');
+    customToggle.dispatchEvent({ type: 'click' });
+    expect(customRow.getAttribute('hidden')).toBeNull();
+    expect(customToggle.getAttribute('aria-expanded')).toBe('true');
+    modal.onClose();
+  });
+
   it('Custom non-empty text overrides checkboxes', async () => {
     const snippet = makeSnippet([
       { id: 'f', label: 'F', type: 'choice', options: ['a', 'b'] },
@@ -442,6 +467,24 @@ describe('SnippetFillInModal Phase 52 D-06 — Custom override preserved', () =>
 });
 
 describe('SnippetFillInModal Phase 52 — free-text unchanged', () => {
+  it('auto-expands the preview textarea as rendered text grows', () => {
+    const snippet = makeSnippet(
+      [{ id: 'f', label: 'F', type: 'free-text' }],
+      'R: {{f}}',
+    );
+    const modal = new SnippetFillInModal(app, snippet);
+    modal.onOpen();
+    const root = (modal as unknown as { contentEl: MockEl }).contentEl;
+    const preview = root.querySelectorAll('.rp-snippet-preview')[0];
+    const textInput = root.querySelectorAll('input[type="text"]')[0];
+    if (!preview || !textInput) throw new Error('Preview or text input missing');
+    preview.scrollHeight = 240;
+    (textInput as unknown as { _value: string })._value = 'long rendered text';
+    textInput.dispatchEvent({ type: 'input' });
+    expect(preview.style.height).toBe('240px');
+    modal.onClose();
+  });
+
   it('renders a text input for free-text and inserts its value', async () => {
     const snippet = makeSnippet(
       [{ id: 'f', label: 'F', type: 'free-text' }],

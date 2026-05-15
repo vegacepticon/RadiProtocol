@@ -71,7 +71,7 @@ export function fieldsForProtocolEditorNodeKind(kind: RPNodeKind | null): Record
 
 export function normalizeProtocolEditorEdgeLabel(label: string, isLoopExit: boolean): string | undefined {
   const withoutPrefix = label.trim().replace(/^\+\s*/, '').trim();
-  if (isLoopExit) return `+${withoutPrefix}`;
+  if (isLoopExit && withoutPrefix !== '') return `+${withoutPrefix}`;
   return withoutPrefix === '' ? undefined : withoutPrefix;
 }
 
@@ -94,15 +94,36 @@ function nodeTitle(node: ProtocolNodeRecord): string {
 
 export function defaultProtocolEditorEdgeLabelForTarget(node: ProtocolNodeRecord | undefined): string | undefined {
   if (node === undefined) return undefined;
-  const candidates = [
-    node.fields['displayLabel'],
-    node.fields['answerText'],
-    node.text,
-  ];
+  const candidates = node.kind === 'answer'
+    ? [node.fields['displayLabel'], node.fields['answerText'], node.text]
+    : node.kind === 'snippet'
+      ? [node.fields['snippetLabel'], node.text]
+      : [];
   for (const candidate of candidates) {
     if (typeof candidate === 'string' && candidate.trim() !== '') return candidate.trim();
   }
   return undefined;
+}
+
+export function shouldAutoRefreshProtocolEditorEdgeLabel(
+  currentLabel: string | undefined,
+  previousAutoLabel: string | undefined,
+): boolean {
+  const currentTrim = currentLabel?.trim() || undefined;
+  const previousTrim = previousAutoLabel?.trim() || undefined;
+  return currentTrim === undefined || currentTrim === previousTrim;
+}
+
+export function shouldDisplayProtocolEditorEdgeLabel(
+  edge: ProtocolEdgeRecord,
+  fromNode: ProtocolNodeRecord | undefined,
+  toNode: ProtocolNodeRecord | undefined,
+): boolean {
+  if (toNode?.kind === 'answer' || toNode?.kind === 'snippet') {
+    const effectiveLabel = deriveProtocolEditorEdgeLabel(toNode, edge.label);
+    return effectiveLabel !== undefined && effectiveLabel.trim() !== '';
+  }
+  return fromNode?.kind === 'loop' && toNode?.kind === 'loop' && isProtocolEditorLoopExitLabel(edge.label);
 }
 
 export function deriveProtocolEditorEdgeLabel(
@@ -437,7 +458,9 @@ export class ProtocolEditorView extends ItemView {
           class: 'rp-protocol-editor-edge',
         },
       }) as SVGPathElement;
-      const effectiveLabel = deriveProtocolEditorEdgeLabel(to, edge.label);
+      const effectiveLabel = shouldDisplayProtocolEditorEdgeLabel(edge, from, to)
+        ? deriveProtocolEditorEdgeLabel(to, edge.label)
+        : undefined;
       if (effectiveLabel !== undefined && effectiveLabel.trim() !== '') {
         const labelGroup = group.createSvg('g', { attr: { class: 'rp-protocol-editor-edge-label-group' } });
         const labelText = displayProtocolEditorEdgeLabel(effectiveLabel);
@@ -711,12 +734,18 @@ export class ProtocolEditorView extends ItemView {
       return;
     }
 
+    const sourceNode = this.doc.nodes.find((node) => node.id === state.fromNodeId);
     const targetNode = this.doc.nodes.find((node) => node.id === toNodeId);
+    const defaultLabel = defaultProtocolEditorEdgeLabelForTarget(targetNode);
     const newEdge: ProtocolEdgeRecord = {
       id: edgeUid(),
       fromNodeId: state.fromNodeId,
       toNodeId,
-      label: defaultProtocolEditorEdgeLabelForTarget(targetNode),
+      label: shouldDisplayProtocolEditorEdgeLabel(
+        { id: 'preview', fromNodeId: state.fromNodeId, toNodeId, label: defaultLabel },
+        sourceNode,
+        targetNode,
+      ) ? defaultLabel : undefined,
     };
 
     try {
@@ -1104,16 +1133,36 @@ export class ProtocolEditorView extends ItemView {
       const duplicate = this.doc?.edges.some((candidate) => candidate.id !== edge.id && candidate.fromNodeId === nextFrom && candidate.toNodeId === nextTo) ?? false;
       if (nextFrom === nextTo) { new Notice(t('protocolEditor.selfEdgeRejected')); return; }
       if (duplicate) { new Notice(t('protocolEditor.duplicateEdgeRejected')); return; }
+      const selectedSource = nodes.find((node) => node.id === nextFrom);
       const selectedTarget = nodes.find((node) => node.id === nextTo);
       const typedLabel = normalizeProtocolEditorEdgeLabel(labelInput.value, exitCheckbox.checked);
-      const nextLabel = typedLabel ?? defaultProtocolEditorEdgeLabelForTarget(selectedTarget);
+      const defaultLabel = defaultProtocolEditorEdgeLabelForTarget(selectedTarget);
+      const shouldDisplayLabel = shouldDisplayProtocolEditorEdgeLabel(
+        { ...edge, fromNodeId: nextFrom, toNodeId: nextTo, label: typedLabel ?? defaultLabel },
+        selectedSource,
+        selectedTarget,
+      );
+      const nextLabel = shouldDisplayLabel ? typedLabel ?? defaultLabel : undefined;
       try {
         await this.plugin.protocolDocumentStore.update(this.protocolPath!, (existing) => {
           if (existing === null) throw new Error('Protocol file disappeared');
+          const nodes = existing.nodes.map((candidate) => {
+            if (candidate.id !== nextTo || candidate.kind !== 'snippet' || typedLabel === undefined || isProtocolEditorLoopExitLabel(typedLabel)) {
+              return candidate;
+            }
+            return {
+              ...candidate,
+              text: typedLabel,
+              fields: {
+                ...candidate.fields,
+                snippetLabel: typedLabel,
+              },
+            };
+          });
           const edges = existing.edges.map((candidate) => candidate.id === edge.id
             ? { ...candidate, fromNodeId: nextFrom, toNodeId: nextTo, label: nextLabel }
             : candidate);
-          return { ...existing, edges, viewport: this.currentViewportState(), updatedAt: new Date().toISOString() };
+          return { ...existing, nodes, edges, viewport: this.currentViewportState(), updatedAt: new Date().toISOString() };
         });
         closeModal();
         new Notice(t('protocolEditor.edgeSaved'));
@@ -1324,14 +1373,21 @@ export class ProtocolEditorView extends ItemView {
         await this.plugin.protocolDocumentStore.update(this.protocolPath!, (existing) => {
           if (existing === null) throw new Error('Protocol file disappeared');
           const nodes = existing.nodes.map((n) => n.id === updatedNode.id ? updatedNode : n);
-          const edges = updatedNode.kind === 'answer'
+          const edgeNodeById = new Map(nodes.map((n) => [n.id, n]));
+          const shouldSyncIncomingLabels = updatedNode.kind === 'answer' || updatedNode.kind === 'snippet';
+          const previousAutoLabel = defaultProtocolEditorEdgeLabelForTarget(node);
+          const nextAutoLabel = defaultProtocolEditorEdgeLabelForTarget(updatedNode);
+          const edges = shouldSyncIncomingLabels
             ? existing.edges.map((candidate) => {
               if (candidate.toNodeId !== updatedNode.id) return candidate;
-              const previousAutoLabel = defaultProtocolEditorEdgeLabelForTarget(node);
-              const shouldRefresh = candidate.label === undefined || candidate.label.trim() === '' || candidate.label === previousAutoLabel;
-              if (!shouldRefresh) return candidate;
-              const nextAutoLabel = defaultProtocolEditorEdgeLabelForTarget(updatedNode);
-              return { ...candidate, label: nextAutoLabel };
+              if (!shouldAutoRefreshProtocolEditorEdgeLabel(candidate.label, previousAutoLabel)) return candidate;
+              const fromNode = edgeNodeById.get(candidate.fromNodeId);
+              const shouldDisplayLabel = shouldDisplayProtocolEditorEdgeLabel(
+                { ...candidate, label: nextAutoLabel },
+                fromNode,
+                updatedNode,
+              );
+              return { ...candidate, label: shouldDisplayLabel ? nextAutoLabel : undefined };
             })
             : existing.edges;
           return { ...existing, nodes, edges, viewport: this.currentViewportState(), updatedAt: new Date().toISOString() };

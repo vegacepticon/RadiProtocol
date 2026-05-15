@@ -6,6 +6,7 @@ import type RadiProtocolPlugin from '../main';
 import { ProtocolRunner } from '../runner/protocol-runner';
 import { GraphValidator } from '../graph/graph-validator';
 import type { ProtocolGraph, AnswerNode } from '../graph/graph-model';
+import type { RunnerState } from '../runner/runner-state';
 import { SnippetTreePicker } from './snippet-tree-picker';
 import { SnippetFillInModal } from './snippet-fill-in-modal';
 import { renderLoopPicker } from '../runner/render/render-loop-picker';
@@ -102,6 +103,8 @@ export class InlineRunnerModal {
 
   private containerEl: HTMLElement | null = null;
   private headerEl: HTMLElement | null = null;
+  private progressFillEl: HTMLElement | null = null;
+  private progressTextEl: HTMLElement | null = null;
   private contentEl: HTMLElement | null = null;
 
   private runner: ProtocolRunner;
@@ -345,6 +348,8 @@ export class InlineRunnerModal {
     }
 
     this.headerEl = null;
+    this.progressFillEl = null;
+    this.progressTextEl = null;
     this.contentEl = null;
     this.graph = null;
   }
@@ -360,9 +365,10 @@ export class InlineRunnerModal {
     this.headerEl = header;
     this.enableDragging(header);
 
-    const titleEl = header.createDiv({ cls: 'rp-inline-runner-header-title' });
-    const canvasName = this.canvasFilePath!.replace(/\.canvas$/, '').split('/').pop() ?? 'Protocol';
-    titleEl.setText(canvasName);
+    const progress = header.createDiv({ cls: 'rp-inline-runner-progress', attr: { role: 'progressbar', 'aria-valuemin': '0', 'aria-valuemax': '100' } });
+    const progressTrack = progress.createDiv({ cls: 'rp-inline-runner-progress-track' });
+    this.progressFillEl = progressTrack.createDiv({ cls: 'rp-inline-runner-progress-fill' });
+    this.progressTextEl = progress.createDiv({ cls: 'rp-inline-runner-progress-text' });
 
     const closeBtn = header.createEl('button', { cls: 'rp-inline-runner-close-btn rp-center' });
     setIcon(closeBtn, 'x');
@@ -379,11 +385,38 @@ export class InlineRunnerModal {
 
   // ── Rendering ─────────────────────────────────────────────────────────────
 
+  private calculateProgressPercent(state: RunnerState): number {
+    if (this.graph === null) return 0;
+    if (state.status === 'complete') return 100;
+    if (state.status === 'idle' || state.status === 'error') return 0;
+    const visitedNodeIds = new Set<string>();
+    const session = this.runner.getSerializableState();
+    if (session !== null) {
+      for (const entry of session.undoStack) visitedNodeIds.add(entry.nodeId);
+      if (session.currentNodeId !== '') visitedNodeIds.add(session.currentNodeId);
+    }
+    if (state.status === 'at-node') visitedNodeIds.add(state.currentNodeId);
+    else visitedNodeIds.add(state.nodeId);
+    const totalNodes = Math.max(1, this.graph.nodes.size);
+    return Math.min(99, Math.max(0, Math.round((visitedNodeIds.size / totalNodes) * 100)));
+  }
+
+  private updateProgress(state: RunnerState): void {
+    if (this.headerEl === null || this.progressFillEl === null || this.progressTextEl === null) return;
+    const percent = this.calculateProgressPercent(state);
+    this.progressFillEl.style.width = `${percent}%`;
+    this.progressTextEl.setText(`${percent}%`);
+    const progressEl = this.headerEl.querySelector('.rp-inline-runner-progress');
+    progressEl?.setAttribute('aria-valuenow', String(percent));
+    progressEl?.setAttribute('aria-label', `Protocol progress ${percent}%`);
+  }
+
   private render(): void {
     if (this.contentEl === null) return;
 
     // Unmount picker if state has left awaiting-snippet-pick
     const state = this.runner.getState();
+    this.updateProgress(state);
     if (this.snippetTreePicker !== null && state.status !== 'awaiting-snippet-pick') {
       this.snippetTreePicker.unmount();
       this.snippetTreePicker = null;

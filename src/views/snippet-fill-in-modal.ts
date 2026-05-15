@@ -164,13 +164,39 @@ export class SnippetFillInModal extends Modal {
       });
     }
 
-    // Custom: free-text override (SNIP-09, D-06/D-09) — always shown below options
-    const customRow = optionsDiv.createDiv({ cls: 'rp-snippet-modal-custom-row' });
+    // Custom: free-text override (SNIP-09, D-06/D-09), collapsed by default to reduce visual noise.
+    const customWrapper = optionsDiv.createDiv({ cls: 'rp-snippet-modal-custom-wrapper' });
+    const customToggle = customWrapper.createEl('button', {
+      cls: 'rp-snippet-modal-custom-toggle',
+      type: 'button',
+    });
+    customToggle.textContent = '✎';
+    customToggle.setAttribute('aria-label', `Show custom value for ${placeholder.label}`);
+    customToggle.setAttribute('aria-expanded', 'false');
+
+    const customRow = customWrapper.createDiv({ cls: 'rp-snippet-modal-custom-row' });
+    customRow.setAttribute('hidden', 'true');
     const customLabel = customRow.createEl('label');
     customLabel.textContent = 'Custom:';
 
     customInput = customRow.createEl('input', { type: 'text' });
     customInput.setAttribute('aria-label', `Custom value for ${placeholder.label}`);
+
+    const setCustomOpen = (open: boolean): void => {
+      customToggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+      if (open) {
+        customRow.removeAttribute('hidden');
+        customRow.addClass('is-open');
+        customInput?.focus();
+      } else {
+        customRow.setAttribute('hidden', 'true');
+        customRow.removeClass('is-open');
+      }
+    };
+
+    customToggle.addEventListener('click', () => {
+      setCustomOpen(customToggle.getAttribute('aria-expanded') !== 'true');
+    });
 
     customInput.addEventListener('input', () => {
       if (customInput && customInput.value.trim() !== '') {
@@ -195,12 +221,22 @@ export class SnippetFillInModal extends Modal {
     this.previewTextarea.setAttribute('aria-label', 'Snippet preview');
     // Show the raw template initially (unfilled tokens visible per UI-SPEC empty state)
     this.previewTextarea.value = this.snippet.template;
+    this.resizePreview();
+  }
+
+  /** Keep preview compact for short text and readable for long rendered snippets. */
+  private resizePreview(): void {
+    if (!this.previewTextarea) return;
+    const scrollHeight = this.previewTextarea.scrollHeight;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (this.previewTextarea as any).style.height = `${Math.max(160, scrollHeight)}px`;
   }
 
   /** Update the live preview textarea with current field values. */
   private updatePreview(): void {
     if (this.previewTextarea) {
       this.previewTextarea.value = renderSnippet(this.snippet, this.values);
+      this.resizePreview();
     }
   }
 

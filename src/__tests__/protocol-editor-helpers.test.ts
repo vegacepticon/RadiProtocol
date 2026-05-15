@@ -3,6 +3,7 @@ import {
   canCreateProtocolEditorEdge,
   clampProtocolEditorZoom,
   defaultColorForProtocolEditorNodeKind,
+  defaultProtocolEditorEdgeLabelForTarget,
   displayProtocolEditorEdgeLabel,
   fieldsForProtocolEditorNodeKind,
   isProtocolEditorLoopExitLabel,
@@ -10,7 +11,10 @@ import {
   normalizeProtocolEditorSnippetFolderSelection,
   removeProtocolEditorEdge,
   screenDeltaToProtocolEditorDelta,
+  shouldAutoRefreshProtocolEditorEdgeLabel,
+  shouldDisplayProtocolEditorEdgeLabel,
 } from '../views/protocol-editor-view';
+import type { ProtocolNodeRecord } from '../protocol/protocol-document';
 
 describe('protocol editor helper functions', () => {
   describe('canCreateProtocolEditorEdge', () => {
@@ -32,6 +36,57 @@ describe('protocol editor helper functions', () => {
   });
 
   describe('edge helpers', () => {
+    const answerNode: ProtocolNodeRecord = {
+      id: 'answer',
+      kind: 'answer',
+      x: 0,
+      y: 0,
+      width: 160,
+      height: 80,
+      text: 'Answer text',
+      fields: { displayLabel: 'Answer button', answerText: 'Answer body' },
+    };
+    const snippetNode: ProtocolNodeRecord = {
+      id: 'snippet',
+      kind: 'snippet',
+      x: 0,
+      y: 0,
+      width: 160,
+      height: 80,
+      text: 'Snippet title',
+      fields: { snippetLabel: 'Snippet button' },
+    };
+    const loopNodeA: ProtocolNodeRecord = {
+      id: 'loop-a',
+      kind: 'loop',
+      x: 0,
+      y: 0,
+      width: 160,
+      height: 80,
+      text: 'Loop A',
+      fields: {},
+    };
+    const loopNodeB: ProtocolNodeRecord = {
+      id: 'loop-b',
+      kind: 'loop',
+      x: 0,
+      y: 0,
+      width: 160,
+      height: 80,
+      text: 'Loop B',
+      fields: {},
+    };
+    const textNode: ProtocolNodeRecord = {
+      id: 'text',
+      kind: 'text-block',
+      x: 0,
+      y: 0,
+      width: 160,
+      height: 80,
+      text: 'Text block',
+      fields: { content: 'Text content' },
+    };
+
     it('removes an edge by id without mutating the rest', () => {
       expect(removeProtocolEditorEdge([
         { id: 'e1', fromNodeId: 'a', toNodeId: 'b' },
@@ -42,6 +97,7 @@ describe('protocol editor helper functions', () => {
     it('normalizes loop exit labels with a leading plus', () => {
       expect(normalizeProtocolEditorEdgeLabel(' Exit ', true)).toBe('+Exit');
       expect(normalizeProtocolEditorEdgeLabel('+ Exit ', true)).toBe('+Exit');
+      expect(normalizeProtocolEditorEdgeLabel('   ', true)).toBeUndefined();
       expect(displayProtocolEditorEdgeLabel('+ Exit')).toBe('Exit');
       expect(isProtocolEditorLoopExitLabel('+ Exit')).toBe(true);
       expect(isProtocolEditorLoopExitLabel('Body')).toBe(false);
@@ -50,6 +106,48 @@ describe('protocol editor helper functions', () => {
     it('removes leading plus when loop exit is disabled', () => {
       expect(normalizeProtocolEditorEdgeLabel('+ Exit ', false)).toBe('Exit');
       expect(normalizeProtocolEditorEdgeLabel('   ', false)).toBeUndefined();
+    });
+
+    it('derives edge labels only from answer and snippet button labels', () => {
+      expect(defaultProtocolEditorEdgeLabelForTarget(answerNode)).toBe('Answer button');
+      expect(defaultProtocolEditorEdgeLabelForTarget(snippetNode)).toBe('Snippet button');
+      expect(defaultProtocolEditorEdgeLabelForTarget(textNode)).toBeUndefined();
+      expect(defaultProtocolEditorEdgeLabelForTarget(loopNodeA)).toBeUndefined();
+    });
+
+    it('auto-refreshes only empty or previously generated edge labels', () => {
+      expect(shouldAutoRefreshProtocolEditorEdgeLabel(undefined, 'Old')).toBe(true);
+      expect(shouldAutoRefreshProtocolEditorEdgeLabel('   ', 'Old')).toBe(true);
+      expect(shouldAutoRefreshProtocolEditorEdgeLabel('Old', 'Old')).toBe(true);
+      expect(shouldAutoRefreshProtocolEditorEdgeLabel('Manual', 'Old')).toBe(false);
+    });
+
+    it('shows labels for answer/snippet targets and loop-to-loop exit edges only', () => {
+      expect(shouldDisplayProtocolEditorEdgeLabel(
+        { id: 'e1', fromNodeId: 'text', toNodeId: 'answer', label: undefined },
+        textNode,
+        answerNode,
+      )).toBe(true);
+      expect(shouldDisplayProtocolEditorEdgeLabel(
+        { id: 'e2', fromNodeId: 'text', toNodeId: 'snippet', label: undefined },
+        textNode,
+        snippetNode,
+      )).toBe(true);
+      expect(shouldDisplayProtocolEditorEdgeLabel(
+        { id: 'e3', fromNodeId: 'text', toNodeId: 'loop-a', label: 'Noise' },
+        textNode,
+        loopNodeA,
+      )).toBe(false);
+      expect(shouldDisplayProtocolEditorEdgeLabel(
+        { id: 'e4', fromNodeId: 'loop-a', toNodeId: 'loop-b', label: '+Exit' },
+        loopNodeA,
+        loopNodeB,
+      )).toBe(true);
+      expect(shouldDisplayProtocolEditorEdgeLabel(
+        { id: 'e5', fromNodeId: 'loop-a', toNodeId: 'loop-b', label: 'Body' },
+        loopNodeA,
+        loopNodeB,
+      )).toBe(false);
     });
   });
 
