@@ -29,7 +29,7 @@ import { createButton, createInput, createTextarea } from '../utils/dom-helpers'
 
 type SnippetEditorResult =
   | { saved: true; snippet: Snippet; movedFrom: string | null }
-  | { saved: false };
+  | { saved: false; duplicatedTo?: string };
 
 interface SnippetEditorOptions {
   mode: 'create' | 'edit';
@@ -459,6 +459,15 @@ export class SnippetEditorModal extends Modal {
       void this.handleCancel();
     });
 
+    const duplicateBtn = createButton(row, {
+      text: this.plugin.i18n.t('snippetEditor.duplicate'),
+      attr: { title: this.plugin.i18n.t('snippetEditor.duplicateTitle') },
+    });
+    duplicateBtn.setAttribute('type', 'button');
+    duplicateBtn.addEventListener('click', () => {
+      void this.handleDuplicate();
+    });
+
     const saveBtn = createButton(row, {
       text: this.options.mode === 'create'
         ? this.plugin.i18n.t('snippetEditor.create')
@@ -647,6 +656,17 @@ export class SnippetEditorModal extends Modal {
     }
     this.safeResolve({ saved: false });
     super.close();
+  }
+
+  private async handleDuplicate(): Promise<void> {
+    if (this.options.mode !== 'edit' || !this.options.snippet) return;
+    try {
+      const newPath = await this.plugin.snippetService.duplicateSnippet(this.options.snippet.path);
+      this.safeResolve({ saved: false, duplicatedTo: newPath });
+      super.close();
+    } catch (err) {
+      new Notice(this.plugin.i18n.t('snippetEditor.duplicateError', { error: String(err) }));
+    }
   }
 
   /**

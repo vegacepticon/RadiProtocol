@@ -1207,7 +1207,7 @@ export class ProtocolEditorView extends ItemView {
     }
     kindSelect.value = (node.kind !== null && EDITABLE_NODE_KINDS.includes(node.kind)) ? node.kind : 'question';
 
-    const textControls: Array<{ key: string; value: () => string | undefined }> = [];
+    const textControls: Array<{ key: string; value: () => string | boolean | undefined }> = [];
     const addInput = (key: string, label: string, value: unknown, multiline = false) => {
       const field = body.createDiv({ cls: 'rp-protocol-editor-modal-field' });
       field.createEl('label', { text: label });
@@ -1219,6 +1219,15 @@ export class ProtocolEditorView extends ItemView {
         textControls.push({ key, value: () => input.value || undefined });
       }
     };
+    const addStartPointCheckbox = () => {
+      const field = body.createDiv({ cls: 'rp-protocol-editor-modal-field rp-protocol-editor-modal-checkbox-field' });
+      const label = field.createEl('label');
+      const input = label.createEl('input', { attr: { type: 'checkbox' } }) as HTMLInputElement;
+      input.checked = node.fields['startPointEnabled'] === true;
+      label.appendText(t('protocolEditor.startPointEnabledLabel'));
+      textControls.push({ key: 'startPointEnabled', value: () => input.checked ? true : undefined });
+    };
+
     const addSeparator = (key: string, label: string, value: unknown) => {
       const field = body.createDiv({ cls: 'rp-protocol-editor-modal-field' });
       field.createEl('label', { text: label });
@@ -1289,6 +1298,8 @@ export class ProtocolEditorView extends ItemView {
       textControls.push({ key: 'subfolderPath', value: () => selectedFolder });
       textControls.push({ key: 'snippetPath', value: () => selectedFile });
     };
+
+    addStartPointCheckbox();
 
     switch (node.kind) {
       case 'question':

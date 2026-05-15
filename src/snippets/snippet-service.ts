@@ -322,6 +322,27 @@ export class SnippetService {
     return { files, folders, total: files.length + folders.length };
   }
 
+  async duplicateSnippet(path: string): Promise<string> {
+    const original = await this.load(path);
+    if (original === null) throw new Error(this.t('snippetService.fileNotFound', { path }));
+
+    const dot = path.lastIndexOf('.');
+    const base = dot >= 0 ? path.slice(0, dot) : path;
+    const ext = dot >= 0 ? path.slice(dot) : '';
+    let candidate = `${base}-copy${ext}`;
+    let index = 2;
+    while (await this.exists(candidate)) {
+      candidate = `${base}-copy-${index}${ext}`;
+      index += 1;
+    }
+
+    const duplicate = original.kind === 'json'
+      ? { ...original, path: candidate, name: this.basenameNoExt(candidate), placeholders: original.placeholders.map((p) => ({ ...p })) }
+      : { ...original, path: candidate, name: this.basenameNoExt(candidate) };
+    await this.save(duplicate);
+    return candidate;
+  }
+
   /**
    * Phase 34 (MOVE-01, RENAME-03): Rename a snippet file in place (same folder).
    * Preserves the original extension (.json or .md). Rejects basenames that

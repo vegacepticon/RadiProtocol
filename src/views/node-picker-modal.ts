@@ -1,14 +1,17 @@
 // views/node-picker-modal.ts
 // Implements the "Start from specific node" picker (RUN-10 / D-06)
 import { App, SuggestModal } from 'obsidian';
-import type { ProtocolGraph, QuestionNode, TextBlockNode, SnippetNode, LoopNode } from '../graph/graph-model';
+import type { ProtocolGraph, QuestionNode, TextBlockNode, SnippetNode, LoopNode, RPNodeKind } from '../graph/graph-model';
+import type { ProtocolNodeRecord } from '../protocol/protocol-document';
 import type RadiProtocolPlugin from '../main';
 import { defaultT, type Translator } from '../i18n';
+
+type StartableNodeKind = Extract<RPNodeKind, 'start' | 'question' | 'answer' | 'text-block' | 'snippet' | 'loop'>;
 
 export interface NodeOption {
   id: string;
   label: string;
-  kind: 'question' | 'text-block' | 'snippet' | 'loop';
+  kind: StartableNodeKind;
 }
 
 /**
@@ -17,7 +20,9 @@ export interface NodeOption {
  * against the active locale. Exhaustive over NodeOption['kind'].
  */
 export const KIND_LABEL_KEYS: Record<NodeOption['kind'], string> = {
+  'start': 'nodePicker.start',
   'question': 'nodePicker.question',
+  'answer': 'nodePicker.answer',
   'text-block': 'nodePicker.textBlock',
   'snippet': 'nodePicker.snippet',
   'loop': 'nodePicker.loop',
@@ -29,7 +34,9 @@ export const KIND_LABEL_KEYS: Record<NodeOption['kind'], string> = {
  * KIND_LABEL_KEYS + the plugin's translator for live-locale output.
  */
 export const KIND_LABELS: Record<NodeOption['kind'], string> = {
+  'start': defaultT('nodePicker.start'),
   'question': defaultT('nodePicker.question'),
+  'answer': defaultT('nodePicker.answer'),
   'text-block': defaultT('nodePicker.textBlock'),
   'snippet': defaultT('nodePicker.snippet'),
   'loop': defaultT('nodePicker.loop'),
@@ -47,10 +54,12 @@ export const KIND_LABELS: Record<NodeOption['kind'], string> = {
  * at runtime (which previously clustered unknown kinds ahead of every known group).
  */
 const KIND_ORDER: Record<NodeOption['kind'], number> = {
-  'question':   0,
-  'loop':       1,
-  'text-block': 2,
-  'snippet':    3,
+  'start':      0,
+  'question':   1,
+  'answer':     2,
+  'loop':       3,
+  'text-block': 4,
+  'snippet':    5,
 };
 
 /**
@@ -70,41 +79,68 @@ const KIND_ORDER: Record<NodeOption['kind'], number> = {
  * Phase 84 (I18N-02): the snippet-row fallback label ("(snippets root)") is
  * resolved through the optional translator so it follows the active locale.
  */
-export function buildNodeOptions(graph: ProtocolGraph, t: Translator = defaultT): NodeOption[] {
-  const options: NodeOption[] = [];
-
-  for (const [id, node] of graph.nodes) {
-    if (node.kind === 'question') {
-      const q = node as QuestionNode;
-      options.push({ id, label: q.questionText || id, kind: 'question' });
-    } else if (node.kind === 'text-block') {
-      const tb = node as TextBlockNode;
-      const preview = tb.content.slice(0, 60);
-      options.push({ id, label: preview || id, kind: 'text-block' });
-    } else if (node.kind === 'snippet') {
-      const s = node as SnippetNode;
-      // D-07 + D-CL-05: subfolderPath may be undefined → fallback "(snippets root)" (i18n-keyed);
-      // id — final fallback (defense-in-depth; should never fire because the i18n key resolves truthy).
-      options.push({ id, label: s.subfolderPath || t('nodePicker.rootSnippets'), kind: 'snippet' });
-    } else if (node.kind === 'loop') {
-      const l = node as LoopNode;
-      options.push({ id, label: l.headerText || id, kind: 'loop' });
-    }
-    // answer, start, loop-start, loop-end — deliberately excluded (D-06)
-  }
-
-  // D-08: kind-group entry order via KIND_ORDER lookup, alphabetical within group.
-  // Phase 45 WR-02 fix: KIND_ORDER is now a Record<kind, number> so lookup cannot
-  // return -1 for unknown kinds — TypeScript enforces exhaustiveness at the
-  // declaration site (see KIND_ORDER JSDoc above).
+function sortNodeOptions(options: NodeOption[]): NodeOption[] {
   options.sort((a, b) => {
     const kaIdx = KIND_ORDER[a.kind];
     const kbIdx = KIND_ORDER[b.kind];
     if (kaIdx !== kbIdx) return kaIdx - kbIdx;
     return a.label.toLowerCase().localeCompare(b.label.toLowerCase());
   });
-
   return options;
+}
+
+export function buildNodeOptions(graph: ProtocolGraph, t: Translator = defaultT): NodeOption[] {
+  const options: NodeOption[] = [];
+
+  for (const [id, node] of graph.nodes) {
+    if (node.kind === 'start') {
+      options.push({ id, label: node.text || id, kind: 'start' });
+    } else if (node.kind === 'question') {
+      const q = node as QuestionNode;
+      options.push({ id, label: q.questionText || id, kind: 'question' });
+    } else if (node.kind === 'answer') {
+      options.push({ id, label: node.text || id, kind: 'answer' });
+    } else if (node.kind === 'text-block') {
+      const tb = node as TextBlockNode;
+      const preview = tb.content.slice(0, 60);
+      options.push({ id, label: preview || id, kind: 'text-block' });
+    } else if (node.kind === 'snippet') {
+      const s = node as SnippetNode;
+      options.push({ id, label: s.snippetLabel || s.subfolderPath || t('nodePicker.rootSnippets'), kind: 'snippet' });
+    } else if (node.kind === 'loop') {
+      const l = node as LoopNode;
+      options.push({ id, label: l.headerText || id, kind: 'loop' });
+    }
+  }
+
+  return sortNodeOptions(options);
+}
+
+function stringField(record: ProtocolNodeRecord, key: string): string | undefined {
+  const value = record.fields[key];
+  return typeof value === 'string' && value.trim() !== '' ? value.trim() : undefined;
+}
+
+export function buildStartableProtocolNodeOptions(
+  nodes: ProtocolNodeRecord[],
+  t: Translator = defaultT,
+): NodeOption[] {
+  const options: NodeOption[] = [];
+  for (const node of nodes) {
+    if (node.kind === null || node.fields['startPointEnabled'] !== true) continue;
+    if (node.kind === 'loop-start' || node.kind === 'loop-end') continue;
+    const label =
+      stringField(node, 'displayLabel') ??
+      stringField(node, 'snippetLabel') ??
+      stringField(node, 'questionText') ??
+      stringField(node, 'answerText') ??
+      stringField(node, 'content') ??
+      stringField(node, 'headerText') ??
+      node.text ??
+      (node.kind === 'snippet' ? t('nodePicker.rootSnippets') : node.id);
+    options.push({ id: node.id, label, kind: node.kind });
+  }
+  return sortNodeOptions(options);
 }
 
 /**

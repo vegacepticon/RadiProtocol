@@ -75,31 +75,38 @@ describe('buildNodeOptions (Phase 45 LOOP-06 / D-06..D-08)', () => {
     expect(kindSet).toEqual(new Set(['question', 'text-block', 'snippet', 'loop']));
   });
 
-  it('excludes answer, start, loop-start, loop-end (D-06 conscious deviation from ROADMAP SC #3)', () => {
-    // Phase 46 CLEAN-04: removed assertion for deleted kind (46-01 D-46-01-A excised it from RPNodeKind).
+  it('includes answer, start, question, text-block, snippet, loop; excludes only loop-start / loop-end', () => {
     const g = makeGraph([
       question('q1', 'Q'),
       answer('a1', 'A'),
       start('s1'),
+      textBlock('tb1', 'text'),
+      snippet('sn1', 'organ'),
+      loop('l1', 'Loop'),
       loopStart('ls1', 'inner', 'выход'),
       loopEnd('le1', 'ls1'),
     ]);
     const opts = buildNodeOptions(g);
-    expect(opts).toHaveLength(1);
-    expect(opts[0]?.kind).toBe('question');
-    // Defensive — none of the non-startable kinds appeared
-    expect(opts.find(o => (o.kind as string) === 'answer')).toBeUndefined();
-    expect(opts.find(o => (o.kind as string) === 'start')).toBeUndefined();
+    expect(opts).toHaveLength(6);
+    const kinds = opts.map(o => o.kind);
+    expect(kinds).toContain('question');
+    expect(kinds).toContain('answer');
+    expect(kinds).toContain('start');
+    expect(kinds).toContain('text-block');
+    expect(kinds).toContain('snippet');
+    expect(kinds).toContain('loop');
     expect(opts.find(o => (o.kind as string) === 'loop-start')).toBeUndefined();
     expect(opts.find(o => (o.kind as string) === 'loop-end')).toBeUndefined();
   });
 
-  it('label falls back to id when primary text field is empty (D-07 — all 4 kinds)', () => {
+  it('label falls back to id when primary text field is empty (D-07 — all 6 kinds)', () => {
     const g = makeGraph([
       question('q-empty', ''),          // questionText пустой → label === id
       textBlock('t-empty', ''),         // content пустой → label === id
       snippet('s-empty'),               // subfolderPath undefined → label === '(snippets root)'
       loop('l-empty', ''),              // headerText пустой → label === id
+      answer('a-empty', ''),            // answerText пустой → label === id
+      start('s-start'),                 // text пустой → label === id
     ]);
     const opts = buildNodeOptions(g);
     const byKind = Object.fromEntries(opts.map(o => [o.kind, o]));
@@ -107,18 +114,22 @@ describe('buildNodeOptions (Phase 45 LOOP-06 / D-06..D-08)', () => {
     expect(byKind['text-block']?.label).toBe('t-empty');
     expect(byKind['snippet']?.label).toBe('(snippets root)');
     expect(byKind['loop']?.label).toBe('l-empty');
+    expect(byKind['answer']?.label).toBe('a-empty');
+    expect(byKind['start']?.label).toBe('s-start');
   });
 
-  it('sorts kind-groups in entry order: question → loop → text-block → snippet (D-08)', () => {
+  it('sorts kind-groups in entry order: start → question → answer → loop → text-block → snippet', () => {
     // Insertion order deliberately scrambled — output MUST be in KIND_ORDER sequence.
     const g = makeGraph([
       snippet('s1', 'a'),
       textBlock('t1', 'z content'),
+      answer('a1', 'A'),
+      start('s-start'),
       loop('l1', 'mid header'),
       question('q1', 'Start here'),
     ]);
     const opts = buildNodeOptions(g);
-    expect(opts.map(o => o.kind)).toEqual(['question', 'loop', 'text-block', 'snippet']);
+    expect(opts.map(o => o.kind)).toEqual(['start', 'question', 'answer', 'loop', 'text-block', 'snippet']);
   });
 
   it('sorts within-group alphabetically via toLowerCase().localeCompare (D-08)', () => {
@@ -151,9 +162,9 @@ describe('buildNodeOptions (Phase 45 LOOP-06 / D-06..D-08)', () => {
 });
 
 describe('KIND_LABELS (Phase 45 LOOP-06 / D-10)', () => {
-  it('has Russian labels for exactly 4 startable kinds', () => {
+  it('has Russian labels for exactly 6 startable kinds', () => {
     const keys = Object.keys(KIND_LABELS).sort();
-    expect(keys).toEqual(['loop', 'question', 'snippet', 'text-block']);
+    expect(keys).toEqual(['answer', 'loop', 'question', 'snippet', 'start', 'text-block']);
   });
 
   it('maps each kind to its locked English badge text', () => {

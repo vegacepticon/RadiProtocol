@@ -96,6 +96,10 @@
     "snippetFilePlaceholder": "Selected file",
     "clearSnippetTarget": "Clear snippet target",
     "snippetNodeLabelLabel": "Snippet button label",
+    "startPointEnabledLabel": "Show in “start from node” command",
+    "duplicate": "Duplicate",
+    "duplicateTitle": "Create a copy of this snippet",
+    "duplicateError": "Failed to duplicate snippet: {error}",
     "useGlobalSeparator": "Use global separator",
     "nodeKind": {
       "start": "Start",
@@ -135,6 +139,14 @@
     "movedAndRenamedNotice": "Snippet moved and renamed.",
     "validationLockTitle": "Snippet has an error — fix the source and reopen.",
     "validationBannerHeader": "This snippet cannot be used:"
+  },
+  "insertSnippet": {
+    "title": "Insert snippet",
+    "setSnippetFolderFirst": "Set a snippet folder in settings before inserting snippets.",
+    "openMarkdownFirst": "Open a Markdown note first, then insert a snippet.",
+    "notFound": "Snippet not found: {path}",
+    "cannotBeUsed": "Snippet «{path}» cannot be used. {error}",
+    "inserted": "Snippet inserted."
   },
   "snippetTreePicker": {
     "selectFolder": "Select this folder",
@@ -197,8 +209,13 @@
     "folderRenamedNotice": "Folder renamed. Canvases updated: {updated}, skipped: {skipped}.",
     "renameError": "Failed to rename: {error}"
   },
+  "startFromNode": {
+    "noStartPoints": "This protocol has no nodes enabled for “start from node”. Enable the checkbox in node settings first."
+  },
   "nodePicker": {
+    "start": "Start",
     "question": "Question",
+    "answer": "Answer",
     "textBlock": "Text",
     "snippet": "Snippet",
     "loop": "Loop",

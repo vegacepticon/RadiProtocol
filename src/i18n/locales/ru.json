@@ -96,6 +96,10 @@
     "snippetFilePlaceholder": "Выбранный файл",
     "clearSnippetTarget": "Очистить цель сниппета",
     "snippetNodeLabelLabel": "Подпись кнопки сниппета",
+    "startPointEnabledLabel": "Показывать в команде «старт с узла»",
+    "duplicate": "Дублировать",
+    "duplicateTitle": "Создать копию этого сниппета",
+    "duplicateError": "Ошибка дублирования сниппета: {error}",
     "useGlobalSeparator": "Использовать общий разделитель",
     "nodeKind": {
       "start": "Старт",
@@ -135,6 +139,14 @@
     "movedAndRenamedNotice": "Сниппет перемещён и переименован.",
     "validationLockTitle": "Сниппет содержит ошибку — исправьте источник и откройте заново.",
     "validationBannerHeader": "Этот сниппет не может быть использован:"
+  },
+  "insertSnippet": {
+    "title": "Вставить сниппет",
+    "setSnippetFolderFirst": "Сначала укажи папку сниппетов в настройках.",
+    "openMarkdownFirst": "Сначала открой Markdown-заметку, затем вставь сниппет.",
+    "notFound": "Сниппет не найден: {path}",
+    "cannotBeUsed": "Сниппет «{path}» не может быть использован. {error}",
+    "inserted": "Сниппет вставлен."
   },
   "snippetTreePicker": {
     "selectFolder": "Выбрать эту папку",
@@ -197,8 +209,13 @@
     "folderRenamedNotice": "Папка переименована. Обновлено канвасов: {updated}, пропущено: {skipped}.",
     "renameError": "Не удалось переименовать: {error}"
   },
+  "startFromNode": {
+    "noStartPoints": "В этом протоколе нет узлов, включённых для команды «старт с узла». Сначала включи чекбокс в настройках узла."
+  },
   "nodePicker": {
+    "start": "Старт",
     "question": "Вопрос",
+    "answer": "Ответ",
     "textBlock": "Текст",
     "snippet": "Сниппет",
     "loop": "Цикл",

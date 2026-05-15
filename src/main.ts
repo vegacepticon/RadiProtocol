@@ -1,5 +1,5 @@
 // main.ts
-import { Plugin, Notice, Menu, TFile, TFolder, SuggestModal } from 'obsidian';
+import { Plugin, Notice, Menu, TFile, TFolder, SuggestModal, MarkdownView } from 'obsidian';
 import type { App } from 'obsidian';
 import { RadiProtocolSettings, DEFAULT_SETTINGS, RadiProtocolSettingsTab, type InlineRunnerLayout } from './settings';
 import { CanvasParser } from './graph/canvas-parser';
@@ -15,10 +15,11 @@ import { CanvasNodeFactory } from './canvas/canvas-node-factory';
 import { EdgeLabelSyncService } from './canvas/edge-label-sync-service';
 import { LibraryService } from './snippets/library-service';
 // Phase 45 (LOOP-06): start-from-node command dependencies
-import { NodePickerModal, buildNodeOptions } from './views/node-picker-modal';
+import { NodePickerModal, buildNodeOptions, buildStartableProtocolNodeOptions } from './views/node-picker-modal';
 import { GraphValidator } from './graph/graph-validator';
 // Phase 54: inline protocol display mode
 import { InlineRunnerModal } from './views/inline-runner-modal';
+import { InsertSnippetModal } from './views/insert-snippet-modal';
 import { ProtocolEditorView, PROTOCOL_EDITOR_VIEW_TYPE } from './views/protocol-editor-view';
 
 /**
@@ -286,6 +287,12 @@ export default class RadiProtocolPlugin extends Plugin {
       callback: () => { void this.handleRunProtocolInline(); },
     });
 
+    this.addCommand({
+      id: 'insert-snippet',
+      name: 'Insert snippet',
+      callback: () => { void this.handleInsertSnippet(); },
+    });
+
     // Settings tab
     this.addSettingTab(new RadiProtocolSettingsTab(this.app, this));
 
@@ -505,7 +512,7 @@ export default class RadiProtocolPlugin extends Plugin {
     const activeLeaf = this.app.workspace.getMostRecentLeaf();
     const canvasLeaf = canvasLeaves.find(l => l === activeLeaf) ?? canvasLeaves[0];
     if (!canvasLeaf) {
-      new Notice('Open a canvas first.');
+      await this.handleStartFromProtocolNode();
       return;
     }
 
@@ -578,6 +585,86 @@ export default class RadiProtocolPlugin extends Plugin {
       const modal = new InlineRunnerModal(this.app, this, canvasPath, activeFile, opt.id);
       void modal.open();
     }).open();
+  }
+
+  private async handleStartFromProtocolNode(): Promise<void> {
+    const activeFile = this.app.workspace.getActiveFile();
+    if (activeFile === null || activeFile.extension !== 'md') {
+      new Notice(this.i18n.t('insertSnippet.openMarkdownFirst'));
+      return;
+    }
+
+    const folderPath = this.settings.protocolFolderPath.trim();
+    if (folderPath === '') {
+      new Notice(this.i18n.t('protocolEditor.setProtocolFolderFirst'));
+      return;
+    }
+
+    const protocolFiles = resolveProtocolDocumentFiles(this.app.vault, folderPath);
+    if (protocolFiles.length === 0) {
+      new Notice(`No protocol files found in '${folderPath}'.`);
+      return;
+    }
+
+    this.pickerModal = new ProtocolPickerSuggestModal(this.app, protocolFiles, (item) => {
+      this.pickerModal = null;
+      void this.openProtocolStartNodePicker(item.file, activeFile);
+    });
+    this.pickerModal.open();
+  }
+
+  private async openProtocolStartNodePicker(protocolFile: TFile, activeFile: TFile): Promise<void> {
+    let doc;
+    try {
+      doc = await this.protocolDocumentStore.read(protocolFile.path);
+    } catch {
+      new Notice(this.i18n.t('protocolEditor.loadFailed'));
+      return;
+    }
+
+    if (doc === null) {
+      new Notice(this.i18n.t('protocolEditor.loadFailed'));
+      return;
+    }
+
+    const options = buildStartableProtocolNodeOptions(doc.nodes, this.i18n.t.bind(this.i18n));
+    if (options.length === 0) {
+      new Notice(this.i18n.t('startFromNode.noStartPoints'));
+      return;
+    }
+
+    new NodePickerModal(this.app, options, (opt) => {
+      const modal = new InlineRunnerModal(this.app, this, protocolFile.path, activeFile, opt.id);
+      void modal.open();
+    }, this).open();
+  }
+
+  private async handleInsertSnippet(): Promise<void> {
+    const activeFile = this.app.workspace.getActiveFile();
+    if (activeFile === null || activeFile.extension !== 'md') {
+      new Notice(this.i18n.t('insertSnippet.openMarkdownFirst'));
+      return;
+    }
+
+    const modal = new InsertSnippetModal(this.app, this);
+    modal.open();
+    const rendered = await modal.result;
+    if (rendered === null) return;
+
+    const activeView = this.app.workspace.getActiveViewOfType(MarkdownView);
+    const editor = activeView?.editor;
+    if (editor !== undefined) {
+      editor.replaceSelection(rendered);
+      new Notice(this.i18n.t('insertSnippet.inserted'));
+      return;
+    }
+
+    await this.insertMutex.runExclusive(activeFile.path, async () => {
+      const current = await this.app.vault.read(activeFile);
+      const separator = current.endsWith('\n') || current.length === 0 ? '' : '\n';
+      await this.app.vault.modify(activeFile, `${current}${separator}${rendered}`);
+    });
+    new Notice(this.i18n.t('insertSnippet.inserted'));
   }
 
   /**
