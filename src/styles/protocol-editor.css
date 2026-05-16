@@ -717,10 +717,13 @@
   border-radius: var(--radius-s);
   background: var(--background-secondary);
   color: var(--text-muted);
-  font-size: var(--font-ui-medium);
-  line-height: 1;
   cursor: pointer;
   transition: background-color 0.15s, border-color 0.15s, color 0.15s, transform 0.15s;
+}
+
+.rp-protocol-editor-floating-action svg {
+  width: 18px;
+  height: 18px;
 }
 
 .rp-protocol-editor-floating-action:hover,

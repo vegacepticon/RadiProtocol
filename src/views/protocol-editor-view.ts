@@ -1,4 +1,4 @@
-import { ItemView, Notice, TFile, WorkspaceLeaf } from 'obsidian';
+import { ItemView, Notice, TFile, WorkspaceLeaf, setIcon } from 'obsidian';
 import type RadiProtocolPlugin from '../main';
 import type { ProtocolDocumentV1, ProtocolEdgeRecord, ProtocolNodeRecord } from '../protocol/protocol-document';
 import type { RPNodeKind } from '../graph/graph-model';
@@ -288,24 +288,22 @@ export class ProtocolEditorView extends ItemView {
     const floatingActions = workspace.createDiv({ cls: 'rp-protocol-editor-floating-actions' });
     const selfCheckBtn = floatingActions.createEl('button', {
       cls: 'rp-protocol-editor-floating-action',
-      text: '☑',
       attr: {
         type: 'button',
-        title: this.plugin.i18n.t('selfCheck.title'),
         'aria-label': this.plugin.i18n.t('selfCheck.title'),
       },
     });
+    setIcon(selfCheckBtn, 'list-checks');
     selfCheckBtn.addEventListener('click', () => this.openSelfCheckModal());
 
     const minimapToggleBtn = floatingActions.createEl('button', {
       cls: 'rp-protocol-editor-floating-action',
-      text: '▣',
       attr: {
         type: 'button',
-        title: this.plugin.i18n.t('protocolEditor.toggleMinimap'),
         'aria-label': this.plugin.i18n.t('protocolEditor.toggleMinimap'),
       },
     });
+    setIcon(minimapToggleBtn, 'map');
     minimapToggleBtn.addEventListener('click', () => this.toggleMinimap());
 
     workspace.createDiv({
@@ -857,7 +855,7 @@ export class ProtocolEditorView extends ItemView {
       const removeBtn = row.createEl('button', {
         cls: 'rp-protocol-editor-modal-btn',
         text: '×',
-        attr: { title: t('selfCheck.removeItem') },
+        attr: { 'aria-label': t('selfCheck.removeItem') },
       });
       input.addEventListener('input', () => {
         values[index] = input.value;

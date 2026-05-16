@@ -105,6 +105,7 @@ interface Harness {
   modal: InlineRunnerModal;
   runner: ProtocolRunner;
   contentEl: MockEl;
+  actionsEl: MockEl;
   handleSnippetFillSpy: ReturnType<typeof vi.fn>;
   app: ReturnType<typeof makeBaseApp>;
 }
@@ -117,7 +118,9 @@ function mountWithGraph(graph: ProtocolGraph): Harness {
 
   // Bypass full open() — install fields directly so we can drive render() with our graph.
   const contentEl = makeEl('div');
+  const actionsEl = makeEl('div');
   (modal as unknown as { contentEl: MockEl }).contentEl = contentEl;
+  (modal as unknown as { actionsEl: MockEl }).actionsEl = actionsEl;
   (modal as unknown as { graph: ProtocolGraph }).graph = graph;
 
   // Install a real ProtocolRunner against the graph so D-14 dispatch is exercised.
@@ -137,7 +140,7 @@ function mountWithGraph(graph: ProtocolGraph): Harness {
   // Trigger initial render.
   (modal as unknown as { render: () => void }).render();
 
-  return { modal, runner, contentEl, handleSnippetFillSpy, app };
+  return { modal, runner, contentEl, actionsEl, handleSnippetFillSpy, app };
 }
 
 beforeEach(() => {
@@ -168,7 +171,7 @@ describe('Phase 67 D-14 / D-18 Test Layer #3 — InlineRunnerModal loop-body →
     const h = mountWithGraph(graph);
 
     // RUN-01: render shows loop picker with body button caption '📄 Abd CT' (D-15).
-    const bodyBtns = findByClass(h.contentEl, 'rp-loop-body-btn');
+    const bodyBtns = findByClass(h.actionsEl, 'rp-loop-body-btn');
     expect(bodyBtns.length).toBe(1);
     expect((bodyBtns[0] as unknown as { _text: string })._text).toBe('📄 Abd CT');
 
@@ -211,7 +214,7 @@ describe('Phase 67 D-14 / D-18 Test Layer #3 — InlineRunnerModal loop-body →
 
     const h = mountWithGraph(graph);
 
-    const bodyBtns = findByClass(h.contentEl, 'rp-loop-body-btn');
+    const bodyBtns = findByClass(h.actionsEl, 'rp-loop-body-btn');
     expect(bodyBtns.length).toBe(1);
     // D-15 directory-bound back-compat — caption is the legacy 'snippet (Findings/Chest)' string.
     expect((bodyBtns[0] as unknown as { _text: string })._text).toBe('snippet (Findings/Chest)');

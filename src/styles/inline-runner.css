@@ -26,40 +26,6 @@
   flex-shrink: 0;
 }
 
-.rp-inline-runner-progress {
-  flex: 1 1 auto;
-  display: flex;
-  align-items: center;
-  gap: var(--size-2-2);
-  min-width: 0;
-}
-
-.rp-inline-runner-progress-track {
-  flex: 1 1 auto;
-  height: 6px;
-  min-width: 32px;
-  overflow: hidden;
-  border-radius: 999px;
-  background: var(--background-modifier-border);
-}
-
-.rp-inline-runner-progress-fill {
-  width: 0%;
-  height: 100%;
-  border-radius: inherit;
-  background: var(--interactive-accent);
-  transition: width 0.16s ease;
-}
-
-.rp-inline-runner-progress-text {
-  flex: 0 0 auto;
-  min-width: 3ch;
-  color: var(--text-muted);
-  font-size: var(--font-ui-smaller);
-  line-height: 1;
-  text-align: right;
-}
-
 .rp-inline-runner-close-btn {
   /* display/align/justify migrated to .rp-center utility (Phase 80) */
   background: transparent;
@@ -78,7 +44,59 @@
 .rp-inline-runner-content {
   flex: 1;
   overflow-y: auto;
-  padding: var(--size-4-3);
+  padding: var(--size-4-2);
+}
+
+/* Phase 86: actions zone — pinned between content and footer */
+.rp-inline-runner-actions {
+  flex-shrink: 0;
+  padding: var(--size-4-2);
+  border-top: 1px solid var(--background-modifier-border);
+  display: flex;
+  flex-direction: column;
+  gap: var(--size-2-3);
+}
+
+/* Phase 86: footer — progress bar at bottom */
+.rp-inline-runner-footer {
+  flex-shrink: 0;
+  padding: var(--size-2-3) var(--size-4-2);
+  border-top: 1px solid var(--background-modifier-border);
+  background: var(--background-primary);
+}
+
+.rp-inline-runner-footer .rp-inline-runner-progress {
+  flex: 1 1 auto;
+  display: flex;
+  align-items: center;
+  gap: var(--size-2-2);
+  min-width: 0;
+}
+
+.rp-inline-runner-footer .rp-inline-runner-progress-track {
+  flex: 1 1 auto;
+  height: 6px;
+  min-width: 32px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: var(--background-modifier-border);
+}
+
+.rp-inline-runner-footer .rp-inline-runner-progress-fill {
+  width: 0%;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--interactive-accent);
+  transition: width 0.16s ease;
+}
+
+.rp-inline-runner-footer .rp-inline-runner-progress-text {
+  flex: 0 0 auto;
+  min-width: 3ch;
+  color: var(--text-muted);
+  font-size: var(--font-ui-smaller);
+  line-height: 1;
+  text-align: right;
 }
 
 /* Reuse existing .rp-* classes for visual parity (D7) */

@@ -106,6 +106,7 @@ export class InlineRunnerModal {
   private progressFillEl: HTMLElement | null = null;
   private progressTextEl: HTMLElement | null = null;
   private contentEl: HTMLElement | null = null;
+  private actionsEl: HTMLElement | null = null;
 
   private runner: ProtocolRunner;
   private readonly validator: GraphValidator;
@@ -359,6 +360,7 @@ export class InlineRunnerModal {
     this.progressFillEl = null;
     this.progressTextEl = null;
     this.contentEl = null;
+    this.actionsEl = null;
     this.graph = null;
   }
 
@@ -368,27 +370,32 @@ export class InlineRunnerModal {
     const container = document.body.createDiv({ cls: 'rp-inline-runner-container' });
     this.containerEl = container;
 
-    // Header
+    // Header — compact (drag handle + close only)
     const header = container.createDiv({ cls: 'rp-inline-runner-header' });
     this.headerEl = header;
     this.enableDragging(header);
 
-    const progress = header.createDiv({ cls: 'rp-inline-runner-progress', attr: { role: 'progressbar', 'aria-valuemin': '0', 'aria-valuemax': '100' } });
-    const progressTrack = progress.createDiv({ cls: 'rp-inline-runner-progress-track' });
-    this.progressFillEl = progressTrack.createDiv({ cls: 'rp-inline-runner-progress-fill' });
-    this.progressTextEl = progress.createDiv({ cls: 'rp-inline-runner-progress-text' });
-
     const closeBtn = header.createEl('button', { cls: 'rp-inline-runner-close-btn rp-center' });
     setIcon(closeBtn, 'x');
     closeBtn.setAttribute('aria-label', 'Close protocol');
-    closeBtn.title = 'Close protocol';
     closeBtn.addEventListener('click', () => {
       this.close();
     });
 
-    // Content area
+    // Content area — scrollable text zone
     const content = container.createDiv({ cls: 'rp-inline-runner-content' });
     this.contentEl = content;
+
+    // Actions area — pinned buttons, non-scrollable
+    const actions = container.createDiv({ cls: 'rp-inline-runner-actions' });
+    this.actionsEl = actions;
+
+    // Footer — progress bar at the bottom
+    const footer = container.createDiv({ cls: 'rp-inline-runner-footer' });
+    const progress = footer.createDiv({ cls: 'rp-inline-runner-progress', attr: { role: 'progressbar', 'aria-valuemin': '0', 'aria-valuemax': '100' } });
+    const progressTrack = progress.createDiv({ cls: 'rp-inline-runner-progress-track' });
+    this.progressFillEl = progressTrack.createDiv({ cls: 'rp-inline-runner-progress-fill' });
+    this.progressTextEl = progress.createDiv({ cls: 'rp-inline-runner-progress-text' });
   }
 
   // ── Rendering ─────────────────────────────────────────────────────────────
@@ -437,17 +444,17 @@ export class InlineRunnerModal {
   }
 
   private updateProgress(state: RunnerState): void {
-    if (this.headerEl === null || this.progressFillEl === null || this.progressTextEl === null) return;
+    if (this.progressFillEl === null || this.progressTextEl === null) return;
     const percent = this.calculateProgressPercent(state);
     this.progressFillEl.style.width = `${percent}%`;
     this.progressTextEl.setText(`${percent}%`);
-    const progressEl = this.headerEl.querySelector('.rp-inline-runner-progress');
+    const progressEl = this.containerEl?.querySelector('.rp-inline-runner-progress');
     progressEl?.setAttribute('aria-valuenow', String(percent));
     progressEl?.setAttribute('aria-label', `Protocol progress ${percent}%`);
   }
 
   private render(): void {
-    if (this.contentEl === null) return;
+    if (this.contentEl === null || this.actionsEl === null) return;
 
     // Unmount picker if state has left awaiting-snippet-pick
     const state = this.runner.getState();
@@ -458,12 +465,11 @@ export class InlineRunnerModal {
     }
 
     this.contentEl.empty();
-
-    const questionZone = this.contentEl.createDiv({ cls: CSS_CLASS.QUESTION_ZONE });
+    this.actionsEl.empty();
 
     switch (state.status) {
       case 'idle': {
-        questionZone.createEl('p', {
+        this.contentEl.createEl('p', {
           text: 'Starting protocol…',
           cls: CSS_CLASS.EMPTY_STATE_BODY,
         });
@@ -471,9 +477,9 @@ export class InlineRunnerModal {
       }
 
       case 'at-node': {
-        const result = renderQuestionAtNode(questionZone, this.graph, state, {
+        const result = renderQuestionAtNode(this.contentEl, this.actionsEl, this.graph, state, {
           bindClick: (el, handler) => el.addEventListener('click', handler),
-          renderError: (messages) => this.renderError(questionZone, messages),
+          renderError: (messages) => this.renderError(this.contentEl!, messages),
           onChooseAnswer: (answerNode) => this.handleAnswerClick(answerNode),
           onChooseSnippetBranch: (snippetNode, isFileBound) => {
             if (isFileBound) {
@@ -496,7 +502,7 @@ export class InlineRunnerModal {
         });
         if (result === 'error') return;
         if (result === 'not-question') {
-          questionZone.createEl('p', {
+          this.contentEl.createEl('p', {
             text: 'Processing...',
             cls: CSS_CLASS.EMPTY_STATE_BODY,
           });
@@ -506,18 +512,18 @@ export class InlineRunnerModal {
       }
 
       case 'awaiting-snippet-pick': {
-        questionZone.createEl('p', {
+        this.contentEl.createEl('p', {
           text: 'Loading snippets...',
           cls: CSS_CLASS.EMPTY_STATE_BODY,
         });
-        void this.mountSnippetPicker(state, questionZone);
+        void this.mountSnippetPicker(state, this.contentEl);
         break;
       }
 
       case 'awaiting-loop-pick': {
-        const rendered = renderLoopPicker(questionZone, this.graph, state, {
+        const rendered = renderLoopPicker(this.contentEl, this.actionsEl, this.graph, state, {
           bindClick: (el, handler) => el.addEventListener('click', handler),
-          renderError: (messages) => this.renderError(questionZone, messages),
+          renderError: (messages) => this.renderError(this.contentEl!, messages),
           onChooseLoopBranch: (edge, isExit) => this.handleLoopBranchClick(edge, isExit),
           onBack: () => {
             this.runner.stepBack();
@@ -530,8 +536,8 @@ export class InlineRunnerModal {
       }
 
       case 'awaiting-snippet-fill': {
-        renderSnippetFillLoading(questionZone);
-        void this.handleSnippetFill(state.snippetId, questionZone);
+        renderSnippetFillLoading(this.contentEl);
+        void this.handleSnippetFill(state.snippetId, this.contentEl);
         break;
       }
 
@@ -546,12 +552,12 @@ export class InlineRunnerModal {
           scheduleClose(() => this.close(), 0);
           break;
         }
-        this.renderSelfCheckCompletion(questionZone);
+        this.renderSelfCheckCompletion(this.contentEl);
         break;
       }
 
       case 'error': {
-        this.renderError(questionZone, [state.message]);
+        this.renderError(this.contentEl, [state.message]);
         break;
       }
 
