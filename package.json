@@ -12,7 +12,9 @@
     "test": "vitest run",
     "check:planning": "node scripts/check-planning-freshness.mjs",
     "check:consistency": "node scripts/check-consistency.mjs",
-    "check": "npm run build && npm run lint && npm test && npm run check:planning && npm run check:consistency"
+    "check:agent-docs": "node scripts/check-agent-docs.mjs",
+    "check:css": "node scripts/check-css-classes.mjs",
+    "check": "npm run build && npm run lint && npm test && npm run check:planning && npm run check:consistency && npm run check:agent-docs"
   },
   "keywords": [],
   "author": "",

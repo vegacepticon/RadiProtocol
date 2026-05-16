@@ -57,6 +57,7 @@ try {
 // Tracked policy files that intentionally reference .planning/ (not stale)
   const PLANNING_POLICY_FILES = new Set([
     '.gitignore',
+    'CLAUDE.md',
     'scripts/check-planning-freshness.mjs',
     'scripts/check-consistency.mjs',
     'eslint.config.mjs',

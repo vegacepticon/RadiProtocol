@@ -232,6 +232,7 @@
 .rp-inline-runner-actions .rp-loop-body-btn,
 .rp-inline-runner-actions .rp-loop-exit-btn {
   padding: var(--size-2-3) var(--size-4-2);
+  width: 100%;
   min-height: 36px;
   white-space: normal;
   overflow-wrap: anywhere;
@@ -240,6 +241,7 @@
   align-items: flex-start;
   max-width: 100%;
   box-sizing: border-box;
+  text-align: left;
 }
 
 /* Phase 67: resizable inline runner */
