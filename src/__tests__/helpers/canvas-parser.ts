@@ -15,8 +15,8 @@ import type {
   LoopEndNode,
   SnippetNode,  // Phase 29
   LoopNode,     // Phase 43 D-05 — unified loop kind (LOOP-01, LOOP-02)
-} from './graph-model';
-import { defaultT, type Translator } from '../i18n';
+} from '../../graph/graph-model';
+import { defaultT, type Translator } from '../../i18n';
 
 // Minimal canvas JSON shape we need from the JSON Canvas v1.0 spec.
 // We do NOT import from 'obsidian/canvas' here — that would require

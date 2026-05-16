@@ -1,7 +1,7 @@
 // src/__tests__/fixtures/protocol-document-fixtures.ts
 // Factory functions returning ProtocolGraph instances parsed from .canvas fixture files.
 
-import { CanvasParser } from '../../graph/canvas-parser';
+import { CanvasParser } from '../helpers/canvas-parser';
 import type { ProtocolGraph } from '../../graph/graph-model';
 import * as fs from 'fs';
 import * as path from 'path';

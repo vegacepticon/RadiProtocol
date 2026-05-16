@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
-import { CanvasParser } from '../graph/canvas-parser';
+import { CanvasParser } from './helpers/canvas-parser';
 import { GraphValidator } from '../graph/graph-validator';
 
 const fixturesDir = path.join(__dirname, 'fixtures');

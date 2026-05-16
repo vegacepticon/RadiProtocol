@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { ProtocolRunner } from '../../runner/protocol-runner';
 import type { ProtocolGraph } from '../../graph/graph-model';
 import { branchingGraph, linearGraph, loopStartGraph, snippetBlockGraph, snippetNodeWithExitGraph, textBlockGraph, unifiedLoopValidGraph } from '../fixtures/protocol-document-fixtures';
-import { CanvasParser } from '../../graph/canvas-parser';
+import { CanvasParser } from '../helpers/canvas-parser';
 import * as path from 'path';
 import * as fs from 'fs';
 

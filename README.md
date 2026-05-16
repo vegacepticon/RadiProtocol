@@ -8,7 +8,7 @@ Protocols are authored as **`.rp.json`** files — a first-party JSON format
 with a custom visual graph editor. Legacy `.canvas` (JSON Canvas) support is
 preserved for backward compatibility and migration.
 
-**Latest release:** 1.17.5 (2026-05-16) — Remove legacy Canvas layer, inline runner migrated to .rp.json only
+**Latest release:** 1.17.6 (2026-05-16) — Move CanvasParser to test-only; fully removed from production bundle
 
 ## Features
 

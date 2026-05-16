@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { GraphValidator } from '../graph/graph-validator';
-import { CanvasParser } from '../graph/canvas-parser';
+import { CanvasParser } from './helpers/canvas-parser';
 import * as fs from 'fs';
 import * as path from 'path';
 
