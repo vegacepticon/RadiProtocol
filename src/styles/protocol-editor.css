@@ -177,27 +177,35 @@
 /* Phase 4E — edge connection ports */
 .rp-protocol-editor-port {
   position: absolute;
+
+  --rp-protocol-editor-port-color: var(--interactive-accent);
+
   top: 50%;
   z-index: 2;
   width: 18px;
   height: 18px;
-  border: 2px solid var(--interactive-accent);
+  border: 2px solid var(--rp-protocol-editor-port-color);
   border-radius: 50%;
   background: var(--background-primary);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--rp-protocol-editor-port-color) 18%, transparent);
   transform: translateY(-50%);
   cursor: crosshair;
 }
 
 .rp-protocol-editor-port:hover {
-  background: var(--interactive-accent);
+  background: var(--rp-protocol-editor-port-color);
 }
 
 .rp-protocol-editor-port-input {
   left: -12px;
+
+  --rp-protocol-editor-port-color: #4caf50;
 }
 
 .rp-protocol-editor-port-output {
   right: -12px;
+
+  --rp-protocol-editor-port-color: #ff9800;
 }
 
 .rp-protocol-editor-zoom-indicator {
@@ -725,8 +733,8 @@
 
 .rp-protocol-editor-canvas-title {
   position: absolute;
-  right: var(--size-4-3);
-  bottom: var(--size-4-3);
+  top: var(--size-4-3);
+  left: var(--size-4-3);
   z-index: 4;
   max-width: min(42vw, 420px);
   padding: var(--size-2-2) var(--size-4-2);
@@ -744,7 +752,7 @@
 }
 
 .rp-protocol-editor-minimap {
-  bottom: calc(var(--size-4-3) + 34px);
+  bottom: var(--size-4-3);
 }
 
 .rp-protocol-editor-minimap .rp-protocol-editor-zoom-indicator {

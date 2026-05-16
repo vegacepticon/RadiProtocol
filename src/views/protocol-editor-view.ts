@@ -33,6 +33,12 @@ interface ConnectionDragState {
   previewPath: SVGPathElement;
 }
 
+interface ProtocolEditorEdgeRoute {
+  d: string;
+  labelX: number;
+  labelY: number;
+}
+
 interface PanState {
   startClientX: number;
   startClientY: number;
@@ -174,9 +180,33 @@ export function normalizeProtocolEditorSnippetFolderSelection(relativePath: stri
   return trimmed === '' ? undefined : trimmed;
 }
 
-function edgePath(x1: number, y1: number, x2: number, y2: number): string {
-  const mid = Math.max(40, Math.abs(x2 - x1) / 2);
-  return `M ${x1} ${y1} C ${x1 + mid} ${y1}, ${x2 - mid} ${y2}, ${x2} ${y2}`;
+export function protocolEditorEdgeRoute(x1: number, y1: number, x2: number, y2: number): ProtocolEditorEdgeRoute {
+  if (x2 >= x1 + 24) {
+    const mid = Math.max(40, Math.abs(x2 - x1) / 2);
+    return {
+      d: `M ${x1} ${y1} C ${x1 + mid} ${y1}, ${x2 - mid} ${y2}, ${x2} ${y2}`,
+      labelX: (x1 + x2) / 2,
+      labelY: (y1 + y2) / 2 - 8,
+    };
+  }
+
+  const horizontalGap = Math.max(56, Math.min(120, Math.abs(x2 - x1) / 2 + 48));
+  const direction = y2 >= y1 ? 1 : -1;
+  const verticalGap = Math.max(48, Math.min(140, Math.abs(y2 - y1) / 2 + 40));
+  const loopY = Math.min(Math.max(y1, y2) + direction * verticalGap, DEFAULT_VIEWPORT_HEIGHT - 80);
+  const outX = Math.min(x1 + horizontalGap, DEFAULT_VIEWPORT_WIDTH - 40);
+  const inX = Math.max(x2 - horizontalGap, 40);
+
+  return {
+    d: [
+      `M ${x1} ${y1}`,
+      `C ${outX} ${y1}, ${outX} ${loopY}, ${x1} ${loopY}`,
+      `L ${x2} ${loopY}`,
+      `C ${inX} ${loopY}, ${inX} ${y2}, ${x2} ${y2}`,
+    ].join(' '),
+    labelX: (x1 + x2) / 2,
+    labelY: loopY - 8,
+  };
 }
 
 export class ProtocolEditorView extends ItemView {
@@ -450,7 +480,7 @@ export class ProtocolEditorView extends ItemView {
       const y1 = worldYToSurfaceY(from.y + from.height / 2);
       const x2 = worldXToSurfaceX(to.x);
       const y2 = worldYToSurfaceY(to.y + to.height / 2);
-      const d = edgePath(x1, y1, x2, y2);
+      const route = protocolEditorEdgeRoute(x1, y1, x2, y2);
       const group = this.svgEl.createSvg('g', {
         attr: {
           class: 'rp-protocol-editor-edge-group',
@@ -479,13 +509,13 @@ export class ProtocolEditorView extends ItemView {
       });
       group.createSvg('path', {
         attr: {
-          d,
+          d: route.d,
           class: 'rp-protocol-editor-edge-hitbox',
         },
       });
        group.createSvg('path', {
         attr: {
-          d,
+          d: route.d,
           class: 'rp-protocol-editor-edge',
         },
       }) as SVGPathElement;
@@ -495,8 +525,8 @@ export class ProtocolEditorView extends ItemView {
       if (effectiveLabel !== undefined && effectiveLabel.trim() !== '') {
         const labelGroup = group.createSvg('g', { attr: { class: 'rp-protocol-editor-edge-label-group' } });
         const labelText = displayProtocolEditorEdgeLabel(effectiveLabel);
-        const labelX = (x1 + x2) / 2;
-        const labelY = (y1 + y2) / 2 - 8;
+        const labelX = route.labelX;
+        const labelY = route.labelY;
         const approxWidth = Math.min(220, Math.max(48, labelText.length * 7 + 18));
         labelGroup.createSvg('rect', {
           attr: {
@@ -695,7 +725,7 @@ export class ProtocolEditorView extends ItemView {
       const startY = worldYToSurfaceY(node.y + node.height / 2);
       const previewPath = this.svgEl.createSvg('path', {
         attr: {
-          d: edgePath(startX, startY, startX + 80, startY),
+          d: protocolEditorEdgeRoute(startX, startY, startX + 80, startY).d,
           class: 'rp-protocol-editor-edge rp-protocol-editor-edge-preview',
         },
       }) as SVGPathElement;
@@ -716,12 +746,12 @@ export class ProtocolEditorView extends ItemView {
   private updateConnectionPreview(ev: MouseEvent): void {
     if (this.connectionDragState === null || this.viewportEl === null) return;
     const point = this.clientPointToCanvasPoint(ev.clientX, ev.clientY);
-    this.connectionDragState.previewPath.setAttr('d', edgePath(
+    this.connectionDragState.previewPath.setAttr('d', protocolEditorEdgeRoute(
       this.connectionDragState.startX,
       this.connectionDragState.startY,
       point.x,
       point.y,
-    ));
+    ).d);
   }
 
   private findInputPortAt(clientX: number, clientY: number): HTMLElement | null {

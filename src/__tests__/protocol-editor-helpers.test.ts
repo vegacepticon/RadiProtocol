@@ -9,6 +9,7 @@ import {
   isProtocolEditorLoopExitLabel,
   normalizeProtocolEditorEdgeLabel,
   normalizeProtocolEditorSnippetFolderSelection,
+  protocolEditorEdgeRoute,
   removeProtocolEditorEdge,
   screenDeltaToProtocolEditorDelta,
   shouldAutoRefreshProtocolEditorEdgeLabel,
@@ -120,6 +121,19 @@ describe('protocol editor helper functions', () => {
       expect(shouldAutoRefreshProtocolEditorEdgeLabel('   ', 'Old')).toBe(true);
       expect(shouldAutoRefreshProtocolEditorEdgeLabel('Old', 'Old')).toBe(true);
       expect(shouldAutoRefreshProtocolEditorEdgeLabel('Manual', 'Old')).toBe(false);
+    });
+
+    it('routes backward edges around nodes instead of through them', () => {
+      const route = protocolEditorEdgeRoute(500, 100, 200, 120);
+      expect(route.d).toContain('L 200');
+      expect(route.labelY).toBeGreaterThan(120);
+    });
+
+    it('keeps forward edges as direct bezier curves', () => {
+      const route = protocolEditorEdgeRoute(100, 100, 500, 120);
+      expect(route.d).toContain('C');
+      expect(route.d).not.toContain('L 500');
+      expect(route.labelX).toBe(300);
     });
 
     it('shows labels for answer/snippet targets and loop-to-loop exit edges only', () => {
