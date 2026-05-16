@@ -20,8 +20,7 @@ export interface QuestionBranchHost extends RunnerFooterHost {
 }
 
 export function renderQuestionAtNode(
-  textZone: HTMLElement,
-  actionZone: HTMLElement,
+  zone: HTMLElement,
   graph: ProtocolGraph | null,
   state: AtNodeState,
   host: QuestionBranchHost,
@@ -40,7 +39,7 @@ export function renderQuestionAtNode(
     return 'not-question';
   }
 
-  textZone.createEl('p', {
+  zone.createEl('p', {
     text: node.questionText,
     cls: 'rp-question-text',
   });
@@ -57,7 +56,8 @@ export function renderQuestionAtNode(
   }
 
   if (answerNeighbors.length > 0) {
-    const answerList = actionZone.createDiv({ cls: 'rp-answer-list rp-stack' });
+    const answerList = zone.createDiv({ cls: 'rp-answer-list rp-stack' });
+    answerList.setCssProps({ 'margin-top': 'var(--size-4-3)' });
     for (const answerNode of answerNeighbors) {
       const btn = createButton(answerList, {
         cls: 'rp-answer-btn',
@@ -71,7 +71,10 @@ export function renderQuestionAtNode(
 
   if (snippetNeighbors.length > 0) {
     // Phase 31 D-02: snippet branches render below answers, visually distinct.
-    const snippetList = actionZone.createDiv({ cls: 'rp-snippet-branch-list' });
+    const snippetList = zone.createDiv({ cls: 'rp-snippet-branch-list' });
+    if (answerNeighbors.length === 0) {
+      snippetList.setCssProps({ 'margin-top': 'var(--size-4-3)' });
+    }
     for (const snippetNode of snippetNeighbors) {
       const isFileBound = isFileBoundSnippetNode(snippetNode);
       const btn = createButton(snippetList, {
@@ -86,7 +89,7 @@ export function renderQuestionAtNode(
 
   // Phase 65 RUNNER-02: Skip is rendered in the shared footer row after all
   // answer and snippet branch lists, never between mixed branch groups.
-  renderRunnerFooter(actionZone, host, {
+  renderRunnerFooter(zone, host, {
     showBack: state.canStepBack,
     onBack: host.onBack,
     showSkip: answerNeighbors.length > 0 && host.canSkip === true,

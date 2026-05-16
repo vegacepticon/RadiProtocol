@@ -98,9 +98,19 @@
   border-top: 1px solid var(--background-modifier-border);
 }
 
-/* Phase 77: snippet-fill-in-modal option row — replaces inline display/alignItems/gap (LINT-01) */
+/* Phase 77: snippet-fill-in-modal option row — inline horizontal layout */
 .rp-snippet-fill-option-row {
-  display: flex;
+  display: inline-flex;
   align-items: center;
   gap: 4px;
+  white-space: nowrap;
+}
+
+/* Phase 77: horizontal checkbox options container */
+.rp-snippet-modal-options {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  gap: var(--size-2-3) var(--size-4-2); /* vertical horizontal */
+  align-items: center;
 }

@@ -106,7 +106,6 @@ export class InlineRunnerModal {
   private progressFillEl: HTMLElement | null = null;
   private progressTextEl: HTMLElement | null = null;
   private contentEl: HTMLElement | null = null;
-  private actionsEl: HTMLElement | null = null;
 
   private runner: ProtocolRunner;
   private readonly validator: GraphValidator;
@@ -360,7 +359,6 @@ export class InlineRunnerModal {
     this.progressFillEl = null;
     this.progressTextEl = null;
     this.contentEl = null;
-    this.actionsEl = null;
     this.graph = null;
   }
 
@@ -382,13 +380,9 @@ export class InlineRunnerModal {
       this.close();
     });
 
-    // Content area — scrollable text zone
+    // Content area — scrollable text and action zone
     const content = container.createDiv({ cls: 'rp-inline-runner-content' });
     this.contentEl = content;
-
-    // Actions area — pinned buttons, non-scrollable
-    const actions = container.createDiv({ cls: 'rp-inline-runner-actions' });
-    this.actionsEl = actions;
 
     // Footer — progress bar at the bottom
     const footer = container.createDiv({ cls: 'rp-inline-runner-footer' });
@@ -454,7 +448,7 @@ export class InlineRunnerModal {
   }
 
   private render(): void {
-    if (this.contentEl === null || this.actionsEl === null) return;
+    if (this.contentEl === null) return;
 
     // Unmount picker if state has left awaiting-snippet-pick
     const state = this.runner.getState();
@@ -465,7 +459,6 @@ export class InlineRunnerModal {
     }
 
     this.contentEl.empty();
-    this.actionsEl.empty();
 
     switch (state.status) {
       case 'idle': {
@@ -477,7 +470,7 @@ export class InlineRunnerModal {
       }
 
       case 'at-node': {
-        const result = renderQuestionAtNode(this.contentEl, this.actionsEl, this.graph, state, {
+        const result = renderQuestionAtNode(this.contentEl, this.graph, state, {
           bindClick: (el, handler) => el.addEventListener('click', handler),
           renderError: (messages) => this.renderError(this.contentEl!, messages),
           onChooseAnswer: (answerNode) => this.handleAnswerClick(answerNode),
@@ -521,7 +514,7 @@ export class InlineRunnerModal {
       }
 
       case 'awaiting-loop-pick': {
-        const rendered = renderLoopPicker(this.contentEl, this.actionsEl, this.graph, state, {
+        const rendered = renderLoopPicker(this.contentEl, this.graph, state, {
           bindClick: (el, handler) => el.addEventListener('click', handler),
           renderError: (messages) => this.renderError(this.contentEl!, messages),
           onChooseLoopBranch: (edge, isExit) => this.handleLoopBranchClick(edge, isExit),

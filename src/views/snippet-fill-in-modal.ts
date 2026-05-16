@@ -121,7 +121,7 @@ export class SnippetFillInModal extends Modal {
     const legend = fieldset.createEl('legend', { cls: 'rp-snippet-modal-label' });
     legend.textContent = placeholder.label;
 
-    const optionsDiv = fieldset.createDiv({ cls: 'rp-snippet-modal-options rp-stack' });
+    const optionsDiv = fieldset.createDiv({ cls: 'rp-snippet-modal-options' });
     const options = placeholder.options ?? [];
 
     const checkboxEls: HTMLInputElement[] = [];

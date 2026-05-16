@@ -47,17 +47,6 @@
   padding: var(--size-4-2);
 }
 
-/* Phase 86: actions zone — pinned between content and footer */
-.rp-inline-runner-actions {
-  flex-shrink: 0;
-  display: flex;
-  flex-direction: column;
-  gap: var(--size-2-3);
-  padding: var(--size-4-2);
-  border-top: 1px solid var(--background-modifier-border);
-  min-height: 80px;                                    /* consistent actions height across node types */
-}
-
 /* Phase 86: footer — progress bar at bottom */
 .rp-inline-runner-footer {
   flex-shrink: 0;
@@ -105,24 +94,9 @@
   margin: 0 0 var(--size-4-3) 0;
 }
 
-.rp-inline-runner-actions .rp-answer-list,
-.rp-inline-runner-actions .rp-snippet-branch-list {
-  display: flex;
-  flex-direction: column;
-  gap: var(--size-4-2);
-}
-
 /* Snippet picker inline host */
 .rp-stp-inline-host {
   width: 100%;
-}
-
-/* Loop picker */
-.rp-inline-runner-content .rp-loop-picker-list {
-  display: flex;
-  flex-direction: column;
-  gap: var(--size-4-2);
-  margin-bottom: var(--size-4-3);
 }
 
 /* Error panel */
@@ -196,21 +170,23 @@
   line-height: var(--line-height-tight);
 }
 
-/* Lists inside the actions zone */
-.rp-inline-runner-actions .rp-answer-list,
-.rp-inline-runner-actions .rp-snippet-branch-list,
-.rp-inline-runner-actions .rp-loop-picker-list {
+/* Lists inside the content zone */
+.rp-inline-runner-content .rp-answer-list,
+.rp-inline-runner-content .rp-snippet-branch-list,
+.rp-inline-runner-content .rp-loop-picker-list {
+  display: flex;
+  flex-direction: column;
   gap: var(--size-2-3);
   margin-bottom: 0;
 }
 
 /* Unified button sizing for all runner action buttons */
-.rp-inline-runner-actions .rp-answer-btn,
-.rp-inline-runner-actions .rp-snippet-branch-btn,
-.rp-inline-runner-actions .rp-loop-body-btn,
-.rp-inline-runner-actions .rp-loop-exit-btn,
-.rp-inline-runner-actions .rp-step-back-btn,
-.rp-inline-runner-actions .rp-skip-btn {
+.rp-inline-runner-content .rp-answer-btn,
+.rp-inline-runner-content .rp-snippet-branch-btn,
+.rp-inline-runner-content .rp-loop-body-btn,
+.rp-inline-runner-content .rp-loop-exit-btn,
+.rp-inline-runner-content .rp-step-back-btn,
+.rp-inline-runner-content .rp-skip-btn {
   padding: var(--size-2-3) var(--size-4-2);
   min-height: 36px;
   white-space: normal;

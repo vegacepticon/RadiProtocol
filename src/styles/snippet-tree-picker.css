@@ -48,8 +48,7 @@
   gap: var(--size-2-1);
   font-size: var(--font-ui-small);
   color: var(--text-muted);
-  min-width: 0;
-  overflow: hidden;
+  flex-wrap: wrap;
 }
 
 .rp-stp-breadcrumb-label {

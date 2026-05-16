@@ -15,8 +15,7 @@ export interface LoopPickerHost extends RunnerFooterHost {
 }
 
 export function renderLoopPicker(
-  textZone: HTMLElement,
-  actionZone: HTMLElement,
+  zone: HTMLElement,
   graph: ProtocolGraph | null,
   state: AwaitingLoopPickState,
   host: LoopPickerHost,
@@ -34,7 +33,7 @@ export function renderLoopPicker(
 
   // RUN-01: render headerText above picker when present.
   if (node.headerText !== '') {
-    textZone.createEl('p', {
+    zone.createEl('p', {
       text: node.headerText,
       cls: 'rp-loop-header-text',
     });
@@ -42,7 +41,7 @@ export function renderLoopPicker(
 
   // RUN-01: one button per outgoing edge (Pitfall 4 — filter edges, not adjacency).
   const outgoing = graph.edges.filter(e => e.fromNodeId === state.nodeId);
-  const list = actionZone.createDiv({ cls: 'rp-loop-picker-list rp-stack-md' });
+  const list = zone.createDiv({ cls: 'rp-loop-picker-list rp-stack-md' });
   for (const edge of outgoing) {
     // Phase 50.1 EDGE-03 — "+"-prefix convention:
     //   * "+"-prefixed edge → caption = stripExitPrefix(label), class = rp-loop-exit-btn.
@@ -65,7 +64,7 @@ export function renderLoopPicker(
   }
 
   // RUN-05: step-back footer row.
-  renderRunnerFooter(actionZone, host, {
+  renderRunnerFooter(zone, host, {
     showBack: state.canStepBack,
     onBack: host.onBack,
   });

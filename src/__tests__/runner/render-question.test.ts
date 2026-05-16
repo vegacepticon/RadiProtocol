@@ -10,6 +10,7 @@ class MockEl {
   disabled = false;
   attrs = new Map<string, string>();
   clickHandler: ((ev: MouseEvent) => void) | null = null;
+  cssProps = new Map<string, string>();
 
   constructor(readonly tag: string) {}
 
@@ -30,6 +31,12 @@ class MockEl {
 
   setAttribute(name: string, value: string): void {
     this.attrs.set(name, value);
+  }
+
+  setCssProps(props: Record<string, string>): void {
+    for (const [k, v] of Object.entries(props)) {
+      this.cssProps.set(k, v);
+    }
   }
 }
 
@@ -87,14 +94,13 @@ function makeGraph(current: RPNode = baseNode('q', 'question')): ProtocolGraph {
 
 describe('shared question branch renderer', () => {
   it('renders question, answer/snippet branches, footer, and delegates clicks', () => {
-    const textRoot = new MockEl('root');
-    const actionRoot = new MockEl('root');
+    const root = new MockEl('root');
     const onChooseAnswer = vi.fn();
     const onChooseSnippetBranch = vi.fn();
     const onBack = vi.fn();
     const onSkip = vi.fn();
 
-    const result = renderQuestionAtNode(asHtml(textRoot), asHtml(actionRoot), makeGraph(), {
+    const result = renderQuestionAtNode(asHtml(root), makeGraph(), {
       status: 'at-node',
       currentNodeId: 'q',
       accumulatedText: 'before',
@@ -112,18 +118,18 @@ describe('shared question branch renderer', () => {
     });
 
     expect(result).toBe('rendered');
-    expect(findByClass(textRoot, 'rp-question-text')[0]?.text).toBe('Pick one');
-    expect(findByClass(actionRoot, 'rp-answer-btn')[0]?.text).toBe('Shown answer');
-    expect(findByClass(actionRoot, 'rp-snippet-branch-btn').map(btn => btn.text)).toEqual([
+    expect(findByClass(root, 'rp-question-text')[0]?.text).toBe('Pick one');
+    expect(findByClass(root, 'rp-answer-btn')[0]?.text).toBe('Shown answer');
+    expect(findByClass(root, 'rp-snippet-branch-btn').map(btn => btn.text)).toEqual([
       '📄 report',
       '📁 Folder label',
     ]);
 
-    findByClass(actionRoot, 'rp-answer-btn')[0]!.clickHandler?.({} as MouseEvent);
-    findByClass(actionRoot, 'rp-snippet-branch-btn')[0]!.clickHandler?.({} as MouseEvent);
-    findByClass(actionRoot, 'rp-snippet-branch-btn')[1]!.clickHandler?.({} as MouseEvent);
-    findByClass(actionRoot, 'rp-step-back-btn')[0]!.clickHandler?.({} as MouseEvent);
-    findByClass(actionRoot, 'rp-skip-btn')[0]!.clickHandler?.({} as MouseEvent);
+    findByClass(root, 'rp-answer-btn')[0]!.clickHandler?.({} as MouseEvent);
+    findByClass(root, 'rp-snippet-branch-btn')[0]!.clickHandler?.({} as MouseEvent);
+    findByClass(root, 'rp-snippet-branch-btn')[1]!.clickHandler?.({} as MouseEvent);
+    findByClass(root, 'rp-step-back-btn')[0]!.clickHandler?.({} as MouseEvent);
+    findByClass(root, 'rp-skip-btn')[0]!.clickHandler?.({} as MouseEvent);
 
     expect(onChooseAnswer.mock.calls[0]?.[0].id).toBe('a1');
     expect(onChooseSnippetBranch.mock.calls[0]?.[0].id).toBe('s-file');
@@ -135,8 +141,7 @@ describe('shared question branch renderer', () => {
   });
 
   it('returns error/not-question for host-specific chrome handling', () => {
-    const textRoot = new MockEl('root');
-    const actionRoot = new MockEl('root');
+    const root = new MockEl('root');
     const renderError = vi.fn();
     const host = {
       bindClick: vi.fn(),
@@ -153,8 +158,8 @@ describe('shared question branch renderer', () => {
       canStepBack: false,
     };
 
-    expect(renderQuestionAtNode(asHtml(textRoot), asHtml(actionRoot), null, state, host)).toBe('error');
-    expect(renderQuestionAtNode(asHtml(textRoot), asHtml(actionRoot), makeGraph(baseNode('q', 'text-block')), state, host)).toBe('not-question');
+    expect(renderQuestionAtNode(asHtml(root), null, state, host)).toBe('error');
+    expect(renderQuestionAtNode(asHtml(root), makeGraph(baseNode('q', 'text-block')), state, host)).toBe('not-question');
     expect(renderError).toHaveBeenCalledWith(['Internal error: graph not loaded.']);
   });
 });
