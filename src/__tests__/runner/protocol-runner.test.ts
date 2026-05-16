@@ -1,17 +1,17 @@
 import { describe, it, expect } from 'vitest';
-import * as fs from 'node:fs';
-import * as path from 'node:path';
-import { CanvasParser } from '../../graph/canvas-parser';
 import { ProtocolRunner } from '../../runner/protocol-runner';
 import type { ProtocolGraph } from '../../graph/graph-model';
+import { branchingGraph, linearGraph, loopStartGraph, snippetBlockGraph, snippetNodeWithExitGraph, textBlockGraph, unifiedLoopValidGraph } from '../fixtures/protocol-document-fixtures';
+import { CanvasParser } from '../../graph/canvas-parser';
+import * as path from 'path';
+import * as fs from 'fs';
 
-const fixturesDir = path.join(__dirname, '..', 'fixtures');
-
+/** Load a .canvas fixture by filename and parse it into a ProtocolGraph. */
 function loadGraph(name: string): ProtocolGraph {
+  const fixturesDir = path.join(__dirname, '..', 'fixtures');
   const json = fs.readFileSync(path.join(fixturesDir, name), 'utf-8');
-  const parser = new CanvasParser();
-  const result = parser.parse(json, name);
-  if (!result.success) throw new Error(`Fixture ${name} failed to parse: ${result.error}`);
+  const result = new CanvasParser().parse(json, name);
+  if (!result.success) throw new Error(`Fixture parse error: ${result.error}`);
   return result.graph;
 }
 
@@ -28,7 +28,7 @@ describe('ProtocolRunner', () => {
   describe('start() — linear protocol traversal (RUN-01, RUN-02)', () => {
     it('transitions to at-node state pointing at the first question after start()', () => {
       const runner = new ProtocolRunner();
-      const graph = loadGraph('linear.canvas');
+      const graph = linearGraph();
       runner.start(graph);
       const state = runner.getState();
       expect(state.status).toBe('at-node');
@@ -40,7 +40,7 @@ describe('ProtocolRunner', () => {
 
     it('accumulated text is empty at the first question node', () => {
       const runner = new ProtocolRunner();
-      runner.start(loadGraph('linear.canvas'));
+      runner.start(linearGraph());
       const state = runner.getState();
       if (state.status !== 'at-node') return;
       expect(state.accumulatedText).toBe('');
@@ -51,7 +51,7 @@ describe('ProtocolRunner', () => {
     it('appends answerText to accumulatedText and transitions to complete on terminal answer', () => {
       // linear.canvas: start → n-q1 → n-a1 (answerText="A1", terminal)
       const runner = new ProtocolRunner();
-      runner.start(loadGraph('linear.canvas'));
+      runner.start(linearGraph());
       runner.chooseAnswer('n-a1');
       const state = runner.getState();
       // n-a1 has no outgoing edge → complete
@@ -63,7 +63,7 @@ describe('ProtocolRunner', () => {
     it('follows the correct branch in a branching protocol (RUN-03)', () => {
       // branching.canvas: start → n-q1 → n-a1 or n-a2 (both terminal)
       const runner = new ProtocolRunner();
-      runner.start(loadGraph('branching.canvas'));
+      runner.start(branchingGraph());
       runner.chooseAnswer('n-a2');
       const state = runner.getState();
       expect(state.status).toBe('complete');
@@ -74,7 +74,7 @@ describe('ProtocolRunner', () => {
     it('auto-appends text-block content after answer without extra user action (RUN-05)', () => {
       // text-block.canvas: start → n-q1 → n-a1 (answerText="Size: normal") → n-tb1 (content="Findings: normal liver.", terminal)
       const runner = new ProtocolRunner();
-      runner.start(loadGraph('text-block.canvas'));
+      runner.start(textBlockGraph());
       runner.chooseAnswer('n-a1');
       const state = runner.getState();
       // After choosing n-a1, runner auto-advances through n-tb1 (text-block) → complete
@@ -91,7 +91,7 @@ describe('ProtocolRunner', () => {
       // linear.canvas answer is terminal so we can't check mid-state.
       // Use branching.canvas — choose n-a1 which is terminal, but before that check state.
       const runner = new ProtocolRunner();
-      runner.start(loadGraph('branching.canvas'));
+      runner.start(branchingGraph());
       // Still at-node at n-q1 — canStepBack false
       const stateBefore = runner.getState();
       expect(stateBefore.status).toBe('at-node');
@@ -106,7 +106,7 @@ describe('ProtocolRunner', () => {
       // After chooseAnswer('n-a1'), state = complete, finalText = 'Size: normalFindings: normal liver.'
       // After stepBack(), state must return to at-node at n-q1 with accumulatedText = ''
       const runner = new ProtocolRunner();
-      runner.start(loadGraph('text-block.canvas'));
+      runner.start(textBlockGraph());
       runner.chooseAnswer('n-a1');
       expect(runner.getState().status).toBe('complete');
       runner.stepBack();
@@ -172,7 +172,7 @@ describe('ProtocolRunner', () => {
 
     it('stepBack() is a no-op when canStepBack is false (idle or just after start)', () => {
       const runner = new ProtocolRunner();
-      runner.start(loadGraph('linear.canvas'));
+      runner.start(linearGraph());
       const stateBefore = runner.getState();
       expect(stateBefore.status).toBe('at-node');
       if (stateBefore.status !== 'at-node') return;
@@ -189,7 +189,7 @@ describe('ProtocolRunner', () => {
     it('transitions to awaiting-snippet-fill when reaching a text-block with snippetId', () => {
       // snippet-block.canvas: start → n-q1 → n-a1 → n-tb1 (has snippetId="snip-liver-001")
       const runner = new ProtocolRunner();
-      runner.start(loadGraph('snippet-block.canvas'));
+      runner.start(snippetBlockGraph());
       runner.chooseAnswer('n-a1');
       const state = runner.getState();
       expect(state.status).toBe('awaiting-snippet-fill');
@@ -200,7 +200,7 @@ describe('ProtocolRunner', () => {
 
     it('completeSnippet() appends rendered text and advances to complete', () => {
       const runner = new ProtocolRunner();
-      runner.start(loadGraph('snippet-block.canvas'));
+      runner.start(snippetBlockGraph());
       runner.chooseAnswer('n-a1');
       expect(runner.getState().status).toBe('awaiting-snippet-fill');
       runner.completeSnippet('Findings: normal liver with snippet text.');
@@ -219,7 +219,7 @@ describe('ProtocolRunner', () => {
       // loop-start.canvas: start → n-ls1 (loop-start, no outgoing edges with label 'continue')
       // Phase 6: loop support is implemented — a missing 'continue' edge is a malformed graph error
       const runner = new ProtocolRunner();
-      runner.start(loadGraph('loop-start.canvas'));
+      runner.start(loopStartGraph());
       const state = runner.getState();
       expect(state.status).toBe('error');
       if (state.status !== 'error') return;
@@ -369,7 +369,7 @@ describe('ProtocolRunner', () => {
       // snippet-block.canvas: start → n-q1 → n-a1 (answerText) → n-tb1 (snippet)
       // After chooseAnswer, we are awaiting-snippet-fill; completeSnippet should join with '\n'
       const runner = new ProtocolRunner({ defaultSeparator: 'newline' });
-      runner.start(loadGraph('snippet-block.canvas'));
+      runner.start(snippetBlockGraph());
       runner.chooseAnswer('n-a1');
       expect(runner.getState().status).toBe('awaiting-snippet-fill');
       runner.completeSnippet('snippet result');
@@ -518,7 +518,7 @@ describe('ProtocolRunner', () => {
 
     it('pickSnippet is a no-op outside awaiting-snippet-pick', () => {
       const runner = new ProtocolRunner();
-      runner.start(loadGraph('linear.canvas'));
+      runner.start(linearGraph());
       const before = runner.getState();
       expect(before.status).toBe('at-node');
       runner.pickSnippet('x');
@@ -769,7 +769,7 @@ describe('ProtocolRunner', () => {
 
     it('Test 9 (Phase 30 regression): stepBack from auto-advanced snippet picker reverts to predecessor (not branch list)', () => {
       const runner = new ProtocolRunner();
-      runner.start(loadGraph('snippet-node-with-exit.canvas'));
+      runner.start(snippetNodeWithExitGraph());
       runner.chooseAnswer('n-a1');
       expect(runner.getState().status).toBe('awaiting-snippet-pick');
       runner.stepBack();
@@ -816,7 +816,7 @@ describe('ProtocolRunner', () => {
   describe('stepBack() — restoreStatus (D-05, D-06) + in-flight guard (D-01)', () => {
     it('Test A (D-05): loop-entry undo restores awaiting-loop-pick after chooseLoopBranch', () => {
       const runner = new ProtocolRunner();
-      runner.start(loadGraph('unified-loop-valid.canvas'));
+      runner.start(unifiedLoopValidGraph());
       expect(runner.getState().status).toBe('awaiting-loop-pick');
 
       runner.chooseLoopBranch('e2');
@@ -836,7 +836,7 @@ describe('ProtocolRunner', () => {
     it('Test B (D-05): directory-bound snippet pick undo restores awaiting-snippet-pick', () => {
       // snippet-node-with-exit.canvas: start → n-q1 → n-a1 → n-snippet1
       const runner = new ProtocolRunner();
-      runner.start(loadGraph('snippet-node-with-exit.canvas'));
+      runner.start(snippetNodeWithExitGraph());
       runner.chooseAnswer('n-a1');
       let state = runner.getState();
       expect(state.status).toBe('awaiting-snippet-pick');

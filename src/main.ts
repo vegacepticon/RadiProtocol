@@ -1,18 +1,13 @@
 // main.ts
-import { Plugin, Notice, Menu, TFile, TFolder, SuggestModal, MarkdownView } from 'obsidian';
+import { Plugin, Notice, TFile, TFolder, SuggestModal, MarkdownView } from 'obsidian';
 import type { App } from 'obsidian';
 import { RadiProtocolSettings, DEFAULT_SETTINGS, RadiProtocolSettingsTab, type InlineRunnerLayout } from './settings';
-import { CanvasParser } from './graph/canvas-parser';
 import { ProtocolDocumentParser } from './protocol/protocol-document-parser';
 import { ProtocolDocumentStore } from './protocol/protocol-document-store';
-import { EditorPanelView, EDITOR_PANEL_VIEW_TYPE } from './views/editor-panel-view';
 import { SnippetManagerView, SNIPPET_MANAGER_VIEW_TYPE } from './views/snippet-manager-view';
 import { SnippetService } from './snippets/snippet-service';
 import { WriteMutex } from './utils/write-mutex';
 import { I18nService } from './i18n';
-import { CanvasLiveEditor } from './canvas/canvas-live-editor';
-import { CanvasNodeFactory } from './canvas/canvas-node-factory';
-import { EdgeLabelSyncService } from './canvas/edge-label-sync-service';
 import { LibraryService } from './snippets/library-service';
 // Phase 45 (LOOP-06): start-from-node command dependencies
 import { NodePickerModal, buildStartableProtocolNodeOptions } from './views/node-picker-modal';
@@ -94,13 +89,6 @@ export function resolveProtocolDocumentFiles(
   folderPath: string,
 ): TFile[] {
   return resolveProtocolFilesBySuffix(vault, folderPath, '.rp.json', 'PROTOCOL-DOC');
-}
-
-export function resolveProtocolCanvasFiles(
-  vault: import('obsidian').Vault,
-  folderPath: string,
-): TFile[] {
-  return resolveProtocolFilesBySuffix(vault, folderPath, '.canvas', 'INLINE-FIX-01');
 }
 
 type ProtocolPickerSuggestion = { file: TFile; name: string };
@@ -189,14 +177,10 @@ class ProtocolEditorPickerModal extends SuggestModal<ProtocolEditorPickerSuggest
 export default class RadiProtocolPlugin extends Plugin {
   settings!: RadiProtocolSettings;
   i18n!: I18nService;
-  canvasParser!: CanvasParser;
   protocolDocumentParser!: ProtocolDocumentParser;
   protocolDocumentStore!: ProtocolDocumentStore;
   snippetService!: SnippetService;
   libraryService!: LibraryService;
-  canvasLiveEditor!: CanvasLiveEditor;
-  canvasNodeFactory!: CanvasNodeFactory;
-  edgeLabelSyncService!: EdgeLabelSyncService;
   private readonly insertMutex = new WriteMutex();
   private pickerModal: SuggestModal<ProtocolPickerSuggestion | ProtocolEditorPickerSuggestion> | null = null;
   // Phase 85 INLINE-MULTI-01: registry of open inline runners keyed by `${protocolPath}#${notePath}`.
@@ -216,7 +200,6 @@ export default class RadiProtocolPlugin extends Plugin {
 
     // Instantiate pure modules (no Obsidian dependency)
     // Phase 84 (I18N-02): inject the i18n translator so parse-time error messages follow the active locale.
-    this.canvasParser = new CanvasParser(this.i18n.t.bind(this.i18n));
     this.protocolDocumentParser = new ProtocolDocumentParser(this.i18n.t.bind(this.i18n));
     this.protocolDocumentStore = new ProtocolDocumentStore(this.app);
 
@@ -228,22 +211,7 @@ export default class RadiProtocolPlugin extends Plugin {
     // Phase 86 (TEMPLATE-LIB-01): template library service
     this.libraryService = new LibraryService(this.app, this.settings, this.snippetService, this.i18n.t.bind(this.i18n));
 
-    // Instantiate live canvas editor (LIVE-01)
-    this.canvasLiveEditor = new CanvasLiveEditor(this.app);
-
-    // Instantiate canvas node factory (CANVAS-01)
-    this.canvasNodeFactory = new CanvasNodeFactory(this.app);
-
-    // Phase 50 D-01: own the vault.on('modify') subscription for bi-directional
-    // Answer.displayLabel ↔ incoming-edge label sync. Design source:
-    // docs/ARCHITECTURE-NOTES.md#answer-label-and-edge-sync
-    this.edgeLabelSyncService = new EdgeLabelSyncService(this.app, this);
-    this.edgeLabelSyncService.register();
-
     // Commands — IDs intentionally omit plugin name prefix (NFR-06)
-
-    // Register EditorPanelView ItemView (EDIT-01)
-    this.registerView(EDITOR_PANEL_VIEW_TYPE, (leaf) => new EditorPanelView(leaf, this));
 
     // Register ProtocolEditorView ItemView (.rp.json visual editor)
     this.registerView(PROTOCOL_EDITOR_VIEW_TYPE, (leaf) => new ProtocolEditorView(leaf, this));
@@ -256,13 +224,6 @@ export default class RadiProtocolPlugin extends Plugin {
       id: 'open-snippet-manager',
       name: 'Open snippet manager',
       callback: () => { void this.activateSnippetManagerView(); },
-    });
-
-    // Command: open-node-editor (EDIT-01 — opens editor panel; NFR-06: no plugin name prefix)
-    this.addCommand({
-      id: 'open-node-editor',
-      name: 'Open node editor',
-      callback: () => { void this.activateEditorPanelView(); },
     });
 
     // Command: open-protocol-editor — prompts for a .rp.json target, then opens the independent visual editor.
@@ -295,41 +256,6 @@ export default class RadiProtocolPlugin extends Plugin {
     // Settings tab
     this.addSettingTab(new RadiProtocolSettingsTab(this.app, this));
 
-    // Context menu integration — EDIT-05
-    // 'canvas:node-menu' is undocumented but confirmed in multiple community plugins.
-    // Use typed cast to unknown then minimal interface to avoid 'any' (eslint no-explicit-any).
-    type CanvasNodeMenuHandler = (menu: Menu, node: { id: string; canvas?: unknown }) => void;
-    type EventRef = import('obsidian').EventRef;
-    this.registerEvent(
-      (this.app.workspace as unknown as {
-        on(event: 'canvas:node-menu', handler: CanvasNodeMenuHandler): EventRef;
-      }).on('canvas:node-menu', (menu: Menu, node: { id: string; canvas?: unknown }) => {
-        const nodeId = node.id;
-
-        // Derive canvas file path from the active canvas leaf
-        const canvasLeaves = this.app.workspace.getLeavesOfType('canvas');
-        // The node object's 'canvas' property is the internal CanvasView instance —
-        // use it only to match the leaf; extract only id and file path, nothing else.
-        const activeLeaf = canvasLeaves.find(leaf => {
-          const view = leaf.view as unknown as { canvas?: unknown };
-          return view.canvas === node.canvas;
-        });
-        const filePath = (activeLeaf?.view as { file?: { path: string } } | undefined)?.file?.path;
-
-        if (!filePath) return; // Not triggered from a canvas leaf — skip
-
-        menu.addSeparator();
-        menu.addItem(item =>
-          item
-            .setTitle('Edit protocol properties')
-            .setSection('radiprotocol')
-            .onClick(() => {
-              void this.openEditorPanelForNode(filePath, nodeId);
-            })
-        );
-      })
-    );
-
     console.debug('[RadiProtocol] Plugin loaded');
   }
 
@@ -344,9 +270,6 @@ export default class RadiProtocolPlugin extends Plugin {
       modal.close();
     }
     this.inlineRunners.clear();
-    this.canvasLiveEditor.destroy();
-    this.canvasNodeFactory.destroy();
-    this.edgeLabelSyncService.destroy();
     console.debug('[RadiProtocol] Plugin unloaded');
   }
 
@@ -381,37 +304,6 @@ export default class RadiProtocolPlugin extends Plugin {
   async saveInlineRunnerPosition(layout: InlineRunnerLayout | null): Promise<void> {
     this.settings.inlineRunnerPosition = layout;
     await this.saveSettings();
-  }
-
-  async activateEditorPanelView(): Promise<void> {
-    const { workspace } = this.app;
-    workspace.detachLeavesOfType(EDITOR_PANEL_VIEW_TYPE);
-    const leaf = workspace.getRightLeaf(false);
-    if (leaf) {
-      await leaf.setViewState({ type: EDITOR_PANEL_VIEW_TYPE, active: true });
-      const activeLeaf = workspace.getLeavesOfType(EDITOR_PANEL_VIEW_TYPE)[0];
-      if (activeLeaf !== undefined) {
-        void workspace.revealLeaf(activeLeaf);
-      }
-    }
-  }
-
-  async ensureEditorPanelVisible(): Promise<void> {
-    const { workspace } = this.app;
-    const leaves = workspace.getLeavesOfType(EDITOR_PANEL_VIEW_TYPE);
-    if (leaves.length > 0 && leaves[0] !== undefined) {
-      void workspace.revealLeaf(leaves[0]);
-      return;
-    }
-    // No existing leaf — create one in the right sidebar
-    const leaf = workspace.getRightLeaf(false);
-    if (leaf) {
-      await leaf.setViewState({ type: EDITOR_PANEL_VIEW_TYPE, active: true });
-      const newLeaves = workspace.getLeavesOfType(EDITOR_PANEL_VIEW_TYPE);
-      if (newLeaves[0] !== undefined) {
-        void workspace.revealLeaf(newLeaves[0]);
-      }
-    }
   }
 
   async activateProtocolEditorView(protocolPath?: string): Promise<void> {
@@ -479,17 +371,6 @@ export default class RadiProtocolPlugin extends Plugin {
       if (activeLeaf !== undefined) {
         void workspace.revealLeaf(activeLeaf);
       }
-    }
-  }
-
-  async openEditorPanelForNode(filePath: string, nodeId: string): Promise<void> {
-    await this.activateEditorPanelView();
-    const leaves = this.app.workspace.getLeavesOfType(EDITOR_PANEL_VIEW_TYPE);
-    const leaf = leaves[0];
-    if (leaf === undefined) return;
-    const view = leaf.view;
-    if (view instanceof EditorPanelView) {
-      view.loadNode(filePath, nodeId);
     }
   }
 

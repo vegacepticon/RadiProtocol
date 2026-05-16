@@ -232,15 +232,6 @@ vi.mock('../views/snippet-tree-picker', () => ({
   },
 }));
 
-// --- Spy on rewriteCanvasRefs --------------------------------------------
-const rewriteCanvasRefsSpy = vi.fn(async (_app: unknown, _mapping: Map<string, string>) => ({
-  updated: ['canvas-a.canvas'],
-  skipped: [],
-}));
-vi.mock('../snippets/canvas-ref-sync', () => ({
-  rewriteCanvasRefs: (app: unknown, mapping: Map<string, string>) => rewriteCanvasRefsSpy(app, mapping),
-}));
-
 // --- Spy on rewriteProtocolSnippetRefs ------------------------------------
 const rewriteProtocolSnippetRefsSpy = vi.fn(async (_app: unknown, _mapping: Map<string, string>) => ({
   updated: ['protocol-a.rp.json'],
@@ -399,7 +390,6 @@ describe('SnippetManagerView — drag-and-drop (Phase 34 Plan 02)', () => {
   const root = '.radiprotocol/snippets';
 
   beforeEach(() => {
-    rewriteCanvasRefsSpy.mockClear();
     rewriteProtocolSnippetRefsSpy.mockClear();
     _lastMenuItems = [];
   });
@@ -507,7 +497,7 @@ describe('SnippetManagerView — drag-and-drop (Phase 34 Plan 02)', () => {
       await Promise.resolve();
       expect(service.moveSnippet).toHaveBeenCalledWith(`${root}/note.json`, `${root}/b`);
       expect(service.moveFolder).not.toHaveBeenCalled();
-      expect(rewriteCanvasRefsSpy).toHaveBeenCalledTimes(1);
+      expect(rewriteProtocolSnippetRefsSpy).toHaveBeenCalledTimes(1);
       expect(rewriteProtocolSnippetRefsSpy).toHaveBeenCalledTimes(1);
       expect(ev.defaultPrevented).toBe(true);
     });
@@ -523,7 +513,7 @@ describe('SnippetManagerView — drag-and-drop (Phase 34 Plan 02)', () => {
       await Promise.resolve();
       await Promise.resolve();
       expect(service.moveFolder).toHaveBeenCalledWith(`${root}/a`, `${root}/b`);
-      expect(rewriteCanvasRefsSpy).toHaveBeenCalledTimes(1);
+      expect(rewriteProtocolSnippetRefsSpy).toHaveBeenCalledTimes(1);
       expect(rewriteProtocolSnippetRefsSpy).toHaveBeenCalledTimes(1);
     });
 
@@ -537,7 +527,7 @@ describe('SnippetManagerView — drag-and-drop (Phase 34 Plan 02)', () => {
       await Promise.resolve();
       await Promise.resolve();
       expect(service.moveFolder).not.toHaveBeenCalled();
-      expect(rewriteCanvasRefsSpy).not.toHaveBeenCalled();
+      expect(rewriteProtocolSnippetRefsSpy).not.toHaveBeenCalled();
     });
 
     it('folder dropped on own descendant → rejected, no service call', async () => {
@@ -551,7 +541,7 @@ describe('SnippetManagerView — drag-and-drop (Phase 34 Plan 02)', () => {
       await Promise.resolve();
       await Promise.resolve();
       expect(service.moveFolder).not.toHaveBeenCalled();
-      expect(rewriteCanvasRefsSpy).not.toHaveBeenCalled();
+      expect(rewriteProtocolSnippetRefsSpy).not.toHaveBeenCalled();
     });
 
     it('drop on file-row redirects to parent folder', async () => {
@@ -573,7 +563,7 @@ describe('SnippetManagerView — drag-and-drop (Phase 34 Plan 02)', () => {
     const root = '.radiprotocol/snippets';
 
     beforeEach(() => {
-      rewriteCanvasRefsSpy.mockClear();
+      rewriteProtocolSnippetRefsSpy.mockClear();
       rewriteProtocolSnippetRefsSpy.mockClear();
       _lastMenuItems = [];
       // Phase 51 Plan 04 D-07 — new Modal + SnippetTreePicker instrumentation
@@ -626,10 +616,7 @@ describe('SnippetManagerView — drag-and-drop (Phase 34 Plan 02)', () => {
 
       expect(service.moveSnippet).toHaveBeenCalledWith(`${root}/note.json`, `${root}/dst`);
       expect(service.moveFolder).not.toHaveBeenCalled();
-      expect(rewriteCanvasRefsSpy).toHaveBeenCalledTimes(1);
       expect(rewriteProtocolSnippetRefsSpy).toHaveBeenCalledTimes(1);
-      const canvasMapping = rewriteCanvasRefsSpy.mock.calls[0]![1] as Map<string, string>;
-      expect(Array.from(canvasMapping.entries())).toEqual([['note', 'dst/note']]);
       const protocolMapping = rewriteProtocolSnippetRefsSpy.mock.calls[0]![1] as Map<string, string>;
       expect(Array.from(protocolMapping.entries())).toEqual([['note.json', 'dst/note.json']]);
     });
@@ -652,10 +639,10 @@ describe('SnippetManagerView — drag-and-drop (Phase 34 Plan 02)', () => {
       await selectAbsolute(`${root}/b`);
 
       expect(service.moveFolder).toHaveBeenCalledWith(`${root}/a`, `${root}/b`);
-      expect(rewriteCanvasRefsSpy).toHaveBeenCalledTimes(1);
+      expect(rewriteProtocolSnippetRefsSpy).toHaveBeenCalledTimes(1);
       expect(rewriteProtocolSnippetRefsSpy).toHaveBeenCalledTimes(1);
       // Keys must be snippet-root-relative (D-03): oldKey 'a' → newKey 'b/a'
-      const mapping = rewriteCanvasRefsSpy.mock.calls[0]![1] as Map<string, string>;
+      const mapping = rewriteProtocolSnippetRefsSpy.mock.calls[0]![1] as Map<string, string>;
       expect(Array.from(mapping.entries())).toEqual([['a', 'b/a']]);
       // Protocol ref sync must receive the same mapping
       const protocolMapping = rewriteProtocolSnippetRefsSpy.mock.calls[0]![1] as Map<string, string>;

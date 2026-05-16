@@ -1,8 +1,8 @@
 import { describe, it, expect } from 'vitest';
 import { GraphValidator } from '../graph/graph-validator';
 import { CanvasParser } from '../graph/canvas-parser';
-import * as fs from 'node:fs';
-import * as path from 'node:path';
+import * as fs from 'fs';
+import * as path from 'path';
 
 describe('Runner commands (RUN-10, UI-04)', () => {
   it('RUN-10: node-picker-modal exports NodePickerModal (RED until Plan 03)', async () => {
@@ -47,7 +47,7 @@ describe('Runner commands (RUN-10, UI-04)', () => {
       startNodeId: loopNode.id,
     };
     const opts = buildNodeOptions(graph as unknown as import('../graph/graph-model').ProtocolGraph);
-    const loopOpt = opts.find(o => o.kind === 'loop');
+    const loopOpt = opts.find((o: { kind: string }) => o.kind === 'loop');
     expect(loopOpt).toBeDefined();
     expect(loopOpt?.id).toBe('loop-1');
     expect(loopOpt?.label).toBe('Lesion loop');

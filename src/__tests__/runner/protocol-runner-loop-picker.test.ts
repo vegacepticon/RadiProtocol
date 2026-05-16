@@ -1,20 +1,9 @@
 import { describe, it, expect } from 'vitest';
-import * as fs from 'node:fs';
-import * as path from 'node:path';
-import { CanvasParser } from '../../graph/canvas-parser';
 import { ProtocolRunner } from '../../runner/protocol-runner';
 import { stripExitPrefix } from '../../graph/node-label';
 import type { ProtocolGraph, RPNode } from '../../graph/graph-model';
+import { unifiedLoopLabeledBodyGraph, unifiedLoopLongBodyGraph, unifiedLoopNestedGraph, unifiedLoopValidGraph } from '../fixtures/protocol-document-fixtures';
 
-const fixturesDir = path.join(__dirname, '..', 'fixtures');
-
-function loadGraph(name: string): ProtocolGraph {
-  const json = fs.readFileSync(path.join(fixturesDir, name), 'utf-8');
-  const parser = new CanvasParser();
-  const result = parser.parse(json, name);
-  if (!result.success) throw new Error(`Fixture ${name} failed to parse: ${result.error}`);
-  return result.graph;
-}
 
 // Phase 44 (RUN-01..RUN-05) — picker state-machine coverage.
 // Each test pins a specific behaviour from Plan 02a runtime:
@@ -26,7 +15,7 @@ describe('ProtocolRunner loop picker (RUN-01..RUN-05)', () => {
 
   it('RUN-01: halts at awaiting-loop-pick with loop node id after start() on unified-loop-valid.canvas', () => {
     const runner = new ProtocolRunner();
-    runner.start(loadGraph('unified-loop-valid.canvas'));
+    runner.start(unifiedLoopValidGraph());
     const state = runner.getState();
     expect(state.status).toBe('awaiting-loop-pick');
     if (state.status !== 'awaiting-loop-pick') return;
@@ -35,7 +24,7 @@ describe('ProtocolRunner loop picker (RUN-01..RUN-05)', () => {
   });
 
   it('RUN-02: body-branch walks the branch; back-edge re-entry increments top frame iteration to 2 via the B1 guard WITHOUT pushing a second frame (B1 + I1 — single-point-increment semantic)', () => {
-    const graph = loadGraph('unified-loop-valid.canvas');
+    const graph = unifiedLoopValidGraph();
     const runner = new ProtocolRunner();
     runner.start(graph);
     // Pick the body edge e2 ("проверка") — walks to n-q1
@@ -59,7 +48,7 @@ describe('ProtocolRunner loop picker (RUN-01..RUN-05)', () => {
 
   it('RUN-03: choosing «выход» pops frame and advances along exit edge', () => {
     const runner = new ProtocolRunner();
-    runner.start(loadGraph('unified-loop-valid.canvas'));
+    runner.start(unifiedLoopValidGraph());
     // e3 is the «выход» edge (n-loop → n-end, text-block terminal)
     runner.chooseLoopBranch('e3');
     const state = runner.getState();
@@ -70,7 +59,7 @@ describe('ProtocolRunner loop picker (RUN-01..RUN-05)', () => {
   });
 
   it('RUN-04: nested loops — inner «выход» returns to outer picker with SINGLE outer frame (B1 — loopContextStack.length === 1, not 2)', () => {
-    const graph = loadGraph('unified-loop-nested.canvas');
+    const graph = unifiedLoopNestedGraph();
     const runner = new ProtocolRunner();
     runner.start(graph);
     let state = runner.getState();
@@ -111,7 +100,7 @@ describe('ProtocolRunner loop picker (RUN-01..RUN-05)', () => {
   });
 
   it('RUN-05: step-back from loop picker restores pre-loop currentNodeId and accumulatedText; canStepBack=true via B2 even at first halt', () => {
-    const graph = loadGraph('unified-loop-valid.canvas');
+    const graph = unifiedLoopValidGraph();
     const runner = new ProtocolRunner();
     runner.start(graph);
     // B2: first halt after start() on a loop — canStepBack is true because the loop-entry
@@ -138,7 +127,7 @@ describe('ProtocolRunner loop picker (RUN-01..RUN-05)', () => {
   // under the 50 threshold because the steps counter resets every time advanceThrough is
   // re-entered via chooseLoopBranch.
   it('W4: long-body loop iterates 10 times without tripping RUN-09 auto-advance guard', () => {
-    const graph = loadGraph('unified-loop-long-body.canvas');
+    const graph = unifiedLoopLongBodyGraph();
     const runner = new ProtocolRunner();
     runner.start(graph);
     let state = runner.getState();
@@ -245,7 +234,7 @@ describe('ProtocolRunner loop picker (RUN-01..RUN-05)', () => {
     // Under Phase 49 the labeled body edge was misclassified as a second exit and
     // validation failed. Under Phase 50.1 the body edge has no "+" prefix so
     // isExitEdge(bodyEdge) = false; the picker renders one exit + one body button.
-    const graph = loadGraph('unified-loop-labeled-body.canvas');
+    const graph = unifiedLoopLabeledBodyGraph();
     const runner = new ProtocolRunner();
     runner.start(graph);
     // Reach the loop picker
@@ -382,7 +371,7 @@ describe('Phase 66 D-13 — scripted loop-boundary scenarios for stepBack', () =
   // D-13 Scenario 1 — Back from inside loop body iteration N
   it('D-13 Scenario 1: back from inside loop body iteration N restores awaiting-loop-pick with iteration preserved', async () => {
     const runner = new ProtocolRunner();
-    runner.start(loadGraph('unified-loop-valid.canvas'));
+    runner.start(unifiedLoopValidGraph());
     // Iteration 1: enter body, answer, back-edge re-entry → iter=2 picker
     runner.chooseLoopBranch('e2');
     runner.chooseAnswer('n-a1');
@@ -413,7 +402,7 @@ describe('Phase 66 D-13 — scripted loop-boundary scenarios for stepBack', () =
   // D-13 Scenario 2 — Back through +exit edge
   it('D-13 Scenario 2: back through +exit edge restores awaiting-loop-pick with frame restored', async () => {
     const runner = new ProtocolRunner();
-    runner.start(loadGraph('unified-loop-valid.canvas'));
+    runner.start(unifiedLoopValidGraph());
     runner.chooseLoopBranch('e3'); // +exit → complete
     expect(runner.getState().status).toBe('complete');
     // Back restores the loop picker with the popped frame back on the stack
@@ -486,7 +475,7 @@ describe('Phase 66 D-13 — scripted loop-boundary scenarios for stepBack', () =
   // D-13 Scenario 4 — Nested loops: back from inner picker stays in inner
   it('D-13 Scenario 4: back from nested-inner picker returns to inner, not outer', async () => {
     const runner = new ProtocolRunner();
-    runner.start(loadGraph('unified-loop-nested.canvas'));
+    runner.start(unifiedLoopNestedGraph());
     let state = runner.getState();
     expect(state.status).toBe('awaiting-loop-pick');
     if (state.status !== 'awaiting-loop-pick') return;
@@ -535,7 +524,7 @@ describe('ProtocolRunner RUNFIX-01 — manual edits survive loop transitions', (
 
   it('RUNFIX-01 Test 1: body-branch entry preserves manual edit made at awaiting-loop-pick', () => {
     const runner = new ProtocolRunner();
-    runner.start(loadGraph('unified-loop-valid.canvas'));
+    runner.start(unifiedLoopValidGraph());
     // Halted at n-loop picker with empty accumulator
     let state = runner.getState();
     expect(state.status).toBe('awaiting-loop-pick');
@@ -558,7 +547,7 @@ describe('ProtocolRunner RUNFIX-01 — manual edits survive loop transitions', (
 
   it('RUNFIX-01 Test 2: «выход» exit preserves manual edit made at awaiting-loop-pick', () => {
     const runner = new ProtocolRunner();
-    runner.start(loadGraph('unified-loop-valid.canvas'));
+    runner.start(unifiedLoopValidGraph());
     let state = runner.getState();
     expect(state.status).toBe('awaiting-loop-pick');
 
@@ -581,7 +570,7 @@ describe('ProtocolRunner RUNFIX-01 — manual edits survive loop transitions', (
     // into the picker via B1. A regression here would mean syncManualEdit no longer
     // writes through at at-node.
     const runner = new ProtocolRunner();
-    runner.start(loadGraph('unified-loop-valid.canvas'));
+    runner.start(unifiedLoopValidGraph());
     // Halted at n-loop picker — walk body branch to reach n-q1 at-node
     runner.chooseLoopBranch('e2');
     let state = runner.getState();
@@ -605,7 +594,7 @@ describe('ProtocolRunner RUNFIX-01 — manual edits survive loop transitions', (
 
   it('RUNFIX-01 Test 4: undo snapshot captured inside chooseLoopBranch contains the manual edit, not the pre-edit text', () => {
     const runner = new ProtocolRunner();
-    runner.start(loadGraph('unified-loop-valid.canvas'));
+    runner.start(unifiedLoopValidGraph());
     let state = runner.getState();
     expect(state.status).toBe('awaiting-loop-pick');
 

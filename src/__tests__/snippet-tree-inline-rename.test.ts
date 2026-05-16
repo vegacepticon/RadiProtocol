@@ -1,7 +1,7 @@
 // Phase 34 Plan 03 — F2 inline rename tests.
 // Covers the enter/commit/cancel cycle for both file and folder rows, the
 // settled flag that prevents Enter+blur double-commit, and the folder-rename
-// fan-out via rewriteCanvasRefs + expand-state prefix rewrite.
+// fan-out via rewriteProtocolSnippetRefs + expand-state prefix rewrite.
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 
 // --- Browser globals stub (identical shape to snippet-tree-dnd.test.ts) ---
@@ -211,13 +211,13 @@ vi.mock('obsidian', () => {
 interface CapturedMenuItem { title: string; icon?: string; cb: () => void }
 let lastMenuItems: CapturedMenuItem[] = [];
 
-// --- Spy on rewriteCanvasRefs --------------------------------------------
-const rewriteCanvasRefsSpy = vi.fn(async (_app: unknown, _mapping: Map<string, string>) => ({
-  updated: ['canvas-a.canvas'],
+// --- Spy on rewriteProtocolSnippetRefs ------------------------------------
+const rewriteProtocolSnippetRefsSpy = vi.fn(async (_app: unknown, _mapping: Map<string, string>) => ({
+  updated: ['test.rp.json'],
   skipped: [],
 }));
-vi.mock('../snippets/canvas-ref-sync', () => ({
-  rewriteCanvasRefs: (app: unknown, mapping: Map<string, string>) => rewriteCanvasRefsSpy(app, mapping),
+vi.mock('../snippets/protocol-ref-sync', () => ({
+  rewriteProtocolSnippetRefs: (app: unknown, mapping: Map<string, string>) => rewriteProtocolSnippetRefsSpy(app, mapping),
 }));
 
 // --- Stub modal imports --------------------------------------------------
@@ -357,7 +357,7 @@ describe('SnippetManagerView — F2 inline rename (Phase 34 Plan 03)', () => {
   const root = '.radiprotocol/snippets';
 
   beforeEach(() => {
-    rewriteCanvasRefsSpy.mockClear();
+    rewriteProtocolSnippetRefsSpy.mockClear();
     lastMenuItems = [];
   });
 
@@ -433,10 +433,10 @@ describe('SnippetManagerView — F2 inline rename (Phase 34 Plan 03)', () => {
       await Promise.resolve();
       await Promise.resolve();
       expect(service.renameSnippet).toHaveBeenCalledWith(`${root}/note.json`, 'renamed');
-      expect(rewriteCanvasRefsSpy).not.toHaveBeenCalled();
+      expect(rewriteProtocolSnippetRefsSpy).not.toHaveBeenCalled();
     });
 
-    it('Enter commits via snippetService.renameFolder (folder) and fires rewriteCanvasRefs with snippet-root-relative keys', async () => {
+    it('Enter commits via snippetService.renameFolder (folder) and fires rewriteProtocolSnippetRefs with snippet-root-relative keys', async () => {
       const { service, view } = makeTreeView();
       await view.onOpen();
       const row = findRow(view, `${root}/a`);
@@ -448,10 +448,10 @@ describe('SnippetManagerView — F2 inline rename (Phase 34 Plan 03)', () => {
       await Promise.resolve();
       await Promise.resolve();
       expect(service.renameFolder).toHaveBeenCalledWith(`${root}/a`, 'renamed');
-      expect(rewriteCanvasRefsSpy).toHaveBeenCalledTimes(1);
-      const mapping = rewriteCanvasRefsSpy.mock.calls[0]![1] as Map<string, string>;
-      // toCanvasKey('.radiprotocol/snippets/a', root) === 'a'
-      // toCanvasKey('.radiprotocol/snippets/renamed', root) === 'renamed'
+      expect(rewriteProtocolSnippetRefsSpy).toHaveBeenCalledTimes(1);
+      const mapping = rewriteProtocolSnippetRefsSpy.mock.calls[0]![1] as Map<string, string>;
+      // toSnippetRelativePath('.radiprotocol/snippets/a', root) === 'a'
+      // toSnippetRelativePath('.radiprotocol/snippets/renamed', root) === 'renamed'
       expect(Array.from(mapping.entries())).toEqual([['a', 'renamed']]);
     });
 

@@ -11,7 +11,7 @@
 //   - Name collision pre-flight via snippetService.exists (debounced, D-12)
 //   - Unsaved-changes 3-button guard via ConfirmModal (D-08)
 //   - Phase 34 (MOVE-04 cleanup): move-on-save uses atomic snippetService.moveSnippet
-//     (replaces Phase 33 save+delete+placebo rewriteCanvasRefs pipeline, D-03/D-10)
+//     (replaces Phase 33 save+delete+placebo rewriteProtocolSnippetRefs pipeline, D-03/D-10)
 //
 // Not in scope here (deferred to Phase 34):
 //   - Multi-file / folder-level moves

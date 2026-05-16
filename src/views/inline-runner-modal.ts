@@ -165,7 +165,7 @@ export class InlineRunnerModal {
 
   // ── Phase 85 INLINE-MULTI-01 — Registry accessors ────────────────────────
 
-  /** Identifier for the canvas file driving this runner (without `.canvas` strip). */
+  /** Identifier for the protocol file driving this runner. */
   getCanvasFilePath(): string | null {
     return this.canvasFilePath;
   }
@@ -197,8 +197,7 @@ export class InlineRunnerModal {
     // Build DOM shell
     this.buildContainer();
 
-    // Parse and validate protocol. .rp.json is the primary format; .canvas remains
-    // supported here for transitional tests and legacy direct constructor usage.
+    // Parse and validate .rp.json protocol file.
     const protocolPath = this.canvasFilePath!;
     const file = this.app.vault.getAbstractFileByPath(protocolPath);
     if (!(file instanceof TFile)) {
@@ -210,44 +209,33 @@ export class InlineRunnerModal {
     }
 
     let content: string;
-    const liveJson = protocolPath.endsWith('.canvas')
-      ? this.plugin.canvasLiveEditor.getCanvasJSON(protocolPath)
-      : null;
-    if (liveJson !== null) {
-      content = liveJson;
-    } else {
-      try {
-        content = await this.app.vault.read(file);
-      } catch {
-        const reason = `Could not read protocol file: "${protocolPath}".`;
-        console.warn('[RadiProtocol] InlineRunnerModal.open() failed:', reason);
-        new Notice(reason);
-        this.close();
-        return;
-      }
+    try {
+      content = await this.app.vault.read(file);
+    } catch {
+      const reason = `Could not read protocol file: "${protocolPath}".`;
+      console.warn('[RadiProtocol] InlineRunnerModal.open() failed:', reason);
+      new Notice(reason);
+      this.close();
+      return;
     }
 
     this.selfCheckItems = [];
     this.selfCheckEnabled = false;
-    if (protocolPath.endsWith('.rp.json')) {
-      try {
-        const rawDoc = JSON.parse(content) as { selfCheckItems?: unknown; selfCheckEnabled?: unknown };
-        if (Array.isArray(rawDoc.selfCheckItems)) {
-          this.selfCheckItems = rawDoc.selfCheckItems
-            .filter((item): item is string => typeof item === 'string')
-            .map(item => item.trim())
-            .filter(item => item.length > 0);
-        }
-        if (rawDoc.selfCheckEnabled === true) this.selfCheckEnabled = true;
-      } catch {
-        this.selfCheckItems = [];
-        this.selfCheckEnabled = false;
+    try {
+      const rawDoc = JSON.parse(content) as { selfCheckItems?: unknown; selfCheckEnabled?: unknown };
+      if (Array.isArray(rawDoc.selfCheckItems)) {
+        this.selfCheckItems = rawDoc.selfCheckItems
+          .filter((item): item is string => typeof item === 'string')
+          .map(item => item.trim())
+          .filter(item => item.length > 0);
       }
+      if (rawDoc.selfCheckEnabled === true) this.selfCheckEnabled = true;
+    } catch {
+      this.selfCheckItems = [];
+      this.selfCheckEnabled = false;
     }
 
-    const parseResult = protocolPath.endsWith('.rp.json')
-      ? this.plugin.protocolDocumentParser.parse(content, protocolPath)
-      : this.plugin.canvasParser.parse(content, protocolPath);
+    const parseResult = this.plugin.protocolDocumentParser.parse(content, protocolPath);
     if (!parseResult.success) {
       console.warn('[RadiProtocol] InlineRunnerModal.open() parse failed:', parseResult.error);
       new Notice(parseResult.error);

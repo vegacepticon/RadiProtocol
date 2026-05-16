@@ -16,9 +16,9 @@ import { defaultT, type Translator } from '../i18n';
  *
  * This is the single source of truth for converting between vault-relative
  * paths (what SnippetService deals in) and the snippet-root-relative,
- * extension-less format that `rewriteCanvasRefs` expects.
+ * extension-less format that `rewriteProtocolSnippetRefs` expects.
  */
-export function toCanvasKey(vaultPath: string, snippetRoot: string): string {
+export function toSnippetRelativePath(vaultPath: string, snippetRoot: string): string {
   if (vaultPath === snippetRoot) return '';
   const prefix = snippetRoot + '/';
   let rel = vaultPath.startsWith(prefix) ? vaultPath.slice(prefix.length) : vaultPath;
@@ -276,7 +276,7 @@ export class SnippetService {
   /**
    * Phase 33 (D-16, D-17): Trash a folder recursively via FileManager.
    * Path-safety gated; unsafe path or missing folder → silent no-op (no throw).
-   * Per D-17 refined: does NOT call rewriteCanvasRefs — deletes leave canvas refs broken.
+   * Per D-17 refined: does NOT call rewriteProtocolSnippetRefs — deletes leave canvas refs broken.
    * Wrapped in WriteMutex per normalized path.
    */
   async deleteFolder(path: string): Promise<void> {

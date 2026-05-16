@@ -13,6 +13,8 @@ import type {
   AnswerNode,
   TextBlockNode,
   LoopNode,
+  LoopStartNode,
+  LoopEndNode,
   SnippetNode,
   } from '../graph/graph-model';
 import { defaultT, type Translator } from '../i18n';
@@ -29,6 +31,8 @@ const VALID_KINDS: RPNodeKind[] = [
   'text-block',
   'snippet',
   'loop',
+  'loop-start',
+  'loop-end',
 ];
 
 function getCompatValue(obj: Record<string, unknown>, key: string, legacyKey?: string): unknown {
@@ -229,6 +233,23 @@ export class ProtocolDocumentParser {
           ...base,
           kind: 'loop',
           headerText: getString(fields, 'headerText', '', 'radiprotocol_headerText'),
+        };
+        return node;
+      }
+      case 'loop-start': {
+        const node: LoopStartNode = {
+          ...base,
+          kind: 'loop-start',
+          loopLabel: getString(fields, 'loopLabel', '', 'radiprotocol_loopLabel'),
+          exitLabel: getString(fields, 'exitLabel', '', 'radiprotocol_exitLabel'),
+        };
+        return node;
+      }
+      case 'loop-end': {
+        const node: LoopEndNode = {
+          ...base,
+          kind: 'loop-end',
+          loopStartId: getString(fields, 'loopStartId', '', 'radiprotocol_loopStartId'),
         };
         return node;
       }

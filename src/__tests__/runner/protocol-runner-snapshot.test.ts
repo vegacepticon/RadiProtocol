@@ -1,19 +1,8 @@
 import { describe, it, expect } from 'vitest';
-import * as fs from 'node:fs';
-import * as path from 'node:path';
-import { CanvasParser } from '../../graph/canvas-parser';
 import { ProtocolRunner } from '../../runner/protocol-runner';
 import type { ProtocolGraph } from '../../graph/graph-model';
+import { linearGraph, snippetNodeWithExitGraph, unifiedLoopValidGraph } from '../fixtures/protocol-document-fixtures';
 
-const fixturesDir = path.join(__dirname, '..', 'fixtures');
-
-function loadGraph(name: string): ProtocolGraph {
-  const json = fs.readFileSync(path.join(fixturesDir, name), 'utf-8');
-  const parser = new CanvasParser();
-  const result = parser.parse(json, name);
-  if (!result.success) throw new Error(`Fixture ${name} failed to parse: ${result.error}`);
-  return result.graph;
-}
 
 // ── getSerializableState() — runner snapshot ────────────────────────────────
 
@@ -25,7 +14,7 @@ describe('ProtocolRunner.getSerializableState() snapshot', () => {
 
   it('returns null when runner has completed the protocol', () => {
     // Use a minimal linear fixture that goes start → question → answer → complete
-    const graph = loadGraph('linear.canvas');
+    const graph = linearGraph();
     const runner = new ProtocolRunner();
     runner.start(graph);
     // Advance to complete: choose the first (and only) answer
@@ -51,7 +40,7 @@ describe('ProtocolRunner.getSerializableState() snapshot', () => {
 describe('snapshot — awaiting-snippet-pick (D-22)', () => {
   it('serializes awaiting-snippet-pick state with snippet node id', () => {
     const runner = new ProtocolRunner();
-    runner.start(loadGraph('snippet-node-with-exit.canvas'));
+    runner.start(snippetNodeWithExitGraph());
     runner.chooseAnswer('n-a1');
     expect(runner.getState().status).toBe('awaiting-snippet-pick');
     const serialized = runner.getSerializableState();
@@ -62,7 +51,7 @@ describe('snapshot — awaiting-snippet-pick (D-22)', () => {
   });
 
   it('restores awaiting-snippet-pick round-trip', () => {
-    const graph = loadGraph('snippet-node-with-exit.canvas');
+    const graph = snippetNodeWithExitGraph();
     const runner = new ProtocolRunner();
     runner.start(graph);
     runner.chooseAnswer('n-a1');
@@ -194,7 +183,7 @@ describe('Phase 31 D-09: branch-entered picker snapshot round-trip', () => {
 describe('snapshot — awaiting-loop-pick (RUN-06)', () => {
   it('returns non-null at awaiting-loop-pick state with loop node id', () => {
     const runner = new ProtocolRunner();
-    runner.start(loadGraph('unified-loop-valid.canvas'));
+    runner.start(unifiedLoopValidGraph());
     expect(runner.getState().status).toBe('awaiting-loop-pick');
     const serialized = runner.getSerializableState();
     expect(serialized).not.toBeNull();
@@ -205,7 +194,7 @@ describe('snapshot — awaiting-loop-pick (RUN-06)', () => {
 
   it('serialized awaiting-loop-pick snapshot has all required runner fields', () => {
     const runner = new ProtocolRunner();
-    runner.start(loadGraph('unified-loop-valid.canvas'));
+    runner.start(unifiedLoopValidGraph());
     const serialized = runner.getSerializableState();
     expect(serialized).not.toBeNull();
     if (serialized === null) return;
@@ -221,7 +210,7 @@ describe('snapshot — awaiting-loop-pick (RUN-06)', () => {
   });
 
   it('restores awaiting-loop-pick currentNodeId and status correctly', () => {
-    const graph = loadGraph('unified-loop-valid.canvas');
+    const graph = unifiedLoopValidGraph();
     const runner = new ProtocolRunner();
     runner.start(graph);
     const saved = runner.getSerializableState();
@@ -239,7 +228,7 @@ describe('snapshot — awaiting-loop-pick (RUN-06)', () => {
   });
 
   it('restores accumulatedText after body-branch walk + dead-end + picker', () => {
-    const graph = loadGraph('unified-loop-valid.canvas');
+    const graph = unifiedLoopValidGraph();
     const runner = new ProtocolRunner();
     runner.start(graph);
     // Body branch → question → answer → dead-end → picker iteration 2
@@ -262,7 +251,7 @@ describe('snapshot — awaiting-loop-pick (RUN-06)', () => {
   });
 
   it('canStepBack is true in restored awaiting-loop-pick (loop-entry pushed undo — B2 threading ensures this holds even on the first halt after start())', () => {
-    const graph = loadGraph('unified-loop-valid.canvas');
+    const graph = unifiedLoopValidGraph();
     const runner = new ProtocolRunner();
     runner.start(graph);
     const saved = runner.getSerializableState();
@@ -284,7 +273,7 @@ describe('snapshot — awaiting-loop-pick (RUN-06)', () => {
   });
 
   it('getSerializableState → JSON.stringify → JSON.parse → restoreFrom is idempotent at awaiting-loop-pick', () => {
-    const graph = loadGraph('unified-loop-valid.canvas');
+    const graph = unifiedLoopValidGraph();
     const runner = new ProtocolRunner();
     runner.start(graph);
     runner.chooseLoopBranch('e2');
@@ -310,7 +299,7 @@ describe('snapshot — awaiting-loop-pick (RUN-06)', () => {
   });
 
   it('loopContextStack with iteration=2 survives JSON round-trip', () => {
-    const graph = loadGraph('unified-loop-valid.canvas');
+    const graph = unifiedLoopValidGraph();
     const runner = new ProtocolRunner();
     runner.start(graph);
     runner.chooseLoopBranch('e2');

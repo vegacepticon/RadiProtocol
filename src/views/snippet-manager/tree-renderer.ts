@@ -5,8 +5,8 @@
 import { Menu, Notice, setIcon } from 'obsidian';
 import type RadiProtocolPlugin from '../../main';
 import type { Snippet } from '../../snippets/snippet-model';
-import { rewriteCanvasRefs } from '../../snippets/canvas-ref-sync';
-import { toCanvasKey } from '../../snippets/snippet-service';
+import { rewriteProtocolSnippetRefs } from '../../snippets/protocol-ref-sync';
+import { toSnippetRelativePath } from '../../snippets/snippet-service';
 import { createButton } from '../../utils/dom-helpers';
 
 // Phase 34 Plan 02: HTML5 DnD custom MIME types.
@@ -563,9 +563,9 @@ export class SnippetManagerTreeRenderer {
         const newPath = await this.plugin.snippetService.renameFolder(oldPath, newValue);
         const snippetRoot = this.plugin.settings.snippetFolderPath;
         const mapping = new Map<string, string>([
-          [toCanvasKey(oldPath, snippetRoot), toCanvasKey(newPath, snippetRoot)],
+          [toSnippetRelativePath(oldPath, snippetRoot), toSnippetRelativePath(newPath, snippetRoot)],
         ]);
-        const result = await rewriteCanvasRefs(this.plugin.app, mapping, this.plugin.canvasLiveEditor);
+        const result = await rewriteProtocolSnippetRefs(this.plugin.app, mapping);
         await this.callbacks.rewriteExpandState(oldPath, newPath);
         new Notice(t('snippetManager.folderRenamedNotice', {
           updated: String(result.updated.length),

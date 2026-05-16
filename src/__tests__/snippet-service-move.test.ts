@@ -3,7 +3,7 @@
 // listAllFolders. Every suite asserts path-safety gating, collision pre-flight,
 // WriteMutex wrapping, and self-descendant guards where applicable.
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { SnippetService, toCanvasKey } from '../snippets/snippet-service';
+import { SnippetService, toSnippetRelativePath } from '../snippets/snippet-service';
 
 // ---------------------------------------------------------------------------
 // Mock vault harness (kept local — mirrors snippet-service.test.ts pattern).
@@ -123,27 +123,27 @@ const settings = {
 const ROOT = '.radiprotocol/snippets';
 
 // ---------------------------------------------------------------------------
-// toCanvasKey — pure helper (D-03)
+// toSnippetRelativePath — pure helper (D-03)
 // ---------------------------------------------------------------------------
 
-describe('toCanvasKey (Phase 34 D-03)', () => {
+describe('toSnippetRelativePath (Phase 34 D-03)', () => {
   it('strips snippet-root prefix and .json extension', () => {
-    expect(toCanvasKey(`${ROOT}/a/b.json`, ROOT)).toBe('a/b');
+    expect(toSnippetRelativePath(`${ROOT}/a/b.json`, ROOT)).toBe('a/b');
   });
   it('strips .md extension', () => {
-    expect(toCanvasKey(`${ROOT}/a/b.md`, ROOT)).toBe('a/b');
+    expect(toSnippetRelativePath(`${ROOT}/a/b.md`, ROOT)).toBe('a/b');
   });
   it('leaves folder path untouched after root strip', () => {
-    expect(toCanvasKey(`${ROOT}/a`, ROOT)).toBe('a');
+    expect(toSnippetRelativePath(`${ROOT}/a`, ROOT)).toBe('a');
   });
   it('returns empty string when vaultPath === snippetRoot', () => {
-    expect(toCanvasKey(ROOT, ROOT)).toBe('');
+    expect(toSnippetRelativePath(ROOT, ROOT)).toBe('');
   });
   it('handles nested folder path with no extension', () => {
-    expect(toCanvasKey(`${ROOT}/a/sub/leaf`, ROOT)).toBe('a/sub/leaf');
+    expect(toSnippetRelativePath(`${ROOT}/a/sub/leaf`, ROOT)).toBe('a/sub/leaf');
   });
   it('leaves path unchanged when prefix does not match', () => {
-    expect(toCanvasKey('other/x.json', ROOT)).toBe('other/x');
+    expect(toSnippetRelativePath('other/x.json', ROOT)).toBe('other/x');
   });
 });
 
