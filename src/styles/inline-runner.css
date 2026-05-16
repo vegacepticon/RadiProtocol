@@ -50,11 +50,12 @@
 /* Phase 86: actions zone — pinned between content and footer */
 .rp-inline-runner-actions {
   flex-shrink: 0;
-  padding: var(--size-4-2);
-  border-top: 1px solid var(--background-modifier-border);
   display: flex;
   flex-direction: column;
   gap: var(--size-2-3);
+  padding: var(--size-4-2);
+  border-top: 1px solid var(--background-modifier-border);
+  min-height: 80px;                                    /* consistent actions height across node types */
 }
 
 /* Phase 86: footer — progress bar at bottom */
@@ -240,7 +241,6 @@
   display: flex;
   gap: var(--size-4-2);
   justify-content: flex-end;
-  margin-top: var(--size-4-2);
 }
 
 /* Phase 75: complete heading */
