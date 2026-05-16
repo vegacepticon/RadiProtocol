@@ -258,24 +258,8 @@ export class ProtocolEditorView extends ItemView {
       cls: 'rp-protocol-editor-title',
       text: this.doc?.title ?? this.plugin.i18n.t('protocolEditor.emptyTitle'),
     });
-    /* Phase 4D — toolbar action buttons for each node kind */
+    /* Canvas actions remain minimal; nodes are created by double-clicking the canvas. */
     const actions = toolbar.createDiv({ cls: 'rp-protocol-editor-toolbar-actions' });
-    const kinds: Array<{ key: string; label: string }> = [
-      { key: 'start', label: this.plugin.i18n.t('protocolEditor.addStart') },
-      { key: 'question', label: this.plugin.i18n.t('protocolEditor.addQuestion') },
-      { key: 'answer', label: this.plugin.i18n.t('protocolEditor.addAnswer') },
-      { key: 'text-block', label: this.plugin.i18n.t('protocolEditor.addTextBlock') },
-      { key: 'loop', label: this.plugin.i18n.t('protocolEditor.addLoop') },
-      { key: 'snippet', label: this.plugin.i18n.t('protocolEditor.addSnippet') },
-    ];
-    for (const { key, label } of kinds) {
-      const btn = actions.createEl('button', {
-        cls: 'rp-protocol-editor-add-btn',
-        text: label,
-      });
-      btn.setAttr('data-node-kind', key);
-      btn.addEventListener('click', () => this.addNodeAtCenter(key as RPNodeKind | null));
-    }
 
     const selfCheckBtn = actions.createEl('button', {
       cls: 'rp-protocol-editor-add-btn',
@@ -329,38 +313,66 @@ export class ProtocolEditorView extends ItemView {
     }
   }
 
-  /* Phase 4D — create a new node at the center of the viewport */
-  private addNodeAtCenter(kind: RPNodeKind | null): void {
-    if (this.doc === null || this.protocolPath === null || this.viewportEl === null) return;
-
-    const cx = (this.viewportEl.scrollLeft + this.viewportEl.clientWidth / 2) / this.zoom - PROTOCOL_EDITOR_ORIGIN_X - DEFAULT_NODE_WIDTH / 2;
-    const cy = (this.viewportEl.scrollTop + this.viewportEl.clientHeight / 2) / this.zoom - PROTOCOL_EDITOR_ORIGIN_Y - DEFAULT_NODE_HEIGHT / 2;
-
+  private createProtocolEditorNode(kind: RPNodeKind | null, x: number, y: number): ProtocolNodeRecord {
     const defaults = (kind !== null && NODE_KIND_DEFAULTS[kind])
       ? NODE_KIND_DEFAULTS[kind]
       : { kind: null as RPNodeKind | null, fields: {} };
 
-    const newNode: ProtocolNodeRecord = {
+    return {
       id: nodeUid(),
       kind: defaults.kind,
-      x: Math.round(cx),
-      y: Math.round(cy),
+      x: Math.round(x),
+      y: Math.round(y),
       width: DEFAULT_NODE_WIDTH,
       height: DEFAULT_NODE_HEIGHT,
       color: defaults.color ?? defaultColorForProtocolEditorNodeKind(defaults.kind),
       text: defaults.text,
       fields: { ...defaults.fields },
     };
+  }
+
+  private addNodeAtWorldPoint(kind: RPNodeKind | null, x: number, y: number): void {
+    if (this.doc === null || this.protocolPath === null) return;
+
+    const newNode = this.createProtocolEditorNode(kind, x, y);
 
     void this.plugin.protocolDocumentStore.update(this.protocolPath, (existing) => {
       if (existing === null) throw new Error('Protocol file disappeared');
       return { ...existing, nodes: [...existing.nodes, newNode], viewport: this.currentViewportState(), updatedAt: new Date().toISOString() };
-    }).then(() => {
-      void this.loadProtocol(this.protocolPath!);
+    }).then(async () => {
+      await this.loadProtocol(this.protocolPath!);
       new Notice(this.plugin.i18n.t('protocolEditor.nodeCreated'));
+      this.openEditModal(newNode);
     }).catch((err) => {
       new Notice(this.plugin.i18n.t('protocolEditor.saveFailed', { error: String(err) }));
     });
+  }
+
+  private openNodeKindPickerAtWorldPoint(x: number, y: number): void {
+    if (this.doc === null || this.protocolPath === null) return;
+    const t = this.plugin.i18n.t.bind(this.plugin.i18n);
+    const modalEl = document.body.createDiv({ cls: 'rp-protocol-editor-modal-backdrop' });
+    const modal = modalEl.createDiv({ cls: 'rp-protocol-editor-modal rp-protocol-editor-node-kind-modal' });
+    const header = modal.createDiv({ cls: 'rp-protocol-editor-modal-header' });
+    header.createEl('h3', { text: t('protocolEditor.chooseNodeType') });
+    const closeBtn = header.createEl('button', { cls: 'rp-protocol-editor-modal-close', text: '✕' });
+    const closeModal = () => { modalEl.remove(); this.restoreEditorFocus(); };
+    closeBtn.addEventListener('click', closeModal);
+
+    const body = modal.createDiv({ cls: 'rp-protocol-editor-modal-body' });
+    const grid = body.createDiv({ cls: 'rp-protocol-editor-node-kind-grid' });
+    for (const kind of EDITABLE_NODE_KINDS) {
+      const btn = grid.createEl('button', {
+        cls: 'rp-protocol-editor-node-kind-choice',
+        text: t(`protocolEditor.nodeKind.${kind}`),
+      });
+      btn.setAttr('data-node-kind', kind);
+      btn.addEventListener('click', () => {
+        closeModal();
+        this.addNodeAtWorldPoint(kind, x, y);
+      });
+    }
+    modalEl.addEventListener('click', (e) => { if (e.target === modalEl) closeModal(); });
   }
 
   private renderDocument(): void {
@@ -969,8 +981,21 @@ export class ProtocolEditorView extends ItemView {
   private bindViewportControls(): void {
     if (this.viewportEl === null) return;
 
-    this.viewportEl.addEventListener('mousedown', (e: MouseEvent) => {
+    this.viewportEl.addEventListener('dblclick', (e: MouseEvent) => {
       if (e.button !== 0) return;
+      const target = e.target as Element;
+      if (target.closest('.rp-protocol-editor-minimap') !== null) return;
+      if (target.closest('.rp-protocol-editor-node') !== null) return;
+      if (target.closest('.rp-protocol-editor-port') !== null) return;
+      if (target.closest('.rp-protocol-editor-edge-group') !== null) return;
+      e.preventDefault();
+      e.stopPropagation();
+      const point = this.clientPointToWorldPoint(e.clientX, e.clientY);
+      this.openNodeKindPickerAtWorldPoint(point.x - DEFAULT_NODE_WIDTH / 2, point.y - DEFAULT_NODE_HEIGHT / 2);
+    });
+
+    this.viewportEl.addEventListener('mousedown', (e: MouseEvent) => {
+      if (e.button !== 0 || e.detail > 1) return;
       const target = e.target as Element;
       if (target.closest('.rp-protocol-editor-minimap') !== null) return;
       if (target.closest('.rp-protocol-editor-node') !== null) return;

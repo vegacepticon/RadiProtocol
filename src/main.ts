@@ -15,8 +15,7 @@ import { CanvasNodeFactory } from './canvas/canvas-node-factory';
 import { EdgeLabelSyncService } from './canvas/edge-label-sync-service';
 import { LibraryService } from './snippets/library-service';
 // Phase 45 (LOOP-06): start-from-node command dependencies
-import { NodePickerModal, buildNodeOptions, buildStartableProtocolNodeOptions } from './views/node-picker-modal';
-import { GraphValidator } from './graph/graph-validator';
+import { NodePickerModal, buildStartableProtocolNodeOptions } from './views/node-picker-modal';
 // Phase 54: inline protocol display mode
 import { InlineRunnerModal } from './views/inline-runner-modal';
 import { InsertSnippetModal } from './views/insert-snippet-modal';
@@ -495,96 +494,14 @@ export default class RadiProtocolPlugin extends Plugin {
   }
 
   /**
-   * Phase 45 (LOOP-06, D-12/D-13): "Start from specific node" command callback.
+   * Start the inline runner from a selected start-enabled node in a .rp.json protocol.
    *
-   * Flow:
-   *   1. Discover active canvas leaf (editor-panel pattern).
-   *   2. Read canvas content (live-JSON preferred, disk fallback — Pitfall BUG-02/03).
-   *   3. Parse via CanvasParser; validate via GraphValidator.
-   *   4. Any parse/validate error -> Notice + abort (D-CL-06 - validator blocks start
-   *      including MIGRATE-01 on legacy loop-start/loop-end).
-   *   5. buildNodeOptions produces 4-kind picker list (Plan 45-01).
-   *   6. Check active file is a markdown note. On pick, open InlineRunnerModal.
+   * The command intentionally ignores any open Obsidian Canvas leaves: RadiProtocol's
+   * active authoring/runtime path is .rp.json, so the node list must come only from
+   * the configured protocol picker folder.
    */
   private async handleStartFromNode(): Promise<void> {
-    // 1. Find active canvas leaf — same pattern as editor-panel-view.ts:54-57
-    const canvasLeaves = this.app.workspace.getLeavesOfType('canvas');
-    const activeLeaf = this.app.workspace.getMostRecentLeaf();
-    const canvasLeaf = canvasLeaves.find(l => l === activeLeaf) ?? canvasLeaves[0];
-    if (!canvasLeaf) {
-      await this.handleStartFromProtocolNode();
-      return;
-    }
-
-    const canvasPath = (canvasLeaf.view as { file?: { path: string } }).file?.path;
-    if (!canvasPath) {
-      new Notice('Active canvas has no file path.');
-      return;
-    }
-
-    // 2. Read canvas content — prefer live in-memory JSON (BUG-02/03 avoidance).
-    let content: string;
-    const liveJson = this.canvasLiveEditor.getCanvasJSON(canvasPath);
-    if (liveJson !== null) {
-      content = liveJson;
-    } else {
-      const file = this.app.vault.getAbstractFileByPath(canvasPath);
-      if (!(file instanceof TFile)) {
-        new Notice('Canvas file not found.');
-        return;
-      }
-      try {
-        content = await this.app.vault.read(file);
-      } catch {
-        new Notice('Could not read canvas file.');
-        return;
-      }
-    }
-
-    // 3. Parse
-    const parseResult = this.canvasParser.parse(content, canvasPath);
-    if (!parseResult.success) {
-      new Notice(`Canvas parse failed: ${parseResult.error}`);
-      return;
-    }
-
-    // 4. Validate — MIGRATE-01 (legacy loop-start/loop-end) blocks start per D-CL-06.
-    // Phase 51 D-04 (PICKER-01): inject snippet-file probe so specific-bound
-    // SnippetNode references are verified at canvas-open. Legacy directory-bound
-    // snippets are unaffected (probe never invoked when radiprotocol_snippetPath is absent).
-    // See `docs/ARCHITECTURE-NOTES.md#snippet-node-binding-and-picker`.
-    const validator = new GraphValidator({
-      snippetFileProbe: (absPath) => this.app.vault.getAbstractFileByPath(absPath) !== null,
-      snippetFolderPath: this.settings.snippetFolderPath,
-      // Phase 84 (I18N-02): localized validator messages.
-      t: this.i18n.t.bind(this.i18n),
-    });
-    const errors = validator.validate(parseResult.graph);
-    if (errors.length > 0) {
-      const firstError = errors[0] ?? 'Canvas validation failed.';
-      new Notice(`Canvas validation failed: ${firstError}`);
-      return;
-    }
-
-    // 5. Build picker options (4 kinds via Plan 45-01)
-    const options = buildNodeOptions(parseResult.graph);
-    if (options.length === 0) {
-      new Notice('No startable nodes in this canvas.');
-      return;
-    }
-
-    // 6. Active file must be a markdown note
-    const activeFile = this.app.workspace.getActiveFile();
-    if (activeFile === null || activeFile.extension !== 'md') {
-      new Notice('Open a Markdown note first, then run this command.');
-      return;
-    }
-
-    // Open node picker; on pick, launch InlineRunnerModal at the chosen node
-    new NodePickerModal(this.app, options, (opt) => {
-      const modal = new InlineRunnerModal(this.app, this, canvasPath, activeFile, opt.id);
-      void modal.open();
-    }).open();
+    await this.handleStartFromProtocolNode();
   }
 
   private async handleStartFromProtocolNode(): Promise<void> {

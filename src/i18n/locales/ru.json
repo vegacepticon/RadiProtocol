@@ -33,6 +33,7 @@
     "addTextBlock": "Добавить Текст",
     "addLoop": "Добавить Цикл",
     "addSnippet": "Добавить Сниппет",
+    "chooseNodeType": "Выберите тип узла",
     "editNode": "Редактировать узел",
     "deleteNode": "Удалить узел",
     "deleteNodeConfirm": "Удалить этот узел и все связанные рёбра?",

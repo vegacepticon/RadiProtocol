@@ -33,6 +33,7 @@
     "addTextBlock": "Add Text",
     "addLoop": "Add Loop",
     "addSnippet": "Add Snippet",
+    "chooseNodeType": "Choose node type",
     "editNode": "Edit Node",
     "deleteNode": "Delete Node",
     "deleteNodeConfirm": "Delete this node and all connected edges?",

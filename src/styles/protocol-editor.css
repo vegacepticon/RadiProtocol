@@ -233,7 +233,7 @@
 }
 
 /* Добавляем цветные превью слева от текста */
-.rp-protocol-editor-add-btn::before {
+.rp-protocol-editor-add-btn[data-node-kind]::before {
   content: '';
   position: absolute;
   left: var(--size-4-1);
@@ -279,9 +279,32 @@
 }
 
 /* При наведении усилить границу превью */
-.rp-protocol-editor-add-btn:hover::before {
+.rp-protocol-editor-add-btn[data-node-kind]:hover::before {
   border-color: var(--text-on-accent);
   opacity: 1;
+}
+
+.rp-protocol-editor-node-kind-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: var(--size-4-2);
+}
+
+.rp-protocol-editor-node-kind-choice {
+  padding: var(--size-4-2) var(--size-4-3);
+  border: 1px solid var(--background-modifier-border);
+  border-radius: var(--radius-s);
+  background: var(--background-secondary);
+  color: var(--text-normal);
+  cursor: pointer;
+  text-align: left;
+}
+
+.rp-protocol-editor-node-kind-choice:hover,
+.rp-protocol-editor-node-kind-choice:focus {
+  border-color: var(--interactive-accent);
+  background: var(--interactive-accent);
+  color: var(--text-on-accent);
 }
 
 /* Phase 4D — draggable node cursor */
