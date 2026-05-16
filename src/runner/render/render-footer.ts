@@ -27,7 +27,6 @@ export function renderRunnerFooter(
       text: 'Back',
     });
     if ('setAttribute' in backBtn) backBtn.setAttribute('aria-label', 'Go back one step');
-    backBtn.title = 'Go back one step';
     // Phase 66 D-01 + D-02 + D-03: visual half of the double-click guard.
     // Disable Back synchronously on first click; runner-side guards handle any races.
     host.bindClick(backBtn, () => {
@@ -41,7 +40,6 @@ export function renderRunnerFooter(
       text: 'Skip',
     });
     if ('setAttribute' in skipBtn) skipBtn.setAttribute('aria-label', 'Skip this question');
-    skipBtn.title = 'Skip this question';
     host.bindClick(skipBtn, options.onSkip);
   }
 }

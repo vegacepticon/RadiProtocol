@@ -104,12 +104,11 @@
   margin: 0 0 var(--size-4-3) 0;
 }
 
-.rp-inline-runner-content .rp-answer-list,
-.rp-inline-runner-content .rp-snippet-branch-list {
+.rp-inline-runner-actions .rp-answer-list,
+.rp-inline-runner-actions .rp-snippet-branch-list {
   display: flex;
   flex-direction: column;
   gap: var(--size-4-2);
-  margin-bottom: var(--size-4-3);
 }
 
 /* Snippet picker inline host */
@@ -195,21 +194,23 @@
   line-height: var(--line-height-tight);
 }
 
-.rp-inline-runner-content .rp-answer-list,
-.rp-inline-runner-content .rp-snippet-branch-list,
-.rp-inline-runner-content .rp-loop-picker-list {
+/* Lists inside the actions zone */
+.rp-inline-runner-actions .rp-answer-list,
+.rp-inline-runner-actions .rp-snippet-branch-list,
+.rp-inline-runner-actions .rp-loop-picker-list {
   gap: var(--size-2-3);
-  margin-bottom: var(--size-4-2);
+  margin-bottom: 0;
 }
 
-.rp-inline-runner-content .rp-answer-btn,
-.rp-inline-runner-content .rp-snippet-branch-btn,
-.rp-inline-runner-content .rp-loop-body-btn,
-.rp-inline-runner-content .rp-loop-exit-btn,
-.rp-inline-runner-content .rp-step-back-btn,
-.rp-inline-runner-content .rp-skip-btn {
+/* Unified button sizing for all runner action buttons */
+.rp-inline-runner-actions .rp-answer-btn,
+.rp-inline-runner-actions .rp-snippet-branch-btn,
+.rp-inline-runner-actions .rp-loop-body-btn,
+.rp-inline-runner-actions .rp-loop-exit-btn,
+.rp-inline-runner-actions .rp-step-back-btn,
+.rp-inline-runner-actions .rp-skip-btn {
   padding: var(--size-2-3) var(--size-4-2);
-  min-height: 28px;
+  min-height: 36px;
   white-space: normal;
   overflow-wrap: anywhere;
   word-break: break-word;
