@@ -72,7 +72,7 @@
   transform: none;
 }
 
-/* Phase 88: Content zone — top half, scrollable */
+/* Phase 88: Content zone — flexible, scrollable */
 .rp-inline-runner-content {
   flex: 1 1 auto;
   min-height: 0;
@@ -80,18 +80,34 @@
   padding: var(--size-4-2);
 }
 
-/* Phase 88: Actions zone — fixed from top of bottom half, scrollable, buttons anchor top */
+/* Phase 88: Actions zone — anchored button area.
+ * Shown for states with buttons (at-node, awaiting-loop-pick).
+ * Hidden for states that need full content area (snippet-pick, snippet-fill, etc.). */
 .rp-inline-runner-actions {
-  flex: 0 0 50%;
+  flex: 1 1 auto;
   min-height: 0;
   overflow-y: auto;
-  flex-shrink: 0;
   border-top: 1px solid var(--background-modifier-border);
   padding: var(--size-2-3) var(--size-4-2);
   display: flex;
   flex-direction: column;
   align-items: stretch;
-  justify-content: flex-start;
+}
+
+/* When actions are shown (at-node, awaiting-loop-pick), split 50/50 */
+.rp-inline-runner-container.rp-state-actions .rp-inline-runner-content {
+  flex: 0 0 50%;
+}
+.rp-inline-runner-container.rp-state-actions .rp-inline-runner-actions {
+  flex: 0 0 50%;
+}
+
+/* When content is fullscreen (no actions zone visible), content takes all */
+.rp-inline-runner-container.rp-state-content-only .rp-inline-runner-content {
+  flex: 1 1 auto;
+}
+.rp-inline-runner-container.rp-state-content-only .rp-inline-runner-actions {
+  display: none;
 }
 
 /* Phase 88: Button lists inside actions */

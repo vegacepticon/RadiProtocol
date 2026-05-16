@@ -475,6 +475,16 @@ export class InlineRunnerModal {
     this.contentEl.empty();
     if (this.actionsEl !== null) this.actionsEl.empty();
 
+    // Toggle layout state class on container:
+    //   rp-state-actions      → split layout: content 50% + actions 50% (at-node, awaiting-loop-pick)
+    //   rp-state-content-only → full-height content, actions hidden (all other states)
+    const actionsStates: RunnerState['status'][] = ['at-node', 'awaiting-loop-pick'];
+    const hasActions = actionsStates.includes(state.status);
+    if (this.containerEl !== null) {
+      this.containerEl.toggleClass('rp-state-actions', hasActions);
+      this.containerEl.toggleClass('rp-state-content-only', !hasActions);
+    }
+
     // Recreate footer-row children (close btn destroyed by empty, must re-add)
     if (this.footerBtnRowEl !== null) {
       this.footerBtnRowEl.empty();
