@@ -8,7 +8,7 @@ Protocols are authored as **`.rp.json`** files — a first-party JSON format
 with a custom visual graph editor. Legacy `.canvas` (JSON Canvas) support is
 preserved for backward compatibility and migration.
 
-**Latest release:** 1.17.13 (2026-05-16) — Remove legacy editor-panel.css + improve CSS audit + fix runner button width
+**Latest release:** 1.17.14 (2026-05-16) — Restructure inline runner: 3-zone layout with stable button anchors, close button in footer row, question text frame
 
 ## Features
 
