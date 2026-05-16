@@ -8,7 +8,7 @@ Protocols are authored as **`.rp.json`** files — a first-party JSON format
 with a custom visual graph editor. Legacy `.canvas` (JSON Canvas) support is
 preserved for backward compatibility and migration.
 
-**Latest release:** 1.17.11 (2026-05-17) — Runner zone merge + horizontal snippet checkboxes + breadcrumb wrap
+**Latest release:** 1.17.12 (2026-05-17) — Pinned runner actions zone + SVG footer controls
 
 ## Features
 
