@@ -91,6 +91,8 @@
     "loopExitLabel": "Эта связь выходит из цикла",
     "minimapLabel": "Миникарта — кликните или перетащите для панорамирования",
     "toggleMinimap": "Скрыть/показать миникарту",
+    "autoLayout": "Авторазмещение",
+    "autoLayoutDone": "Узлы размещены автоматически.",
     "confirmDelete": "Подтвердить удаление",
     "snippetFolderPathLabel": "Папка сниппетов",
     "snippetTargetLabel": "Цель сниппета",

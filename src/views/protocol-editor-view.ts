@@ -9,8 +9,8 @@ export const PROTOCOL_EDITOR_VIEW_TYPE = 'radiprotocol-protocol-editor';
 /* Phase 4D — default node dimensions and kind-specific defaults */
 const DEFAULT_NODE_WIDTH = 200;
 const DEFAULT_NODE_HEIGHT = 80;
-const DEFAULT_VIEWPORT_WIDTH = 20000;
-const DEFAULT_VIEWPORT_HEIGHT = 16000;
+const DEFAULT_VIEWPORT_WIDTH = 30000;
+const DEFAULT_VIEWPORT_HEIGHT = 24000;
 const PROTOCOL_EDITOR_ORIGIN_X = DEFAULT_VIEWPORT_WIDTH / 2;
 const PROTOCOL_EDITOR_ORIGIN_Y = DEFAULT_VIEWPORT_HEIGHT / 2;
 const MIN_NODE_WIDTH = 120;
@@ -305,6 +305,16 @@ export class ProtocolEditorView extends ItemView {
     });
     setIcon(minimapToggleBtn, 'map');
     minimapToggleBtn.addEventListener('click', () => this.toggleMinimap());
+
+    const autoLayoutBtn = floatingActions.createEl('button', {
+      cls: 'rp-protocol-editor-floating-action',
+      attr: {
+        type: 'button',
+        'aria-label': this.plugin.i18n.t('protocolEditor.autoLayout'),
+      },
+    });
+    setIcon(autoLayoutBtn, 'layout');
+    autoLayoutBtn.addEventListener('click', () => this.autoLayoutNodes());
 
     workspace.createDiv({
       cls: 'rp-protocol-editor-canvas-title',
@@ -1091,6 +1101,193 @@ export class ProtocolEditorView extends ItemView {
     this.viewportEl.addEventListener('scroll', () => {
       this.updateMinimapViewport();
       this.scheduleViewportSave();
+    });
+  }
+
+  private autoLayoutNodes(): void {
+    if (this.doc === null || this.protocolPath === null) return;
+    const nodes = this.doc.nodes;
+    const edges = this.doc.edges;
+    if (nodes.length === 0) return;
+
+    const adjacency = new Map<string, string[]>();
+    const reverseAdj = new Map<string, string[]>();
+    for (const node of nodes) {
+      adjacency.set(node.id, []);
+      reverseAdj.set(node.id, []);
+    }
+    for (const edge of edges) {
+      adjacency.get(edge.fromNodeId)?.push(edge.toNodeId);
+      reverseAdj.get(edge.toNodeId)?.push(edge.fromNodeId);
+    }
+
+    // Longest path via topological DP
+    const inDegree = new Map<string, number>();
+    for (const node of nodes) inDegree.set(node.id, 0);
+    for (const edge of edges) {
+      inDegree.set(edge.toNodeId, (inDegree.get(edge.toNodeId) ?? 0) + 1);
+    }
+    const queue: string[] = [];
+    const dist = new Map<string, number>();
+    const prev = new Map<string, string | null>();
+    for (const node of nodes) {
+      const d = inDegree.get(node.id) ?? 0;
+      if (d === 0) {
+        queue.push(node.id);
+        dist.set(node.id, 1);
+        prev.set(node.id, null);
+      }
+    }
+    let head = 0;
+    while (head < queue.length) {
+      const u = queue[head++];
+      if (u === undefined) break;
+      for (const v of adjacency.get(u) ?? []) {
+        const du = dist.get(u)!;
+        const dv = dist.get(v) ?? 0;
+        if (du + 1 > dv) {
+          dist.set(v, du + 1);
+          prev.set(v, u);
+        }
+        const indeg = (inDegree.get(v) ?? 1) - 1;
+        inDegree.set(v, indeg);
+        if (indeg === 0) queue.push(v);
+      }
+    }
+
+    // Reconstruct longest path
+    let longestEnd: string | null = null;
+    let maxDist = 0;
+    for (const [id, d] of dist) {
+      if (d > maxDist) {
+        maxDist = d;
+        longestEnd = id;
+      }
+    }
+    const longestPath: string[] = [];
+    let cur = longestEnd;
+    while (cur !== null) {
+      longestPath.unshift(cur);
+      cur = prev.get(cur) ?? null;
+    }
+
+    // Pick center node
+    let centerId: string;
+    if (longestPath.length <= 1) {
+      // fallback: max total degree
+      let bestDegree = -1;
+      for (const node of nodes) {
+        const deg = (adjacency.get(node.id)?.length ?? 0) + (reverseAdj.get(node.id)?.length ?? 0);
+        if (deg > bestDegree) {
+          bestDegree = deg;
+          centerId = node.id;
+        }
+      }
+      centerId = centerId!;
+    } else {
+      centerId = longestPath[Math.floor(longestPath.length / 2)]!;
+    }
+
+    // BFS levels from center
+    const levels = new Map<string, number>();
+    const bfsQueue: string[] = [centerId];
+    levels.set(centerId, 0);
+    let bfsHead = 0;
+    while (bfsHead < bfsQueue.length) {
+      const u = bfsQueue[bfsHead++];
+      if (u === undefined) continue;
+      const lu = levels.get(u)!;
+      for (const v of adjacency.get(u) ?? []) {
+        if (!levels.has(v)) {
+          levels.set(v, lu + 1);
+          bfsQueue.push(v);
+        } else if (Math.abs(lu + 1) < Math.abs(levels.get(v)!)) {
+          levels.set(v, lu + 1);
+        }
+      }
+      for (const v of reverseAdj.get(u) ?? []) {
+        if (!levels.has(v)) {
+          levels.set(v, lu - 1);
+          bfsQueue.push(v);
+        } else if (Math.abs(lu - 1) < Math.abs(levels.get(v)!)) {
+          levels.set(v, lu - 1);
+        }
+      }
+    }
+    // nodes unreachable from center default to level 0
+    for (const node of nodes) {
+      if (!levels.has(node.id)) levels.set(node.id, 0);
+    }
+
+    // Group by level and assign y
+    const byLevel = new Map<number, string[]>();
+    for (const [id, lvl] of levels) {
+      if (!byLevel.has(lvl)) byLevel.set(lvl, []);
+      byLevel.get(lvl)!.push(id);
+    }
+    const nodeY = new Map<string, number>();
+    const LEVEL_X_GAP = 260;
+    const NODE_Y_GAP = 120;
+    for (const [, ids] of byLevel) {
+      // sort by current y to preserve approximate ordering
+      const sorted = ids
+        .map(id => nodes.find(n => n.id === id))
+        .filter((n): n is ProtocolNodeRecord => n !== undefined)
+        .sort((a, b) => a.y - b.y);
+      const totalHeight = sorted.length * DEFAULT_NODE_HEIGHT + (sorted.length - 1) * NODE_Y_GAP;
+      const startY = -totalHeight / 2;
+      for (let i = 0; i < sorted.length; i++) {
+        const n = sorted[i];
+        if (n === undefined) continue;
+        nodeY.set(n.id, startY + i * (DEFAULT_NODE_HEIGHT + NODE_Y_GAP));
+      }
+    }
+
+    const positions = new Map<string, { x: number; y: number }>();
+    for (const node of nodes) {
+      const lvl = levels.get(node.id) ?? 0;
+      positions.set(node.id, {
+        x: lvl * LEVEL_X_GAP - DEFAULT_NODE_WIDTH / 2,
+        y: (nodeY.get(node.id) ?? 0),
+      });
+    }
+
+    // Center bounding box at (0,0) world space
+    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+    for (const node of nodes) {
+      const p = positions.get(node.id)!;
+      if (p.x < minX) minX = p.x;
+      if (p.x + node.width > maxX) maxX = p.x + node.width;
+      if (p.y < minY) minY = p.y;
+      if (p.y + node.height > maxY) maxY = p.y + node.height;
+    }
+    const shiftX = (minX + maxX) / 2;
+    const shiftY = (minY + maxY) / 2;
+    for (const node of nodes) {
+      const p = positions.get(node.id)!;
+      p.x = Math.round(p.x - shiftX);
+      p.y = Math.round(p.y - shiftY);
+    }
+
+    // Persist
+    void this.plugin.protocolDocumentStore.update(this.protocolPath, (existing) => {
+      if (existing === null) throw new Error('Protocol file disappeared');
+      const updatedNodes = existing.nodes.map((n) => {
+        const p = positions.get(n.id);
+        if (p === undefined) return n;
+        return { ...n, x: p.x, y: p.y };
+      });
+      return {
+        ...existing,
+        nodes: updatedNodes,
+        viewport: this.currentViewportState(),
+        updatedAt: new Date().toISOString(),
+      };
+    }).then(async () => {
+      new Notice(this.plugin.i18n.t('protocolEditor.autoLayoutDone'));
+      await this.loadProtocol(this.protocolPath!);
+    }).catch((err) => {
+      new Notice(this.plugin.i18n.t('protocolEditor.saveFailed', { error: String(err) }));
     });
   }
 

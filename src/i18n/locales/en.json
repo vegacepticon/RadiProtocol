@@ -91,6 +91,8 @@
     "loopExitLabel": "This edge exits the loop",
     "minimapLabel": "Minimap — click or drag to pan",
     "toggleMinimap": "Toggle minimap",
+    "autoLayout": "Auto layout",
+    "autoLayoutDone": "Nodes auto-arranged.",
     "confirmDelete": "Confirm delete",
     "snippetFolderPathLabel": "Snippet folder path",
     "snippetTargetLabel": "Snippet target",
