@@ -8,7 +8,7 @@ Protocols are authored as **`.rp.json`** files — a first-party JSON format
 with a custom visual graph editor. Legacy `.canvas` (JSON Canvas) support is
 preserved for backward compatibility and migration.
 
-**Latest release:** 1.17.8 (2026-05-17) — Unified runner button sizing; removed duplicate hover tooltips
+**Latest release:** 1.17.9 (2026-05-17) — Fixed runner panel height to prevent button position jitter between nodes
 
 ## Features
 
