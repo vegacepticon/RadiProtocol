@@ -631,4 +631,99 @@ describe('ProtocolRunner RUNFIX-01 — manual edits survive loop transitions', (
     // snapshot in chooseLoopBranch captured the manual edit, not the pre-edit value.
     expect(state.accumulatedText).toBe('PRE_EXIT_EDIT');
   });
+  it('v1.17.3: step-back from a start-from-loop picker does not leave an invalid loop-pick state', async () => {
+    const graph: ProtocolGraph = {
+      canvasFilePath: 'test:start-from-loop.canvas',
+      nodes: new Map<string, RPNode>([
+        ['n-start', { id: 'n-start', kind: 'start', x: 0, y: 0, width: 200, height: 60 }],
+        ['n-loop', { id: 'n-loop', kind: 'loop', x: 0, y: 120, width: 200, height: 60, headerText: 'Loop' }],
+        ['n-body', { id: 'n-body', kind: 'text-block', x: 260, y: 120, width: 200, height: 60, content: 'Body' }],
+        ['n-end', { id: 'n-end', kind: 'text-block', x: 0, y: 240, width: 200, height: 60, content: 'End' }],
+      ]),
+      edges: [
+        { id: 'e1', fromNodeId: 'n-start', toNodeId: 'n-loop' },
+        { id: 'e2', fromNodeId: 'n-loop', toNodeId: 'n-body' },
+        { id: 'e3', fromNodeId: 'n-loop', toNodeId: 'n-end', label: '+exit' },
+      ],
+      adjacency: new Map<string, string[]>([
+        ['n-start', ['n-loop']],
+        ['n-loop', ['n-body', 'n-end']],
+        ['n-body', []],
+        ['n-end', []],
+      ]),
+      reverseAdjacency: new Map<string, string[]>([
+        ['n-start', []],
+        ['n-loop', ['n-start']],
+        ['n-body', ['n-loop']],
+        ['n-end', ['n-loop']],
+      ]),
+      startNodeId: 'n-start',
+    };
+    const runner = new ProtocolRunner();
+    runner.start(graph, 'n-loop');
+
+    let state = runner.getState();
+    expect(state.status).toBe('awaiting-loop-pick');
+    if (state.status !== 'awaiting-loop-pick') return;
+    expect(state.canStepBack).toBe(true);
+
+    runner.stepBack();
+    await Promise.resolve();
+    state = runner.getState();
+    expect(state.status).not.toBe('error');
+    expect(state.status).toBe('awaiting-loop-pick');
+    if (state.status !== 'awaiting-loop-pick') return;
+    expect(state.nodeId).toBe('n-loop');
+    expect(state.canStepBack).toBe(false);
+  });
+
+  it('v1.17.3: back after a non-plus answer branch exits a loop through the loop exit target without loop-node-not-found errors', async () => {
+    const graph: ProtocolGraph = {
+      canvasFilePath: 'test:loop-answer-quick-exit.canvas',
+      nodes: new Map<string, RPNode>([
+        ['start', { id: 'start', kind: 'start', x: 0, y: 0, width: 200, height: 60 }],
+        ['loop', { id: 'loop', kind: 'loop', x: 0, y: 100, width: 200, height: 80, headerText: 'Loop' }],
+        ['answer', { id: 'answer', kind: 'answer', x: 260, y: 100, width: 200, height: 80, answerText: 'Answer' }],
+        ['after', { id: 'after', kind: 'question', x: 520, y: 100, width: 200, height: 80, questionText: 'After loop' }],
+      ]),
+      edges: [
+        { id: 'e-start', fromNodeId: 'start', toNodeId: 'loop' },
+        { id: 'e-body', fromNodeId: 'loop', toNodeId: 'answer', label: 'body' },
+        { id: 'e-exit', fromNodeId: 'loop', toNodeId: 'after', label: '+exit' },
+        { id: 'e-answer-exit', fromNodeId: 'answer', toNodeId: 'after' },
+      ],
+      adjacency: new Map<string, string[]>([
+        ['start', ['loop']],
+        ['loop', ['answer', 'after']],
+        ['answer', ['after']],
+        ['after', []],
+      ]),
+      reverseAdjacency: new Map<string, string[]>([
+        ['start', []],
+        ['loop', ['start']],
+        ['answer', ['loop']],
+        ['after', ['loop', 'answer']],
+      ]),
+      startNodeId: 'start',
+    };
+
+    const runner = new ProtocolRunner();
+    runner.start(graph);
+    expect(runner.getState().status).toBe('awaiting-loop-pick');
+
+    runner.chooseLoopBranch('e-body');
+    let state = runner.getState();
+    expect(state.status).toBe('at-node');
+    if (state.status !== 'at-node') return;
+    expect(state.currentNodeId).toBe('after');
+
+    runner.stepBack();
+    await Promise.resolve();
+    state = runner.getState();
+    expect(state.status).not.toBe('error');
+    expect(state.status).toBe('awaiting-loop-pick');
+    if (state.status !== 'awaiting-loop-pick') return;
+    expect(state.nodeId).toBe('loop');
+    expect(state.canStepBack).toBe(true);
+  });
 });

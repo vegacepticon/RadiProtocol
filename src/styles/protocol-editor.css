@@ -677,3 +677,139 @@
   flex: 0 0 auto;
 }
 
+
+/* v1.17.3: canvas-first editor chrome polish */
+.rp-protocol-editor-toolbar {
+  display: none;
+}
+
+.rp-protocol-editor-floating-actions {
+  position: absolute;
+  top: var(--size-4-3);
+  right: var(--size-4-3);
+  z-index: 8;
+  display: flex;
+  gap: var(--size-2-2);
+  padding: var(--size-2-1);
+  border: 1px solid var(--background-modifier-border);
+  border-radius: var(--radius-m);
+  background: color-mix(in srgb, var(--background-primary) 88%, transparent);
+  box-shadow: var(--shadow-s);
+  backdrop-filter: blur(6px);
+}
+
+.rp-protocol-editor-floating-action {
+  width: 32px;
+  height: 32px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: 1px solid var(--background-modifier-border);
+  border-radius: var(--radius-s);
+  background: var(--background-secondary);
+  color: var(--text-muted);
+  font-size: var(--font-ui-medium);
+  line-height: 1;
+  cursor: pointer;
+  transition: background-color 0.15s, border-color 0.15s, color 0.15s, transform 0.15s;
+}
+
+.rp-protocol-editor-floating-action:hover,
+.rp-protocol-editor-floating-action:focus-visible {
+  border-color: var(--interactive-accent);
+  background: var(--interactive-accent);
+  color: var(--text-on-accent);
+  transform: translateY(-1px);
+}
+
+.rp-protocol-editor-canvas-title {
+  position: absolute;
+  right: var(--size-4-3);
+  bottom: var(--size-4-3);
+  z-index: 4;
+  max-width: min(42vw, 420px);
+  padding: var(--size-2-2) var(--size-4-2);
+  border: 1px solid var(--background-modifier-border);
+  border-radius: var(--radius-m);
+  background: color-mix(in srgb, var(--background-primary) 86%, transparent);
+  color: var(--text-muted);
+  font-size: var(--font-ui-smaller);
+  font-weight: var(--font-medium);
+  box-shadow: var(--shadow-s);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+.rp-protocol-editor-minimap {
+  bottom: calc(var(--size-4-3) + 34px);
+}
+
+.rp-protocol-editor-minimap .rp-protocol-editor-zoom-indicator {
+  position: absolute;
+  right: var(--size-2-2);
+  bottom: var(--size-2-2);
+  z-index: 1;
+  padding: 2px 6px;
+  border: 1px solid var(--background-modifier-border);
+  border-radius: var(--radius-s);
+  background: color-mix(in srgb, var(--background-primary) 82%, transparent);
+  color: var(--text-muted);
+  font-size: var(--font-ui-smaller);
+  line-height: 1.4;
+  pointer-events: none;
+}
+
+.rp-protocol-editor-node-kind-choice {
+  position: relative;
+  min-height: 44px;
+  padding-left: calc(var(--size-4-3) + 18px);
+  border-color: color-mix(in srgb, var(--rp-node-choice-color, var(--interactive-accent)) 55%, var(--background-modifier-border));
+  background: color-mix(in srgb, var(--rp-node-choice-color, var(--background-secondary)) 26%, var(--background-primary));
+}
+
+.rp-protocol-editor-node-kind-choice::before {
+  content: '';
+  position: absolute;
+  left: var(--size-4-2);
+  top: 50%;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--rp-node-choice-color, var(--interactive-accent));
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--rp-node-choice-color, var(--interactive-accent)) 22%, transparent);
+  transform: translateY(-50%);
+}
+
+.rp-protocol-editor-node-kind-choice:hover,
+.rp-protocol-editor-node-kind-choice:focus {
+  border-color: color-mix(in srgb, var(--rp-node-choice-color, var(--interactive-accent)) 75%, var(--interactive-accent));
+  background: color-mix(in srgb, var(--rp-node-choice-color, var(--interactive-accent)) 42%, var(--background-primary));
+  color: var(--text-normal);
+}
+
+.rp-protocol-editor-node-kind-choice[data-node-kind="start"] {
+  --rp-node-choice-color: rgba(76, 175, 80, 0.72);
+}
+
+.rp-protocol-editor-node-kind-choice[data-node-kind="question"] {
+  --rp-node-choice-color: rgba(33, 150, 243, 0.72);
+}
+
+.rp-protocol-editor-node-kind-choice[data-node-kind="answer"] {
+  --rp-node-choice-color: rgba(255, 193, 7, 0.72);
+}
+
+.rp-protocol-editor-node-kind-choice[data-node-kind="text-block"] {
+  --rp-node-choice-color: rgba(255, 235, 59, 0.72);
+}
+
+.rp-protocol-editor-node-kind-choice[data-node-kind="loop"] {
+  --rp-node-choice-color: rgba(233, 30, 99, 0.72);
+}
+
+.rp-protocol-editor-node-kind-choice[data-node-kind="snippet"] {
+  --rp-node-choice-color: rgba(156, 39, 176, 0.72);
+}

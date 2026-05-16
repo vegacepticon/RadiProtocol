@@ -604,13 +604,6 @@ export class ProtocolRunner {
    */
   private advanceThrough(nodeId: string): void {
     let cursor = nodeId;
-    // B2 — previousCursor records the node we were at BEFORE the current cursor was assigned.
-    // Used by case 'loop' below to push an undo entry with nodeId=<predecessor> so step-back
-    // from the picker restores the predecessor. When advanceThrough is called directly from
-    // start() or chooseLoopBranch() and the first node IS the loop itself, previousCursor stays
-    // null; the loop-entry undo push then falls back to nodeId=cursor (step-back becomes a
-    // logical no-op — re-running advanceThrough lands back at the same picker).
-    let previousCursor: string | null = null;
     // steps counter resets on each advanceThrough entry (RUN-07 context: per-call cycle guard,
     // NOT per-loop cap). W4 — long-body integration test in Plan 02b Task 2 exercises a loop
     // body with 10 text-blocks × 10 iterations ≈ 110 nodes-per-call to confirm the guard does
@@ -642,7 +635,6 @@ export class ProtocolRunner {
           // Auto-advance through the start node to the first real node
           const next = this.firstNeighbour(cursor);
           if (this.advanceOrReturnToLoop(next) === 'halted') return;
-          previousCursor = cursor;   // B2 threading
           cursor = next!;
           break;
         }
@@ -658,7 +650,6 @@ export class ProtocolRunner {
           this.accumulator.appendWithSeparator(node.content, this.resolveSeparator(node));
           const next = this.firstNeighbour(cursor);
           if (this.advanceOrReturnToLoop(next) === 'halted') return;
-          previousCursor = cursor;   // B2 threading
           cursor = next!;
           break;
         }
@@ -695,7 +686,6 @@ export class ProtocolRunner {
           }
 
           if (this.advanceOrReturnToLoop(next) === 'halted') return;
-          previousCursor = cursor;   // B2 threading
           cursor = next!;
           break;
         }
@@ -730,7 +720,7 @@ export class ProtocolRunner {
           //     changes) — acceptable because (a) consistent canStepBack behaviour in the union type,
           //     (b) keeps the UI "Step back" button enabled symmetrically, (c) no data loss.
           this.undoStack.push({
-            nodeId: previousCursor !== null ? previousCursor : cursor,
+            nodeId: cursor,
             textSnapshot: this.accumulator.snapshot(),
             loopContextStack: this.loopContextStack.map(f => ({ ...f })),
             restoreStatus: RUNNER_STATUS.AWAITING_LOOP_PICK,

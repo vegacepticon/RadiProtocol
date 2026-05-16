@@ -253,30 +253,35 @@ export class ProtocolEditorView extends ItemView {
     container.empty();
     this.rootEl = container.createDiv({ cls: 'rp-protocol-editor' });
 
-    const toolbar = this.rootEl.createDiv({ cls: 'rp-protocol-editor-toolbar' });
-    toolbar.createEl('div', {
-      cls: 'rp-protocol-editor-title',
-      text: this.doc?.title ?? this.plugin.i18n.t('protocolEditor.emptyTitle'),
-    });
-    /* Canvas actions remain minimal; nodes are created by double-clicking the canvas. */
-    const actions = toolbar.createDiv({ cls: 'rp-protocol-editor-toolbar-actions' });
+    const workspace = this.rootEl.createDiv({ cls: 'rp-protocol-editor-workspace' });
 
-    const selfCheckBtn = actions.createEl('button', {
-      cls: 'rp-protocol-editor-add-btn',
-      text: this.plugin.i18n.t('selfCheck.title'),
+    const floatingActions = workspace.createDiv({ cls: 'rp-protocol-editor-floating-actions' });
+    const selfCheckBtn = floatingActions.createEl('button', {
+      cls: 'rp-protocol-editor-floating-action',
+      text: '☑',
+      attr: {
+        type: 'button',
+        title: this.plugin.i18n.t('selfCheck.title'),
+        'aria-label': this.plugin.i18n.t('selfCheck.title'),
+      },
     });
     selfCheckBtn.addEventListener('click', () => this.openSelfCheckModal());
 
-    const minimapToggleBtn = actions.createEl('button', {
-      cls: 'rp-protocol-editor-add-btn',
-      text: this.plugin.i18n.t('protocolEditor.toggleMinimap'),
+    const minimapToggleBtn = floatingActions.createEl('button', {
+      cls: 'rp-protocol-editor-floating-action',
+      text: '▣',
+      attr: {
+        type: 'button',
+        title: this.plugin.i18n.t('protocolEditor.toggleMinimap'),
+        'aria-label': this.plugin.i18n.t('protocolEditor.toggleMinimap'),
+      },
     });
     minimapToggleBtn.addEventListener('click', () => this.toggleMinimap());
 
-    const zoomIndicator = actions.createDiv({ cls: 'rp-protocol-editor-zoom-indicator' });
-    zoomIndicator.setText(`${Math.round(this.zoom * 100)}%`);
-
-    const workspace = this.rootEl.createDiv({ cls: 'rp-protocol-editor-workspace' });
+    workspace.createDiv({
+      cls: 'rp-protocol-editor-canvas-title',
+      text: this.doc?.title ?? this.plugin.i18n.t('protocolEditor.emptyTitle'),
+    });
     this.viewportEl = workspace.createDiv({ cls: 'rp-protocol-editor-viewport' });
     this.viewportEl.setAttr('data-zoom', String(this.zoom));
     this.surfaceEl = this.viewportEl.createDiv({ cls: 'rp-protocol-editor-surface' });
@@ -293,6 +298,8 @@ export class ProtocolEditorView extends ItemView {
           preserveAspectRatio: 'none',
         },
       }) as SVGSVGElement;
+      const zoomIndicator = this.minimapEl.createDiv({ cls: 'rp-protocol-editor-zoom-indicator' });
+      zoomIndicator.setText(`${Math.round(this.zoom * 100)}%`);
     } else {
       this.minimapEl = null;
       this.minimapSvgEl = null;
