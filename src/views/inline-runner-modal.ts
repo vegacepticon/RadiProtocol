@@ -14,7 +14,7 @@ import { renderQuestionAtNode } from '../runner/render/render-question';
 import { renderSnippetPicker } from '../runner/render/render-snippet-picker';
 import { renderCompleteHeading } from '../runner/render/render-complete';
 import { renderErrorList } from '../runner/render/render-error';
-import { renderRunnerFooter } from '../runner/render/render-footer';
+import { createButton } from '../utils/dom-helpers';
 import { CSS_CLASS } from '../constants/css-classes';
 import {
   isFullSnippetPath,
@@ -373,31 +373,34 @@ export class InlineRunnerModal {
     const container = document.body.createDiv({ cls: 'rp-inline-runner-container' });
     this.containerEl = container;
 
-    // Header — compact (drag handle + close only)
+    // Header — invisible drag handle only (close button moved to footer row)
     const header = container.createDiv({ cls: 'rp-inline-runner-header' });
     this.headerEl = header;
     this.enableDragging(header);
 
-    const closeBtn = header.createEl('button', { cls: 'rp-inline-runner-close-btn rp-center' });
+    // Content area — scrollable text (top half of modal)
+    const content = container.createDiv({ cls: 'rp-inline-runner-content' });
+    this.contentEl = content;
+
+    // Actions zone — buttons anchored from top, scrollable if overflow (bottom half)
+    const actions = container.createDiv({ cls: 'rp-inline-runner-actions' });
+    this.actionsEl = actions;
+
+    // Footer — close button (left) + progress bar + Back/Skip (right)
+    const footer = container.createDiv({ cls: 'rp-inline-runner-footer' });
+    const footerBtnRow = footer.createDiv({ cls: 'rp-inline-runner-footer-btn-row' });
+    this.footerBtnRowEl = footerBtnRow;
+
+    // Close button — left side of footer row (square, was in header)
+    const closeBtn = footerBtnRow.createEl('button', { cls: 'rp-inline-runner-close-btn rp-runner-icon-btn' });
     setIcon(closeBtn, 'x');
     closeBtn.setAttribute('aria-label', 'Close protocol');
     closeBtn.addEventListener('click', () => {
       this.close();
     });
 
-    // Content area — scrollable text
-    const content = container.createDiv({ cls: 'rp-inline-runner-content' });
-    this.contentEl = content;
-
-    // Actions zone — pinned buttons with max-height cap
-    const actions = container.createDiv({ cls: 'rp-inline-runner-actions' });
-    this.actionsEl = actions;
-
-    // Footer — progress bar + icon buttons at the bottom
-    const footer = container.createDiv({ cls: 'rp-inline-runner-footer' });
-    const footerBtnRow = footer.createDiv({ cls: 'rp-inline-runner-footer-btn-row' });
-    this.footerBtnRowEl = footerBtnRow;
-    const progress = footer.createDiv({ cls: 'rp-inline-runner-progress', attr: { role: 'progressbar', 'aria-valuemin': '0', 'aria-valuemax': '100' } });
+    // Progress bar — fills remaining space in footer row
+    const progress = footerBtnRow.createDiv({ cls: 'rp-inline-runner-progress', attr: { role: 'progressbar', 'aria-valuemin': '0', 'aria-valuemax': '100' } });
     const progressTrack = progress.createDiv({ cls: 'rp-inline-runner-progress-track' });
     this.progressFillEl = progressTrack.createDiv({ cls: 'rp-inline-runner-progress-fill' });
     this.progressTextEl = progress.createDiv({ cls: 'rp-inline-runner-progress-text' });
@@ -471,7 +474,18 @@ export class InlineRunnerModal {
 
     this.contentEl.empty();
     if (this.actionsEl !== null) this.actionsEl.empty();
-    if (this.footerBtnRowEl !== null) this.footerBtnRowEl.empty();
+
+    // Recreate footer-row children (close btn destroyed by empty, must re-add)
+    if (this.footerBtnRowEl !== null) {
+      this.footerBtnRowEl.empty();
+      // Close button — always present on the left
+      const closeBtn = this.footerBtnRowEl.createEl('button', { cls: 'rp-inline-runner-close-btn rp-runner-icon-btn' });
+      setIcon(closeBtn, 'x');
+      closeBtn.setAttribute('aria-label', 'Close protocol');
+      closeBtn.addEventListener('click', () => {
+        this.close();
+      });
+    }
 
     switch (state.status) {
       case 'idle': {
@@ -519,20 +533,7 @@ export class InlineRunnerModal {
             const hasAnswers = neighborIds.some(
               (nid) => this.graph!.nodes.get(nid)?.kind === 'answer',
             );
-            renderRunnerFooter(this.footerBtnRowEl, {
-              bindClick: (el, handler) => el.addEventListener('click', handler),
-            }, {
-              showBack: state.canStepBack,
-              onBack: () => {
-                this.runner.stepBack();
-                this.render();
-              },
-              showSkip: hasAnswers && typeof this.runner.skip === 'function',
-              onSkip: () => {
-                this.runner.skip();
-                this.render();
-              },
-            });
+            this.renderFooterIcons(state.canStepBack, hasAnswers && typeof this.runner.skip === 'function');
           }
         }
         break;
@@ -563,15 +564,7 @@ export class InlineRunnerModal {
 
         // Footer icon buttons: Back only (no Skip in loop picker)
         if (this.footerBtnRowEl !== null) {
-          renderRunnerFooter(this.footerBtnRowEl, {
-            bindClick: (el, handler) => el.addEventListener('click', handler),
-          }, {
-            showBack: state.canStepBack,
-            onBack: () => {
-              this.runner.stepBack();
-              this.render();
-            },
-          });
+          this.renderFooterIcons(state.canStepBack, false);
         }
         break;
       }
@@ -607,6 +600,39 @@ export class InlineRunnerModal {
         void _exhaustive;
         break;
       }
+    }
+  }
+
+  /** Render Back/Skip icon buttons into the footer row (after close btn). */
+  private renderFooterIcons(showBack: boolean, showSkip: boolean): void {
+    if (this.footerBtnRowEl === null) return;
+    if (!showBack && !showSkip) return;
+
+    // Container for Back+Skip, pushed right via justify-content: flex-end
+    const iconsGroup = this.footerBtnRowEl.createDiv({ cls: 'rp-runner-footer-row' });
+    if (showBack) {
+      const backBtn = createButton(iconsGroup, {
+        cls: 'rp-step-back-btn rp-runner-icon-btn',
+        attr: { 'aria-label': 'Go back one step' },
+      });
+      setIcon(backBtn, 'arrow-left');
+      // Phase 66 D-01/D-02/D-03: visual half of double-click guard
+      backBtn.addEventListener('click', () => {
+        backBtn.disabled = true;
+        this.runner.stepBack();
+        this.render();
+      });
+    }
+    if (showSkip) {
+      const skipBtn = createButton(iconsGroup, {
+        cls: 'rp-skip-btn rp-runner-icon-btn',
+        attr: { 'aria-label': 'Skip this question' },
+      });
+      setIcon(skipBtn, 'skip-forward');
+      skipBtn.addEventListener('click', () => {
+        this.runner.skip();
+        this.render();
+      });
     }
   }
 

@@ -1,9 +1,8 @@
-/* Phase 54: Inline protocol display mode — bottom bar, note-width */
+/* Phase 54 / 60 / 67 / 88: Inline runner — 3-zone layout with stable button anchor */
 
 .rp-inline-runner-container {
   position: fixed;
   bottom: 0;
-  max-height: 45vh;
   background: var(--background-primary);
   border-top: 1px solid var(--background-modifier-border);
   box-shadow: 0 -2px 12px rgba(0, 0, 0, 0.15);
@@ -17,37 +16,124 @@
   display: none;
 }
 
+/* Phase 88: Header — invisible 8px drag handle */
 .rp-inline-runner-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: var(--size-4-2) var(--size-4-3);
-  border-bottom: 1px solid var(--background-modifier-border);
   flex-shrink: 0;
+  height: 8px;
+  min-height: 8px;
+  cursor: grab;
+  user-select: none;
+  background: var(--background-primary);
+  border-bottom: 1px solid var(--background-modifier-border);
 }
 
-.rp-inline-runner-close-btn {
-  /* display/align/justify migrated to .rp-center utility (Phase 80) */
-  background: transparent;
-  border: none;
-  cursor: pointer;
-  padding: var(--size-2-2);
-  border-radius: var(--radius-s);
-  color: var(--text-muted);
+.rp-inline-runner-container.is-dragging .rp-inline-runner-header {
+  cursor: grabbing;
 }
 
-.rp-inline-runner-close-btn:hover {
-  background: var(--background-modifier-hover);
-  color: var(--text-normal);
+/* Phase 60: compact draggable inline runner */
+.rp-inline-runner-container {
+  width: min(360px, calc(100vw - var(--size-4-8)));
+  max-width: calc(100vw - var(--size-4-8));
+  height: min(45vh, 480px);
+  max-height: min(52vh, calc(100vh - var(--size-4-8)));
+  bottom: auto;
+  right: auto;
+  border: 1px solid var(--background-modifier-border);
+  border-radius: var(--radius-m);
+  box-shadow: var(--shadow-l);
+  overflow: hidden;
+  transition: box-shadow 0.12s ease;
 }
 
+.rp-inline-runner-container.is-dragging {
+  box-shadow: var(--shadow-xl);
+}
+
+/* Phase 67: resizable inline runner */
+.rp-inline-runner-container {
+  resize: both;
+  overflow: auto;
+  min-width: 240px;
+  min-height: 120px;
+  max-width: calc(100vw - var(--size-4-8));
+  max-height: calc(100vh - var(--size-4-8));
+}
+
+.rp-inline-runner-container.is-resizing {
+  box-shadow: var(--shadow-xl);
+}
+
+/* Phase 77: applyPosition/applyLayout reset right/bottom/maxWidth/transform */
+.rp-inline-runner-container.rp-inline-runner-applied-position {
+  right: auto;
+  bottom: auto;
+  max-width: none;
+  transform: none;
+}
+
+/* Phase 88: Content zone — top half, scrollable */
 .rp-inline-runner-content {
-  flex: 1;
+  flex: 1 1 auto;
+  min-height: 0;
   overflow-y: auto;
   padding: var(--size-4-2);
 }
 
-/* Phase 86: footer — progress bar at bottom */
+/* Phase 88: Actions zone — fixed from top of bottom half, scrollable, buttons anchor top */
+.rp-inline-runner-actions {
+  flex: 0 0 50%;
+  min-height: 0;
+  overflow-y: auto;
+  flex-shrink: 0;
+  border-top: 1px solid var(--background-modifier-border);
+  padding: var(--size-2-3) var(--size-4-2);
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: flex-start;
+}
+
+/* Phase 88: Button lists inside actions */
+.rp-inline-runner-actions .rp-answer-list,
+.rp-inline-runner-actions .rp-snippet-branch-list,
+.rp-inline-runner-actions .rp-loop-picker-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--size-2-3);
+  margin-bottom: 0;
+}
+
+/* Phase 88: Question text frame — subtle border, non-intrusive */
+.rp-inline-runner-content .rp-question-text {
+  margin: 0 0 var(--size-4-2) 0;
+  font-size: var(--font-ui-small);
+  line-height: var(--line-height-tight);
+  padding: var(--size-2-3) var(--size-2-2);
+  border: 1px solid var(--background-modifier-border);
+  border-radius: var(--radius-s);
+  background: var(--background-secondary);
+}
+
+/* Phase 88: Unified action button selectors — only in .rp-inline-runner-actions now */
+.rp-inline-runner-actions .rp-answer-btn,
+.rp-inline-runner-actions .rp-snippet-branch-btn,
+.rp-inline-runner-actions .rp-loop-body-btn,
+.rp-inline-runner-actions .rp-loop-exit-btn {
+  padding: var(--size-2-3) var(--size-4-2);
+  width: 100%;
+  min-height: 36px;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  height: auto;
+  align-items: flex-start;
+  max-width: 100%;
+  box-sizing: border-box;
+  text-align: left;
+}
+
+/* Phase 88: Footer — close btn + Back/Skip + progress, single row */
 .rp-inline-runner-footer {
   flex-shrink: 0;
   padding: var(--size-2-3) var(--size-4-2);
@@ -55,12 +141,39 @@
   background: var(--background-primary);
 }
 
+/* Phase 88: Footer button row — close (left) + progress (center fill) + Back/Skip (right) */
+.rp-inline-runner-footer-btn-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--size-2-2);
+}
+
+/* Close button in footer — square rp-runner-icon-btn */
+.rp-inline-runner-footer-btn-row .rp-inline-runner-close-btn {
+  background: transparent;
+  border: 1px solid var(--background-modifier-border);
+  cursor: pointer;
+  color: var(--text-muted);
+  border-radius: var(--radius-s);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.rp-inline-runner-footer-btn-row .rp-inline-runner-close-btn:hover {
+  background: var(--background-modifier-hover);
+  color: var(--text-normal);
+}
+
+/* Phase 88: Progress bar fills remaining space in footer row */
 .rp-inline-runner-footer .rp-inline-runner-progress {
   flex: 1 1 auto;
   display: flex;
   align-items: center;
   gap: var(--size-2-2);
   min-width: 0;
+  margin: 0 var(--size-2-3);
 }
 
 .rp-inline-runner-footer .rp-inline-runner-progress-track {
@@ -89,11 +202,6 @@
   text-align: right;
 }
 
-/* Reuse existing .rp-* classes for visual parity (D7) */
-.rp-inline-runner-content .rp-question-text {
-  margin: 0 0 var(--size-4-3) 0;
-}
-
 /* Snippet picker inline host */
 .rp-stp-inline-host {
   width: 100%;
@@ -117,148 +225,7 @@
   padding-left: var(--size-4-4);
 }
 
-/* Phase 60: compact draggable inline runner */
-.rp-inline-runner-container {
-  width: min(360px, calc(100vw - var(--size-4-8)));
-  max-width: calc(100vw - var(--size-4-8));
-  height: min(45vh, 480px);                            /* FIXED: consistent panel height, no shrink-to-fit jitter */
-  max-height: min(52vh, calc(100vh - var(--size-4-8)));
-  bottom: auto;
-  right: auto;
-  border: 1px solid var(--background-modifier-border);
-  border-radius: var(--radius-m);
-  box-shadow: var(--shadow-l);
-  overflow: hidden;
-  transition: box-shadow 0.12s ease;
-}
-
-.rp-inline-runner-container.is-dragging {
-  box-shadow: var(--shadow-xl);
-}
-
-.rp-inline-runner-header {
-  padding: var(--size-2-3) var(--size-4-2);
-  cursor: grab;
-  user-select: none;
-}
-
-.rp-inline-runner-container.is-dragging .rp-inline-runner-header {
-  cursor: grabbing;
-}
-
-.rp-inline-runner-progress-text {
-  font-size: var(--font-ui-smaller);
-}
-
-.rp-inline-runner-close-btn {
-  padding: var(--size-2-1);
-}
-
-.rp-inline-runner-content {
-  padding: var(--size-4-2);
-}
-
-.rp-inline-runner-content .rp-question-zone {
-  display: flex;
-  flex-direction: column;
-  gap: var(--size-2-3);
-}
-
-.rp-inline-runner-content .rp-question-text {
-  margin: 0 0 var(--size-4-2) 0;
-  font-size: var(--font-ui-small);
-  line-height: var(--line-height-tight);
-}
-
-/* Lists inside the content zone */
-.rp-inline-runner-content .rp-answer-list,
-.rp-inline-runner-content .rp-snippet-branch-list,
-.rp-inline-runner-content .rp-loop-picker-list {
-  display: flex;
-  flex-direction: column;
-  gap: var(--size-2-3);
-  margin-bottom: 0;
-}
-
-/* Unified button sizing for all runner action buttons */
-/* Phase 87: 4-zone inline runner layout — actions zone + footer icon buttons */
-
-.rp-inline-runner-actions {
-  max-height: 180px;
-  overflow-y: auto;
-  flex-shrink: 0;
-  border-top: 1px solid var(--background-modifier-border);
-  padding: var(--size-2-3) var(--size-4-2);
-}
-
-.rp-inline-runner-footer-btn-row {
-  display: flex;
-  justify-content: flex-end;
-  gap: var(--size-2-2);
-  padding: var(--size-2-2) 0;
-}
-
-.rp-runner-icon-btn {
-  width: 28px;
-  height: 28px;
-  padding: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: var(--radius-s);
-  background: transparent;
-  border: 1px solid var(--background-modifier-border);
-  color: var(--text-muted);
-  cursor: pointer;
-}
-
-.rp-runner-icon-btn:hover {
-  background: var(--background-modifier-hover);
-  color: var(--text-normal);
-}
-
-.rp-runner-icon-btn svg {
-  width: 14px;
-  height: 14px;
-}
-
-/* Phase 87: unify action button selectors to include both content and actions zones */
-.rp-inline-runner-content .rp-answer-btn,
-.rp-inline-runner-content .rp-snippet-branch-btn,
-.rp-inline-runner-content .rp-loop-body-btn,
-.rp-inline-runner-content .rp-loop-exit-btn,
-.rp-inline-runner-actions .rp-answer-btn,
-.rp-inline-runner-actions .rp-snippet-branch-btn,
-.rp-inline-runner-actions .rp-loop-body-btn,
-.rp-inline-runner-actions .rp-loop-exit-btn {
-  padding: var(--size-2-3) var(--size-4-2);
-  width: 100%;
-  min-height: 36px;
-  white-space: normal;
-  overflow-wrap: anywhere;
-  word-break: break-word;
-  height: auto;
-  align-items: flex-start;
-  max-width: 100%;
-  box-sizing: border-box;
-  text-align: left;
-}
-
-/* Phase 67: resizable inline runner */
-.rp-inline-runner-container {
-  resize: both;                                       /* D-01: native CSS resize, SE-corner grip */
-  overflow: auto;                                     /* D-01: overrides Phase 60 line 174 `overflow: hidden` so the resizer is paintable */
-  min-width: 240px;                                   /* D-09: fits Phase 65 Back/Skip footer row */
-  min-height: 120px;                                  /* D-09: header (~32px) + ≥1 button row + footer */
-  max-width: calc(100vw - var(--size-4-8));           /* D-10: ≤ viewport - 32px */
-  max-height: calc(100vh - var(--size-4-8));          /* D-10: ≤ viewport - 32px */
-}
-
-.rp-inline-runner-container.is-resizing {
-  box-shadow: var(--shadow-xl);                       /* D-02: exact mirror of Phase 60 `.is-dragging` */
-}
-
-/* Phase 75: runner footer row */
+/* Phase 75: runner footer row (Back/Skip) */
 .rp-runner-footer-row {
   display: flex;
   gap: var(--size-4-2);
@@ -272,13 +239,33 @@
   margin: 0 0 var(--size-4-2) 0;
 }
 
-/* Phase 77: applyPosition/applyLayout reset right/bottom/maxWidth/transform when explicit left/top is applied (Phase 60/67 drag+resize, LINT-01) */
-.rp-inline-runner-container.rp-inline-runner-applied-position {
-  right: auto;
-  bottom: auto;
-  max-width: none;
-  transform: none;
+/* Icon buttons (Back/Skip/Close) */
+.rp-runner-icon-btn {
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-s);
+  background: transparent;
+  border: 1px solid var(--background-modifier-border);
+  color: var(--text-muted);
+  cursor: pointer;
+  flex-shrink: 0;
 }
+
+.rp-runner-icon-btn:hover {
+  background: var(--background-modifier-hover);
+  color: var(--text-normal);
+}
+
+.rp-runner-icon-btn svg {
+  width: 14px;
+  height: 14px;
+}
+
+/* Self-check */
 .rp-inline-runner-self-check {
   display: flex;
   flex-direction: column;
@@ -291,4 +278,3 @@
   gap: var(--size-2-2);
   line-height: 1.4;
 }
-
