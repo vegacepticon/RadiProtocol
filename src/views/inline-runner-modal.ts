@@ -14,6 +14,7 @@ import { renderQuestionAtNode } from '../runner/render/render-question';
 import { renderSnippetPicker } from '../runner/render/render-snippet-picker';
 import { renderCompleteHeading } from '../runner/render/render-complete';
 import { renderErrorList } from '../runner/render/render-error';
+import { renderRunnerFooter } from '../runner/render/render-footer';
 import { CSS_CLASS } from '../constants/css-classes';
 import {
   isFullSnippetPath,
@@ -106,6 +107,8 @@ export class InlineRunnerModal {
   private progressFillEl: HTMLElement | null = null;
   private progressTextEl: HTMLElement | null = null;
   private contentEl: HTMLElement | null = null;
+  private actionsEl: HTMLElement | null = null;
+  private footerBtnRowEl: HTMLElement | null = null;
 
   private runner: ProtocolRunner;
   private readonly validator: GraphValidator;
@@ -359,6 +362,8 @@ export class InlineRunnerModal {
     this.progressFillEl = null;
     this.progressTextEl = null;
     this.contentEl = null;
+    this.actionsEl = null;
+    this.footerBtnRowEl = null;
     this.graph = null;
   }
 
@@ -380,12 +385,18 @@ export class InlineRunnerModal {
       this.close();
     });
 
-    // Content area — scrollable text and action zone
+    // Content area — scrollable text
     const content = container.createDiv({ cls: 'rp-inline-runner-content' });
     this.contentEl = content;
 
-    // Footer — progress bar at the bottom
+    // Actions zone — pinned buttons with max-height cap
+    const actions = container.createDiv({ cls: 'rp-inline-runner-actions' });
+    this.actionsEl = actions;
+
+    // Footer — progress bar + icon buttons at the bottom
     const footer = container.createDiv({ cls: 'rp-inline-runner-footer' });
+    const footerBtnRow = footer.createDiv({ cls: 'rp-inline-runner-footer-btn-row' });
+    this.footerBtnRowEl = footerBtnRow;
     const progress = footer.createDiv({ cls: 'rp-inline-runner-progress', attr: { role: 'progressbar', 'aria-valuemin': '0', 'aria-valuemax': '100' } });
     const progressTrack = progress.createDiv({ cls: 'rp-inline-runner-progress-track' });
     this.progressFillEl = progressTrack.createDiv({ cls: 'rp-inline-runner-progress-fill' });
@@ -459,6 +470,8 @@ export class InlineRunnerModal {
     }
 
     this.contentEl.empty();
+    if (this.actionsEl !== null) this.actionsEl.empty();
+    if (this.footerBtnRowEl !== null) this.footerBtnRowEl.empty();
 
     switch (state.status) {
       case 'idle': {
@@ -470,29 +483,26 @@ export class InlineRunnerModal {
       }
 
       case 'at-node': {
-        const result = renderQuestionAtNode(this.contentEl, this.graph, state, {
-          bindClick: (el, handler) => el.addEventListener('click', handler),
-          renderError: (messages) => this.renderError(this.contentEl!, messages),
-          onChooseAnswer: (answerNode) => this.handleAnswerClick(answerNode),
-          onChooseSnippetBranch: (snippetNode, isFileBound) => {
-            if (isFileBound) {
-              const snippetPath = snippetNode.radiprotocol_snippetPath as string;
-              this.runner.pickFileBoundSnippet(state.currentNodeId, snippetNode.id, snippetPath);
-            } else {
-              this.runner.chooseSnippetBranch(snippetNode.id);
-            }
-            this.render();
+        const result = renderQuestionAtNode(
+          this.contentEl,
+          this.actionsEl!,
+          this.graph,
+          state,
+          {
+            bindClick: (el, handler) => el.addEventListener('click', handler),
+            renderError: (messages) => this.renderError(this.contentEl!, messages),
+            onChooseAnswer: (answerNode) => this.handleAnswerClick(answerNode),
+            onChooseSnippetBranch: (snippetNode, isFileBound) => {
+              if (isFileBound) {
+                const snippetPath = snippetNode.radiprotocol_snippetPath as string;
+                this.runner.pickFileBoundSnippet(state.currentNodeId, snippetNode.id, snippetPath);
+              } else {
+                this.runner.chooseSnippetBranch(snippetNode.id);
+              }
+              this.render();
+            },
           },
-          onBack: () => {
-            this.runner.stepBack();
-            this.render();
-          },
-          onSkip: () => {
-            this.runner.skip();
-            this.render();
-          },
-          canSkip: typeof this.runner.skip === 'function',
-        });
+        );
         if (result === 'error') return;
         if (result === 'not-question') {
           this.contentEl.createEl('p', {
@@ -501,6 +511,30 @@ export class InlineRunnerModal {
           });
         }
 
+        // Footer icon buttons: Back + Skip (only when question has answers)
+        if (this.footerBtnRowEl !== null && this.graph !== null) {
+          const node = this.graph.nodes.get(state.currentNodeId);
+          if (node !== undefined && node.kind === 'question') {
+            const neighborIds = this.graph.adjacency.get(state.currentNodeId) ?? [];
+            const hasAnswers = neighborIds.some(
+              (nid) => this.graph!.nodes.get(nid)?.kind === 'answer',
+            );
+            renderRunnerFooter(this.footerBtnRowEl, {
+              bindClick: (el, handler) => el.addEventListener('click', handler),
+            }, {
+              showBack: state.canStepBack,
+              onBack: () => {
+                this.runner.stepBack();
+                this.render();
+              },
+              showSkip: hasAnswers && typeof this.runner.skip === 'function',
+              onSkip: () => {
+                this.runner.skip();
+                this.render();
+              },
+            });
+          }
+        }
         break;
       }
 
@@ -514,17 +548,31 @@ export class InlineRunnerModal {
       }
 
       case 'awaiting-loop-pick': {
-        const rendered = renderLoopPicker(this.contentEl, this.graph, state, {
-          bindClick: (el, handler) => el.addEventListener('click', handler),
-          renderError: (messages) => this.renderError(this.contentEl!, messages),
-          onChooseLoopBranch: (edge, isExit) => this.handleLoopBranchClick(edge, isExit),
-          onBack: () => {
-            this.runner.stepBack();
-            this.render();
+        const rendered = renderLoopPicker(
+          this.contentEl,
+          this.actionsEl!,
+          this.graph,
+          state,
+          {
+            bindClick: (el, handler) => el.addEventListener('click', handler),
+            renderError: (messages) => this.renderError(this.contentEl!, messages),
+            onChooseLoopBranch: (edge, isExit) => this.handleLoopBranchClick(edge, isExit),
           },
-        });
+        );
         if (!rendered) return;
 
+        // Footer icon buttons: Back only (no Skip in loop picker)
+        if (this.footerBtnRowEl !== null) {
+          renderRunnerFooter(this.footerBtnRowEl, {
+            bindClick: (el, handler) => el.addEventListener('click', handler),
+          }, {
+            showBack: state.canStepBack,
+            onBack: () => {
+              this.runner.stepBack();
+              this.render();
+            },
+          });
+        }
         break;
       }
 

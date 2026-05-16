@@ -85,7 +85,7 @@ function makeFakeNode(tag = 'div', cls?: string, text?: string): FakeNode {
 function findByClass(root: FakeNode, cls: string): FakeNode[] {
   const out: FakeNode[] = [];
   const visit = (n: FakeNode): void => {
-    if (n.cls === cls) out.push(n);
+    if (n.cls?.split(/\s+/).includes(cls)) out.push(n);
     for (const c of n.children) visit(c);
   };
   visit(root);

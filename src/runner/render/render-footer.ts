@@ -1,5 +1,6 @@
 // runner/render/render-footer.ts
-// Phase 75 DEDUP-01 — shared runner Back/Skip footer row.
+// Phase 87 — shared runner Back/Skip footer icon buttons.
+import { setIcon } from 'obsidian';
 import { createButton } from '../../utils/dom-helpers';
 
 export interface RunnerFooterOptions {
@@ -23,10 +24,10 @@ export function renderRunnerFooter(
   const footerRow = zone.createDiv({ cls: 'rp-runner-footer-row' });
   if (options.showBack) {
     const backBtn = createButton(footerRow, {
-      cls: 'rp-step-back-btn',
-      text: 'Back',
+      cls: 'rp-step-back-btn rp-runner-icon-btn',
+      attr: { 'aria-label': 'Go back one step' },
     });
-    if ('setAttribute' in backBtn) backBtn.setAttribute('aria-label', 'Go back one step');
+    setIcon(backBtn, 'arrow-left');
     // Phase 66 D-01 + D-02 + D-03: visual half of the double-click guard.
     // Disable Back synchronously on first click; runner-side guards handle any races.
     host.bindClick(backBtn, () => {
@@ -36,10 +37,10 @@ export function renderRunnerFooter(
   }
   if (options.showSkip === true && options.onSkip !== undefined) {
     const skipBtn = createButton(footerRow, {
-      cls: 'rp-skip-btn',
-      text: 'Skip',
+      cls: 'rp-skip-btn rp-runner-icon-btn',
+      attr: { 'aria-label': 'Skip this question' },
     });
-    if ('setAttribute' in skipBtn) skipBtn.setAttribute('aria-label', 'Skip this question');
+    setIcon(skipBtn, 'skip-forward');
     host.bindClick(skipBtn, options.onSkip);
   }
 }

@@ -181,12 +181,56 @@
 }
 
 /* Unified button sizing for all runner action buttons */
+/* Phase 87: 4-zone inline runner layout — actions zone + footer icon buttons */
+
+.rp-inline-runner-actions {
+  max-height: 180px;
+  overflow-y: auto;
+  flex-shrink: 0;
+  border-top: 1px solid var(--background-modifier-border);
+  padding: var(--size-2-3) var(--size-4-2);
+}
+
+.rp-inline-runner-footer-btn-row {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--size-2-2);
+  padding: var(--size-2-2) 0;
+}
+
+.rp-runner-icon-btn {
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-s);
+  background: transparent;
+  border: 1px solid var(--background-modifier-border);
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
+.rp-runner-icon-btn:hover {
+  background: var(--background-modifier-hover);
+  color: var(--text-normal);
+}
+
+.rp-runner-icon-btn svg {
+  width: 14px;
+  height: 14px;
+}
+
+/* Phase 87: unify action button selectors to include both content and actions zones */
 .rp-inline-runner-content .rp-answer-btn,
 .rp-inline-runner-content .rp-snippet-branch-btn,
 .rp-inline-runner-content .rp-loop-body-btn,
 .rp-inline-runner-content .rp-loop-exit-btn,
-.rp-inline-runner-content .rp-step-back-btn,
-.rp-inline-runner-content .rp-skip-btn {
+.rp-inline-runner-actions .rp-answer-btn,
+.rp-inline-runner-actions .rp-snippet-branch-btn,
+.rp-inline-runner-actions .rp-loop-body-btn,
+.rp-inline-runner-actions .rp-loop-exit-btn {
   padding: var(--size-2-3) var(--size-4-2);
   min-height: 36px;
   white-space: normal;

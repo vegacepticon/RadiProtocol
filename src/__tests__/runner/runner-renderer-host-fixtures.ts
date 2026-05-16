@@ -64,12 +64,17 @@ export function makeEl(tag = 'div'): MockEl {
     inputMode: '',
     readOnly: false,
     dataset,
-    createEl(subtag: string, opts?: { text?: string; cls?: string; type?: string }): MockEl {
+    createEl(subtag: string, opts?: { text?: string; cls?: string; type?: string; attr?: Record<string, string> }): MockEl {
       const child = makeEl(subtag);
       child.parent = el as unknown as MockEl;
       if (opts?.text !== undefined) (child as unknown as { _text: string })._text = opts.text;
       if (opts?.cls) child.classList.add(opts.cls);
       if (opts?.type) (child as unknown as { _type: string })._type = opts.type;
+      if (opts?.attr) {
+        for (const [k, v] of Object.entries(opts.attr)) {
+          child.setAttribute(k, v);
+        }
+      }
       children.push(child);
       return child;
     },
@@ -232,7 +237,12 @@ export function createObsidianModuleMock(): Record<string, unknown> {
       this.children = children;
     }
   }
-  return { Modal, Notice, Plugin, ItemView, WorkspaceLeaf, PluginSettingTab, SuggestModal, Setting, TFile, TFolder };
+  return { Modal, Notice, Plugin, ItemView, WorkspaceLeaf, PluginSettingTab, SuggestModal, Setting, TFile, TFolder, setIcon: mockSetIcon };
+}
+
+// Minimal setIcon mock for tests that import render-runner-footer
+export function mockSetIcon(_el: unknown, _iconId: string): void {
+  // no-op
 }
 
 // ───── SnippetFillInModal mock ─────────────────────────────────────────────

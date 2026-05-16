@@ -1,21 +1,21 @@
 // runner/render/render-loop-picker.ts
-// Phase 75 DEDUP-01 — shared awaiting-loop-pick renderer.
+// Phase 87 — 2-zone render: textZone (loop header text) + actionZone (body/exit buttons).
 import type { ProtocolGraph, RPEdge } from '../../graph/graph-model';
 import { isExitEdge, nodeLabel, stripExitPrefix } from '../../graph/node-label';
 import type { RunnerState } from '../runner-state';
-import { renderRunnerFooter, type RunnerFooterHost } from './render-footer';
 import { createButton } from '../../utils/dom-helpers';
 
 export type AwaitingLoopPickState = Extract<RunnerState, { status: 'awaiting-loop-pick' }>;
 
-export interface LoopPickerHost extends RunnerFooterHost {
+export interface LoopPickerHost {
+  bindClick(el: HTMLElement, handler: (ev: MouseEvent) => void): void;
   renderError(messages: string[]): void;
   onChooseLoopBranch(edge: RPEdge, isExit: boolean): void | Promise<void>;
-  onBack(): void;
 }
 
 export function renderLoopPicker(
-  zone: HTMLElement,
+  textZone: HTMLElement,
+  actionZone: HTMLElement,
   graph: ProtocolGraph | null,
   state: AwaitingLoopPickState,
   host: LoopPickerHost,
@@ -33,7 +33,7 @@ export function renderLoopPicker(
 
   // RUN-01: render headerText above picker when present.
   if (node.headerText !== '') {
-    zone.createEl('p', {
+    textZone.createEl('p', {
       text: node.headerText,
       cls: 'rp-loop-header-text',
     });
@@ -41,7 +41,7 @@ export function renderLoopPicker(
 
   // RUN-01: one button per outgoing edge (Pitfall 4 — filter edges, not adjacency).
   const outgoing = graph.edges.filter(e => e.fromNodeId === state.nodeId);
-  const list = zone.createDiv({ cls: 'rp-loop-picker-list rp-stack-md' });
+  const list = actionZone.createDiv({ cls: 'rp-loop-picker-list rp-stack-md' });
   for (const edge of outgoing) {
     // Phase 50.1 EDGE-03 — "+"-prefix convention:
     //   * "+"-prefixed edge → caption = stripExitPrefix(label), class = rp-loop-exit-btn.
@@ -62,12 +62,6 @@ export function renderLoopPicker(
       void host.onChooseLoopBranch(edge, exit);
     });
   }
-
-  // RUN-05: step-back footer row.
-  renderRunnerFooter(zone, host, {
-    showBack: state.canStepBack,
-    onBack: host.onBack,
-  });
 
   return true;
 }

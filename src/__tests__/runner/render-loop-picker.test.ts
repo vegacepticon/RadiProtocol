@@ -21,10 +21,15 @@ class MockEl {
     return child;
   }
 
-  createEl(tag: string, opts?: { cls?: string; text?: string }): MockEl {
+  createEl(tag: string, opts?: { cls?: string; text?: string; attr?: Record<string, string> }): MockEl {
     const child = new MockEl(tag);
     child.cls = opts?.cls ?? '';
     child.text = opts?.text ?? '';
+    if (opts?.attr) {
+      for (const [k, v] of Object.entries(opts.attr)) {
+        child.setAttribute(k, v);
+      }
+    }
     this.children.push(child);
     return child;
   }
@@ -82,7 +87,7 @@ function graph(edges: RPEdge[]): ProtocolGraph {
 }
 
 describe('shared runner footer renderer', () => {
-  it('renders Back/Skip with synchronous back disable guard', () => {
+  it('renders Back/Skip icon buttons with synchronous back disable guard', () => {
     const root = new MockEl('root');
     const onBack = vi.fn();
     const onSkip = vi.fn();
@@ -110,14 +115,14 @@ describe('shared runner footer renderer', () => {
 });
 
 describe('shared loop picker renderer', () => {
-  it('renders header, body/exit buttons, and delegates clicks', () => {
-    const root = new MockEl('root');
+  it('renders header in text zone, body/exit buttons in action zone, and delegates clicks', () => {
+    const textZone = new MockEl('text');
+    const actionZone = new MockEl('actions');
     const bodyEdge = { id: 'e-body', fromNodeId: 'loop', toNodeId: 'body' };
     const exitEdge = { id: 'e-exit', fromNodeId: 'loop', toNodeId: 'exit', label: '+ finish' };
     const onChooseLoopBranch = vi.fn();
-    const onBack = vi.fn();
 
-    const rendered = renderLoopPicker(asHtml(root), graph([bodyEdge, exitEdge]), {
+    const rendered = renderLoopPicker(asHtml(textZone), asHtml(actionZone), graph([bodyEdge, exitEdge]), {
       status: 'awaiting-loop-pick',
       nodeId: 'loop',
       accumulatedText: 'before',
@@ -128,31 +133,28 @@ describe('shared loop picker renderer', () => {
       },
       renderError: vi.fn(),
       onChooseLoopBranch,
-      onBack,
     });
 
     expect(rendered).toBe(true);
-    expect(findByClass(root, 'rp-loop-header-text')[0]?.text).toBe('Repeat?');
-    expect(findByClass(root, 'rp-loop-body-btn')[0]?.text).toBe('Body label');
-    expect(findByClass(root, 'rp-loop-exit-btn')[0]?.text).toBe('finish');
+    expect(findByClass(textZone, 'rp-loop-header-text')[0]?.text).toBe('Repeat?');
+    expect(findByClass(actionZone, 'rp-loop-body-btn')[0]?.text).toBe('Body label');
+    expect(findByClass(actionZone, 'rp-loop-exit-btn')[0]?.text).toBe('finish');
 
-    findByClass(root, 'rp-loop-body-btn')[0]!.clickHandler?.({} as MouseEvent);
-    findByClass(root, 'rp-loop-exit-btn')[0]!.clickHandler?.({} as MouseEvent);
-    findByClass(root, 'rp-step-back-btn')[0]!.clickHandler?.({} as MouseEvent);
+    findByClass(actionZone, 'rp-loop-body-btn')[0]!.clickHandler?.({} as MouseEvent);
+    findByClass(actionZone, 'rp-loop-exit-btn')[0]!.clickHandler?.({} as MouseEvent);
 
     expect(onChooseLoopBranch).toHaveBeenNthCalledWith(1, bodyEdge, false);
     expect(onChooseLoopBranch).toHaveBeenNthCalledWith(2, exitEdge, true);
-    expect(onBack).toHaveBeenCalledTimes(1);
   });
 
   it('returns false and delegates graph/node errors to host chrome', () => {
-    const root = new MockEl('root');
+    const textZone = new MockEl('text');
+    const actionZone = new MockEl('actions');
     const renderError = vi.fn();
     const host = {
       bindClick: vi.fn(),
       renderError,
       onChooseLoopBranch: vi.fn(),
-      onBack: vi.fn(),
     };
     const state = {
       status: 'awaiting-loop-pick' as const,
@@ -161,8 +163,8 @@ describe('shared loop picker renderer', () => {
       canStepBack: false,
     };
 
-    expect(renderLoopPicker(asHtml(root), null, state, host)).toBe(false);
-    expect(renderLoopPicker(asHtml(root), graph([]), state, host)).toBe(false);
+    expect(renderLoopPicker(asHtml(textZone), asHtml(actionZone), null, state, host)).toBe(false);
+    expect(renderLoopPicker(asHtml(textZone), asHtml(actionZone), graph([]), state, host)).toBe(false);
     expect(renderError).toHaveBeenNthCalledWith(1, ['Internal error: graph not loaded.']);
     expect(renderError).toHaveBeenNthCalledWith(2, ['Loop node "missing" not found in graph.']);
   });

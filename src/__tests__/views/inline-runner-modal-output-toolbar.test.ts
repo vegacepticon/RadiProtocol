@@ -63,6 +63,8 @@ function setupModalAndRender(
   const app = makeBaseApp(plugin);
   const modal = new InlineRunnerModal(app as any, plugin as any, 'test.canvas', targetNote);
   (modal as any).contentEl = makeEl('div');
+  (modal as any).actionsEl = makeEl('div');
+  (modal as any).footerBtnRowEl = makeEl('div');
   if (opts.graph !== undefined) (modal as any).graph = opts.graph;
   vi.spyOn((modal as any).runner, 'getState').mockImplementation(() => ({
     status,
