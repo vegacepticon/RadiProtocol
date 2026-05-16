@@ -146,6 +146,7 @@
 .rp-inline-runner-container {
   width: min(360px, calc(100vw - var(--size-4-8)));
   max-width: calc(100vw - var(--size-4-8));
+  height: min(45vh, 480px);                            /* FIXED: consistent panel height, no shrink-to-fit jitter */
   max-height: min(52vh, calc(100vh - var(--size-4-8)));
   bottom: auto;
   right: auto;
