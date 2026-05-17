@@ -25,8 +25,8 @@
 - `src/styles/` — feature-scoped CSS source files concatenated by `esbuild.config.mjs`.
 - `src/__tests__/` and colocated `*.test.ts` files — Vitest coverage.
 - `docs/adr/` — durable architecture decisions. Use ADRs for removals or direction changes.
-- `.planning/` — local GSD scratchpad (gitignored; see DEVELOPMENT-WORKFLOW.md for policy). Git/GitHub/code/tests are authoritative, not planning docs.
 - `docs/ARCHITECTURE-NOTES.md` — implementation-relevant notes promoted from planning.
+- `docs/DEVELOPMENT-WORKFLOW.md` — authoritative process reference.
 
 ## Authoritative commands
 
