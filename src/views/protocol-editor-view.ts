@@ -1526,6 +1526,7 @@ export class ProtocolEditorView extends ItemView {
         this.doc = updated;
         closeModal();
         new Notice(t('protocolEditor.edgeSaved'));
+        void this.loadProtocol(this.protocolPath!);
       } catch (err) {
         new Notice(t('protocolEditor.saveFailed', { error: String(err) }));
       }
