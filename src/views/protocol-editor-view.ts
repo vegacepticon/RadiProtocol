@@ -1495,7 +1495,7 @@ export class ProtocolEditorView extends ItemView {
       );
       const nextLabel = shouldDisplayLabel ? typedLabel ?? defaultLabel : undefined;
       try {
-        await this.plugin.protocolDocumentStore.update(this.protocolPath!, (existing) => {
+        const updated = await this.plugin.protocolDocumentStore.update(this.protocolPath!, (existing) => {
           if (existing === null) throw new Error('Protocol file disappeared');
           const nodes = existing.nodes.map((candidate) => {
             if (candidate.id !== nextTo || candidate.kind !== 'snippet' || typedLabel === undefined || isProtocolEditorLoopExitLabel(typedLabel)) {
@@ -1515,9 +1515,9 @@ export class ProtocolEditorView extends ItemView {
             : candidate);
           return { ...existing, nodes, edges, viewport: this.currentViewportState(), updatedAt: new Date().toISOString() };
         });
+        this.doc = updated;
         closeModal();
         new Notice(t('protocolEditor.edgeSaved'));
-        await this.loadProtocol(this.protocolPath!);
       } catch (err) {
         new Notice(t('protocolEditor.saveFailed', { error: String(err) }));
       }

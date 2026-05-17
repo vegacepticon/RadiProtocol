@@ -23,9 +23,4 @@
   gap: var(--size-2-2); /* 6px */
 }
 
-/* Centered flex (both axes) */
-.rp-center {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
+

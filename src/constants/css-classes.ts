@@ -4,7 +4,6 @@
 
 export const CSS_CLASS = {
   // Runner / inline shared
-  QUESTION_ZONE: 'rp-question-zone',
   EMPTY_STATE_BODY: 'rp-empty-state-body',
   ERROR_TITLE: 'rp-error-title',
 

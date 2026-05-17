@@ -53,7 +53,7 @@
 /* Phase 67: resizable inline runner */
 .rp-inline-runner-container {
   resize: both;
-  overflow: auto;
+  overflow: hidden;
   min-width: 240px;
   min-height: 120px;
   max-width: calc(100vw - var(--size-4-8));
@@ -94,12 +94,13 @@
   align-items: stretch;
 }
 
-/* When actions are shown (at-node, awaiting-loop-pick), split 50/50 */
+/* When actions are shown (at-node, awaiting-loop-pick), content sizes to its text, actions fills remainder */
 .rp-inline-runner-container.rp-state-actions .rp-inline-runner-content {
-  flex: 0 0 50%;
+  flex: 0 0 auto;
 }
 .rp-inline-runner-container.rp-state-actions .rp-inline-runner-actions {
-  flex: 0 0 50%;
+  flex: 1 1 auto;
+  overflow-y: auto;
 }
 
 /* When content is fullscreen (no actions zone visible), content takes all */
@@ -120,11 +121,12 @@
   margin-bottom: 0;
 }
 
-/* Phase 88: Question text frame — subtle border, non-intrusive */
+/* Phase 88: Question text frame — subtle border, non-intrusive, centered, larger */
 .rp-inline-runner-content .rp-question-text {
   margin: 0 0 var(--size-4-2) 0;
-  font-size: var(--font-ui-small);
+  font-size: var(--font-ui-normal);
   line-height: var(--line-height-tight);
+  text-align: center;
   padding: var(--size-2-3) var(--size-2-2);
   border: 1px solid var(--background-modifier-border);
   border-radius: var(--radius-s);

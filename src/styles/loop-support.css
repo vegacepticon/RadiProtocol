@@ -3,10 +3,11 @@
 /* Phase 44: Unified loop picker (RUN-01) ———————————————————————————————————— */
 
 .rp-loop-header-text {
-  font-size: var(--font-ui-medium);
+  font-size: var(--font-ui-normal);
   font-weight: var(--font-semibold);
   color: var(--text-normal);
   margin-bottom: var(--size-2-3);
+  text-align: center;
 }
 
 .rp-loop-picker-list {

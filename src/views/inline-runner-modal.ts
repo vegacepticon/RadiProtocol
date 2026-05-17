@@ -1110,13 +1110,11 @@ export class InlineRunnerModal {
       isStillMounted: () =>
         this.containerEl !== null && document.body.contains(this.containerEl),
       // Inline modal re-renders before showing the error so the new picker
-      // takes a fresh DOM, then writes the error into the fresh question zone.
+      // takes a fresh DOM, then writes the error into contentEl.
       presentAsyncError: (message) => {
         this.render();
-        const freshZone = this.contentEl?.querySelector('.rp-question-zone');
-        if (freshZone) {
-          freshZone.empty();
-          (freshZone as HTMLElement).createEl('p', {
+        if (this.contentEl) {
+          this.contentEl.createEl('p', {
             cls: CSS_CLASS.EMPTY_STATE_BODY,
             text: message,
           });

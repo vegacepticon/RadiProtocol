@@ -20,6 +20,8 @@
 - `src/snippets/` — snippet discovery, binding, insertion, placeholder handling.
 - `src/i18n/` — translation service and locale dictionaries.
 - `src/constants/` — shared constants for CSS classes, runner/editor states, etc.
+- `src/donate/` — donate/settings section UI.
+- `src/utils/` — shared utility helpers (mutexes, array helpers, drag-and-drop).
 - `src/styles/` — feature-scoped CSS source files concatenated by `esbuild.config.mjs`.
 - `src/__tests__/` and colocated `*.test.ts` files — Vitest coverage.
 - `docs/adr/` — durable architecture decisions. Use ADRs for removals or direction changes.
