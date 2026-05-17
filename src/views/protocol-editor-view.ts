@@ -129,7 +129,15 @@ export function shouldDisplayProtocolEditorEdgeLabel(
     const effectiveLabel = deriveProtocolEditorEdgeLabel(toNode, edge.label);
     return effectiveLabel !== undefined && effectiveLabel.trim() !== '';
   }
-  return fromNode?.kind === 'loop' && toNode?.kind === 'loop' && isProtocolEditorLoopExitLabel(edge.label);
+  // Phase 50.1 EDGE-03 FIX: loop exit edges carry a user-authored "+"-prefixed label
+  // that must be preserved regardless of the target node kind. A loop exit typically
+  // points to a question/answer/text-block (not another loop node), so requiring
+  // toNode.kind === 'loop' was stripping the label on save, making the edge unlabeled
+  // and breaking the runner's exit-edge dispatch.
+  if (fromNode?.kind === 'loop' && isProtocolEditorLoopExitLabel(edge.label)) {
+    return true;
+  }
+  return false;
 }
 
 export function deriveProtocolEditorEdgeLabel(

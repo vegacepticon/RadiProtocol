@@ -136,7 +136,7 @@ describe('protocol editor helper functions', () => {
       expect(route.labelX).toBe(300);
     });
 
-    it('shows labels for answer/snippet targets and loop-to-loop exit edges only', () => {
+    it('shows labels for answer/snippet targets and loop exit edges regardless of target kind', () => {
       expect(shouldDisplayProtocolEditorEdgeLabel(
         { id: 'e1', fromNodeId: 'text', toNodeId: 'answer', label: undefined },
         textNode,
@@ -152,16 +152,35 @@ describe('protocol editor helper functions', () => {
         textNode,
         loopNodeA,
       )).toBe(false);
+      // Loop-to-loop exit edge: preserved
       expect(shouldDisplayProtocolEditorEdgeLabel(
         { id: 'e4', fromNodeId: 'loop-a', toNodeId: 'loop-b', label: '+Exit' },
         loopNodeA,
         loopNodeB,
       )).toBe(true);
+      // Loop-to-loop body edge (no "+" prefix): not displayed
       expect(shouldDisplayProtocolEditorEdgeLabel(
         { id: 'e5', fromNodeId: 'loop-a', toNodeId: 'loop-b', label: 'Body' },
         loopNodeA,
         loopNodeB,
       )).toBe(false);
+      // Phase 50.1 EDGE-03 FIX: loop exit edge to a non-loop node (question/answer/text-block)
+      // must still be displayed. The runner dispatches on the "+" prefix regardless of target kind.
+      expect(shouldDisplayProtocolEditorEdgeLabel(
+        { id: 'e6', fromNodeId: 'loop-a', toNodeId: 'question-1', label: '+Выход' },
+        loopNodeA,
+        { id: 'question-1', kind: 'question', x: 0, y: 0, width: 160, height: 80, text: '', fields: { questionText: 'Q' } },
+      )).toBe(true);
+      expect(shouldDisplayProtocolEditorEdgeLabel(
+        { id: 'e7', fromNodeId: 'loop-a', toNodeId: 'answer-1', label: '+Да' },
+        loopNodeA,
+        answerNode,
+      )).toBe(true);
+      expect(shouldDisplayProtocolEditorEdgeLabel(
+        { id: 'e8', fromNodeId: 'loop-a', toNodeId: 'text-1', label: '+Завершить' },
+        loopNodeA,
+        textNode,
+      )).toBe(true);
     });
   });
 
