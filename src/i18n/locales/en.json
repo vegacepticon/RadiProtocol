@@ -235,9 +235,6 @@
     "loop": "Loop",
     "rootSnippets": "(snippets root)"
   },
-  "snippetForm": {
-    "targetDesc": "Choose a folder (the node will offer all its snippets) or a specific snippet file. Folder and file are mutually exclusive (D-01)."
-  },
   "snippetChip": {
     "separator": "Separator"
   },
@@ -266,10 +263,6 @@
   },
   "protocolRunner": {
     "legacyLoopRuntime": "Encountered a deprecated loop-start/loop-end node. The canvas should have been rejected by the validator; if you see this message, this is a bug — please contact the plugin author."
-  },
-  "runnerView": {
-    "snippetNotFound": "Snippet not found: {path}",
-    "snippetCannotBeUsed": "Snippet «{path}» cannot be used. {error}"
   },
   "library": {
     "title": "Snippet Library",

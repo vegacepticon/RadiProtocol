@@ -428,6 +428,73 @@ export class ProtocolEditorView extends ItemView {
     modalEl.addEventListener('click', (e) => { if (e.target === modalEl) closeModal(); });
   }
 
+  private openNodeKindPickerAndConnectAtWorldPoint(fromNodeId: string, x: number, y: number): void {
+    if (this.doc === null || this.protocolPath === null) return;
+    const t = this.plugin.i18n.t.bind(this.plugin.i18n);
+    const modalEl = document.body.createDiv({ cls: 'rp-protocol-editor-modal-backdrop' });
+    const modal = modalEl.createDiv({ cls: 'rp-protocol-editor-modal rp-protocol-editor-node-kind-modal' });
+    const header = modal.createDiv({ cls: 'rp-protocol-editor-modal-header' });
+    header.createEl('h3', { text: t('protocolEditor.chooseNodeType') });
+    const closeBtn = header.createEl('button', { cls: 'rp-protocol-editor-modal-close', text: '✕' });
+    const closeModal = () => { modalEl.remove(); this.restoreEditorFocus(); };
+    closeBtn.addEventListener('click', closeModal);
+
+    const body = modal.createDiv({ cls: 'rp-protocol-editor-modal-body' });
+    const grid = body.createDiv({ cls: 'rp-protocol-editor-node-kind-grid' });
+    for (const kind of EDITABLE_NODE_KINDS) {
+      const btn = grid.createEl('button', {
+        cls: 'rp-protocol-editor-node-kind-choice',
+        text: t(`protocolEditor.nodeKind.${kind}`),
+      });
+      btn.setAttr('data-node-kind', kind);
+      btn.addEventListener('click', () => {
+        closeModal();
+        this.addNodeAndConnectAtWorldPoint(fromNodeId, kind, x, y);
+      });
+    }
+    modalEl.addEventListener('click', (e) => { if (e.target === modalEl) closeModal(); });
+  }
+
+  private addNodeAndConnectAtWorldPoint(fromNodeId: string, kind: RPNodeKind | null, x: number, y: number): void {
+    if (this.doc === null || this.protocolPath === null) return;
+
+    const newNode = this.createProtocolEditorNode(kind, x, y);
+
+    void this.plugin.protocolDocumentStore.update(this.protocolPath, (existing) => {
+      if (existing === null) throw new Error('Protocol file disappeared');
+      const sourceNode = existing.nodes.find((n) => n.id === fromNodeId);
+      const targetNode = { ...newNode };
+      const defaultLabel = defaultProtocolEditorEdgeLabelForTarget(targetNode);
+      const shouldDisplay = shouldDisplayProtocolEditorEdgeLabel(
+        { id: 'preview', fromNodeId, toNodeId: newNode.id, label: defaultLabel },
+        sourceNode,
+        targetNode,
+      );
+      const newEdge: ProtocolEdgeRecord = {
+        id: edgeUid(),
+        fromNodeId,
+        toNodeId: newNode.id,
+        label: shouldDisplay ? defaultLabel : undefined,
+      };
+      const edges = canCreateProtocolEditorEdge(existing.edges, fromNodeId, newNode.id) === 'ok'
+        ? [...existing.edges, newEdge]
+        : existing.edges;
+      return {
+        ...existing,
+        nodes: [...existing.nodes, newNode],
+        edges,
+        viewport: this.currentViewportState(),
+        updatedAt: new Date().toISOString(),
+      };
+    }).then(async () => {
+      await this.loadProtocol(this.protocolPath!);
+      new Notice(this.plugin.i18n.t('protocolEditor.nodeCreated'));
+      this.openEditModal(newNode);
+    }).catch((err) => {
+      new Notice(this.plugin.i18n.t('protocolEditor.saveFailed', { error: String(err) }));
+    });
+  }
+
   private renderDocument(): void {
     if (this.doc === null || this.surfaceEl === null || this.svgEl === null) return;
     this.surfaceEl.empty();
@@ -799,7 +866,17 @@ export class ProtocolEditorView extends ItemView {
 
     const inputPort = this.findInputPortAt(ev.clientX, ev.clientY);
     const toNodeId = inputPort?.getAttr('data-node-id');
-    if (toNodeId === undefined || toNodeId === null) return;
+
+    if (toNodeId === undefined || toNodeId === null) {
+      // Dropped on empty canvas — open node kind picker and create node + edge
+      const worldPoint = this.clientPointToWorldPoint(ev.clientX, ev.clientY);
+      this.openNodeKindPickerAndConnectAtWorldPoint(
+        state.fromNodeId,
+        worldPoint.x - DEFAULT_NODE_WIDTH / 2,
+        worldPoint.y - DEFAULT_NODE_HEIGHT / 2,
+      );
+      return;
+    }
 
     const decision = canCreateProtocolEditorEdge(this.doc.edges, state.fromNodeId, toNodeId);
     if (decision === 'self') {

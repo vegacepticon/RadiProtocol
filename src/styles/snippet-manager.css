@@ -348,13 +348,6 @@
   padding: var(--size-4-3);
 }
 
-.radi-snippet-editor-modal .radi-field {
-  display: flex;
-  flex-direction: column;
-  gap: var(--size-4-1);
-  margin-bottom: var(--size-4-2);
-}
-
 .radi-snippet-editor-modal label {
   font-weight: var(--font-semibold);
   font-size: var(--font-ui-small);
@@ -365,41 +358,6 @@
 .radi-snippet-editor-modal textarea {
   font-size: var(--font-ui-medium);
   width: 100%;
-}
-
-.radi-snippet-editor-modal .radi-collision-error {
-  color: var(--text-error);
-  font-size: var(--font-ui-smaller);
-  margin-top: var(--size-2-1);
-  display: none;
-}
-
-.radi-snippet-editor-modal .radi-collision-error.is-visible {
-  display: block;
-}
-
-.radi-snippet-editor-modal .radi-type-toggle {
-  display: flex;
-  flex-direction: row;
-  gap: 0;
-  border: 1px solid var(--background-modifier-border);
-  border-radius: var(--radius-s);
-  overflow: hidden;
-}
-
-.radi-snippet-editor-modal .radi-type-toggle button {
-  flex: 1 1 auto;
-  background: transparent;
-  color: var(--text-muted);
-  padding: var(--size-4-1) var(--size-4-2);
-  border: none;
-  cursor: pointer;
-  transition: background 150ms ease-out;
-}
-
-.radi-snippet-editor-modal .radi-type-toggle button.is-active {
-  background: var(--background-modifier-hover);
-  color: var(--text-normal);
 }
 
 .radi-snippet-editor-modal .modal-button-container {

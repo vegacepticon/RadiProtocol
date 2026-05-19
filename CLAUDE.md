@@ -66,12 +66,12 @@ CSS is split into per-feature files under `src/styles/`. The build concatenates 
 Current source files:
 
 - `_utilities.css` — shared utilities and reset-level helpers.
-- `protocol-editor.css` — independent `.rp.json` visual protocol editor.
 - `snippet-manager.css` — snippet manager + placeholder chips.
 - `snippet-fill-modal.css` — snippet fill-in modal.
 - `loop-support.css` — loop iteration UI hooks shared by runner UI.
 - `snippet-tree-picker.css` — snippet tree picker.
 - `inline-runner.css` — inline runner modal UI.
+- `protocol-editor.css` — independent `.rp.json` visual protocol editor.
 - `donate-section.css` — donate/settings section.
 
 When adding CSS for a new feature:

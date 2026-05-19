@@ -235,9 +235,6 @@
     "loop": "Цикл",
     "rootSnippets": "(корень snippets)"
   },
-  "snippetForm": {
-    "targetDesc": "Выберите папку (узел предложит все её сниппеты) или конкретный файл сниппета. Папка и файл взаимно исключительны (D-01)."
-  },
   "snippetChip": {
     "separator": "Разделитель"
   },
@@ -266,10 +263,6 @@
   },
   "protocolRunner": {
     "legacyLoopRuntime": "Обнаружен устаревший узел loop-start/loop-end. Канвас должен быть отклонён validator-ом; если вы видите это сообщение — это программная ошибка, сообщите автору плагина."
-  },
-  "runnerView": {
-    "snippetNotFound": "Сниппет не найден: {path}",
-    "snippetCannotBeUsed": "Сниппет «{path}» не может быть использован. {error}"
   },
   "library": {
     "title": "Библиотека сниппетов",
