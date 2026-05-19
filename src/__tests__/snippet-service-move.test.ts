@@ -118,6 +118,7 @@ const settings = {
   textSeparator: 'newline' as const,
   locale: 'en' as const,
   libraryUrl: '',
+  protocolLibraryUrl: '',
 };
 
 const ROOT = '.radiprotocol/snippets';

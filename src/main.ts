@@ -9,12 +9,14 @@ import { SnippetService } from './snippets/snippet-service';
 import { WriteMutex } from './utils/write-mutex';
 import { I18nService } from './i18n';
 import { LibraryService } from './snippets/library-service';
+import { ProtocolLibraryService } from './protocol/protocol-library-service';
 // Phase 45 (LOOP-06): start-from-node command dependencies
 import { NodePickerModal, buildStartableProtocolNodeOptions } from './views/node-picker-modal';
 // Phase 54: inline protocol display mode
 import { InlineRunnerModal } from './views/inline-runner-modal';
 import { InsertSnippetModal } from './views/insert-snippet-modal';
 import { ProtocolEditorView, PROTOCOL_EDITOR_VIEW_TYPE } from './views/protocol-editor-view';
+import { ProtocolLibraryBrowserModal } from './views/protocol-library-browser-modal';
 
 /**
  * Phase 59 INLINE-FIX-01 — Nested-path-safe protocol folder enumeration.
@@ -181,6 +183,7 @@ export default class RadiProtocolPlugin extends Plugin {
   protocolDocumentStore!: ProtocolDocumentStore;
   snippetService!: SnippetService;
   libraryService!: LibraryService;
+  protocolLibraryService!: ProtocolLibraryService;
   private readonly insertMutex = new WriteMutex();
   private pickerModal: SuggestModal<ProtocolPickerSuggestion | ProtocolEditorPickerSuggestion> | null = null;
   // Phase 85 INLINE-MULTI-01: registry of open inline runners keyed by `${protocolPath}#${notePath}`.
@@ -210,6 +213,9 @@ export default class RadiProtocolPlugin extends Plugin {
 
     // Phase 86 (TEMPLATE-LIB-01): template library service
     this.libraryService = new LibraryService(this.app, this.settings, this.snippetService, this.i18n.t.bind(this.i18n));
+
+    // Protocol library service
+    this.protocolLibraryService = new ProtocolLibraryService(this.app, this.settings, this.protocolDocumentStore, this.i18n.t.bind(this.i18n));
 
     // Commands — IDs intentionally omit plugin name prefix (NFR-06)
 
@@ -251,6 +257,13 @@ export default class RadiProtocolPlugin extends Plugin {
       id: 'insert-snippet',
       name: 'Insert snippet',
       callback: () => { void this.handleInsertSnippet(); },
+    });
+
+    // Command: browse-protocol-library
+    this.addCommand({
+      id: 'browse-protocol-library',
+      name: 'Browse protocol library',
+      callback: () => { new ProtocolLibraryBrowserModal(this.app, this).open(); },
     });
 
     // Settings tab
