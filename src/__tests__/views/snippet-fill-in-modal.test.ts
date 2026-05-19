@@ -165,7 +165,7 @@ function makeEl(tag = 'div'): MockEl {
   return el;
 }
 
-/** Simple selector walker — supports 'input[type="checkbox"]', 'button', 'input[type="radio"]', '.class'. */
+/** Simple selector walker — supports 'button[type="button"]', 'button', 'input[type="radio"]', '.class'. */
 function walk(root: MockEl, sel: string): MockEl[] {
   const out: MockEl[] = [];
   const match = buildMatcher(sel);
@@ -204,12 +204,12 @@ vi.mock('obsidian', () => {
     app: unknown;
     contentEl: MockEl;
     titleEl: MockEl;
-    modalEl: { style: Record<string, string> };
+    modalEl: MockEl;
     constructor(app: unknown) {
       this.app = app;
       this.contentEl = makeEl('div');
       this.titleEl = makeEl('div');
-      this.modalEl = { style: {} };
+      this.modalEl = makeEl('div');
     }
     open(): void { this.onOpen(); }
     close(): void { this.onClose(); }
@@ -275,23 +275,28 @@ function findConfirmButton(root: MockEl): MockEl {
   return found;
 }
 
-describe('SnippetFillInModal Phase 52 D-05 — unified choice renders as checkboxes', () => {
-  it('renders checkbox inputs (not radios) for choice with options', async () => {
+describe('SnippetFillInModal Phase 52 D-05 — unified choice renders as toggle buttons', () => {
+  it('renders toggle buttons (not checkboxes or radios) for choice with options', async () => {
     const snippet = makeSnippet([
       { id: 'f', label: 'F', type: 'choice', options: ['a', 'b', 'c'] },
     ]);
     const modal = new SnippetFillInModal(app, snippet);
     modal.onOpen();
-    const checkboxes = (modal as unknown as { contentEl: MockEl }).contentEl
+    const root = (modal as unknown as { contentEl: MockEl }).contentEl;
+    const checkboxes = root
       .querySelectorAll('input[type="checkbox"]');
-    const radios = (modal as unknown as { contentEl: MockEl }).contentEl
+    const radios = root
       .querySelectorAll('input[type="radio"]');
-    expect(checkboxes.length).toBe(3);
+    const options = root.querySelectorAll('.rp-snippet-fill-option-row');
+    expect(options.length).toBe(3);
+    expect(options.every(option => option.tagName === 'BUTTON')).toBe(true);
+    expect(options.every(option => (option as unknown as { _type: string })._type === 'button')).toBe(true);
+    expect(checkboxes.length).toBe(0);
     expect(radios.length).toBe(0);
     modal.onClose();
   });
 
-  it('resolves with empty string in value map when no checkbox + empty custom (D-09)', async () => {
+  it('resolves with empty string in value map when no option selected + empty custom (D-09)', async () => {
     const snippet = makeSnippet([
       { id: 'f', label: 'F', type: 'choice', options: ['a', 'b'] },
     ]);
@@ -306,16 +311,17 @@ describe('SnippetFillInModal Phase 52 D-05 — unified choice renders as checkbo
     modal.onClose();
   });
 
-  it('inserts a single checked option verbatim', async () => {
+  it('inserts a single selected option verbatim', async () => {
     const snippet = makeSnippet([
       { id: 'f', label: 'F', type: 'choice', options: ['alpha', 'beta'] },
     ]);
     const modal = new SnippetFillInModal(app, snippet);
     modal.onOpen();
-    const boxes = (modal as unknown as { contentEl: MockEl }).contentEl
-      .querySelectorAll('input[type="checkbox"]');
-    (boxes[0] as unknown as { _checked: boolean })._checked = true;
-    boxes[0]!.dispatchEvent({ type: 'change' });
+    const buttons = (modal as unknown as { contentEl: MockEl }).contentEl
+      .querySelectorAll('.rp-snippet-fill-option-row');
+    buttons[0]!.dispatchEvent({ type: 'click' });
+    expect(buttons[0]!.hasClass('is-selected')).toBe(true);
+    expect(buttons[0]!.getAttribute('aria-pressed')).toBe('true');
     const confirmBtn = findConfirmButton(
       (modal as unknown as { contentEl: MockEl }).contentEl,
     );
@@ -325,18 +331,16 @@ describe('SnippetFillInModal Phase 52 D-05 — unified choice renders as checkbo
     modal.onClose();
   });
 
-  it('joins multiple checked options with default separator ", "', async () => {
+  it('joins multiple selected options with default separator ", "', async () => {
     const snippet = makeSnippet([
       { id: 'f', label: 'F', type: 'choice', options: ['a', 'b', 'c'] },
     ]);
     const modal = new SnippetFillInModal(app, snippet);
     modal.onOpen();
-    const boxes = (modal as unknown as { contentEl: MockEl }).contentEl
-      .querySelectorAll('input[type="checkbox"]');
-    (boxes[0] as unknown as { _checked: boolean })._checked = true;
-    boxes[0]!.dispatchEvent({ type: 'change' });
-    (boxes[2] as unknown as { _checked: boolean })._checked = true;
-    boxes[2]!.dispatchEvent({ type: 'change' });
+    const buttons = (modal as unknown as { contentEl: MockEl }).contentEl
+      .querySelectorAll('.rp-snippet-fill-option-row');
+    buttons[0]!.dispatchEvent({ type: 'click' });
+    buttons[2]!.dispatchEvent({ type: 'click' });
     const confirmBtn = findConfirmButton(
       (modal as unknown as { contentEl: MockEl }).contentEl,
     );
@@ -346,18 +350,16 @@ describe('SnippetFillInModal Phase 52 D-05 — unified choice renders as checkbo
     modal.onClose();
   });
 
-  it('joins multiple checked options with override separator " / " (D-02)', async () => {
+  it('joins multiple selected options with override separator " / " (D-02)', async () => {
     const snippet = makeSnippet([
       { id: 'f', label: 'F', type: 'choice', options: ['a', 'b'], separator: ' / ' },
     ]);
     const modal = new SnippetFillInModal(app, snippet);
     modal.onOpen();
-    const boxes = (modal as unknown as { contentEl: MockEl }).contentEl
-      .querySelectorAll('input[type="checkbox"]');
-    (boxes[0] as unknown as { _checked: boolean })._checked = true;
-    boxes[0]!.dispatchEvent({ type: 'change' });
-    (boxes[1] as unknown as { _checked: boolean })._checked = true;
-    boxes[1]!.dispatchEvent({ type: 'change' });
+    const buttons = (modal as unknown as { contentEl: MockEl }).contentEl
+      .querySelectorAll('.rp-snippet-fill-option-row');
+    buttons[0]!.dispatchEvent({ type: 'click' });
+    buttons[1]!.dispatchEvent({ type: 'click' });
     const confirmBtn = findConfirmButton(
       (modal as unknown as { contentEl: MockEl }).contentEl,
     );
@@ -373,15 +375,12 @@ describe('SnippetFillInModal Phase 52 D-05 — unified choice renders as checkbo
     ]);
     const modal = new SnippetFillInModal(app, snippet);
     modal.onOpen();
-    const boxes = (modal as unknown as { contentEl: MockEl }).contentEl
-      .querySelectorAll('input[type="checkbox"]');
+    const buttons = (modal as unknown as { contentEl: MockEl }).contentEl
+      .querySelectorAll('.rp-snippet-fill-option-row');
     // Click order: c, a, b
-    (boxes[2] as unknown as { _checked: boolean })._checked = true;
-    boxes[2]!.dispatchEvent({ type: 'change' });
-    (boxes[0] as unknown as { _checked: boolean })._checked = true;
-    boxes[0]!.dispatchEvent({ type: 'change' });
-    (boxes[1] as unknown as { _checked: boolean })._checked = true;
-    boxes[1]!.dispatchEvent({ type: 'change' });
+    buttons[2]!.dispatchEvent({ type: 'click' });
+    buttons[0]!.dispatchEvent({ type: 'click' });
+    buttons[1]!.dispatchEvent({ type: 'click' });
     const confirmBtn = findConfirmButton(
       (modal as unknown as { contentEl: MockEl }).contentEl,
     );
@@ -411,18 +410,16 @@ describe('SnippetFillInModal Phase 52 D-06 — Custom override preserved', () =>
     modal.onClose();
   });
 
-  it('Custom non-empty text overrides checkboxes', async () => {
+  it('Custom non-empty text overrides options', async () => {
     const snippet = makeSnippet([
       { id: 'f', label: 'F', type: 'choice', options: ['a', 'b'] },
     ]);
     const modal = new SnippetFillInModal(app, snippet);
     modal.onOpen();
     const root = (modal as unknown as { contentEl: MockEl }).contentEl;
-    const boxes = root.querySelectorAll('input[type="checkbox"]');
-    (boxes[0] as unknown as { _checked: boolean })._checked = true;
-    boxes[0]!.dispatchEvent({ type: 'change' });
-    (boxes[1] as unknown as { _checked: boolean })._checked = true;
-    boxes[1]!.dispatchEvent({ type: 'change' });
+    const buttons = root.querySelectorAll('.rp-snippet-fill-option-row');
+    buttons[0]!.dispatchEvent({ type: 'click' });
+    buttons[1]!.dispatchEvent({ type: 'click' });
     const customInput = root
       .querySelectorAll('.rp-snippet-modal-custom-row')[0]
       ?.querySelectorAll('input[type="text"]')[0];
@@ -436,16 +433,15 @@ describe('SnippetFillInModal Phase 52 D-06 — Custom override preserved', () =>
     modal.onClose();
   });
 
-  it('Custom emptied falls back to checkbox values', async () => {
+  it('Custom emptied falls back to option values', async () => {
     const snippet = makeSnippet([
       { id: 'f', label: 'F', type: 'choice', options: ['a', 'b'] },
     ]);
     const modal = new SnippetFillInModal(app, snippet);
     modal.onOpen();
     const root = (modal as unknown as { contentEl: MockEl }).contentEl;
-    const boxes = root.querySelectorAll('input[type="checkbox"]');
-    (boxes[0] as unknown as { _checked: boolean })._checked = true;
-    boxes[0]!.dispatchEvent({ type: 'change' });
+    const buttons = root.querySelectorAll('.rp-snippet-fill-option-row');
+    buttons[0]!.dispatchEvent({ type: 'click' });
     const customInput = root
       .querySelectorAll('.rp-snippet-modal-custom-row')[0]
       ?.querySelectorAll('input[type="text"]')[0];
@@ -455,9 +451,8 @@ describe('SnippetFillInModal Phase 52 D-06 — Custom override preserved', () =>
     // Clear Custom
     (customInput as unknown as { _value: string })._value = '';
     customInput.dispatchEvent({ type: 'input' });
-    // Re-check the box (Custom listener clears all boxes on non-empty)
-    (boxes[0] as unknown as { _checked: boolean })._checked = true;
-    boxes[0]!.dispatchEvent({ type: 'change' });
+    // Re-select the option (Custom listener clears all option selections on non-empty)
+    buttons[0]!.dispatchEvent({ type: 'click' });
     const confirmBtn = findConfirmButton(root);
     confirmBtn.dispatchEvent({ type: 'click' });
     const result = await modal.result;
@@ -502,6 +497,87 @@ describe('SnippetFillInModal Phase 52 — free-text unchanged', () => {
     confirmBtn.dispatchEvent({ type: 'click' });
     const result = await modal.result;
     expect(result).toBe('R: hello');
+    modal.onClose();
+  });
+});
+
+describe('SnippetFillInModal — filled class on text inputs', () => {
+  it('adds rp-snippet-field-filled when a free-text input has value', () => {
+    const snippet = makeSnippet(
+      [{ id: 'f', label: 'F', type: 'free-text' }],
+      'R: {{f}}',
+    );
+    const modal = new SnippetFillInModal(app, snippet);
+    modal.onOpen();
+    const root = (modal as unknown as { contentEl: MockEl }).contentEl;
+    const textInput = root.querySelectorAll('input[type="text"]')[0];
+    if (!textInput) throw new Error('Text input missing');
+    expect(textInput.hasClass('rp-snippet-field-filled')).toBe(false);
+    (textInput as unknown as { _value: string })._value = 'hello';
+    textInput.dispatchEvent({ type: 'input' });
+    expect(textInput.hasClass('rp-snippet-field-filled')).toBe(true);
+    // Clear value removes the class
+    (textInput as unknown as { _value: string })._value = '';
+    textInput.dispatchEvent({ type: 'input' });
+    expect(textInput.hasClass('rp-snippet-field-filled')).toBe(false);
+    modal.onClose();
+  });
+
+  it('adds rp-snippet-field-filled when custom input has value', () => {
+    const snippet = makeSnippet([
+      { id: 'f', label: 'F', type: 'choice', options: ['a', 'b'] },
+    ]);
+    const modal = new SnippetFillInModal(app, snippet);
+    modal.onOpen();
+    const root = (modal as unknown as { contentEl: MockEl }).contentEl;
+    const customRow = root.querySelectorAll('.rp-snippet-modal-custom-row')[0];
+    if (!customRow) throw new Error('Custom row missing');
+    const customInput = customRow.querySelectorAll('input[type="text"]')[0];
+    if (!customInput) throw new Error('Custom input missing');
+    expect(customInput.hasClass('rp-snippet-field-filled')).toBe(false);
+    (customInput as unknown as { _value: string })._value = 'custom';
+    customInput.dispatchEvent({ type: 'input' });
+    expect(customInput.hasClass('rp-snippet-field-filled')).toBe(true);
+    // Clear value removes the class
+    (customInput as unknown as { _value: string })._value = '';
+    customInput.dispatchEvent({ type: 'input' });
+    expect(customInput.hasClass('rp-snippet-field-filled')).toBe(false);
+    modal.onClose();
+  });
+});
+
+describe('SnippetFillInModal — toggle button deselect', () => {
+  it('clicking a selected button deselects it', async () => {
+    const snippet = makeSnippet([
+      { id: 'f', label: 'F', type: 'choice', options: ['a', 'b'] },
+    ]);
+    const modal = new SnippetFillInModal(app, snippet);
+    modal.onOpen();
+    const root = (modal as unknown as { contentEl: MockEl }).contentEl;
+    const buttons = root.querySelectorAll('.rp-snippet-fill-option-row');
+    // Select
+    buttons[0]!.dispatchEvent({ type: 'click' });
+    expect(buttons[0]!.hasClass('is-selected')).toBe(true);
+    expect(buttons[0]!.getAttribute('aria-pressed')).toBe('true');
+    // Deselect
+    buttons[0]!.dispatchEvent({ type: 'click' });
+    expect(buttons[0]!.hasClass('is-selected')).toBe(false);
+    expect(buttons[0]!.getAttribute('aria-pressed')).toBe('false');
+    const confirmBtn = findConfirmButton(root);
+    confirmBtn.dispatchEvent({ type: 'click' });
+    const result = await modal.result;
+    expect(result).toBe('R: ');
+    modal.onClose();
+  });
+});
+
+describe('SnippetFillInModal — wide modal', () => {
+  it('adds rp-snippet-modal class to modalEl in onOpen', () => {
+    const snippet = makeSnippet([{ id: 'f', label: 'F', type: 'free-text' }]);
+    const modal = new SnippetFillInModal(app, snippet);
+    modal.onOpen();
+    const modalEl = (modal as unknown as { modalEl: MockEl }).modalEl;
+    expect(modalEl.hasClass('rp-snippet-modal')).toBe(true);
     modal.onClose();
   });
 });

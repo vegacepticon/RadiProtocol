@@ -114,3 +114,41 @@
   gap: var(--size-2-3) var(--size-4-2); /* vertical horizontal */
   align-items: center;
 }
+
+/* Snippet fill-in modal UX improvements: wider modal, toggle pills, filled field highlight */
+.rp-snippet-modal {
+  max-width: 800px;
+}
+
+.rp-snippet-fill-option-row {
+  padding: var(--size-2-2) var(--size-4-2);
+  border: 1px solid var(--background-modifier-border);
+  border-radius: var(--radius-l);
+  background: var(--background-secondary);
+  color: var(--text-normal);
+  cursor: pointer;
+  transition:
+    background-color 120ms ease,
+    border-color 120ms ease,
+    color 120ms ease;
+}
+
+.rp-snippet-fill-option-row:hover {
+  border-color: var(--background-modifier-border-hover);
+  background: var(--background-modifier-hover);
+}
+
+.rp-snippet-fill-option-row.is-selected {
+  border-color: var(--interactive-accent);
+  background: var(--interactive-accent);
+  color: var(--text-on-accent);
+}
+
+.rp-snippet-fill-option-row.is-selected:hover {
+  background: var(--interactive-accent-hover);
+}
+
+.rp-snippet-field-filled {
+  border-color: var(--interactive-accent);
+  background: color-mix(in srgb, var(--interactive-accent) 8%, var(--background-primary));
+}

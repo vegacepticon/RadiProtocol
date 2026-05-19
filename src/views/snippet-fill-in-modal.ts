@@ -49,6 +49,12 @@ export class SnippetFillInModal extends Modal {
     this.titleEl.setText(this.snippet.name);
     this.contentEl.addClass('rp-snippet-modal');
 
+    // D-07: wide Obsidian modal (same pattern as snippet-editor-modal)
+    const modalEl = (this as unknown as { modalEl?: { addClass?: (cls: string) => void } }).modalEl;
+    if (typeof modalEl?.addClass === 'function') {
+      modalEl.addClass('rp-snippet-modal');
+    }
+
     // Initialize values map with empty strings for every placeholder
     for (const p of this.snippet.placeholders) {
       this.values[p.id] = '';
@@ -103,15 +109,16 @@ export class SnippetFillInModal extends Modal {
 
     input.addEventListener('input', () => {
       this.values[placeholder.id] = input.value;
+      input.toggleClass('rp-snippet-field-filled', input.value.length > 0);
       this.updatePreview();
     });
   }
 
   /**
-   * Phase 52 D-05: unified choice field — checkbox-list always.
+   * Phase 52 D-05: unified choice field — multi-select option buttons.
    * Includes a "Custom:" free-text override at the bottom (SNIP-09, D-06/D-09).
-   * Selecting a checkbox clears custom input; typing in custom clears all checkboxes.
-   * 0 checked + empty Custom → empty string (D-09).
+   * Selecting an option clears custom input; typing in custom clears all selected options.
+   * 0 selected + empty Custom → empty string (D-09).
    */
   private renderChoiceField(
     container: HTMLElement,
@@ -124,42 +131,47 @@ export class SnippetFillInModal extends Modal {
     const optionsDiv = fieldset.createDiv({ cls: 'rp-snippet-modal-options' });
     const options = placeholder.options ?? [];
 
-    const checkboxEls: HTMLInputElement[] = [];
+    const optionButtons: HTMLButtonElement[] = [];
     let customInput: HTMLInputElement | null = null;
 
-    /** Recompute the current value from custom input or checkbox state. */
+    /** Recompute the current value from custom input or toggle-button state. */
     const recomputeValue = (): void => {
       if (customInput && customInput.value.trim() !== '') {
-        // Custom value takes precedence over checkbox selection (D-06)
+        // Custom value takes precedence over option selection (D-06)
         this.values[placeholder.id] = customInput.value.trim();
       } else {
-        const selected = checkboxEls
-          .filter(cb => cb.checked)
-          .map(cb => cb.value);
+        const selected = optionButtons
+          .filter(btn => btn.hasClass('is-selected'))
+          .map(btn => btn.value);
         const sep = placeholder.separator ?? ', ';
         this.values[placeholder.id] = selected.join(sep);
       }
       this.updatePreview();
     };
 
-    // Render one checkbox per predefined option
+    // Render one toggle pill button per predefined option
     for (const opt of options) {
-      const row = optionsDiv.createDiv({ cls: 'rp-snippet-fill-option-row' });
+      const btn = optionsDiv.createEl('button', {
+        cls: 'rp-snippet-fill-option-row',
+        type: 'button',
+      });
+      btn.textContent = opt;
+      btn.name = `rp-${placeholder.id}`;
+      btn.value = opt;
+      btn.setAttribute('aria-pressed', 'false');
 
-      const ctrl = row.createEl('input', { type: 'checkbox' });
-      ctrl.name = `rp-${placeholder.id}`;
-      ctrl.value = opt;
+      optionButtons.push(btn);
 
-      const lbl = row.createEl('label');
-      lbl.textContent = opt;
-
-      checkboxEls.push(ctrl);
-
-      ctrl.addEventListener('change', () => {
-        // Clear custom input when a checkbox is toggled (D-06)
+      btn.addEventListener('click', () => {
+        // Clear custom input when an option button is toggled (D-06)
         if (customInput) {
           customInput.value = '';
+          customInput.removeClass('rp-snippet-field-filled');
         }
+
+        const selected = !btn.hasClass('is-selected');
+        btn.toggleClass('is-selected', selected);
+        btn.setAttribute('aria-pressed', selected ? 'true' : 'false');
         recomputeValue();
       });
     }
@@ -199,10 +211,12 @@ export class SnippetFillInModal extends Modal {
     });
 
     customInput.addEventListener('input', () => {
-      if (customInput && customInput.value.trim() !== '') {
-        // Deselect all checkboxes when custom is typed (D-06)
-        for (const cb of checkboxEls) {
-          cb.checked = false;
+      customInput.toggleClass('rp-snippet-field-filled', customInput.value.length > 0);
+      if (customInput.value.trim() !== '') {
+        // Deselect all option buttons when custom is typed (D-06)
+        for (const btn of optionButtons) {
+          btn.removeClass('is-selected');
+          btn.setAttribute('aria-pressed', 'false');
         }
       }
       recomputeValue();
