@@ -8,7 +8,7 @@ Protocols are authored as **`.rp.json`** files — a first-party JSON format
 with a custom visual graph editor. Legacy `.canvas` (JSON Canvas) support is
 preserved for backward compatibility and migration.
 
-**Latest release:** 1.18.2 (2026-05-17) — Loop exit edge label save fix (preserves + prefix regardless of target node kind)
+**Latest release:** 1.18.3 (2026-05-19) — Drag connection to empty canvas creates connected node
 
 ## Features
 
