@@ -17,7 +17,9 @@
     "donateHeading": "Support development",
     "showWalletAddresses": "Show wallet addresses",
     "libraryUrlLabel": "Library URL",
-    "libraryUrlDesc": "URL of the external snippet library index JSON. Leave empty to disable."
+    "libraryUrlDesc": "URL of the external snippet library index JSON. Leave empty to disable.",
+    "protocolLibraryUrlLabel": "Protocol library URL",
+    "protocolLibraryUrlDesc": "URL of the external protocol library index JSON. Leave empty to disable."
   },
   "protocolEditor": {
     "displayText": "Protocol editor",
@@ -274,5 +276,20 @@
     "installedLabel": "Installed",
     "installFailed": "Failed to install",
     "networkError": "Network error. Check your connection and the library URL."
+  },
+  "protocolLibrary": {
+    "title": "Protocol Library",
+    "noUrl": "Protocol library URL is not configured. Set it in plugin settings.",
+    "loadError": "Failed to load protocol library index. Check the URL and your network connection.",
+    "empty": "No protocols found in this library.",
+    "install": "Install",
+    "installing": "Installing…",
+    "installed": "Installed: {title}",
+    "installedLabel": "Installed",
+    "installFailed": "Failed to install",
+    "networkError": "Network error. Check your connection and the protocol library URL.",
+    "invalidProtocol": "Downloaded protocol has an invalid RadiProtocol schema.",
+    "nodes": "{count} nodes",
+    "edges": "{count} edges"
   }
 }

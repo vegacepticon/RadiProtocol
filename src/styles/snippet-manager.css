@@ -539,3 +539,12 @@
   color: var(--text-error);
   padding: var(--size-4-4) 0;
 }
+
+.rp-library-empty {
+  color: var(--text-muted);
+  padding: var(--size-4-4) 0;
+}
+
+.rp-protocol-library-entry .rp-library-entry-name {
+  font-size: var(--font-ui-medium);
+}

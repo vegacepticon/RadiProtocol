@@ -32,6 +32,8 @@ export interface RadiProtocolSettings {
   locale: 'en' | 'ru';
   /** Phase 86 (TEMPLATE-LIB-01): URL of the external snippet library index JSON. */
   libraryUrl: string;
+  /** URL of the external protocol library index JSON. */
+  protocolLibraryUrl: string;
 }
 
 export const DEFAULT_SETTINGS: RadiProtocolSettings = {
@@ -42,6 +44,7 @@ export const DEFAULT_SETTINGS: RadiProtocolSettings = {
   inlineRunnerPosition: null,
   locale: 'en',
   libraryUrl: '',
+  protocolLibraryUrl: '',
 };
 
 export class RadiProtocolSettingsTab extends PluginSettingTab {
@@ -105,6 +108,19 @@ export class RadiProtocolSettingsTab extends PluginSettingTab {
             await this.plugin.saveSettings();
           });
       });
+
+    // Protocol library URL setting
+    new Setting(containerEl)
+      .setName(this.plugin.i18n.t('settings.protocolLibraryUrlLabel'))
+      .setDesc(this.plugin.i18n.t('settings.protocolLibraryUrlDesc'))
+      .addText(text => text
+        .setPlaceholder('https://example.com/protocols-index.json')
+        .setValue(this.plugin.settings.protocolLibraryUrl)
+        .onChange(async (value) => {
+          this.plugin.settings.protocolLibraryUrl = value.trim();
+          await this.plugin.saveSettings();
+        })
+      );
 
     // Group 5 — Storage
     new Setting(containerEl).setName(this.plugin.i18n.t('settings.storageHeading')).setHeading();

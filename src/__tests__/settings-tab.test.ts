@@ -73,13 +73,14 @@ describe('Settings folder autocomplete (SETTINGS-01)', () => {
   it('attaches folder suggesters to Protocol and Snippet fields only', () => {
     const { textComponents, suggesters } = renderSettings();
 
-    expect(textComponents).toHaveLength(3);
+    expect(textComponents).toHaveLength(4);
     expect(suggesters).toHaveLength(2);
     expect(suggesters.map((suggester: { textInputEl: unknown }) => suggester.textInputEl)).toEqual([
       textComponents[0]!.inputEl,
-      textComponents[1]!.inputEl,
+      textComponents[2]!.inputEl,
     ]);
-    expect(suggesters.map((suggester: { textInputEl: unknown }) => suggester.textInputEl)).not.toContain(textComponents[2]!.inputEl);
+    expect(suggesters.map((suggester: { textInputEl: unknown }) => suggester.textInputEl)).not.toContain(textComponents[1]!.inputEl);
+    expect(suggesters.map((suggester: { textInputEl: unknown }) => suggester.textInputEl)).not.toContain(textComponents[3]!.inputEl);
   });
 
   it('typing wired fields still persists through field-specific save handlers', async () => {
@@ -87,7 +88,7 @@ describe('Settings folder autocomplete (SETTINGS-01)', () => {
       protocolFolderPath: 'Old Protocols',
       snippetFolderPath: 'Old Snippets',
     });
-    const [protocolText, snippetText] = textComponents;
+    const [protocolText, , snippetText] = textComponents;
 
     protocolText!.inputEl.value = ' Protocols/CT ';
     protocolText!.inputEl.dispatchEvent({ type: 'input', bubbles: true });
