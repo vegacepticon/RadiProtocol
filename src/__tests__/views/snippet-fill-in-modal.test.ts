@@ -572,12 +572,12 @@ describe('SnippetFillInModal — toggle button deselect', () => {
 });
 
 describe('SnippetFillInModal — wide modal', () => {
-  it('adds rp-snippet-modal class to modalEl in onOpen', () => {
+  it('adds rp-snippet-fill-modal class to modalEl in onOpen', () => {
     const snippet = makeSnippet([{ id: 'f', label: 'F', type: 'free-text' }]);
     const modal = new SnippetFillInModal(app, snippet);
     modal.onOpen();
     const modalEl = (modal as unknown as { modalEl: MockEl }).modalEl;
-    expect(modalEl.hasClass('rp-snippet-modal')).toBe(true);
+    expect(modalEl.hasClass('rp-snippet-fill-modal')).toBe(true);
     modal.onClose();
   });
 });

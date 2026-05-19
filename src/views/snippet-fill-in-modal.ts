@@ -52,7 +52,7 @@ export class SnippetFillInModal extends Modal {
     // D-07: wide Obsidian modal (same pattern as snippet-editor-modal)
     const modalEl = (this as unknown as { modalEl?: { addClass?: (cls: string) => void } }).modalEl;
     if (typeof modalEl?.addClass === 'function') {
-      modalEl.addClass('rp-snippet-modal');
+      modalEl.addClass('rp-snippet-fill-modal');
     }
 
     // Initialize values map with empty strings for every placeholder

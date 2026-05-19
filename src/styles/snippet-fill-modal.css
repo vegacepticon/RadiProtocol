@@ -116,17 +116,52 @@
 }
 
 /* Snippet fill-in modal UX improvements: wider modal, toggle pills, filled field highlight */
+.modal.rp-snippet-fill-modal,
+.rp-snippet-fill-modal.modal {
+  width: min(880px, calc(100vw - 48px));
+  max-width: min(880px, calc(100vw - 48px));
+}
+
 .rp-snippet-modal {
-  max-width: 800px;
+  width: 100%;
+  max-width: none;
+  box-sizing: border-box;
+  overflow-x: hidden;
+}
+
+.rp-snippet-modal fieldset {
+  min-width: 0;
+}
+
+.rp-snippet-modal input[type='text'] {
+  border: 1px solid var(--background-modifier-border);
+  background: var(--background-primary);
+  transition:
+    background-color 120ms ease,
+    border-color 120ms ease,
+    box-shadow 120ms ease;
+}
+
+.rp-snippet-modal input[type='text'].rp-snippet-field-filled {
+  border-color: var(--interactive-accent);
+  background: color-mix(in srgb, var(--interactive-accent) 12%, var(--background-primary));
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--interactive-accent) 24%, transparent);
 }
 
 .rp-snippet-fill-option-row {
+  max-width: 100%;
+  min-width: 0;
   padding: var(--size-2-2) var(--size-4-2);
   border: 1px solid var(--background-modifier-border);
   border-radius: var(--radius-l);
   background: var(--background-secondary);
   color: var(--text-normal);
   cursor: pointer;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  text-align: left;
+  line-height: 1.35;
   transition:
     background-color 120ms ease,
     border-color 120ms ease,
@@ -146,9 +181,4 @@
 
 .rp-snippet-fill-option-row.is-selected:hover {
   background: var(--interactive-accent-hover);
-}
-
-.rp-snippet-field-filled {
-  border-color: var(--interactive-accent);
-  background: color-mix(in srgb, var(--interactive-accent) 8%, var(--background-primary));
 }
