@@ -86,6 +86,16 @@
   box-sizing: border-box;
   min-height: 80px;
   height: var(--rp-preview-height, auto);
+  transition:
+    background-color 120ms ease,
+    border-color 120ms ease,
+    box-shadow 120ms ease;
+}
+
+.rp-snippet-preview.rp-snippet-preview-complete {
+  border-color: var(--interactive-accent);
+  background: color-mix(in srgb, var(--interactive-accent) 12%, var(--background-primary));
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--interactive-accent) 24%, transparent);
 }
 
 .rp-snippet-modal-btn-row {

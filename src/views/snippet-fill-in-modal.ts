@@ -246,10 +246,20 @@ export class SnippetFillInModal extends Modal {
     (this.previewTextarea as any).style.height = `${Math.max(160, scrollHeight)}px`;
   }
 
+  /** True when every placeholder has a selected/typed value. */
+  private areAllPlaceholdersFilled(): boolean {
+    return this.snippet.placeholders.length > 0
+      && this.snippet.placeholders.every((placeholder) => (this.values[placeholder.id] ?? '').length > 0);
+  }
+
   /** Update the live preview textarea with current field values. */
   private updatePreview(): void {
     if (this.previewTextarea) {
       this.previewTextarea.value = renderSnippet(this.snippet, this.values);
+      this.previewTextarea.toggleClass(
+        'rp-snippet-preview-complete',
+        this.areAllPlaceholdersFilled(),
+      );
       this.resizePreview();
     }
   }

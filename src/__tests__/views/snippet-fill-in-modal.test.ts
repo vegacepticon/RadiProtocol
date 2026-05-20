@@ -581,3 +581,61 @@ describe('SnippetFillInModal — wide modal', () => {
     modal.onClose();
   });
 });
+
+describe('SnippetFillInModal — preview complete highlight', () => {
+  it('adds rp-snippet-preview-complete when all free-text placeholders are filled', () => {
+    const snippet = makeSnippet(
+      [
+        { id: 'a', label: 'A', type: 'free-text' },
+        { id: 'b', label: 'B', type: 'free-text' },
+      ],
+      'R: {{a}} / {{b}}',
+    );
+    const modal = new SnippetFillInModal(app, snippet);
+    modal.onOpen();
+    const root = (modal as unknown as { contentEl: MockEl }).contentEl;
+    const preview = root.querySelectorAll('.rp-snippet-preview')[0];
+    if (!preview) throw new Error('Preview missing');
+    const textInputs = root.querySelectorAll('input[type="text"]');
+    // Initially not complete
+    expect(preview.hasClass('rp-snippet-preview-complete')).toBe(false);
+    // Fill first — still incomplete
+    (textInputs[0] as unknown as { _value: string })._value = 'hello';
+    textInputs[0]!.dispatchEvent({ type: 'input' });
+    expect(preview.hasClass('rp-snippet-preview-complete')).toBe(false);
+    // Fill second — now complete
+    (textInputs[1] as unknown as { _value: string })._value = 'world';
+    textInputs[1]!.dispatchEvent({ type: 'input' });
+    expect(preview.hasClass('rp-snippet-preview-complete')).toBe(true);
+    // Clear one — no longer complete
+    (textInputs[0] as unknown as { _value: string })._value = '';
+    textInputs[0]!.dispatchEvent({ type: 'input' });
+    expect(preview.hasClass('rp-snippet-preview-complete')).toBe(false);
+    modal.onClose();
+  });
+
+  it('adds rp-snippet-preview-complete when all choice placeholders have selection', () => {
+    const snippet = makeSnippet(
+      [
+        { id: 'x', label: 'X', type: 'choice', options: ['a', 'b'] },
+        { id: 'y', label: 'Y', type: 'choice', options: ['c', 'd'] },
+      ],
+      'R: {{x}} / {{y}}',
+    );
+    const modal = new SnippetFillInModal(app, snippet);
+    modal.onOpen();
+    const root = (modal as unknown as { contentEl: MockEl }).contentEl;
+    const preview = root.querySelectorAll('.rp-snippet-preview')[0];
+    if (!preview) throw new Error('Preview missing');
+    // Initially not complete
+    expect(preview.hasClass('rp-snippet-preview-complete')).toBe(false);
+    // Select first option group — still incomplete
+    const allButtons = root.querySelectorAll('.rp-snippet-fill-option-row');
+    allButtons[0]!.dispatchEvent({ type: 'click' });
+    expect(preview.hasClass('rp-snippet-preview-complete')).toBe(false);
+    // Select second option group — now complete
+    allButtons[2]!.dispatchEvent({ type: 'click' });
+    expect(preview.hasClass('rp-snippet-preview-complete')).toBe(true);
+    modal.onClose();
+  });
+});
