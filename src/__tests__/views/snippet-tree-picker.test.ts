@@ -591,6 +591,32 @@ describe('Tree-wide search (D-09, D-10, D-11)', () => {
     expect(name?.textContent).toContain('ct-routine.md');
   });
 
+  it('keeps current results visible while the next search is loading', async () => {
+    svc.listFolder.mockResolvedValue({ folders: [], snippets: [] });
+    svc.listFolderDescendants
+      .mockResolvedValueOnce({
+        files: [`${ROOT}/ct-routine.md`],
+        folders: [],
+        total: 1,
+      })
+      .mockImplementationOnce(() => new Promise(() => {}));
+
+    const { picker, container } = makePicker({ mode: 'file-only' }, svc);
+    await picker.mount();
+
+    const input = findFirst(container, (el) => el.classList.has('rp-stp-search-input'))!;
+    triggerInput(input, 'ct');
+    await flushDebounce();
+    expect(findByClass(container, 'rp-stp-file-row').length).toBe(1);
+
+    triggerInput(input, 'ctr');
+    await flushDebounce();
+
+    expect(svc.listFolderDescendants).toHaveBeenCalledTimes(2);
+    expect(findByClass(container, 'rp-stp-file-row').length).toBe(1);
+    expect(findFirst(container, (el) => el.classList.has('rp-stp-row-title'))?.textContent).toBe('ct-routine.md');
+  });
+
   it('result row primary text = basename with extension', async () => {
     svc.listFolder.mockResolvedValue({ folders: [], snippets: [] });
     svc.listFolderDescendants.mockResolvedValue({

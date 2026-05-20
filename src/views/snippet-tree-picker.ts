@@ -401,16 +401,20 @@ export class SnippetTreePicker {
     const host = this.rootEl();
     if (!host) return;
 
-    this.removeListenersExceptSearch();
-    this.removeBody(host);
-
     // Tree-wide search is rooted at options.rootPath (NOT the drill cursor).
+    // Keep the current rendered body in place while the async vault scan runs:
+    // clearing it before await produces a visible blank/list jump on each keystroke.
     const { files, folders } = await this.options.snippetService.listFolderDescendants(
       this.options.rootPath,
     );
 
-    // Defensive: component may have been unmounted.
+    // Defensive: component may have been unmounted or superseded by a newer query
+    // while the async search was in flight.
     if (this.containerEl === null) return;
+    if (this.currentQuery.trim() !== query) return;
+
+    this.removeListenersExceptSearch();
+    this.removeBody(host);
 
     const lowerQ = query.toLowerCase();
     const rootPrefix = `${this.options.rootPath}/`;
