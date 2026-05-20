@@ -373,10 +373,16 @@ export class InlineRunnerModal {
     const container = document.body.createDiv({ cls: 'rp-inline-runner-container' });
     this.containerEl = container;
 
-    // Header — invisible drag handle only (close button moved to footer row)
+    // Header — drag handle + progress bar at top of modal
     const header = container.createDiv({ cls: 'rp-inline-runner-header' });
     this.headerEl = header;
     this.enableDragging(header);
+
+    // Progress bar — top of modal, inside header
+    const progress = header.createDiv({ cls: 'rp-inline-runner-progress', attr: { role: 'progressbar', 'aria-valuemin': '0', 'aria-valuemax': '100' } });
+    const progressTrack = progress.createDiv({ cls: 'rp-inline-runner-progress-track' });
+    this.progressFillEl = progressTrack.createDiv({ cls: 'rp-inline-runner-progress-fill' });
+    this.progressTextEl = progress.createDiv({ cls: 'rp-inline-runner-progress-text' });
 
     // Content area — scrollable text (top half of modal)
     const content = container.createDiv({ cls: 'rp-inline-runner-content' });
@@ -386,24 +392,18 @@ export class InlineRunnerModal {
     const actions = container.createDiv({ cls: 'rp-inline-runner-actions' });
     this.actionsEl = actions;
 
-    // Footer — close button (left) + progress bar + Back/Skip (right)
+    // Footer — close button (left) + Back/Skip (right)
     const footer = container.createDiv({ cls: 'rp-inline-runner-footer' });
     const footerBtnRow = footer.createDiv({ cls: 'rp-inline-runner-footer-btn-row' });
     this.footerBtnRowEl = footerBtnRow;
 
-    // Close button — left side of footer row (square, was in header)
+    // Close button — left side of footer row (square icon button)
     const closeBtn = footerBtnRow.createEl('button', { cls: 'rp-inline-runner-close-btn rp-runner-icon-btn' });
     setIcon(closeBtn, 'x');
     closeBtn.setAttribute('aria-label', 'Close protocol');
     closeBtn.addEventListener('click', () => {
       this.close();
     });
-
-    // Progress bar — fills remaining space in footer row
-    const progress = footerBtnRow.createDiv({ cls: 'rp-inline-runner-progress', attr: { role: 'progressbar', 'aria-valuemin': '0', 'aria-valuemax': '100' } });
-    const progressTrack = progress.createDiv({ cls: 'rp-inline-runner-progress-track' });
-    this.progressFillEl = progressTrack.createDiv({ cls: 'rp-inline-runner-progress-fill' });
-    this.progressTextEl = progress.createDiv({ cls: 'rp-inline-runner-progress-text' });
   }
 
   // ── Rendering ─────────────────────────────────────────────────────────────
