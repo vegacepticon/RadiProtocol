@@ -129,15 +129,56 @@ describe('LibraryAdminService', () => {
 
   it('pulls origin main with rebase and autostash so local branch state does not hide remote changes', async () => {
     const calls: string[] = [];
-    const mockExec = (cmd: string) => { calls.push(cmd); return 'Already up to date.\n'; };
+    const mockExec = (cmd: string) => {
+      calls.push(cmd);
+      if (cmd.includes('fetch')) return '';
+      if (cmd.includes('status')) return '';
+      if (cmd.includes('merge')) return 'Already up to date.';
+      return '';
+    };
     const svc = new LibraryAdminService(repo, t, mockExec as unknown as typeof import('node:child_process').execSync);
 
     const result = await svc.gitPull();
 
     expect(result.success).toBe(true);
     expect(result.output).toBe('Already up to date.');
-    expect(calls).toHaveLength(1);
-    expect(calls[0]).toContain('git pull --rebase --autostash origin main');
+    expect(calls.some(c => c.includes('fetch origin main'))).toBe(true);
+    expect(calls.some(c => c.includes('merge --ff-only origin/main'))).toBe(true);
+  });
+
+  it('blocks pull when working tree is dirty and reports status', async () => {
+    const calls: string[] = [];
+    const mockExec = (cmd: string) => {
+      calls.push(cmd);
+      if (cmd.includes('fetch')) return '';
+      if (cmd.includes('status')) return ' M snippets/foo.json\n';
+      return '';
+    };
+    const svc = new LibraryAdminService(repo, t, mockExec as unknown as typeof import('node:child_process').execSync);
+
+    const result = await svc.gitPull();
+
+    expect(result.success).toBe(false);
+    expect(result.output).toContain('snippets/foo.json');
+  });
+
+  it('resets to origin/main with fetch + reset --hard + clean -fd', async () => {
+    const calls: string[] = [];
+    const mockExec = (cmd: string) => {
+      calls.push(cmd);
+      if (cmd.includes('fetch')) return '';
+      if (cmd.includes('reset')) return 'HEAD is now at abc1234';
+      if (cmd.includes('clean')) return '';
+      return '';
+    };
+    const svc = new LibraryAdminService(repo, t, mockExec as unknown as typeof import('node:child_process').execSync);
+
+    const result = await svc.gitResetToOriginMain();
+
+    expect(result.success).toBe(true);
+    expect(calls.some(c => c.includes('fetch origin main'))).toBe(true);
+    expect(calls.some(c => c.includes('reset --hard origin/main'))).toBe(true);
+    expect(calls.some(c => c.includes('clean -fd'))).toBe(true);
   });
 
   it('returns git stderr/stdout details when pull fails', async () => {

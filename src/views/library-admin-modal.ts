@@ -72,6 +72,9 @@ export class LibraryAdminModal extends Modal {
         .setButtonText(this.plugin.i18n.t('admin.pullLatest'))
         .onClick(() => { void this.handlePullLatest(); }))
       .addButton(btn => btn
+        .setButtonText(this.plugin.i18n.t('admin.resetToRemote'))
+        .onClick(() => { void this.handleResetToRemote(); }))
+      .addButton(btn => btn
         .setButtonText(this.plugin.i18n.t('admin.validateAll'))
         .onClick(() => { void this.handleValidate(); }))
       .addButton(btn => btn
@@ -408,9 +411,28 @@ export class LibraryAdminModal extends Modal {
     this.setStatus(this.plugin.i18n.t('admin.pullingLatest'));
     const result = await this.admin.gitPull();
     if (result.success) {
-      this.setStatus(result.output || this.plugin.i18n.t('admin.upToDate'));
+      const output = result.output.trim();
+      this.setStatus(output || this.plugin.i18n.t('admin.upToDate'));
+      new Notice(this.plugin.i18n.t('admin.upToDate'));
     } else {
-      this.setStatus(this.plugin.i18n.t('admin.pullFailed', { error: result.output }));
+      this.setStatus(result.output);
+      new Notice(result.output, 8000);
+    }
+    this.refreshAdmin();
+  }
+
+  private async handleResetToRemote(): Promise<void> {
+    if (!this.admin) return;
+    const message = this.plugin.i18n.t('admin.confirmResetToRemote');
+    if (!confirm(message)) return;
+    this.setStatus(this.plugin.i18n.t('admin.resettingToRemote'));
+    const result = await this.admin.gitResetToOriginMain();
+    if (result.success) {
+      this.setStatus(result.output || this.plugin.i18n.t('admin.resetSuccess'));
+      new Notice(this.plugin.i18n.t('admin.resetSuccess'));
+    } else {
+      this.setStatus(result.output);
+      new Notice(result.output, 8000);
     }
     this.refreshAdmin();
   }

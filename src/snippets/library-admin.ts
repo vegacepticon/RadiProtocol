@@ -398,9 +398,38 @@ export class LibraryAdminService {
 
   // ─── Git operations ──────────────────────────────────────────────────
 
-  /** Run git pull in the repo directory. */
+  /** Fetch and fast-forward from origin/main. Does not overwrite local edits/deletes. */
   async gitPull(): Promise<{ success: boolean; output: string }> {
-    return this.runGit('pull', '--rebase', '--autostash', 'origin', 'main');
+    const fetch = await this.runGit('fetch', 'origin', 'main');
+    if (!fetch.success) return fetch;
+
+    const status = await this.gitStatus();
+    if (!status.success) return status;
+    if (status.output.trim() !== '') {
+      return {
+        success: false,
+        output: this.t('admin.pullBlockedDirtyTree', { status: status.output }),
+      };
+    }
+
+    return this.runGit('merge', '--ff-only', 'origin/main');
+  }
+
+  /** Restore the local checkout to origin/main, discarding local changes. */
+  async gitResetToOriginMain(): Promise<{ success: boolean; output: string }> {
+    const fetch = await this.runGit('fetch', 'origin', 'main');
+    if (!fetch.success) return fetch;
+
+    const reset = await this.runGit('reset', '--hard', 'origin/main');
+    if (!reset.success) return reset;
+
+    const clean = await this.runGit('clean', '-fd');
+    if (!clean.success) return clean;
+
+    return {
+      success: true,
+      output: [reset.output, clean.output].filter(Boolean).join('\n') || this.t('admin.resetSuccess'),
+    };
   }
 
   /** Get git status. */
