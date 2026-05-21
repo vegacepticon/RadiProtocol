@@ -1,7 +1,7 @@
 // src/protocol/protocol-library-service.ts
 // Fetches a remote protocol library index, installs .rp.json protocols, and tracks installed entries.
 import { App, Notice, requestUrl } from 'obsidian';
-import type { RadiProtocolSettings } from '../settings';
+import { DEFAULT_PROTOCOL_LIBRARY_URL, type RadiProtocolSettings } from '../settings';
 import type { Translator } from '../i18n';
 import { ensureFolderPath } from '../utils/vault-utils';
 import { WriteMutex } from '../utils/write-mutex';
@@ -33,11 +33,7 @@ export class ProtocolLibraryService {
   }
 
   async fetchIndex(): Promise<ProtocolLibraryIndex | null> {
-    const url = this.settings.protocolLibraryUrl.trim();
-    if (url === '') {
-      new Notice(this.t('protocolLibrary.noUrl'));
-      return null;
-    }
+    const url = this.getLibraryUrl();
 
     try {
       const response = await requestUrl({ url, method: 'GET' });
@@ -54,8 +50,12 @@ export class ProtocolLibraryService {
     }
   }
 
+  private getLibraryUrl(): string {
+    return this.settings.protocolLibraryUrl.trim() || DEFAULT_PROTOCOL_LIBRARY_URL;
+  }
+
   private getBaseUrl(): string {
-    const url = this.settings.protocolLibraryUrl.trim();
+    const url = this.getLibraryUrl();
     const lastSlash = url.lastIndexOf('/');
     return lastSlash > 0 ? url.slice(0, lastSlash + 1) : url;
   }

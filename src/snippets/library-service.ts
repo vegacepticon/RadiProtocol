@@ -1,7 +1,7 @@
 // snippets/library-service.ts
 // Phase 86 (TEMPLATE-LIB-01): fetch library index, download snippets, track installs.
 import { App, Notice, requestUrl } from 'obsidian';
-import type { RadiProtocolSettings } from '../settings';
+import { DEFAULT_LIBRARY_URL, type RadiProtocolSettings } from '../settings';
 import { SnippetService } from './snippet-service';
 import type { JsonSnippet } from './snippet-model';
 import { validatePlaceholders } from './snippet-model';
@@ -29,14 +29,10 @@ export class LibraryService {
     this.t = t;
   }
 
-  /** Fetch library index JSON from settings.libraryUrl via requestUrl().
+  /** Fetch library index JSON from settings.libraryUrl or the bundled default via requestUrl().
    *  Returns null on network or parse failure. */
   async fetchIndex(): Promise<LibraryIndex | null> {
-    const url = this.settings.libraryUrl.trim();
-    if (url === '') {
-      new Notice(this.t('library.noUrl'));
-      return null;
-    }
+    const url = this.getLibraryUrl();
     try {
       const response = await requestUrl({ url, method: 'GET' });
       const parsed = JSON.parse(response.text) as LibraryIndex;
@@ -52,9 +48,13 @@ export class LibraryService {
     }
   }
 
+  private getLibraryUrl(): string {
+    return this.settings.libraryUrl.trim() || DEFAULT_LIBRARY_URL;
+  }
+
   /** Derive the base URL (directory of the index file) so snippet paths can be resolved. */
   private getBaseUrl(): string {
-    const url = this.settings.libraryUrl.trim();
+    const url = this.getLibraryUrl();
     const lastSlash = url.lastIndexOf('/');
     return lastSlash > 0 ? url.slice(0, lastSlash + 1) : url;
   }

@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import * as obsidian from 'obsidian';
 import { ProtocolLibraryService } from '../protocol/protocol-library-service';
 import type { ProtocolLibraryEntry } from '../protocol/protocol-library-model';
 
@@ -35,16 +36,24 @@ describe('ProtocolLibraryService', () => {
   });
 
   describe('fetchIndex', () => {
-    it('returns null when URL is empty', async () => {
+    it('uses bundled RadiProtocol-Library protocol index when URL setting is empty', async () => {
+      vi.spyOn(obsidian, 'requestUrl').mockResolvedValue({
+        text: JSON.stringify({ version: '1.0.0', protocols: [] }),
+      } as never);
       service = new ProtocolLibraryService(
         mockApp,
         { ...mockSettings, protocolLibraryUrl: '' },
         mockProtocolDocumentStore,
         mockT,
       );
+
       const result = await service.fetchIndex();
-      expect(result).toBeNull();
-      expect(mockT).toHaveBeenCalledWith('protocolLibrary.noUrl');
+
+      expect(result).toEqual({ version: '1.0.0', protocols: [] });
+      expect(obsidian.requestUrl).toHaveBeenCalledWith({
+        url: 'https://raw.githubusercontent.com/vegacepticon/RadiProtocol-Library/main/protocols-index.json',
+        method: 'GET',
+      });
     });
   });
 

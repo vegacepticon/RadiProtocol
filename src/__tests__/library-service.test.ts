@@ -39,11 +39,19 @@ describe('LibraryService', () => {
   });
 
   describe('fetchIndex', () => {
-    it('returns null when URL is empty', async () => {
+    it('uses bundled RadiProtocol-Library index when URL setting is empty', async () => {
+      vi.spyOn(obsidian, 'requestUrl').mockResolvedValue({
+        text: JSON.stringify({ version: '1.0.0', snippets: [] }),
+      } as never);
       service = new LibraryService(mockApp, { ...mockSettings, libraryUrl: '' }, mockSnippetService, mockT);
+
       const result = await service.fetchIndex();
-      expect(result).toBeNull();
-      expect(mockT).toHaveBeenCalledWith('library.noUrl');
+
+      expect(result).toEqual({ version: '1.0.0', snippets: [] });
+      expect(obsidian.requestUrl).toHaveBeenCalledWith({
+        url: 'https://raw.githubusercontent.com/vegacepticon/RadiProtocol-Library/main/index.json',
+        method: 'GET',
+      });
     });
   });
 

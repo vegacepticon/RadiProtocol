@@ -17,6 +17,9 @@ export interface InlineRunnerLayout {
   height?: number;
 }
 
+export const DEFAULT_LIBRARY_URL = 'https://raw.githubusercontent.com/vegacepticon/RadiProtocol-Library/main/index.json';
+export const DEFAULT_PROTOCOL_LIBRARY_URL = 'https://raw.githubusercontent.com/vegacepticon/RadiProtocol-Library/main/protocols-index.json';
+
 export interface RadiProtocolSettings {
   /** Vault-relative path for snippet JSON files (D-15, SNIP-08). Default: .radiprotocol/snippets */
   snippetFolderPath: string;
@@ -47,8 +50,8 @@ export const DEFAULT_SETTINGS: RadiProtocolSettings = {
   textSeparator: 'newline',
   inlineRunnerPosition: null,
   locale: 'en',
-  libraryUrl: '',
-  protocolLibraryUrl: '',
+  libraryUrl: DEFAULT_LIBRARY_URL,
+  protocolLibraryUrl: DEFAULT_PROTOCOL_LIBRARY_URL,
   libraryMaintainerMode: false,
   libraryRepoPath: '',
 };
@@ -115,19 +118,6 @@ export class RadiProtocolSettingsTab extends PluginSettingTab {
           });
       });
 
-    // Protocol library URL setting
-    new Setting(containerEl)
-      .setName(this.plugin.i18n.t('settings.protocolLibraryUrlLabel'))
-      .setDesc(this.plugin.i18n.t('settings.protocolLibraryUrlDesc'))
-      .addText(text => text
-        .setPlaceholder('https://example.com/protocols-index.json')
-        .setValue(this.plugin.settings.protocolLibraryUrl)
-        .onChange(async (value) => {
-          this.plugin.settings.protocolLibraryUrl = value.trim();
-          await this.plugin.saveSettings();
-        })
-      );
-
     // Group 5 — Storage
     new Setting(containerEl).setName(this.plugin.i18n.t('settings.storageHeading')).setHeading();
 
@@ -144,19 +134,6 @@ export class RadiProtocolSettingsTab extends PluginSettingTab {
             await this.plugin.saveSettings();
           });
       });
-
-    // Phase 86 (TEMPLATE-LIB-01): library URL setting
-    new Setting(containerEl)
-      .setName(this.plugin.i18n.t('settings.libraryUrlLabel'))
-      .setDesc(this.plugin.i18n.t('settings.libraryUrlDesc'))
-      .addText(text => text
-        .setPlaceholder('https://raw.githubusercontent.com/user/repo/main/index.json')
-        .setValue(this.plugin.settings.libraryUrl)
-        .onChange(async (value) => {
-          this.plugin.settings.libraryUrl = value.trim();
-          await this.plugin.saveSettings();
-        })
-      );
 
     // Library Admin section
     new Setting(containerEl).setName(this.plugin.i18n.t('settings.libraryAdminHeading')).setHeading();
