@@ -101,6 +101,17 @@ export class LibraryService {
     return true;
   }
 
+  async installSnippets(entries: LibrarySnippetEntry[]): Promise<{ installed: number; failed: number }> {
+    let installed = 0;
+    let failed = 0;
+    for (const entry of entries) {
+      const ok = await this.installSnippet(entry);
+      if (ok) installed += 1;
+      else failed += 1;
+    }
+    return { installed, failed };
+  }
+
   /** Read local library-manifest.json or return null if absent. */
   async readManifest(): Promise<LibraryManifest | null> {
     const path = `${this.settings.snippetFolderPath}/Library/library-manifest.json`;

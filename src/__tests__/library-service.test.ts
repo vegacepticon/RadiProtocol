@@ -74,6 +74,27 @@ describe('LibraryService', () => {
     });
   });
 
+  describe('installSnippets', () => {
+    it('installs entries sequentially and returns success/failure counts', async () => {
+      const entries: LibrarySnippetEntry[] = [
+        { id: 'a', name: 'A', category: 'General', path: 'a.json', description: 'A' },
+        { id: 'b', name: 'B', category: 'General', path: 'b.json', description: 'B' },
+        { id: 'c', name: 'C', category: 'General', path: 'c.json', description: 'C' },
+      ];
+      vi.spyOn(service, 'installSnippet')
+        .mockResolvedValueOnce(true)
+        .mockResolvedValueOnce(false)
+        .mockResolvedValueOnce(true);
+
+      const result = await service.installSnippets(entries);
+
+      expect(result).toEqual({ installed: 2, failed: 1 });
+      expect(service.installSnippet).toHaveBeenNthCalledWith(1, entries[0]);
+      expect(service.installSnippet).toHaveBeenNthCalledWith(2, entries[1]);
+      expect(service.installSnippet).toHaveBeenNthCalledWith(3, entries[2]);
+    });
+  });
+
   describe('readManifest / writeManifest', () => {
     it('returns null when manifest does not exist', async () => {
       mockApp.vault.adapter.exists = vi.fn().mockResolvedValue(false);

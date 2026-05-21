@@ -498,22 +498,80 @@
   opacity: 0.5;
 }
 
-/* Phase 86: Library browser modal */
-.rp-library-category-heading {
-  margin-top: var(--size-4-4);
-  margin-bottom: var(--size-4-2);
-  font-size: var(--font-ui-medium);
-  font-weight: 600;
-  border-bottom: 1px solid var(--background-modifier-border);
-  padding-bottom: var(--size-4-1);
+/* Phase 86/87: Library browser modal */
+.rp-library-modal {
+  min-width: min(720px, 90vw);
 }
 
-.rp-library-entry {
+.rp-library-root {
+  display: flex;
+  flex-direction: column;
+  gap: var(--size-4-3);
+}
+
+.rp-library-search-input {
+  width: 100%;
+}
+
+.rp-library-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--size-4-2);
+}
+
+.rp-library-body {
+  min-height: 240px;
+}
+
+.rp-library-breadcrumb {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--size-4-1);
+  margin-bottom: var(--size-4-2);
+}
+
+.rp-library-crumb,
+.rp-library-folder-row {
+  cursor: pointer;
+}
+
+.rp-library-crumb.is-current {
+  color: var(--text-normal);
+  font-weight: var(--font-medium);
+}
+
+.rp-library-crumb-separator {
+  color: var(--text-muted);
+}
+
+.rp-library-directory-meta,
+.rp-library-entry-path {
+  font-size: var(--font-ui-smaller);
+  color: var(--text-muted);
+}
+
+.rp-library-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.rp-library-entry,
+.rp-library-folder-row {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  width: 100%;
   padding: var(--size-4-2) 0;
   border-bottom: 1px solid var(--background-modifier-border);
+  text-align: left;
+}
+
+.rp-library-folder-row {
+  background: transparent;
+  color: var(--text-normal);
+  box-shadow: none;
 }
 
 .rp-library-entry-info {
@@ -523,7 +581,16 @@
 }
 
 .rp-library-entry-name {
+  display: flex;
+  align-items: center;
+  gap: var(--size-4-1);
   font-weight: var(--font-medium);
+}
+
+.rp-library-row-title {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .rp-library-entry-desc {
@@ -531,7 +598,9 @@
   color: var(--text-muted);
 }
 
-.rp-library-install-btn {
+.rp-library-install-btn,
+.rp-library-install-all-btn,
+.rp-library-install-folder-btn {
   flex-shrink: 0;
 }
 
