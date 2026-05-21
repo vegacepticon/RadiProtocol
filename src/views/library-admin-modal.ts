@@ -305,7 +305,7 @@ export class LibraryAdminModal extends Modal {
 
     const actions = row.createDiv({ cls: 'rp-admin-entry-actions' });
     createButton(actions, { cls: 'rp-admin-btn rp-admin-btn-edit', text: this.plugin.i18n.t('admin.rename') })
-      .addEventListener('click', () => { void this.handleRenameDirectory(section, node.path); });
+      .addEventListener('click', () => { void this.handleRenameDirectory(section, node.path, node.displayName); });
     createButton(actions, { cls: 'rp-admin-btn rp-admin-btn-delete', text: this.plugin.i18n.t('admin.delete') })
       .addEventListener('click', () => { void this.handleDeleteDirectory(section, node.path); });
   }
@@ -610,13 +610,12 @@ export class LibraryAdminModal extends Modal {
     if (created) void this.refreshAdmin();
   }
 
-  private async handleRenameDirectory(section: LibraryAdminSection, dirPath: string): Promise<void> {
+  private async handleRenameDirectory(section: LibraryAdminSection, dirPath: string, currentDisplayName: string): Promise<void> {
     if (!this.admin) return;
-    const currentName = dirPath.split('/').pop() ?? dirPath;
     const name = await TextPromptModal.prompt(this.app, {
       title: this.plugin.i18n.t('admin.rename'),
       label: this.plugin.i18n.t('admin.renameFolderPrompt'),
-      initialValue: currentName,
+      initialValue: currentDisplayName,
       confirmText: this.plugin.i18n.t('admin.rename'),
       cancelText: this.plugin.i18n.t('common.cancel'),
     });

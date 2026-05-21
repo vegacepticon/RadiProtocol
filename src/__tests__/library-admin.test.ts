@@ -195,4 +195,68 @@ describe('LibraryAdminService', () => {
     expect(result.output).toContain('stderr details');
     expect(result.output).toContain('stdout details');
   });
+
+  it('createDirectory transliterates Cyrillic name to Latin slug', async () => {
+    const entry = await service.createDirectory('snippets', 'snippets', 'ГМ');
+    expect(entry).not.toBeNull();
+    expect(entry!.name).toBe('gm');
+    expect(entry!.path).toBe('snippets/gm');
+    expect(fs.existsSync(path.join(repo, 'snippets', 'gm'))).toBe(true);
+  });
+
+  it('createDirectory transliterates complex Cyrillic name', async () => {
+    const entry = await service.createDirectory('snippets', 'snippets', 'Щитовидная');
+    expect(entry).not.toBeNull();
+    expect(entry!.name).toBe('shchitovidnaya');
+    expect(fs.existsSync(path.join(repo, 'snippets', 'shchitovidnaya'))).toBe(true);
+  });
+
+  it('renameDirectory produces Latin slug from Cyrillic name', async () => {
+    const created = await service.createDirectory('snippets', 'snippets', 'test-dir');
+    expect(created).not.toBeNull();
+
+    const renamed = await service.renameDirectory('snippets', 'snippets/test-dir', 'Кости');
+    expect(renamed).not.toBeNull();
+    expect(renamed!.name).toBe('kosti');
+    expect(renamed!.path).toBe('snippets/kosti');
+    expect(fs.existsSync(path.join(repo, 'snippets', 'kosti'))).toBe(true);
+    expect(fs.existsSync(path.join(repo, 'snippets', 'test-dir'))).toBe(false);
+  });
+
+  it('renameDirectory updates index entry paths to preserve category metadata', async () => {
+    // Import a snippet first — this creates the directory and index entry
+    const snippetContent = JSON.stringify({ name: 'Test Snippet', template: 'test {{param}}', placeholders: [] });
+    await service.importSnippetFromVault(snippetContent, 'Old Cat', 'Test Snippet', undefined, 'Old Cat / Test Snippet');
+
+    // Verify the snippet is under old-cat directory
+    const oldIndexPath = path.join(repo, 'index.json');
+    const oldIndex = JSON.parse(fs.readFileSync(oldIndexPath, 'utf-8'));
+    const oldEntry = oldIndex.snippets.find((e: any) => e.path.includes('old-cat'));
+    expect(oldEntry).toBeDefined();
+    expect(oldEntry.category).toBe('Old Cat');
+
+    // Rename the directory using the admin service
+    const renamed = await service.renameDirectory('snippets', 'snippets/old-cat', 'new-cat');
+    expect(renamed).not.toBeNull();
+    expect(renamed!.name).toBe('new-cat');
+
+    // Check that category is preserved after full regeneration
+    const newIndex = JSON.parse(fs.readFileSync(oldIndexPath, 'utf-8'));
+    const newEntry = newIndex.snippets.find((e: any) => e.path.includes('new-cat'));
+    expect(newEntry).toBeDefined();
+    expect(newEntry.category).toBe('Old Cat');
+  });
+
+  it('importSnippetFromVault still produces Latin slug from Cyrillic category', async () => {
+    await service.importSnippetFromVault(
+      JSON.stringify({ name: 'Atelectasis', template: 'Atelectasis {{side}}', placeholders: [] }),
+      'Грудная Клетка',
+      'Atelectasis',
+      undefined,
+      'Грудная Клетка / Atelectasis',
+    );
+
+    const snippetPath = path.join(repo, 'snippets', 'grudnaya-kletka', 'atelectasis.json');
+    expect(fs.existsSync(snippetPath)).toBe(true);
+  });
 });
