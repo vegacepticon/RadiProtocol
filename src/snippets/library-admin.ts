@@ -19,6 +19,14 @@ function ensureModule(mod: unknown, name: string): void {
 
 type GitExec = typeof nodeChildProcess.execSync;
 
+export type LibraryAdminSection = 'snippets' | 'protocols';
+
+export interface LibraryAdminDirectoryEntry {
+  name: string;
+  path: string;
+  section: LibraryAdminSection;
+}
+
 export class LibraryAdminService {
   private readonly repoPath: string;
   private readonly t: Translator;
@@ -87,6 +95,30 @@ export class LibraryAdminService {
     } catch {
       return null;
     }
+  }
+
+  /** List directories under snippets/ or protocols/. */
+  async listDirectories(section: LibraryAdminSection): Promise<LibraryAdminDirectoryEntry[]> {
+    ensureModule(nodeFs, 'fs');
+    ensureModule(nodePath, 'path');
+    const fs = nodeFs as typeof import('fs');
+    const path = nodePath as typeof import('path');
+    const rootRel = this.sectionRoot(section);
+    const root = path.join(this.repoPath, rootRel);
+    if (!fs.existsSync(root)) return [];
+    const dirs: LibraryAdminDirectoryEntry[] = [];
+    const stack = [root];
+    while (stack.length > 0) {
+      const current = stack.pop()!;
+      for (const entry of fs.readdirSync(current, { withFileTypes: true })) {
+        if (!entry.isDirectory()) continue;
+        const fullPath = path.join(current, entry.name);
+        const rel = path.relative(this.repoPath, fullPath).split(path.sep).join('/');
+        dirs.push({ name: entry.name, path: rel, section });
+        stack.push(fullPath);
+      }
+    }
+    return dirs.sort((a, b) => a.path.localeCompare(b.path, 'ru'));
   }
 
   // ─── Write operations ──────────────────────────────────────────────
@@ -227,6 +259,80 @@ export class LibraryAdminService {
     } catch (err) {
       console.error('[RadiProtocol][Admin] deleteProtocol failed:', err);
       new Notice(this.t('admin.deleteFailed', { error: String(err) }));
+      return false;
+    }
+  }
+
+  /** Create a directory under snippets/ or protocols/. */
+  async createDirectory(section: LibraryAdminSection, parentPath: string, name: string): Promise<LibraryAdminDirectoryEntry | null> {
+    ensureModule(nodeFs, 'fs');
+    const fs = nodeFs as typeof import('fs');
+    try {
+      const safeName = this.safeDirectoryName(name);
+      const parentRel = this.normaliseDirectoryPath(section, parentPath);
+      const relPath = `${parentRel}/${safeName}`;
+      const fullPath = this.resolveRepoPath(relPath);
+      if (fs.existsSync(fullPath)) {
+        throw new Error(this.t('admin.directoryAlreadyExists'));
+      }
+      fs.mkdirSync(fullPath, { recursive: false });
+      new Notice(this.t('admin.directoryCreated', { name: safeName }));
+      return { name: safeName, path: relPath, section };
+    } catch (err) {
+      console.error('[RadiProtocol][Admin] createDirectory failed:', err);
+      new Notice(this.t('admin.directoryCreateFailed', { error: String(err) }));
+      return null;
+    }
+  }
+
+  /** Rename a directory under snippets/ or protocols/. */
+  async renameDirectory(section: LibraryAdminSection, dirPath: string, newName: string): Promise<LibraryAdminDirectoryEntry | null> {
+    ensureModule(nodeFs, 'fs');
+    ensureModule(nodePath, 'path');
+    const fs = nodeFs as typeof import('fs');
+    const path = nodePath as typeof import('path');
+    try {
+      const fromRel = this.normaliseDirectoryPath(section, dirPath);
+      if (fromRel === this.sectionRoot(section)) throw new Error(this.t('admin.directoryRootProtected'));
+      const safeName = this.safeDirectoryName(newName);
+      const toRel = `${path.posix.dirname(fromRel)}/${safeName}`;
+      const fromFull = this.resolveRepoPath(fromRel);
+      const toFull = this.resolveRepoPath(toRel);
+      if (!fs.existsSync(fromFull) || !fs.statSync(fromFull).isDirectory()) {
+        throw new Error(this.t('admin.directoryNotFound'));
+      }
+      if (fs.existsSync(toFull)) {
+        throw new Error(this.t('admin.directoryAlreadyExists'));
+      }
+      fs.renameSync(fromFull, toFull);
+      await this.regenerateIndexes();
+      new Notice(this.t('admin.directoryRenamed', { name: safeName }));
+      return { name: safeName, path: toRel, section };
+    } catch (err) {
+      console.error('[RadiProtocol][Admin] renameDirectory failed:', err);
+      new Notice(this.t('admin.directoryRenameFailed', { error: String(err) }));
+      return null;
+    }
+  }
+
+  /** Delete an empty directory under snippets/ or protocols/. */
+  async deleteDirectory(section: LibraryAdminSection, dirPath: string): Promise<boolean> {
+    ensureModule(nodeFs, 'fs');
+    const fs = nodeFs as typeof import('fs');
+    try {
+      const relPath = this.normaliseDirectoryPath(section, dirPath);
+      if (relPath === this.sectionRoot(section)) throw new Error(this.t('admin.directoryRootProtected'));
+      const fullPath = this.resolveRepoPath(relPath);
+      if (!fs.existsSync(fullPath) || !fs.statSync(fullPath).isDirectory()) {
+        throw new Error(this.t('admin.directoryNotFound'));
+      }
+      fs.rmdirSync(fullPath);
+      await this.regenerateIndexes();
+      new Notice(this.t('admin.directoryDeleted'));
+      return true;
+    } catch (err) {
+      console.error('[RadiProtocol][Admin] deleteDirectory failed:', err);
+      new Notice(this.t('admin.directoryDeleteFailed', { error: String(err) }));
       return false;
     }
   }
@@ -608,6 +714,37 @@ export class LibraryAdminService {
 
   private titleFromSlug(slug: string): string {
     return slug.replace(/-/g, ' ').replace(/\s+/g, ' ').trim().toUpperCase();
+  }
+
+  private sectionRoot(section: LibraryAdminSection): string {
+    return section === 'snippets' ? 'snippets' : 'protocols';
+  }
+
+  private safeDirectoryName(name: string): string {
+    const trimmed = name.trim();
+    if (trimmed === '' || trimmed === '.' || trimmed === '..' || trimmed.includes('/') || trimmed.includes('\\')) {
+      throw new Error(this.t('admin.invalidDirectoryName'));
+    }
+    return trimmed;
+  }
+
+  private normaliseDirectoryPath(section: LibraryAdminSection, dirPath: string): string {
+    const root = this.sectionRoot(section);
+    const normalised = dirPath.replace(/\\/g, '/').replace(/^\/+|\/+$/g, '');
+    if (normalised === '') return root;
+    if (normalised === root || normalised.startsWith(`${root}/`)) return normalised;
+    throw new Error(this.t('admin.invalidDirectoryPath'));
+  }
+
+  private resolveRepoPath(relPath: string): string {
+    ensureModule(nodePath, 'path');
+    const path = nodePath as typeof import('path');
+    const fullPath = path.resolve(this.repoPath, relPath);
+    const repoRoot = path.resolve(this.repoPath);
+    if (fullPath !== repoRoot && !fullPath.startsWith(`${repoRoot}${path.sep}`)) {
+      throw new Error(this.t('admin.invalidDirectoryPath'));
+    }
+    return fullPath;
   }
 
   private displayCategoryFromRelativePath(relPath: string): string {

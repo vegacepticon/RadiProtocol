@@ -4,16 +4,42 @@
 import { App, Modal, Notice, Setting, TFile, TFolder } from 'obsidian';
 import type RadiProtocolPlugin from '../main';
 import { LibraryAdminService } from '../snippets/library-admin';
+import type { LibraryAdminDirectoryEntry, LibraryAdminSection } from '../snippets/library-admin';
 import type { LibrarySnippetEntry } from '../snippets/library-model';
 import type { ProtocolLibraryEntry } from '../protocol/protocol-library-model';
+import { createButton, createInput } from '../utils/dom-helpers';
 
-type TabId = 'snippets' | 'protocols';
+type TabId = LibraryAdminSection;
+type AdminEntry = LibrarySnippetEntry | ProtocolLibraryEntry;
+
+const SEARCH_DEBOUNCE_MS = 120;
+const GLYPH_FOLDER = '\uD83D\uDCC1';
+const GLYPH_JSON = '\uD83D\uDCC4';
+
+interface AdminTreeNode {
+  name: string;
+  path: string;
+  children: Map<string, AdminTreeNode>;
+  entries: AdminEntry[];
+}
+
+function entryTitle(entry: AdminEntry): string {
+  return 'title' in entry ? entry.title : entry.name;
+}
+
+function nodePath(parentPath: string, name: string): string {
+  return parentPath === '' ? name : `${parentPath}/${name}`;
+}
 
 export class LibraryAdminModal extends Modal {
   private plugin: RadiProtocolPlugin;
   private admin: LibraryAdminService | null = null;
   private currentTab: TabId = 'snippets';
   private statusEl: HTMLElement;
+  private drillPath: string[] = [];
+  private currentQuery = '';
+  private searchInputEl: HTMLInputElement | null = null;
+  private searchDebounceTimer: number | null = null;
 
   constructor(app: App, plugin: RadiProtocolPlugin) {
     super(app);
@@ -95,6 +121,8 @@ export class LibraryAdminModal extends Modal {
     });
     snippetTab.addEventListener('click', () => {
       this.currentTab = 'snippets';
+      this.drillPath = [];
+      this.clearSearch();
       this.renderAdminContent(contentEl);
     });
 
@@ -104,6 +132,8 @@ export class LibraryAdminModal extends Modal {
     });
     protocolTab.addEventListener('click', () => {
       this.currentTab = 'protocols';
+      this.drillPath = [];
+      this.clearSearch();
       this.renderAdminContent(contentEl);
     });
 
@@ -134,7 +164,6 @@ export class LibraryAdminModal extends Modal {
   }
 
   private renderSnippetsTab(contentArea: HTMLElement): void {
-    // Import button
     new Setting(contentArea)
       .setName(this.plugin.i18n.t('admin.importSnippet'))
       .setDesc(this.plugin.i18n.t('admin.importSnippetDesc'))
@@ -142,51 +171,10 @@ export class LibraryAdminModal extends Modal {
         .setButtonText(this.plugin.i18n.t('admin.importSnippetBtn'))
         .onClick(() => { void this.handleImportSnippet(); }));
 
-    // List snippets
-    void this.admin!.readSnippetIndex().then((index) => {
-      if (!index || index.snippets.length === 0) {
-        contentArea.createEl('p', { text: this.plugin.i18n.t('admin.noSnippets'), cls: 'rp-admin-empty' });
-        return;
-      }
-
-      const list = contentArea.createDiv({ cls: 'rp-admin-list' });
-
-      // Group by category
-      const byCategory = new Map<string, LibrarySnippetEntry[]>();
-      for (const entry of index.snippets) {
-        const cat = entry.category || 'General';
-        if (!byCategory.has(cat)) byCategory.set(cat, []);
-        byCategory.get(cat)!.push(entry);
-      }
-
-      for (const [category, entries] of byCategory) {
-        list.createEl('h4', { text: category, cls: 'rp-admin-category' });
-        for (const entry of entries) {
-          const row = list.createDiv({ cls: 'rp-admin-entry' });
-          const info = row.createDiv({ cls: 'rp-admin-entry-info' });
-          info.createEl('span', { text: entry.name, cls: 'rp-admin-entry-name' });
-          info.createEl('span', { text: entry.path, cls: 'rp-admin-entry-path' });
-
-          const actions = row.createDiv({ cls: 'rp-admin-entry-actions' });
-          actions.createEl('button', {
-            text: this.plugin.i18n.t('admin.edit'),
-            cls: 'rp-admin-btn rp-admin-btn-edit',
-          }).addEventListener('click', () => {
-            this.openEditSnippetModal(entry);
-          });
-          actions.createEl('button', {
-            text: this.plugin.i18n.t('admin.delete'),
-            cls: 'rp-admin-btn rp-admin-btn-delete',
-          }).addEventListener('click', () => {
-            void this.handleDeleteSnippet(entry);
-          });
-        }
-      }
-    });
+    void this.renderTreeTab(contentArea, 'snippets');
   }
 
   private renderProtocolsTab(contentArea: HTMLElement): void {
-    // Import button
     new Setting(contentArea)
       .setName(this.plugin.i18n.t('admin.importProtocol'))
       .setDesc(this.plugin.i18n.t('admin.importProtocolDesc'))
@@ -194,39 +182,212 @@ export class LibraryAdminModal extends Modal {
         .setButtonText(this.plugin.i18n.t('admin.importProtocolBtn'))
         .onClick(() => { void this.handleImportProtocol(); }));
 
-    // List protocols
-    void this.admin!.readProtocolIndex().then((index) => {
-      if (!index || index.protocols.length === 0) {
-        contentArea.createEl('p', { text: this.plugin.i18n.t('admin.noProtocols'), cls: 'rp-admin-empty' });
-        return;
-      }
+    void this.renderTreeTab(contentArea, 'protocols');
+  }
 
-      const list = contentArea.createDiv({ cls: 'rp-admin-list' });
-      for (const entry of index.protocols) {
-        const row = list.createDiv({ cls: 'rp-admin-entry' });
-        const info = row.createDiv({ cls: 'rp-admin-entry-info' });
-        info.createEl('span', { text: entry.title, cls: 'rp-admin-entry-name' });
-        info.createEl('span', {
-          text: `${entry.nodes ?? 0} nodes · ${entry.edges ?? 0} edges`,
-          cls: 'rp-admin-entry-meta',
-        });
-        info.createEl('span', { text: entry.path, cls: 'rp-admin-entry-path' });
+  private async renderTreeTab(contentArea: HTMLElement, section: LibraryAdminSection): Promise<void> {
+    if (!this.admin) return;
+    const treeHost = contentArea.createDiv({ cls: 'rp-admin-tree-root' });
+    this.renderTreeToolbar(treeHost, section);
 
-        const actions = row.createDiv({ cls: 'rp-admin-entry-actions' });
-        actions.createEl('button', {
-          text: this.plugin.i18n.t('admin.edit'),
-          cls: 'rp-admin-btn rp-admin-btn-edit',
-        }).addEventListener('click', () => {
-          this.openEditProtocolModal(entry);
-        });
-        actions.createEl('button', {
-          text: this.plugin.i18n.t('admin.delete'),
-          cls: 'rp-admin-btn rp-admin-btn-delete',
-        }).addEventListener('click', () => {
-          void this.handleDeleteProtocol(entry);
-        });
-      }
+    const [directories, entries] = await Promise.all([
+      this.admin.listDirectories(section),
+      this.readSectionEntries(section),
+    ]);
+    const tree = this.buildAdminTree(section, directories, entries);
+    const body = treeHost.createDiv({ cls: 'rp-admin-tree-body' });
+    this.renderBreadcrumb(body, section);
+
+    const query = this.currentQuery.trim();
+    if (query !== '') {
+      this.renderSearchResults(body, section, entries, query);
+    } else {
+      this.renderDirectory(body, section, this.findNodeByDrillPath(tree));
+    }
+  }
+
+  private renderTreeToolbar(host: HTMLElement, section: LibraryAdminSection): void {
+    const toolbar = host.createDiv({ cls: 'rp-admin-tree-toolbar' });
+    const searchInput = createInput(toolbar, {
+      cls: 'rp-admin-search-input',
+      type: 'text',
+      placeholder: this.plugin.i18n.t('admin.searchPlaceholder'),
+      value: this.currentQuery,
     });
+    this.searchInputEl = searchInput;
+    searchInput.addEventListener('input', () => {
+      this.currentQuery = searchInput.value;
+      if (this.searchDebounceTimer !== null) clearTimeout(this.searchDebounceTimer);
+      this.searchDebounceTimer = setTimeout(() => {
+        this.searchDebounceTimer = null;
+        this.renderAdminContent(this.contentEl);
+      }, SEARCH_DEBOUNCE_MS) as unknown as number;
+    });
+
+    const newFolderBtn = createButton(toolbar, {
+      cls: 'rp-admin-btn rp-admin-create-folder-btn',
+      text: this.plugin.i18n.t('admin.createFolder'),
+    });
+    newFolderBtn.addEventListener('click', () => { void this.handleCreateDirectory(section); });
+  }
+
+  private renderBreadcrumb(host: HTMLElement, section: LibraryAdminSection): void {
+    const breadcrumb = host.createDiv({ cls: 'rp-admin-breadcrumb' });
+    const rootBtn = createButton(breadcrumb, {
+      cls: this.drillPath.length === 0 ? 'rp-admin-crumb is-current' : 'rp-admin-crumb',
+      text: section === 'snippets' ? this.plugin.i18n.t('admin.snippetsTab') : this.plugin.i18n.t('admin.protocolsTab'),
+    });
+    rootBtn.addEventListener('click', () => {
+      this.drillPath = [];
+      this.clearSearch();
+      this.renderAdminContent(this.contentEl);
+    });
+
+    this.drillPath.forEach((segment, index) => {
+      breadcrumb.createEl('span', { cls: 'rp-admin-crumb-separator', text: '/' });
+      const crumb = createButton(breadcrumb, {
+        cls: index === this.drillPath.length - 1 ? 'rp-admin-crumb is-current' : 'rp-admin-crumb',
+        text: segment,
+      });
+      crumb.addEventListener('click', () => {
+        this.drillPath = this.drillPath.slice(0, index + 1);
+        this.clearSearch();
+        this.renderAdminContent(this.contentEl);
+      });
+    });
+  }
+
+  private renderDirectory(host: HTMLElement, section: LibraryAdminSection, node: AdminTreeNode): void {
+    host.createDiv({
+      cls: 'rp-admin-directory-meta',
+      text: this.plugin.i18n.t('admin.directoryCount', { count: String(this.collectEntries(node).length) }),
+    });
+    const list = host.createDiv({ cls: 'rp-admin-list rp-admin-tree-list' });
+    for (const child of node.children.values()) this.renderFolderRow(list, section, child);
+    for (const entry of node.entries) this.renderEntryRow(list, section, entry, false);
+    if (list.children.length === 0) {
+      list.createEl('div', { cls: 'rp-admin-empty', text: this.plugin.i18n.t('admin.emptyFolder') });
+    }
+  }
+
+  private renderSearchResults(host: HTMLElement, section: LibraryAdminSection, entries: AdminEntry[], query: string): void {
+    const matches = this.filterEntries(entries, query);
+    host.createDiv({ cls: 'rp-admin-directory-meta', text: this.plugin.i18n.t('admin.searchResults', { count: String(matches.length) }) });
+    const list = host.createDiv({ cls: 'rp-admin-list rp-admin-tree-list' });
+    for (const entry of matches) this.renderEntryRow(list, section, entry, true);
+    if (list.children.length === 0) {
+      list.createEl('div', { cls: 'rp-admin-empty', text: this.plugin.i18n.t('admin.emptyResults') });
+    }
+  }
+
+  private renderFolderRow(list: HTMLElement, section: LibraryAdminSection, node: AdminTreeNode): void {
+    const row = list.createDiv({ cls: 'rp-admin-entry rp-admin-folder-row' });
+    const openBtn = createButton(row, { cls: 'rp-admin-folder-open' });
+    const nameEl = openBtn.createEl('span', { cls: 'rp-admin-entry-name' });
+    nameEl.createEl('span', { cls: 'rp-admin-row-glyph', text: GLYPH_FOLDER });
+    nameEl.createEl('span', { cls: 'rp-admin-row-title', text: node.name });
+    openBtn.createEl('span', {
+      cls: 'rp-admin-entry-meta',
+      text: this.plugin.i18n.t('admin.directoryCount', { count: String(this.collectEntries(node).length) }),
+    });
+    openBtn.addEventListener('click', () => {
+      this.drillPath.push(node.name);
+      this.clearSearch();
+      this.renderAdminContent(this.contentEl);
+    });
+
+    const actions = row.createDiv({ cls: 'rp-admin-entry-actions' });
+    createButton(actions, { cls: 'rp-admin-btn rp-admin-btn-edit', text: this.plugin.i18n.t('admin.rename') })
+      .addEventListener('click', () => { void this.handleRenameDirectory(section, node.path); });
+    createButton(actions, { cls: 'rp-admin-btn rp-admin-btn-delete', text: this.plugin.i18n.t('admin.delete') })
+      .addEventListener('click', () => { void this.handleDeleteDirectory(section, node.path); });
+  }
+
+  private renderEntryRow(list: HTMLElement, section: LibraryAdminSection, entry: AdminEntry, showPath: boolean): void {
+    const row = list.createDiv({ cls: 'rp-admin-entry' });
+    const info = row.createDiv({ cls: 'rp-admin-entry-info' });
+    const nameEl = info.createEl('span', { cls: 'rp-admin-entry-name' });
+    nameEl.createEl('span', { cls: 'rp-admin-row-glyph', text: GLYPH_JSON });
+    nameEl.createEl('span', { cls: 'rp-admin-row-title', text: entryTitle(entry) });
+    if (section === 'protocols' && 'nodes' in entry) {
+      info.createEl('span', {
+        text: this.plugin.i18n.t('admin.protocolMeta', { nodes: String(entry.nodes ?? 0), edges: String(entry.edges ?? 0) }),
+        cls: 'rp-admin-entry-meta',
+      });
+    }
+    info.createEl('span', { text: showPath ? entry.path : entry.path.split('/').pop() ?? entry.path, cls: 'rp-admin-entry-path' });
+
+    const actions = row.createDiv({ cls: 'rp-admin-entry-actions' });
+    createButton(actions, { text: this.plugin.i18n.t('admin.edit'), cls: 'rp-admin-btn rp-admin-btn-edit' })
+      .addEventListener('click', () => {
+        if (section === 'snippets') this.openEditSnippetModal(entry as LibrarySnippetEntry);
+        else this.openEditProtocolModal(entry as ProtocolLibraryEntry);
+      });
+    createButton(actions, { text: this.plugin.i18n.t('admin.delete'), cls: 'rp-admin-btn rp-admin-btn-delete' })
+      .addEventListener('click', () => {
+        if (section === 'snippets') void this.handleDeleteSnippet(entry as LibrarySnippetEntry);
+        else void this.handleDeleteProtocol(entry as ProtocolLibraryEntry);
+      });
+  }
+
+  private async readSectionEntries(section: LibraryAdminSection): Promise<AdminEntry[]> {
+    if (!this.admin) return [];
+    if (section === 'snippets') return (await this.admin.readSnippetIndex())?.snippets ?? [];
+    return (await this.admin.readProtocolIndex())?.protocols ?? [];
+  }
+
+  private buildAdminTree(section: LibraryAdminSection, directories: LibraryAdminDirectoryEntry[], entries: AdminEntry[]): AdminTreeNode {
+    const rootName = section === 'snippets' ? 'snippets' : 'protocols';
+    const root: AdminTreeNode = { name: rootName, path: rootName, children: new Map(), entries: [] };
+    const ensureNode = (relPath: string): AdminTreeNode => {
+      const parts = relPath.split('/').filter(Boolean).slice(1);
+      let node = root;
+      for (const part of parts) {
+        let child = node.children.get(part);
+        if (!child) {
+          child = { name: part, path: nodePath(node.path, part), children: new Map(), entries: [] };
+          node.children.set(part, child);
+        }
+        node = child;
+      }
+      return node;
+    };
+    for (const directory of directories) ensureNode(directory.path);
+    for (const entry of entries) ensureNode(entry.path.split('/').slice(0, -1).join('/')).entries.push(entry);
+    this.sortTree(root);
+    return root;
+  }
+
+  private sortTree(node: AdminTreeNode): void {
+    node.entries.sort((a, b) => entryTitle(a).localeCompare(entryTitle(b), undefined, { sensitivity: 'base' }));
+    const sortedChildren = [...node.children.values()].sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: 'base' }));
+    node.children = new Map(sortedChildren.map(child => [child.name, child]));
+    for (const child of node.children.values()) this.sortTree(child);
+  }
+
+  private findNodeByDrillPath(root: AdminTreeNode): AdminTreeNode {
+    let node = root;
+    const validPath: string[] = [];
+    for (const segment of this.drillPath) {
+      const child = node.children.get(segment);
+      if (!child) break;
+      validPath.push(segment);
+      node = child;
+    }
+    this.drillPath = validPath;
+    return node;
+  }
+
+  private collectEntries(node: AdminTreeNode): AdminEntry[] {
+    const entries = [...node.entries];
+    for (const child of node.children.values()) entries.push(...this.collectEntries(child));
+    return entries;
+  }
+
+  private filterEntries(entries: AdminEntry[], query: string): AdminEntry[] {
+    const lower = query.trim().toLowerCase();
+    if (lower === '') return entries;
+    return entries.filter((entry) => `${entryTitle(entry)}\n${entry.path}\n${entry.description ?? ''}`.toLowerCase().includes(lower));
   }
 
   // ─── Snippet actions ────────────────────────────────────────────────
@@ -404,6 +565,53 @@ export class LibraryAdminModal extends Modal {
     }
   }
 
+  // ─── Directory actions ──────────────────────────────────────────────
+
+  private async handleCreateDirectory(section: LibraryAdminSection): Promise<void> {
+    if (!this.admin) return;
+    const name = prompt(this.plugin.i18n.t('admin.createFolderPrompt'));
+    if (name === null) return;
+    const parentPath = this.currentDirectoryPath(section);
+    const created = await this.admin.createDirectory(section, parentPath, name);
+    if (created) void this.refreshAdmin();
+  }
+
+  private async handleRenameDirectory(section: LibraryAdminSection, dirPath: string): Promise<void> {
+    if (!this.admin) return;
+    const currentName = dirPath.split('/').pop() ?? dirPath;
+    const name = prompt(this.plugin.i18n.t('admin.renameFolderPrompt'), currentName);
+    if (name === null) return;
+    const renamed = await this.admin.renameDirectory(section, dirPath, name);
+    if (renamed) {
+      this.drillPath = renamed.path.split('/').filter(Boolean).slice(1);
+      void this.refreshAdmin();
+    }
+  }
+
+  private async handleDeleteDirectory(section: LibraryAdminSection, dirPath: string): Promise<void> {
+    if (!this.admin) return;
+    if (!confirm(this.plugin.i18n.t('admin.confirmDeleteFolder', { path: dirPath }))) return;
+    const ok = await this.admin.deleteDirectory(section, dirPath);
+    if (ok) {
+      const deletedPath = dirPath.split('/').filter(Boolean).slice(1);
+      if (this.drillPath.join('/') === deletedPath.join('/')) this.drillPath = deletedPath.slice(0, -1);
+      void this.refreshAdmin();
+    }
+  }
+
+  private currentDirectoryPath(section: LibraryAdminSection): string {
+    return [section, ...this.drillPath].join('/');
+  }
+
+  private clearSearch(): void {
+    this.currentQuery = '';
+    if (this.searchInputEl) this.searchInputEl.value = '';
+    if (this.searchDebounceTimer !== null) {
+      clearTimeout(this.searchDebounceTimer);
+      this.searchDebounceTimer = null;
+    }
+  }
+
   // ─── Toolbar actions ────────────────────────────────────────────────
 
   private async handlePullLatest(): Promise<void> {
@@ -472,6 +680,11 @@ export class LibraryAdminModal extends Modal {
 
   private refreshAdmin(): void {
     this.renderAdmin(this.contentEl);
+  }
+
+  onClose(): void {
+    this.clearSearch();
+    this.contentEl.empty();
   }
 }
 

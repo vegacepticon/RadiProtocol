@@ -124,6 +124,95 @@
   color: var(--text-error);
 }
 
+.rp-admin-tree-root {
+  display: flex;
+  flex-direction: column;
+  gap: var(--size-4-2);
+  margin-top: var(--size-4-3);
+}
+
+.rp-admin-tree-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--size-4-2);
+  align-items: center;
+}
+
+.rp-admin-search-input {
+  flex: 1 1 240px;
+  min-width: 0;
+}
+
+.rp-admin-tree-body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--size-4-2);
+}
+
+.rp-admin-breadcrumb {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--size-4-1);
+  color: var(--text-muted);
+  font-size: var(--font-ui-smaller);
+}
+
+.rp-admin-crumb {
+  height: auto;
+  min-height: 0;
+  padding: 2px var(--size-4-1);
+  background: transparent;
+  color: var(--text-accent);
+}
+
+.rp-admin-crumb.is-current {
+  color: var(--text-normal);
+  font-weight: 600;
+}
+
+.rp-admin-directory-meta {
+  color: var(--text-muted);
+  font-size: var(--font-ui-smaller);
+}
+
+.rp-admin-tree-list {
+  margin-top: 0;
+}
+
+.rp-admin-folder-row {
+  background: var(--background-secondary);
+}
+
+.rp-admin-folder-open {
+  display: flex;
+  flex: 1 1 auto;
+  min-width: 0;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  height: auto;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+  text-align: left;
+}
+
+.rp-admin-folder-open:hover {
+  background: transparent;
+}
+
+.rp-admin-row-glyph {
+  margin-right: var(--size-4-1);
+}
+
+.rp-admin-row-title {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .rp-admin-empty {
   color: var(--text-muted);
   font-style: italic;
