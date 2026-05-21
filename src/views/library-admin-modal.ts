@@ -17,7 +17,11 @@ const GLYPH_FOLDER = '\uD83D\uDCC1';
 const GLYPH_JSON = '\uD83D\uDCC4';
 
 interface AdminTreeNode {
+  /** Filesystem slug (e.g. "gm", "obp") */
   name: string;
+  /** Human-readable display name (e.g. "ГМ", "ОБП") */
+  displayName: string;
+  /** Full relative path (e.g. "snippets/gm") */
   path: string;
   children: Map<string, AdminTreeNode>;
   entries: AdminEntry[];
@@ -285,7 +289,10 @@ export class LibraryAdminModal extends Modal {
     const openBtn = createButton(row, { cls: 'rp-admin-folder-open' });
     const nameEl = openBtn.createEl('span', { cls: 'rp-admin-entry-name' });
     nameEl.createEl('span', { cls: 'rp-admin-row-glyph', text: GLYPH_FOLDER });
-    nameEl.createEl('span', { cls: 'rp-admin-row-title', text: node.name });
+    nameEl.createEl('span', { cls: 'rp-admin-row-title', text: node.displayName });
+    if (node.displayName !== node.name) {
+      openBtn.createEl('span', { cls: 'rp-admin-entry-path', text: node.name });
+    }
     openBtn.createEl('span', {
       cls: 'rp-admin-entry-meta',
       text: this.plugin.i18n.t('admin.directoryCount', { count: String(this.collectEntries(node).length) }),
@@ -338,14 +345,28 @@ export class LibraryAdminModal extends Modal {
 
   private buildAdminTree(section: LibraryAdminSection, directories: LibraryAdminDirectoryEntry[], entries: AdminEntry[]): AdminTreeNode {
     const rootName = section === 'snippets' ? 'snippets' : 'protocols';
-    const root: AdminTreeNode = { name: rootName, path: rootName, children: new Map(), entries: [] };
+    const root: AdminTreeNode = { name: rootName, displayName: rootName, path: rootName, children: new Map(), entries: [] };
+
+    // Build slug → human-readable name map from index entries
+    const categoryBySlug = new Map<string, string>();
+    if (section === 'snippets') {
+      for (const entry of entries) {
+        const s = entry as LibrarySnippetEntry;
+        if (s.category) {
+          const dirPart = s.path.split('/')[1] ?? '';
+          if (dirPart && !categoryBySlug.has(dirPart)) categoryBySlug.set(dirPart, s.category);
+        }
+      }
+    }
+
     const ensureNode = (relPath: string): AdminTreeNode => {
       const parts = relPath.split('/').filter(Boolean).slice(1);
       let node = root;
       for (const part of parts) {
         let child = node.children.get(part);
         if (!child) {
-          child = { name: part, path: nodePath(node.path, part), children: new Map(), entries: [] };
+          const readableName = categoryBySlug.get(part) ?? this.slugToDisplayName(part);
+          child = { name: part, displayName: readableName, path: nodePath(node.path, part), children: new Map(), entries: [] };
           node.children.set(part, child);
         }
         node = child;
@@ -360,9 +381,17 @@ export class LibraryAdminModal extends Modal {
 
   private sortTree(node: AdminTreeNode): void {
     node.entries.sort((a, b) => entryTitle(a).localeCompare(entryTitle(b), undefined, { sensitivity: 'base' }));
-    const sortedChildren = [...node.children.values()].sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: 'base' }));
+    const sortedChildren = [...node.children.values()].sort((a, b) => a.displayName.localeCompare(b.displayName, 'ru', { sensitivity: 'base' }));
     node.children = new Map(sortedChildren.map(child => [child.name, child]));
     for (const child of node.children.values()) this.sortTree(child);
+  }
+
+  private slugToDisplayName(slug: string): string {
+    return slug
+      .split('-')
+      .filter(Boolean)
+      .map(part => part.length > 0 ? `${part.charAt(0).toUpperCase()}${part.slice(1)}` : part)
+      .join(' ');
   }
 
   private findNodeByDrillPath(root: AdminTreeNode): AdminTreeNode {
@@ -569,7 +598,12 @@ export class LibraryAdminModal extends Modal {
 
   private async handleCreateDirectory(section: LibraryAdminSection): Promise<void> {
     if (!this.admin) return;
-    const name = prompt(this.plugin.i18n.t('admin.createFolderPrompt'));
+    const name = await TextPromptModal.prompt(this.app, {
+      title: this.plugin.i18n.t('admin.createFolder'),
+      label: this.plugin.i18n.t('admin.createFolderPrompt'),
+      confirmText: this.plugin.i18n.t('admin.createFolder'),
+      cancelText: this.plugin.i18n.t('common.cancel'),
+    });
     if (name === null) return;
     const parentPath = this.currentDirectoryPath(section);
     const created = await this.admin.createDirectory(section, parentPath, name);
@@ -579,7 +613,13 @@ export class LibraryAdminModal extends Modal {
   private async handleRenameDirectory(section: LibraryAdminSection, dirPath: string): Promise<void> {
     if (!this.admin) return;
     const currentName = dirPath.split('/').pop() ?? dirPath;
-    const name = prompt(this.plugin.i18n.t('admin.renameFolderPrompt'), currentName);
+    const name = await TextPromptModal.prompt(this.app, {
+      title: this.plugin.i18n.t('admin.rename'),
+      label: this.plugin.i18n.t('admin.renameFolderPrompt'),
+      initialValue: currentName,
+      confirmText: this.plugin.i18n.t('admin.rename'),
+      cancelText: this.plugin.i18n.t('common.cancel'),
+    });
     if (name === null) return;
     const renamed = await this.admin.renameDirectory(section, dirPath, name);
     if (renamed) {
@@ -689,6 +729,67 @@ export class LibraryAdminModal extends Modal {
 }
 
 // ─── Helper modals ────────────────────────────────────────────────────
+
+class TextPromptModal extends Modal {
+  private result: string | null = null;
+  private didSubmit = false;
+
+  static prompt(
+    app: App,
+    opts: { title: string; label: string; initialValue?: string; confirmText: string; cancelText: string },
+  ): Promise<string | null> {
+    return new Promise((resolve) => {
+      const modal = new TextPromptModal(app, opts, resolve);
+      modal.open();
+    });
+  }
+
+  private constructor(
+    app: App,
+    private readonly opts: { title: string; label: string; initialValue?: string; confirmText: string; cancelText: string },
+    private readonly resolve: (value: string | null) => void,
+  ) {
+    super(app);
+  }
+
+  onOpen(): void {
+    const { contentEl } = this;
+    contentEl.empty();
+    contentEl.createEl('h2', { text: this.opts.title });
+
+    const setting = new Setting(contentEl)
+      .setName(this.opts.label);
+
+    let value = this.opts.initialValue ?? '';
+    setting.addText(text => {
+      text.setValue(value);
+      text.onChange(next => { value = next; });
+      setTimeout(() => text.inputEl.focus(), 0);
+    });
+
+    new Setting(contentEl)
+      .addButton(btn => btn
+        .setButtonText(this.opts.confirmText)
+        .setCta()
+        .onClick(() => {
+          this.didSubmit = true;
+          this.result = value.trim();
+          this.close();
+        }))
+      .addButton(btn => btn
+        .setButtonText(this.opts.cancelText)
+        .onClick(() => {
+          this.didSubmit = true;
+          this.result = null;
+          this.close();
+        }));
+  }
+
+  onClose(): void {
+    this.contentEl.empty();
+    this.resolve(this.didSubmit ? this.result : null);
+  }
+}
 
 class ImportSnippetPickerModal extends Modal {
   constructor(
