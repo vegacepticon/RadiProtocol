@@ -8,7 +8,7 @@ Protocols are authored as **`.rp.json`** files — a first-party JSON format
 with a custom visual graph editor. Legacy `.canvas` (JSON Canvas) support is
 preserved for backward compatibility and migration.
 
-**Latest release:** 1.19.3 (2026-05-20) — Snippet search flicker fix
+**Latest release:** 1.19.4 (2026-05-21) — Snippet Library install path fix
 
 ## Features
 
