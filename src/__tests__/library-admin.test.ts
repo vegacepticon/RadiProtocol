@@ -126,4 +126,32 @@ describe('LibraryAdminService', () => {
     expect(result.errors).toContain('Missing file: snippets/missing-a.json');
     expect(result.errors).toContain('Missing file: snippets/missing-b.json');
   });
+
+  it('pulls origin main with rebase and autostash so local branch state does not hide remote changes', async () => {
+    const calls: string[] = [];
+    const mockExec = (cmd: string) => { calls.push(cmd); return 'Already up to date.\n'; };
+    const svc = new LibraryAdminService(repo, t, mockExec as unknown as typeof import('node:child_process').execSync);
+
+    const result = await svc.gitPull();
+
+    expect(result.success).toBe(true);
+    expect(result.output).toBe('Already up to date.');
+    expect(calls).toHaveLength(1);
+    expect(calls[0]).toContain('git pull --rebase --autostash origin main');
+  });
+
+  it('returns git stderr/stdout details when pull fails', async () => {
+    const error = Object.assign(new Error('Command failed'), {
+      stdout: 'stdout details',
+      stderr: 'stderr details',
+    });
+    const mockExec = () => { throw error; };
+    const svc = new LibraryAdminService(repo, t, mockExec as unknown as typeof import('node:child_process').execSync);
+
+    const result = await svc.gitPull();
+
+    expect(result.success).toBe(false);
+    expect(result.output).toContain('stderr details');
+    expect(result.output).toContain('stdout details');
+  });
 });

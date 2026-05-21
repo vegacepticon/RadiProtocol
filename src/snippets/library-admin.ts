@@ -17,13 +17,17 @@ function ensureModule(mod: unknown, name: string): void {
   }
 }
 
+type GitExec = typeof nodeChildProcess.execSync;
+
 export class LibraryAdminService {
   private readonly repoPath: string;
   private readonly t: Translator;
+  private readonly gitExec: GitExec;
 
-  constructor(repoPath: string, t: Translator) {
+  constructor(repoPath: string, t: Translator, gitExec: GitExec = nodeChildProcess.execSync) {
     this.repoPath = repoPath;
     this.t = t;
+    this.gitExec = gitExec;
   }
 
   // ─── Validation ─────────────────────────────────────────────────────
@@ -396,7 +400,7 @@ export class LibraryAdminService {
 
   /** Run git pull in the repo directory. */
   async gitPull(): Promise<{ success: boolean; output: string }> {
-    return this.runGit('pull');
+    return this.runGit('pull', '--rebase', '--autostash', 'origin', 'main');
   }
 
   /** Get git status. */
@@ -464,18 +468,29 @@ export class LibraryAdminService {
 
   private runGit(...args: string[]): Promise<{ success: boolean; output: string }> {
     ensureModule(nodeChildProcess, 'child_process');
-    const { execSync } = nodeChildProcess as typeof import('child_process');
     try {
-      const output = execSync(`git ${args.join(' ')}`, {
+      const output = this.gitExec(`git ${args.join(' ')}`, {
         cwd: this.repoPath,
         encoding: 'utf-8',
         timeout: 30000,
       });
-      return Promise.resolve({ success: true, output: output.trim() });
+      return Promise.resolve({ success: true, output: String(output).trim() });
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : String(err);
-      return Promise.resolve({ success: false, output: message });
+      return Promise.resolve({ success: false, output: this.formatGitError(err) });
     }
+  }
+
+  private formatGitError(err: unknown): string {
+    const parts: string[] = [];
+    if (typeof err === 'object' && err !== null) {
+      const gitError = err as { stderr?: unknown; stdout?: unknown; message?: unknown };
+      if (gitError.stderr) parts.push(String(gitError.stderr).trim());
+      if (gitError.stdout) parts.push(String(gitError.stdout).trim());
+      if (gitError.message) parts.push(String(gitError.message).trim());
+    } else {
+      parts.push(String(err));
+    }
+    return parts.filter(Boolean).join('\n');
   }
 
   private async writeSnippetEntryMetadata(entry: LibrarySnippetEntry): Promise<void> {
