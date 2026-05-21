@@ -34,6 +34,10 @@ export interface RadiProtocolSettings {
   libraryUrl: string;
   /** URL of the external protocol library index JSON. */
   protocolLibraryUrl: string;
+  /** Enable library maintainer admin mode for managing local library repo. */
+  libraryMaintainerMode?: boolean;
+  /** Absolute path to the local RadiProtocol-Library repo checkout. */
+  libraryRepoPath?: string;
 }
 
 export const DEFAULT_SETTINGS: RadiProtocolSettings = {
@@ -45,6 +49,8 @@ export const DEFAULT_SETTINGS: RadiProtocolSettings = {
   locale: 'en',
   libraryUrl: '',
   protocolLibraryUrl: '',
+  libraryMaintainerMode: false,
+  libraryRepoPath: '',
 };
 
 export class RadiProtocolSettingsTab extends PluginSettingTab {
@@ -151,6 +157,35 @@ export class RadiProtocolSettingsTab extends PluginSettingTab {
           await this.plugin.saveSettings();
         })
       );
+
+    // Library Admin section
+    new Setting(containerEl).setName(this.plugin.i18n.t('settings.libraryAdminHeading')).setHeading();
+
+    new Setting(containerEl)
+      .setName(this.plugin.i18n.t('settings.libraryMaintainerMode'))
+      .setDesc(this.plugin.i18n.t('settings.libraryMaintainerModeDesc'))
+      .addToggle(toggle => toggle
+        .setValue(this.plugin.settings.libraryMaintainerMode ?? false)
+        .onChange(async (value) => {
+          this.plugin.settings.libraryMaintainerMode = value;
+          await this.plugin.saveSettings();
+          this.display();
+        })
+      );
+
+    if (this.plugin.settings.libraryMaintainerMode) {
+      new Setting(containerEl)
+        .setName(this.plugin.i18n.t('settings.libraryRepoPath'))
+        .setDesc(this.plugin.i18n.t('settings.libraryRepoPathDesc'))
+        .addText(text => text
+          .setPlaceholder('/home/user/radiprotocol-library')
+          .setValue(this.plugin.settings.libraryRepoPath ?? '')
+          .onChange(async (value) => {
+            this.plugin.settings.libraryRepoPath = value.trim();
+            await this.plugin.saveSettings();
+          })
+        );
+    }
 
     // Quick 260430-s48: relocated to bottom; addresses collapsed behind <details>.
     // Stateless: addresses are hard-coded constants in ./donate/wallets, no settings persistence.

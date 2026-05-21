@@ -33,6 +33,7 @@ const CSS_FILES = [
   'snippet-manager',
   'snippet-fill-modal',
   'library-preview-modal',
+  'library-admin',
   'loop-support',
   'snippet-tree-picker',
   'inline-runner',

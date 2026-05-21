@@ -198,6 +198,19 @@ interface MockDropdown {
   onChange: (cb: (v: string) => void) => MockDropdown;
 }
 
+function makeMockToggle(): MockToggle {
+  const toggle: MockToggle = {
+    setValue: (_value: boolean) => toggle,
+    onChange: (_cb: (value: boolean) => void) => toggle,
+  };
+  return toggle;
+}
+
+interface MockToggle {
+  setValue: (value: boolean) => MockToggle;
+  onChange: (cb: (value: boolean) => void) => MockToggle;
+}
+
 /** Mock ButtonComponent — supports setCta and onClick chaining */
 function makeMockButton(): MockButton {
   const btn: MockButton = {
@@ -316,6 +329,10 @@ export class Setting {
   }
   addSlider(_cb: (slider: unknown) => void): this {
     _cb({ setLimits: () => this, setValue: () => this, onChange: () => this, setDynamicTooltip: () => this });
+    return this;
+  }
+  addToggle(_cb: (toggle: MockToggle) => void): this {
+    _cb(makeMockToggle());
     return this;
   }
   addButton(_cb: (btn: MockButton) => void): this {
