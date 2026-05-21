@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import * as obsidian from 'obsidian';
 import { LibraryService } from '../snippets/library-service';
 import type { LibrarySnippetEntry } from '../snippets/library-model';
 
@@ -23,6 +24,8 @@ describe('LibraryService', () => {
 
     mockApp = {
       vault: {
+        create: vi.fn().mockResolvedValue(undefined),
+        createFolder: vi.fn().mockResolvedValue(undefined),
         adapter: {
           exists: vi.fn().mockResolvedValue(false),
           read: vi.fn().mockResolvedValue(''),
@@ -30,6 +33,7 @@ describe('LibraryService', () => {
         },
       },
     };
+    vi.spyOn(obsidian, 'requestUrl').mockResolvedValue({ text: '' } as never);
 
     service = new LibraryService(mockApp, mockSettings, mockSnippetService, mockT);
   });
@@ -44,7 +48,7 @@ describe('LibraryService', () => {
   });
 
   describe('installSnippet', () => {
-    it('downloads and writes snippet file', async () => {
+    it('downloads and writes snippet file, creating only parent folders', async () => {
       const entry: LibrarySnippetEntry = {
         id: 'test-snip',
         name: 'Test Snippet',
@@ -52,13 +56,21 @@ describe('LibraryService', () => {
         path: 'general/test.json',
         description: 'A test snippet',
       };
+      vi.spyOn(obsidian, 'requestUrl').mockResolvedValue({ text: '{"name":"Test Snippet","template":"ok","placeholders":[]}' } as never);
 
-      // requestUrl is mocked globally in __mocks__/obsidian.ts
       const result = await service.installSnippet(entry);
-      // Since requestUrl mock returns a simple object, this will fail at download —
-      // the test validates the method exists and structure is correct.
-      // In a real environment requestUrl would return { text: '...' }.
-      expect(typeof result).toBe('boolean');
+
+      expect(result).toBe(true);
+      expect(obsidian.requestUrl).toHaveBeenCalledWith({
+        url: 'https://example.com/general/test.json',
+        method: 'GET',
+      });
+      expect(mockApp.vault.createFolder).toHaveBeenCalledWith('.radiprotocol/snippets/Library/General');
+      expect(mockApp.vault.createFolder).not.toHaveBeenCalledWith('.radiprotocol/snippets/Library/General/Test Snippet.json');
+      expect(mockApp.vault.adapter.write).toHaveBeenCalledWith(
+        '.radiprotocol/snippets/Library/General/Test Snippet.json',
+        '{"name":"Test Snippet","template":"ok","placeholders":[]}',
+      );
     });
   });
 

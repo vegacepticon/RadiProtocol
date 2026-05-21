@@ -78,7 +78,10 @@ export class LibraryService {
 
     try {
       await this.mutex.runExclusive(targetPath, async () => {
-        await ensureFolderPath(this.app.vault, targetPath);
+        const lastSlash = targetPath.lastIndexOf('/');
+        if (lastSlash > 0) {
+          await ensureFolderPath(this.app.vault, targetPath.slice(0, lastSlash));
+        }
         await this.app.vault.adapter.write(targetPath, content);
       });
     } catch (err) {
@@ -115,7 +118,10 @@ export class LibraryService {
   /** Write library-manifest.json. */
   async writeManifest(manifest: LibraryManifest): Promise<void> {
     const path = `${this.settings.snippetFolderPath}/Library/library-manifest.json`;
-    await ensureFolderPath(this.app.vault, path);
+    const lastSlash = path.lastIndexOf('/');
+    if (lastSlash > 0) {
+      await ensureFolderPath(this.app.vault, path.slice(0, lastSlash));
+    }
     await this.app.vault.adapter.write(path, JSON.stringify(manifest, null, 2));
   }
 }
