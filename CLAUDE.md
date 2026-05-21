@@ -23,6 +23,7 @@
 - `src/donate/` — donate/settings section UI.
 - `src/utils/` — shared utility helpers (mutexes, array helpers, drag-and-drop).
 - `src/styles/` — feature-scoped CSS source files concatenated by `esbuild.config.mjs`.
+- `src/__mocks__/` — Vitest/Jest mock stubs (e.g. `obsidian.ts` for unit tests).
 - `src/__tests__/` and colocated `*.test.ts` files — Vitest coverage.
 - `docs/adr/` — durable architecture decisions. Use ADRs for removals or direction changes.
 - `docs/ARCHITECTURE-NOTES.md` — implementation-relevant notes promoted from planning.

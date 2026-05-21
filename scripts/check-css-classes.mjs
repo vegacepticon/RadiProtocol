@@ -134,12 +134,6 @@ const ignoreOrphaned = new Set([
   'is-selected',
   'is-untyped',
   'is-visible',
-  // Toolbar chrome hidden via CSS (display: none) — kept for future canvas-mode toolbar.
-  'rp-protocol-editor-add-btn',
-  'rp-protocol-editor-path',
-  'rp-protocol-editor-title',
-  'rp-protocol-editor-toolbar',
-  'rp-protocol-editor-toolbar-actions',
   // Snippet picker folder selection button — used in ternary with is-committed.
   'rp-stp-select-folder-btn',
 ]);

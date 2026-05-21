@@ -574,10 +574,7 @@
 }
 
 
-/* v1.17.3: canvas-first editor chrome polish */
-.rp-protocol-editor-toolbar {
-  display: none;
-}
+/* v1.17.3: canvas-first editor chrome polish — toolbar replaced by floating-actions */
 
 .rp-protocol-editor-floating-actions {
   position: absolute;
