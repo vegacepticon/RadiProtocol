@@ -47,6 +47,37 @@ describe('LibraryService', () => {
     });
   });
 
+  describe('fetchSnippetPreview', () => {
+    it('downloads and parses a snippet without writing to the vault', async () => {
+      const entry: LibrarySnippetEntry = {
+        id: 'test-snip',
+        name: 'Index Name',
+        category: 'General',
+        path: 'general/test.json',
+        description: 'A test snippet',
+      };
+      vi.spyOn(obsidian, 'requestUrl').mockResolvedValue({
+        text: JSON.stringify({
+          name: 'Remote Name',
+          template: 'Finding: {{finding}}',
+          placeholders: [{ id: 'finding', label: 'Finding', type: 'free-text' }],
+        }),
+      } as never);
+
+      const result = await service.fetchSnippetPreview(entry);
+
+      expect(result).toMatchObject({
+        kind: 'json',
+        path: 'general/test.json',
+        name: 'Remote Name',
+        template: 'Finding: {{finding}}',
+        validationError: null,
+      });
+      expect(result?.placeholders).toHaveLength(1);
+      expect(mockApp.vault.adapter.write).not.toHaveBeenCalled();
+    });
+  });
+
   describe('installSnippet', () => {
     it('downloads and writes snippet file, creating only parent folders', async () => {
       const entry: LibrarySnippetEntry = {

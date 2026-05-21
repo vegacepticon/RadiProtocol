@@ -285,8 +285,16 @@
     "installedLabel": "Установлено",
     "installedCount": "Установлено сниппетов: {count}.",
     "installCountFailed": "Установлено: {installed}; ошибок: {failed}.",
-    "installFailed": "Ошибка установки",
+    "installFailed": "Не удалось установить",
     "emptyInstallSelection": "Здесь нет сниппетов для установки.",
+    "preview": "Предпросмотр",
+    "previewLoading": "Загрузка…",
+    "previewLoadFailed": "Не удалось загрузить предпросмотр сниппета.",
+    "previewTitle": "Предпросмотр: {name}",
+    "previewOutput": "Preview",
+    "previewClose": "Закрыть",
+    "previewCustom": "Другое:",
+    "previewCustomAria": "Показать своё значение для {label}",
     "networkError": "Ошибка сети. Проверьте подключение и URL библиотеки."
   },
   "protocolLibrary": {

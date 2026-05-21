@@ -1,0 +1,111 @@
+/* Library snippet preview modal */
+.modal.rp-library-preview-modal-container,
+.rp-library-preview-modal-container.modal {
+  width: min(880px, calc(100vw - 48px));
+  max-width: min(880px, calc(100vw - 48px));
+}
+
+.rp-library-preview-modal {
+  width: 100%;
+  max-width: none;
+  box-sizing: border-box;
+  overflow-x: hidden;
+}
+
+.rp-library-preview-field {
+  margin-bottom: var(--size-4-3);
+}
+
+.rp-library-preview-label {
+  margin: 0 0 var(--size-4-1);
+  font-weight: var(--font-medium);
+}
+
+.rp-library-preview-error {
+  color: var(--text-error);
+  margin-bottom: var(--size-4-3);
+}
+
+.rp-library-preview-modal input[type='text'] {
+  width: 100%;
+  border: 1px solid var(--background-modifier-border);
+  background: var(--background-primary);
+  transition:
+    background-color 120ms ease,
+    border-color 120ms ease,
+    box-shadow 120ms ease;
+}
+
+.rp-library-preview-modal input[type='text'].rp-snippet-field-filled {
+  border-color: var(--interactive-accent);
+  background: color-mix(in srgb, var(--interactive-accent) 12%, var(--background-primary));
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--interactive-accent) 24%, transparent);
+}
+
+.rp-library-preview-modal fieldset {
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.rp-library-preview-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--size-4-1);
+}
+
+.rp-library-preview-option-row {
+  max-width: 100%;
+  min-width: 0;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  text-align: left;
+  line-height: 1.35;
+  border: 1px solid var(--background-modifier-border);
+}
+
+.rp-library-preview-option-row.is-selected {
+  border-color: var(--interactive-accent);
+  background: var(--interactive-accent);
+  color: var(--text-on-accent);
+}
+
+.rp-library-preview-custom-wrapper {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--size-4-1);
+}
+
+.rp-library-preview-custom-toggle {
+  flex: 0 0 auto;
+}
+
+.rp-library-preview-custom-row {
+  display: flex;
+  align-items: center;
+  gap: var(--size-4-1);
+}
+
+.rp-library-preview-custom-row[hidden] {
+  display: none;
+}
+
+.rp-library-preview-section {
+  margin-top: var(--size-4-4);
+}
+
+.rp-library-preview-output {
+  width: 100%;
+  min-height: 160px;
+  resize: vertical;
+  font-family: var(--font-monospace);
+  white-space: pre-wrap;
+}
+
+.rp-library-preview-button-row {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: var(--size-4-3);
+}

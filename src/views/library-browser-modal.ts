@@ -3,6 +3,7 @@
 import { App, Modal, Notice } from 'obsidian';
 import type RadiProtocolPlugin from '../main';
 import type { LibrarySnippetEntry } from '../snippets/library-model';
+import { LibrarySnippetPreviewModal } from './library-snippet-preview-modal';
 import { createButton, createInput } from '../utils/dom-helpers';
 
 const SEARCH_DEBOUNCE_MS = 120;
@@ -289,11 +290,30 @@ export class LibraryBrowserModal extends Modal {
     if (entry.description) {
       info.createEl('div', { text: entry.description, cls: 'rp-library-entry-desc' });
     }
-    const installBtn = createButton(row, { cls: 'mod-cta rp-library-install-btn' });
+    const actions = row.createDiv({ cls: 'rp-library-entry-actions' });
+    const previewBtn = createButton(actions, { cls: 'rp-library-preview-btn' });
+    previewBtn.setText(this.plugin.i18n.t('library.preview'));
+    previewBtn.addEventListener('click', () => {
+      void this.openPreview(entry, previewBtn);
+    });
+    const installBtn = createButton(actions, { cls: 'mod-cta rp-library-install-btn' });
     installBtn.setText(this.plugin.i18n.t('library.install'));
     installBtn.addEventListener('click', () => {
       void this.installSingleEntry(entry, installBtn);
     });
+  }
+
+  private async openPreview(entry: LibrarySnippetEntry, previewBtn: HTMLButtonElement): Promise<void> {
+    previewBtn.setText(this.plugin.i18n.t('library.previewLoading'));
+    previewBtn.disabled = true;
+    const snippet = await this.plugin.libraryService.fetchSnippetPreview(entry);
+    previewBtn.disabled = false;
+    previewBtn.setText(this.plugin.i18n.t('library.preview'));
+    if (!snippet) {
+      new Notice(this.plugin.i18n.t('library.previewLoadFailed'));
+      return;
+    }
+    new LibrarySnippetPreviewModal(this.app, snippet, this.plugin.i18n.t.bind(this.plugin.i18n)).open();
   }
 
   private async installSingleEntry(entry: LibrarySnippetEntry, installBtn: HTMLButtonElement): Promise<void> {

@@ -287,6 +287,14 @@
     "installCountFailed": "Installed {installed}; failed {failed}.",
     "installFailed": "Failed to install",
     "emptyInstallSelection": "There are no snippets to install here.",
+    "preview": "Preview",
+    "previewLoading": "Loading…",
+    "previewLoadFailed": "Failed to load snippet preview.",
+    "previewTitle": "Preview: {name}",
+    "previewOutput": "Preview",
+    "previewClose": "Close",
+    "previewCustom": "Custom:",
+    "previewCustomAria": "Show custom value for {label}",
     "networkError": "Network error. Check your connection and the library URL."
   },
   "protocolLibrary": {

@@ -598,6 +598,15 @@
   color: var(--text-muted);
 }
 
+.rp-library-entry-actions {
+  display: flex;
+  flex: 0 0 auto;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: var(--size-4-1);
+}
+
+.rp-library-preview-btn,
 .rp-library-install-btn,
 .rp-library-install-all-btn,
 .rp-library-install-folder-btn {

@@ -3,6 +3,8 @@
 import { App, Notice, requestUrl } from 'obsidian';
 import type { RadiProtocolSettings } from '../settings';
 import { SnippetService } from './snippet-service';
+import type { JsonSnippet } from './snippet-model';
+import { validatePlaceholders } from './snippet-model';
 import type { LibraryIndex, LibrarySnippetEntry, LibraryManifest } from './library-model';
 import type { Translator } from '../i18n';
 import { ensureFolderPath } from '../utils/vault-utils';
@@ -55,6 +57,31 @@ export class LibraryService {
     const url = this.settings.libraryUrl.trim();
     const lastSlash = url.lastIndexOf('/');
     return lastSlash > 0 ? url.slice(0, lastSlash + 1) : url;
+  }
+
+  async fetchSnippetPreview(entry: LibrarySnippetEntry): Promise<JsonSnippet | null> {
+    const baseUrl = this.getBaseUrl();
+    const rawUrl = baseUrl + entry.path;
+    try {
+      const response = await requestUrl({ url: rawUrl, method: 'GET' });
+      const parsed = JSON.parse(response.text) as Partial<JsonSnippet>;
+      if (typeof parsed.template !== 'string' || !Array.isArray(parsed.placeholders)) {
+        console.error('[RadiProtocol][Library] preview snippet missing template or placeholders');
+        return null;
+      }
+      return {
+        kind: 'json',
+        path: entry.path,
+        name: typeof parsed.name === 'string' && parsed.name.trim() !== '' ? parsed.name : entry.name,
+        template: parsed.template,
+        placeholders: parsed.placeholders,
+        validationError: validatePlaceholders(parsed.placeholders, this.t),
+      };
+    } catch (err) {
+      console.error('[RadiProtocol][Library] fetchSnippetPreview failed:', err);
+      new Notice(this.t('library.networkError'));
+      return null;
+    }
   }
 
   /** Install a single library snippet into the vault.
