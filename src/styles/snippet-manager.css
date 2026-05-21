@@ -499,8 +499,14 @@
 }
 
 /* Phase 86/87: Library browser modal */
+.modal.rp-library-modal-container,
+.rp-library-modal-container.modal {
+  width: min(920px, calc(100vw - 48px));
+  max-width: min(920px, calc(100vw - 48px));
+}
+
 .rp-library-modal {
-  min-width: min(720px, 90vw);
+  min-width: 0;
 }
 
 .rp-library-root {
@@ -521,6 +527,8 @@
 
 .rp-library-body {
   min-height: 240px;
+  max-height: calc(100vh - 260px);
+  overflow-y: auto;
 }
 
 .rp-library-breadcrumb {
@@ -578,6 +586,7 @@
   flex: 1 1 auto;
   min-width: 0;
   padding-right: var(--size-4-2);
+  overflow: hidden;
 }
 
 .rp-library-entry-name {
@@ -601,7 +610,7 @@
 .rp-library-entry-actions {
   display: flex;
   flex: 0 0 auto;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   justify-content: flex-end;
   gap: var(--size-4-1);
 }
@@ -611,6 +620,10 @@
 .rp-library-install-all-btn,
 .rp-library-install-folder-btn {
   flex-shrink: 0;
+  font-size: var(--font-ui-smaller);
+  padding: var(--size-2-1) var(--size-4-2);
+  line-height: 1;
+  height: auto;
 }
 
 .rp-library-error {

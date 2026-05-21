@@ -114,6 +114,7 @@ export class LibraryBrowserModal extends Modal {
 
   async onOpen(): Promise<void> {
     this.titleEl.setText(this.plugin.i18n.t('library.title'));
+    this.modalEl.addClass('rp-library-modal-container');
     this.contentEl.empty();
     this.contentEl.addClass('rp-library-modal');
 
