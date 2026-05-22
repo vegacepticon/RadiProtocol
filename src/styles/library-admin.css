@@ -76,11 +76,6 @@
   margin-top: var(--size-4-3);
 }
 
-.rp-admin-category {
-  margin: var(--size-4-3) 0 var(--size-4-1);
-  color: var(--text-accent);
-}
-
 .rp-admin-entry {
   display: flex;
   align-items: center;
@@ -118,6 +113,20 @@
   display: flex;
   flex: 0 0 auto;
   gap: var(--size-4-1);
+}
+
+.rp-admin-btn {
+  padding: var(--size-4-1) var(--size-4-2);
+  border-radius: var(--radius-s);
+  cursor: pointer;
+}
+
+.rp-admin-create-folder-btn {
+  color: var(--text-normal);
+}
+
+.rp-admin-btn-edit {
+  color: var(--text-accent);
 }
 
 .rp-admin-btn-delete {
@@ -164,6 +173,10 @@
   padding: 2px var(--size-4-1);
   background: transparent;
   color: var(--text-accent);
+}
+
+.rp-admin-crumb-separator {
+  color: var(--text-muted);
 }
 
 .rp-admin-crumb.is-current {

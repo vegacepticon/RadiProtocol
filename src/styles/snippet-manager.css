@@ -515,6 +515,12 @@
   gap: var(--size-4-3);
 }
 
+.rp-library-search {
+  display: flex;
+  gap: var(--size-4-2);
+  align-items: center;
+}
+
 .rp-library-search-input {
   width: 100%;
 }
@@ -594,6 +600,10 @@
   align-items: center;
   gap: var(--size-4-1);
   font-weight: var(--font-medium);
+}
+
+.rp-library-row-glyph {
+  margin-right: var(--size-4-1);
 }
 
 .rp-library-row-title {

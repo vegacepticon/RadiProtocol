@@ -127,6 +127,7 @@ walk(sourceDir, path => /\.(?:ts|tsx|js|jsx|mjs)$/.test(extname(path)), (path, c
 const ignoreOrphaned = new Set([
   'is-active',
   'is-committed',
+  'is-current',
   'is-disabled',
   'is-expanded',
   'is-hidden',
@@ -134,6 +135,9 @@ const ignoreOrphaned = new Set([
   'is-selected',
   'is-untyped',
   'is-visible',
+  // Composite class strings: 'rp-admin-crumb is-current', 'rp-library-crumb is-current'.
+  'rp-admin-crumb',
+  'rp-library-crumb',
   // Snippet picker folder selection button — used in ternary with is-committed.
   'rp-stp-select-folder-btn',
 ]);
@@ -141,6 +145,8 @@ const ignoreOrphaned = new Set([
 const ignoreMissing = new Set([
   // Body/document state hooks — no dedicated visual rules.
   'is-open',
+  // Dynamic state class toggled via addClass/removeClass in TypeScript.
+  'is-active',
   'rp-insert-snippet-picker-host',
   'rp-protocol-editor-drag-active',
   'rp-protocol-editor-resize-active',
