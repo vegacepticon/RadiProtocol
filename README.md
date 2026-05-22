@@ -8,7 +8,7 @@ Protocols are authored as **`.rp.json`** files — a first-party JSON format
 with a custom visual graph editor. Legacy `.canvas` (JSON Canvas) support is
 preserved for backward compatibility and migration.
 
-**Latest release:** 1.19.16 (2026-05-22) — Admin panel UX: folder list, Cyrillic rename fix, streamlined toolbar
+**Latest release:** 1.20.0 (2026-05-22) — Editor autofocus, snippet manager tab, collapse all
 
 ## Features
 
