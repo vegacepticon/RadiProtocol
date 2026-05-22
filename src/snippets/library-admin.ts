@@ -332,10 +332,16 @@ export class LibraryAdminService {
       if (!fs.existsSync(fromFull) || !fs.statSync(fromFull).isDirectory()) {
         throw new Error(this.t('admin.directoryNotFound'));
       }
-      if (fs.existsSync(toFull)) {
-        throw new Error(this.t('admin.directoryAlreadyExists'));
+
+      // If the slugified name matches the current directory name, only update _meta.json
+      // (no filesystem rename needed — this handles display-name-only changes like Cyrillic rename)
+      const currentSlug = path.posix.basename(fromRel);
+      if (safeName !== currentSlug) {
+        if (fs.existsSync(toFull)) {
+          throw new Error(this.t('admin.directoryAlreadyExists'));
+        }
+        fs.renameSync(fromFull, toFull);
       }
-      fs.renameSync(fromFull, toFull);
 
       // Write _meta.json with the new display name
       const displayName = newName.trim();
@@ -369,7 +375,7 @@ export class LibraryAdminService {
       }
 
       await this.regenerateIndexes();
-      new Notice(this.t('admin.directoryRenamed', { name: safeName }));
+      new Notice(this.t('admin.directoryRenamed', { name: displayName !== safeName ? displayName : safeName }));
       return { name: safeName, path: toRel, section };
     } catch (err) {
       console.error('[RadiProtocol][Admin] renameDirectory failed:', err);
