@@ -8,7 +8,7 @@ Protocols are authored as **`.rp.json`** files — a first-party JSON format
 with a custom visual graph editor. Legacy `.canvas` (JSON Canvas) support is
 preserved for backward compatibility and migration.
 
-**Latest release:** 1.19.14 (2026-05-21) — Bundled RadiProtocol-Library defaults, URL fields hidden from settings
+**Latest release:** 1.19.15 (2026-05-22) — Admin panel UX: folder grid, Cyrillic names, import navigation, streamlined toolbar
 
 ## Features
 
