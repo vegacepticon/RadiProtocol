@@ -97,7 +97,7 @@ export class LibraryAdminService {
     }
   }
 
-  /** List directories under snippets/ or protocols/. */
+  /** List directories under snippets/ or protocols/ with display names from _meta.json. */
   async listDirectories(section: LibraryAdminSection): Promise<LibraryAdminDirectoryEntry[]> {
     ensureModule(nodeFs, 'fs');
     ensureModule(nodePath, 'path');
@@ -112,6 +112,8 @@ export class LibraryAdminService {
       const current = stack.pop()!;
       for (const entry of fs.readdirSync(current, { withFileTypes: true })) {
         if (!entry.isDirectory()) continue;
+        // Skip _meta files that accidentally parse as directories — defensive
+        if (entry.name.startsWith('_') && entry.name.endsWith('.json')) continue;
         const fullPath = path.join(current, entry.name);
         const rel = path.relative(this.repoPath, fullPath).split(path.sep).join('/');
         dirs.push({ name: entry.name, path: rel, section });
@@ -119,6 +121,27 @@ export class LibraryAdminService {
       }
     }
     return dirs.sort((a, b) => a.path.localeCompare(b.path, 'ru'));
+  }
+
+  /** Read the display name for a directory from its _meta.json, or return null if absent. */
+  async readDirectoryDisplayName(dirAbsPath: string): Promise<string | null> {
+    ensureModule(nodeFs, 'fs');
+    ensureModule(nodePath, 'path');
+    const fs = nodeFs as typeof import('fs');
+    const path = nodePath as typeof import('path');
+    const metaPath = path.join(dirAbsPath, '_meta.json');
+    try {
+      if (!fs.existsSync(metaPath)) return null;
+      const data = JSON.parse(fs.readFileSync(metaPath, 'utf-8'));
+      return typeof data.displayName === 'string' ? data.displayName : null;
+    } catch {
+      return null;
+    }
+  }
+
+  /** Resolve a repo-relative path to an absolute path. Public for modal use. */
+  resolveRepoPathPublic(relPath: string): string {
+    return this.resolveRepoPath(relPath);
   }
 
   // ─── Write operations ──────────────────────────────────────────────
@@ -266,7 +289,9 @@ export class LibraryAdminService {
   /** Create a directory under snippets/ or protocols/. */
   async createDirectory(section: LibraryAdminSection, parentPath: string, name: string): Promise<LibraryAdminDirectoryEntry | null> {
     ensureModule(nodeFs, 'fs');
+    ensureModule(nodePath, 'path');
     const fs = nodeFs as typeof import('fs');
+    const path = nodePath as typeof import('path');
     try {
       const safeName = this.safeDirectoryName(name);
       const parentRel = this.normaliseDirectoryPath(section, parentPath);
@@ -276,6 +301,12 @@ export class LibraryAdminService {
         throw new Error(this.t('admin.directoryAlreadyExists'));
       }
       fs.mkdirSync(fullPath, { recursive: false });
+      // Store the original display name so Cyrillic names survive slugification
+      const displayName = name.trim();
+      if (displayName !== safeName) {
+        const metaPath = path.join(fullPath, '_meta.json');
+        fs.writeFileSync(metaPath, JSON.stringify({ displayName }, null, 2) + '\n', 'utf-8');
+      }
       new Notice(this.t('admin.directoryCreated', { name: safeName }));
       return { name: safeName, path: relPath, section };
     } catch (err) {
@@ -305,6 +336,17 @@ export class LibraryAdminService {
         throw new Error(this.t('admin.directoryAlreadyExists'));
       }
       fs.renameSync(fromFull, toFull);
+
+      // Write _meta.json with the new display name
+      const displayName = newName.trim();
+      if (displayName !== safeName) {
+        const metaPath = path.join(toFull, '_meta.json');
+        fs.writeFileSync(metaPath, JSON.stringify({ displayName }, null, 2) + '\n', 'utf-8');
+      } else {
+        // If displayName matches slug, remove _meta.json if it exists
+        const metaPath = path.join(toFull, '_meta.json');
+        if (fs.existsSync(metaPath)) fs.unlinkSync(metaPath);
+      }
 
       // Update index entry paths to preserve category metadata after directory rename
       const indexPath = path.join(this.repoPath, 'index.json');
@@ -708,7 +750,7 @@ export class LibraryAdminService {
         const fullPath = path.join(current, entry.name);
         if (entry.isDirectory()) {
           stack.push(fullPath);
-        } else if (entry.isFile() && predicate(fullPath)) {
+        } else if (entry.isFile() && predicate(fullPath) && entry.name !== '_meta.json') {
           out.push(fullPath);
         }
       }

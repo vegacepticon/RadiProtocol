@@ -1,13 +1,14 @@
 // views/library-admin-modal.ts
 // Admin UI for managing the local RadiProtocol-Library repo.
 // Import from vault, edit metadata, delete, validate, regenerate indexes.
-import { App, Modal, Notice, Setting, TFile, TFolder } from 'obsidian';
+import { AbstractInputSuggest, App, Modal, Notice, Setting, TFile, TFolder } from 'obsidian';
 import type RadiProtocolPlugin from '../main';
 import { LibraryAdminService } from '../snippets/library-admin';
 import type { LibraryAdminDirectoryEntry, LibraryAdminSection } from '../snippets/library-admin';
 import type { LibrarySnippetEntry } from '../snippets/library-model';
 import type { ProtocolLibraryEntry } from '../protocol/protocol-library-model';
 import { createButton, createInput } from '../utils/dom-helpers';
+import { SnippetTreePicker } from './snippet-tree-picker';
 
 type TabId = LibraryAdminSection;
 type AdminEntry = LibrarySnippetEntry | ProtocolLibraryEntry;
@@ -94,25 +95,16 @@ export class LibraryAdminModal extends Modal {
     // Title
     contentEl.createEl('h2', { text: this.plugin.i18n.t('admin.title') });
 
-    // Toolbar: Pull + Validate + Regenerate + Copy commands
+    // Toolbar: Reset to remote + Update instructions
     const toolbar = contentEl.createDiv({ cls: 'rp-admin-toolbar' });
 
     new Setting(toolbar)
       .addButton(btn => btn
-        .setButtonText(this.plugin.i18n.t('admin.pullLatest'))
-        .onClick(() => { void this.handlePullLatest(); }))
-      .addButton(btn => btn
         .setButtonText(this.plugin.i18n.t('admin.resetToRemote'))
         .onClick(() => { void this.handleResetToRemote(); }))
       .addButton(btn => btn
-        .setButtonText(this.plugin.i18n.t('admin.validateAll'))
-        .onClick(() => { void this.handleValidate(); }))
-      .addButton(btn => btn
-        .setButtonText(this.plugin.i18n.t('admin.regenerateIndexes'))
-        .onClick(() => { void this.handleRegenerate(); }))
-      .addButton(btn => btn
-        .setButtonText(this.plugin.i18n.t('admin.copyGitCommands'))
-        .onClick(() => { void this.handleCopyGitCommands(); }));
+        .setButtonText(this.plugin.i18n.t('admin.updateInstructions'))
+        .onClick(() => { void this.handleShowUpdateInstructions(); }));
 
     // Status area
     this.statusEl = contentEl.createDiv({ cls: 'rp-admin-status' });
@@ -198,7 +190,20 @@ export class LibraryAdminModal extends Modal {
       this.admin.listDirectories(section),
       this.readSectionEntries(section),
     ]);
-    const tree = this.buildAdminTree(section, directories, entries);
+
+    // Read _meta.json display names for each directory
+    const metaDisplayNameBySlug = new Map<string, string>();
+    await Promise.all(directories.map(async (dir) => {
+      const absPath = this.admin!.resolveRepoPathPublic(dir.path);
+      const metaName = await this.admin!.readDirectoryDisplayName(absPath);
+      if (metaName !== null) {
+        // Key by the trailing slug segment for ensureNode lookup
+        const slug = dir.name;
+        metaDisplayNameBySlug.set(slug, metaName);
+      }
+    }));
+
+    const tree = this.buildAdminTree(section, directories, entries, metaDisplayNameBySlug);
     const body = treeHost.createDiv({ cls: 'rp-admin-tree-body' });
     this.renderBreadcrumb(body, section);
 
@@ -266,10 +271,17 @@ export class LibraryAdminModal extends Modal {
       cls: 'rp-admin-directory-meta',
       text: this.plugin.i18n.t('admin.directoryCount', { count: String(this.collectEntries(node).length) }),
     });
+
+    // Folder tiles in a grid
+    if (node.children.size > 0) {
+      const grid = host.createDiv({ cls: 'rp-admin-folder-grid' });
+      for (const child of node.children.values()) this.renderFolderTile(grid, section, child);
+    }
+
+    // Entry rows below the folder grid
     const list = host.createDiv({ cls: 'rp-admin-list rp-admin-tree-list' });
-    for (const child of node.children.values()) this.renderFolderRow(list, section, child);
     for (const entry of node.entries) this.renderEntryRow(list, section, entry, false);
-    if (list.children.length === 0) {
+    if (node.children.size === 0 && list.children.length === 0) {
       list.createEl('div', { cls: 'rp-admin-empty', text: this.plugin.i18n.t('admin.emptyFolder') });
     }
   }
@@ -284,9 +296,9 @@ export class LibraryAdminModal extends Modal {
     }
   }
 
-  private renderFolderRow(list: HTMLElement, section: LibraryAdminSection, node: AdminTreeNode): void {
-    const row = list.createDiv({ cls: 'rp-admin-entry rp-admin-folder-row' });
-    const openBtn = createButton(row, { cls: 'rp-admin-folder-open' });
+  private renderFolderTile(grid: HTMLElement, section: LibraryAdminSection, node: AdminTreeNode): void {
+    const tile = grid.createDiv({ cls: 'rp-admin-folder-tile' });
+    const openBtn = tile.createDiv({ cls: 'rp-admin-folder-tile-open' });
     const nameEl = openBtn.createEl('span', { cls: 'rp-admin-entry-name' });
     nameEl.createEl('span', { cls: 'rp-admin-row-glyph', text: GLYPH_FOLDER });
     nameEl.createEl('span', { cls: 'rp-admin-row-title', text: node.displayName });
@@ -303,7 +315,7 @@ export class LibraryAdminModal extends Modal {
       this.renderAdminContent(this.contentEl);
     });
 
-    const actions = row.createDiv({ cls: 'rp-admin-entry-actions' });
+    const actions = tile.createDiv({ cls: 'rp-admin-folder-tile-actions' });
     createButton(actions, { cls: 'rp-admin-btn rp-admin-btn-edit', text: this.plugin.i18n.t('admin.rename') })
       .addEventListener('click', () => { void this.handleRenameDirectory(section, node.path, node.displayName); });
     createButton(actions, { cls: 'rp-admin-btn rp-admin-btn-delete', text: this.plugin.i18n.t('admin.delete') })
@@ -343,7 +355,7 @@ export class LibraryAdminModal extends Modal {
     return (await this.admin.readProtocolIndex())?.protocols ?? [];
   }
 
-  private buildAdminTree(section: LibraryAdminSection, directories: LibraryAdminDirectoryEntry[], entries: AdminEntry[]): AdminTreeNode {
+  private buildAdminTree(section: LibraryAdminSection, directories: LibraryAdminDirectoryEntry[], entries: AdminEntry[], metaDisplayNameBySlug?: Map<string, string>): AdminTreeNode {
     const rootName = section === 'snippets' ? 'snippets' : 'protocols';
     const root: AdminTreeNode = { name: rootName, displayName: rootName, path: rootName, children: new Map(), entries: [] };
 
@@ -365,7 +377,8 @@ export class LibraryAdminModal extends Modal {
       for (const part of parts) {
         let child = node.children.get(part);
         if (!child) {
-          const readableName = categoryBySlug.get(part) ?? this.slugToDisplayName(part);
+          // Priority: _meta.json displayName > index category > slug-based name
+          const readableName = metaDisplayNameBySlug?.get(part) ?? categoryBySlug.get(part) ?? this.slugToDisplayName(part);
           child = { name: part, displayName: readableName, path: nodePath(node.path, part), children: new Map(), entries: [] };
           node.children.set(part, child);
         }
@@ -419,19 +432,49 @@ export class LibraryAdminModal extends Modal {
     return entries.filter((entry) => `${entryTitle(entry)}\n${entry.path}\n${entry.description ?? ''}`.toLowerCase().includes(lower));
   }
 
+  /** Collect display names of top-level directories under a library section for autocomplete. */
+  private async collectLibraryCategoryNames(section: LibraryAdminSection): Promise<string[]> {
+    if (!this.admin) return [];
+    const names = new Set<string>();
+    if (section === 'snippets') {
+      const index = await this.admin.readSnippetIndex();
+      if (index) {
+        for (const entry of index.snippets) {
+          if (entry.category) names.add(entry.category);
+        }
+      }
+    } else {
+      const directories = await this.admin.listDirectories(section);
+      for (const dir of directories) {
+        // Only top-level (one depth below section root)
+        const parts = dir.path.split('/').filter(Boolean);
+        if (parts.length === 2) {
+          const absPath = this.admin.resolveRepoPathPublic(dir.path);
+          const metaName = await this.admin.readDirectoryDisplayName(absPath);
+          names.add(metaName ?? dir.name);
+        }
+      }
+    }
+    return [...names].sort((a, b) => a.localeCompare(b, 'ru', { sensitivity: 'base' }));
+  }
+
   // ─── Snippet actions ────────────────────────────────────────────────
 
   private async handleImportSnippet(): Promise<void> {
-    // List snippet files in vault
     const folder = this.plugin.settings.snippetFolderPath;
-    const files = this.listVaultSnippetFiles(folder);
-    if (files.length === 0) {
+    if (!folder) {
       new Notice(this.plugin.i18n.t('admin.noVaultSnippets'));
       return;
     }
 
-    // Show picker
-    const modal = new ImportSnippetPickerModal(this.app, files, this.plugin, async (file) => {
+    const vaultFolder = this.app.vault.getAbstractFileByPath(folder);
+    if (!(vaultFolder instanceof TFolder)) {
+      new Notice(this.plugin.i18n.t('admin.noVaultSnippets'));
+      return;
+    }
+
+    // Show picker with drill-down navigation
+    const modal = new ImportSnippetPickerModal(this.app, folder, this.plugin, async (file) => {
       try {
         const content = await this.app.vault.read(file);
         const parsed = JSON.parse(content);
@@ -447,43 +490,32 @@ export class LibraryAdminModal extends Modal {
     modal.open();
   }
 
-  private listVaultSnippetFiles(folderPath: string): TFile[] {
-    const folder = this.app.vault.getAbstractFileByPath(folderPath);
-    if (!(folder instanceof TFolder)) return [];
-    const out: TFile[] = [];
-    const walk = (f: TFolder): void => {
-      for (const child of f.children) {
-        if (child instanceof TFolder) walk(child);
-        else if (child instanceof TFile && child.extension === 'json' && !child.path.includes('Library')) {
-          out.push(child);
-        }
-      }
-    };
-    walk(folder);
-    return out;
-  }
-
   private openImportSnippetDetailsModal(content: string, suggestedName: string): void {
-    const modal = new ImportDetailsModal(
-      this.app,
-      this.plugin.i18n.t('admin.importSnippetDetails'),
-      suggestedName,
-      async (details) => {
-        if (!this.admin) return;
-        const result = await this.admin.importSnippetFromVault(
-          content,
-          details.category,
-          details.name || suggestedName,
-          undefined,
-          details.description || undefined,
-        );
-        if (result) {
-          void this.refreshAdmin();
-        }
-      },
-      this.plugin,
-    );
-    modal.open();
+    // Collect existing category names for autocomplete
+    void this.collectLibraryCategoryNames('snippets').then((categories) => {
+      const modal = new ImportDetailsModal(
+        this.app,
+        this.plugin.i18n.t('admin.importSnippetDetails'),
+        suggestedName,
+        async (details) => {
+          if (!this.admin) return;
+          const result = await this.admin.importSnippetFromVault(
+            content,
+            details.category,
+            details.name || suggestedName,
+            undefined,
+            details.description || undefined,
+          );
+          if (result) {
+            void this.refreshAdmin();
+          }
+        },
+        this.plugin,
+        false, // isProtocol
+        categories,
+      );
+      modal.open();
+    });
   }
 
   private openEditSnippetModal(entry: LibrarySnippetEntry): void {
@@ -653,25 +685,19 @@ export class LibraryAdminModal extends Modal {
 
   // ─── Toolbar actions ────────────────────────────────────────────────
 
-  private async handlePullLatest(): Promise<void> {
-    if (!this.admin) return;
-    this.setStatus(this.plugin.i18n.t('admin.pullingLatest'));
-    const result = await this.admin.gitPull();
-    if (result.success) {
-      const output = result.output.trim();
-      this.setStatus(output || this.plugin.i18n.t('admin.upToDate'));
-      new Notice(this.plugin.i18n.t('admin.upToDate'));
-    } else {
-      this.setStatus(result.output);
-      new Notice(result.output, 8000);
-    }
-    this.refreshAdmin();
-  }
-
   private async handleResetToRemote(): Promise<void> {
     if (!this.admin) return;
-    const message = this.plugin.i18n.t('admin.confirmResetToRemote');
-    if (!confirm(message)) return;
+    // Use an Obsidian modal for confirmation instead of window.confirm
+    const confirmed = await new Promise<boolean>((resolve) => {
+      const modal = new ConfirmModal(
+        this.app,
+        this.plugin.i18n.t('admin.confirmResetToRemote'),
+        () => resolve(true),
+        () => resolve(false),
+      );
+      modal.open();
+    });
+    if (!confirmed) return;
     this.setStatus(this.plugin.i18n.t('admin.resettingToRemote'));
     const result = await this.admin.gitResetToOriginMain();
     if (result.success) {
@@ -684,33 +710,9 @@ export class LibraryAdminModal extends Modal {
     this.refreshAdmin();
   }
 
-  private async handleValidate(): Promise<void> {
-    if (!this.admin) return;
-    this.setStatus(this.plugin.i18n.t('admin.validating'));
-    const result = await this.admin.validateSnippets();
-    if (result.valid) {
-      this.setStatus(this.plugin.i18n.t('admin.validationPassed'));
-    } else {
-      this.setStatus(this.plugin.i18n.t('admin.validationFailed') + '\n' + result.errors.join('\n'));
-    }
-  }
-
-  private async handleRegenerate(): Promise<void> {
-    if (!this.admin) return;
-    this.setStatus(this.plugin.i18n.t('admin.regenerating'));
-    try {
-      await this.admin.regenerateIndexes();
-      this.setStatus(this.plugin.i18n.t('admin.regenerateSuccess'));
-    } catch (err) {
-      this.setStatus(this.plugin.i18n.t('admin.regenerateFailed', { error: String(err) }));
-    }
-  }
-
-  private async handleCopyGitCommands(): Promise<void> {
-    if (!this.admin) return;
-    const commands = this.admin.getGitPushCommands();
-    await navigator.clipboard.writeText(commands);
-    new Notice(this.plugin.i18n.t('admin.copiedToClipboard'));
+  private handleShowUpdateInstructions(): void {
+    const modal = new UpdateInstructionsModal(this.app);
+    modal.open();
   }
 
   private setStatus(text: string): void {
@@ -728,6 +730,77 @@ export class LibraryAdminModal extends Modal {
 }
 
 // ─── Helper modals ────────────────────────────────────────────────────
+
+/** Confirmation dialog using an Obsidian modal instead of window.confirm(). */
+class ConfirmModal extends Modal {
+  constructor(
+    app: App,
+    private readonly message: string,
+    private readonly onConfirm: () => void,
+    private readonly onCancel: () => void,
+  ) {
+    super(app);
+  }
+
+  onOpen(): void {
+    const { contentEl } = this;
+    contentEl.createEl('p', { text: this.message });
+
+    new Setting(contentEl)
+      .addButton(btn => btn
+        .setButtonText('OK')
+        .setCta()
+        .onClick(() => {
+          this.close();
+          this.onConfirm();
+        }))
+      .addButton(btn => btn
+        .setButtonText('Cancel')
+        .onClick(() => {
+          this.close();
+          this.onCancel();
+        }));
+  }
+
+  onClose(): void {
+    this.contentEl.empty();
+  }
+}
+
+/** Modal showing instructions for updating the library via git. */
+class UpdateInstructionsModal extends Modal {
+  constructor(app: App) {
+    super(app);
+  }
+
+  onOpen(): void {
+    const { contentEl } = this;
+    contentEl.createEl('h2', { text: 'Инструкция по обновлению библиотеки' });
+
+    const steps = [
+      '1. Актуализируйте локальную копию:\n   cd <путь-к-RadiProtocol-Library>\n   git checkout main\n   git pull origin main',
+      '2. Создайте новую ветку для изменений:\n   git checkout -b my-changes',
+      '3. Внесите изменения через панель администрания\n   (создание папок, импорт сниппетов/протоколов, редактирование метаданных).\n   Индексы пересобираются автоматически.',
+      '4. Проверьте изменения:\n   git status\n   git diff',
+      '5. Закоммитьте и отправьте:\n   git add .\n   git commit -m "описание изменений"\n   git push origin my-changes',
+      '6. Создайте Pull Request на GitHub:\n   Перейдите на страницу репозитория → ' +
+        'вкладка Pull Requests → New pull request → выберите вашу ветку.',
+    ];
+
+    for (const step of steps) {
+      contentEl.createEl('pre', { text: step, cls: 'rp-admin-instructions-step' });
+    }
+
+    contentEl.createEl('hr');
+    contentEl.createEl('p', {
+      text: 'Для сброса локальной копии к состоянию GitHub используйте кнопку «Сбросить к remote».',
+    });
+  }
+
+  onClose(): void {
+    this.contentEl.empty();
+  }
+}
 
 class TextPromptModal extends Modal {
   private result: string | null = null;
@@ -791,9 +864,11 @@ class TextPromptModal extends Modal {
 }
 
 class ImportSnippetPickerModal extends Modal {
+  private picker: SnippetTreePicker | null = null;
+
   constructor(
     app: App,
-    private files: TFile[],
+    private rootPath: string,
     private plugin: RadiProtocolPlugin,
     private onSelect: (file: TFile) => void,
   ) {
@@ -805,17 +880,33 @@ class ImportSnippetPickerModal extends Modal {
     contentEl.empty();
     contentEl.createEl('h2', { text: this.plugin.i18n.t('admin.selectSnippet') });
 
-    for (const file of this.files) {
-      new Setting(contentEl)
-        .setName(file.basename)
-        .setDesc(file.path)
-        .addButton(btn => btn
-          .setButtonText(this.plugin.i18n.t('admin.select'))
-          .onClick(() => {
-            this.close();
-            this.onSelect(file);
-          }));
-    }
+    const pickerHost = contentEl.createDiv();
+    this.picker = new SnippetTreePicker({
+      app: this.app,
+      snippetService: this.plugin.snippetService,
+      container: pickerHost,
+      mode: 'file-only',
+      rootPath: this.rootPath,
+      onSelect: (result) => {
+        if (result.kind !== 'file') return;
+        const vaultPath = result.relativePath
+          ? `${this.rootPath}/${result.relativePath}`
+          : this.rootPath;
+        const file = this.app.vault.getAbstractFileByPath(vaultPath);
+        if (file instanceof TFile) {
+          this.close();
+          this.onSelect(file);
+        }
+      },
+      t: this.plugin.i18n.t.bind(this.plugin.i18n),
+    });
+    void this.picker.mount();
+  }
+
+  onClose(): void {
+    this.picker?.unmount();
+    this.picker = null;
+    this.contentEl.empty();
   }
 }
 
@@ -860,6 +951,7 @@ class ImportDetailsModal extends Modal {
     private onSubmit: (details: { name: string; category: string; description: string }) => void,
     private plugin: RadiProtocolPlugin,
     private isProtocol = false,
+    private existingCategories: string[] = [],
   ) {
     super(app);
     this.nameInput = suggestedName;
@@ -880,9 +972,15 @@ class ImportDetailsModal extends Modal {
 
     new Setting(contentEl)
       .setName(this.plugin.i18n.t('admin.categoryLabel'))
-      .addText(text => text
-        .setPlaceholder(this.isProtocol ? 'e.g. CT, X-ray' : 'e.g. ГМ, Грудная клетка')
-        .onChange(v => { this.categoryInput = v; }));
+      .addText(text => {
+        text
+          .setPlaceholder(this.isProtocol ? 'e.g. CT, X-ray' : 'e.g. ГМ, Грудная клетка')
+          .onChange(v => { this.categoryInput = v; });
+        // Attach category suggest for autocomplete
+        if (this.existingCategories.length > 0) {
+          new LibraryCategorySuggest(this.app, text.inputEl, this.existingCategories);
+        }
+      });
 
     new Setting(contentEl)
       .setName(this.plugin.i18n.t('admin.descriptionLabel'))
@@ -902,6 +1000,38 @@ class ImportDetailsModal extends Modal {
             description: this.descriptionInput,
           });
         }));
+  }
+}
+
+/** Autocomplete suggest for library category (directory display names). */
+class LibraryCategorySuggest extends AbstractInputSuggest<string> {
+  private readonly inputElRef: HTMLInputElement;
+
+  constructor(
+    app: App,
+    inputEl: HTMLInputElement,
+    private categories: string[],
+  ) {
+    super(app, inputEl);
+    this.inputElRef = inputEl;
+  }
+
+  protected getSuggestions(query: string): string[] {
+    const lower = query.trim().toLowerCase();
+    if (lower === '') return this.categories.slice(0, 20);
+    return this.categories
+      .filter(c => c.toLowerCase().includes(lower))
+      .slice(0, 20);
+  }
+
+  renderSuggestion(category: string, el: HTMLElement): void {
+    el.createEl('div', { text: category });
+  }
+
+  selectSuggestion(category: string, evt: MouseEvent | KeyboardEvent): void {
+    this.setValue(category);
+    this.inputElRef.dispatchEvent(new Event('input', { bubbles: true }));
+    super.selectSuggestion(category, evt);
   }
 }
 
