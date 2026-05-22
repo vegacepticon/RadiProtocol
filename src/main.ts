@@ -384,15 +384,14 @@ export default class RadiProtocolPlugin extends Plugin {
 
   async activateSnippetManagerView(): Promise<void> {
     const { workspace } = this.app;
-    workspace.detachLeavesOfType(SNIPPET_MANAGER_VIEW_TYPE);
-    const leaf = workspace.getRightLeaf(false);
-    if (leaf) {
+    const existing = workspace.getLeavesOfType(SNIPPET_MANAGER_VIEW_TYPE)[0];
+    const leaf = existing ?? workspace.getLeaf(false);
+    if (leaf === null) return;
+
+    if (existing === undefined) {
       await leaf.setViewState({ type: SNIPPET_MANAGER_VIEW_TYPE, active: true });
-      const activeLeaf = workspace.getLeavesOfType(SNIPPET_MANAGER_VIEW_TYPE)[0];
-      if (activeLeaf !== undefined) {
-        void workspace.revealLeaf(activeLeaf);
-      }
     }
+    void workspace.revealLeaf(leaf);
   }
 
   /**

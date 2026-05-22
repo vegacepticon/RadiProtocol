@@ -191,7 +191,8 @@
     "ctxDeleteFolder": "Удалить папку",
     "snippetRenamedNotice": "Сниппет переименован.",
     "folderRenamedNotice": "Папка переименована. Обновлено канвасов: {updated}, пропущено: {skipped}.",
-    "renameError": "Не удалось переименовать: {error}"
+    "renameError": "Не удалось переименовать: {error}",
+    "collapseAll": "Свернуть всё"
   },
   "startFromNode": {
     "noStartPoints": "В этом протоколе нет узлов, включённых для команды «старт с узла». Сначала включи чекбокс в настройках узла."

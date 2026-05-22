@@ -25,6 +25,7 @@ interface MockEl {
   addClass: (c: string) => void;
   removeClass: (c: string) => void;
   setAttribute: (k: string, v: string) => void;
+  setAttr: (name: string, value: string) => void;
   getAttribute: (k: string) => string | null;
   addEventListener: (t: string, h: (e: unknown) => void) => void;
   dispatchEvent: (e: { type: string }) => void;
@@ -64,6 +65,7 @@ function makeEl(tag = 'div'): MockEl {
     addClass(c: string): void { classSet.add(c); },
     removeClass(c: string): void { classSet.delete(c); },
     setAttribute(k: string, v: string): void { attrs[k] = v; },
+    setAttr(name: string, value: string): void { attrs[name] = value; },
     getAttribute(k: string): string | null { return attrs[k] ?? null; },
     addEventListener(t: string, h: (e: unknown) => void): void {
       const a = listeners.get(t) ?? [];

@@ -191,7 +191,8 @@
     "ctxDeleteFolder": "Delete folder",
     "snippetRenamedNotice": "Snippet renamed.",
     "folderRenamedNotice": "Folder renamed. Canvases updated: {updated}, skipped: {skipped}.",
-    "renameError": "Failed to rename: {error}"
+    "renameError": "Failed to rename: {error}",
+    "collapseAll": "Collapse all"
   },
   "startFromNode": {
     "noStartPoints": "This protocol has no nodes enabled for “start from node”. Enable the checkbox in node settings first."

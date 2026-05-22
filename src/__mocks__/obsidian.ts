@@ -34,6 +34,9 @@ function makeMockEl(): MockElement {
     setAttribute: (name: string, value: string) => {
       attrs.set(name, value);
     },
+    setAttr: (name: string, value: string | number | boolean) => {
+      attrs.set(name, String(value));
+    },
     getAttribute: (name: string) => attrs.get(name) ?? null,
     addClass: (cls: string) => {
       classes.add(cls);
@@ -74,6 +77,7 @@ interface MockElement {
   textContent: string;
   addEventListener: (type: string, cb: unknown) => void;
   setAttribute: (name: string, value: string) => void;
+  setAttr: (name: string, value: string | number | boolean) => void;
   getAttribute: (name: string) => string | null;
   addClass: (cls: string) => void;
   removeClass: (cls: string) => void;

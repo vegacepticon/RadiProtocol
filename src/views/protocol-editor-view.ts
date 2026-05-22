@@ -395,7 +395,7 @@ export class ProtocolEditorView extends ItemView {
     }).then(async () => {
       await this.loadProtocol(this.protocolPath!);
       new Notice(this.plugin.i18n.t('protocolEditor.nodeCreated'));
-      this.openEditModal(newNode);
+      this.openEditModal(newNode, { autofocusFirstTextField: true });
     }).catch((err) => {
       new Notice(this.plugin.i18n.t('protocolEditor.saveFailed', { error: String(err) }));
     });
@@ -489,7 +489,7 @@ export class ProtocolEditorView extends ItemView {
     }).then(async () => {
       await this.loadProtocol(this.protocolPath!);
       new Notice(this.plugin.i18n.t('protocolEditor.nodeCreated'));
-      this.openEditModal(newNode);
+      this.openEditModal(newNode, { autofocusFirstTextField: true });
     }).catch((err) => {
       new Notice(this.plugin.i18n.t('protocolEditor.saveFailed', { error: String(err) }));
     });
@@ -1618,7 +1618,7 @@ export class ProtocolEditorView extends ItemView {
   }
 
   /* Phase 4D — open edit modal for a node */
-  private openEditModal(node: ProtocolNodeRecord): void {
+  private openEditModal(node: ProtocolNodeRecord, options?: { autofocusFirstTextField?: boolean }): void {
     if (this.protocolPath === null) return;
     const t = this.plugin.i18n.t.bind(this.plugin.i18n);
 
@@ -1645,15 +1645,18 @@ export class ProtocolEditorView extends ItemView {
     kindSelect.value = (node.kind !== null && EDITABLE_NODE_KINDS.includes(node.kind)) ? node.kind : 'question';
 
     const textControls: Array<{ key: string; value: () => string | boolean | undefined }> = [];
+    const firstEditableField: Array<HTMLInputElement | HTMLTextAreaElement> = [];
     const addInput = (key: string, label: string, value: unknown, multiline = false) => {
       const field = body.createDiv({ cls: 'rp-protocol-editor-modal-field' });
       field.createEl('label', { text: label });
       if (multiline) {
         const input = field.createEl('textarea', { text: typeof value === 'string' ? value : '' }) as HTMLTextAreaElement;
         textControls.push({ key, value: () => input.value || undefined });
+        if (firstEditableField.length === 0) firstEditableField.push(input);
       } else {
         const input = field.createEl('input', { attr: { type: 'text', value: typeof value === 'string' ? value : '' } }) as HTMLInputElement;
         textControls.push({ key, value: () => input.value || undefined });
+        if (firstEditableField.length === 0) firstEditableField.push(input);
       }
     };
     const addStartPointCheckbox = () => {
@@ -1876,6 +1879,12 @@ export class ProtocolEditorView extends ItemView {
     modalEl.addEventListener('click', (e) => {
       if (e.target === modalEl) closeModal();
     });
+
+    // Autofocus the first editable text field when opening for a newly-created node
+    if (options?.autofocusFirstTextField && firstEditableField.length > 0) {
+      const field = firstEditableField[0]!;
+      window.setTimeout(() => { field.focus(); field.select(); }, 0);
+    }
   }
 
 }

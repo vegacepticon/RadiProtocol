@@ -99,6 +99,19 @@ export class SnippetManagerView extends ItemView {
       void this.openLibraryBrowser();
     });
 
+    // Collapse all directories button
+    const collapseBtn = header.createEl('button', { cls: 'radi-snippet-tree-new-btn' });
+    const collapseIcon = collapseBtn.createSpan({ cls: 'radi-snippet-tree-new-icon' });
+    setIcon(collapseIcon, 'chevrons-down-up');
+    collapseBtn.setAttr('aria-label', this.plugin.i18n.t('snippetManager.collapseAll'));
+    collapseBtn.createSpan({ text: this.plugin.i18n.t('snippetManager.collapseAll') });
+    this.registerDomEvent(collapseBtn, 'click', async () => {
+      this.plugin.settings.snippetTreeExpandedPaths.length = 0;
+      await this.plugin.saveSettings();
+      await this.rebuildTreeModel();
+      this.renderTree();
+    });
+
     // Tree container
     this.treeRootEl = contentEl.createDiv({ cls: 'radi-snippet-tree-body' });
 
