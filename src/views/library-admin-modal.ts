@@ -521,6 +521,7 @@ export class LibraryAdminModal extends Modal {
 				this.plugin.i18n.t('admin.confirmResetToRemote'),
 				() => resolve(true),
 				() => resolve(false),
+				this.plugin.i18n.t.bind(this.plugin.i18n),
 			);
 			modal.open();
 		});
@@ -538,7 +539,7 @@ export class LibraryAdminModal extends Modal {
 	}
 
 	private handleShowUpdateInstructions(): void {
-		const modal = new UpdateInstructionsModal(this.app);
+		const modal = new UpdateInstructionsModal(this.app, this.plugin.i18n.t.bind(this.plugin.i18n));
 		modal.open();
 	}
 

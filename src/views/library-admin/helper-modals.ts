@@ -3,16 +3,22 @@ import type RadiProtocolPlugin from '../../main';
 import type { LibrarySnippetEntry } from '../../snippets/library-model';
 import type { ProtocolLibraryEntry } from '../../protocol/protocol-library-model';
 import { SnippetTreePicker } from '../snippet-tree-picker';
+import type { Translator } from '../../i18n';
+import { defaultT } from '../../i18n';
 
 /** Confirmation dialog using an Obsidian modal instead of window.confirm(). */
 export class ConfirmModal extends Modal {
+	private readonly t: Translator;
+
 	constructor(
 		app: App,
 		private readonly message: string,
 		private readonly onConfirm: () => void,
 		private readonly onCancel: () => void,
+		t?: Translator,
 	) {
 		super(app);
+		this.t = t ?? defaultT;
 	}
 
 	onOpen(): void {
@@ -21,14 +27,14 @@ export class ConfirmModal extends Modal {
 
 		new Setting(contentEl)
 			.addButton(btn => btn
-				.setButtonText('OK')
+				.setButtonText(this.t('confirm.ok'))
 				.setCta()
 				.onClick(() => {
 					this.close();
 					this.onConfirm();
 				}))
 			.addButton(btn => btn
-				.setButtonText('Cancel')
+				.setButtonText(this.t('confirm.cancel'))
 				.onClick(() => {
 					this.close();
 					this.onCancel();
@@ -42,31 +48,24 @@ export class ConfirmModal extends Modal {
 
 /** Modal showing instructions for updating the library via git. */
 export class UpdateInstructionsModal extends Modal {
-	constructor(app: App) {
+	private readonly t: Translator;
+
+	constructor(app: App, t?: Translator) {
 		super(app);
+		this.t = t ?? defaultT;
 	}
 
 	onOpen(): void {
 		const { contentEl } = this;
-		contentEl.createEl('h2', { text: 'Инструкция по обновлению библиотеки' });
+		contentEl.createEl('h2', { text: this.t('admin.updateInstructionsTitle') });
 
-		const steps = [
-			'1. Актуализируйте локальную копию:\n   cd <путь-к-RadiProtocol-Library>\n   git checkout main\n   git pull origin main',
-			'2. Создайте новую ветку для изменений:\n   git checkout -b my-changes',
-			'3. Внесите изменения через панель администрания\n   (создание папок, импорт сниппетов/протоколов, редактирование метаданных).\n   Индексы пересобираются автоматически.',
-			'4. Проверьте изменения:\n   git status\n   git diff',
-			'5. Закоммитьте и отправьте:\n   git add .\n   git commit -m "описание изменений"\n   git push origin my-changes',
-			'6. Создайте Pull Request на GitHub:\n   Перейдите на страницу репозитория → ' +
-				'вкладка Pull Requests → New pull request → выберите вашу ветку.',
-		];
-
-		for (const step of steps) {
-			contentEl.createEl('pre', { text: step, cls: 'rp-admin-instructions-step' });
+		for (let i = 1; i <= 6; i++) {
+			contentEl.createEl('pre', { text: this.t(`admin.updateSteps.${i}`), cls: 'rp-admin-instructions-step' });
 		}
 
 		contentEl.createEl('hr');
 		contentEl.createEl('p', {
-			text: 'Для сброса локальной копии к состоянию GitHub используйте кнопку «Сбросить к remote».',
+			text: this.t('admin.resetToLocalNotice'),
 		});
 	}
 

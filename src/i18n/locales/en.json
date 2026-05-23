@@ -286,6 +286,10 @@
     "preview": "Preview",
     "confirm": "Confirm"
   },
+  "confirm": {
+    "ok": "OK",
+    "cancel": "Cancel"
+  },
   "library": {
     "title": "Snippet Library",
     "loadError": "Failed to load library index. Check the URL and your network connection.",
@@ -388,7 +392,17 @@
     "invalidDirectoryPath": "Invalid folder path.",
     "directoryAlreadyExists": "Folder already exists.",
     "directoryNotFound": "Folder not found.",
-    "directoryRootProtected": "The root library folder cannot be changed."
+    "directoryRootProtected": "The root library folder cannot be changed.",
+    "updateInstructionsTitle": "Library Update Instructions",
+    "updateSteps": {
+      "1": "1. Update your local copy:\n   cd <path-to-RadiProtocol-Library>\n   git checkout main\n   git pull origin main",
+      "2": "2. Create a new branch for your changes:\n   git checkout -b my-changes",
+      "3": "3. Make changes through the admin panel\n   (creating folders, importing snippets/protocols, editing metadata).\n   Indexes are rebuilt automatically.",
+      "4": "4. Review changes:\n   git status\n   git diff",
+      "5": "5. Commit and push:\n   git add .\n   git commit -m \"description of changes\"\n   git push origin my-changes",
+      "6": "6. Create a Pull Request on GitHub:\n   Go to the repository page → Pull Requests tab → New pull request → select your branch."
+    },
+    "resetToLocalNotice": "To reset your local copy to the GitHub state, use the \"Reset to remote\" button."
   },
   "protocolLibrary": {
     "title": "Protocol Library",

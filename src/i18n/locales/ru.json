@@ -286,6 +286,10 @@
     "preview": "Предпросмотр",
     "confirm": "Подтвердить"
   },
+  "confirm": {
+    "ok": "ОК",
+    "cancel": "Отмена"
+  },
   "library": {
     "title": "Библиотека сниппетов",
     "loadError": "Не удалось загрузить индекс библиотеки. Проверьте URL и подключение к сети.",
@@ -388,7 +392,17 @@
     "invalidDirectoryPath": "Некорректный путь папки.",
     "directoryAlreadyExists": "Папка уже существует.",
     "directoryNotFound": "Папка не найдена.",
-    "directoryRootProtected": "Корневую папку библиотеки нельзя изменять."
+    "directoryRootProtected": "Корневую папку библиотеки нельзя изменять.",
+    "updateInstructionsTitle": "Инструкция по обновлению библиотеки",
+    "updateSteps": {
+      "1": "1. Актуализируйте локальную копию:\n   cd <путь-к-RadiProtocol-Library>\n   git checkout main\n   git pull origin main",
+      "2": "2. Создайте новую ветку для изменений:\n   git checkout -b my-changes",
+      "3": "3. Внесите изменения через панель администрирования\n   (создание папок, импорт сниппетов/протоколов, редактирование метаданных).\n   Индексы пересобираются автоматически.",
+      "4": "4. Проверьте изменения:\n   git status\n   git diff",
+      "5": "5. Закоммитьте и отправьте:\n   git add .\n   git commit -m \"описание изменений\"\n   git push origin my-changes",
+      "6": "6. Создайте Pull Request на GitHub:\n   Перейдите на страницу репозитория → вкладка Pull Requests → New pull request → выберите вашу ветку."
+    },
+    "resetToLocalNotice": "Для сброса локальной копии к состоянию GitHub используйте кнопку «Сбросить к remote»."
   },
   "protocolLibrary": {
     "title": "Библиотека протоколов",
