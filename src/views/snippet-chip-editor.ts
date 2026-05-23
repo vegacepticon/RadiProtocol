@@ -101,12 +101,12 @@ export function mountChipEditor(
   if (!skipName) {
     const nameSection = container.createDiv({ cls: 'rp-snippet-form-section rp-stack' });
     const nameLabel = nameSection.createEl('label');
-    nameLabel.textContent = 'Name';
+    nameLabel.textContent = t('snippetEditor.name');
     nameLabel.htmlFor = 'rp-snippet-name-input';
     const nameInput = nameSection.createEl('input', { type: 'text' });
     nameInput.id = 'rp-snippet-name-input';
     nameInput.value = draft.name;
-    nameInput.placeholder = 'Snippet name';
+    nameInput.placeholder = t('snippetEditor.namePlaceholder');
     on(nameInput, 'input', () => {
       draft.name = nameInput.value;
       onChange();
@@ -129,26 +129,26 @@ export function mountChipEditor(
   });
 
   // --- [+ add placeholder] button and inline mini-form (D-04) ---
-  const addPlaceholderBtn = templateSection.createEl('button', { text: '+ add placeholder' });
+  const addPlaceholderBtn = templateSection.createEl('button', { text: t('snippetEditor.addPlaceholder') });
   addPlaceholderBtn.setAttribute('type', 'button');
   const addPlaceholderForm = templateSection.createDiv({ cls: 'rp-add-placeholder-form' });
   addPlaceholderForm.toggleClass('rp-chip-form-hidden', true);
 
   const miniLabelEl = addPlaceholderForm.createEl('label');
-  miniLabelEl.textContent = 'Label';
+  miniLabelEl.textContent = t('snippetEditor.placeholderLabel');
   miniLabelEl.htmlFor = 'rp-add-ph-label';
   const miniLabelInput = addPlaceholderForm.createEl('input', { type: 'text' });
   miniLabelInput.id = 'rp-add-ph-label';
-  miniLabelInput.placeholder = 'E.g. Patient age';
+  miniLabelInput.placeholder = t('snippetEditor.placeholderLabelPlaceholder');
 
   const miniTypeLabel = addPlaceholderForm.createEl('label');
-  miniTypeLabel.textContent = 'Type';
+  miniTypeLabel.textContent = t('snippetEditor.type');
   miniTypeLabel.htmlFor = 'rp-add-ph-type';
   const miniTypeSelect = addPlaceholderForm.createEl('select');
   miniTypeSelect.id = 'rp-add-ph-type';
   const phTypes: Array<{ value: SnippetPlaceholder['type']; label: string }> = [
-    { value: 'free-text', label: 'Free text' },
-    { value: 'choice', label: 'Choice' },
+    { value: 'free-text', label: t('snippetEditor.placeholderTypeFreeText') },
+    { value: 'choice', label: t('snippetEditor.placeholderTypeChoice') },
   ];
   for (const { value, label } of phTypes) {
     const opt = miniTypeSelect.createEl('option', { text: label });
@@ -385,11 +385,11 @@ export function mountChipEditor(
         const optRow = optionList.createDiv({ cls: 'rp-option-row' });
         const optLabel = optRow.createEl('label', { cls: 'rp-chip-option-label-hidden' });
         optLabel.htmlFor = `rp-opt-${ph.id}-${oi}`;
-        optLabel.textContent = `Option ${oi + 1}`;
+        optLabel.textContent = t('snippetEditor.optionNumber', { n: String(oi + 1) });
         const optInput = optRow.createEl('input', { type: 'text' });
         optInput.id = `rp-opt-${ph.id}-${oi}`;
         optInput.value = opt;
-        optInput.placeholder = `Option ${oi + 1}`;
+        optInput.placeholder = t('snippetEditor.optionNumber', { n: String(oi + 1) });
         on(optInput, 'input', () => {
           if (ph.options) ph.options[oi] = optInput.value;
           onChange();

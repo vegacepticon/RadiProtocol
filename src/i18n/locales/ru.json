@@ -91,7 +91,15 @@
       "text-block": "Текст",
       "loop": "Цикл",
       "snippet": "Сниппет"
-    }
+    },
+    "defaultNodeText": {
+      "question": "Новый вопрос",
+      "answer": "Новый ответ",
+      "text-block": "Новый текстовый блок",
+      "loop": "Новый цикл",
+      "snippet": "Новый сниппет"
+    },
+    "close": "Закрыть"
   },
   "donate": {
     "invitation": "Спасибо за поддержку! Если RadiProtocol экономит вам время — буду рад любому переводу.",
@@ -129,7 +137,13 @@
     "removePlaceholderAria": "Удалить плейсхолдер {label}",
     "removeOptionAria": "Удалить {label}",
     "optionNumber": "Опция {n}",
-    "addOption": "Добавить"
+    "addOption": "Добавить",
+    "addPlaceholder": "+ добавить плейсхолдер",
+    "placeholderLabel": "Метка",
+    "placeholderLabelPlaceholder": "Например: Возраст пациента",
+    "placeholderTypeFreeText": "Свободный текст",
+    "placeholderTypeChoice": "Выбор",
+    "close": "Закрыть"
   },
   "insertSnippet": {
     "title": "Вставить сниппет",

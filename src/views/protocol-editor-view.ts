@@ -56,11 +56,11 @@ function worldYToSurfaceY(y: number): number {
 
 const NODE_KIND_DEFAULTS: Record<string, NodeKindDefault> = {
   start: { kind: 'start', fields: {}, color: 'rgba(76, 175, 80, 0.28)' },
-  question: { kind: 'question', fields: { questionText: '' }, text: 'New question', color: 'rgba(33, 150, 243, 0.24)' },
-  answer: { kind: 'answer', fields: { answerText: '' }, text: 'New answer', color: 'rgba(255, 193, 7, 0.28)' },
-  'text-block': { kind: 'text-block', fields: { content: '' }, text: 'New text block', color: 'rgba(255, 235, 59, 0.24)' },
-  loop: { kind: 'loop', fields: { headerText: '' }, text: 'New loop', color: 'rgba(233, 30, 99, 0.24)' },
-  snippet: { kind: 'snippet', fields: {}, text: 'New snippet', color: 'rgba(156, 39, 176, 0.24)' },
+  question: { kind: 'question', fields: { questionText: '' }, color: 'rgba(33, 150, 243, 0.24)' },
+  answer: { kind: 'answer', fields: { answerText: '' }, color: 'rgba(255, 193, 7, 0.28)' },
+  'text-block': { kind: 'text-block', fields: { content: '' }, color: 'rgba(255, 235, 59, 0.24)' },
+  loop: { kind: 'loop', fields: { headerText: '' }, color: 'rgba(233, 30, 99, 0.24)' },
+  snippet: { kind: 'snippet', fields: {}, color: 'rgba(156, 39, 176, 0.24)' },
 };
 
 const EDITABLE_NODE_KINDS: RPNodeKind[] = ['start', 'question', 'answer', 'text-block', 'loop', 'snippet'];
@@ -371,6 +371,7 @@ export class ProtocolEditorView extends ItemView {
       ? NODE_KIND_DEFAULTS[kind]
       : { kind: null as RPNodeKind | null, fields: {} };
 
+    const text = defaults.text ?? (kind !== null ? this.plugin.i18n.t(`protocolEditor.defaultNodeText.${kind}`) : undefined);
     return {
       id: nodeUid(),
       kind: defaults.kind,
@@ -379,7 +380,7 @@ export class ProtocolEditorView extends ItemView {
       width: DEFAULT_NODE_WIDTH,
       height: DEFAULT_NODE_HEIGHT,
       color: defaults.color ?? defaultColorForProtocolEditorNodeKind(defaults.kind),
-      text: defaults.text,
+      text,
       fields: { ...defaults.fields },
     };
   }
@@ -408,7 +409,7 @@ export class ProtocolEditorView extends ItemView {
     const modal = modalEl.createDiv({ cls: 'rp-protocol-editor-modal rp-protocol-editor-node-kind-modal' });
     const header = modal.createDiv({ cls: 'rp-protocol-editor-modal-header' });
     header.createEl('h3', { text: t('protocolEditor.chooseNodeType') });
-    const closeBtn = header.createEl('button', { cls: 'rp-protocol-editor-modal-close', text: '✕' });
+    const closeBtn = header.createEl('button', { cls: 'rp-protocol-editor-modal-close', text: '✕', attr: { 'aria-label': t('protocolEditor.close') } });
     const closeModal = () => { modalEl.remove(); this.restoreEditorFocus(); };
     closeBtn.addEventListener('click', closeModal);
 
@@ -435,7 +436,7 @@ export class ProtocolEditorView extends ItemView {
     const modal = modalEl.createDiv({ cls: 'rp-protocol-editor-modal rp-protocol-editor-node-kind-modal' });
     const header = modal.createDiv({ cls: 'rp-protocol-editor-modal-header' });
     header.createEl('h3', { text: t('protocolEditor.chooseNodeType') });
-    const closeBtn = header.createEl('button', { cls: 'rp-protocol-editor-modal-close', text: '✕' });
+    const closeBtn = header.createEl('button', { cls: 'rp-protocol-editor-modal-close', text: '✕', attr: { 'aria-label': t('protocolEditor.close') } });
     const closeModal = () => { modalEl.remove(); this.restoreEditorFocus(); };
     closeBtn.addEventListener('click', closeModal);
 
@@ -1510,7 +1511,7 @@ export class ProtocolEditorView extends ItemView {
     const modal = modalEl.createDiv({ cls: 'rp-protocol-editor-modal' });
     const header = modal.createDiv({ cls: 'rp-protocol-editor-modal-header' });
     header.createEl('h3', { text: t('protocolEditor.editEdge') });
-    const closeBtn = header.createEl('button', { cls: 'rp-protocol-editor-modal-close', text: '✕' });
+    const closeBtn = header.createEl('button', { cls: 'rp-protocol-editor-modal-close', text: '✕', attr: { 'aria-label': t('protocolEditor.close') } });
     const closeModal = () => { modalEl.remove(); this.restoreEditorFocus(); };
     closeBtn.addEventListener('click', closeModal);
 
@@ -1627,7 +1628,7 @@ export class ProtocolEditorView extends ItemView {
 
     const header = modal.createDiv({ cls: 'rp-protocol-editor-modal-header' });
     header.createEl('h3', { text: t('protocolEditor.editNode') });
-    const closeBtn = header.createEl('button', { cls: 'rp-protocol-editor-modal-close', text: '✕' });
+    const closeBtn = header.createEl('button', { cls: 'rp-protocol-editor-modal-close', text: '✕', attr: { 'aria-label': t('protocolEditor.close') } });
     const closeModal = () => {
       modalEl.remove();
       this.restoreEditorFocus();

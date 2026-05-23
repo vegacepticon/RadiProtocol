@@ -91,7 +91,15 @@
       "text-block": "Text block",
       "loop": "Loop",
       "snippet": "Snippet"
-    }
+    },
+    "defaultNodeText": {
+      "question": "New question",
+      "answer": "New answer",
+      "text-block": "New text block",
+      "loop": "New loop",
+      "snippet": "New snippet"
+    },
+    "close": "Close"
   },
   "donate": {
     "invitation": "Thank you for your support! If RadiProtocol saves you time, any donation is appreciated.",
@@ -129,7 +137,13 @@
     "removePlaceholderAria": "Remove placeholder {label}",
     "removeOptionAria": "Remove {label}",
     "optionNumber": "Option {n}",
-    "addOption": "Add"
+    "addOption": "Add",
+    "addPlaceholder": "+ add placeholder",
+    "placeholderLabel": "Label",
+    "placeholderLabelPlaceholder": "E.g. Patient age",
+    "placeholderTypeFreeText": "Free text",
+    "placeholderTypeChoice": "Choice",
+    "close": "Close"
   },
   "insertSnippet": {
     "title": "Insert snippet",
