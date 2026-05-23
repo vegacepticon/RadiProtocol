@@ -344,6 +344,8 @@
     "noRepoPath": "Путь к repo библиотеки не настроен.",
     "setRepoInSettings": "Укажите локальный путь к RadiProtocol-Library в настройках плагина.",
     "invalidRepo": "Некорректный путь к repo библиотеки.",
+    "notDirectory": "Не является директорией",
+    "invalidRepoStructure": "Директория не похожа на репозиторий RadiProtocol-Library (нет snippets/, protocols/ или index.json)",
     "snippetsTab": "Сниппеты",
     "protocolsTab": "Протоколы",
     "resetToRemote": "Сбросить к remote",

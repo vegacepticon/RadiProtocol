@@ -49,13 +49,13 @@ export class LibraryAdminService {
     try {
       const stat = fs.statSync(this.repoPath);
       if (!stat.isDirectory()) {
-        return { valid: false, error: 'Not a directory' };
+        return { valid: false, error: this.t('admin.notDirectory') };
       }
       const hasSnippetsDir = fs.existsSync(path.join(this.repoPath, 'snippets'));
       const hasProtocolsDir = fs.existsSync(path.join(this.repoPath, 'protocols'));
       const hasIndex = fs.existsSync(path.join(this.repoPath, 'index.json'));
       if (!hasSnippetsDir && !hasProtocolsDir && !hasIndex) {
-        return { valid: false, error: 'Directory does not look like a RadiProtocol-Library repo (no snippets/, protocols/, or index.json found)' };
+        return { valid: false, error: this.t('admin.invalidRepoStructure') };
       }
       return { valid: true };
     } catch (err) {

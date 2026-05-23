@@ -344,6 +344,8 @@
     "noRepoPath": "Library repo path is not configured.",
     "setRepoInSettings": "Set the local RadiProtocol-Library repo path in plugin settings.",
     "invalidRepo": "Invalid library repo path.",
+    "notDirectory": "Not a directory",
+    "invalidRepoStructure": "Directory does not look like a RadiProtocol-Library repo (no snippets/, protocols/, or index.json found)",
     "snippetsTab": "Snippets",
     "protocolsTab": "Protocols",
     "resetToRemote": "Reset to remote",
