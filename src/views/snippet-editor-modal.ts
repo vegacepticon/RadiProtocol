@@ -424,7 +424,7 @@ export class SnippetEditorModal extends Modal {
   private renderValidationBanner(container: HTMLElement, msg: string): void {
     const banner = container.createDiv({ cls: 'radi-snippet-editor-validation-banner' });
     banner.setAttribute('role', 'alert');
-    // Assign banner.textContent to the Russian header + blank-line + the
+    // Assign banner.textContent to the localized header + blank-line + the
     // validationError verbatim. textContent treats the entire string as
     // literal text — a `<script>` substring becomes the characters `<`, `s`,
     // `c`, ... and is NEVER parsed as a DOM child (T-52-09 XSS mitigation).
