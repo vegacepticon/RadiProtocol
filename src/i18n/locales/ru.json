@@ -280,6 +280,10 @@
     "processing": "Обработка…",
     "loadingSnippets": "Загрузка сниппетов…"
   },
+  "inlineRunner": {
+    "protocolFileNotFound": "Файл протокола не найден: \"{path}\".",
+    "couldNotReadProtocol": "Не удалось прочитать файл протокола: \"{path}\"."
+  },
   "snippetPreview": {
     "ariaLabel": "Предпросмотр сниппета",
     "showCustomAria": "Показать пользовательское значение для {label}",

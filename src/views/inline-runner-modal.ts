@@ -135,7 +135,7 @@ export class InlineRunnerModal {
     const protocolPath = this.canvasFilePath!;
     const file = this.app.vault.getAbstractFileByPath(protocolPath);
     if (!(file instanceof TFile)) {
-      const reason = `Protocol file not found: "${protocolPath}".`;
+      const reason = this.plugin.i18n.t('inlineRunner.protocolFileNotFound', { path: protocolPath });
       console.warn('[RadiProtocol] InlineRunnerModal.open() failed:', reason);
       new Notice(reason);
       this.close();
@@ -146,7 +146,7 @@ export class InlineRunnerModal {
     try {
       content = await this.app.vault.read(file);
     } catch {
-      const reason = `Could not read protocol file: "${protocolPath}".`;
+      const reason = this.plugin.i18n.t('inlineRunner.couldNotReadProtocol', { path: protocolPath });
       console.warn('[RadiProtocol] InlineRunnerModal.open() failed:', reason);
       new Notice(reason);
       this.close();

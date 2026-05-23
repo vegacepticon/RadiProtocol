@@ -280,6 +280,10 @@
     "processing": "Processing…",
     "loadingSnippets": "Loading snippets…"
   },
+  "inlineRunner": {
+    "protocolFileNotFound": "Protocol file not found: \"{path}\".",
+    "couldNotReadProtocol": "Could not read protocol file: \"{path}\"."
+  },
   "snippetPreview": {
     "ariaLabel": "Snippet preview",
     "showCustomAria": "Show custom value for {label}",
