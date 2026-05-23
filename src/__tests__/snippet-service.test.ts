@@ -750,3 +750,115 @@ describe('listFolderDescendants (Phase 33 D-15)', () => {
     errSpy.mockRestore();
   });
 });
+
+// ---------------------------------------------------------------------------
+// duplicateSnippet — path, name, and placeholder deep clone (Phase 36)
+// ---------------------------------------------------------------------------
+
+describe('duplicateSnippet (Phase 36)', () => {
+  it('duplicates a JSON snippet with placeholders — path, name, and placeholders cloned', async () => {
+    const p = `${ROOT}/CT/chest.json`;
+    const original: JsonSnippet = {
+      kind: 'json',
+      path: p,
+      name: 'chest',
+      template: 'Finding: {{finding}}. Side: {{side}}.',
+      placeholders: [
+        { id: 'finding', label: 'Finding', type: 'free-text' },
+        { id: 'side', label: 'Side', type: 'choice', options: ['left', 'right'], separator: ', ' },
+      ],
+      validationError: null,
+    };
+    const { vault, files } = makeVault({
+      files: { [p]: JSON.stringify(original) },
+      folders: [ROOT, `${ROOT}/CT`],
+    });
+    const svc = new SnippetService(makeSnippetServiceApp(vault) as never, settings);
+
+    const newPath = await svc.duplicateSnippet(p);
+
+    // Path suffix is -copy.json
+    expect(newPath).toBe(`${ROOT}/CT/chest-copy.json`);
+
+    // File was persisted
+    expect(files[newPath]).toBeDefined();
+
+    const parsed = JSON.parse(files[newPath]!);
+    expect(parsed.name).toBe('chest-copy');
+    expect(parsed.template).toBe('Finding: {{finding}}. Side: {{side}}.');
+    expect(parsed.placeholders).toHaveLength(2);
+    // Placeholder values are preserved
+    expect(parsed.placeholders[0]).toEqual({
+      id: 'finding',
+      label: 'Finding',
+      type: 'free-text',
+    });
+    expect(parsed.placeholders[1]).toEqual({
+      id: 'side',
+      label: 'Side',
+      type: 'choice',
+      options: ['left', 'right'],
+      separator: ', ',
+    });
+
+    // Loaded duplicate has deep-cloned placeholders (not same references as original)
+    const loaded = await svc.load(newPath);
+    const dup = loaded as JsonSnippet;
+    expect(dup.placeholders).not.toBe(original.placeholders);
+    expect(dup.placeholders[0]).not.toBe(original.placeholders[0]);
+    expect(dup.placeholders[1]).not.toBe(original.placeholders[1]);
+  });
+
+  it('increments suffix when -copy already exists', async () => {
+    const p = `${ROOT}/CT/chest.json`;
+    const cp = `${ROOT}/CT/chest-copy.json`;
+    const orig: JsonSnippet = {
+      kind: 'json',
+      path: p,
+      name: 'chest',
+      template: 't',
+      placeholders: [],
+      validationError: null,
+    };
+    const { vault } = makeVault({
+      files: {
+        [p]: JSON.stringify(orig),
+        [cp]: JSON.stringify({ name: 'chest-copy', template: 't', placeholders: [] }),
+      },
+      folders: [ROOT, `${ROOT}/CT`],
+    });
+    const svc = new SnippetService(makeSnippetServiceApp(vault) as never, settings);
+
+    const newPath = await svc.duplicateSnippet(p);
+
+    expect(newPath).toBe(`${ROOT}/CT/chest-copy-2.json`);
+  });
+
+  it('duplicates an MD snippet — content preserved, no placeholders', async () => {
+    const p = `${ROOT}/CT/notes.md`;
+    const raw = '# Notes\n\nBody text.';
+    const { vault, files } = makeVault({
+      files: { [p]: raw },
+      folders: [ROOT, `${ROOT}/CT`],
+    });
+    const svc = new SnippetService(makeSnippetServiceApp(vault) as never, settings);
+
+    const newPath = await svc.duplicateSnippet(p);
+
+    expect(newPath).toBe(`${ROOT}/CT/notes-copy.md`);
+    expect(files[newPath]).toBe(raw);
+
+    const loaded = await svc.load(newPath);
+    const dup = loaded as MdSnippet;
+    expect(dup.kind).toBe('md');
+    expect(dup.content).toBe(raw);
+    expect(dup.name).toBe('notes-copy');
+  });
+
+  it('throws for missing source file', async () => {
+    const { vault } = makeVault();
+    const svc = new SnippetService(makeSnippetServiceApp(vault) as never, settings);
+
+    await expect(svc.duplicateSnippet(`${ROOT}/missing.json`)).rejects.toThrow(/not found/i);
+  });
+});
