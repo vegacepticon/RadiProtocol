@@ -269,7 +269,12 @@
     "loopNoExitWithLegacy": "Loop node \"{label}\" has no exit edge with a \"+\" prefix. Add \"+\" to one of the labeled edges ({ids}) — the text after \"+\" becomes the exit-button caption.",
     "loopExitNoLabel": "Loop node \"{label}\": \"+\" edge {edgeId} has no caption — add text after \"+\".",
     "loopNoBody": "Loop node \"{label}\" has no body — add an outgoing edge without a \"+\" prefix.",
-    "snippetFileMissing": "Snippet node \"{label}\" references a missing file \"{relPath}\" — file not found in {folder}. Check the path or restore the file."
+    "snippetFileMissing": "Snippet node \"{label}\" references a missing file \"{relPath}\" — file not found in {folder}. Check the path or restore the file.",
+    "noStartNode": "No start node found. Add a node with radiprotocol_nodeType = \"start\".",
+    "multipleStartNodes": "Multiple start nodes found ({count}). Only one start node is allowed.",
+    "unreachableNodes": "{count} unreachable node(s) found: {nodeList}. Connect these nodes to the protocol or remove them.",
+    "deadEndQuestion": "Question \"{questionText}\" has no outgoing branches. Add at least one answer or snippet node connected from this question.",
+    "unintentionalCycle": "Unintentional cycle detected: {cycleLabel}. Cycles must pass through a loop node. Remove the back-edge or route the cycle through a loop node."
   },
   "protocolRunner": {
     "legacyLoopRuntime": "Encountered a deprecated loop-start/loop-end node. The canvas should have been rejected by the validator; if you see this message, this is a bug — please contact the plugin author.",
