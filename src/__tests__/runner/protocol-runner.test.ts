@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { ProtocolRunner } from '../../runner/protocol-runner';
 import type { ProtocolGraph } from '../../graph/graph-model';
-import { branchingGraph, linearGraph, loopStartGraph, snippetBlockGraph, snippetNodeWithExitGraph, textBlockGraph, unifiedLoopValidGraph } from '../fixtures/protocol-document-fixtures';
+import { branchingGraph, linearGraph, snippetBlockGraph, snippetNodeWithExitGraph, textBlockGraph, unifiedLoopValidGraph } from '../fixtures/protocol-document-fixtures';
 import { CanvasParser } from '../helpers/canvas-parser';
 import * as path from 'path';
 import * as fs from 'fs';
@@ -212,20 +212,8 @@ describe('ProtocolRunner', () => {
     });
   });
 
-  // Note: RUN-08 (loop-start missing continue edge) is covered by GraphValidator LOOP-04.
-  // The runtime-level test is skipped — validator rejects the malformed graph before runner starts.
-  describe.skip('loop-start missing continue edge (RUN-08)', () => {
-    it('transitions to error state when loop-start has no continue edge', () => {
-      // loop-start.canvas: start → n-ls1 (loop-start, no outgoing edges with label 'continue')
-      // Phase 6: loop support is implemented — a missing 'continue' edge is a malformed graph error
-      const runner = new ProtocolRunner();
-      runner.start(loopStartGraph());
-      const state = runner.getState();
-      expect(state.status).toBe('error');
-      if (state.status !== 'error') return;
-      expect(state.message).toMatch(/Loop-start node.*has no 'continue' edge/);
-    });
-  });
+  // RUN-08 (loop-start missing continue edge) is covered by GraphValidator LOOP-04
+  // and the graph-validator regression test for a unified loop with zero outgoing edges.
 
   describe('iteration cap (RUN-09, D-08)', () => {
     it('transitions to error state when maxIterations is exceeded', () => {
