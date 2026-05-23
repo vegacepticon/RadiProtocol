@@ -135,6 +135,68 @@ export class TextPromptModal extends Modal {
 	}
 }
 
+export class TypeConfirmModal extends Modal {
+	private didConfirm = false;
+	private confirmBtn: HTMLButtonElement | null = null;
+
+	static prompt(
+		app: App,
+		opts: { title: string; message: string; phrase: string; confirmText: string; cancelText: string; t?: Translator },
+	): Promise<boolean> {
+		return new Promise((resolve) => {
+			const modal = new TypeConfirmModal(app, opts, resolve);
+			modal.open();
+		});
+	}
+
+	constructor(
+		app: App,
+		private readonly opts: { title: string; message: string; phrase: string; confirmText: string; cancelText: string; t?: Translator },
+		private readonly resolve: (value: boolean) => void,
+	) {
+		super(app);
+	}
+
+	onOpen(): void {
+		const { contentEl } = this;
+		contentEl.empty();
+		contentEl.createEl('h2', { text: this.opts.title });
+		contentEl.createEl('p', { text: this.opts.message });
+
+		new Setting(contentEl)
+			.addText(text => {
+				text.onChange(next => {
+					if (this.confirmBtn) {
+						this.confirmBtn.disabled = next !== this.opts.phrase;
+					}
+				});
+				setTimeout(() => text.inputEl.focus(), 0);
+			});
+
+		new Setting(contentEl)
+			.addButton(btn => {
+				btn.setButtonText(this.opts.confirmText);
+				btn.setCta();
+				btn.buttonEl.disabled = true;
+				this.confirmBtn = btn.buttonEl;
+				btn.onClick(() => {
+					this.didConfirm = true;
+					this.close();
+				});
+			})
+			.addButton(btn => btn
+				.setButtonText(this.opts.cancelText) // Caller-supplied localized label
+				.onClick(() => {
+					this.close();
+				}));
+	}
+
+	onClose(): void {
+		this.contentEl.empty();
+		this.resolve(this.didConfirm);
+	}
+}
+
 export class ImportSnippetPickerModal extends Modal {
 	private picker: SnippetTreePicker | null = null;
 

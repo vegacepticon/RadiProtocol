@@ -11,9 +11,9 @@ import { renderBreadcrumb } from './library-admin/breadcrumb';
 import { renderTreeSearch } from './library-admin/search';
 import { renderDirectory, renderSearchResults } from './library-admin/tree-renderer';
 import {
-	ConfirmModal,
 	UpdateInstructionsModal,
 	TextPromptModal,
+	TypeConfirmModal,
 	ImportSnippetPickerModal,
 	ImportProtocolPickerModal,
 	ImportDetailsModal,
@@ -515,15 +515,14 @@ export class LibraryAdminModal extends Modal {
 
 	private async handleResetToRemote(): Promise<void> {
 		if (!this.admin) return;
-		const confirmed = await new Promise<boolean>((resolve) => {
-			const modal = new ConfirmModal(
-				this.app,
-				this.plugin.i18n.t('admin.confirmResetToRemote'),
-				() => resolve(true),
-				() => resolve(false),
-				this.plugin.i18n.t.bind(this.plugin.i18n),
-			);
-			modal.open();
+		const phrase = this.plugin.i18n.t('admin.resetConfirmPhrase');
+		const message = this.plugin.i18n.t('admin.resetConfirmMessage', { phrase });
+		const confirmed = await TypeConfirmModal.prompt(this.app, {
+			title: this.plugin.i18n.t('admin.resetConfirmTitle'),
+			message,
+			phrase,
+			confirmText: this.plugin.i18n.t('confirm.ok'),
+			cancelText: this.plugin.i18n.t('confirm.cancel'),
 		});
 		if (!confirmed) return;
 		this.setStatus(this.plugin.i18n.t('admin.resettingToRemote'));
