@@ -75,7 +75,7 @@ export class RadiProtocolSettingsTab extends PluginSettingTab {
       .setName(this.plugin.i18n.t('settings.languageLabel'))
       .setDesc(this.plugin.i18n.t('settings.languageDesc'))
       .addDropdown(drop => drop
-        .addOption('en', 'English')
+        .addOption('en', this.plugin.i18n.t('settings.english'))
         .addOption('ru', this.plugin.i18n.t('settings.russian'))
         .setValue(this.plugin.settings.locale)
         .onChange(async (value) => {

@@ -4,6 +4,7 @@
     "languageLabel": "Язык / Language",
     "languageDesc": "Выберите язык интерфейса. / Select the interface language.",
     "russian": "Русский",
+    "english": "English",
     "textSeparator": "Разделитель текста",
     "textSeparatorDesc": "Как объединять накопленный текст отчёта между узлами. «Новая строка» добавляет перенос строки; «Пробел» — один пробел.",
     "newline": "Новая строка (по умолчанию)",

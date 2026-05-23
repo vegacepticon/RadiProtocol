@@ -4,6 +4,7 @@
     "languageLabel": "Language / Язык",
     "languageDesc": "Select the interface language. / Выберите язык интерфейса.",
     "russian": "Русский",
+    "english": "English",
     "textSeparator": "Text separator",
     "textSeparatorDesc": "How accumulated report text is joined between nodes. \"newline\" adds a line break before each new chunk; \"space\" adds a single space.",
     "newline": "Newline (default)",
