@@ -254,6 +254,65 @@ describe('protocol editor helper functions', () => {
     });
   });
 
+  describe('nodeTitle for all editable node kinds (keyboard aria-label regression #56)', () => {
+    const kinds: Array<ProtocolNodeRecord['kind']> = ['start', 'question', 'answer', 'text-block', 'loop', 'snippet'];
+
+    it('returns node.text when present for every editable kind', () => {
+      for (const kind of kinds) {
+        const node: ProtocolNodeRecord = {
+          id: `${kind}-1`, kind, x: 0, y: 0, width: 100, height: 60,
+          text: `${kind} label`, fields: {},
+        };
+        expect(nodeTitle(node), `kind=${kind}`).toBe(`${kind} label`);
+      }
+    });
+
+    it('returns kind label via nodeKindToken when text is empty/undefined', () => {
+      for (const kind of kinds) {
+        const noText: ProtocolNodeRecord = {
+          id: `${kind}-2`, kind, x: 0, y: 0, width: 100, height: 60,
+          text: '', fields: {},
+        };
+        expect(nodeTitle(noText), `kind=${kind}`).toBe(kind);
+      }
+    });
+
+    it('returns i18n untyped fallback when kind is null and text is empty', () => {
+      const node: ProtocolNodeRecord = {
+        id: 'untitled', kind: null, x: 0, y: 0, width: 100, height: 60,
+        text: undefined as unknown as string, fields: {},
+      };
+      const mockT = (key: string) => `[${key}]`;
+      expect(nodeTitle(node, mockT as never)).toBe('[protocolEditor.untyped]');
+    });
+
+    it('falls back to field values when text is empty', () => {
+      const questionNode: ProtocolNodeRecord = {
+        id: 'q1', kind: 'question', x: 0, y: 0, width: 100, height: 60,
+        text: '', fields: { questionText: 'Where is the pain?' },
+      };
+      expect(nodeTitle(questionNode)).toBe('Where is the pain?');
+
+      const answerNode: ProtocolNodeRecord = {
+        id: 'a1', kind: 'answer', x: 0, y: 0, width: 100, height: 60,
+        text: '', fields: { answerText: 'Left side' },
+      };
+      expect(nodeTitle(answerNode)).toBe('Left side');
+
+      const textBlockNode: ProtocolNodeRecord = {
+        id: 'tb1', kind: 'text-block', x: 0, y: 0, width: 100, height: 60,
+        text: '', fields: { content: 'Report header' },
+      };
+      expect(nodeTitle(textBlockNode)).toBe('Report header');
+
+      const answerWithLabel: ProtocolNodeRecord = {
+        id: 'a2', kind: 'answer', x: 0, y: 0, width: 100, height: 60,
+        text: '', fields: { displayLabel: 'Yes/No' },
+      };
+      expect(nodeTitle(answerWithLabel)).toBe('Yes/No');
+    });
+  });
+
   describe('nodeKindToken — raw "untyped" for CSS/attribute paths (Phase 44)', () => {
     it('returns the kind string when kind is non-null', () => {
       expect(nodeKindToken('question')).toBe('question');
@@ -262,6 +321,18 @@ describe('protocol editor helper functions', () => {
 
     it('returns raw "untyped" when kind is null — never i18n', () => {
       expect(nodeKindToken(null)).toBe('untyped');
+    });
+
+    it('returns a non-empty string for every editable node kind', () => {
+      const editableKinds: Array<ProtocolNodeRecord['kind']> = ['start', 'question', 'answer', 'text-block', 'loop', 'snippet'];
+      for (const kind of editableKinds) {
+        expect(nodeKindToken(kind).length, `kind=${kind}`).toBeGreaterThan(0);
+      }
+    });
+
+    it('returns null for kind=null when used as aria-label fallback source', () => {
+      expect(nodeKindToken(null)).toBe('untyped');
+      expect(typeof nodeKindToken(null)).toBe('string');
     });
   });
 });
