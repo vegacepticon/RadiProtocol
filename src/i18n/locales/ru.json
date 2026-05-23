@@ -11,6 +11,7 @@
     "protocolHeading": "Протокол",
     "protocolFolder": "Папка протоколов",
     "protocolFolderDesc": "Папка относительно хранилища, содержащая файлы .rp.json. Выбор протокола для inline-запуска сканирует эту папку. Оставьте пустой, чтобы отключить выбор.",
+    "protocolFolderPlaceholder": "Например, Протоколы",
     "storageHeading": "Хранение",
     "snippetFolder": "Папка сниппетов",
     "snippetFolderDesc": "Путь относительно хранилища для JSON-файлов сниппетов. По умолчанию: .radiprotocol/snippets",
@@ -20,7 +21,8 @@
     "libraryMaintainerMode": "Режим maintainer библиотеки",
     "libraryMaintainerModeDesc": "Включает admin UI для управления локальным checkout RadiProtocol-Library. GitHub token не хранится и не используется.",
     "libraryRepoPath": "Путь к локальному repo библиотеки",
-    "libraryRepoPathDesc": "Абсолютный путь к локальному clone vegacepticon/RadiProtocol-Library."
+    "libraryRepoPathDesc": "Абсолютный путь к локальному clone vegacepticon/RadiProtocol-Library.",
+    "libraryRepoPathPlaceholder": "/home/user/radiprotocol-library"
   },
   "protocolEditor": {
     "displayText": "Редактор протокола",
@@ -353,6 +355,8 @@
     "select": "Выбрать",
     "nameLabel": "Название",
     "categoryLabel": "Категория",
+    "categoryPlaceholderProtocol": "напр. КТ, Рентген",
+    "categoryPlaceholderSnippet": "напр. ГМ, Грудная клетка",
     "descriptionLabel": "Описание",
     "descriptionPlaceholder": "Короткое описание…",
     "importConfirm": "Импортировать",

@@ -246,7 +246,7 @@ export class ImportDetailsModal extends Modal {
       .setName(this.plugin.i18n.t('admin.categoryLabel'))
 			.addText(text => {
 				text
-					.setPlaceholder(this.isProtocol ? 'e.g. CT, X-ray' : 'e.g. ГМ, Грудная клетка')
+					.setPlaceholder(this.isProtocol ? this.plugin.i18n.t('admin.categoryPlaceholderProtocol') : this.plugin.i18n.t('admin.categoryPlaceholderSnippet'))
 					.onChange(v => { this.categoryInput = v; });
 				if (this.existingCategories.length > 0) {
 					new LibraryCategorySuggest(this.app, text.inputEl, this.existingCategories);

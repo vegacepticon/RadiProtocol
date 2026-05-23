@@ -110,7 +110,7 @@ export class RadiProtocolSettingsTab extends PluginSettingTab {
       .addText(text => {
         new FolderSuggest(this.app, text.inputEl);
         text
-          .setPlaceholder('E.g. Protocols')
+          .setPlaceholder(this.plugin.i18n.t('settings.protocolFolderPlaceholder'))
           .setValue(this.plugin.settings.protocolFolderPath)
           .onChange(async (value) => {
             this.plugin.settings.protocolFolderPath = value.trim();
@@ -155,7 +155,7 @@ export class RadiProtocolSettingsTab extends PluginSettingTab {
         .setName(this.plugin.i18n.t('settings.libraryRepoPath'))
         .setDesc(this.plugin.i18n.t('settings.libraryRepoPathDesc'))
         .addText(text => text
-          .setPlaceholder('/home/user/radiprotocol-library')
+          .setPlaceholder(this.plugin.i18n.t('settings.libraryRepoPathPlaceholder'))
           .setValue(this.plugin.settings.libraryRepoPath ?? '')
           .onChange(async (value) => {
             this.plugin.settings.libraryRepoPath = value.trim();

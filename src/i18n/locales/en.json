@@ -11,6 +11,7 @@
     "protocolHeading": "Protocol",
     "protocolFolder": "Protocol folder",
     "protocolFolderDesc": "Vault-relative folder containing your .rp.json protocol files. The inline runner protocol picker scans this folder. Leave empty to disable the picker.",
+    "protocolFolderPlaceholder": "E.g. Protocols",
     "storageHeading": "Storage",
     "snippetFolder": "Snippet folder",
     "snippetFolderDesc": "Vault-relative path for snippet JSON files. Default: .radiprotocol/snippets",
@@ -20,7 +21,8 @@
     "libraryMaintainerMode": "Library maintainer mode",
     "libraryMaintainerModeDesc": "Enable admin UI for managing a local RadiProtocol-Library checkout. No GitHub token is stored or used.",
     "libraryRepoPath": "Local library repo path",
-    "libraryRepoPathDesc": "Absolute path to a local clone of vegacepticon/RadiProtocol-Library."
+    "libraryRepoPathDesc": "Absolute path to a local clone of vegacepticon/RadiProtocol-Library.",
+    "libraryRepoPathPlaceholder": "/home/user/radiprotocol-library"
   },
   "protocolEditor": {
     "displayText": "Protocol editor",
@@ -353,6 +355,8 @@
     "select": "Select",
     "nameLabel": "Name",
     "categoryLabel": "Category",
+    "categoryPlaceholderProtocol": "e.g. CT, X-ray",
+    "categoryPlaceholderSnippet": "e.g. Brain, Chest",
     "descriptionLabel": "Description",
     "descriptionPlaceholder": "Short description…",
     "importConfirm": "Import",
