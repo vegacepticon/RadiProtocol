@@ -169,6 +169,8 @@ describe('LibraryAdminService', () => {
       if (cmd.includes('fetch')) return '';
       if (cmd.includes('reset')) return 'HEAD is now at abc1234';
       if (cmd.includes('clean')) return '';
+      if (cmd.includes('abbrev-ref')) return 'main';
+      if (cmd.includes('rev-parse') && cmd.includes('--short')) return 'abc1234';
       return '';
     };
     const svc = new LibraryAdminService(repo, t, mockExec as unknown as typeof import('node:child_process').execSync);
@@ -176,9 +178,59 @@ describe('LibraryAdminService', () => {
     const result = await svc.gitResetToOriginMain();
 
     expect(result.success).toBe(true);
+    expect(result.ref).toBe('main (abc1234)');
+    expect(result.cleanedCount).toBe(0);
     expect(calls.some(c => c.includes('fetch origin main'))).toBe(true);
     expect(calls.some(c => c.includes('reset --hard origin/main'))).toBe(true);
     expect(calls.some(c => c.includes('clean -fd'))).toBe(true);
+  });
+
+  it('reset returns ref and cleanedCount when untracked files removed', async () => {
+    const mockExec = (cmd: string) => {
+      if (cmd.includes('fetch')) return '';
+      if (cmd.includes('reset')) return 'HEAD is now at def5678';
+      if (cmd.includes('clean')) return 'Removing snippets/orphan.json\nRemoving protocols/old.rp.json\n';
+      if (cmd.includes('abbrev-ref')) return 'main';
+      if (cmd.includes('rev-parse') && cmd.includes('--short')) return 'def5678';
+      return '';
+    };
+    const svc = new LibraryAdminService(repo, t, mockExec as unknown as typeof import('node:child_process').execSync);
+
+    const result = await svc.gitResetToOriginMain();
+
+    expect(result.success).toBe(true);
+    expect(result.ref).toBe('main (def5678)');
+    expect(result.cleanedCount).toBe(2);
+  });
+
+  it('reset returns hint when fetch fails', async () => {
+    const error = Object.assign(new Error('fetch failed'), { stderr: 'connection refused' });
+    const mockExec = (cmd: string) => {
+      if (cmd.includes('fetch')) throw error;
+      return '';
+    };
+    const svc = new LibraryAdminService(repo, t, mockExec as unknown as typeof import('node:child_process').execSync);
+
+    const result = await svc.gitResetToOriginMain();
+
+    expect(result.success).toBe(false);
+    expect(result.hint).toBe('admin.resetFetchFailedHint');
+    expect(result.output).toContain('connection refused');
+  });
+
+  it('reset returns hint when reset fails', async () => {
+    const mockExec = (cmd: string) => {
+      if (cmd.includes('fetch')) return '';
+      if (cmd.includes('reset')) throw Object.assign(new Error('lock'), { stderr: 'index.lock exists' });
+      return '';
+    };
+    const svc = new LibraryAdminService(repo, t, mockExec as unknown as typeof import('node:child_process').execSync);
+
+    const result = await svc.gitResetToOriginMain();
+
+    expect(result.success).toBe(false);
+    expect(result.hint).toBe('admin.resetFailedHint');
+    expect(result.output).toContain('index.lock');
   });
 
   it('returns git stderr/stdout details when pull fails', async () => {

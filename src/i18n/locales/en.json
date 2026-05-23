@@ -439,7 +439,11 @@
       "5": "5. Commit and push:\n   git add .\n   git commit -m \"description of changes\"\n   git push origin my-changes",
       "6": "6. Create a Pull Request on GitHub:\n   Go to the repository page → Pull Requests tab → New pull request → select your branch."
     },
-    "resetToLocalNotice": "To reset your local copy to the GitHub state, use the \"Reset to remote\" button."
+    "resetToLocalNotice": "To reset your local copy to the GitHub state, use the \"Reset to remote\" button.",
+    "resetSuccessDetail": "Reset to {ref} complete. Local changes discarded. Cleaned {count} untracked item(s).",
+    "resetSuccessNoClean": "Reset to {ref} complete. No untracked files to clean.",
+    "resetFetchFailedHint": "Could not fetch from origin. Check your network connection and remote URL.",
+    "resetFailedHint": "Reset failed. If the repository is locked or has merge conflicts, resolve them manually in the terminal."
   },
   "protocolLibrary": {
     "title": "Protocol Library",

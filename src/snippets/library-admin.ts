@@ -591,19 +591,49 @@ export class LibraryAdminService {
   }
 
   /** Restore the local checkout to origin/main, discarding local changes. */
-  async gitResetToOriginMain(): Promise<{ success: boolean; output: string }> {
+  async gitResetToOriginMain(): Promise<{
+    success: boolean;
+    output: string;
+    ref?: string;
+    cleanedCount?: number;
+    hint?: string;
+  }> {
     const fetch = await this.runGit('fetch', 'origin', 'main');
-    if (!fetch.success) return fetch;
+    if (!fetch.success) {
+      return { success: false, output: fetch.output, hint: this.t('admin.resetFetchFailedHint') };
+    }
 
     const reset = await this.runGit('reset', '--hard', 'origin/main');
-    if (!reset.success) return reset;
+    if (!reset.success) {
+      return { success: false, output: reset.output, hint: this.t('admin.resetFailedHint') };
+    }
 
     const clean = await this.runGit('clean', '-fd');
-    if (!clean.success) return clean;
+    if (!clean.success) {
+      return { success: false, output: clean.output, hint: this.t('admin.resetFailedHint') };
+    }
+
+    const refResult = await this.runGit('rev-parse', '--abbrev-ref', 'HEAD');
+    const shortHash = await this.runGit('rev-parse', '--short', 'HEAD');
+    let ref: string;
+    if (refResult.success && refResult.output.trim()) {
+      ref = refResult.output.trim();
+      if (shortHash.success && shortHash.output.trim()) {
+        ref = `${ref} (${shortHash.output.trim()})`;
+      }
+    } else if (shortHash.success && shortHash.output.trim()) {
+      ref = shortHash.output.trim();
+    } else {
+      ref = 'origin/main';
+    }
+
+    const cleanedCount = this.parseCleanCount(clean.output);
 
     return {
       success: true,
       output: [reset.output, clean.output].filter(Boolean).join('\n') || this.t('admin.resetSuccess'),
+      ref,
+      cleanedCount,
     };
   }
 
@@ -695,6 +725,12 @@ export class LibraryAdminService {
       parts.push(String(err));
     }
     return parts.filter(Boolean).join('\n');
+  }
+
+  private parseCleanCount(cleanOutput: string): number {
+    if (!cleanOutput.trim()) return 0;
+    const lines = cleanOutput.split('\n').filter(l => l.trim().startsWith('Removing'));
+    return lines.length;
   }
 
   private async writeSnippetEntryMetadata(entry: LibrarySnippetEntry): Promise<void> {

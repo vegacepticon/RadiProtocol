@@ -528,11 +528,25 @@ export class LibraryAdminModal extends Modal {
 		this.setStatus(this.plugin.i18n.t('admin.resettingToRemote'));
 		const result = await this.admin.gitResetToOriginMain();
 		if (result.success) {
-			this.setStatus(result.output || this.plugin.i18n.t('admin.resetSuccess'));
-			new Notice(this.plugin.i18n.t('admin.resetSuccess'));
+			let statusText: string;
+			if (result.cleanedCount && result.cleanedCount > 0) {
+				statusText = this.plugin.i18n.t('admin.resetSuccessDetail', {
+					ref: result.ref ?? 'origin/main',
+					count: String(result.cleanedCount),
+				});
+			} else {
+				statusText = this.plugin.i18n.t('admin.resetSuccessNoClean', {
+					ref: result.ref ?? 'origin/main',
+				});
+			}
+			this.setStatus(statusText);
+			new Notice(statusText);
 		} else {
-			this.setStatus(result.output);
-			new Notice(result.output, 8000);
+			const parts = [result.output];
+			if (result.hint) parts.push(result.hint);
+			const failureText = parts.filter(Boolean).join('\n');
+			this.setStatus(failureText);
+			new Notice(failureText, 8000);
 		}
 		this.refreshAdmin();
 	}
