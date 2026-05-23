@@ -115,7 +115,7 @@ export class LibrarySnippetPreviewModal extends Modal {
       cls: 'rp-library-preview-custom-toggle',
       type: 'button',
     });
-    customToggle.textContent = '✎';
+    customToggle.textContent = '✎'; // Non-translatable edit-toggle symbol
     customToggle.setAttribute('aria-label', this.t('library.previewCustomAria', { label: placeholder.label }));
     customToggle.setAttribute('aria-expanded', 'false');
 

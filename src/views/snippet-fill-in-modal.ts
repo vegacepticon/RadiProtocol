@@ -186,7 +186,7 @@ export class SnippetFillInModal extends Modal {
       cls: 'rp-snippet-modal-custom-toggle',
       type: 'button',
     });
-    customToggle.textContent = '✎';
+    customToggle.textContent = '✎'; // Non-translatable edit-toggle symbol
     customToggle.setAttribute('aria-label', this.t('snippetPreview.showCustomAria', { label: placeholder.label }));
     customToggle.setAttribute('aria-expanded', 'false');
 

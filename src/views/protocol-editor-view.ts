@@ -630,7 +630,7 @@ export class ProtocolEditorView extends ItemView {
             'text-anchor': 'middle',
           },
         });
-        label.textContent = labelText.length > 28 ? `${labelText.slice(0, 27)}…` : labelText;
+        label.textContent = labelText.length > 28 ? `${labelText.slice(0, 27)}…` : labelText; // User-authored protocol text
       }
     }
   }
