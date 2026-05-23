@@ -139,11 +139,16 @@
     "optionNumber": "Option {n}",
     "addOption": "Add",
     "addOptionBtn": "+ add option",
+    "template": "Template",
+    "templatePlaceholder": "Enter template text. Use {{placeholder-id}} to insert placeholders.",
+    "placeholders": "Placeholders",
     "addPlaceholder": "+ add placeholder",
     "placeholderLabel": "Label",
     "placeholderLabelPlaceholder": "E.g. Patient age",
     "placeholderTypeFreeText": "Free text",
     "placeholderTypeChoice": "Choice",
+    "optionsLabel": "Options",
+    "orphanBadge": "Template still contains {{${id}}} — remove from template or re-add this placeholder.",
     "close": "Close"
   },
   "insertSnippet": {

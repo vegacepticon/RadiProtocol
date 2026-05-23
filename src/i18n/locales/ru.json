@@ -139,11 +139,16 @@
     "optionNumber": "Опция {n}",
     "addOption": "Добавить",
     "addOptionBtn": "+ добавить вариант",
+    "template": "Шаблон",
+    "templatePlaceholder": "Введите текст шаблона. Используйте {{placeholder-id}} для вставки плейсхолдеров.",
+    "placeholders": "Плейсхолдеры",
     "addPlaceholder": "+ добавить плейсхолдер",
     "placeholderLabel": "Метка",
     "placeholderLabelPlaceholder": "Например: Возраст пациента",
     "placeholderTypeFreeText": "Свободный текст",
     "placeholderTypeChoice": "Выбор",
+    "optionsLabel": "Варианты",
+    "orphanBadge": "Шаблон всё ещё содержит {{${id}}} — удалите из шаблона или добавьте плейсхолдер заново.",
     "close": "Закрыть"
   },
   "insertSnippet": {

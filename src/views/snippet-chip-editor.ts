@@ -116,15 +116,15 @@ export function mountChipEditor(
   // --- Template section ---
   const templateSection = container.createDiv({ cls: 'rp-snippet-form-section rp-stack' });
   const templateLabel = templateSection.createEl('label');
-  templateLabel.textContent = 'Template';
+  templateLabel.textContent = t('snippetEditor.template');
   templateLabel.htmlFor = 'rp-snippet-template-input';
   const templateArea = templateSection.createEl('textarea');
   templateArea.id = 'rp-snippet-template-input';
   templateArea.value = draft.template;
-  templateArea.placeholder = 'Enter template text. Use {{placeholder-id}} to insert placeholders.';
+  templateArea.placeholder = t('snippetEditor.templatePlaceholder');
   on(templateArea, 'input', () => {
     draft.template = templateArea.value;
-    refreshOrphanBadges(draft, placeholderList);
+    refreshOrphanBadges(draft, placeholderList, t);
     onChange();
   });
 
@@ -166,7 +166,7 @@ export function mountChipEditor(
   // Placeholder list (built/rebuilt below)
   const placeholderSection = container.createDiv({ cls: 'rp-snippet-form-section rp-stack' });
   const placeholderHeading = placeholderSection.createEl('label');
-  placeholderHeading.textContent = 'Placeholders';
+  placeholderHeading.textContent = t('snippetEditor.placeholders');
   const placeholderList = placeholderSection.createDiv({ cls: 'rp-placeholder-list' });
 
   // Wire [+ add placeholder] button: show mini-form
@@ -225,7 +225,7 @@ export function mountChipEditor(
       if (!ph) continue;
       renderPlaceholderChip(ph, i);
     }
-    refreshOrphanBadges(draft, placeholderList);
+    refreshOrphanBadges(draft, placeholderList, t);
   }
 
   function renderPlaceholderChip(ph: SnippetPlaceholder, index: number): void {
@@ -308,7 +308,7 @@ export function mountChipEditor(
       if (isOrphaned) {
         const orphanBadge = placeholderList.createDiv({ cls: 'rp-placeholder-orphan-badge' });
         orphanBadge.setAttribute('role', 'alert');
-        orphanBadge.textContent = `Template still contains {{${removedId}}} — remove from template or re-add this placeholder.`;
+        orphanBadge.textContent = t('snippetEditor.orphanBadge', { id: removedId });
       }
       onChange();
     });
@@ -329,7 +329,7 @@ export function mountChipEditor(
     // Label field
     const labelSec = expanded.createDiv({ cls: 'rp-snippet-form-section rp-stack' });
     const labelLbl = labelSec.createEl('label');
-    labelLbl.textContent = 'Label';
+    labelLbl.textContent = t('snippetEditor.placeholderLabel');
     labelLbl.htmlFor = `rp-ph-label-${ph.id}`;
     const labelInput = labelSec.createEl('input', { type: 'text' });
     labelInput.id = `rp-ph-label-${ph.id}`;
@@ -343,13 +343,13 @@ export function mountChipEditor(
     // Type dropdown
     const typeSec = expanded.createDiv({ cls: 'rp-snippet-form-section rp-stack' });
     const typeLbl = typeSec.createEl('label');
-    typeLbl.textContent = 'Type';
+    typeLbl.textContent = t('snippetEditor.type');
     typeLbl.htmlFor = `rp-ph-type-${ph.id}`;
     const typeSelect = typeSec.createEl('select');
     typeSelect.id = `rp-ph-type-${ph.id}`;
     const phTypesLocal: Array<{ value: SnippetPlaceholder['type']; label: string }> = [
-      { value: 'free-text', label: 'Free text' },
-      { value: 'choice', label: 'Choice' },
+      { value: 'free-text', label: t('snippetEditor.placeholderTypeFreeText') },
+      { value: 'choice', label: t('snippetEditor.placeholderTypeChoice') },
     ];
     for (const { value, label } of phTypesLocal) {
       const opt = typeSelect.createEl('option', { text: label });
@@ -373,7 +373,7 @@ export function mountChipEditor(
     // Options list (D-06)
     const optionsSec = expanded.createDiv({ cls: 'rp-snippet-form-section rp-stack' });
     const optionsLbl = optionsSec.createEl('label');
-    optionsLbl.textContent = 'Options';
+    optionsLbl.textContent = t('snippetEditor.optionsLabel');
     const optionList = optionsSec.createDiv({ cls: 'rp-option-list' });
 
     if (!ph.options) ph.options = [];
@@ -448,7 +448,7 @@ export function mountChipEditor(
 
 // --- Orphan badge refresh --------------------------------------------------
 
-function refreshOrphanBadges(draft: JsonSnippet, container: HTMLElement): void {
+function refreshOrphanBadges(draft: JsonSnippet, container: HTMLElement, t: Translator = defaultT): void {
   container.querySelectorAll('.rp-placeholder-orphan-badge').forEach(el => el.remove());
   const templateText = draft.template;
   const activeIds = new Set(draft.placeholders.map(p => p.id));
@@ -457,7 +457,7 @@ function refreshOrphanBadges(draft: JsonSnippet, container: HTMLElement): void {
     if (token && !activeIds.has(token)) {
       const badge = container.createDiv({ cls: 'rp-placeholder-orphan-badge' });
       badge.setAttribute('role', 'alert');
-      badge.textContent = `Template still contains {{${token}}} — remove from template or re-add this placeholder.`;
+      badge.textContent = t('snippetEditor.orphanBadge', { id: token });
     }
   }
 }
