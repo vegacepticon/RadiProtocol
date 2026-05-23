@@ -128,7 +128,8 @@
     "dragReorderAria": "Drag to reorder {label}",
     "removePlaceholderAria": "Remove placeholder {label}",
     "removeOptionAria": "Remove {label}",
-    "optionNumber": "Option {n}"
+    "optionNumber": "Option {n}",
+    "addOption": "Add"
   },
   "insertSnippet": {
     "title": "Insert snippet",
@@ -250,7 +251,10 @@
     "stepRedo": "Redo",
     "stepSkip": "Skip this question",
     "closeProtocol": "Close protocol",
-    "progressLabel": "Protocol progress {percent}%"
+    "progressLabel": "Protocol progress {percent}%",
+    "starting": "Starting protocol…",
+    "processing": "Processing…",
+    "loadingSnippets": "Loading snippets…"
   },
   "snippetPreview": {
     "ariaLabel": "Snippet preview",

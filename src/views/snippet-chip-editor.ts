@@ -157,10 +157,10 @@ export function mountChipEditor(
 
   const miniActionRow = addPlaceholderForm.createDiv({ cls: 'rp-chip-row-flex' });
 
-  const miniAddBtn = miniActionRow.createEl('button', { text: 'Add' });
+  const miniAddBtn = miniActionRow.createEl('button', { text: t('snippetEditor.addOption') });
   miniAddBtn.addClass('mod-cta');
   miniAddBtn.setAttribute('type', 'button');
-  const miniCancelBtn = miniActionRow.createEl('button', { text: 'Cancel' });
+  const miniCancelBtn = miniActionRow.createEl('button', { text: t('snippetEditor.cancel') });
   miniCancelBtn.setAttribute('type', 'button');
 
   // Placeholder list (built/rebuilt below)

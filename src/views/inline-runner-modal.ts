@@ -427,7 +427,7 @@ export class InlineRunnerModal {
     switch (state.status) {
       case 'idle': {
         this.contentEl.createEl('p', {
-          text: 'Starting protocol…',
+          text: this.plugin.i18n.t('protocolRunner.starting'),
           cls: CSS_CLASS.EMPTY_STATE_BODY,
         });
         break;
@@ -457,7 +457,7 @@ export class InlineRunnerModal {
         if (result === 'error') return;
         if (result === 'not-question') {
           this.contentEl.createEl('p', {
-            text: 'Processing...',
+            text: this.plugin.i18n.t('protocolRunner.processing'),
             cls: CSS_CLASS.EMPTY_STATE_BODY,
           });
         }
@@ -478,7 +478,7 @@ export class InlineRunnerModal {
 
       case 'awaiting-snippet-pick': {
         this.contentEl.createEl('p', {
-          text: 'Loading snippets...',
+          text: this.plugin.i18n.t('protocolRunner.loadingSnippets'),
           cls: CSS_CLASS.EMPTY_STATE_BODY,
         });
         void this.mountSnippetPicker(state, this.contentEl);

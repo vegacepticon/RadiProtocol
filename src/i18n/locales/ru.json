@@ -128,7 +128,8 @@
     "dragReorderAria": "Перетащите для изменения порядка {label}",
     "removePlaceholderAria": "Удалить плейсхолдер {label}",
     "removeOptionAria": "Удалить {label}",
-    "optionNumber": "Опция {n}"
+    "optionNumber": "Опция {n}",
+    "addOption": "Добавить"
   },
   "insertSnippet": {
     "title": "Вставить сниппет",
@@ -250,7 +251,10 @@
     "stepRedo": "Повторить",
     "stepSkip": "Пропустить этот вопрос",
     "closeProtocol": "Закрыть протокол",
-    "progressLabel": "Прогресс протокола {percent}%"
+    "progressLabel": "Прогресс протокола {percent}%",
+    "starting": "Запуск протокола…",
+    "processing": "Обработка…",
+    "loadingSnippets": "Загрузка сниппетов…"
   },
   "snippetPreview": {
     "ariaLabel": "Предпросмотр сниппета",
