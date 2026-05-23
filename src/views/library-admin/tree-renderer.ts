@@ -12,7 +12,7 @@ export function renderFolderTile(
 	const tile = grid.createDiv({ cls: 'rp-admin-folder-tile' });
 	const openBtn = tile.createDiv({ cls: 'rp-admin-folder-tile-open' });
 	const nameEl = openBtn.createEl('span', { cls: 'rp-admin-entry-name' });
-	nameEl.createEl('span', { cls: 'rp-admin-row-glyph', text: '\uD83D\uDCC1' });
+	nameEl.createEl('span', { cls: 'rp-admin-row-glyph', text: '\uD83D\uDCC1' }); // Non-translatable folder glyph symbol
 	nameEl.createEl('span', { cls: 'rp-admin-row-title', text: node.displayName });
 	if (node.displayName !== node.name) {
 		openBtn.createEl('span', { cls: 'rp-admin-entry-path', text: node.name });
@@ -38,7 +38,7 @@ export function renderEntryRow(
 	const row = list.createDiv({ cls: 'rp-admin-entry' });
 	const info = row.createDiv({ cls: 'rp-admin-entry-info' });
 	const nameEl = info.createEl('span', { cls: 'rp-admin-entry-name' });
-	nameEl.createEl('span', { cls: 'rp-admin-row-glyph', text: '\uD83D\uDCC4' });
+	nameEl.createEl('span', { cls: 'rp-admin-row-glyph', text: '\uD83D\uDCC4' }); // Non-translatable file glyph symbol
 	const entryTitle = 'title' in entry ? entry.title : entry.name;
 	nameEl.createEl('span', { cls: 'rp-admin-row-title', text: entryTitle });
 	if (section === 'protocols' && 'nodes' in entry) {
