@@ -15,6 +15,7 @@
     "storageHeading": "Хранение",
     "snippetFolder": "Папка сниппетов",
     "snippetFolderDesc": "Путь относительно хранилища для JSON-файлов сниппетов. По умолчанию: .radiprotocol/snippets",
+    "snippetFolderPathPlaceholder": ".radiprotocol/snippets",
     "donateHeading": "Помочь разработке",
     "showWalletAddresses": "Показать адреса кошельков",
     "libraryAdminHeading": "Администрирование библиотеки",

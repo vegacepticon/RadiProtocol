@@ -127,7 +127,7 @@ export class RadiProtocolSettingsTab extends PluginSettingTab {
       .addText(text => {
         new FolderSuggest(this.app, text.inputEl);
         text
-          .setPlaceholder('.radiprotocol/snippets')
+          .setPlaceholder(this.plugin.i18n.t('settings.snippetFolderPathPlaceholder'))
           .setValue(this.plugin.settings.snippetFolderPath)
           .onChange(async (value) => {
             this.plugin.settings.snippetFolderPath = value.trim() || '.radiprotocol/snippets';

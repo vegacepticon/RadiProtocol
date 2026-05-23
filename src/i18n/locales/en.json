@@ -15,6 +15,7 @@
     "storageHeading": "Storage",
     "snippetFolder": "Snippet folder",
     "snippetFolderDesc": "Vault-relative path for snippet JSON files. Default: .radiprotocol/snippets",
+    "snippetFolderPathPlaceholder": ".radiprotocol/snippets",
     "donateHeading": "Support development",
     "showWalletAddresses": "Show wallet addresses",
     "libraryAdminHeading": "Library admin",
