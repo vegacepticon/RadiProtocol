@@ -3,6 +3,7 @@ import type RadiProtocolPlugin from '../main';
 import type { ProtocolDocumentV1, ProtocolEdgeRecord, ProtocolNodeRecord } from '../protocol/protocol-document';
 import type { RPNodeKind } from '../graph/graph-model';
 import { SnippetTreePicker, type SnippetTreePickerResult } from './snippet-tree-picker';
+import { defaultT, type Translator } from '../i18n';
 
 export const PROTOCOL_EDITOR_VIEW_TYPE = 'radiprotocol-protocol-editor';
 
@@ -94,13 +95,13 @@ export function isProtocolEditorLoopExitLabel(label: string | undefined): boolea
   return (label ?? '').trim().startsWith('+');
 }
 
-function nodeTitle(node: ProtocolNodeRecord): string {
+function nodeTitle(node: ProtocolNodeRecord, t: Translator = defaultT): string {
   if (typeof node.text === 'string' && node.text.trim() !== '') return node.text.trim();
   if (typeof node.fields['displayLabel'] === 'string') return node.fields['displayLabel'];
   if (typeof node.fields['questionText'] === 'string') return node.fields['questionText'];
   if (typeof node.fields['answerText'] === 'string') return node.fields['answerText'];
   if (typeof node.fields['content'] === 'string') return node.fields['content'];
-  return node.kind ?? 'untyped';
+  return node.kind ?? t('protocolEditor.untyped');
 }
 
 export function defaultProtocolEditorEdgeLabelForTarget(node: ProtocolNodeRecord | undefined): string | undefined {
@@ -536,8 +537,8 @@ export class ProtocolEditorView extends ItemView {
       outputPort.setAttr('data-port-kind', 'output');
       outputPort.setAttr('aria-label', this.plugin.i18n.t('protocolEditor.outputPortLabel'));
 
-      nodeEl.createDiv({ cls: 'rp-protocol-editor-node-kind', text: node.kind ?? 'untyped' });
-      nodeEl.createDiv({ cls: 'rp-protocol-editor-node-title', text: nodeTitle(node) });
+      nodeEl.createDiv({ cls: 'rp-protocol-editor-node-kind', text: node.kind ?? this.plugin.i18n.t('protocolEditor.untyped') });
+      nodeEl.createDiv({ cls: 'rp-protocol-editor-node-title', text: nodeTitle(node, this.plugin.i18n.t.bind(this.plugin.i18n)) });
       const resizeHandle = nodeEl.createDiv({ cls: 'rp-protocol-editor-resize-handle' });
       resizeHandle.setAttr('aria-label', this.plugin.i18n.t('protocolEditor.resizeNodeLabel'));
 
@@ -1522,7 +1523,7 @@ export class ProtocolEditorView extends ItemView {
 
     const body = modal.createDiv({ cls: 'rp-protocol-editor-modal-body' });
     const nodes = this.doc.nodes;
-    const nodeLabelForSelect = (node: ProtocolNodeRecord) => `${nodeTitle(node)} (${node.kind ?? 'untyped'})`;
+    const nodeLabelForSelect = (node: ProtocolNodeRecord) => `${nodeTitle(node, this.plugin.i18n.t.bind(this.plugin.i18n))} (${node.kind ?? this.plugin.i18n.t('protocolEditor.untyped')})`;
     const addNodeSelect = (label: string, initial: string) => {
       const field = body.createDiv({ cls: 'rp-protocol-editor-modal-field' });
       field.createEl('label', { text: label });

@@ -103,7 +103,8 @@
       "loop": "New loop",
       "snippet": "New snippet"
     },
-    "close": "Close"
+    "close": "Close",
+    "untyped": "untyped"
   },
   "donate": {
     "invitation": "Thank you for your support! If RadiProtocol saves you time, any donation is appreciated.",
