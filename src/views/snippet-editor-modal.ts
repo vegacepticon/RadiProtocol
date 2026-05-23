@@ -462,8 +462,8 @@ export class SnippetEditorModal extends Modal {
 
     const duplicateBtn = createButton(row, {
       text: this.plugin.i18n.t('snippetEditor.duplicate'),
-      attr: { title: this.plugin.i18n.t('snippetEditor.duplicateTitle') },
     });
+    duplicateBtn.setAttribute('aria-label', this.plugin.i18n.t('snippetEditor.duplicateTitle'));
     duplicateBtn.setAttribute('type', 'button');
     duplicateBtn.addEventListener('click', () => {
       void this.handleDuplicate();
