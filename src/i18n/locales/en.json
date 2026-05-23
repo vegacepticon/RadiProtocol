@@ -141,6 +141,9 @@
     "emptyFolder": "Empty here",
     "searchPlaceholder": "Search…"
   },
+  "snippetPicker": {
+    "goToRoot": "Go to root"
+  },
   "snippetManager": {
     "newButton": "New",
     "folderButton": "Folder",

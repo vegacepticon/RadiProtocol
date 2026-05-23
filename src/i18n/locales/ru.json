@@ -141,6 +141,9 @@
     "emptyFolder": "Здесь пусто",
     "searchPlaceholder": "Поиск…"
   },
+  "snippetPicker": {
+    "goToRoot": "Перейти к корню"
+  },
   "snippetManager": {
     "newButton": "Новый",
     "folderButton": "Папка",

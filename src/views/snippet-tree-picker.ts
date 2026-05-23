@@ -228,7 +228,7 @@ export class SnippetTreePicker {
       text: this.drillPath.length === 0 ? '/' : this.drillPath.join('/'),
     });
     if (this.drillPath.length > 0) {
-      const upBtn = createButton(breadcrumb, { cls: 'rp-stp-up-btn', attr: { 'aria-label': 'Root (parent)', title: 'Root' } });
+      const upBtn = createButton(breadcrumb, { cls: 'rp-stp-up-btn', attr: { 'aria-label': this.t('snippetPicker.goToRoot') } });
       setIcon(upBtn, 'arrow-up');
       this.addListener(upBtn, 'click', () => {
         this.drillPath = [];

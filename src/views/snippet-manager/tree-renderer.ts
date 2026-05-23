@@ -231,7 +231,7 @@ export class SnippetManagerTreeRenderer {
       const ariaLabel = this.plugin.i18n.t('snippetManager.createInThisFolder');
       const addBtn = createButton(actions, {
         cls: 'radi-snippet-tree-add-btn',
-        attr: { 'aria-label': ariaLabel, title: ariaLabel },
+        attr: { 'aria-label': ariaLabel },
       });
       setIcon(addBtn, 'plus');
       addBtn.addEventListener('click', (ev) => {
