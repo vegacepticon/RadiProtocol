@@ -529,6 +529,9 @@ export class ProtocolEditorView extends ItemView {
       nodeEl.toggleClass('is-untyped', node.kind === null);
       nodeEl.setAttr('data-node-id', node.id);
       nodeEl.setAttr('data-node-kind', nodeKindToken(node.kind));
+      nodeEl.setAttr('tabindex', '0');
+      nodeEl.setAttr('role', 'group');
+      nodeEl.setAttr('aria-label', nodeTitle(node, this.plugin.i18n.t.bind(this.plugin.i18n)));
       if (node.color === undefined) node.color = defaultColorForProtocolEditorNodeKind(node.kind);
       this.applyNodePosition(nodeEl, node);
 
@@ -557,6 +560,15 @@ export class ProtocolEditorView extends ItemView {
         e.preventDefault();
         e.stopPropagation();
         this.openEditModal(node);
+      });
+
+      nodeEl.addEventListener('keydown', (e: KeyboardEvent) => {
+        if ((e.target as HTMLElement).closest('.rp-protocol-editor-port') !== null) return;
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          e.stopPropagation();
+          this.openEditModal(node);
+        }
       });
     }
 
