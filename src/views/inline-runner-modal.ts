@@ -470,7 +470,7 @@ export class InlineRunnerModal {
             const hasAnswers = neighborIds.some(
               (nid) => this.graph!.nodes.get(nid)?.kind === 'answer',
             );
-            this.renderFooterIcons(state.canStepBack, hasAnswers && typeof this.runner.skip === 'function');
+            this.renderFooterIcons(state.canStepBack, hasAnswers && typeof this.runner.skip === 'function', state.canRedo);
           }
         }
         break;
@@ -501,7 +501,7 @@ export class InlineRunnerModal {
 
         // Footer icon buttons: Back only (no Skip in loop picker)
         if (this.footerBtnRowEl !== null) {
-          this.renderFooterIcons(state.canStepBack, false);
+          this.renderFooterIcons(state.canStepBack, false, state.canRedo);
         }
         break;
       }
@@ -540,12 +540,12 @@ export class InlineRunnerModal {
     }
   }
 
-  /** Render Back/Skip icon buttons into the footer row (after close btn). */
-  private renderFooterIcons(showBack: boolean, showSkip: boolean): void {
+  /** Render Back/Redo/Skip icon buttons into the footer row (after close btn). */
+  private renderFooterIcons(showBack: boolean, showSkip: boolean, showRedo: boolean): void {
     if (this.footerBtnRowEl === null) return;
-    if (!showBack && !showSkip) return;
+    if (!showBack && !showSkip && !showRedo) return;
 
-    // Container for Back+Skip, pushed right via justify-content: flex-end
+    // Container for Back+Redo+Skip, pushed right via justify-content: flex-end
     const iconsGroup = this.footerBtnRowEl.createDiv({ cls: 'rp-runner-footer-row' });
     if (showBack) {
       const backBtn = createButton(iconsGroup, {
@@ -557,6 +557,18 @@ export class InlineRunnerModal {
       backBtn.addEventListener('click', () => {
         backBtn.disabled = true;
         this.runner.stepBack();
+        this.render();
+      });
+    }
+    if (showRedo) {
+      const redoBtn = createButton(iconsGroup, {
+        cls: 'rp-step-redo-btn rp-runner-icon-btn',
+        attr: { 'aria-label': 'Redo' },
+      });
+      setIcon(redoBtn, 'redo');
+      redoBtn.addEventListener('click', () => {
+        redoBtn.disabled = true;
+        this.runner.redo();
         this.render();
       });
     }
@@ -812,6 +824,7 @@ export class InlineRunnerModal {
       subfolderPath: string | undefined;
       accumulatedText: string;
       canStepBack: boolean;
+      canRedo: boolean;
     },
     questionZone: HTMLElement,
   ): Promise<void> {
@@ -856,6 +869,10 @@ export class InlineRunnerModal {
           this.snippetTreePicker = null;
         }
         this.runner.stepBack();
+        this.render();
+      },
+      onRedo: () => {
+        this.runner.redo();
         this.render();
       },
     });

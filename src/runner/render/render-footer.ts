@@ -8,6 +8,8 @@ export interface RunnerFooterOptions {
   onBack: () => void;
   showSkip?: boolean;
   onSkip?: () => void;
+  showRedo?: boolean;
+  onRedo?: () => void;
 }
 
 export interface RunnerFooterHost {
@@ -19,7 +21,7 @@ export function renderRunnerFooter(
   host: RunnerFooterHost,
   options: RunnerFooterOptions,
 ): void {
-  if (!options.showBack && options.showSkip !== true) return;
+  if (!options.showBack && options.showSkip !== true && options.showRedo !== true) return;
 
   const footerRow = zone.createDiv({ cls: 'rp-runner-footer-row' });
   if (options.showBack) {
@@ -33,6 +35,17 @@ export function renderRunnerFooter(
     host.bindClick(backBtn, () => {
       backBtn.disabled = true;
       options.onBack();
+    });
+  }
+  if (options.showRedo === true && options.onRedo !== undefined) {
+    const redoBtn = createButton(footerRow, {
+      cls: 'rp-step-redo-btn rp-runner-icon-btn',
+      attr: { 'aria-label': 'Redo' },
+    });
+    setIcon(redoBtn, 'redo');
+    host.bindClick(redoBtn, () => {
+      redoBtn.disabled = true;
+      options.onRedo!();
     });
   }
   if (options.showSkip === true && options.onSkip !== undefined) {

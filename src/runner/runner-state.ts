@@ -19,6 +19,8 @@ export interface AtNodeState {
   accumulatedText: string;
   /** true when undoStack is non-empty — avoids exposing the stack itself (D-02) */
   canStepBack: boolean;
+  /** true when redoStack is non-empty — a forward action can be re-applied after undo. */
+  canRedo: boolean;
 }
 
 /**
@@ -32,6 +34,8 @@ export interface AwaitingSnippetPickState {
   subfolderPath: string | undefined;
   accumulatedText: string;
   canStepBack: boolean;
+  /** true when redoStack is non-empty — a forward action can be re-applied after undo. */
+  canRedo: boolean;
 }
 
 /**
@@ -44,6 +48,8 @@ export interface AwaitingLoopPickState {
   nodeId: string;                 // loop node id — host looks up headerText from graph
   accumulatedText: string;
   canStepBack: boolean;
+  /** true when redoStack is non-empty — a forward action can be re-applied after undo. */
+  canRedo: boolean;
 }
 
 /**
@@ -57,12 +63,35 @@ export interface AwaitingSnippetFillState {
   nodeId: string;
   accumulatedText: string;
   canStepBack: boolean;
+  /** true when redoStack is non-empty — a forward action can be re-applied after undo. */
+  canRedo: boolean;
 }
 
 /** All nodes have been traversed and there is no next node. */
 export interface CompleteState {
   status: typeof RUNNER_STATUS.COMPLETE;
   finalText: string;
+}
+
+/**
+ * Redo-entry shape: captured at stepBack() time so that redo() can restore
+ * the runner to the state that existed immediately before the undo.
+ */
+export interface RedoEntry {
+  /** currentNodeId at the time of stepBack (the state being undone). */
+  nodeId: string | null;
+  /** accumulatedText snapshot at the time of stepBack. */
+  textSnapshot: string;
+  /** Deep copy of loopContextStack at the time of stepBack. */
+  loopContextStack: LoopContext[];
+  /** runnerStatus at the time of stepBack. */
+  runnerStatus: RunnerState['status'];
+  /** snippetId at the time of stepBack (null unless in awaiting-snippet-fill). */
+  snippetId: string | null;
+  /** snippetNodeId at the time of stepBack (null unless in awaiting-snippet-fill). */
+  snippetNodeId: string | null;
+  /** The UndoEntry that was popped at stepBack — redo must re-push it. */
+  poppedUndoEntry: UndoEntry;
 }
 
 /**

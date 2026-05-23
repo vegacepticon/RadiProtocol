@@ -61,6 +61,8 @@ export interface SnippetPickerRenderOptions extends RunnerFooterHost {
   /** Footer back-button handler. Host owns picker.unmount + runner.stepBack +
    *  any host-specific autosave + re-render. */
   onBack(): void;
+  /** Footer redo-button handler. Host calls runner.redo + re-render. */
+  onRedo?(): void;
 }
 
 export function renderSnippetPicker(
@@ -118,6 +120,8 @@ export function renderSnippetPicker(
   renderRunnerFooter(questionZone, options, {
     showBack: state.canStepBack,
     onBack: options.onBack,
+    showRedo: state.canRedo,
+    onRedo: options.onRedo,
   });
 
   return picker;

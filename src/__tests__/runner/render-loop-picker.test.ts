@@ -127,6 +127,7 @@ describe('shared loop picker renderer', () => {
       nodeId: 'loop',
       accumulatedText: 'before',
       canStepBack: true,
+      canRedo: false,
     }, {
       bindClick: (el, handler) => {
         (el as unknown as MockEl).clickHandler = handler;
@@ -161,6 +162,7 @@ describe('shared loop picker renderer', () => {
       nodeId: 'missing',
       accumulatedText: '',
       canStepBack: false,
+      canRedo: false,
     };
 
     expect(renderLoopPicker(asHtml(textZone), asHtml(actionZone), null, state, host)).toBe(false);

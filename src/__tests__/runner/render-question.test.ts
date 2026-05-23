@@ -104,6 +104,7 @@ describe('shared question branch renderer', () => {
       currentNodeId: 'q',
       accumulatedText: 'before',
       canStepBack: true,
+      canRedo: false,
     }, {
       bindClick: (el, handler) => {
         (el as unknown as MockEl).clickHandler = handler;
@@ -147,6 +148,7 @@ describe('shared question branch renderer', () => {
       currentNodeId: 'q',
       accumulatedText: '',
       canStepBack: false,
+      canRedo: false,
     };
 
     expect(renderQuestionAtNode(asHtml(textZone), asHtml(actionZone), null, state, host)).toBe('error');

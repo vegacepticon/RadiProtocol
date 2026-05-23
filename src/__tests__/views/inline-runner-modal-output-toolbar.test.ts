@@ -69,6 +69,7 @@ function setupModalAndRender(
   vi.spyOn((modal as any).runner, 'getState').mockImplementation(() => ({
     status,
     canStepBack: false,
+    canRedo: false,
     accumulatedText: 'sample',
     finalText: 'sample',
     ...extras,
