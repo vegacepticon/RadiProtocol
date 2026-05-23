@@ -375,6 +375,34 @@ describe('GraphValidator — Phase 43: unified loop + migration (LOOP-04, MIGRAT
     expect(errors.some(e => e.includes('loop node'))).toBe(true);
     expect(errors.some(e => e.includes('loop-end node'))).toBe(false);
   });
+
+  // ── Regression: loop node with zero outgoing edges (skipped RUN-08 runtime test) ─
+  // The skipped runner test checked that a loop-start with no continue edge causes an
+  // error at runtime. At the validator level, a unified loop node with zero outgoing
+  // edges must flag both "has no exit" (D-04) and "has no body" (D-07).
+  it('unified loop with zero outgoing edges flags both D-04 and D-07 errors (RUN-08 regression)', () => {
+    const json = JSON.stringify({
+      nodes: [
+        { id: 'n-start', type: 'text', text: 'Start', x: 0, y: 0, width: 100, height: 60,
+          radiprotocol_nodeType: 'start' },
+        { id: 'n-loop', type: 'text', text: 'Empty loop', x: 200, y: 0, width: 100, height: 60,
+          radiprotocol_nodeType: 'loop', radiprotocol_headerText: 'Empty loop' },
+      ],
+      edges: [
+        { id: 'e1', fromNode: 'n-start', toNode: 'n-loop' },
+      ],
+    });
+    const parser = new CanvasParser();
+    const result = parser.parse(json, 'loop-zero-edges.canvas');
+    expect(result.success).toBe(true);
+    if (!result.success) return;
+    const validator = new GraphValidator();
+    const errors = validator.validate(result.graph);
+    // D-04: has no exit
+    expect(errors.some(e => e.includes('has no exit'))).toBe(true);
+    // D-07: has no body
+    expect(errors.some(e => e.includes('has no body'))).toBe(true);
+  });
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
