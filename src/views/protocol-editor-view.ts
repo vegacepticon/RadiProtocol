@@ -95,7 +95,7 @@ export function isProtocolEditorLoopExitLabel(label: string | undefined): boolea
   return (label ?? '').trim().startsWith('+');
 }
 
-function nodeTitle(node: ProtocolNodeRecord, t: Translator = defaultT): string {
+export function nodeTitle(node: ProtocolNodeRecord, t: Translator = defaultT): string {
   if (typeof node.text === 'string' && node.text.trim() !== '') return node.text.trim();
   if (typeof node.fields['displayLabel'] === 'string') return node.fields['displayLabel'];
   if (typeof node.fields['questionText'] === 'string') return node.fields['questionText'];

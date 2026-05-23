@@ -9,6 +9,7 @@ import {
   isProtocolEditorLoopExitLabel,
   normalizeProtocolEditorEdgeLabel,
   normalizeProtocolEditorSnippetFolderSelection,
+  nodeTitle,
   protocolEditorEdgeRoute,
   protocolMissingFileError,
   removeProtocolEditorEdge,
@@ -218,6 +219,37 @@ describe('protocol editor helper functions', () => {
     it('converts screen movement to canvas movement under zoom', () => {
       expect(screenDeltaToProtocolEditorDelta(100, 2)).toBe(50);
       expect(screenDeltaToProtocolEditorDelta(100, 0.5)).toBe(200);
+    });
+  });
+
+  describe('nodeTitle untyped fallback (Phase 42 i18n)', () => {
+    const nodeNoKindNoText: ProtocolNodeRecord = {
+      id: 'n1',
+      kind: null,
+      x: 0, y: 0, width: 100, height: 60,
+      text: '',
+      fields: {},
+    };
+
+    it('returns i18n key via mock translator when kind is null and no text fallback', () => {
+      const mockT = (key: string) => `[${key}]`;
+      expect(nodeTitle(nodeNoKindNoText, mockT as never)).toBe('[protocolEditor.untyped]');
+    });
+
+    it('returns defaultT English value when no translator passed', () => {
+      expect(nodeTitle(nodeNoKindNoText)).toBe('untyped');
+    });
+
+    it('returns node.text when available, never hitting untyped fallback', () => {
+      const node: ProtocolNodeRecord = {
+        id: 'n2',
+        kind: null,
+        x: 0, y: 0, width: 100, height: 60,
+        text: 'My title',
+        fields: {},
+      };
+      const mockT = (key: string) => `[${key}]`;
+      expect(nodeTitle(node, mockT as never)).toBe('My title');
     });
   });
 });
