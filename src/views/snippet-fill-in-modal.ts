@@ -3,6 +3,8 @@
 import { Modal, App } from 'obsidian';
 import type { JsonSnippet, SnippetPlaceholder } from '../snippets/snippet-model';
 import { renderSnippet } from '../snippets/snippet-model';
+import type { Translator } from '../i18n';
+import { defaultT } from '../i18n';
 
 // Phase 32 (D-01): JsonSnippet is the canonical type for fill-in modal input.
 // Previously typed as `SnippetFile`, which is now an alias for `JsonSnippet`.
@@ -36,10 +38,12 @@ export class SnippetFillInModal extends Modal {
 
   /** Live preview textarea reference for updatePreview() calls */
   private previewTextarea: HTMLTextAreaElement | null = null;
+  private readonly t: Translator;
 
-  constructor(app: App, snippet: JsonSnippet) {
+  constructor(app: App, snippet: JsonSnippet, t?: Translator) {
     super(app);
     this.snippet = snippet;
+    this.t = t ?? defaultT;
     this.result = new Promise<string | null>(res => {
       this.resolve = res;
     });
@@ -232,7 +236,7 @@ export class SnippetFillInModal extends Modal {
 
     this.previewTextarea = previewSection.createEl('textarea', { cls: 'rp-snippet-preview' });
     this.previewTextarea.readOnly = true;
-    this.previewTextarea.setAttribute('aria-label', 'Snippet preview');
+    this.previewTextarea.setAttribute('aria-label', this.t('snippetPreview.ariaLabel'));
     // Show the raw template initially (unfilled tokens visible per UI-SPEC empty state)
     this.previewTextarea.value = this.snippet.template;
     this.resizePreview();

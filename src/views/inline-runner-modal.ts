@@ -327,7 +327,7 @@ export class InlineRunnerModal {
     // Close button — left side of footer row (square icon button)
     const closeBtn = footerBtnRow.createEl('button', { cls: 'rp-inline-runner-close-btn rp-runner-icon-btn' });
     setIcon(closeBtn, 'x');
-    closeBtn.setAttribute('aria-label', 'Close protocol');
+    closeBtn.setAttribute('aria-label', this.plugin.i18n.t('protocolRunner.closeProtocol'));
     closeBtn.addEventListener('click', () => {
       this.close();
     });
@@ -418,7 +418,7 @@ export class InlineRunnerModal {
       // Close button — always present on the left
       const closeBtn = this.footerBtnRowEl.createEl('button', { cls: 'rp-inline-runner-close-btn rp-runner-icon-btn' });
       setIcon(closeBtn, 'x');
-      closeBtn.setAttribute('aria-label', 'Close protocol');
+      closeBtn.setAttribute('aria-label', this.plugin.i18n.t('protocolRunner.closeProtocol'));
       closeBtn.addEventListener('click', () => {
         this.close();
       });
@@ -990,7 +990,7 @@ export class InlineRunnerModal {
 
     // JSON with placeholders — open the stacked fill-in modal (parity with sidebar).
     // Phase 54 D6 is reversed: the in-panel fill-in form is gone.
-    const modal = new SnippetFillInModal(this.app, snippet);
+    const modal = new SnippetFillInModal(this.app, snippet, this.plugin.i18n.t.bind(this.plugin.i18n));
     this.fillModal = modal;
     this.isFillModalOpen = true;
     modal.open();

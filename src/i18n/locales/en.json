@@ -244,7 +244,11 @@
     "legacyLoopRuntime": "Encountered a deprecated loop-start/loop-end node. The canvas should have been rejected by the validator; if you see this message, this is a bug — please contact the plugin author.",
     "stepBack": "Go back one step",
     "stepRedo": "Redo",
-    "stepSkip": "Skip this question"
+    "stepSkip": "Skip this question",
+    "closeProtocol": "Close protocol"
+  },
+  "snippetPreview": {
+    "ariaLabel": "Snippet preview"
   },
   "library": {
     "title": "Snippet Library",
