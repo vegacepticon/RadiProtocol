@@ -169,7 +169,11 @@
     "selectFolderCommitted": "✓ Selected",
     "emptyResults": "No matches found",
     "emptyFolder": "Empty here",
-    "searchPlaceholder": "Search…"
+    "searchPlaceholder": "Search…",
+    "openFolder": "Open folder {name}",
+    "selectSnippet": "Select snippet {name}",
+    "selectFolderAria": "Select current folder",
+    "crumbAria": "Go to {name}"
   },
   "snippetPicker": {
     "goToRoot": "Go to root"

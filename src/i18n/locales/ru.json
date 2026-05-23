@@ -169,7 +169,11 @@
     "selectFolderCommitted": "✓ Выбрано",
     "emptyResults": "Ничего не найдено",
     "emptyFolder": "Здесь пусто",
-    "searchPlaceholder": "Поиск…"
+    "searchPlaceholder": "Поиск…",
+    "openFolder": "Открыть папку {name}",
+    "selectSnippet": "Выбрать сниппет {name}",
+    "selectFolderAria": "Выбрать текущую папку",
+    "crumbAria": "Перейти к {name}"
   },
   "snippetPicker": {
     "goToRoot": "Перейти к корню"
