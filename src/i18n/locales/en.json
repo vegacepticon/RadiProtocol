@@ -290,6 +290,11 @@
     "ok": "OK",
     "cancel": "Cancel"
   },
+  "command": {
+    "openMarkdownFirst": "Open a Markdown note first, then run this command.",
+    "setProtocolFolder": "Set a protocol folder in settings to get started.",
+    "noProtocolFiles": "No protocol files found in '{folderPath}'."
+  },
   "library": {
     "title": "Snippet Library",
     "loadError": "Failed to load library index. Check the URL and your network connection.",
