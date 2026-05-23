@@ -6,6 +6,11 @@ import { SnippetTreePicker, type SnippetTreePickerResult } from './snippet-tree-
 
 export const PROTOCOL_EDITOR_VIEW_TYPE = 'radiprotocol-protocol-editor';
 
+/** Throw a consistent error when the protocol file is no longer in the vault. */
+export function protocolMissingFileError(): never {
+	throw new Error('Protocol file disappeared');
+}
+
 /* Phase 4D — default node dimensions and kind-specific defaults */
 const DEFAULT_NODE_WIDTH = 200;
 const DEFAULT_NODE_HEIGHT = 80;
@@ -391,7 +396,7 @@ export class ProtocolEditorView extends ItemView {
     const newNode = this.createProtocolEditorNode(kind, x, y);
 
     void this.plugin.protocolDocumentStore.update(this.protocolPath, (existing) => {
-      if (existing === null) throw new Error('Protocol file disappeared');
+      if (existing === null) protocolMissingFileError();
       return { ...existing, nodes: [...existing.nodes, newNode], viewport: this.currentViewportState(), updatedAt: new Date().toISOString() };
     }).then(async () => {
       await this.loadProtocol(this.protocolPath!);
@@ -462,7 +467,7 @@ export class ProtocolEditorView extends ItemView {
     const newNode = this.createProtocolEditorNode(kind, x, y);
 
     void this.plugin.protocolDocumentStore.update(this.protocolPath, (existing) => {
-      if (existing === null) throw new Error('Protocol file disappeared');
+      if (existing === null) protocolMissingFileError();
       const sourceNode = existing.nodes.find((n) => n.id === fromNodeId);
       const targetNode = { ...newNode };
       const defaultLabel = defaultProtocolEditorEdgeLabelForTarget(targetNode);
@@ -778,7 +783,7 @@ export class ProtocolEditorView extends ItemView {
     if (this.protocolPath === null) return;
     try {
       await this.plugin.protocolDocumentStore.update(this.protocolPath, (existing) => {
-        if (existing === null) throw new Error('Protocol file disappeared');
+        if (existing === null) protocolMissingFileError();
         return {
           ...existing,
           edges: removeProtocolEditorEdge(existing.edges, edgeId),
@@ -905,7 +910,7 @@ export class ProtocolEditorView extends ItemView {
 
     try {
       await this.plugin.protocolDocumentStore.update(this.protocolPath, (existing) => {
-        if (existing === null) throw new Error('Protocol file disappeared');
+        if (existing === null) protocolMissingFileError();
         const currentDecision = canCreateProtocolEditorEdge(existing.edges, state.fromNodeId, toNodeId);
         if (currentDecision !== 'ok') return existing;
         return { ...existing, edges: [...existing.edges, newEdge], viewport: this.currentViewportState(), updatedAt: new Date().toISOString() };
@@ -936,7 +941,7 @@ export class ProtocolEditorView extends ItemView {
     const persist = async () => {
       const items = values.map(value => value.trim()).filter(value => value.length > 0);
       await this.plugin.protocolDocumentStore.update(this.protocolPath!, (existing) => {
-        if (existing === null) throw new Error('Protocol file disappeared');
+        if (existing === null) protocolMissingFileError();
         return { ...existing, selfCheckEnabled: enabled, selfCheckItems: items, updatedAt: new Date().toISOString() };
       });
       if (this.doc !== null) this.doc = { ...this.doc, selfCheckEnabled: enabled, selfCheckItems: items };
@@ -1097,7 +1102,7 @@ export class ProtocolEditorView extends ItemView {
     if (this.protocolPath === null) return;
     try {
       await this.plugin.protocolDocumentStore.update(this.protocolPath, (existing) => {
-        if (existing === null) throw new Error('Protocol file disappeared');
+        if (existing === null) protocolMissingFileError();
         const nodes = existing.nodes.map((n) =>
           n.id === node.id ? { ...n, x: Math.round(node.x), y: Math.round(node.y), width: Math.round(node.width), height: Math.round(node.height) } : n,
         );
@@ -1357,7 +1362,7 @@ export class ProtocolEditorView extends ItemView {
 
     // Persist
     void this.plugin.protocolDocumentStore.update(this.protocolPath, (existing) => {
-      if (existing === null) throw new Error('Protocol file disappeared');
+      if (existing === null) protocolMissingFileError();
       const updatedNodes = existing.nodes.map((n) => {
         const p = positions.get(n.id);
         if (p === undefined) return n;
@@ -1495,7 +1500,7 @@ export class ProtocolEditorView extends ItemView {
     const viewport = this.currentViewportState();
     try {
       await this.plugin.protocolDocumentStore.update(this.protocolPath, (existing) => {
-        if (existing === null) throw new Error('Protocol file disappeared');
+        if (existing === null) protocolMissingFileError();
         return { ...existing, viewport, updatedAt: new Date().toISOString() };
       });
       this.doc = { ...this.doc, viewport };
@@ -1582,7 +1587,7 @@ export class ProtocolEditorView extends ItemView {
       const nextLabel = shouldDisplayLabel ? typedLabel ?? defaultLabel : undefined;
       try {
         const updated = await this.plugin.protocolDocumentStore.update(this.protocolPath!, (existing) => {
-          if (existing === null) throw new Error('Protocol file disappeared');
+          if (existing === null) protocolMissingFileError();
           const nodes = existing.nodes.map((candidate) => {
             if (candidate.id !== nextTo || candidate.kind !== 'snippet' || typedLabel === undefined || isProtocolEditorLoopExitLabel(typedLabel)) {
               return candidate;
@@ -1823,7 +1828,7 @@ export class ProtocolEditorView extends ItemView {
 
       try {
         await this.plugin.protocolDocumentStore.update(this.protocolPath!, (existing) => {
-          if (existing === null) throw new Error('Protocol file disappeared');
+          if (existing === null) protocolMissingFileError();
           const nodes = existing.nodes.map((n) => n.id === updatedNode.id ? updatedNode : n);
           const edgeNodeById = new Map(nodes.map((n) => [n.id, n]));
           const shouldSyncIncomingLabels = updatedNode.kind === 'answer' || updatedNode.kind === 'snippet';
@@ -1863,7 +1868,7 @@ export class ProtocolEditorView extends ItemView {
       confirmBtn.addEventListener('click', async () => {
         try {
         await this.plugin.protocolDocumentStore.update(this.protocolPath!, (existing) => {
-          if (existing === null) throw new Error('Protocol file disappeared');
+          if (existing === null) protocolMissingFileError();
           const nodes = existing.nodes.filter((n) => n.id !== node.id);
           const edges = existing.edges.filter((e) => e.fromNodeId !== node.id && e.toNodeId !== node.id);
           return { ...existing, nodes, edges, viewport: this.currentViewportState(), updatedAt: new Date().toISOString() };

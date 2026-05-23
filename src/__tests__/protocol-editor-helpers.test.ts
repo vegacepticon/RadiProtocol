@@ -10,6 +10,7 @@ import {
   normalizeProtocolEditorEdgeLabel,
   normalizeProtocolEditorSnippetFolderSelection,
   protocolEditorEdgeRoute,
+  protocolMissingFileError,
   removeProtocolEditorEdge,
   screenDeltaToProtocolEditorDelta,
   shouldAutoRefreshProtocolEditorEdgeLabel,
@@ -181,6 +182,12 @@ describe('protocol editor helper functions', () => {
         loopNodeA,
         textNode,
       )).toBe(true);
+    });
+  });
+
+  describe('protocolMissingFileError', () => {
+    it('throws an Error with the expected message', () => {
+      expect(() => protocolMissingFileError()).toThrow('Protocol file disappeared');
     });
   });
 
