@@ -58,7 +58,7 @@ export class LibrarySnippetPreviewModal extends Modal {
 
   private renderFreeTextField(container: HTMLElement, placeholder: SnippetPlaceholder): void {
     const label = container.createEl('label', { cls: 'rp-library-preview-label' });
-    label.textContent = placeholder.label;
+    label.textContent = placeholder.label; // User-authored content, not a UI string
 
     const input = container.createEl('input', { type: 'text' });
     input.addEventListener('input', () => {
@@ -71,7 +71,7 @@ export class LibrarySnippetPreviewModal extends Modal {
   private renderChoiceField(container: HTMLElement, placeholder: SnippetPlaceholder): void {
     const fieldset = container.createEl('fieldset');
     const legend = fieldset.createEl('legend', { cls: 'rp-library-preview-label' });
-    legend.textContent = placeholder.label;
+    legend.textContent = placeholder.label; // User-authored content, not a UI string
 
     const optionsDiv = fieldset.createDiv({ cls: 'rp-library-preview-options' });
     const optionButtons: HTMLButtonElement[] = [];
@@ -94,7 +94,7 @@ export class LibrarySnippetPreviewModal extends Modal {
         cls: 'rp-library-preview-option-row',
         type: 'button',
       });
-      btn.textContent = opt;
+      btn.textContent = opt; // User-authored content, not a UI string
       btn.value = opt;
       btn.setAttribute('aria-pressed', 'false');
       optionButtons.push(btn);

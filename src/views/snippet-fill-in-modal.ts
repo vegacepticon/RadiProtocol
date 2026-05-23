@@ -107,7 +107,7 @@ export class SnippetFillInModal extends Modal {
   /** free-text: visible label + full-width text input */
   private renderFreeTextField(container: HTMLElement, placeholder: SnippetPlaceholder): void {
     const label = container.createEl('label', { cls: 'rp-snippet-modal-label' });
-    label.textContent = placeholder.label;
+    label.textContent = placeholder.label; // User-authored content, not a UI string
 
     const input = container.createEl('input', { type: 'text' });
 
@@ -130,7 +130,7 @@ export class SnippetFillInModal extends Modal {
   ): void {
     const fieldset = container.createEl('fieldset');
     const legend = fieldset.createEl('legend', { cls: 'rp-snippet-modal-label' });
-    legend.textContent = placeholder.label;
+    legend.textContent = placeholder.label; // User-authored content, not a UI string
 
     const optionsDiv = fieldset.createDiv({ cls: 'rp-snippet-modal-options' });
     const options = placeholder.options ?? [];
@@ -159,7 +159,7 @@ export class SnippetFillInModal extends Modal {
         cls: 'rp-snippet-fill-option-row',
         type: 'button',
       });
-      btn.textContent = opt;
+      btn.textContent = opt; // User-authored content, not a UI string
       btn.name = `rp-${placeholder.id}`;
       btn.value = opt;
       btn.setAttribute('aria-pressed', 'false');
