@@ -282,7 +282,9 @@
   },
   "inlineRunner": {
     "protocolFileNotFound": "Protocol file not found: \"{path}\".",
-    "couldNotReadProtocol": "Could not read protocol file: \"{path}\"."
+    "couldNotReadProtocol": "Could not read protocol file: \"{path}\".",
+    "snippetNotFound": "Snippet not found: \"{path}\".",
+    "snippetCannotBeUsed": "Snippet \"{path}\" cannot be used. {error}"
   },
   "snippetPreview": {
     "ariaLabel": "Snippet preview",

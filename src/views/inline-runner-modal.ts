@@ -840,9 +840,9 @@ export class InlineRunnerModal {
       rootPath: this.plugin.settings.snippetFolderPath,
       hostClass: CSS_CLASS.STP_INLINE_HOST,
       copy: {
-        notFound: (relativePath) => `Snippet not found: ${relativePath}`,
+        notFound: (relativePath) => this.plugin.i18n.t('inlineRunner.snippetNotFound', { path: relativePath }),
         validationError: (snippetPath, validationMessage) =>
-          `Snippet "${snippetPath}" cannot be used. ${validationMessage}`,
+          this.plugin.i18n.t('inlineRunner.snippetCannotBeUsed', { path: snippetPath, error: validationMessage }),
       },
       t: this.plugin.i18n.t.bind(this.plugin.i18n),
       bindClick: (el, handler) => el.addEventListener('click', handler),
@@ -883,7 +883,7 @@ export class InlineRunnerModal {
   /** Handle snippet picker selection — append to note and advance. */
   private async handleSnippetPickerSelection(snippet: import('../snippets/snippet-model').Snippet): Promise<void> {
     if (snippet.kind === 'json' && snippet.validationError !== null) {
-      new Notice(`Snippet "${snippet.path}" cannot be used. ${snippet.validationError}`);
+      new Notice(this.plugin.i18n.t('inlineRunner.snippetCannotBeUsed', { path: snippet.path, error: snippet.validationError }));
       return;
     }
 
@@ -960,7 +960,7 @@ export class InlineRunnerModal {
     }
 
     if (snippet.kind === 'json' && snippet.validationError !== null) {
-      new Notice(`Snippet "${snippet.path}" cannot be used. ${snippet.validationError}`);
+      new Notice(this.plugin.i18n.t('inlineRunner.snippetCannotBeUsed', { path: snippet.path, error: snippet.validationError }));
       this.runner.stepBack();
       this.render();
       return;
