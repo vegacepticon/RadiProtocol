@@ -645,7 +645,7 @@ export class SnippetEditorModal extends Modal {
 
   private showSaveError(msg: string): void {
     if (!this.saveErrorEl) return;
-    this.saveErrorEl.textContent = msg;
+    this.saveErrorEl.textContent = msg; // msg is pass-through localized text from callers
     this.saveErrorEl.toggleClass('rp-snippet-banner-hidden', false);
   }
 
