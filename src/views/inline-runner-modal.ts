@@ -545,12 +545,13 @@ export class InlineRunnerModal {
     if (this.footerBtnRowEl === null) return;
     if (!showBack && !showSkip && !showRedo) return;
 
+    const t = this.plugin.i18n.t.bind(this.plugin.i18n);
     // Container for Back+Redo+Skip, pushed right via justify-content: flex-end
     const iconsGroup = this.footerBtnRowEl.createDiv({ cls: 'rp-runner-footer-row' });
     if (showBack) {
       const backBtn = createButton(iconsGroup, {
         cls: 'rp-step-back-btn rp-runner-icon-btn',
-        attr: { 'aria-label': 'Go back one step' },
+        attr: { 'aria-label': t('protocolRunner.stepBack') },
       });
       setIcon(backBtn, 'arrow-left');
       // Phase 66 D-01/D-02/D-03: visual half of double-click guard
@@ -563,7 +564,7 @@ export class InlineRunnerModal {
     if (showRedo) {
       const redoBtn = createButton(iconsGroup, {
         cls: 'rp-step-redo-btn rp-runner-icon-btn',
-        attr: { 'aria-label': 'Redo' },
+        attr: { 'aria-label': t('protocolRunner.stepRedo') },
       });
       setIcon(redoBtn, 'redo');
       redoBtn.addEventListener('click', () => {
@@ -575,7 +576,7 @@ export class InlineRunnerModal {
     if (showSkip) {
       const skipBtn = createButton(iconsGroup, {
         cls: 'rp-skip-btn rp-runner-icon-btn',
-        attr: { 'aria-label': 'Skip this question' },
+        attr: { 'aria-label': t('protocolRunner.stepSkip') },
       });
       setIcon(skipBtn, 'skip-forward');
       skipBtn.addEventListener('click', () => {
@@ -843,6 +844,7 @@ export class InlineRunnerModal {
         validationError: (snippetPath, validationMessage) =>
           `Snippet "${snippetPath}" cannot be used. ${validationMessage}`,
       },
+      t: this.plugin.i18n.t.bind(this.plugin.i18n),
       bindClick: (el, handler) => el.addEventListener('click', handler),
       getCurrentNodeId: () => {
         const s = this.runner.getState();

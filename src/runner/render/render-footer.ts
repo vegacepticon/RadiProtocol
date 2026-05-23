@@ -2,6 +2,7 @@
 // Phase 87 — shared runner Back/Skip footer icon buttons.
 import { setIcon } from 'obsidian';
 import { createButton } from '../../utils/dom-helpers';
+import type { Translator } from '../../i18n';
 
 export interface RunnerFooterOptions {
   showBack: boolean;
@@ -10,11 +11,15 @@ export interface RunnerFooterOptions {
   onSkip?: () => void;
   showRedo?: boolean;
   onRedo?: () => void;
+  /** Translation function for aria-labels. Defaults to English. */
+  t?: Translator;
 }
 
 export interface RunnerFooterHost {
   bindClick(el: HTMLElement, handler: (ev: MouseEvent) => void): void;
 }
+
+const fallbackT: Translator = (key) => key;
 
 export function renderRunnerFooter(
   zone: HTMLElement,
@@ -23,11 +28,12 @@ export function renderRunnerFooter(
 ): void {
   if (!options.showBack && options.showSkip !== true && options.showRedo !== true) return;
 
+  const t = options.t ?? fallbackT;
   const footerRow = zone.createDiv({ cls: 'rp-runner-footer-row' });
   if (options.showBack) {
     const backBtn = createButton(footerRow, {
       cls: 'rp-step-back-btn rp-runner-icon-btn',
-      attr: { 'aria-label': 'Go back one step' },
+      attr: { 'aria-label': t('protocolRunner.stepBack') },
     });
     setIcon(backBtn, 'arrow-left');
     // Phase 66 D-01 + D-02 + D-03: visual half of the double-click guard.
@@ -40,7 +46,7 @@ export function renderRunnerFooter(
   if (options.showRedo === true && options.onRedo !== undefined) {
     const redoBtn = createButton(footerRow, {
       cls: 'rp-step-redo-btn rp-runner-icon-btn',
-      attr: { 'aria-label': 'Redo' },
+      attr: { 'aria-label': t('protocolRunner.stepRedo') },
     });
     setIcon(redoBtn, 'redo');
     host.bindClick(redoBtn, () => {
@@ -51,7 +57,7 @@ export function renderRunnerFooter(
   if (options.showSkip === true && options.onSkip !== undefined) {
     const skipBtn = createButton(footerRow, {
       cls: 'rp-skip-btn rp-runner-icon-btn',
-      attr: { 'aria-label': 'Skip this question' },
+      attr: { 'aria-label': t('protocolRunner.stepSkip') },
     });
     setIcon(skipBtn, 'skip-forward');
     host.bindClick(skipBtn, options.onSkip);
