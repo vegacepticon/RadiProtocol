@@ -385,7 +385,7 @@ export class InlineRunnerModal {
     this.progressTextEl.setText(`${percent}%`);
     const progressEl = this.containerEl?.querySelector('.rp-inline-runner-progress');
     progressEl?.setAttribute('aria-valuenow', String(percent));
-    progressEl?.setAttribute('aria-label', `Protocol progress ${percent}%`);
+    progressEl?.setAttribute('aria-label', this.plugin.i18n.t('protocolRunner.progressLabel', { percent: String(percent) }));
   }
 
   private render(): void {

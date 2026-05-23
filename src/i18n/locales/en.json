@@ -124,7 +124,11 @@
     "validationBannerHeader": "This snippet cannot be used:",
     "duplicate": "Duplicate snippet",
     "duplicateTitle": "Create a copy of this snippet",
-    "duplicateError": "Failed to duplicate snippet: {error}"
+    "duplicateError": "Failed to duplicate snippet: {error}",
+    "dragReorderAria": "Drag to reorder {label}",
+    "removePlaceholderAria": "Remove placeholder {label}",
+    "removeOptionAria": "Remove {label}",
+    "optionNumber": "Option {n}"
   },
   "insertSnippet": {
     "title": "Insert snippet",
@@ -245,10 +249,13 @@
     "stepBack": "Go back one step",
     "stepRedo": "Redo",
     "stepSkip": "Skip this question",
-    "closeProtocol": "Close protocol"
+    "closeProtocol": "Close protocol",
+    "progressLabel": "Protocol progress {percent}%"
   },
   "snippetPreview": {
-    "ariaLabel": "Snippet preview"
+    "ariaLabel": "Snippet preview",
+    "showCustomAria": "Show custom value for {label}",
+    "customValueAria": "Custom value for {label}"
   },
   "library": {
     "title": "Snippet Library",

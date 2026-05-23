@@ -235,7 +235,7 @@ export function mountChipEditor(
 
     const handle = chip.createSpan({ cls: 'rp-placeholder-chip-handle' });
     handle.textContent = '⠿';
-    handle.setAttribute('aria-label', `Drag to reorder ${ph.label}`);
+    handle.setAttribute('aria-label', t('snippetEditor.dragReorderAria', { label: ph.label }));
 
     const labelSpan = chip.createSpan({ cls: 'rp-placeholder-chip-label' });
     labelSpan.textContent = ph.label;
@@ -248,7 +248,7 @@ export function mountChipEditor(
       text: '×',
     });
     removeBtn.setAttribute('type', 'button');
-    removeBtn.setAttribute('aria-label', `Remove placeholder ${ph.label}`);
+    removeBtn.setAttribute('aria-label', t('snippetEditor.removePlaceholderAria', { label: ph.label }));
 
     chip.dataset['dragIndex'] = String(index);
 
@@ -396,7 +396,7 @@ export function mountChipEditor(
         });
         const removeOptBtn = optRow.createEl('button', { text: '×' });
         removeOptBtn.setAttribute('type', 'button');
-        removeOptBtn.setAttribute('aria-label', `Remove ${opt || `option ${oi + 1}`}`);
+        removeOptBtn.setAttribute('aria-label', t('snippetEditor.removeOptionAria', { label: opt || t('snippetEditor.optionNumber', { n: String(oi + 1) }) }));
         on(removeOptBtn, 'click', () => {
           ph.options?.splice(oi, 1);
           renderOptionRows();

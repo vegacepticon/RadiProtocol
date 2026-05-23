@@ -187,7 +187,7 @@ export class SnippetFillInModal extends Modal {
       type: 'button',
     });
     customToggle.textContent = '✎';
-    customToggle.setAttribute('aria-label', `Show custom value for ${placeholder.label}`);
+    customToggle.setAttribute('aria-label', this.t('snippetPreview.showCustomAria', { label: placeholder.label }));
     customToggle.setAttribute('aria-expanded', 'false');
 
     const customRow = customWrapper.createDiv({ cls: 'rp-snippet-modal-custom-row' });
@@ -196,7 +196,7 @@ export class SnippetFillInModal extends Modal {
     customLabel.textContent = 'Custom:';
 
     customInput = customRow.createEl('input', { type: 'text' });
-    customInput.setAttribute('aria-label', `Custom value for ${placeholder.label}`);
+    customInput.setAttribute('aria-label', this.t('snippetPreview.customValueAria', { label: placeholder.label }));
 
     const setCustomOpen = (open: boolean): void => {
       customToggle.setAttribute('aria-expanded', open ? 'true' : 'false');
