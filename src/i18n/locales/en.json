@@ -263,6 +263,13 @@
   "canvasParser": {
     "legacyFreeTextInput": "Node \"{id}\" uses the deprecated type \"free-text-input\". This type was removed. Replace the node with question or text-block and rebuild the branch manually."
   },
+  "parser": {
+    "invalidJson": "Protocol file contains invalid JSON",
+    "missingRequiredFields": "Protocol file is missing required schema/version/nodes/edges fields",
+    "nonStringKind": "Node \"{id}\" has non-string kind",
+    "unknownKind": "Node \"{id}\" has unknown kind: \"{kind}\"",
+    "missingNodeId": "Protocol node is missing string id"
+  },
   "graphValidator": {
     "legacyLoopNodes": "Canvas contains deprecated loop-start/loop-end nodes: {ids}. Rebuild the loop with a unified loop node: an «exit» label on one of the outgoing edges marks the exit branch; the rest form the loop body.",
     "loopNoExit": "Loop node \"{label}\" has no exit. Mark exactly one outgoing edge with a \"+\" prefix — the text after \"+\" becomes the exit-button caption.",
