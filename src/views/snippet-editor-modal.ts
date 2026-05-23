@@ -425,7 +425,8 @@ export class SnippetEditorModal extends Modal {
     const banner = container.createDiv({ cls: 'radi-snippet-editor-validation-banner' });
     banner.setAttribute('role', 'alert');
     // Assign banner.textContent to the localized header + blank-line + the
-    // validationError verbatim. textContent treats the entire string as
+    // dynamic validationError text (not hardcoded UI copy — msg comes from
+    // model validation). textContent treats the entire string as
     // literal text — a `<script>` substring becomes the characters `<`, `s`,
     // `c`, ... and is NEVER parsed as a DOM child (T-52-09 XSS mitigation).
     // Plan 01 tests B3/B4 assert on `banner.textContent` (via the mock's

@@ -113,7 +113,7 @@ export class TextPromptModal extends Modal {
 
 		new Setting(contentEl)
 			.addButton(btn => btn
-				.setButtonText(this.opts.confirmText)
+				.setButtonText(this.opts.confirmText) // Caller-supplied localized label
 				.setCta()
 				.onClick(() => {
 					this.didSubmit = true;
@@ -121,7 +121,7 @@ export class TextPromptModal extends Modal {
 					this.close();
 				}))
 			.addButton(btn => btn
-				.setButtonText(this.opts.cancelText)
+				.setButtonText(this.opts.cancelText) // Caller-supplied localized label
 				.onClick(() => {
 					this.didSubmit = true;
 					this.result = null;
