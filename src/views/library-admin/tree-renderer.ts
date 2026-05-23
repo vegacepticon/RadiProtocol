@@ -20,9 +20,9 @@ export function renderFolderTile(
 	openBtn.addEventListener('click', onOpen);
 
 	const actions = tile.createDiv({ cls: 'rp-admin-folder-tile-actions' });
-	createButton(actions, { cls: 'rp-admin-btn rp-admin-btn-edit', text: t('admin.rename') })
+	createButton(actions, { cls: 'rp-admin-btn rp-admin-btn-edit', text: t('admin.rename'), attr: { 'aria-label': t('admin.rename') } })
 		.addEventListener('click', onRename);
-	createButton(actions, { cls: 'rp-admin-btn rp-admin-btn-delete', text: t('admin.delete') })
+	createButton(actions, { cls: 'rp-admin-btn rp-admin-btn-delete', text: t('admin.delete'), attr: { 'aria-label': t('admin.delete') } })
 		.addEventListener('click', onDelete);
 }
 
@@ -51,11 +51,11 @@ export function renderEntryRow(
 
 	const actions = row.createDiv({ cls: 'rp-admin-entry-actions' });
 	if (onEdit) {
-		const editBtn = actions.createEl('button', { text: t('admin.edit'), cls: 'rp-admin-btn rp-admin-btn-edit' });
+		const editBtn = actions.createEl('button', { text: t('admin.edit'), cls: 'rp-admin-btn rp-admin-btn-edit', attr: { 'aria-label': t('admin.edit') } });
 		editBtn.addEventListener('click', () => { onEdit(entry); });
 	}
 	if (onDelete) {
-		const delBtn = actions.createEl('button', { text: t('admin.delete'), cls: 'rp-admin-btn rp-admin-btn-delete' });
+		const delBtn = actions.createEl('button', { text: t('admin.delete'), cls: 'rp-admin-btn rp-admin-btn-delete', attr: { 'aria-label': t('admin.delete') } });
 		delBtn.addEventListener('click', () => { onDelete(entry); });
 	}
 }
@@ -114,7 +114,7 @@ export function renderSearchResults(
 		const entryTitle = 'title' in entry ? entry.title : entry.name;
 		return `${entryTitle}\n${entry.path}\n${entry.description ?? ''}`.toLowerCase().includes(lower);
 	});
-	host.createDiv({ cls: 'rp-admin-directory-meta', text: t('admin.searchResults', { count: String(matches.length) }) });
+	host.createDiv({ cls: 'rp-admin-directory-meta', text: t('admin.searchResults', { count: String(matches.length) }), attr: { 'aria-live': 'polite' } });
 	const list = host.createDiv({ cls: 'rp-admin-list rp-admin-tree-list' });
 	for (const entry of matches) renderEntryRow(list, entry, section, true, t, onEdit, onDelete);
 	if (list.children.length === 0) {

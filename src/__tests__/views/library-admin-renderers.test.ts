@@ -92,14 +92,14 @@ function findAllByClass(root: MockEl, cls: string): MockEl[] {
 
 // Mock dom-helpers — our MockEl stands in for HTMLElement
 vi.mock('../../utils/dom-helpers', () => ({
-	createButton: (parent: MockEl, opts: { cls?: string; text?: string } = {}): MockEl => {
-		return parent.createEl('button', { cls: opts.cls, text: opts.text });
+	createButton: (parent: MockEl, opts: { cls?: string; text?: string; attr?: Record<string, string> } = {}): MockEl => {
+		return parent.createEl('button', { cls: opts.cls, text: opts.text, attr: opts.attr });
 	},
-	createInput: (parent: MockEl, opts: { cls?: string; type?: string; placeholder?: string; value?: string } = {}): MockEl => {
+	createInput: (parent: MockEl, opts: { cls?: string; type?: string; placeholder?: string; value?: string; attr?: Record<string, string> } = {}): MockEl => {
 		const input = parent.createEl('input', {
 			cls: opts.cls,
 			type: opts.type,
-			attr: opts.placeholder ? { placeholder: opts.placeholder } : undefined,
+			attr: { ...opts.attr ?? {}, ...(opts.placeholder ? { placeholder: opts.placeholder } : {}) },
 		});
 		input._value = opts.value ?? '';
 		input._placeholder = opts.placeholder ?? '';
@@ -603,5 +603,114 @@ describe('renderSearchResults', () => {
 		actions.children[1]!.dispatchEvent({ type: 'click' });
 		expect(edits).toEqual(['cb-test']);
 		expect(deletes).toEqual(['cb-test']);
+	});
+});
+
+// ─── Accessibility / aria-label regression tests ──────────────────────────
+
+describe('Accessibility: aria-label and no-title attribute regression', () => {
+	it('renderBreadcrumb: root button has aria-label matching its text', () => {
+		const host = makeEl('div');
+		renderBreadcrumb(asEl(host), [], 'Snippets', { onRootClick: () => {}, onCrumbClick: () => {} });
+
+		const breadcrumb = host.children[0]!;
+		const rootBtn = breadcrumb.children[0]!;
+		expect(rootBtn._attrs['aria-label']).toBe('Snippets');
+		// Must NOT have a title attribute (Obsidian icon tooltip pitfall)
+		expect(rootBtn._attrs['title']).toBeUndefined();
+	});
+
+	it('renderBreadcrumb: crumb buttons have aria-label matching their segment text', () => {
+		const host = makeEl('div');
+		renderBreadcrumb(asEl(host), ['gm', 'chest'], 'Snippets', { onRootClick: () => {}, onCrumbClick: () => {} });
+
+		const breadcrumb = host.children[0]!;
+		const buttons = breadcrumb.children.filter(c => c.tagName === 'BUTTON');
+		// Root button
+		expect(buttons[0]!._attrs['aria-label']).toBe('Snippets');
+		// gm crumb
+		expect(buttons[1]!._attrs['aria-label']).toBe('gm');
+		// chest crumb
+		expect(buttons[2]!._attrs['aria-label']).toBe('chest');
+		// None should have title
+		for (const btn of buttons) {
+			expect(btn._attrs['title']).toBeUndefined();
+		}
+	});
+
+	it('renderTreeSearch: search input has aria-label (not title)', () => {
+		const host = makeEl('div');
+		renderTreeSearch(asEl(host), '', mockI18n, () => {}, () => {});
+
+		const toolbar = host.children[0]!;
+		const input = toolbar.children[0]!;
+		expect(input._attrs['aria-label']).toBe('Search…');
+		expect(input._attrs['title']).toBeUndefined();
+	});
+
+	it('renderTreeSearch: create folder button has aria-label', () => {
+		const host = makeEl('div');
+		renderTreeSearch(asEl(host), '', mockI18n, () => {}, () => {});
+
+		const toolbar = host.children[0]!;
+		const folderBtn = toolbar.children[1]!;
+		expect(folderBtn._attrs['aria-label']).toBe('New Folder');
+		expect(folderBtn._attrs['title']).toBeUndefined();
+	});
+
+	it('renderFolderTile: rename and delete buttons have aria-labels, not title', () => {
+		const grid = makeEl('div');
+		const node = makeNode({ name: 'gm', displayName: 'ГМ', path: 'snippets/gm' });
+		renderFolderTile(asEl(grid), node, mockI18n, () => {}, () => {}, () => {});
+
+		const tile = grid.children[0]!;
+		const actionArea = tile.children[1]!;
+		const renameBtn = actionArea.children[0]!;
+		const deleteBtn = actionArea.children[1]!;
+		expect(renameBtn._attrs['aria-label']).toBe('Rename');
+		expect(renameBtn._attrs['title']).toBeUndefined();
+		expect(deleteBtn._attrs['aria-label']).toBe('Delete');
+		expect(deleteBtn._attrs['title']).toBeUndefined();
+	});
+
+	it('renderEntryRow: edit and delete buttons have aria-labels, not title', () => {
+		const list = makeEl('div');
+		const entry = makeSnippetEntry({ id: 'ar1', name: 'Test' });
+		renderEntryRow(asEl(list), entry, 'snippets', false, mockI18n, () => {}, () => {});
+
+		const row = list.children[0]!;
+		const actions = row.children[1]!;
+		const editBtn = actions.children[0]!;
+		const deleteBtn = actions.children[1]!;
+		expect(editBtn._attrs['aria-label']).toBe('Edit');
+		expect(editBtn._attrs['title']).toBeUndefined();
+		expect(deleteBtn._attrs['aria-label']).toBe('Delete');
+		expect(deleteBtn._attrs['title']).toBeUndefined();
+	});
+
+	it('renderSearchResults: result count has aria-live="polite"', () => {
+		const host = makeEl('div');
+		const entries: AdminEntry[] = [
+			makeSnippetEntry({ id: '1', name: 'Pneumonia' }),
+		];
+
+		renderSearchResults(asEl(host), entries, 'snippets', 'pneum', mockI18n);
+
+		const meta = host.children[0]!;
+		expect(meta._attrs['aria-live']).toBe('polite');
+	});
+
+	it('renderDirectory: directory count does NOT have title attribute', () => {
+		const host = makeEl('div');
+		const node = makeNode({ entries: [] });
+
+		renderDirectory(
+			asEl(host), node, 'snippets', mockI18n,
+			() => {}, () => {}, () => {}, () => {}, () => {},
+			5,
+		);
+
+		const meta = host.children[0]!;
+		expect(meta._attrs['title']).toBeUndefined();
 	});
 });

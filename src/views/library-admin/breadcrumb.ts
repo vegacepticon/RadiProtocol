@@ -15,6 +15,7 @@ export function renderBreadcrumb(
 	const rootBtn = createButton(breadcrumb, {
 		cls: drillPath.length === 0 ? 'rp-admin-crumb is-current' : 'rp-admin-crumb',
 		text: rootLabel,
+		attr: { 'aria-label': rootLabel },
 	});
 	rootBtn.addEventListener('click', callbacks.onRootClick);
 
@@ -23,6 +24,7 @@ export function renderBreadcrumb(
 		const crumb = createButton(breadcrumb, {
 			cls: index === drillPath.length - 1 ? 'rp-admin-crumb is-current' : 'rp-admin-crumb',
 			text: segment,
+			attr: { 'aria-label': segment },
 		});
 		crumb.addEventListener('click', () => { callbacks.onCrumbClick(index); });
 	});

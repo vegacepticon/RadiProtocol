@@ -14,10 +14,15 @@ export function renderTreeSearch(
 		type: 'text',
 		placeholder: t('admin.searchPlaceholder'),
 		value: query,
+		attr: { 'aria-label': t('admin.searchPlaceholder') },
 	});
 	searchInput.addEventListener('input', () => { onInput(searchInput.value); });
 
-	const newFolderBtn = toolbar.createEl('button', { cls: 'rp-admin-btn rp-admin-create-folder-btn', text: t('admin.createFolder') });
+	const newFolderBtn = toolbar.createEl('button', {
+		cls: 'rp-admin-btn rp-admin-create-folder-btn',
+		text: t('admin.createFolder'),
+		attr: { 'aria-label': t('admin.createFolder') },
+	});
 	newFolderBtn.addEventListener('click', onCreateFolder);
 
 	return searchInput;
