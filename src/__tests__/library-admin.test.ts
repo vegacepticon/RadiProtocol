@@ -259,4 +259,29 @@ describe('LibraryAdminService', () => {
     const snippetPath = path.join(repo, 'snippets', 'grudnaya-kletka', 'atelectasis.json');
     expect(fs.existsSync(snippetPath)).toBe(true);
   });
+
+  describe('validateRepoPath invalid cases', () => {
+    it('returns notDirectory error when path is a regular file', async () => {
+      const filePath = path.join(os.tmpdir(), `rp-admin-file-${Date.now()}.txt`);
+      fs.writeFileSync(filePath, 'not a dir');
+      try {
+        const svc = new LibraryAdminService(filePath, t);
+        const result = await svc.validateRepoPath();
+        expect(result).toEqual({ valid: false, error: 'admin.notDirectory' });
+      } finally {
+        fs.rmSync(filePath, { force: true });
+      }
+    });
+
+    it('returns invalidRepoStructure error when directory has no snippets/, protocols/, or index.json', async () => {
+      const emptyDir = fs.mkdtempSync(path.join(os.tmpdir(), 'rp-admin-empty-'));
+      try {
+        const svc = new LibraryAdminService(emptyDir, t);
+        const result = await svc.validateRepoPath();
+        expect(result).toEqual({ valid: false, error: 'admin.invalidRepoStructure' });
+      } finally {
+        fs.rmSync(emptyDir, { recursive: true, force: true });
+      }
+    });
+  });
 });
