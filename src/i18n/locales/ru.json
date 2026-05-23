@@ -352,7 +352,10 @@
     "previewCustom": "Другое:",
     "previewCustomAria": "Показать своё значение для {label}",
     "previewCustomValueAria": "Пользовательское значение для {label}",
-    "networkError": "Ошибка сети. Проверьте подключение и URL библиотеки."
+    "networkError": "Ошибка сети. Проверьте подключение и URL библиотеки.",
+    "openFolderAria": "Открыть папку {name}",
+    "previewAria": "Предпросмотр сниппета {name}",
+    "installAria": "Установить сниппет {name}"
   },
   "admin": {
     "title": "Администрирование библиотеки",
