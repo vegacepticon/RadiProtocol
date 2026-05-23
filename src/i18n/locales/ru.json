@@ -238,7 +238,8 @@
     "textBlock": "Текст",
     "snippet": "Сниппет",
     "loop": "Цикл",
-    "rootSnippets": "(корень snippets)"
+    "rootSnippets": "(корень snippets)",
+    "searchPlaceholder": "Поиск узлов по метке\u2026"
   },
   "snippetChip": {
     "separator": "Разделитель"

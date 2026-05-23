@@ -238,7 +238,8 @@
     "textBlock": "Text",
     "snippet": "Snippet",
     "loop": "Loop",
-    "rootSnippets": "(snippets root)"
+    "rootSnippets": "(snippets root)",
+    "searchPlaceholder": "Search nodes by label\u2026"
   },
   "snippetChip": {
     "separator": "Separator"
