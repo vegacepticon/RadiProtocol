@@ -138,6 +138,7 @@
     "removeOptionAria": "Удалить {label}",
     "optionNumber": "Опция {n}",
     "addOption": "Добавить",
+    "addOptionBtn": "+ добавить вариант",
     "addPlaceholder": "+ добавить плейсхолдер",
     "placeholderLabel": "Метка",
     "placeholderLabelPlaceholder": "Например: Возраст пациента",

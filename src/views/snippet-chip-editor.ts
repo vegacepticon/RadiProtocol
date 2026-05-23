@@ -406,7 +406,7 @@ export function mountChipEditor(
     };
     renderOptionRows();
 
-    const addOptionBtn = optionsSec.createEl('button', { text: '+ add option' });
+    const addOptionBtn = optionsSec.createEl('button', { text: t('snippetEditor.addOptionBtn') });
     addOptionBtn.setAttribute('type', 'button');
     on(addOptionBtn, 'click', () => {
       if (!ph.options) ph.options = [];

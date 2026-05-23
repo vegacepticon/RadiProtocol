@@ -138,6 +138,7 @@
     "removeOptionAria": "Remove {label}",
     "optionNumber": "Option {n}",
     "addOption": "Add",
+    "addOptionBtn": "+ add option",
     "addPlaceholder": "+ add placeholder",
     "placeholderLabel": "Label",
     "placeholderLabelPlaceholder": "E.g. Patient age",
