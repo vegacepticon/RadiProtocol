@@ -234,18 +234,18 @@ export function mountChipEditor(
     chip.setAttribute('draggable', 'true');
 
     const handle = chip.createSpan({ cls: 'rp-placeholder-chip-handle' });
-    handle.textContent = '⠿';
+    handle.textContent = '⠿'; // Non-translatable drag-handle symbol
     handle.setAttribute('aria-label', t('snippetEditor.dragReorderAria', { label: ph.label }));
 
     const labelSpan = chip.createSpan({ cls: 'rp-placeholder-chip-label' });
-    labelSpan.textContent = ph.label;
+    labelSpan.textContent = ph.label; // User-authored content, not a UI string
 
     const badge = chip.createSpan({ cls: 'rp-placeholder-chip-badge' });
-    badge.textContent = ph.type;
+    badge.textContent = ph.type; // Internal enum value, not a UI label
 
     const removeBtn = chip.createEl('button', {
       cls: 'rp-placeholder-chip-remove',
-      text: '×',
+      text: '×', // Non-translatable removal symbol
     });
     removeBtn.setAttribute('type', 'button');
     removeBtn.setAttribute('aria-label', t('snippetEditor.removePlaceholderAria', { label: ph.label }));
@@ -336,7 +336,7 @@ export function mountChipEditor(
     labelInput.value = ph.label;
     on(labelInput, 'input', () => {
       ph.label = labelInput.value;
-      labelSpan.textContent = ph.label;
+      labelSpan.textContent = ph.label; // User-authored content, not a UI string
       onChange();
     });
 
@@ -358,7 +358,7 @@ export function mountChipEditor(
     typeSelect.value = ph.type;
     on(typeSelect, 'change', () => {
       ph.type = typeSelect.value as SnippetPlaceholder['type'];
-      badge.textContent = ph.type;
+      badge.textContent = ph.type; // Internal enum value, not a UI label
       if (ph.type === 'choice') {
         if (!ph.options) ph.options = [];
       } else {
