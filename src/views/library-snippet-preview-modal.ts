@@ -125,7 +125,7 @@ export class LibrarySnippetPreviewModal extends Modal {
     customLabel.textContent = this.t('library.previewCustom');
 
     customInput = customRow.createEl('input', { type: 'text' });
-    customInput.setAttribute('aria-label', this.t('library.previewCustomAria', { label: placeholder.label }));
+    customInput.setAttribute('aria-label', this.t('library.previewCustomValueAria', { label: placeholder.label }));
 
     const setCustomOpen = (open: boolean): void => {
       customToggle.setAttribute('aria-expanded', open ? 'true' : 'false');

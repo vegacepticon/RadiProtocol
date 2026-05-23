@@ -172,6 +172,7 @@ const t = (key: string, vars?: Record<string, string>): string => {
     'library.previewClose': 'Close',
     'library.previewCustom': 'Custom:',
     'library.previewCustomAria': `Custom ${vars?.label ?? ''}`,
+    'library.previewCustomValueAria': `Custom value for ${vars?.label ?? ''}`,
   };
   return map[key] ?? key;
 };

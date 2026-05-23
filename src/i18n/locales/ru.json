@@ -333,6 +333,7 @@
     "previewClose": "Закрыть",
     "previewCustom": "Другое:",
     "previewCustomAria": "Показать своё значение для {label}",
+    "previewCustomValueAria": "Пользовательское значение для {label}",
     "networkError": "Ошибка сети. Проверьте подключение и URL библиотеки."
   },
   "admin": {

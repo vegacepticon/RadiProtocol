@@ -333,6 +333,7 @@
     "previewClose": "Close",
     "previewCustom": "Custom:",
     "previewCustomAria": "Show custom value for {label}",
+    "previewCustomValueAria": "Custom value for {label}",
     "networkError": "Network error. Check your connection and the library URL."
   },
   "admin": {
