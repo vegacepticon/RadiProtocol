@@ -193,7 +193,7 @@ export class SnippetFillInModal extends Modal {
     const customRow = customWrapper.createDiv({ cls: 'rp-snippet-modal-custom-row' });
     customRow.setAttribute('hidden', 'true');
     const customLabel = customRow.createEl('label');
-    customLabel.textContent = 'Custom:';
+    customLabel.textContent = this.t('snippetFillIn.customLabel');
 
     customInput = customRow.createEl('input', { type: 'text' });
     customInput.setAttribute('aria-label', this.t('snippetPreview.customValueAria', { label: placeholder.label }));
@@ -232,7 +232,7 @@ export class SnippetFillInModal extends Modal {
     const previewSection = this.contentEl.createDiv();
 
     const previewLabel = previewSection.createEl('p', { cls: 'rp-snippet-preview-label' });
-    previewLabel.textContent = 'Preview';
+    previewLabel.textContent = this.t('snippetFillIn.preview');
 
     this.previewTextarea = previewSection.createEl('textarea', { cls: 'rp-snippet-preview' });
     this.previewTextarea.readOnly = true;
@@ -273,14 +273,14 @@ export class SnippetFillInModal extends Modal {
     const row = this.contentEl.createDiv({ cls: 'rp-snippet-modal-btn-row' });
 
     const cancelBtn = row.createEl('button');
-    cancelBtn.textContent = 'Cancel';
+    cancelBtn.textContent = this.t('snippetEditor.cancel');
     cancelBtn.addEventListener('click', () => {
       this.safeResolve(null);
       this.close();
     });
 
     const confirmBtn = row.createEl('button', { cls: 'mod-cta' });
-    confirmBtn.textContent = 'Confirm';
+    confirmBtn.textContent = this.t('snippetFillIn.confirm');
     confirmBtn.addEventListener('click', () => {
       const rendered = renderSnippet(this.snippet, this.values);
       this.safeResolve(rendered);

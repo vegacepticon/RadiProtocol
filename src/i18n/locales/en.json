@@ -281,6 +281,11 @@
     "showCustomAria": "Show custom value for {label}",
     "customValueAria": "Custom value for {label}"
   },
+  "snippetFillIn": {
+    "customLabel": "Custom:",
+    "preview": "Preview",
+    "confirm": "Confirm"
+  },
   "library": {
     "title": "Snippet Library",
     "loadError": "Failed to load library index. Check the URL and your network connection.",
