@@ -355,7 +355,9 @@
     "networkError": "Network error. Check your connection and the library URL.",
     "openFolderAria": "Open folder {name}",
     "previewAria": "Preview snippet {name}",
-    "installAria": "Install snippet {name}"
+    "installAria": "Install snippet {name}",
+    "installAllAria": "Install full library",
+    "installCurrentFolderAria": "Install current folder"
   },
   "admin": {
     "title": "Library Admin",

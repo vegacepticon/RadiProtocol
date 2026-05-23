@@ -355,7 +355,9 @@
     "networkError": "Ошибка сети. Проверьте подключение и URL библиотеки.",
     "openFolderAria": "Открыть папку {name}",
     "previewAria": "Предпросмотр сниппета {name}",
-    "installAria": "Установить сниппет {name}"
+    "installAria": "Установить сниппет {name}",
+    "installAllAria": "Установить всю библиотеку",
+    "installCurrentFolderAria": "Установить текущую папку"
   },
   "admin": {
     "title": "Администрирование библиотеки",

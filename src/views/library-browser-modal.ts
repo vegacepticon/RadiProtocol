@@ -176,6 +176,7 @@ export class LibraryBrowserModal extends Modal {
     const installAllBtn = createButton(actions, {
       cls: 'mod-cta rp-library-install-all-btn',
       text: this.plugin.i18n.t('library.installAll'),
+      attr: { 'aria-label': this.plugin.i18n.t('library.installAllAria') },
     });
     installAllBtn.addEventListener('click', () => {
       void this.installEntries(this.allEntries, installAllBtn, this.plugin.i18n.t('library.installAll'));
@@ -184,6 +185,7 @@ export class LibraryBrowserModal extends Modal {
     const installFolderBtn = createButton(actions, {
       cls: 'rp-library-install-folder-btn',
       text: this.plugin.i18n.t('library.installCurrentFolder'),
+      attr: { 'aria-label': this.plugin.i18n.t('library.installCurrentFolderAria') },
     });
     installFolderBtn.addEventListener('click', () => {
       const entries = this.currentFolderEntries();
