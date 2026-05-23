@@ -71,6 +71,11 @@ const NODE_KIND_DEFAULTS: Record<string, NodeKindDefault> = {
 
 const EDITABLE_NODE_KINDS: RPNodeKind[] = ['start', 'question', 'answer', 'text-block', 'loop', 'snippet'];
 
+/** CSS/attribute token for a node kind — always raw "untyped", never i18n. */
+export function nodeKindToken(kind: RPNodeKind | null): string {
+  return kind ?? 'untyped';
+}
+
 export function defaultColorForProtocolEditorNodeKind(kind: RPNodeKind | null): string | undefined {
   if (kind === null) return undefined;
   return NODE_KIND_DEFAULTS[kind]?.color;
@@ -523,7 +528,7 @@ export class ProtocolEditorView extends ItemView {
       const nodeEl = this.surfaceEl.createDiv({ cls: 'rp-protocol-editor-node' });
       nodeEl.toggleClass('is-untyped', node.kind === null);
       nodeEl.setAttr('data-node-id', node.id);
-      nodeEl.setAttr('data-node-kind', node.kind ?? 'untyped');
+      nodeEl.setAttr('data-node-kind', nodeKindToken(node.kind));
       if (node.color === undefined) node.color = defaultColorForProtocolEditorNodeKind(node.kind);
       this.applyNodePosition(nodeEl, node);
 
@@ -727,7 +732,7 @@ export class ProtocolEditorView extends ItemView {
           width: String(node.width),
           height: String(node.height),
           rx: '4',
-          class: `rp-protocol-editor-minimap-node rp-protocol-editor-minimap-node-${node.kind ?? 'untyped'}`,
+          class: `rp-protocol-editor-minimap-node rp-protocol-editor-minimap-node-${nodeKindToken(node.kind)}`,
         },
       });
     }

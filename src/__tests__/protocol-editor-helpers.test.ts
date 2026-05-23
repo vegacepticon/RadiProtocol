@@ -7,9 +7,10 @@ import {
   displayProtocolEditorEdgeLabel,
   fieldsForProtocolEditorNodeKind,
   isProtocolEditorLoopExitLabel,
+  nodeKindToken,
+  nodeTitle,
   normalizeProtocolEditorEdgeLabel,
   normalizeProtocolEditorSnippetFolderSelection,
-  nodeTitle,
   protocolEditorEdgeRoute,
   protocolMissingFileError,
   removeProtocolEditorEdge,
@@ -250,6 +251,17 @@ describe('protocol editor helper functions', () => {
       };
       const mockT = (key: string) => `[${key}]`;
       expect(nodeTitle(node, mockT as never)).toBe('My title');
+    });
+  });
+
+  describe('nodeKindToken — raw "untyped" for CSS/attribute paths (Phase 44)', () => {
+    it('returns the kind string when kind is non-null', () => {
+      expect(nodeKindToken('question')).toBe('question');
+      expect(nodeKindToken('loop')).toBe('loop');
+    });
+
+    it('returns raw "untyped" when kind is null — never i18n', () => {
+      expect(nodeKindToken(null)).toBe('untyped');
     });
   });
 });
