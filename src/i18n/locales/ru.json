@@ -304,7 +304,10 @@
     "processing": "Обработка…",
     "loadingSnippets": "Загрузка сниппетов…",
     "stepCounter": "Шаг {current} / {total}",
-    "stepCounterAria": "Вопрос {current} из {total}"
+    "stepCounterAria": "Вопрос {current} из {total}",
+    "keyStepBack": "Ctrl+← Назад",
+    "keyStepRedo": "Ctrl+→ Повторить",
+    "keyClose": "Esc Закрыть"
   },
   "inlineRunner": {
     "protocolFileNotFound": "Файл протокола не найден: \"{path}\".",
