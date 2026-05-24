@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { ProtocolEditorView } from '../../views/protocol-editor-view';
 import type { ProtocolDocumentV1, ProtocolNodeRecord } from '../../protocol/protocol-document';
 
@@ -241,6 +241,7 @@ const t = (key: string, _params?: Record<string, string>): string => {
     'protocolEditor.snippetFilePlaceholder': 'File',
     'protocolEditor.clearSnippetTarget': 'Clear',
     'protocolEditor.chooseNodeType': 'Choose node type',
+    'protocolEditor.minimapLabel': 'Minimap — click or drag to pan',
   };
   return map[key] ?? key;
 };
@@ -371,5 +372,90 @@ describe('ProtocolEditorView: node keyboard activation', () => {
 
     const nodes = findAllByClass(surfaceEl, 'rp-protocol-editor-node');
     expect(nodes[0]!._attrs['aria-label']).toBe('Where is the pain?');
+  });
+});
+
+describe('ProtocolEditorView: floating action button aria-labels', () => {
+  let savedWindow: unknown;
+  let savedRAF: unknown;
+  beforeEach(() => {
+    savedWindow = (globalThis as any).window;
+    savedRAF = (globalThis as any).requestAnimationFrame;
+    (globalThis as any).window = globalThis;
+    (globalThis as any).requestAnimationFrame = (cb: FrameRequestCallback) => { cb(0); return 0; };
+  });
+  afterEach(() => {
+    (globalThis as any).window = savedWindow;
+    (globalThis as any).requestAnimationFrame = savedRAF;
+  });
+
+  function createShellView(): { view: ProtocolEditorView; rootEl: MockEl } {
+    const mockPlugin = {
+      i18n: { t },
+      settings: { snippetFolderPath: '.radiprotocol/snippets' },
+      protocolDocumentStore: {},
+    } as any;
+
+    const leaf = {} as any;
+    const view = new ProtocolEditorView(leaf, mockPlugin);
+
+    const containerEl = makeEl('div');
+    containerEl.createDiv({ cls: 'nav-region' });
+    const contentArea = containerEl.createDiv({ cls: 'content-area' });
+    (view as any).containerEl = containerEl;
+
+    const doc: ProtocolDocumentV1 = {
+      schema: 'radiprotocol.protocol',
+      version: 1,
+      id: 'test-doc',
+      title: 'Test Protocol',
+      createdAt: '2025-01-01T00:00:00Z',
+      updatedAt: '2025-01-01T00:00:00Z',
+      nodes: [],
+      edges: [],
+    };
+    (view as any).doc = doc;
+    (view as any).protocolPath = 'test.rp.json';
+    (view as any).zoom = 1;
+
+    (view as any).renderShell();
+    const rootEl = contentArea.children.find((c: MockEl) => c.classList.has('rp-protocol-editor'))!;
+    return { view, rootEl };
+  }
+
+  it('self-check floating button has localized aria-label', () => {
+    const { rootEl } = createShellView();
+    const workspace = rootEl.children.find((c: MockEl) => c.classList.has('rp-protocol-editor-workspace'))!;
+    const floatingActions = workspace.children.find((c: MockEl) => c.classList.has('rp-protocol-editor-floating-actions'))!;
+    const buttons = floatingActions.children.filter((c: MockEl) => c.tagName === 'BUTTON');
+    const selfCheckBtn = buttons.find((b: MockEl) => b._attrs['aria-label'] === 'Self-check')!;
+    expect(selfCheckBtn._attrs['aria-label']).toBe('Self-check');
+  });
+
+  it('minimap toggle floating button has localized aria-label', () => {
+    const { rootEl } = createShellView();
+    const workspace = rootEl.children.find((c: MockEl) => c.classList.has('rp-protocol-editor-workspace'))!;
+    const floatingActions = workspace.children.find((c: MockEl) => c.classList.has('rp-protocol-editor-floating-actions'))!;
+    const buttons = floatingActions.children.filter((c: MockEl) => c.tagName === 'BUTTON');
+    const minimapBtn = buttons.find((b: MockEl) => b._attrs['aria-label'] === 'Minimap')!;
+    expect(minimapBtn._attrs['aria-label']).toBe('Minimap');
+  });
+
+  it('auto-layout floating button has localized aria-label', () => {
+    const { rootEl } = createShellView();
+    const workspace = rootEl.children.find((c: MockEl) => c.classList.has('rp-protocol-editor-workspace'))!;
+    const floatingActions = workspace.children.find((c: MockEl) => c.classList.has('rp-protocol-editor-floating-actions'))!;
+    const buttons = floatingActions.children.filter((c: MockEl) => c.tagName === 'BUTTON');
+    const autoLayoutBtn = buttons.find((b: MockEl) => b._attrs['aria-label'] === 'Auto layout')!;
+    expect(autoLayoutBtn._attrs['aria-label']).toBe('Auto layout');
+  });
+
+  it('minimap element has localized aria-label', () => {
+    const { rootEl } = createShellView();
+    const workspace = rootEl.children.find((c: MockEl) => c.classList.has('rp-protocol-editor-workspace'))!;
+    const minimap = workspace.children.find((c: MockEl) => c.classList.has('rp-protocol-editor-minimap'))!;
+    expect(minimap).toBeDefined();
+    expect(minimap!._attrs['aria-label']).toBe('Minimap — click or drag to pan');
+    expect(minimap!._attrs['role']).toBe('button');
   });
 });
