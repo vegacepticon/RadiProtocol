@@ -1671,14 +1671,6 @@ export class ProtocolEditorView extends ItemView {
 
     const body = modal.createDiv({ cls: 'rp-protocol-editor-modal-body' });
 
-    const kindField = body.createDiv({ cls: 'rp-protocol-editor-modal-field' });
-    kindField.createEl('label', { text: t('protocolEditor.kindLabel') });
-    const kindSelect = kindField.createEl('select') as HTMLSelectElement;
-    for (const kind of EDITABLE_NODE_KINDS) {
-      kindSelect.createEl('option', { attr: { value: kind }, text: t(`protocolEditor.nodeKind.${kind}`) });
-    }
-    kindSelect.value = (node.kind !== null && EDITABLE_NODE_KINDS.includes(node.kind)) ? node.kind : 'question';
-
     const textControls: Array<{ key: string; value: () => string | boolean | undefined }> = [];
     const firstEditableField: Array<HTMLInputElement | HTMLTextAreaElement> = [];
     const addInput = (key: string, label: string, value: unknown, multiline = false) => {
@@ -1823,10 +1815,8 @@ export class ProtocolEditorView extends ItemView {
     cancelBtn.addEventListener('click', closeModal);
 
     saveBtn.addEventListener('click', async () => {
-      const nextKind = kindSelect.value as RPNodeKind;
-      const kindChanged = nextKind !== node.kind;
-      const nextFields: Record<string, unknown> = kindChanged ? fieldsForProtocolEditorNodeKind(nextKind) : { ...node.fields };
-      if (!kindChanged) for (const control of textControls) {
+      const nextFields: Record<string, unknown> = { ...node.fields };
+      for (const control of textControls) {
         const value = control.value();
         if (value === undefined) delete nextFields[control.key];
         else nextFields[control.key] = value;
@@ -1834,8 +1824,7 @@ export class ProtocolEditorView extends ItemView {
 
       const updatedNode: ProtocolNodeRecord = {
         ...node,
-        kind: nextKind,
-        color: kindChanged || node.color === undefined ? defaultColorForProtocolEditorNodeKind(nextKind) : node.color,
+        kind: node.kind,
         fields: nextFields,
       };
 
