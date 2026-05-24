@@ -438,7 +438,7 @@
     "rename": "Переименовать",
     "openFolder": "Открыть папку {name}",
     "renameFolderPrompt": "Новое название папки",
-    "confirmDeleteFolder": "Удалить папку \"{path}\"? Папка должна быть пустой.",
+    "confirmDeleteFolder": "Удалить папку \"{path}\" и всё её содержимое?",
     "directoryCreated": "Папка \"{name}\" создана.",
     "directoryRenamed": "Папка переименована в \"{name}\".",
     "directoryDeleted": "Папка удалена.",
