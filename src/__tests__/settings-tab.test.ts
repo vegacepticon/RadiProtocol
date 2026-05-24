@@ -11,6 +11,13 @@ describe('Settings defaults (RUN-07)', () => {
     expect('maxLoopIterations' in DEFAULT_SETTINGS).toBe(false);
   });
 
+  it('DEFAULT_SETTINGS: snippetFolderPath defaults to Snippets', () => {
+    expect(DEFAULT_SETTINGS.snippetFolderPath).toBe('Snippets');
+  });
+
+  it('DEFAULT_SETTINGS: protocolFolderPath defaults to Protocols', () => {
+    expect(DEFAULT_SETTINGS.protocolFolderPath).toBe('Protocols');
+  });
 
   it('SettingsTab has display method (stub check)', async () => {
     // Full settings tab test requires Obsidian environment — manual only.
@@ -95,7 +102,7 @@ describe('Settings folder autocomplete (SETTINGS-01)', () => {
     await Promise.resolve();
 
     expect(plugin.settings.protocolFolderPath).toBe('Protocols/CT');
-    expect(plugin.settings.snippetFolderPath).toBe('.radiprotocol/snippets');
+    expect(plugin.settings.snippetFolderPath).toBe('Snippets');
     expect(plugin.saveSettingsCalls).toBe(2);
   });
 

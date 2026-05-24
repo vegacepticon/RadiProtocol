@@ -44,9 +44,9 @@ export interface RadiProtocolSettings {
 }
 
 export const DEFAULT_SETTINGS: RadiProtocolSettings = {
-  snippetFolderPath: '.radiprotocol/snippets',
+  snippetFolderPath: 'Snippets',
   snippetTreeExpandedPaths: [],
-  protocolFolderPath: '',
+  protocolFolderPath: 'Protocols',
   textSeparator: 'newline',
   inlineRunnerPosition: null,
   locale: 'en',
@@ -130,7 +130,7 @@ export class RadiProtocolSettingsTab extends PluginSettingTab {
           .setPlaceholder(this.plugin.i18n.t('settings.snippetFolderPathPlaceholder'))
           .setValue(this.plugin.settings.snippetFolderPath)
           .onChange(async (value) => {
-            this.plugin.settings.snippetFolderPath = value.trim() || '.radiprotocol/snippets';
+            this.plugin.settings.snippetFolderPath = value.trim() || 'Snippets';
             await this.plugin.saveSettings();
           });
       });
