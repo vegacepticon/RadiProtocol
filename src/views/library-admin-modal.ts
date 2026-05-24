@@ -103,7 +103,7 @@ export class LibraryAdminModal extends Modal {
 		const snippetTab = tabContainer.createEl('button', {
 			text: this.plugin.i18n.t('admin.snippetsTab'),
 			cls: 'rp-admin-tab' + (this.currentTab === 'snippets' ? ' rp-admin-tab-active' : ''),
-			attr: { role: 'tab', id: 'rp-admin-tab-snippets', 'aria-selected': String(this.currentTab === 'snippets'), 'aria-controls': 'rp-admin-content' },
+			attr: { role: 'tab', id: 'rp-admin-tab-snippets', tabindex: this.currentTab === 'snippets' ? '0' : '-1', 'aria-selected': String(this.currentTab === 'snippets'), 'aria-controls': 'rp-admin-content' },
 		});
 		snippetTab.addEventListener('click', () => {
 			this.currentTab = 'snippets';
@@ -115,7 +115,7 @@ export class LibraryAdminModal extends Modal {
 		const protocolTab = tabContainer.createEl('button', {
 			text: this.plugin.i18n.t('admin.protocolsTab'),
 			cls: 'rp-admin-tab' + (this.currentTab === 'protocols' ? ' rp-admin-tab-active' : ''),
-			attr: { role: 'tab', id: 'rp-admin-tab-protocols', 'aria-selected': String(this.currentTab === 'protocols'), 'aria-controls': 'rp-admin-content' },
+			attr: { role: 'tab', id: 'rp-admin-tab-protocols', tabindex: this.currentTab === 'protocols' ? '0' : '-1', 'aria-selected': String(this.currentTab === 'protocols'), 'aria-controls': 'rp-admin-content' },
 		});
 		protocolTab.addEventListener('click', () => {
 			this.currentTab = 'protocols';
@@ -159,6 +159,7 @@ export class LibraryAdminModal extends Modal {
 		tabs[activeIdx]?.addClass('rp-admin-tab-active');
 		tabs.forEach((tab, idx) => {
 			tab.setAttr('aria-selected', String(idx === activeIdx));
+			tab.setAttr('tabindex', idx === activeIdx ? '0' : '-1');
 		});
 		contentArea.setAttr('aria-labelledby', this.currentTab === 'snippets' ? 'rp-admin-tab-snippets' : 'rp-admin-tab-protocols');
 
