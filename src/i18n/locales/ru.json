@@ -302,7 +302,9 @@
     "progressLabel": "Прогресс протокола {percent}%",
     "starting": "Запуск протокола…",
     "processing": "Обработка…",
-    "loadingSnippets": "Загрузка сниппетов…"
+    "loadingSnippets": "Загрузка сниппетов…",
+    "stepCounter": "Шаг {current} / {total}",
+    "stepCounterAria": "Вопрос {current} из {total}"
   },
   "inlineRunner": {
     "protocolFileNotFound": "Файл протокола не найден: \"{path}\".",

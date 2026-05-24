@@ -302,7 +302,9 @@
     "progressLabel": "Protocol progress {percent}%",
     "starting": "Starting protocol…",
     "processing": "Processing…",
-    "loadingSnippets": "Loading snippets…"
+    "loadingSnippets": "Loading snippets…",
+    "stepCounter": "Step {current} / {total}",
+    "stepCounterAria": "Question {current} of {total}"
   },
   "inlineRunner": {
     "protocolFileNotFound": "Protocol file not found: \"{path}\".",
