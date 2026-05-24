@@ -45,7 +45,6 @@ export class InlineRunnerModal {
   private headerEl: HTMLElement | null = null;
   private progressFillEl: HTMLElement | null = null;
   private progressTextEl: HTMLElement | null = null;
-  private stepCounterEl: HTMLElement | null = null;
   private contentEl: HTMLElement | null = null;
   private actionsEl: HTMLElement | null = null;
   private footerBtnRowEl: HTMLElement | null = null;
@@ -291,7 +290,6 @@ export class InlineRunnerModal {
     this.headerEl = null;
     this.progressFillEl = null;
     this.progressTextEl = null;
-    this.stepCounterEl = null;
     this.contentEl = null;
     this.actionsEl = null;
     this.footerBtnRowEl = null;
@@ -322,7 +320,6 @@ export class InlineRunnerModal {
     const progressTrack = progress.createDiv({ cls: 'rp-inline-runner-progress-track' });
     this.progressFillEl = progressTrack.createDiv({ cls: 'rp-inline-runner-progress-fill' });
     this.progressTextEl = progress.createDiv({ cls: 'rp-inline-runner-progress-text' });
-    this.stepCounterEl = progress.createDiv({ cls: 'rp-inline-runner-step-counter' });
 
     // Content area — scrollable text (top half of modal)
     const content = container.createDiv({ cls: 'rp-inline-runner-content' });
@@ -399,27 +396,6 @@ export class InlineRunnerModal {
     const progressEl = this.containerEl?.querySelector('.rp-inline-runner-progress');
     progressEl?.setAttribute('aria-valuenow', String(percent));
     progressEl?.setAttribute('aria-label', this.plugin.i18n.t('protocolRunner.progressLabel', { percent: String(percent) }));
-    this.updateStepCounter(state);
-  }
-
-  private updateStepCounter(state: RunnerState): void {
-    if (this.graph === null || this.stepCounterEl === null) return;
-    const total = Array.from(this.graph.nodes.values()).filter(n => n.kind === 'question').length;
-    let current: number;
-    if (state.status === 'complete') {
-      current = total;
-    } else if (state.status === 'idle' || state.status === 'error') {
-      current = 0;
-    } else {
-      current = (state.undoStackSize ?? 0) + 1;
-    }
-    this.stepCounterEl.setText(
-      this.plugin.i18n.t('protocolRunner.stepCounter', { current: String(current), total: String(total) }),
-    );
-    this.stepCounterEl.setAttribute(
-      'aria-label',
-      this.plugin.i18n.t('protocolRunner.stepCounterAria', { current: String(current), total: String(total) }),
-    );
   }
 
   private render(): void {

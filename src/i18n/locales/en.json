@@ -304,8 +304,6 @@
     "starting": "Starting protocol…",
     "processing": "Processing…",
     "loadingSnippets": "Loading snippets…",
-    "stepCounter": "Step {current} / {total}",
-    "stepCounterAria": "Question {current} of {total}",
     "keyStepBack": "Ctrl+← Back",
     "keyStepRedo": "Ctrl+→ Redo",
     "keyClose": "Esc Close"

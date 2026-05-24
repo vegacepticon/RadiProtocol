@@ -304,8 +304,6 @@
     "starting": "Запуск протокола…",
     "processing": "Обработка…",
     "loadingSnippets": "Загрузка сниппетов…",
-    "stepCounter": "Шаг {current} / {total}",
-    "stepCounterAria": "Вопрос {current} из {total}",
     "keyStepBack": "Ctrl+← Назад",
     "keyStepRedo": "Ctrl+→ Повторить",
     "keyClose": "Esc Закрыть"
