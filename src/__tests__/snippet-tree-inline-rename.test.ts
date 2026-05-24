@@ -531,4 +531,72 @@ describe('SnippetManagerView — F2 inline rename (Phase 34 Plan 03)', () => {
       expect(service.renameSnippet).not.toHaveBeenCalled();
     });
   });
+
+  describe('keyboard activation (Enter/Space)', () => {
+    it('Enter on a file row calls openEditModal with the snippet path', async () => {
+      const { view } = makeTreeView();
+      await view.onOpen();
+      const openEditModalSpy = vi.spyOn((view as any).treeRenderer['callbacks'], 'openEditModal');
+      const row = findRow(view, `${root}/note.json`);
+      expect(row).not.toBeNull();
+      fire(row!, makeKeyEvent('keydown', 'Enter'));
+      expect(openEditModalSpy).toHaveBeenCalledWith(`${root}/note.json`);
+    });
+
+    it('Space on a file row calls openEditModal with the snippet path', async () => {
+      const { view } = makeTreeView();
+      await view.onOpen();
+      const openEditModalSpy = vi.spyOn((view as any).treeRenderer['callbacks'], 'openEditModal');
+      const row = findRow(view, `${root}/note.json`);
+      expect(row).not.toBeNull();
+      const ke = makeKeyEvent('keydown', ' ');
+      fire(row!, ke);
+      expect(openEditModalSpy).toHaveBeenCalledWith(`${root}/note.json`);
+      expect(ke.defaultPrevented).toBe(true);
+    });
+
+    it('Enter on a folder row toggles expand (collapses expanded folder)', async () => {
+      const { plugin, view } = makeTreeView();
+      await view.onOpen();
+      expect(plugin.settings.snippetTreeExpandedPaths).toContain(`${root}/a`);
+      const row = findRow(view, `${root}/a`);
+      expect(row).not.toBeNull();
+      fire(row!, makeKeyEvent('keydown', 'Enter'));
+      await Promise.resolve();
+      expect(plugin.settings.snippetTreeExpandedPaths).not.toContain(`${root}/a`);
+    });
+
+    it('Space on a folder row toggles expand and prevents default', async () => {
+      const { plugin, view } = makeTreeView();
+      await view.onOpen();
+      expect(plugin.settings.snippetTreeExpandedPaths).toContain(`${root}/a`);
+      const row = findRow(view, `${root}/a`);
+      expect(row).not.toBeNull();
+      const ke = makeKeyEvent('keydown', ' ');
+      fire(row!, ke);
+      await Promise.resolve();
+      expect(plugin.settings.snippetTreeExpandedPaths).not.toContain(`${root}/a`);
+      expect(ke.defaultPrevented).toBe(true);
+    });
+
+    it('F2 still triggers inline rename on file rows', async () => {
+      const { view } = makeTreeView();
+      await view.onOpen();
+      const row = findRow(view, `${root}/note.json`);
+      expect(row).not.toBeNull();
+      expect(findInputInRow(row!)).toBeNull();
+      fire(row!, makeKeyEvent('keydown', 'F2'));
+      expect(findInputInRow(row!)).not.toBeNull();
+    });
+
+    it('F2 still triggers inline rename on folder rows', async () => {
+      const { view } = makeTreeView();
+      await view.onOpen();
+      const row = findRow(view, `${root}/a`);
+      expect(row).not.toBeNull();
+      expect(findInputInRow(row!)).toBeNull();
+      fire(row!, makeKeyEvent('keydown', 'F2'));
+      expect(findInputInRow(row!)).not.toBeNull();
+    });
+  });
 });
