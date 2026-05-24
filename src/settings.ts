@@ -101,8 +101,8 @@ export class RadiProtocolSettingsTab extends PluginSettingTab {
           });
       });
 
-    // Group 2 — Protocol
-    new Setting(containerEl).setName(this.plugin.i18n.t('settings.protocolHeading')).setHeading();
+    // Group 2 — Storage
+    new Setting(containerEl).setName(this.plugin.i18n.t('settings.storageHeading')).setHeading();
 
     new Setting(containerEl)
       .setName(this.plugin.i18n.t('settings.protocolFolder'))
@@ -117,9 +117,6 @@ export class RadiProtocolSettingsTab extends PluginSettingTab {
             await this.plugin.saveSettings();
           });
       });
-
-    // Group 5 — Storage
-    new Setting(containerEl).setName(this.plugin.i18n.t('settings.storageHeading')).setHeading();
 
     new Setting(containerEl)
       .setName(this.plugin.i18n.t('settings.snippetFolder'))
