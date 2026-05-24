@@ -154,6 +154,8 @@ const mockI18n = (key: string, params?: Record<string, string>): string => {
 		'admin.rename': 'Rename',
 		'admin.delete': 'Delete',
 		'admin.edit': 'Edit',
+		'admin.editSnippet': params ? `Edit snippet: ${params.name}` : 'Edit snippet',
+		'admin.editProtocol': params ? `Edit protocol: ${params.title}` : 'Edit protocol',
 		'admin.emptyFolder': 'Empty folder',
 		'admin.searchResults': params ? `${params.count} results` : '0 results',
 		'admin.emptyResults': 'No results',
@@ -484,7 +486,7 @@ describe('renderEntryRow', () => {
 		expect(actions.children.length).toBe(0);
 	});
 
-	it('sets tabindex=0, role=button, and aria-label on info when onEdit is provided', () => {
+	it('sets tabindex=0, role=button, and snippet-specific aria-label on info when onEdit is provided', () => {
 		const list = makeEl('div');
 		const entry = makeSnippetEntry({ id: 'kb1', name: 'Pneumo' });
 		renderEntryRow(asEl(list), entry, 'snippets', false, mockI18n, () => {}, () => {});
@@ -493,7 +495,17 @@ describe('renderEntryRow', () => {
 		const info = row.children[0]!;
 		expect(info._attrs['tabindex']).toBe('0');
 		expect(info._attrs['role']).toBe('button');
-		expect(info._attrs['aria-label']).toBe('Edit Pneumo');
+		expect(info._attrs['aria-label']).toBe('Edit snippet: Pneumo');
+	});
+
+	it('sets protocol-specific aria-label on info for protocol entries', () => {
+		const list = makeEl('div');
+		const entry = makeProtocolEntry({ id: 'kb2', title: 'КТ Грудная клетка' });
+		renderEntryRow(asEl(list), entry, 'protocols', false, mockI18n, () => {}, () => {});
+
+		const row = list.children[0]!;
+		const info = row.children[0]!;
+		expect(info._attrs['aria-label']).toBe('Edit protocol: КТ Грудная клетка');
 	});
 
 	it('does not set tabindex, role, or aria-label on info when onEdit is omitted', () => {
@@ -784,7 +796,7 @@ describe('Accessibility: aria-label and no-title attribute regression', () => {
 		expect(deleteBtn._attrs['title']).toBeUndefined();
 	});
 
-	it('renderEntryRow: edit and delete buttons have aria-labels, not title', () => {
+	it('renderEntryRow: edit button has snippet-specific aria-label, delete button has generic label, no title', () => {
 		const list = makeEl('div');
 		const entry = makeSnippetEntry({ id: 'ar1', name: 'Test' });
 		renderEntryRow(asEl(list), entry, 'snippets', false, mockI18n, () => {}, () => {});
@@ -793,10 +805,21 @@ describe('Accessibility: aria-label and no-title attribute regression', () => {
 		const actions = row.children[1]!;
 		const editBtn = actions.children[0]!;
 		const deleteBtn = actions.children[1]!;
-		expect(editBtn._attrs['aria-label']).toBe('Edit');
+		expect(editBtn._attrs['aria-label']).toBe('Edit snippet: Test');
 		expect(editBtn._attrs['title']).toBeUndefined();
 		expect(deleteBtn._attrs['aria-label']).toBe('Delete');
 		expect(deleteBtn._attrs['title']).toBeUndefined();
+	});
+
+	it('renderEntryRow: edit button has protocol-specific aria-label with Cyrillic title', () => {
+		const list = makeEl('div');
+		const entry = makeProtocolEntry({ id: 'ar2', title: 'КТ Грудная клетка' });
+		renderEntryRow(asEl(list), entry, 'protocols', false, mockI18n, () => {}, () => {});
+
+		const row = list.children[0]!;
+		const actions = row.children[1]!;
+		const editBtn = actions.children[0]!;
+		expect(editBtn._attrs['aria-label']).toBe('Edit protocol: КТ Грудная клетка');
 	});
 
 	it('renderSearchResults: result count has aria-live="polite"', () => {

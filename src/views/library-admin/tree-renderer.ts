@@ -43,11 +43,14 @@ export function renderEntryRow(
 ): void {
 	const row = list.createDiv({ cls: 'rp-admin-entry' });
 	const entryTitle = 'title' in entry ? entry.title : entry.name;
+	const editAriaLabel = section === 'snippets'
+		? t('admin.editSnippet', { name: entryTitle })
+		: t('admin.editProtocol', { title: entryTitle });
 	const infoAttrs: Record<string, string> = {};
 	if (onEdit) {
 		infoAttrs['tabindex'] = '0';
 		infoAttrs['role'] = 'button';
-		infoAttrs['aria-label'] = t('admin.edit') + ' ' + entryTitle;
+		infoAttrs['aria-label'] = editAriaLabel;
 	}
 	const info = row.createDiv({ cls: 'rp-admin-entry-info', attr: infoAttrs });
 	const nameEl = info.createEl('span', { cls: 'rp-admin-entry-name' });
@@ -73,7 +76,7 @@ export function renderEntryRow(
 
 	const actions = row.createDiv({ cls: 'rp-admin-entry-actions' });
 	if (onEdit) {
-		const editBtn = actions.createEl('button', { text: t('admin.edit'), cls: 'rp-admin-btn rp-admin-btn-edit', attr: { 'aria-label': t('admin.edit') } });
+		const editBtn = actions.createEl('button', { text: t('admin.edit'), cls: 'rp-admin-btn rp-admin-btn-edit', attr: { 'aria-label': editAriaLabel } });
 		editBtn.addEventListener('click', () => { onEdit(entry); });
 	}
 	if (onDelete) {
