@@ -295,10 +295,10 @@
   },
   "protocolRunner": {
     "legacyLoopRuntime": "Encountered a deprecated loop-start/loop-end node. The canvas should have been rejected by the validator; if you see this message, this is a bug — please contact the plugin author.",
-    "stepBack": "Go back one step",
-    "stepRedo": "Redo",
+    "stepBack": "Go back one step (Ctrl+←)",
+    "stepRedo": "Redo (Ctrl+→)",
     "stepSkip": "Skip this question",
-    "closeProtocol": "Close protocol",
+    "closeProtocol": "Close protocol (Esc)",
     "progressLabel": "Protocol progress {percent}%",
     "starting": "Starting protocol…",
     "processing": "Processing…",

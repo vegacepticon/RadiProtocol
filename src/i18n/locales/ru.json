@@ -295,10 +295,10 @@
   },
   "protocolRunner": {
     "legacyLoopRuntime": "Обнаружен устаревший узел loop-start/loop-end. Канвас должен быть отклонён validator-ом; если вы видите это сообщение — это программная ошибка, сообщите автору плагина.",
-    "stepBack": "Вернуться на шаг назад",
-    "stepRedo": "Повторить",
+    "stepBack": "Вернуться на шаг назад (Ctrl+←)",
+    "stepRedo": "Повторить (Ctrl+→)",
     "stepSkip": "Пропустить этот вопрос",
-    "closeProtocol": "Закрыть протокол",
+    "closeProtocol": "Закрыть протокол (Esc)",
     "progressLabel": "Прогресс протокола {percent}%",
     "starting": "Запуск протокола…",
     "processing": "Обработка…",
