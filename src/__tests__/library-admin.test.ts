@@ -378,6 +378,35 @@ describe('LibraryAdminService', () => {
     expect(newEntry.category).toBe('Old Cat');
   });
 
+  it('deleteDirectory removes an empty folder', async () => {
+    fs.mkdirSync(path.join(repo, 'snippets', 'empty'), { recursive: true });
+
+    const ok = await service.deleteDirectory('snippets', 'snippets/empty');
+
+    expect(ok).toBe(true);
+    expect(fs.existsSync(path.join(repo, 'snippets', 'empty'))).toBe(false);
+  });
+
+  it('deleteDirectory removes a non-empty folder child-first', async () => {
+    fs.mkdirSync(path.join(repo, 'snippets', 'filled', 'nested'), { recursive: true });
+    fs.writeFileSync(path.join(repo, 'snippets', 'filled', 'nested', 'snippet.json'), JSON.stringify({ name: 'Snippet' }));
+
+    const ok = await service.deleteDirectory('snippets', 'snippets/filled');
+
+    expect(ok).toBe(true);
+    expect(fs.existsSync(path.join(repo, 'snippets', 'filled'))).toBe(false);
+  });
+
+  it('deleteDirectory ignores technical manifest files when deleting otherwise visible-empty folders', async () => {
+    fs.mkdirSync(path.join(repo, 'snippets', 'manifest-only'), { recursive: true });
+    fs.writeFileSync(path.join(repo, 'snippets', 'manifest-only', 'library-manifest.json'), JSON.stringify({ installed: [] }));
+
+    const ok = await service.deleteDirectory('snippets', 'snippets/manifest-only');
+
+    expect(ok).toBe(true);
+    expect(fs.existsSync(path.join(repo, 'snippets', 'manifest-only'))).toBe(false);
+  });
+
   it('importSnippetFromVault still produces Latin slug from Cyrillic category', async () => {
     await service.importSnippetFromVault(
       JSON.stringify({ name: 'Atelectasis', template: 'Atelectasis {{side}}', placeholders: [] }),

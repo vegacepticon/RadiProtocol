@@ -384,7 +384,6 @@ export class LibraryAdminService {
     }
   }
 
-  /** Delete an empty directory under snippets/ or protocols/. */
   async deleteDirectory(section: LibraryAdminSection, dirPath: string): Promise<boolean> {
     ensureModule(nodeFs, 'fs');
     const fs = nodeFs as typeof import('fs');
@@ -395,6 +394,7 @@ export class LibraryAdminService {
       if (!fs.existsSync(fullPath) || !fs.statSync(fullPath).isDirectory()) {
         throw new Error(this.t('admin.directoryNotFound'));
       }
+      this.deleteDirectoryContents(fullPath);
       fs.rmdirSync(fullPath);
       await this.regenerateIndexes();
       new Notice(this.t('admin.directoryDeleted'));
@@ -870,6 +870,24 @@ export class LibraryAdminService {
       return JSON.parse(fs.readFileSync(filePath, 'utf-8'));
     } catch {
       return null;
+    }
+  }
+
+  private deleteDirectoryContents(dir: string): void {
+    ensureModule(nodeFs, 'fs');
+    ensureModule(nodePath, 'path');
+    const fs = nodeFs as typeof import('fs');
+    const path = nodePath as typeof import('path');
+    const children = fs.readdirSync(dir, { withFileTypes: true })
+      .sort((a, b) => a.name.localeCompare(b.name, 'ru'));
+    for (const child of children) {
+      const childPath = path.join(dir, child.name);
+      if (child.isDirectory()) {
+        this.deleteDirectoryContents(childPath);
+        fs.rmdirSync(childPath);
+      } else {
+        fs.unlinkSync(childPath);
+      }
     }
   }
 
