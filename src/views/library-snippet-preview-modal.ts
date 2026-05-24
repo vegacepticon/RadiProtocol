@@ -185,7 +185,6 @@ export class LibrarySnippetPreviewModal extends Modal {
   private resizePreview(): void {
     if (!this.previewTextarea) return;
     const scrollHeight = this.previewTextarea.scrollHeight;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    (this.previewTextarea as any).style.height = `${Math.max(160, scrollHeight)}px`;
+    this.previewTextarea.style.height = `${Math.max(160, scrollHeight)}px`;
   }
 }
