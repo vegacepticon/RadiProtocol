@@ -390,6 +390,58 @@ describe('renderFolderTile', () => {
 		expect(openBtn._attrs['aria-label']).toBe('Open folder Грудная клетка');
 		expect(openBtn._attrs['aria-label']).not.toContain('chest');
 	});
+
+	it('open button has tabindex=0 and role=button', () => {
+		const grid = makeEl('div');
+		const node = makeNode({ name: 'gm', displayName: 'ГМ', path: 'snippets/gm' });
+		renderFolderTile(asEl(grid), node, mockI18n, () => {}, () => {}, () => {});
+
+		const tile = grid.children[0]!;
+		const openBtn = tile.children[0]!;
+		expect(openBtn._attrs['tabindex']).toBe('0');
+		expect(openBtn._attrs['role']).toBe('button');
+	});
+
+	it('Enter keydown on open button fires onOpen callback', () => {
+		const grid = makeEl('div');
+		const node = makeNode({ name: 'gm', displayName: 'ГМ', path: 'snippets/gm' });
+		const opens: string[] = [];
+		renderFolderTile(asEl(grid), node, mockI18n, () => { opens.push('open'); }, () => {}, () => {});
+
+		const tile = grid.children[0]!;
+		const openBtn = tile.children[0]!;
+		let prevented = false;
+		openBtn.dispatchEvent({ type: 'keydown', key: 'Enter', preventDefault: () => { prevented = true; } });
+		expect(opens).toEqual(['open']);
+		expect(prevented).toBe(true);
+	});
+
+	it('Space keydown on open button fires onOpen callback', () => {
+		const grid = makeEl('div');
+		const node = makeNode({ name: 'gm', displayName: 'ГМ', path: 'snippets/gm' });
+		const opens: string[] = [];
+		renderFolderTile(asEl(grid), node, mockI18n, () => { opens.push('open'); }, () => {}, () => {});
+
+		const tile = grid.children[0]!;
+		const openBtn = tile.children[0]!;
+		let prevented = false;
+		openBtn.dispatchEvent({ type: 'keydown', key: ' ', preventDefault: () => { prevented = true; } });
+		expect(opens).toEqual(['open']);
+		expect(prevented).toBe(true);
+	});
+
+	it('other keys on open button do not fire onOpen', () => {
+		const grid = makeEl('div');
+		const node = makeNode({ name: 'gm', displayName: 'ГМ', path: 'snippets/gm' });
+		const opens: string[] = [];
+		renderFolderTile(asEl(grid), node, mockI18n, () => { opens.push('open'); }, () => {}, () => {});
+
+		const tile = grid.children[0]!;
+		const openBtn = tile.children[0]!;
+		openBtn.dispatchEvent({ type: 'keydown', key: 'Tab', preventDefault: () => {} });
+		openBtn.dispatchEvent({ type: 'keydown', key: 'Escape', preventDefault: () => {} });
+		expect(opens).toEqual([]);
+	});
 });
 
 // ─── renderEntryRow ───────────────────────────────────────────────────────
