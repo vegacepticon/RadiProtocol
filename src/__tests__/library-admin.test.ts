@@ -127,26 +127,105 @@ describe('LibraryAdminService', () => {
     expect(result.errors).toContain('Missing file: snippets/missing-b.json');
   });
 
-  it('pulls origin main with rebase and autostash so local branch state does not hide remote changes', async () => {
+  it('returns git status, diff, branch, untracked, and remote URL helpers', async () => {
     const calls: string[] = [];
     const mockExec = (cmd: string) => {
       calls.push(cmd);
-      if (cmd.includes('fetch')) return '';
-      if (cmd.includes('status')) return '';
-      if (cmd.includes('merge')) return 'Already up to date.';
+      if (cmd.includes('status --short')) return ' M snippets/test.json\n';
+      if (cmd.includes('diff --stat HEAD')) return ' snippets/test.json | 2 +-\n';
+      if (cmd.includes('rev-parse --abbrev-ref')) return 'main';
+      if (cmd.includes('ls-files --others')) return 'snippets/new.json\n';
+      if (cmd.includes('remote get-url')) return 'https://github.com/vegacepticon/RadiProtocol-Library\n';
       return '';
     };
     const svc = new LibraryAdminService(repo, t, mockExec as unknown as typeof import('node:child_process').execSync);
 
-    const result = await svc.gitPull();
+    const statusResult = await svc.gitStatus();
+    expect(statusResult.success).toBe(true);
+    expect(statusResult.output).toContain('snippets/test.json');
 
-    expect(result.success).toBe(true);
-    expect(result.output).toBe('Already up to date.');
-    expect(calls.some(c => c.includes('fetch origin main'))).toBe(true);
-    expect(calls.some(c => c.includes('merge --ff-only origin/main'))).toBe(true);
+    const diffResult = await svc.gitDiffStat();
+    expect(diffResult.success).toBe(true);
+    expect(diffResult.output).toContain('snippets/test.json');
+
+    const branch = await svc.gitBranch();
+    expect(branch).toBe('main');
+
+    const untracked = await svc.gitUntracked();
+    expect(untracked).toContain('snippets/new.json');
+
+    const remote = await svc.getRemoteHttpUrl();
+    expect(remote).toBe('https://github.com/vegacepticon/RadiProtocol-Library');
   });
 
-  it('blocks pull when working tree is dirty and reports status', async () => {
+  it('gitCommitAndPushBranch stages, commits and pushes', async () => {
+    const calls: string[] = [];
+    const mockExec = (cmd: string) => {
+      calls.push(cmd);
+      if (cmd.includes('checkout -b')) return `Switched to branch 'test-branch'`;
+      if (cmd.includes('add -A')) return '';
+      if (cmd.includes('commit')) return '[test-branch abc1234] msg';
+      if (cmd.includes('push')) return '';
+      if (cmd.includes('remote get-url')) return 'https://github.com/vegacepticon/RadiProtocol-Library\n';
+      if (cmd.includes('rev-parse') && cmd.includes('--short')) return 'abc1234';
+      return '';
+    };
+    const svc = new LibraryAdminService(repo, t, mockExec as unknown as typeof import('node:child_process').execSync);
+
+    const result = await svc.gitCommitAndPushBranch('test-branch', 'msg');
+
+    expect(result.success).toBe(true);
+    expect(result.branchUrl).toBe('https://github.com/vegacepticon/RadiProtocol-Library/compare/test-branch');
+    expect(calls.some(c => c.includes('checkout -b test-branch'))).toBe(true);
+    expect(calls.some(c => c.includes('add -A'))).toBe(true);
+    expect(calls.some(c => c.includes('commit -m'))).toBe(true);
+    expect(calls.some(c => c.includes('push -u origin test-branch'))).toBe(true);
+  });
+
+  it('gitCommitAndPushBranch returns branchUrl with ssh remote converted to https', async () => {
+    const mockExec = (cmd: string) => {
+      if (cmd.includes('checkout -b')) return '';
+      if (cmd.includes('add -A')) return '';
+      if (cmd.includes('commit')) return '';
+      if (cmd.includes('push')) return '';
+      if (cmd.includes('remote get-url')) return 'git@github.com:vegacepticon/RadiProtocol-Library.git\n';
+      return '';
+    };
+    const svc = new LibraryAdminService(repo, t, mockExec as unknown as typeof import('node:child_process').execSync);
+
+    const result = await svc.gitCommitAndPushBranch('b', 'm');
+    expect(result.success).toBe(true);
+    expect(result.branchUrl).toBe('https://github.com/vegacepticon/RadiProtocol-Library/compare/b');
+  });
+
+  it('gitCommitAndPushBranch returns hint when checkout fails', async () => {
+    const mockExec = (cmd: string) => {
+      if (cmd.includes('checkout')) throw Object.assign(new Error('branch exists'), { stderr: 'already exists' });
+      return '';
+    };
+    const svc = new LibraryAdminService(repo, t, mockExec as unknown as typeof import('node:child_process').execSync);
+
+    const result = await svc.gitCommitAndPushBranch('b', 'm');
+    expect(result.success).toBe(false);
+    expect(result.hint).toBe('admin.sendBranchCheckoutFailed');
+  });
+
+  it('gitCommitAndPushBranch returns hint when push fails', async () => {
+    const mockExec = (cmd: string) => {
+      if (cmd.includes('checkout')) return '';
+      if (cmd.includes('add')) return '';
+      if (cmd.includes('commit')) return '';
+      if (cmd.includes('push')) throw Object.assign(new Error('auth'), { stderr: '403' });
+      return '';
+    };
+    const svc = new LibraryAdminService(repo, t, mockExec as unknown as typeof import('node:child_process').execSync);
+
+    const result = await svc.gitCommitAndPushBranch('b', 'm');
+    expect(result.success).toBe(false);
+    expect(result.hint).toBe('admin.sendPushFailed');
+  });
+
+  it('pull origin main blocks on dirty tree and reports status', async () => {
     const calls: string[] = [];
     const mockExec = (cmd: string) => {
       calls.push(cmd);

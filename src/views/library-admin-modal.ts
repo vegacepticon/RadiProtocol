@@ -11,7 +11,7 @@ import { renderBreadcrumb } from './library-admin/breadcrumb';
 import { renderTreeSearch } from './library-admin/search';
 import { renderDirectory, renderSearchResults } from './library-admin/tree-renderer';
 import {
-	UpdateInstructionsModal,
+	SendToRemoteModal,
 	TextPromptModal,
 	TypeConfirmModal,
 	ImportSnippetPickerModal,
@@ -84,7 +84,7 @@ export class LibraryAdminModal extends Modal {
 		// Title
 		contentEl.createEl('h2', { text: this.plugin.i18n.t('admin.title') });
 
-		// Toolbar: Reset to remote + Update instructions
+		// Toolbar: Reset to remote + Send to remote
 		const toolbar = contentEl.createDiv({ cls: 'rp-admin-toolbar' });
 
 		new Setting(toolbar)
@@ -92,8 +92,8 @@ export class LibraryAdminModal extends Modal {
 				.setButtonText(this.plugin.i18n.t('admin.resetToRemote'))
 				.onClick(() => { void this.handleResetToRemote(); }))
 			.addButton(btn => btn
-				.setButtonText(this.plugin.i18n.t('admin.updateInstructions'))
-				.onClick(() => { void this.handleShowUpdateInstructions(); }));
+				.setButtonText(this.plugin.i18n.t('admin.sendToRemote'))
+				.onClick(() => { void this.handleSendToRemote(); }));
 
 		// Status area
 		this.statusEl = contentEl.createDiv({ cls: 'rp-admin-status' });
@@ -575,8 +575,9 @@ export class LibraryAdminModal extends Modal {
 		this.refreshAdmin();
 	}
 
-	private handleShowUpdateInstructions(): void {
-		const modal = new UpdateInstructionsModal(this.app, this.plugin.i18n.t.bind(this.plugin.i18n));
+	private handleSendToRemote(): void {
+		if (!this.admin) return;
+		const modal = new SendToRemoteModal(this.app, this.admin, this.plugin.settings.libraryRepoPath ?? '', this.plugin.i18n.t.bind(this.plugin.i18n));
 		modal.open();
 	}
 

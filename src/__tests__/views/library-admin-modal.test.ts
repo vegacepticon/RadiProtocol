@@ -127,7 +127,7 @@ vi.mock('obsidian', () => {
 });
 
 vi.mock('../../views/library-admin/helper-modals', () => ({
-	UpdateInstructionsModal: class { constructor() {} open() {} },
+	SendToRemoteModal: class { constructor() {} open() {} },
 	TextPromptModal: { prompt: vi.fn().mockResolvedValue(null) },
 	TypeConfirmModal: { prompt: vi.fn().mockResolvedValue(false) },
 	ImportSnippetPickerModal: class { constructor() {} open() {} },
@@ -176,7 +176,7 @@ const mockI18n = (key: string, _params?: Record<string, string>): string => {
 		'admin.snippetsTab': 'Snippets',
 		'admin.protocolsTab': 'Protocols',
 		'admin.resetToRemote': 'Reset to remote',
-		'admin.updateInstructions': 'Update instructions',
+		'admin.sendToRemote': 'Send to remote',
 		'admin.maintainerModeDisabled': 'Maintainer mode is not enabled.',
 		'admin.enableInSettings': 'Enable maintainer mode.',
 		'admin.noRepoPath': 'No repo path.',
