@@ -51,7 +51,7 @@ output. Configuration in `fields`:
 - `answerText` — the literal text appended on selection.
 - `displayLabel` *(optional)* — overrides the button caption shown at the
   question. The displayLabel is mirrored onto the incoming edge label for
-  canvas-side readability.
+  visual graph readability.
 - `separator` *(optional, `"space"` or `"newline"`)* — overrides the global
   text separator for the chunk this answer contributes.
 
@@ -134,10 +134,9 @@ the protocol along the exit edge.
 
 ## Snippet binding
 
-Snippets live under your configured snippet root (default
-`.radiprotocol/snippets`). The plugin's snippet manager exposes CRUD
-operations for both JSON and MD snippets and keeps references in sync
-when you rename or move snippets/folders.
+Snippets live under your configured snippet root (default `Snippets`). The
+plugin's snippet manager exposes CRUD operations for both JSON and MD snippets
+and keeps references in sync when you rename or move snippets/folders.
 
 When you bind a snippet node to a folder, the runner offers a tree picker
 rooted at that folder. When you bind it to a file, the runner inserts that

@@ -8,8 +8,8 @@ This document promotes implementation-relevant design notes out of the local `.p
 
 Snippet nodes can be bound either to a concrete snippet file or to a snippet directory:
 
-- File-bound snippet nodes carry `radiprotocol_snippetPath` and bypass the picker. The runner goes directly to snippet fill/insert handling.
-- Directory-bound snippet nodes carry `radiprotocol_snippetFolderPath` or no concrete file path. The runner opens the snippet tree picker rooted at the configured directory.
+- File-bound snippet nodes carry `fields.snippetPath` and bypass the picker. The runner goes directly to snippet fill/insert handling.
+- Directory-bound snippet nodes carry `fields.subfolderPath` or no concrete file path. The runner opens the snippet tree picker rooted at the configured directory.
 - UI components should preserve this distinction consistently in editor forms, snippet manager actions, graph parsing, validation, and tests.
 - Shared Pattern H: user-visible snippet binding controls should present folder/file choices through Obsidian-native picker UI, not manual raw-path editing where avoidable.
 
@@ -17,10 +17,10 @@ Snippet nodes can be bound either to a concrete snippet file or to a snippet dir
 
 Answer node text and incoming edge labels must stay synchronized without corrupting user edits:
 
-- Canvas edge labels can mirror answer node labels to keep the visual graph readable.
-- Reconciliation logic should be pure where possible, then applied through a service/live-editor boundary.
-- Open editor forms must not overwrite the field currently being edited by the user. If an inbound canvas update targets a focused field, stash/defer it rather than clobbering the input.
-- Use re-entrancy guards (`queueMicrotask` where needed) around live canvas/editor synchronization to avoid cascading renders inside the same event stack.
+- Protocol editor edge labels can mirror answer node labels to keep the visual graph readable.
+- Reconciliation logic should be pure where possible, then applied through the protocol document store/editor boundary.
+- Open editor forms must not overwrite the field currently being edited by the user. If an inbound protocol update targets a focused field, stash/defer it rather than clobbering the input.
+- Use re-entrancy guards (`queueMicrotask` where needed) around live protocol/editor synchronization to avoid cascading renders inside the same event stack.
 
 ## Loop node exit edge convention
 
