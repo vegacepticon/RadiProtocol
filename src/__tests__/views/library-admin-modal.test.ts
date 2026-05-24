@@ -186,6 +186,7 @@ const mockI18n = (key: string, _params?: Record<string, string>): string => {
 		'admin.importSnippet': 'Import snippet',
 		'admin.importSnippetDesc': 'Import a snippet.',
 		'admin.importSnippetBtn': 'Import',
+		'confirm.cancel': 'Cancel',
 	};
 	return map[key] ?? key;
 };
@@ -433,6 +434,39 @@ describe('LibraryAdminModal — folder rename navigation', () => {
 
 		expect(renameDirectory).toHaveBeenCalledWith('snippets', 'snippets/chest/old-name', 'New Name');
 		expect(refreshAdmin).toHaveBeenCalledOnce();
+		// drillPath should still be ['chest'] — rename of a sibling should not change position
 		expect((modal as any).drillPath).toEqual(['chest']);
+	});
+});
+
+describe('LibraryAdminModal — cancel button localization', () => {
+	it('uses the translated cancel label for the create folder prompt', async () => {
+		const plugin = makePlugin();
+		const app = makeApp();
+		const modal = new LibraryAdminModal(app, plugin);
+		(modal as any).admin = { createDirectory: vi.fn() };
+		vi.mocked(TextPromptModal.prompt).mockResolvedValueOnce(null);
+
+		await (modal as any).handleCreateDirectory('snippets');
+
+		expect(TextPromptModal.prompt).toHaveBeenCalledWith(
+			expect.any(Object),
+			expect.objectContaining({ cancelText: 'Cancel' }),
+		);
+	});
+
+	it('uses the translated cancel label for the rename folder prompt', async () => {
+		const plugin = makePlugin();
+		const app = makeApp();
+		const modal = new LibraryAdminModal(app, plugin);
+		(modal as any).admin = { renameDirectory: vi.fn() };
+		vi.mocked(TextPromptModal.prompt).mockResolvedValueOnce(null);
+
+		await (modal as any).handleRenameDirectory('snippets', 'snippets/chest', 'Chest');
+
+		expect(TextPromptModal.prompt).toHaveBeenCalledWith(
+			expect.any(Object),
+			expect.objectContaining({ cancelText: 'Cancel' }),
+		);
 	});
 });

@@ -486,7 +486,7 @@ export class LibraryAdminModal extends Modal {
 			title: this.plugin.i18n.t('admin.createFolder'),
 			label: this.plugin.i18n.t('admin.createFolderPrompt'),
 			confirmText: this.plugin.i18n.t('admin.createFolder'),
-			cancelText: this.plugin.i18n.t('common.cancel'),
+			cancelText: this.plugin.i18n.t('confirm.cancel'),
 		});
 		if (name === null) return;
 		const parentPath = this.currentDirectoryPath(section);
@@ -501,7 +501,7 @@ export class LibraryAdminModal extends Modal {
 			label: this.plugin.i18n.t('admin.renameFolderPrompt'),
 			initialValue: currentDisplayName,
 			confirmText: this.plugin.i18n.t('admin.rename'),
-			cancelText: this.plugin.i18n.t('common.cancel'),
+			cancelText: this.plugin.i18n.t('confirm.cancel'),
 		});
 		if (name === null) return;
 		const renamed = await this.admin.renameDirectory(section, dirPath, name);
