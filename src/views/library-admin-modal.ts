@@ -506,7 +506,6 @@ export class LibraryAdminModal extends Modal {
 		if (name === null) return;
 		const renamed = await this.admin.renameDirectory(section, dirPath, name);
 		if (renamed) {
-			this.drillPath = renamed.path.split('/').filter(Boolean).slice(1);
 			void this.refreshAdmin();
 		}
 	}
