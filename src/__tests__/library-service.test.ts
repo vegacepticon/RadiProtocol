@@ -132,6 +132,23 @@ describe('LibraryService', () => {
       expect(service.installSnippet).toHaveBeenNthCalledWith(2, entries[1]);
       expect(service.installSnippet).toHaveBeenNthCalledWith(3, entries[2]);
     });
+
+    it('skips library-manifest.json entries silently', async () => {
+      const entries: LibrarySnippetEntry[] = [
+        { id: 'a', name: 'A', category: 'General', path: 'a.json', description: 'A' },
+        { id: 'manifest', name: 'manifest', category: 'General', path: 'Library/library-manifest.json', description: 'Manifest' },
+        { id: 'b', name: 'B', category: 'General', path: 'b.json', description: 'B' },
+      ];
+      vi.spyOn(service, 'installSnippet')
+        .mockResolvedValueOnce(true)
+        .mockResolvedValueOnce(true);
+
+      const result = await service.installSnippets(entries);
+
+      expect(result).toEqual({ installed: 2, failed: 0 });
+      expect(service.installSnippet).toHaveBeenNthCalledWith(1, entries[0]);
+      expect(service.installSnippet).toHaveBeenNthCalledWith(2, entries[2]);
+    });
   });
 
   describe('readManifest / writeManifest', () => {

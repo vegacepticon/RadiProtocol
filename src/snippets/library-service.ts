@@ -132,6 +132,7 @@ export class LibraryService {
     let installed = 0;
     let failed = 0;
     for (const entry of entries) {
+      if (entry.path.endsWith('library-manifest.json')) continue;
       const ok = await this.installSnippet(entry);
       if (ok) installed += 1;
       else failed += 1;
