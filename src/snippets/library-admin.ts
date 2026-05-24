@@ -384,7 +384,6 @@ export class LibraryAdminService {
     }
   }
 
-  /** Delete an empty directory under snippets/ or protocols/. */
   async deleteDirectory(section: LibraryAdminSection, dirPath: string): Promise<boolean> {
     ensureModule(nodeFs, 'fs');
     const fs = nodeFs as typeof import('fs');
@@ -395,6 +394,7 @@ export class LibraryAdminService {
       if (!fs.existsSync(fullPath) || !fs.statSync(fullPath).isDirectory()) {
         throw new Error(this.t('admin.directoryNotFound'));
       }
+      this.deleteDirectoryContents(fullPath);
       fs.rmdirSync(fullPath);
       await this.regenerateIndexes();
       new Notice(this.t('admin.directoryDeleted'));
@@ -637,14 +637,77 @@ export class LibraryAdminService {
     };
   }
 
-  /** Get git status. */
+  /** Get git status (short format). */
   async gitStatus(): Promise<{ success: boolean; output: string }> {
     return this.runGit('status', '--short');
   }
 
-  /** Copy git commit & push commands to clipboard. */
-  getGitPushCommands(): string {
-    return `cd ${this.repoPath} && git add . && git commit -m "update library" && git push origin main`;
+  /** Get a short diff summary (stat) of staged+unstaged changes. */
+  async gitDiffStat(): Promise<{ success: boolean; output: string }> {
+    return this.runGit('diff', '--stat', 'HEAD');
+  }
+
+  /** Get the current branch name. Returns empty string on failure. */
+  async gitBranch(): Promise<string> {
+    const result = await this.runGit('rev-parse', '--abbrev-ref', 'HEAD');
+    return result.success ? result.output.trim() : '';
+  }
+
+  /** Get list of untracked files. */
+  async gitUntracked(): Promise<string[]> {
+    const result = await this.runGit('ls-files', '--others', '--exclude-standard');
+    if (!result.success) return [];
+    return result.output.split('\n').map(l => l.trim()).filter(Boolean);
+  }
+
+  /** Stage all changes, commit, and push to origin on a new branch. */
+  async gitCommitAndPushBranch(branchName: string, commitMessage: string): Promise<{
+    success: boolean;
+    output: string;
+    branchUrl?: string;
+    hint?: string;
+  }> {
+    const checkout = await this.runGit('checkout', '-b', branchName);
+    if (!checkout.success) {
+      return { success: false, output: checkout.output, hint: this.t('admin.sendBranchCheckoutFailed') };
+    }
+
+    const add = await this.runGit('add', '-A');
+    if (!add.success) {
+      return { success: false, output: add.output, hint: this.t('admin.sendStageFailed') };
+    }
+
+    const commit = await this.runGit('commit', '-m', commitMessage);
+    if (!commit.success) {
+      return { success: false, output: commit.output, hint: this.t('admin.sendCommitFailed') };
+    }
+
+    const push = await this.runGit('push', '-u', 'origin', branchName);
+    if (!push.success) {
+      return { success: false, output: push.output, hint: this.t('admin.sendPushFailed') };
+    }
+
+    const remoteUrl = await this.getRemoteHttpUrl();
+    return {
+      success: true,
+      output: commit.output,
+      branchUrl: remoteUrl ? `${remoteUrl}/compare/${branchName}` : undefined,
+    };
+  }
+
+  /** Get the HTTPS remote URL for the origin, or null if unavailable. */
+  async getRemoteHttpUrl(): Promise<string | null> {
+    const result = await this.runGit('remote', 'get-url', 'origin');
+    if (!result.success) return null;
+    let url = result.output.trim();
+    if (url.endsWith('.git')) url = url.slice(0, -4);
+    if (url.startsWith('git@github.com:')) {
+      url = url.replace('git@github.com:', 'https://github.com/');
+    } else if (url.startsWith('ssh://git@github.com/')) {
+      url = url.replace('ssh://git@github.com/', 'https://github.com/');
+    }
+    if (!url.startsWith('https://')) return null;
+    return url;
   }
 
   // ─── Validation ─────────────────────────────────────────────────────
@@ -807,6 +870,24 @@ export class LibraryAdminService {
       return JSON.parse(fs.readFileSync(filePath, 'utf-8'));
     } catch {
       return null;
+    }
+  }
+
+  private deleteDirectoryContents(dir: string): void {
+    ensureModule(nodeFs, 'fs');
+    ensureModule(nodePath, 'path');
+    const fs = nodeFs as typeof import('fs');
+    const path = nodePath as typeof import('path');
+    const children = fs.readdirSync(dir, { withFileTypes: true })
+      .sort((a, b) => a.name.localeCompare(b.name, 'ru'));
+    for (const child of children) {
+      const childPath = path.join(dir, child.name);
+      if (child.isDirectory()) {
+        this.deleteDirectoryContents(childPath);
+        fs.rmdirSync(childPath);
+      } else {
+        fs.unlinkSync(childPath);
+      }
     }
   }
 

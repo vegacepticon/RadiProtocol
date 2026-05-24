@@ -11,7 +11,8 @@ import { renderBreadcrumb } from './library-admin/breadcrumb';
 import { renderTreeSearch } from './library-admin/search';
 import { renderDirectory, renderSearchResults } from './library-admin/tree-renderer';
 import {
-	UpdateInstructionsModal,
+	ConfirmModal,
+	SendToRemoteModal,
 	TextPromptModal,
 	TypeConfirmModal,
 	ImportSnippetPickerModal,
@@ -84,7 +85,7 @@ export class LibraryAdminModal extends Modal {
 		// Title
 		contentEl.createEl('h2', { text: this.plugin.i18n.t('admin.title') });
 
-		// Toolbar: Reset to remote + Update instructions
+		// Toolbar: Reset to remote + Send to remote
 		const toolbar = contentEl.createDiv({ cls: 'rp-admin-toolbar' });
 
 		new Setting(toolbar)
@@ -92,8 +93,8 @@ export class LibraryAdminModal extends Modal {
 				.setButtonText(this.plugin.i18n.t('admin.resetToRemote'))
 				.onClick(() => { void this.handleResetToRemote(); }))
 			.addButton(btn => btn
-				.setButtonText(this.plugin.i18n.t('admin.updateInstructions'))
-				.onClick(() => { void this.handleShowUpdateInstructions(); }));
+				.setButtonText(this.plugin.i18n.t('admin.sendToRemote'))
+				.onClick(() => { void this.handleSendToRemote(); }));
 
 		// Status area
 		this.statusEl = contentEl.createDiv({ cls: 'rp-admin-status' });
@@ -381,13 +382,15 @@ export class LibraryAdminModal extends Modal {
 		modal.open();
 	}
 
-	private async handleDeleteSnippet(entry: LibrarySnippetEntry): Promise<void> {
+	private handleDeleteSnippet(entry: LibrarySnippetEntry): void {
 		if (!this.admin) return;
-		if (!confirm(this.plugin.i18n.t('admin.confirmDeleteSnippet', { name: entry.name }))) return;
-		const ok = await this.admin.deleteSnippet(entry);
-		if (ok) {
-			void this.refreshAdmin();
-		}
+		new ConfirmModal(
+			this.app,
+			this.plugin.i18n.t('admin.confirmDeleteSnippet', { name: entry.name }),
+			() => { void this.admin!.deleteSnippet(entry).then(ok => { if (ok) void this.refreshAdmin(); }); },
+			() => {},
+			this.plugin.i18n.t.bind(this.plugin.i18n),
+		).open();
 	}
 
 	// ─── Protocol actions ───────────────────────────────────────────────
@@ -469,13 +472,15 @@ export class LibraryAdminModal extends Modal {
 		modal.open();
 	}
 
-	private async handleDeleteProtocol(entry: ProtocolLibraryEntry): Promise<void> {
+	private handleDeleteProtocol(entry: ProtocolLibraryEntry): void {
 		if (!this.admin) return;
-		if (!confirm(this.plugin.i18n.t('admin.confirmDeleteProtocol', { title: entry.title }))) return;
-		const ok = await this.admin.deleteProtocol(entry);
-		if (ok) {
-			void this.refreshAdmin();
-		}
+		new ConfirmModal(
+			this.app,
+			this.plugin.i18n.t('admin.confirmDeleteProtocol', { title: entry.title }),
+			() => { void this.admin!.deleteProtocol(entry).then(ok => { if (ok) void this.refreshAdmin(); }); },
+			() => {},
+			this.plugin.i18n.t.bind(this.plugin.i18n),
+		).open();
 	}
 
 	// ─── Directory actions ──────────────────────────────────────────────
@@ -486,7 +491,7 @@ export class LibraryAdminModal extends Modal {
 			title: this.plugin.i18n.t('admin.createFolder'),
 			label: this.plugin.i18n.t('admin.createFolderPrompt'),
 			confirmText: this.plugin.i18n.t('admin.createFolder'),
-			cancelText: this.plugin.i18n.t('common.cancel'),
+			cancelText: this.plugin.i18n.t('confirm.cancel'),
 		});
 		if (name === null) return;
 		const parentPath = this.currentDirectoryPath(section);
@@ -501,25 +506,32 @@ export class LibraryAdminModal extends Modal {
 			label: this.plugin.i18n.t('admin.renameFolderPrompt'),
 			initialValue: currentDisplayName,
 			confirmText: this.plugin.i18n.t('admin.rename'),
-			cancelText: this.plugin.i18n.t('common.cancel'),
+			cancelText: this.plugin.i18n.t('confirm.cancel'),
 		});
 		if (name === null) return;
 		const renamed = await this.admin.renameDirectory(section, dirPath, name);
 		if (renamed) {
-			this.drillPath = renamed.path.split('/').filter(Boolean).slice(1);
 			void this.refreshAdmin();
 		}
 	}
 
-	private async handleDeleteDirectory(section: LibraryAdminSection, dirPath: string): Promise<void> {
+	private handleDeleteDirectory(section: LibraryAdminSection, dirPath: string): void {
 		if (!this.admin) return;
-		if (!confirm(this.plugin.i18n.t('admin.confirmDeleteFolder', { path: dirPath }))) return;
-		const ok = await this.admin.deleteDirectory(section, dirPath);
-		if (ok) {
-			const deletedPath = dirPath.split('/').filter(Boolean).slice(1);
-			if (this.drillPath.join('/') === deletedPath.join('/')) this.drillPath = deletedPath.slice(0, -1);
-			void this.refreshAdmin();
-		}
+		new ConfirmModal(
+			this.app,
+			this.plugin.i18n.t('admin.confirmDeleteFolder', { path: dirPath }),
+			() => {
+				void this.admin!.deleteDirectory(section, dirPath).then(ok => {
+					if (ok) {
+						const deletedPath = dirPath.split('/').filter(Boolean).slice(1);
+						if (this.drillPath.join('/') === deletedPath.join('/')) this.drillPath = deletedPath.slice(0, -1);
+						void this.refreshAdmin();
+					}
+				});
+			},
+			() => {},
+			this.plugin.i18n.t.bind(this.plugin.i18n),
+		).open();
 	}
 
 	private currentDirectoryPath(section: LibraryAdminSection): string {
@@ -575,8 +587,9 @@ export class LibraryAdminModal extends Modal {
 		this.refreshAdmin();
 	}
 
-	private handleShowUpdateInstructions(): void {
-		const modal = new UpdateInstructionsModal(this.app, this.plugin.i18n.t.bind(this.plugin.i18n));
+	private handleSendToRemote(): void {
+		if (!this.admin) return;
+		const modal = new SendToRemoteModal(this.app, this.admin, this.plugin.settings.libraryRepoPath ?? '', this.plugin.i18n.t.bind(this.plugin.i18n));
 		modal.open();
 	}
 

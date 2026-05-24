@@ -383,7 +383,7 @@ export class ProtocolEditorView extends ItemView {
       ? NODE_KIND_DEFAULTS[kind]
       : { kind: null as RPNodeKind | null, fields: {} };
 
-    const text = defaults.text ?? (kind !== null ? this.plugin.i18n.t(`protocolEditor.defaultNodeText.${kind}`) : undefined);
+    const text = defaults.text ?? (kind !== null && kind !== 'start' ? this.plugin.i18n.t(`protocolEditor.defaultNodeText.${kind}`) : undefined);
     return {
       id: nodeUid(),
       kind: defaults.kind,
@@ -547,7 +547,10 @@ export class ProtocolEditorView extends ItemView {
       outputPort.setAttr('aria-label', this.plugin.i18n.t('protocolEditor.outputPortLabel'));
 
       nodeEl.createDiv({ cls: 'rp-protocol-editor-node-kind', text: node.kind ?? this.plugin.i18n.t('protocolEditor.untyped') });
-      nodeEl.createDiv({ cls: 'rp-protocol-editor-node-title', text: nodeTitle(node, this.plugin.i18n.t.bind(this.plugin.i18n)) });
+      const displayTitle = nodeTitle(node, this.plugin.i18n.t.bind(this.plugin.i18n));
+      if (displayTitle !== (node.kind ?? this.plugin.i18n.t('protocolEditor.untyped'))) {
+        nodeEl.createDiv({ cls: 'rp-protocol-editor-node-title', text: displayTitle });
+      }
       const resizeHandle = nodeEl.createDiv({ cls: 'rp-protocol-editor-resize-handle' });
       resizeHandle.setAttr('aria-label', this.plugin.i18n.t('protocolEditor.resizeNodeLabel'));
 
@@ -1668,14 +1671,6 @@ export class ProtocolEditorView extends ItemView {
 
     const body = modal.createDiv({ cls: 'rp-protocol-editor-modal-body' });
 
-    const kindField = body.createDiv({ cls: 'rp-protocol-editor-modal-field' });
-    kindField.createEl('label', { text: t('protocolEditor.kindLabel') });
-    const kindSelect = kindField.createEl('select') as HTMLSelectElement;
-    for (const kind of EDITABLE_NODE_KINDS) {
-      kindSelect.createEl('option', { attr: { value: kind }, text: t(`protocolEditor.nodeKind.${kind}`) });
-    }
-    kindSelect.value = (node.kind !== null && EDITABLE_NODE_KINDS.includes(node.kind)) ? node.kind : 'question';
-
     const textControls: Array<{ key: string; value: () => string | boolean | undefined }> = [];
     const firstEditableField: Array<HTMLInputElement | HTMLTextAreaElement> = [];
     const addInput = (key: string, label: string, value: unknown, multiline = false) => {
@@ -1715,7 +1710,7 @@ export class ProtocolEditorView extends ItemView {
     const addSnippetTargetPicker = (folderValue: unknown, fileValue: unknown) => {
       let selectedFolder = normalizeProtocolEditorSnippetFolderSelection(typeof folderValue === 'string' ? folderValue : '');
       let selectedFile = normalizeProtocolEditorSnippetFolderSelection(typeof fileValue === 'string' ? fileValue : '');
-      const field = body.createDiv({ cls: 'rp-protocol-editor-modal-field' });
+      const field = body.createDiv({ cls: 'rp-protocol-editor-modal-field rp-protocol-editor-snippet-target-field' });
       field.createEl('label', { text: t('protocolEditor.snippetTargetLabel') });
       const folderInput = field.createEl('input', {
         attr: {
@@ -1820,10 +1815,8 @@ export class ProtocolEditorView extends ItemView {
     cancelBtn.addEventListener('click', closeModal);
 
     saveBtn.addEventListener('click', async () => {
-      const nextKind = kindSelect.value as RPNodeKind;
-      const kindChanged = nextKind !== node.kind;
-      const nextFields: Record<string, unknown> = kindChanged ? fieldsForProtocolEditorNodeKind(nextKind) : { ...node.fields };
-      if (!kindChanged) for (const control of textControls) {
+      const nextFields: Record<string, unknown> = { ...node.fields };
+      for (const control of textControls) {
         const value = control.value();
         if (value === undefined) delete nextFields[control.key];
         else nextFields[control.key] = value;
@@ -1831,8 +1824,7 @@ export class ProtocolEditorView extends ItemView {
 
       const updatedNode: ProtocolNodeRecord = {
         ...node,
-        kind: nextKind,
-        color: kindChanged || node.color === undefined ? defaultColorForProtocolEditorNodeKind(nextKind) : node.color,
+        kind: node.kind,
         fields: nextFields,
       };
 

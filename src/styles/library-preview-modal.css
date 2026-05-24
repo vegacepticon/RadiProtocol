@@ -97,11 +97,29 @@
 }
 
 .rp-library-preview-output {
+  display: block;
   width: 100%;
+  max-width: 100%;
   min-height: 160px;
   resize: vertical;
   font-family: var(--font-monospace);
   white-space: pre-wrap;
+  box-sizing: border-box;
+  padding: var(--size-4-2);
+  border: 1px solid var(--background-modifier-border);
+  outline: none;
+  background: var(--background-primary);
+  transition:
+    background-color 120ms ease,
+    border-color 120ms ease,
+    box-shadow 120ms ease;
+}
+
+.rp-library-preview-output:focus,
+.rp-library-preview-output:focus-visible {
+  border-color: var(--background-modifier-border-focus);
+  outline: none;
+  box-shadow: inset 0 0 0 1px var(--background-modifier-border-focus);
 }
 
 .rp-library-preview-button-row {
