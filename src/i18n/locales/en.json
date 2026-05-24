@@ -173,7 +173,8 @@
     "openFolder": "Open folder {name}",
     "selectSnippet": "Select snippet {name}",
     "selectFolderAria": "Select current folder",
-    "crumbAria": "Go to {name}"
+    "crumbAria": "Go to {name}",
+    "breadcrumbNavLabel": "Snippet folders"
   },
   "snippetPicker": {
     "goToRoot": "Go to root"

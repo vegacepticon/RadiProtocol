@@ -173,7 +173,8 @@
     "openFolder": "Открыть папку {name}",
     "selectSnippet": "Выбрать сниппет {name}",
     "selectFolderAria": "Выбрать текущую папку",
-    "crumbAria": "Перейти к {name}"
+    "crumbAria": "Перейти к {name}",
+    "breadcrumbNavLabel": "Папки сниппетов"
   },
   "snippetPicker": {
     "goToRoot": "Перейти к корню"
