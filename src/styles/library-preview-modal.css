@@ -102,6 +102,13 @@
   resize: vertical;
   font-family: var(--font-monospace);
   white-space: pre-wrap;
+  box-sizing: border-box;
+  padding: var(--size-4-2);
+  border: 1px solid var(--background-modifier-border);
+  background: var(--background-primary);
+  transition:
+    background-color 120ms ease,
+    border-color 120ms ease;
 }
 
 .rp-library-preview-button-row {
