@@ -99,10 +99,11 @@ export class LibraryAdminModal extends Modal {
 		this.statusEl = contentEl.createDiv({ cls: 'rp-admin-status' });
 
 		// Tab selector
-		const tabContainer = contentEl.createDiv({ cls: 'rp-admin-tabs' });
+		const tabContainer = contentEl.createDiv({ cls: 'rp-admin-tabs', attr: { role: 'tablist' } });
 		const snippetTab = tabContainer.createEl('button', {
 			text: this.plugin.i18n.t('admin.snippetsTab'),
 			cls: 'rp-admin-tab' + (this.currentTab === 'snippets' ? ' rp-admin-tab-active' : ''),
+			attr: { role: 'tab', 'aria-selected': String(this.currentTab === 'snippets') },
 		});
 		snippetTab.addEventListener('click', () => {
 			this.currentTab = 'snippets';
@@ -114,6 +115,7 @@ export class LibraryAdminModal extends Modal {
 		const protocolTab = tabContainer.createEl('button', {
 			text: this.plugin.i18n.t('admin.protocolsTab'),
 			cls: 'rp-admin-tab' + (this.currentTab === 'protocols' ? ' rp-admin-tab-active' : ''),
+			attr: { role: 'tab', 'aria-selected': String(this.currentTab === 'protocols') },
 		});
 		protocolTab.addEventListener('click', () => {
 			this.currentTab = 'protocols';
@@ -140,6 +142,9 @@ export class LibraryAdminModal extends Modal {
 		});
 		const activeIdx = this.currentTab === 'snippets' ? 0 : 1;
 		tabs[activeIdx]?.addClass('rp-admin-tab-active');
+		tabs.forEach((tab, idx) => {
+			tab.setAttr('aria-selected', String(idx === activeIdx));
+		});
 
 		if (this.currentTab === 'snippets') {
 			this.renderSnippetsTab(contentArea);
