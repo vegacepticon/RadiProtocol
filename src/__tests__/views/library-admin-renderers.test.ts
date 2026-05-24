@@ -160,6 +160,7 @@ const mockI18n = (key: string, params?: Record<string, string>): string => {
 		'admin.protocolMeta': params ? `${params.nodes} nodes, ${params.edges} edges` : '',
 		'admin.searchPlaceholder': 'Search…',
 		'admin.createFolder': 'New Folder',
+		'admin.openFolder': params ? `Open folder ${params.name}` : 'Open folder',
 	};
 	return map[key] ?? key;
 };
@@ -364,6 +365,28 @@ describe('renderFolderTile', () => {
 		expect(actions).toEqual(['rename']);
 		actionArea.children[1]!.dispatchEvent({ type: 'click' });
 		expect(actions).toEqual(['rename', 'delete']);
+	});
+
+	it('open button has action-oriented aria-label with folder name', () => {
+		const grid = makeEl('div');
+		const node = makeNode({ name: 'gm', displayName: 'ГМ', path: 'snippets/gm' });
+		renderFolderTile(asEl(grid), node, mockI18n, () => {}, () => {}, () => {});
+
+		const tile = grid.children[0]!;
+		const openBtn = tile.children[0]!;
+		expect(openBtn._attrs['aria-label']).toBe('Open folder ГМ');
+		expect(openBtn._attrs['title']).toBeUndefined();
+	});
+
+	it('open button aria-label uses displayName, not slug', () => {
+		const grid = makeEl('div');
+		const node = makeNode({ name: 'chest', displayName: 'Грудная клетка', path: 'snippets/chest' });
+		renderFolderTile(asEl(grid), node, mockI18n, () => {}, () => {}, () => {});
+
+		const tile = grid.children[0]!;
+		const openBtn = tile.children[0]!;
+		expect(openBtn._attrs['aria-label']).toBe('Open folder Грудная клетка');
+		expect(openBtn._attrs['aria-label']).not.toContain('chest');
 	});
 });
 

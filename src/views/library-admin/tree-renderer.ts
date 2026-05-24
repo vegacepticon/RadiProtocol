@@ -10,7 +10,7 @@ export function renderFolderTile(
 	onDelete: () => void,
 ): void {
 	const tile = grid.createDiv({ cls: 'rp-admin-folder-tile' });
-	const openBtn = tile.createDiv({ cls: 'rp-admin-folder-tile-open', attr: { tabindex: '0', role: 'button', 'aria-label': node.displayName } });
+	const openBtn = tile.createDiv({ cls: 'rp-admin-folder-tile-open', attr: { tabindex: '0', role: 'button', 'aria-label': t('admin.openFolder', { name: node.displayName }) } });
 	const nameEl = openBtn.createEl('span', { cls: 'rp-admin-entry-name' });
 	nameEl.createEl('span', { cls: 'rp-admin-row-glyph', text: '\uD83D\uDCC1' }); // Non-translatable folder glyph symbol
 	nameEl.createEl('span', { cls: 'rp-admin-row-title', text: node.displayName });

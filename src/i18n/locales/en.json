@@ -429,6 +429,7 @@
     "createFolder": "New folder",
     "createFolderPrompt": "Folder name",
     "rename": "Rename",
+    "openFolder": "Open folder {name}",
     "renameFolderPrompt": "New folder name",
     "confirmDeleteFolder": "Delete folder \"{path}\"? The folder must be empty.",
     "directoryCreated": "Folder \"{name}\" created.",

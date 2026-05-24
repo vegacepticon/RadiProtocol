@@ -429,6 +429,7 @@
     "createFolder": "Новая папка",
     "createFolderPrompt": "Название папки",
     "rename": "Переименовать",
+    "openFolder": "Открыть папку {name}",
     "renameFolderPrompt": "Новое название папки",
     "confirmDeleteFolder": "Удалить папку \"{path}\"? Папка должна быть пустой.",
     "directoryCreated": "Папка \"{name}\" создана.",
