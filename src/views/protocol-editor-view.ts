@@ -1710,7 +1710,7 @@ export class ProtocolEditorView extends ItemView {
     const addSnippetTargetPicker = (folderValue: unknown, fileValue: unknown) => {
       let selectedFolder = normalizeProtocolEditorSnippetFolderSelection(typeof folderValue === 'string' ? folderValue : '');
       let selectedFile = normalizeProtocolEditorSnippetFolderSelection(typeof fileValue === 'string' ? fileValue : '');
-      const field = body.createDiv({ cls: 'rp-protocol-editor-modal-field' });
+      const field = body.createDiv({ cls: 'rp-protocol-editor-modal-field rp-protocol-editor-snippet-target-field' });
       field.createEl('label', { text: t('protocolEditor.snippetTargetLabel') });
       const folderInput = field.createEl('input', {
         attr: {
