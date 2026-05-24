@@ -100,7 +100,7 @@ describe('shared runner footer renderer', () => {
       onBack,
       showSkip: true,
       onSkip,
-      t: (key: string) => key === 'protocolRunner.stepBack' ? 'Go back one step' : key === 'protocolRunner.stepSkip' ? 'Skip this question' : key,
+      t: (key: string) => key === 'protocolRunner.stepBack' ? 'Go back one step (Ctrl+←)' : key === 'protocolRunner.stepSkip' ? 'Skip this question' : key,
     });
 
     const back = findByClass(root, 'rp-step-back-btn')[0]!;
@@ -109,8 +109,8 @@ describe('shared runner footer renderer', () => {
     skip.clickHandler?.({} as MouseEvent);
 
     expect(back.disabled).toBe(true);
-    expect(back.attrs.get('aria-label')).toBe('Go back one step');
     expect(skip.attrs.get('aria-label')).toBe('Skip this question');
+    expect(back.attrs.get('aria-label')).toBe('Go back one step (Ctrl+←)');
     expect(onBack).toHaveBeenCalledTimes(1);
     expect(onSkip).toHaveBeenCalledTimes(1);
   });
@@ -142,11 +142,11 @@ describe('shared runner footer renderer', () => {
       onBack: () => {},
       showRedo: true,
       onRedo,
-      t: (key: string) => key === 'protocolRunner.stepRedo' ? 'Redo' : key,
+      t: (key: string) => key === 'protocolRunner.stepRedo' ? 'Redo (Ctrl+→)' : key,
     });
 
     const redo = findByClass(root, 'rp-step-redo-btn')[0]!;
-    expect(redo.attrs.get('aria-label')).toBe('Redo');
+    expect(redo.attrs.get('aria-label')).toBe('Redo (Ctrl+→)');
     redo.clickHandler?.({} as MouseEvent);
     expect(onRedo).toHaveBeenCalledTimes(1);
     expect(redo.disabled).toBe(true);
@@ -179,8 +179,8 @@ describe('shared runner footer renderer', () => {
       onRedo: () => {},
       t: (key: string) => {
         const map: Record<string, string> = {
-          'protocolRunner.stepBack': 'Go back one step',
-          'protocolRunner.stepRedo': 'Redo',
+          'protocolRunner.stepBack': 'Go back one step (Ctrl+←)',
+          'protocolRunner.stepRedo': 'Redo (Ctrl+→)',
           'protocolRunner.stepSkip': 'Skip this question',
         };
         return map[key] ?? key;
@@ -208,6 +208,7 @@ describe('shared loop picker renderer', () => {
       accumulatedText: 'before',
       canStepBack: true,
       canRedo: false,
+      undoStackSize: 0,
     }, {
       bindClick: (el, handler) => {
         (el as unknown as MockEl).clickHandler = handler;
@@ -243,6 +244,7 @@ describe('shared loop picker renderer', () => {
       accumulatedText: '',
       canStepBack: false,
       canRedo: false,
+      undoStackSize: 0,
     };
 
     expect(renderLoopPicker(asHtml(textZone), asHtml(actionZone), null, state, host)).toBe(false);

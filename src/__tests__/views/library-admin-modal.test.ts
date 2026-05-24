@@ -127,7 +127,7 @@ vi.mock('obsidian', () => {
 });
 
 vi.mock('../../views/library-admin/helper-modals', () => ({
-	UpdateInstructionsModal: class { constructor() {} open() {} },
+	SendToRemoteModal: class { constructor() {} open() {} },
 	TextPromptModal: { prompt: vi.fn().mockResolvedValue(null) },
 	TypeConfirmModal: { prompt: vi.fn().mockResolvedValue(false) },
 	ImportSnippetPickerModal: class { constructor() {} open() {} },
@@ -169,6 +169,7 @@ vi.mock('../../utils/dom-helpers', () => ({
 (globalThis as any).document = { createElement: (_tag: string) => makeEl(_tag) };
 
 import { LibraryAdminModal } from '../../views/library-admin-modal';
+import { TextPromptModal } from '../../views/library-admin/helper-modals';
 
 const mockI18n = (key: string, _params?: Record<string, string>): string => {
 	const map: Record<string, string> = {
@@ -176,7 +177,7 @@ const mockI18n = (key: string, _params?: Record<string, string>): string => {
 		'admin.snippetsTab': 'Snippets',
 		'admin.protocolsTab': 'Protocols',
 		'admin.resetToRemote': 'Reset to remote',
-		'admin.updateInstructions': 'Update instructions',
+		'admin.sendToRemote': 'Send to remote',
 		'admin.maintainerModeDisabled': 'Maintainer mode is not enabled.',
 		'admin.enableInSettings': 'Enable maintainer mode.',
 		'admin.noRepoPath': 'No repo path.',
@@ -185,6 +186,7 @@ const mockI18n = (key: string, _params?: Record<string, string>): string => {
 		'admin.importSnippet': 'Import snippet',
 		'admin.importSnippetDesc': 'Import a snippet.',
 		'admin.importSnippetBtn': 'Import',
+		'confirm.cancel': 'Cancel',
 	};
 	return map[key] ?? key;
 };
@@ -379,5 +381,92 @@ describe('LibraryAdminModal — tab keyboard navigation', () => {
 		expect(protocolTabAfter._attrs['aria-selected']).toBe('true');
 		expect(protocolTabAfter._attrs['tabindex']).toBe('0');
 		expect(contentAreaAfter._attrs['aria-labelledby']).toBe('rp-admin-tab-protocols');
+	});
+});
+
+describe('LibraryAdminModal — folder rename navigation', () => {
+	it('preserves drillPath after renaming a directory (does not navigate into renamed folder)', async () => {
+		const plugin = makePlugin();
+		const app = makeApp();
+		const modal = new LibraryAdminModal(app, plugin);
+		(modal as any).currentTab = 'snippets';
+		const renameDirectory = vi.fn().mockResolvedValue({ name: 'renamed-cat', path: 'snippets/renamed-cat' });
+		(modal as any).admin = {
+			validateRepoPath: vi.fn().mockResolvedValue({ valid: true }),
+			listDirectories: vi.fn().mockResolvedValue([]),
+			readSnippetIndex: vi.fn().mockResolvedValue({ snippets: [] }),
+			readProtocolIndex: vi.fn().mockResolvedValue({ protocols: [] }),
+			readDirectoryDisplayName: vi.fn().mockResolvedValue(null),
+			resolveRepoPathPublic: vi.fn((p: string) => p),
+			renameDirectory,
+		};
+		const refreshAdmin = vi.fn();
+		(modal as any).refreshAdmin = refreshAdmin;
+		vi.mocked(TextPromptModal.prompt).mockResolvedValueOnce('New Cat');
+
+		// Simulate user being drilled into the snippets root (drillPath empty = root view)
+		(modal as any).drillPath = [];
+
+		await (modal as any).handleRenameDirectory('snippets', 'snippets/old-cat', 'Old Cat');
+
+		expect(renameDirectory).toHaveBeenCalledWith('snippets', 'snippets/old-cat', 'New Cat');
+		expect(refreshAdmin).toHaveBeenCalledOnce();
+		expect((modal as any).drillPath).toEqual([]);
+	});
+
+	it('preserves drillPath when drilled into a parent folder and renaming a sibling', async () => {
+		const plugin = makePlugin();
+		const app = makeApp();
+		const modal = new LibraryAdminModal(app, plugin);
+		(modal as any).currentTab = 'snippets';
+		const renameDirectory = vi.fn().mockResolvedValue({ name: 'new-name', path: 'snippets/chest/new-name' });
+		(modal as any).admin = {
+			renameDirectory,
+		};
+		const refreshAdmin = vi.fn();
+		(modal as any).refreshAdmin = refreshAdmin;
+		vi.mocked(TextPromptModal.prompt).mockResolvedValueOnce('New Name');
+
+		// User is inside snippets/chest
+		(modal as any).drillPath = ['chest'];
+
+		await (modal as any).handleRenameDirectory('snippets', 'snippets/chest/old-name', 'Old Name');
+
+		expect(renameDirectory).toHaveBeenCalledWith('snippets', 'snippets/chest/old-name', 'New Name');
+		expect(refreshAdmin).toHaveBeenCalledOnce();
+		// drillPath should still be ['chest'] — rename of a sibling should not change position
+		expect((modal as any).drillPath).toEqual(['chest']);
+	});
+});
+
+describe('LibraryAdminModal — cancel button localization', () => {
+	it('uses the translated cancel label for the create folder prompt', async () => {
+		const plugin = makePlugin();
+		const app = makeApp();
+		const modal = new LibraryAdminModal(app, plugin);
+		(modal as any).admin = { createDirectory: vi.fn() };
+		vi.mocked(TextPromptModal.prompt).mockResolvedValueOnce(null);
+
+		await (modal as any).handleCreateDirectory('snippets');
+
+		expect(TextPromptModal.prompt).toHaveBeenCalledWith(
+			expect.any(Object),
+			expect.objectContaining({ cancelText: 'Cancel' }),
+		);
+	});
+
+	it('uses the translated cancel label for the rename folder prompt', async () => {
+		const plugin = makePlugin();
+		const app = makeApp();
+		const modal = new LibraryAdminModal(app, plugin);
+		(modal as any).admin = { renameDirectory: vi.fn() };
+		vi.mocked(TextPromptModal.prompt).mockResolvedValueOnce(null);
+
+		await (modal as any).handleRenameDirectory('snippets', 'snippets/chest', 'Chest');
+
+		expect(TextPromptModal.prompt).toHaveBeenCalledWith(
+			expect.any(Object),
+			expect.objectContaining({ cancelText: 'Cancel' }),
+		);
 	});
 });

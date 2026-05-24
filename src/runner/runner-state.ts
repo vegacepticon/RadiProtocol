@@ -21,6 +21,8 @@ export interface AtNodeState {
   canStepBack: boolean;
   /** true when redoStack is non-empty — a forward action can be re-applied after undo. */
   canRedo: boolean;
+  /** Number of entries on the undo stack. */
+  undoStackSize: number;
 }
 
 /**
@@ -36,6 +38,8 @@ export interface AwaitingSnippetPickState {
   canStepBack: boolean;
   /** true when redoStack is non-empty — a forward action can be re-applied after undo. */
   canRedo: boolean;
+  /** Number of entries on the undo stack. */
+  undoStackSize: number;
 }
 
 /**
@@ -50,6 +54,8 @@ export interface AwaitingLoopPickState {
   canStepBack: boolean;
   /** true when redoStack is non-empty — a forward action can be re-applied after undo. */
   canRedo: boolean;
+  /** Number of entries on the undo stack. */
+  undoStackSize: number;
 }
 
 /**
@@ -65,6 +71,8 @@ export interface AwaitingSnippetFillState {
   canStepBack: boolean;
   /** true when redoStack is non-empty — a forward action can be re-applied after undo. */
   canRedo: boolean;
+  /** Number of entries on the undo stack. */
+  undoStackSize: number;
 }
 
 /** All nodes have been traversed and there is no next node. */

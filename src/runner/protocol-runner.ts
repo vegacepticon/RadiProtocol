@@ -491,6 +491,7 @@ export class ProtocolRunner {
           accumulatedText: this.accumulator.current,
           canStepBack: this.undoStack.length > 0,
           canRedo: this.redoStack.length > 0,
+          undoStackSize: this.undoStack.length,
         };
       }
       case RUNNER_STATUS.AWAITING_SNIPPET_PICK: {
@@ -507,6 +508,7 @@ export class ProtocolRunner {
           accumulatedText: this.accumulator.current,
           canStepBack: this.undoStack.length > 0,
           canRedo: this.redoStack.length > 0,
+          undoStackSize: this.undoStack.length,
         };
       }
       case RUNNER_STATUS.AWAITING_LOOP_PICK:
@@ -516,6 +518,7 @@ export class ProtocolRunner {
           accumulatedText: this.accumulator.current,
           canStepBack: this.undoStack.length > 0,
           canRedo: this.redoStack.length > 0,
+          undoStackSize: this.undoStack.length,
         };
       case RUNNER_STATUS.AWAITING_SNIPPET_FILL:
         return {
@@ -525,6 +528,7 @@ export class ProtocolRunner {
           accumulatedText: this.accumulator.current,
           canStepBack: this.undoStack.length > 0,
           canRedo: this.redoStack.length > 0,
+          undoStackSize: this.undoStack.length,
         };
       case RUNNER_STATUS.COMPLETE:
         return { status: RUNNER_STATUS.COMPLETE, finalText: this.accumulator.current };

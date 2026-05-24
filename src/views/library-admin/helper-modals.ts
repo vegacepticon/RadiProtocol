@@ -1,7 +1,8 @@
-import { Modal, Setting, App, AbstractInputSuggest, TFile } from 'obsidian';
+import { Modal, Setting, App, AbstractInputSuggest, TFile, Notice } from 'obsidian';
 import type RadiProtocolPlugin from '../../main';
 import type { LibrarySnippetEntry } from '../../snippets/library-model';
 import type { ProtocolLibraryEntry } from '../../protocol/protocol-library-model';
+import type { LibraryAdminService } from '../../snippets/library-admin';
 import { SnippetTreePicker } from '../snippet-tree-picker';
 import type { Translator } from '../../i18n';
 import { defaultT } from '../../i18n';
@@ -46,28 +47,198 @@ export class ConfirmModal extends Modal {
 	}
 }
 
-/** Modal showing instructions for updating the library via git. */
-export class UpdateInstructionsModal extends Modal {
+/** Modal for preparing a "Send to remote" / PR-request from local library changes. */
+export class SendToRemoteModal extends Modal {
 	private readonly t: Translator;
+	private readonly admin: LibraryAdminService;
+	private statusText = '';
+	private diffText = '';
+	private branchText = '';
+	private untrackedFiles: string[] = [];
+	private remoteUrl: string | null = null;
+	private isClean = false;
+	private isSending = false;
+	private readonly repoPath: string;
 
-	constructor(app: App, t?: Translator) {
+	constructor(app: App, admin: LibraryAdminService, repoPath: string, t?: Translator) {
 		super(app);
+		this.admin = admin;
+		this.repoPath = repoPath;
 		this.t = t ?? defaultT;
 	}
 
 	onOpen(): void {
 		const { contentEl } = this;
-		contentEl.createEl('h2', { text: this.t('admin.updateInstructionsTitle') });
+		contentEl.empty();
+		contentEl.createEl('h2', { text: this.t('admin.sendToRemoteTitle') });
 
-		for (let i = 1; i <= 6; i++) {
-			contentEl.createEl('pre', { text: this.t(`admin.updateSteps.${i}`), cls: 'rp-admin-instructions-step' });
+		const loadingEl = contentEl.createEl('p', { text: this.t('admin.sendLoading') });
+		void this.loadStatus().then(() => {
+			loadingEl.remove();
+			this.renderContent(contentEl);
+		});
+	}
+
+	private async loadStatus(): Promise<void> {
+		const [statusResult, diffResult, branchResult, remoteResult] = await Promise.all([
+			this.admin.gitStatus(),
+			this.admin.gitDiffStat(),
+			this.admin.gitBranch(),
+			this.admin.getRemoteHttpUrl(),
+		]);
+		this.statusText = statusResult.success ? statusResult.output : '';
+		this.diffText = diffResult.success ? diffResult.output : '';
+		this.branchText = branchResult;
+		this.remoteUrl = remoteResult;
+		this.isClean = this.statusText.trim() === '';
+
+		const untracked = await this.admin.gitUntracked();
+		this.untrackedFiles = untracked;
+	}
+
+	private renderContent(contentEl: HTMLElement): void {
+		contentEl.empty();
+		contentEl.createEl('h2', { text: this.t('admin.sendToRemoteTitle') });
+
+		if (this.isClean) {
+			contentEl.createEl('p', { text: this.t('admin.sendNoChanges') });
+			contentEl.createEl('p', {
+				text: this.t('admin.sendNoChangesHint'),
+				cls: 'rp-admin-send-hint',
+			});
+			return;
+		}
+
+		contentEl.createEl('p', { text: this.t('admin.sendChangesIntro') });
+
+		if (this.statusText) {
+			const statusContainer = contentEl.createDiv({ cls: 'rp-admin-send-section' });
+			statusContainer.createEl('h3', { text: this.t('admin.sendStatusSection') });
+			statusContainer.createEl('pre', { text: this.statusText, cls: 'rp-admin-send-output' });
+		}
+
+		if (this.diffText) {
+			const diffContainer = contentEl.createDiv({ cls: 'rp-admin-send-section' });
+			diffContainer.createEl('h3', { text: this.t('admin.sendDiffSection') });
+			diffContainer.createEl('pre', { text: this.diffText, cls: 'rp-admin-send-output' });
+		}
+
+		if (this.untrackedFiles.length > 0 && this.untrackedFiles.length <= 20) {
+			const untrackedContainer = contentEl.createDiv({ cls: 'rp-admin-send-section' });
+			untrackedContainer.createEl('h3', { text: this.t('admin.sendUntrackedSection') });
+			untrackedContainer.createEl('pre', { text: this.untrackedFiles.join('\n'), cls: 'rp-admin-send-output' });
 		}
 
 		contentEl.createEl('hr');
+
+		if (this.remoteUrl) {
+			const autoDiv = contentEl.createDiv({ cls: 'rp-admin-send-section' });
+			autoDiv.createEl('p', { text: this.t('admin.sendAutoIntro') });
+
+			new Setting(autoDiv)
+				.setName(this.t('admin.sendBranchLabel'))
+				.addText(text => text
+					.setValue(this.suggestBranchName())
+					.setPlaceholder(this.t('admin.sendBranchPlaceholder'))
+					.onChange(v => { this.branchNameInput = v.trim(); }));
+
+			new Setting(autoDiv)
+				.setName(this.t('admin.sendCommitLabel'))
+				.addText(text => text
+					.setValue(this.t('admin.sendDefaultCommitMessage'))
+					.onChange(v => { this.commitMessageInput = v; }));
+
+			new Setting(autoDiv)
+				.addButton(btn => btn
+					.setButtonText(this.t('admin.sendPushButton'))
+					.setCta()
+					.onClick(() => { void this.handleSend(); }));
+
+			contentEl.createEl('hr');
+		}
+
 		contentEl.createEl('p', {
-			text: this.t('admin.resetToLocalNotice'),
+			text: this.remoteUrl ? this.t('admin.sendManualIntro') : this.t('admin.sendManualIntroNoRemote'),
+			cls: 'rp-admin-send-hint',
 		});
+
+		const steps = this.getManualSteps();
+		for (let i = 0; i < steps.length; i++) {
+			contentEl.createEl('pre', {
+				text: steps[i],
+				cls: 'rp-admin-send-step',
+			});
+		}
 	}
+
+	private branchNameInput = '';
+	private commitMessageInput = '';
+
+	private suggestBranchName(): string {
+		return this.branchText && this.branchText !== 'main' && this.branchText !== 'master'
+			? this.branchText
+			: 'library-update';
+	}
+
+	private getManualSteps(): string[] {
+		const steps = [
+			this.t('admin.sendStep1', { path: this.repoPath }),
+			this.t('admin.sendStep2'),
+			this.t('admin.sendStep3'),
+			this.t('admin.sendStep4'),
+		];
+		if (this.remoteUrl) {
+			steps.push(this.t('admin.sendStep5', { url: this.remoteUrl }));
+		} else {
+			steps.push(this.t('admin.sendStep5NoUrl'));
+		}
+		return steps;
+	}
+
+	private async handleSend(): Promise<void> {
+		if (this.isSending) return;
+		this.isSending = true;
+
+		const branchName = this.branchNameInput || this.suggestBranchName();
+		const commitMessage = this.commitMessageInput || this.t('admin.sendDefaultCommitMessage');
+
+		this.setStatus(this.t('admin.sendSending'));
+		const result = await this.admin.gitCommitAndPushBranch(branchName, commitMessage);
+		this.isSending = false;
+
+		if (result.success) {
+			const url = result.branchUrl ?? this.remoteUrl ?? '';
+			const detail = url
+				? this.t('admin.sendSuccessWithUrl', { url })
+				: this.t('admin.sendSuccess');
+			this.setStatus(detail);
+			new Notice(detail);
+
+			this.isClean = true;
+			const { contentEl } = this;
+			contentEl.empty();
+			contentEl.createEl('h2', { text: this.t('admin.sendToRemoteTitle') });
+			contentEl.createEl('p', { text: this.t('admin.sendSuccess') });
+			if (url) {
+				const link = contentEl.createEl('a', {
+					text: this.t('admin.openPullRequest'),
+					attr: { href: url, target: '_blank', rel: 'noopener' },
+				});
+				link.addClass('rp-admin-send-pr-link');
+			}
+		} else {
+			const failureText = [result.output, result.hint].filter(Boolean).join('\n');
+			this.setStatus(failureText);
+			new Notice(failureText, 8000);
+		}
+	}
+
+	private setStatus(text: string): void {
+		this.statusEl = this.statusEl ?? document.createElement('div');
+		this.statusEl.setText(text);
+	}
+
+	private statusEl: HTMLElement | null = null;
 
 	onClose(): void {
 		this.contentEl.empty();

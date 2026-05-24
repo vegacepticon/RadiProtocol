@@ -302,6 +302,55 @@ function createTestView(): { view: ProtocolEditorView; surfaceEl: MockEl; openEd
   return { view, surfaceEl, openEditModalCalls };
 }
 
+// Helper: create a view with a start node that has no explicit text label
+function createStartNodeView(): { view: ProtocolEditorView; surfaceEl: MockEl } {
+  const mockPlugin = {
+    i18n: { t },
+    settings: { snippetFolderPath: '.radiprotocol/snippets' },
+    protocolDocumentStore: {},
+  } as any;
+
+  const leaf = {} as any;
+  const view = new ProtocolEditorView(leaf, mockPlugin);
+
+  const surfaceEl = makeEl('div');
+  const svgEl = makeEl('svg');
+  const viewportEl = makeEl('div');
+  const rootEl = makeEl('div');
+
+  (view as any).surfaceEl = surfaceEl;
+  (view as any).svgEl = svgEl;
+  (view as any).viewportEl = viewportEl;
+  (view as any).rootEl = rootEl;
+  (view as any).protocolPath = 'test.rp.json';
+  (view as any).zoom = 1;
+
+  const doc: ProtocolDocumentV1 = {
+    schema: 'radiprotocol.protocol',
+    version: 1,
+    id: 'test-doc',
+    title: 'Test Protocol',
+    createdAt: '2025-01-01T00:00:00Z',
+    updatedAt: '2025-01-01T00:00:00Z',
+    nodes: [
+      {
+        id: 'node-start',
+        kind: 'start',
+        x: 100,
+        y: 100,
+        width: 160,
+        height: 60,
+        text: undefined as any,
+        fields: {},
+      },
+    ],
+    edges: [],
+  };
+  (view as any).doc = doc;
+
+  return { view, surfaceEl };
+}
+
 // ── Tests ───────────────────────────────────────────────────────────────────
 
 describe('ProtocolEditorView: node keyboard activation', () => {
@@ -374,6 +423,18 @@ describe('ProtocolEditorView: node keyboard activation', () => {
 
     const nodes = findAllByClass(surfaceEl, 'rp-protocol-editor-node');
     expect(nodes[0]!._attrs['aria-label']).toBe('Where is the pain?');
+  });
+
+  it('start node without explicit text does not render the default i18n key as label', () => {
+    const { view, surfaceEl } = createStartNodeView();
+    (view as any).renderDocument();
+
+    const nodes = findAllByClass(surfaceEl, 'rp-protocol-editor-node');
+    expect(nodes.length).toBe(1);
+    const titles = findAllByClass(nodes[0]!, 'rp-protocol-editor-node-title');
+    expect(titles.length).toBe(0);
+    const kinds = findAllByClass(nodes[0]!, 'rp-protocol-editor-node-kind');
+    expect(kinds.length).toBe(1);
   });
 });
 

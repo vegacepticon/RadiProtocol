@@ -60,6 +60,11 @@
   white-space: nowrap;
 }
 
+.rp-stp-crumb[aria-current="location"] {
+  color: var(--text-normal);
+  font-weight: var(--font-semibold);
+}
+
 .rp-stp-crumb,
 .rp-stp-up-btn {
   display: inline-flex;

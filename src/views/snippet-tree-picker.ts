@@ -221,13 +221,23 @@ export class SnippetTreePicker {
     // ── Body wrapper (stabilises layout across folder changes) ───────────
     const body = host.createDiv({ cls: 'rp-stp-body' });
 
-    // Compact breadcrumb row. Home icon + segment path buttons.
-    const breadcrumb = body.createDiv({ cls: 'rp-stp-breadcrumb' });
-    breadcrumb.createEl('span', {
-      cls: 'rp-stp-breadcrumb-label',
-      text: this.drillPath.length === 0 ? '/' : this.drillPath.join('/'),
+    // Accessible breadcrumb navigation with aria-label and semantic markup.
+    const breadcrumb = body.createEl('nav', {
+      cls: 'rp-stp-breadcrumb',
+      attr: { 'aria-label': this.t('snippetTreePicker.breadcrumbNavLabel') },
     });
-    if (this.drillPath.length > 0) {
+    breadcrumb.setAttribute('role', 'list');
+    if (this.drillPath.length === 0) {
+      breadcrumb.createEl('span', {
+        cls: 'rp-stp-breadcrumb-label',
+        attr: { 'aria-current': 'location' },
+        text: '/',
+      });
+    } else {
+      breadcrumb.createEl('span', {
+        cls: 'rp-stp-breadcrumb-label',
+        text: this.drillPath.join('/'),
+      });
       const upBtn = createButton(breadcrumb, { cls: 'rp-stp-up-btn', attr: { 'aria-label': this.t('snippetPicker.goToRoot') } });
       setIcon(upBtn, 'arrow-up');
       this.addListener(upBtn, 'click', () => {
@@ -236,11 +246,15 @@ export class SnippetTreePicker {
       });
     }
     this.drillPath.forEach((segment, index) => {
-      breadcrumb.createEl('span', { cls: 'rp-stp-crumb-separator', text: '/' });
+      breadcrumb.createEl('span', { cls: 'rp-stp-crumb-separator', text: '/', attr: { 'role': 'presentation' } });
+      const isLast = index === this.drillPath.length - 1;
       const crumb = createButton(breadcrumb, {
         cls: 'rp-stp-crumb',
         text: segment,
-        attr: { 'aria-label': this.t('snippetTreePicker.crumbAria', { name: segment }) },
+        attr: {
+          'aria-label': this.t('snippetTreePicker.crumbAria', { name: segment }),
+          ...(isLast ? { 'aria-current': 'location' } : {}),
+        },
       });
       this.addListener(crumb, 'click', () => {
         this.drillPath = this.drillPath.slice(0, index + 1);

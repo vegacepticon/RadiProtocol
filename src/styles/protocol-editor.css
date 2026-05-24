@@ -390,6 +390,19 @@
   display: none;
 }
 
+.rp-protocol-editor-snippet-target-field {
+  margin-bottom: var(--size-4-1);
+}
+
+.rp-protocol-editor-snippet-target-field .rp-stp-body {
+  min-height: 0;
+  max-height: 160px;
+}
+
+.rp-protocol-editor-snippet-target-field .rp-stp-list {
+  max-height: 112px;
+}
+
 .rp-protocol-editor-confirm {
   display: flex;
   align-items: center;

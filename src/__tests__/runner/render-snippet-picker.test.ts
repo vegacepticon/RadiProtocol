@@ -118,6 +118,7 @@ const STATE = {
   accumulatedText: '',
   canStepBack: true,
   canRedo: false,
+  undoStackSize: 0,
 };
 
 beforeEach(() => {
@@ -371,7 +372,7 @@ describe('renderSnippetPicker (Phase 75 Plan 04)', () => {
   it('omits Back button when canStepBack is false', () => {
     const zone = makeFakeNode();
     renderSnippetPicker(zone as unknown as HTMLElement,
-      { ...STATE, canStepBack: false },
+      { ...STATE, canStepBack: false, undoStackSize: 0 },
       {
         app: {} as never,
         snippetService: { load: vi.fn(), listFolder: vi.fn(), listFolderDescendants: vi.fn() } as never,

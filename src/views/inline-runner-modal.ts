@@ -73,6 +73,8 @@ export class InlineRunnerModal {
  *  to prevent the inline container from disappearing while SnippetFillInModal is active. */
   private isFillModalOpen = false;
 
+  private boundKeyHandler: ((e: KeyboardEvent) => void) | null = null;
+
   constructor(
     app: App,
     plugin: RadiProtocolPlugin,
@@ -219,6 +221,10 @@ export class InlineRunnerModal {
       this.resizeObserver = new ResizeObserver(() => this.layoutManager!.handleResizeTick());
       this.resizeObserver.observe(this.containerEl);
     }
+
+    // Keyboard shortcuts: Ctrl/Alt+Left = step back, Ctrl/Alt+Right = redo, Escape = close
+    this.boundKeyHandler = (e: KeyboardEvent) => this.handleKeydown(e);
+    this.containerEl?.addEventListener('keydown', this.boundKeyHandler);
   }
 
   close(): void {
@@ -242,6 +248,10 @@ export class InlineRunnerModal {
     this.isFillModalOpen = false;
 
     // Unsubscribe event listeners
+    if (this.boundKeyHandler !== null && this.containerEl !== null) {
+      this.containerEl.removeEventListener('keydown', this.boundKeyHandler);
+    }
+    this.boundKeyHandler = null;
     if (this.activeFileEventRef !== null) {
       this.app.workspace.offref(this.activeFileEventRef);
       this.activeFileEventRef = null;
@@ -675,6 +685,33 @@ export class InlineRunnerModal {
     this.close();
   }
 
+  private handleKeydown(e: KeyboardEvent): void {
+    const target = e.target as HTMLElement | null;
+    if (target !== null && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA')) {
+      return;
+    }
+
+    if (e.key === 'Escape') {
+      e.preventDefault();
+      this.close();
+      return;
+    }
+
+    if ((e.ctrlKey || e.altKey) && e.key === 'ArrowLeft') {
+      e.preventDefault();
+      this.runner.stepBack();
+      this.render();
+      return;
+    }
+
+    if ((e.ctrlKey || e.altKey) && e.key === 'ArrowRight') {
+      e.preventDefault();
+      this.runner.redo();
+      this.render();
+      return;
+    }
+  }
+
   /** Phase 85 INLINE-MULTI-02: public so the cascade logic in another modal's
    *  open() can read this instance's current applied position. */
   getAppliedLayout(): InlineRunnerLayout | null {
@@ -843,6 +880,7 @@ export class InlineRunnerModal {
       accumulatedText: string;
       canStepBack: boolean;
       canRedo: boolean;
+      undoStackSize: number;
     },
     questionZone: HTMLElement,
   ): Promise<void> {
