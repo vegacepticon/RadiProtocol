@@ -279,9 +279,17 @@ export class SnippetManagerTreeRenderer {
     // F2 inline rename
     row.addEventListener('keydown', (ev) => {
       const ke = ev as KeyboardEvent;
-      if (ke.key !== 'F2') return;
-      ke.preventDefault();
-      this.startInlineRename(node, labelEl);
+      if (ke.key === 'Enter' || ke.key === ' ') {
+        ke.preventDefault();
+        if (node.kind === 'file') {
+          void this.callbacks.openEditModal(node.path);
+        } else {
+          void this.toggleExpand(node.path);
+        }
+      } else if (ke.key === 'F2') {
+        ke.preventDefault();
+        this.startInlineRename(node, labelEl);
+      }
     });
 
     // Children (folders only, when expanded)
