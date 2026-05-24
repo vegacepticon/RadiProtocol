@@ -241,7 +241,10 @@
     "addItem": "Add item",
     "removeItem": "Remove",
     "title": "Self-check checklist",
-    "enabled": "Enable self-check checklist"
+    "enabled": "Enable self-check checklist",
+    "copyResult": "Copy protocol result",
+    "copied": "Protocol result copied to clipboard.",
+    "copyFailed": "Failed to copy result."
   },
   "nodePicker": {
     "start": "Start",
