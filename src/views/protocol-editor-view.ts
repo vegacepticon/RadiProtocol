@@ -383,7 +383,7 @@ export class ProtocolEditorView extends ItemView {
       ? NODE_KIND_DEFAULTS[kind]
       : { kind: null as RPNodeKind | null, fields: {} };
 
-    const text = defaults.text ?? (kind !== null ? this.plugin.i18n.t(`protocolEditor.defaultNodeText.${kind}`) : undefined);
+    const text = defaults.text ?? (kind !== null && kind !== 'start' ? this.plugin.i18n.t(`protocolEditor.defaultNodeText.${kind}`) : undefined);
     return {
       id: nodeUid(),
       kind: defaults.kind,
@@ -547,7 +547,10 @@ export class ProtocolEditorView extends ItemView {
       outputPort.setAttr('aria-label', this.plugin.i18n.t('protocolEditor.outputPortLabel'));
 
       nodeEl.createDiv({ cls: 'rp-protocol-editor-node-kind', text: node.kind ?? this.plugin.i18n.t('protocolEditor.untyped') });
-      nodeEl.createDiv({ cls: 'rp-protocol-editor-node-title', text: nodeTitle(node, this.plugin.i18n.t.bind(this.plugin.i18n)) });
+      const displayTitle = nodeTitle(node, this.plugin.i18n.t.bind(this.plugin.i18n));
+      if (displayTitle !== (node.kind ?? this.plugin.i18n.t('protocolEditor.untyped'))) {
+        nodeEl.createDiv({ cls: 'rp-protocol-editor-node-title', text: displayTitle });
+      }
       const resizeHandle = nodeEl.createDiv({ cls: 'rp-protocol-editor-resize-handle' });
       resizeHandle.setAttr('aria-label', this.plugin.i18n.t('protocolEditor.resizeNodeLabel'));
 
