@@ -20,6 +20,7 @@ import type { App } from 'obsidian';
 import type { Snippet } from '../../snippets/snippet-model';
 import type { SnippetService } from '../../snippets/snippet-service';
 import type { RunnerState } from '../runner-state';
+import type { Translator } from '../../i18n';
 import { CSS_CLASS } from '../../constants/css-classes';
 import { SnippetTreePicker } from '../../views/snippet-tree-picker';
 import { renderRunnerFooter, type RunnerFooterHost } from './render-footer';
@@ -39,6 +40,8 @@ export interface SnippetPickerCopy {
 export interface SnippetPickerRenderOptions extends RunnerFooterHost {
   app: App;
   snippetService: SnippetService;
+  /** Optional translator for footer aria-labels. */
+  t?: Translator;
   /** Vault-relative root path (plugin.settings.snippetFolderPath). */
   rootPath: string;
   /** Host wrapper CSS hook. Inline modal: rp-stp-inline-host. */
@@ -61,6 +64,8 @@ export interface SnippetPickerRenderOptions extends RunnerFooterHost {
   /** Footer back-button handler. Host owns picker.unmount + runner.stepBack +
    *  any host-specific autosave + re-render. */
   onBack(): void;
+  /** Footer redo-button handler. Host calls runner.redo + re-render. */
+  onRedo?(): void;
 }
 
 export function renderSnippetPicker(
@@ -118,6 +123,9 @@ export function renderSnippetPicker(
   renderRunnerFooter(questionZone, options, {
     showBack: state.canStepBack,
     onBack: options.onBack,
+    showRedo: state.canRedo,
+    onRedo: options.onRedo,
+    t: options.t,
   });
 
   return picker;

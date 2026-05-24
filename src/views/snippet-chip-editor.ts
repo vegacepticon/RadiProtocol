@@ -101,12 +101,12 @@ export function mountChipEditor(
   if (!skipName) {
     const nameSection = container.createDiv({ cls: 'rp-snippet-form-section rp-stack' });
     const nameLabel = nameSection.createEl('label');
-    nameLabel.textContent = 'Name';
+    nameLabel.textContent = t('snippetEditor.name');
     nameLabel.htmlFor = 'rp-snippet-name-input';
     const nameInput = nameSection.createEl('input', { type: 'text' });
     nameInput.id = 'rp-snippet-name-input';
     nameInput.value = draft.name;
-    nameInput.placeholder = 'Snippet name';
+    nameInput.placeholder = t('snippetEditor.namePlaceholder');
     on(nameInput, 'input', () => {
       draft.name = nameInput.value;
       onChange();
@@ -116,39 +116,39 @@ export function mountChipEditor(
   // --- Template section ---
   const templateSection = container.createDiv({ cls: 'rp-snippet-form-section rp-stack' });
   const templateLabel = templateSection.createEl('label');
-  templateLabel.textContent = 'Template';
+  templateLabel.textContent = t('snippetEditor.template');
   templateLabel.htmlFor = 'rp-snippet-template-input';
   const templateArea = templateSection.createEl('textarea');
   templateArea.id = 'rp-snippet-template-input';
   templateArea.value = draft.template;
-  templateArea.placeholder = 'Enter template text. Use {{placeholder-id}} to insert placeholders.';
+  templateArea.placeholder = t('snippetEditor.templatePlaceholder');
   on(templateArea, 'input', () => {
     draft.template = templateArea.value;
-    refreshOrphanBadges(draft, placeholderList);
+    refreshOrphanBadges(draft, placeholderList, t);
     onChange();
   });
 
   // --- [+ add placeholder] button and inline mini-form (D-04) ---
-  const addPlaceholderBtn = templateSection.createEl('button', { text: '+ add placeholder' });
+  const addPlaceholderBtn = templateSection.createEl('button', { text: t('snippetEditor.addPlaceholder') });
   addPlaceholderBtn.setAttribute('type', 'button');
   const addPlaceholderForm = templateSection.createDiv({ cls: 'rp-add-placeholder-form' });
   addPlaceholderForm.toggleClass('rp-chip-form-hidden', true);
 
   const miniLabelEl = addPlaceholderForm.createEl('label');
-  miniLabelEl.textContent = 'Label';
+  miniLabelEl.textContent = t('snippetEditor.placeholderLabel');
   miniLabelEl.htmlFor = 'rp-add-ph-label';
   const miniLabelInput = addPlaceholderForm.createEl('input', { type: 'text' });
   miniLabelInput.id = 'rp-add-ph-label';
-  miniLabelInput.placeholder = 'E.g. Patient age';
+  miniLabelInput.placeholder = t('snippetEditor.placeholderLabelPlaceholder');
 
   const miniTypeLabel = addPlaceholderForm.createEl('label');
-  miniTypeLabel.textContent = 'Type';
+  miniTypeLabel.textContent = t('snippetEditor.type');
   miniTypeLabel.htmlFor = 'rp-add-ph-type';
   const miniTypeSelect = addPlaceholderForm.createEl('select');
   miniTypeSelect.id = 'rp-add-ph-type';
   const phTypes: Array<{ value: SnippetPlaceholder['type']; label: string }> = [
-    { value: 'free-text', label: 'Free text' },
-    { value: 'choice', label: 'Choice' },
+    { value: 'free-text', label: t('snippetEditor.placeholderTypeFreeText') },
+    { value: 'choice', label: t('snippetEditor.placeholderTypeChoice') },
   ];
   for (const { value, label } of phTypes) {
     const opt = miniTypeSelect.createEl('option', { text: label });
@@ -157,16 +157,16 @@ export function mountChipEditor(
 
   const miniActionRow = addPlaceholderForm.createDiv({ cls: 'rp-chip-row-flex' });
 
-  const miniAddBtn = miniActionRow.createEl('button', { text: 'Add' });
+  const miniAddBtn = miniActionRow.createEl('button', { text: t('snippetEditor.addOption') });
   miniAddBtn.addClass('mod-cta');
   miniAddBtn.setAttribute('type', 'button');
-  const miniCancelBtn = miniActionRow.createEl('button', { text: 'Cancel' });
+  const miniCancelBtn = miniActionRow.createEl('button', { text: t('snippetEditor.cancel') });
   miniCancelBtn.setAttribute('type', 'button');
 
   // Placeholder list (built/rebuilt below)
   const placeholderSection = container.createDiv({ cls: 'rp-snippet-form-section rp-stack' });
   const placeholderHeading = placeholderSection.createEl('label');
-  placeholderHeading.textContent = 'Placeholders';
+  placeholderHeading.textContent = t('snippetEditor.placeholders');
   const placeholderList = placeholderSection.createDiv({ cls: 'rp-placeholder-list' });
 
   // Wire [+ add placeholder] button: show mini-form
@@ -225,7 +225,7 @@ export function mountChipEditor(
       if (!ph) continue;
       renderPlaceholderChip(ph, i);
     }
-    refreshOrphanBadges(draft, placeholderList);
+    refreshOrphanBadges(draft, placeholderList, t);
   }
 
   function renderPlaceholderChip(ph: SnippetPlaceholder, index: number): void {
@@ -234,21 +234,21 @@ export function mountChipEditor(
     chip.setAttribute('draggable', 'true');
 
     const handle = chip.createSpan({ cls: 'rp-placeholder-chip-handle' });
-    handle.textContent = '⠿';
-    handle.setAttribute('aria-label', `Drag to reorder ${ph.label}`);
+    handle.textContent = '⠿'; // Non-translatable drag-handle symbol
+    handle.setAttribute('aria-label', t('snippetEditor.dragReorderAria', { label: ph.label }));
 
     const labelSpan = chip.createSpan({ cls: 'rp-placeholder-chip-label' });
-    labelSpan.textContent = ph.label;
+    labelSpan.textContent = ph.label; // User-authored content, not a UI string
 
     const badge = chip.createSpan({ cls: 'rp-placeholder-chip-badge' });
-    badge.textContent = ph.type;
+    badge.textContent = ph.type; // Internal enum value, not a UI label
 
     const removeBtn = chip.createEl('button', {
       cls: 'rp-placeholder-chip-remove',
-      text: '×',
+      text: '×', // Non-translatable removal symbol
     });
     removeBtn.setAttribute('type', 'button');
-    removeBtn.setAttribute('aria-label', `Remove placeholder ${ph.label}`);
+    removeBtn.setAttribute('aria-label', t('snippetEditor.removePlaceholderAria', { label: ph.label }));
 
     chip.dataset['dragIndex'] = String(index);
 
@@ -308,7 +308,7 @@ export function mountChipEditor(
       if (isOrphaned) {
         const orphanBadge = placeholderList.createDiv({ cls: 'rp-placeholder-orphan-badge' });
         orphanBadge.setAttribute('role', 'alert');
-        orphanBadge.textContent = `Template still contains {{${removedId}}} — remove from template or re-add this placeholder.`;
+        orphanBadge.textContent = t('snippetEditor.orphanBadge', { id: removedId });
       }
       onChange();
     });
@@ -329,27 +329,27 @@ export function mountChipEditor(
     // Label field
     const labelSec = expanded.createDiv({ cls: 'rp-snippet-form-section rp-stack' });
     const labelLbl = labelSec.createEl('label');
-    labelLbl.textContent = 'Label';
+    labelLbl.textContent = t('snippetEditor.placeholderLabel');
     labelLbl.htmlFor = `rp-ph-label-${ph.id}`;
     const labelInput = labelSec.createEl('input', { type: 'text' });
     labelInput.id = `rp-ph-label-${ph.id}`;
     labelInput.value = ph.label;
     on(labelInput, 'input', () => {
       ph.label = labelInput.value;
-      labelSpan.textContent = ph.label;
+      labelSpan.textContent = ph.label; // User-authored content, not a UI string
       onChange();
     });
 
     // Type dropdown
     const typeSec = expanded.createDiv({ cls: 'rp-snippet-form-section rp-stack' });
     const typeLbl = typeSec.createEl('label');
-    typeLbl.textContent = 'Type';
+    typeLbl.textContent = t('snippetEditor.type');
     typeLbl.htmlFor = `rp-ph-type-${ph.id}`;
     const typeSelect = typeSec.createEl('select');
     typeSelect.id = `rp-ph-type-${ph.id}`;
     const phTypesLocal: Array<{ value: SnippetPlaceholder['type']; label: string }> = [
-      { value: 'free-text', label: 'Free text' },
-      { value: 'choice', label: 'Choice' },
+      { value: 'free-text', label: t('snippetEditor.placeholderTypeFreeText') },
+      { value: 'choice', label: t('snippetEditor.placeholderTypeChoice') },
     ];
     for (const { value, label } of phTypesLocal) {
       const opt = typeSelect.createEl('option', { text: label });
@@ -358,7 +358,7 @@ export function mountChipEditor(
     typeSelect.value = ph.type;
     on(typeSelect, 'change', () => {
       ph.type = typeSelect.value as SnippetPlaceholder['type'];
-      badge.textContent = ph.type;
+      badge.textContent = ph.type; // Internal enum value, not a UI label
       if (ph.type === 'choice') {
         if (!ph.options) ph.options = [];
       } else {
@@ -373,7 +373,7 @@ export function mountChipEditor(
     // Options list (D-06)
     const optionsSec = expanded.createDiv({ cls: 'rp-snippet-form-section rp-stack' });
     const optionsLbl = optionsSec.createEl('label');
-    optionsLbl.textContent = 'Options';
+    optionsLbl.textContent = t('snippetEditor.optionsLabel');
     const optionList = optionsSec.createDiv({ cls: 'rp-option-list' });
 
     if (!ph.options) ph.options = [];
@@ -385,18 +385,18 @@ export function mountChipEditor(
         const optRow = optionList.createDiv({ cls: 'rp-option-row' });
         const optLabel = optRow.createEl('label', { cls: 'rp-chip-option-label-hidden' });
         optLabel.htmlFor = `rp-opt-${ph.id}-${oi}`;
-        optLabel.textContent = `Option ${oi + 1}`;
+        optLabel.textContent = t('snippetEditor.optionNumber', { n: String(oi + 1) });
         const optInput = optRow.createEl('input', { type: 'text' });
         optInput.id = `rp-opt-${ph.id}-${oi}`;
         optInput.value = opt;
-        optInput.placeholder = `Option ${oi + 1}`;
+        optInput.placeholder = t('snippetEditor.optionNumber', { n: String(oi + 1) });
         on(optInput, 'input', () => {
           if (ph.options) ph.options[oi] = optInput.value;
           onChange();
         });
         const removeOptBtn = optRow.createEl('button', { text: '×' });
         removeOptBtn.setAttribute('type', 'button');
-        removeOptBtn.setAttribute('aria-label', `Remove ${opt || `option ${oi + 1}`}`);
+        removeOptBtn.setAttribute('aria-label', t('snippetEditor.removeOptionAria', { label: opt || t('snippetEditor.optionNumber', { n: String(oi + 1) }) }));
         on(removeOptBtn, 'click', () => {
           ph.options?.splice(oi, 1);
           renderOptionRows();
@@ -406,7 +406,7 @@ export function mountChipEditor(
     };
     renderOptionRows();
 
-    const addOptionBtn = optionsSec.createEl('button', { text: '+ add option' });
+    const addOptionBtn = optionsSec.createEl('button', { text: t('snippetEditor.addOptionBtn') });
     addOptionBtn.setAttribute('type', 'button');
     on(addOptionBtn, 'click', () => {
       if (!ph.options) ph.options = [];
@@ -448,7 +448,7 @@ export function mountChipEditor(
 
 // --- Orphan badge refresh --------------------------------------------------
 
-function refreshOrphanBadges(draft: JsonSnippet, container: HTMLElement): void {
+function refreshOrphanBadges(draft: JsonSnippet, container: HTMLElement, t: Translator = defaultT): void {
   container.querySelectorAll('.rp-placeholder-orphan-badge').forEach(el => el.remove());
   const templateText = draft.template;
   const activeIds = new Set(draft.placeholders.map(p => p.id));
@@ -457,7 +457,7 @@ function refreshOrphanBadges(draft: JsonSnippet, container: HTMLElement): void {
     if (token && !activeIds.has(token)) {
       const badge = container.createDiv({ cls: 'rp-placeholder-orphan-badge' });
       badge.setAttribute('role', 'alert');
-      badge.textContent = `Template still contains {{${token}}} — remove from template or re-add this placeholder.`;
+      badge.textContent = t('snippetEditor.orphanBadge', { id: token });
     }
   }
 }

@@ -225,6 +225,12 @@
   cursor: grab;
 }
 
+.rp-protocol-editor-node:focus-visible {
+  outline: 2px solid var(--interactive-accent);
+  outline-offset: 2px;
+  z-index: 50;
+}
+
 .rp-protocol-editor-node.rp-node-dragging {
   cursor: grabbing;
   opacity: 0.85;
@@ -396,19 +402,48 @@
 /* Beta 3 — easier node resizing */
 .rp-protocol-editor-resize-handle {
   position: absolute;
-  right: 2px;
-  bottom: 2px;
-  width: 14px;
-  height: 14px;
-  border-right: 2px solid var(--text-muted);
-  border-bottom: 2px solid var(--text-muted);
+  right: 0;
+  bottom: 0;
+  width: 18px;
+  height: 18px;
+  border-radius: 3px 0 0;
+  background: var(--background-modifier-hover);
   cursor: nwse-resize;
-  opacity: 0.7;
+  opacity: 0.55;
+  transition: opacity 0.15s ease, background 0.15s ease;
+}
+
+.rp-protocol-editor-resize-handle::after {
+  content: "";
+  position: absolute;
+  right: 3px;
+  bottom: 3px;
+  width: 8px;
+  height: 8px;
+  background:
+    linear-gradient(
+      to bottom left,
+      var(--text-muted) 40%,
+      transparent 40%
+    );
+  background-size: 4px 4px;
+  background-repeat: no-repeat;
 }
 
 .rp-protocol-editor-resize-handle:hover {
   opacity: 1;
-  border-color: var(--interactive-accent);
+  background: var(--background-modifier-active-hover);
+}
+
+.rp-protocol-editor-resize-handle:hover::after {
+  background:
+    linear-gradient(
+      to bottom left,
+      var(--interactive-accent) 40%,
+      transparent 40%
+    );
+  background-size: 4px 4px;
+  background-repeat: no-repeat;
 }
 
 .rp-protocol-editor-node.rp-node-resizing {

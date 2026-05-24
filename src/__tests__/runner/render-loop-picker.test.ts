@@ -100,6 +100,7 @@ describe('shared runner footer renderer', () => {
       onBack,
       showSkip: true,
       onSkip,
+      t: (key: string) => key === 'protocolRunner.stepBack' ? 'Go back one step' : key === 'protocolRunner.stepSkip' ? 'Skip this question' : key,
     });
 
     const back = findByClass(root, 'rp-step-back-btn')[0]!;
@@ -109,8 +110,87 @@ describe('shared runner footer renderer', () => {
 
     expect(back.disabled).toBe(true);
     expect(back.attrs.get('aria-label')).toBe('Go back one step');
+    expect(skip.attrs.get('aria-label')).toBe('Skip this question');
     expect(onBack).toHaveBeenCalledTimes(1);
     expect(onSkip).toHaveBeenCalledTimes(1);
+  });
+
+  it('uses i18n key as fallback when no t function is provided', () => {
+    const root = new MockEl('root');
+    renderRunnerFooter(asHtml(root), {
+      bindClick: (el, handler) => {
+        (el as unknown as MockEl).clickHandler = handler;
+      },
+    }, {
+      showBack: true,
+      onBack: () => {},
+    });
+
+    const back = findByClass(root, 'rp-step-back-btn')[0]!;
+    expect(back.attrs.get('aria-label')).toBe('protocolRunner.stepBack');
+  });
+
+  it('renders Redo button with localized aria-label', () => {
+    const root = new MockEl('root');
+    const onRedo = vi.fn();
+    renderRunnerFooter(asHtml(root), {
+      bindClick: (el, handler) => {
+        (el as unknown as MockEl).clickHandler = handler;
+      },
+    }, {
+      showBack: false,
+      onBack: () => {},
+      showRedo: true,
+      onRedo,
+      t: (key: string) => key === 'protocolRunner.stepRedo' ? 'Redo' : key,
+    });
+
+    const redo = findByClass(root, 'rp-step-redo-btn')[0]!;
+    expect(redo.attrs.get('aria-label')).toBe('Redo');
+    redo.clickHandler?.({} as MouseEvent);
+    expect(onRedo).toHaveBeenCalledTimes(1);
+    expect(redo.disabled).toBe(true);
+  });
+
+  it('does not render footer when no buttons are visible', () => {
+    const root = new MockEl('root');
+    renderRunnerFooter(asHtml(root), {
+      bindClick: () => {},
+    }, {
+      showBack: false,
+      onBack: () => {},
+    });
+
+    expect(root.children.length).toBe(0);
+  });
+
+  it('does not use title attribute on any button (Obsidian icon tooltip pitfall)', () => {
+    const root = new MockEl('root');
+    renderRunnerFooter(asHtml(root), {
+      bindClick: (el, handler) => {
+        (el as unknown as MockEl).clickHandler = handler;
+      },
+    }, {
+      showBack: true,
+      onBack: () => {},
+      showSkip: true,
+      onSkip: () => {},
+      showRedo: true,
+      onRedo: () => {},
+      t: (key: string) => {
+        const map: Record<string, string> = {
+          'protocolRunner.stepBack': 'Go back one step',
+          'protocolRunner.stepRedo': 'Redo',
+          'protocolRunner.stepSkip': 'Skip this question',
+        };
+        return map[key] ?? key;
+      },
+    });
+
+    for (const btn of findByClass(root, 'rp-runner-icon-btn')) {
+      expect(btn.attrs.get('title') ?? null).toBeNull();
+      expect(btn.attrs.get('aria-label')).not.toBeNull();
+    }
   });
 });
 
@@ -127,6 +207,7 @@ describe('shared loop picker renderer', () => {
       nodeId: 'loop',
       accumulatedText: 'before',
       canStepBack: true,
+      canRedo: false,
     }, {
       bindClick: (el, handler) => {
         (el as unknown as MockEl).clickHandler = handler;
@@ -161,6 +242,7 @@ describe('shared loop picker renderer', () => {
       nodeId: 'missing',
       accumulatedText: '',
       canStepBack: false,
+      canRedo: false,
     };
 
     expect(renderLoopPicker(asHtml(textZone), asHtml(actionZone), null, state, host)).toBe(false);

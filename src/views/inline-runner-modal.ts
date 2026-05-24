@@ -22,71 +22,10 @@ import {
   renderSnippetFillNotFound,
 } from '../runner/render/render-snippet-fill';
 import type { InlineRunnerLayout } from '../settings';
+import { InlineRunnerLayoutManager } from './inline-runner-layout';
 
-interface InlineRunnerViewport {
-  width: number;
-  height: number;
-}
-
-interface InlineRunnerSize {
-  width: number;
-  height: number;
-}
-
-const INLINE_RUNNER_DEFAULT_WIDTH = 420;
-const INLINE_RUNNER_DEFAULT_HEIGHT = 320;
-const INLINE_RUNNER_DEFAULT_MARGIN = 16;
-const INLINE_RUNNER_MIN_VISIBLE_WIDTH = 160;
-const INLINE_RUNNER_MIN_VISIBLE_HEADER_HEIGHT = 40;
-
-function isFiniteInlineRunnerPosition(position: InlineRunnerLayout | null): position is InlineRunnerLayout {
-  return position !== null && Number.isFinite(position.left) && Number.isFinite(position.top);
-}
-
-/** Phase 60 D-02: never let persisted coordinates place the draggable header fully off-screen. */
-export function clampInlineRunnerPosition(
-  position: InlineRunnerLayout | null,
-  viewport: InlineRunnerViewport,
-  size: InlineRunnerSize,
-): InlineRunnerLayout | null {
-  if (!isFiniteInlineRunnerPosition(position)) return null;
-
-  const visibleWidth = Math.min(Math.max(size.width, INLINE_RUNNER_MIN_VISIBLE_WIDTH), viewport.width);
-  const visibleHeight = Math.min(Math.max(size.height, INLINE_RUNNER_MIN_VISIBLE_HEADER_HEIGHT), viewport.height);
-  const maxLeft = Math.max(0, viewport.width - Math.min(visibleWidth, INLINE_RUNNER_MIN_VISIBLE_WIDTH));
-  const maxTop = Math.max(0, viewport.height - Math.min(visibleHeight, INLINE_RUNNER_MIN_VISIBLE_HEADER_HEIGHT));
-
-  return {
-    left: Math.min(Math.max(0, position.left), maxLeft),
-    top: Math.min(Math.max(0, position.top), maxTop),
-  };
-}
-
-/** Phase 67 D-10: extends Phase 60 D-02 clamp-on-restore to width/height.
- *  Position arm reuses the existing clampInlineRunnerPosition (preserves
- *  INLINE_RUNNER_MIN_VISIBLE_WIDTH gating). Size arm clamps to viewport - 32px
- *  (matches the CSS `max-width: calc(100vw - var(--size-4-8))` rule). Missing
- *  or non-finite width/height fall back to defaults (D-06). */
-export function clampInlineRunnerLayout(
-  layout: InlineRunnerLayout | null,
-  viewport: InlineRunnerViewport,
-): InlineRunnerLayout | null {
-  if (layout === null) return null;
-  const positionOnly = clampInlineRunnerPosition(
-    { left: layout.left, top: layout.top },
-    viewport,
-    { width: INLINE_RUNNER_DEFAULT_WIDTH, height: INLINE_RUNNER_DEFAULT_HEIGHT },
-  );
-  if (positionOnly === null) return null;
-  const VIEWPORT_MARGIN_PX = 32;
-  const widthIn = (typeof layout.width === 'number' && Number.isFinite(layout.width) && layout.width > 0)
-    ? layout.width : INLINE_RUNNER_DEFAULT_WIDTH;
-  const heightIn = (typeof layout.height === 'number' && Number.isFinite(layout.height) && layout.height > 0)
-    ? layout.height : INLINE_RUNNER_DEFAULT_HEIGHT;
-  const width = Math.min(widthIn, Math.max(0, viewport.width - VIEWPORT_MARGIN_PX));
-  const height = Math.min(heightIn, Math.max(0, viewport.height - VIEWPORT_MARGIN_PX));
-  return { left: positionOnly.left, top: positionOnly.top, width, height };
-}
+// Re-export clamp functions for backward compatibility (tests import from this module).
+export { clampInlineRunnerPosition, clampInlineRunnerLayout } from './inline-runner-layout';
 
 /**
  * InlineRunnerModal — floating panel that hosts the Runner UI over an active note.
@@ -125,22 +64,14 @@ export class InlineRunnerModal {
   private snippetTreePicker: SnippetTreePicker | null = null;
   private resizeObserver: ResizeObserver | null = null;
   private workspaceLayoutRef: import('obsidian').EventRef | null = null;
+  private layoutManager: InlineRunnerLayoutManager | null = null;
 
   /** Phase 59 INLINE-FIX-05: tracks the active fill-in modal so close() can dispose it. */
   private fillModal: SnippetFillInModal | null = null;
 
   /** Phase 59 INLINE-FIX-05: gate flag — when true, D1 handleActiveLeafChange skips hide/show
-   *  to prevent the inline container from disappearing while SnippetFillInModal is active. */
+ *  to prevent the inline container from disappearing while SnippetFillInModal is active. */
   private isFillModalOpen = false;
-
-  private windowResizeHandler: (() => void) | null = null;
-  private dragMoveHandler: ((event: PointerEvent) => void) | null = null;
-  private dragUpHandler: ((event: PointerEvent) => void) | null = null;
-  private isDragging = false;
-  /** Phase 67 D-04: tracks active resize gesture so .is-resizing class lifecycle is one-shot. */
-  private isResizing = false;
-  /** Phase 67 D-04: handle for the 400ms debounce timer between ResizeObserver ticks. */
-  private resizeDebounceTimer: number | null = null;
 
   constructor(
     app: App,
@@ -204,7 +135,7 @@ export class InlineRunnerModal {
     const protocolPath = this.canvasFilePath!;
     const file = this.app.vault.getAbstractFileByPath(protocolPath);
     if (!(file instanceof TFile)) {
-      const reason = `Protocol file not found: "${protocolPath}".`;
+      const reason = this.plugin.i18n.t('inlineRunner.protocolFileNotFound', { path: protocolPath });
       console.warn('[RadiProtocol] InlineRunnerModal.open() failed:', reason);
       new Notice(reason);
       this.close();
@@ -215,7 +146,7 @@ export class InlineRunnerModal {
     try {
       content = await this.app.vault.read(file);
     } catch {
-      const reason = `Could not read protocol file: "${protocolPath}".`;
+      const reason = this.plugin.i18n.t('inlineRunner.couldNotReadProtocol', { path: protocolPath });
       console.warn('[RadiProtocol] InlineRunnerModal.open() failed:', reason);
       new Notice(reason);
       this.close();
@@ -275,20 +206,17 @@ export class InlineRunnerModal {
     this.handleActiveLeafChange();
 
     // Phase 85 INLINE-MULTI-02: cascade-or-default position decision.
-    this.applyInitialLayout();
+    this.layoutManager!.applyInitialLayout();
 
     // Re-clamp on layout changes without resetting to note-width anchoring.
     this.workspaceLayoutRef = this.app.workspace.on('layout-change', () => {
-      void this.reclampCurrentPosition(true);
+      void this.layoutManager!.reclampCurrentPosition(true);
     });
-    this.windowResizeHandler = () => {
-      void this.reclampCurrentPosition(true);
-    };
-    window.addEventListener('resize', this.windowResizeHandler);
+    this.layoutManager!.startWindowResizeListener();
 
     // Phase 67 D-04 / D-07: debounced save on resize-end + .is-resizing lifecycle.
     if (this.containerEl !== null) {
-      this.resizeObserver = new ResizeObserver(() => this.handleResizeTick());
+      this.resizeObserver = new ResizeObserver(() => this.layoutManager!.handleResizeTick());
       this.resizeObserver.observe(this.containerEl);
     }
   }
@@ -330,20 +258,11 @@ export class InlineRunnerModal {
       this.resizeObserver.disconnect();
       this.resizeObserver = null;
     }
-    if (this.windowResizeHandler !== null) {
-      window.removeEventListener('resize', this.windowResizeHandler);
-      this.windowResizeHandler = null;
+    // Phase 67: defensive resize-state cleanup delegated to layout manager.
+    if (this.layoutManager !== null) {
+      this.layoutManager.destroy();
+      this.layoutManager = null;
     }
-    // Phase 67: defensive resize-state cleanup (timer + .is-resizing class).
-    if (this.resizeDebounceTimer !== null) {
-      window.clearTimeout(this.resizeDebounceTimer);
-      this.resizeDebounceTimer = null;
-    }
-    if (this.containerEl !== null) {
-      this.containerEl.removeClass('is-resizing');
-    }
-    this.isResizing = false;
-    this.removeDragListeners();
 
     // Phase 85 INLINE-MULTI-01: unregister from the plugin's registry. Computed
     // BEFORE we null out canvasFilePath/containerEl so the key is still derivable.
@@ -373,10 +292,18 @@ export class InlineRunnerModal {
     const container = document.body.createDiv({ cls: 'rp-inline-runner-container' });
     this.containerEl = container;
 
+    // Create layout manager for position/drag/resize.
+    this.layoutManager = new InlineRunnerLayoutManager({
+      containerEl: container,
+      getSavedLayout: () => this.plugin.getInlineRunnerPosition(),
+      saveLayout: (layout) => this.plugin.saveInlineRunnerPosition(layout),
+      getOpenLayouts: () => this.plugin.getOpenInlineRunners().map(r => r.getAppliedLayout()),
+    });
+
     // Header — drag handle + progress bar at top of modal
     const header = container.createDiv({ cls: 'rp-inline-runner-header' });
     this.headerEl = header;
-    this.enableDragging(header);
+    this.layoutManager.enableDragging(header);
 
     // Progress bar — top of modal, inside header
     const progress = header.createDiv({ cls: 'rp-inline-runner-progress', attr: { role: 'progressbar', 'aria-valuemin': '0', 'aria-valuemax': '100' } });
@@ -400,7 +327,7 @@ export class InlineRunnerModal {
     // Close button — left side of footer row (square icon button)
     const closeBtn = footerBtnRow.createEl('button', { cls: 'rp-inline-runner-close-btn rp-runner-icon-btn' });
     setIcon(closeBtn, 'x');
-    closeBtn.setAttribute('aria-label', 'Close protocol');
+    closeBtn.setAttribute('aria-label', this.plugin.i18n.t('protocolRunner.closeProtocol'));
     closeBtn.addEventListener('click', () => {
       this.close();
     });
@@ -458,7 +385,7 @@ export class InlineRunnerModal {
     this.progressTextEl.setText(`${percent}%`);
     const progressEl = this.containerEl?.querySelector('.rp-inline-runner-progress');
     progressEl?.setAttribute('aria-valuenow', String(percent));
-    progressEl?.setAttribute('aria-label', `Protocol progress ${percent}%`);
+    progressEl?.setAttribute('aria-label', this.plugin.i18n.t('protocolRunner.progressLabel', { percent: String(percent) }));
   }
 
   private render(): void {
@@ -491,7 +418,7 @@ export class InlineRunnerModal {
       // Close button — always present on the left
       const closeBtn = this.footerBtnRowEl.createEl('button', { cls: 'rp-inline-runner-close-btn rp-runner-icon-btn' });
       setIcon(closeBtn, 'x');
-      closeBtn.setAttribute('aria-label', 'Close protocol');
+      closeBtn.setAttribute('aria-label', this.plugin.i18n.t('protocolRunner.closeProtocol'));
       closeBtn.addEventListener('click', () => {
         this.close();
       });
@@ -500,7 +427,7 @@ export class InlineRunnerModal {
     switch (state.status) {
       case 'idle': {
         this.contentEl.createEl('p', {
-          text: 'Starting protocol…',
+          text: this.plugin.i18n.t('protocolRunner.starting'),
           cls: CSS_CLASS.EMPTY_STATE_BODY,
         });
         break;
@@ -530,7 +457,7 @@ export class InlineRunnerModal {
         if (result === 'error') return;
         if (result === 'not-question') {
           this.contentEl.createEl('p', {
-            text: 'Processing...',
+            text: this.plugin.i18n.t('protocolRunner.processing'),
             cls: CSS_CLASS.EMPTY_STATE_BODY,
           });
         }
@@ -543,7 +470,7 @@ export class InlineRunnerModal {
             const hasAnswers = neighborIds.some(
               (nid) => this.graph!.nodes.get(nid)?.kind === 'answer',
             );
-            this.renderFooterIcons(state.canStepBack, hasAnswers && typeof this.runner.skip === 'function');
+            this.renderFooterIcons(state.canStepBack, hasAnswers && typeof this.runner.skip === 'function', state.canRedo);
           }
         }
         break;
@@ -551,7 +478,7 @@ export class InlineRunnerModal {
 
       case 'awaiting-snippet-pick': {
         this.contentEl.createEl('p', {
-          text: 'Loading snippets...',
+          text: this.plugin.i18n.t('protocolRunner.loadingSnippets'),
           cls: CSS_CLASS.EMPTY_STATE_BODY,
         });
         void this.mountSnippetPicker(state, this.contentEl);
@@ -574,7 +501,7 @@ export class InlineRunnerModal {
 
         // Footer icon buttons: Back only (no Skip in loop picker)
         if (this.footerBtnRowEl !== null) {
-          this.renderFooterIcons(state.canStepBack, false);
+          this.renderFooterIcons(state.canStepBack, false, state.canRedo);
         }
         break;
       }
@@ -613,17 +540,18 @@ export class InlineRunnerModal {
     }
   }
 
-  /** Render Back/Skip icon buttons into the footer row (after close btn). */
-  private renderFooterIcons(showBack: boolean, showSkip: boolean): void {
+  /** Render Back/Redo/Skip icon buttons into the footer row (after close btn). */
+  private renderFooterIcons(showBack: boolean, showSkip: boolean, showRedo: boolean): void {
     if (this.footerBtnRowEl === null) return;
-    if (!showBack && !showSkip) return;
+    if (!showBack && !showSkip && !showRedo) return;
 
-    // Container for Back+Skip, pushed right via justify-content: flex-end
+    const t = this.plugin.i18n.t.bind(this.plugin.i18n);
+    // Container for Back+Redo+Skip, pushed right via justify-content: flex-end
     const iconsGroup = this.footerBtnRowEl.createDiv({ cls: 'rp-runner-footer-row' });
     if (showBack) {
       const backBtn = createButton(iconsGroup, {
         cls: 'rp-step-back-btn rp-runner-icon-btn',
-        attr: { 'aria-label': 'Go back one step' },
+        attr: { 'aria-label': t('protocolRunner.stepBack') },
       });
       setIcon(backBtn, 'arrow-left');
       // Phase 66 D-01/D-02/D-03: visual half of double-click guard
@@ -633,10 +561,22 @@ export class InlineRunnerModal {
         this.render();
       });
     }
+    if (showRedo) {
+      const redoBtn = createButton(iconsGroup, {
+        cls: 'rp-step-redo-btn rp-runner-icon-btn',
+        attr: { 'aria-label': t('protocolRunner.stepRedo') },
+      });
+      setIcon(redoBtn, 'redo');
+      redoBtn.addEventListener('click', () => {
+        redoBtn.disabled = true;
+        this.runner.redo();
+        this.render();
+      });
+    }
     if (showSkip) {
       const skipBtn = createButton(iconsGroup, {
         cls: 'rp-skip-btn rp-runner-icon-btn',
-        attr: { 'aria-label': 'Skip this question' },
+        attr: { 'aria-label': t('protocolRunner.stepSkip') },
       });
       setIcon(skipBtn, 'skip-forward');
       skipBtn.addEventListener('click', () => {
@@ -663,6 +603,23 @@ export class InlineRunnerModal {
         else checked.delete(index);
         updateCompletion();
       });
+    });
+
+    const copyRow = checklist.createDiv({ cls: 'rp-inline-runner-self-check-copy-row' });
+    const copyBtn = copyRow.createEl('button', {
+      cls: 'rp-inline-runner-copy-result-btn',
+      attr: { type: 'button', 'aria-label': this.plugin.i18n.t('selfCheck.copyResult') },
+    });
+    setIcon(copyBtn, 'copy');
+    copyBtn.createSpan({ text: this.plugin.i18n.t('selfCheck.copyResult') });
+    copyBtn.addEventListener('click', () => {
+      const state = this.runner.getState();
+      const text = state.status === 'complete' ? state.finalText : '';
+      if (text.length === 0) return;
+      navigator.clipboard.writeText(text).then(
+        () => { new Notice(this.plugin.i18n.t('selfCheck.copied')); },
+        () => { new Notice(this.plugin.i18n.t('selfCheck.copyFailed')); },
+      );
     });
   }
 
@@ -718,230 +675,32 @@ export class InlineRunnerModal {
     this.close();
   }
 
-  private getViewport(): InlineRunnerViewport {
-    return {
-      width: Math.max(0, window.innerWidth || document.documentElement.clientWidth || 0),
-      height: Math.max(0, window.innerHeight || document.documentElement.clientHeight || 0),
-    };
-  }
-
-  private getContainerSize(): InlineRunnerSize {
-    const rect = this.containerEl?.getBoundingClientRect();
-    return {
-      width: Math.max(INLINE_RUNNER_DEFAULT_WIDTH, rect?.width ?? 0),
-      height: Math.max(INLINE_RUNNER_DEFAULT_HEIGHT, rect?.height ?? 0),
-    };
-  }
-
-  private getDefaultPosition(): InlineRunnerLayout {
-    const viewport = this.getViewport();
-    const size = this.getContainerSize();
-    return {
-      left: Math.max(INLINE_RUNNER_DEFAULT_MARGIN, viewport.width - size.width - INLINE_RUNNER_DEFAULT_MARGIN),
-      top: Math.max(INLINE_RUNNER_DEFAULT_MARGIN, viewport.height - size.height - INLINE_RUNNER_DEFAULT_MARGIN),
-    };
-  }
-
-  private applyPosition(position: InlineRunnerLayout): void {
-    if (this.containerEl === null) return;
-    this.containerEl.style.left = `${Math.round(position.left)}px`;
-    this.containerEl.style.top = `${Math.round(position.top)}px`;
-    // Phase 67: do NOT clear style.width — the modal is resizable and width must persist across drags
-    // this.containerEl.style.width = '';
-    this.containerEl.toggleClass('rp-inline-runner-applied-position', true);
-  }
-
-  /** Phase 67 D-10: applyPosition + size. Missing width/height ⇒ default fallback. */
-  private applyLayout(layout: InlineRunnerLayout): void {
-    if (this.containerEl === null) return;
-    this.applyPosition({ left: layout.left, top: layout.top });
-    const width = (typeof layout.width === 'number' && Number.isFinite(layout.width) && layout.width > 0)
-      ? layout.width : INLINE_RUNNER_DEFAULT_WIDTH;
-    const height = (typeof layout.height === 'number' && Number.isFinite(layout.height) && layout.height > 0)
-      ? layout.height : INLINE_RUNNER_DEFAULT_HEIGHT;
-    this.containerEl.style.width = `${Math.round(width)}px`;
-    this.containerEl.style.height = `${Math.round(height)}px`;
-  }
-
-  /** Phase 67 D-06/D-10: restore saved layout (clamped) or apply default. */
-  private restoreOrDefaultPosition(): void {
-    const saved = this.plugin.getInlineRunnerPosition();
-    const viewport = this.getViewport();
-    const restored = clampInlineRunnerLayout(saved, viewport);
-    if (restored !== null) {
-      this.applyLayout(restored);
-      return;
-    }
-    const defaultLayout: InlineRunnerLayout = {
-      ...this.getDefaultPosition(),
-      width: INLINE_RUNNER_DEFAULT_WIDTH,
-      height: INLINE_RUNNER_DEFAULT_HEIGHT,
-    };
-    const clamped = clampInlineRunnerLayout(defaultLayout, viewport)
-      ?? { left: INLINE_RUNNER_DEFAULT_MARGIN, top: INLINE_RUNNER_DEFAULT_MARGIN, width: INLINE_RUNNER_DEFAULT_WIDTH, height: INLINE_RUNNER_DEFAULT_HEIGHT };
-    this.applyLayout(clamped);
-  }
-
-  /** Phase 85 INLINE-MULTI-02: cascade-or-default position decision.
-   *  When opened with no other open inline runners, restores the saved
-   *  position (or falls back to the default). When opened while at least one
-   *  other inline runner is already open, offsets +24/+24 from the most
-   *  recently opened instance, clamped to the viewport, and applies default
-   *  width/height — without persisting the cascade position to settings
-   *  (the saved global default belongs to drag/resize gestures only). */
-  private applyInitialLayout(): void {
-    const others = this.plugin.getOpenInlineRunners();
-    if (others.length === 0) {
-      this.restoreOrDefaultPosition();
-      return;
-    }
-    const last = others[others.length - 1]!;
-    const lastLayout = last.getAppliedLayout();
-    if (lastLayout === null) {
-      this.restoreOrDefaultPosition();
-      return;
-    }
-    const viewport = this.getViewport();
-    const containerSize = this.getContainerSize();
-    const next = clampInlineRunnerPosition(
-      { left: lastLayout.left + 24, top: lastLayout.top + 24 },
-      viewport,
-      containerSize,
-    );
-    if (next === null) {
-      this.restoreOrDefaultPosition();
-      return;
-    }
-    this.applyPosition(next);
-    if (this.containerEl !== null) {
-      this.containerEl.style.width = `${INLINE_RUNNER_DEFAULT_WIDTH}px`;
-      this.containerEl.style.height = `${INLINE_RUNNER_DEFAULT_HEIGHT}px`;
-    }
-  }
-
   /** Phase 85 INLINE-MULTI-02: public so the cascade logic in another modal's
    *  open() can read this instance's current applied position. */
   getAppliedLayout(): InlineRunnerLayout | null {
-    if (this.containerEl === null) return null;
-    const left = Number.parseFloat(this.containerEl.style.left);
-    const top = Number.parseFloat(this.containerEl.style.top);
-    if (!isFiniteInlineRunnerPosition({ left, top })) return null;
-    const width = Number.parseFloat(this.containerEl.style.width);
-    const height = Number.parseFloat(this.containerEl.style.height);
-    return {
-      left,
-      top,
-      width: Number.isFinite(width) && width > 0 ? width : INLINE_RUNNER_DEFAULT_WIDTH,
-      height: Number.isFinite(height) && height > 0 ? height : INLINE_RUNNER_DEFAULT_HEIGHT,
-    };
+    if (this.layoutManager === null) return null;
+    return this.layoutManager.getAppliedLayout();
   }
 
-  /** Phase 67 D-11: re-clamp position AND size on viewport change; persist if anything changed. */
-  private async reclampCurrentPosition(persistIfChanged: boolean): Promise<void> {
-    if (this.containerEl === null) return;
-    if (this.containerEl.hasClass('is-hidden')) return;
-    const currentPosition = this.getAppliedLayout() ?? this.plugin.getInlineRunnerPosition() ?? this.getDefaultPosition();
-    const saved = this.plugin.getInlineRunnerPosition();
-    const styleWidth = Number.parseFloat(this.containerEl.style.width);
-    const styleHeight = Number.parseFloat(this.containerEl.style.height);
-    const current: InlineRunnerLayout = {
-      left: currentPosition.left,
-      top: currentPosition.top,
-      width: Number.isFinite(styleWidth) && styleWidth > 0 ? styleWidth : (saved?.width ?? INLINE_RUNNER_DEFAULT_WIDTH),
-      height: Number.isFinite(styleHeight) && styleHeight > 0 ? styleHeight : (saved?.height ?? INLINE_RUNNER_DEFAULT_HEIGHT),
-    };
-    const clamped = clampInlineRunnerLayout(current, this.getViewport());
-    if (clamped === null) return;
-    this.applyLayout(clamped);
-    const positionChanged = clamped.left !== current.left || clamped.top !== current.top;
-    const sizeChanged = clamped.width !== current.width || clamped.height !== current.height;
-    if (persistIfChanged && (positionChanged || sizeChanged)) {
-      await this.plugin.saveInlineRunnerPosition(clamped);
-    }
+  /** Delegates to InlineRunnerLayoutManager.restoreOrDefaultPosition(). */
+  restoreOrDefaultPosition(): void {
+    this.layoutManager?.restoreOrDefaultPosition();
   }
 
-  private enableDragging(header: HTMLElement): void {
-    header.addEventListener('pointerdown', (event: PointerEvent) => {
-      if (this.containerEl === null) return;
-      const start = this.getAppliedLayout() ?? this.getDefaultPosition();
-      const startX = event.clientX;
-      const startY = event.clientY;
-      this.isDragging = true;
-      this.containerEl.addClass('is-dragging');
-
-      this.dragMoveHandler = (moveEvent: PointerEvent) => {
-        const next = clampInlineRunnerPosition(
-          { left: start.left + moveEvent.clientX - startX, top: start.top + moveEvent.clientY - startY },
-          this.getViewport(),
-          this.getContainerSize(),
-        );
-        if (next !== null) this.applyPosition(next);
-      };
-
-      this.dragUpHandler = () => {
-        const finalLayout = this.getAppliedLayout();
-        this.removeDragListeners();
-        if (finalLayout !== null) {
-          void this.plugin.saveInlineRunnerPosition(finalLayout);
-        }
-      };
-
-      document.addEventListener('pointermove', this.dragMoveHandler);
-      document.addEventListener('pointerup', this.dragUpHandler);
-    });
+  /** Delegates to InlineRunnerLayoutManager.applyInitialLayout(). */
+  applyInitialLayout(): void {
+    this.layoutManager?.applyInitialLayout();
   }
 
-  private removeDragListeners(): void {
-    if (this.dragMoveHandler !== null) {
-      document.removeEventListener('pointermove', this.dragMoveHandler);
-      this.dragMoveHandler = null;
-    }
-    if (this.dragUpHandler !== null) {
-      document.removeEventListener('pointerup', this.dragUpHandler);
-      this.dragUpHandler = null;
-    }
-    if (this.containerEl !== null) {
-      this.containerEl.removeClass('is-dragging');
-    }
-    this.isDragging = false;
+  /** Delegates to InlineRunnerLayoutManager.reclampCurrentPosition(). */
+  async reclampCurrentPosition(persistIfChanged: boolean): Promise<void> {
+    await this.layoutManager?.reclampCurrentPosition(persistIfChanged);
   }
 
-  /** Phase 67 D-04: ResizeObserver tick handler — toggles .is-resizing class and resets the debounce timer.
-   *  Saves only on debounce expiry (D-07). Native CSS `resize: both` owns pointer events (D-01). */
-  private handleResizeTick(): void {
-    if (this.containerEl === null) return;
-    if (!this.isResizing) {
-      this.isResizing = true;
-      this.containerEl.addClass('is-resizing');
-    }
-    if (this.resizeDebounceTimer !== null) {
-      window.clearTimeout(this.resizeDebounceTimer);
-    }
-    this.resizeDebounceTimer = window.setTimeout(() => this.handleResizeDebounceExpire(), 400);
-  }
-
-  /** Phase 67 D-07: debounce expiry — read final size, clamp, persist once, clear .is-resizing. */
-  private handleResizeDebounceExpire(): void {
-    this.resizeDebounceTimer = null;
-    if (this.containerEl === null) return;
-    const appliedLayout = this.getAppliedLayout() ?? this.getDefaultPosition();
-    const layout: InlineRunnerLayout = {
-      left: appliedLayout.left,
-      top: appliedLayout.top,
-      width: appliedLayout.width,
-      height: appliedLayout.height,
-    };
-    const clamped = clampInlineRunnerLayout(layout, this.getViewport());
-    if (clamped !== null) {
-      void this.plugin.saveInlineRunnerPosition(clamped);
-    }
-    this.containerEl.removeClass('is-resizing');
-    this.isResizing = false;
-  }
-
-  /** Phase 60 compatibility shim: layout events now clamp, not note-width-anchor. */
-  private updateModalPosition(): void {
-    void this.reclampCurrentPosition(true);
+  /** Delegates to InlineRunnerLayoutManager.handleResizeTick().
+   *  Exposed for ResizeObserver test harness in inline-runner-layout.test.ts. */
+  handleResizeTick(): void {
+    this.layoutManager?.handleResizeTick();
   }
 
   /** Resolve the textSeparator enum to its actual string value. */
@@ -1083,6 +842,7 @@ export class InlineRunnerModal {
       subfolderPath: string | undefined;
       accumulatedText: string;
       canStepBack: boolean;
+      canRedo: boolean;
     },
     questionZone: HTMLElement,
   ): Promise<void> {
@@ -1097,10 +857,11 @@ export class InlineRunnerModal {
       rootPath: this.plugin.settings.snippetFolderPath,
       hostClass: CSS_CLASS.STP_INLINE_HOST,
       copy: {
-        notFound: (relativePath) => `Snippet not found: ${relativePath}`,
+        notFound: (relativePath) => this.plugin.i18n.t('inlineRunner.snippetNotFound', { path: relativePath }),
         validationError: (snippetPath, validationMessage) =>
-          `Snippet "${snippetPath}" cannot be used. ${validationMessage}`,
+          this.plugin.i18n.t('inlineRunner.snippetCannotBeUsed', { path: snippetPath, error: validationMessage }),
       },
+      t: this.plugin.i18n.t.bind(this.plugin.i18n),
       bindClick: (el, handler) => el.addEventListener('click', handler),
       getCurrentNodeId: () => {
         const s = this.runner.getState();
@@ -1129,13 +890,17 @@ export class InlineRunnerModal {
         this.runner.stepBack();
         this.render();
       },
+      onRedo: () => {
+        this.runner.redo();
+        this.render();
+      },
     });
   }
 
   /** Handle snippet picker selection — append to note and advance. */
   private async handleSnippetPickerSelection(snippet: import('../snippets/snippet-model').Snippet): Promise<void> {
     if (snippet.kind === 'json' && snippet.validationError !== null) {
-      new Notice(`Snippet "${snippet.path}" cannot be used. ${snippet.validationError}`);
+      new Notice(this.plugin.i18n.t('inlineRunner.snippetCannotBeUsed', { path: snippet.path, error: snippet.validationError }));
       return;
     }
 
@@ -1212,7 +977,7 @@ export class InlineRunnerModal {
     }
 
     if (snippet.kind === 'json' && snippet.validationError !== null) {
-      new Notice(`Snippet "${snippet.path}" cannot be used. ${snippet.validationError}`);
+      new Notice(this.plugin.i18n.t('inlineRunner.snippetCannotBeUsed', { path: snippet.path, error: snippet.validationError }));
       this.runner.stepBack();
       this.render();
       return;
@@ -1242,7 +1007,7 @@ export class InlineRunnerModal {
 
     // JSON with placeholders — open the stacked fill-in modal (parity with sidebar).
     // Phase 54 D6 is reversed: the in-panel fill-in form is gone.
-    const modal = new SnippetFillInModal(this.app, snippet);
+    const modal = new SnippetFillInModal(this.app, snippet, this.plugin.i18n.t.bind(this.plugin.i18n));
     this.fillModal = modal;
     this.isFillModalOpen = true;
     modal.open();

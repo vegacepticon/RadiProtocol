@@ -117,6 +117,7 @@ const STATE = {
   subfolderPath: 'abdomen' as string | undefined,
   accumulatedText: '',
   canStepBack: true,
+  canRedo: false,
 };
 
 beforeEach(() => {

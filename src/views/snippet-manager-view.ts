@@ -73,7 +73,7 @@ export class SnippetManagerView extends ItemView {
 
     // Header strip with global "+ New" button
     const header = contentEl.createDiv({ cls: 'radi-snippet-tree-header' });
-    const newBtn = header.createEl('button', { cls: 'mod-cta radi-snippet-tree-new-btn' });
+    const newBtn = header.createEl('button', { cls: 'mod-cta radi-snippet-tree-new-btn', attr: { 'aria-label': this.plugin.i18n.t('snippetManager.newButtonAria') } });
     const newIcon = newBtn.createSpan({ cls: 'radi-snippet-tree-new-icon' });
     setIcon(newIcon, 'plus');
     newBtn.createSpan({ text: this.plugin.i18n.t('snippetManager.newButton') });
@@ -82,7 +82,7 @@ export class SnippetManagerView extends ItemView {
     });
 
     // Phase 37: Header "Create folder" button (CLEAN-03)
-    const folderBtn = header.createEl('button', { cls: 'radi-snippet-tree-new-btn' });
+    const folderBtn = header.createEl('button', { cls: 'radi-snippet-tree-new-btn', attr: { 'aria-label': this.plugin.i18n.t('snippetManager.folderButtonAria') } });
     const folderIcon = folderBtn.createSpan({ cls: 'radi-snippet-tree-new-icon' });
     setIcon(folderIcon, 'folder-plus');
     folderBtn.createSpan({ text: this.plugin.i18n.t('snippetManager.folderButton') });
@@ -91,7 +91,7 @@ export class SnippetManagerView extends ItemView {
     });
 
     // Phase 86 (TEMPLATE-LIB-02): Library browser button
-    const libBtn = header.createEl('button', { cls: 'radi-snippet-tree-new-btn' });
+    const libBtn = header.createEl('button', { cls: 'radi-snippet-tree-new-btn', attr: { 'aria-label': this.plugin.i18n.t('snippetManager.libraryButtonAria') } });
     const libIcon = libBtn.createSpan({ cls: 'radi-snippet-tree-new-icon' });
     setIcon(libIcon, 'globe');
     libBtn.createSpan({ text: this.plugin.i18n.t('snippetManager.libraryButton') });

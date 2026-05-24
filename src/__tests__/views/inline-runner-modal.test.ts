@@ -4,7 +4,7 @@
 // test files). The host-specific tests below remain unchanged: vault.modify
 // content / append-policy, modal lifecycle (instance creation, open, resolve),
 // and source-string regression guards.
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import {
@@ -418,6 +418,72 @@ describe('InlineRunnerModal — progress calculation (v1.17.1)', () => {
     const percent = (modal as any).calculateProgressPercent({ status: 'at-node', currentNodeId: 'q2' });
     expect(percent).toBeGreaterThan(0);
     expect(percent).toBeLessThan(99);
+  });
+});
+
+describe('InlineRunnerModal — self-check copy button', () => {
+  beforeEach(() => {
+    vi.stubGlobal('navigator', {
+      clipboard: {
+        writeText: vi.fn(() => Promise.resolve()),
+      },
+    } as unknown as Navigator);
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  // Setup helper: build container manually so renderSelfCheckCompletion has a zone
+  function setupCompleteModal(finalText: string): {
+    modal: InlineRunnerModal;
+    contentEl: MockEl;
+    copyBtn: MockEl;
+  } {
+    const { modal } = setupModal();
+    vi.spyOn((modal as any).runner, 'getState').mockReturnValue({
+      status: 'complete',
+      finalText,
+    } as any);
+    (modal as any).selfCheckItems = ['Item 1'];
+    (modal as any).selfCheckEnabled = true;
+
+    const zone = makeEl('div');
+    (modal as any).renderSelfCheckCompletion(zone);
+
+    const checklist = zone.children.find((c: MockEl) =>
+      c.classList.has('rp-inline-runner-self-check'),
+    )!;
+    const copyRow = checklist.children.find((c: MockEl) =>
+      c.classList.has('rp-inline-runner-self-check-copy-row'),
+    )!;
+    expect(copyRow).toBeDefined();
+    const copyBtn = copyRow.children.find((c: MockEl) =>
+      c.tagName === 'BUTTON',
+    )!;
+
+    return { modal, contentEl: zone, copyBtn };
+  }
+
+  it('renders copy button with localized aria-label and text', () => {
+    const { copyBtn } = setupCompleteModal('Protocol result');
+    expect(copyBtn._attrs['aria-label']).toBe('Скопировать результат протокола');
+    const spans = copyBtn.children.filter((c: MockEl) => c.tagName === 'SPAN');
+    expect(spans.some((s: MockEl) => s._text === 'Скопировать результат протокола')).toBe(true);
+  });
+
+  it('click writes finalText to clipboard on success', async () => {
+    const { copyBtn } = setupCompleteModal('Final accumulated text');
+    copyBtn.dispatchEvent({ type: 'click' });
+    await Promise.resolve();
+    expect(navigator.clipboard.writeText).toHaveBeenCalledWith('Final accumulated text');
+  });
+
+  it('click with empty finalText does not call clipboard', async () => {
+    const { copyBtn } = setupCompleteModal('');
+    copyBtn.dispatchEvent({ type: 'click' });
+    await Promise.resolve();
+    expect(navigator.clipboard.writeText).not.toHaveBeenCalled();
   });
 });
 

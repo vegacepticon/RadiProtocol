@@ -176,6 +176,7 @@ export class LibraryBrowserModal extends Modal {
     const installAllBtn = createButton(actions, {
       cls: 'mod-cta rp-library-install-all-btn',
       text: this.plugin.i18n.t('library.installAll'),
+      attr: { 'aria-label': this.plugin.i18n.t('library.installAllAria') },
     });
     installAllBtn.addEventListener('click', () => {
       void this.installEntries(this.allEntries, installAllBtn, this.plugin.i18n.t('library.installAll'));
@@ -184,6 +185,7 @@ export class LibraryBrowserModal extends Modal {
     const installFolderBtn = createButton(actions, {
       cls: 'rp-library-install-folder-btn',
       text: this.plugin.i18n.t('library.installCurrentFolder'),
+      attr: { 'aria-label': this.plugin.i18n.t('library.installCurrentFolderAria') },
     });
     installFolderBtn.addEventListener('click', () => {
       const entries = this.currentFolderEntries();
@@ -264,7 +266,7 @@ export class LibraryBrowserModal extends Modal {
   }
 
   private renderFolderRow(listEl: HTMLElement, node: LibraryTreeNode): void {
-    const row = createButton(listEl, { cls: 'rp-library-folder-row' });
+    const row = createButton(listEl, { cls: 'rp-library-folder-row', attr: { 'aria-label': this.plugin.i18n.t('library.openFolderAria', { name: node.name }) } });
     const nameEl = row.createEl('div', { cls: 'rp-library-entry-name' });
     nameEl.createEl('span', { cls: 'rp-library-row-glyph', text: GLYPH_FOLDER });
     nameEl.createEl('span', { cls: 'rp-library-row-title', text: node.name });
@@ -292,12 +294,12 @@ export class LibraryBrowserModal extends Modal {
       info.createEl('div', { text: entry.description, cls: 'rp-library-entry-desc' });
     }
     const actions = row.createDiv({ cls: 'rp-library-entry-actions' });
-    const previewBtn = createButton(actions, { cls: 'rp-library-preview-btn' });
+    const previewBtn = createButton(actions, { cls: 'rp-library-preview-btn', attr: { 'aria-label': this.plugin.i18n.t('library.previewAria', { name: entry.name }) } });
     previewBtn.setText(this.plugin.i18n.t('library.preview'));
     previewBtn.addEventListener('click', () => {
       void this.openPreview(entry, previewBtn);
     });
-    const installBtn = createButton(actions, { cls: 'mod-cta rp-library-install-btn' });
+    const installBtn = createButton(actions, { cls: 'mod-cta rp-library-install-btn', attr: { 'aria-label': this.plugin.i18n.t('library.installAria', { name: entry.name }) } });
     installBtn.setText(this.plugin.i18n.t('library.install'));
     installBtn.addEventListener('click', () => {
       void this.installSingleEntry(entry, installBtn);

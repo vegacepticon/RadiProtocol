@@ -3,6 +3,8 @@
 import { Modal, App } from 'obsidian';
 import type { JsonSnippet, SnippetPlaceholder } from '../snippets/snippet-model';
 import { renderSnippet } from '../snippets/snippet-model';
+import type { Translator } from '../i18n';
+import { defaultT } from '../i18n';
 
 // Phase 32 (D-01): JsonSnippet is the canonical type for fill-in modal input.
 // Previously typed as `SnippetFile`, which is now an alias for `JsonSnippet`.
@@ -36,10 +38,12 @@ export class SnippetFillInModal extends Modal {
 
   /** Live preview textarea reference for updatePreview() calls */
   private previewTextarea: HTMLTextAreaElement | null = null;
+  private readonly t: Translator;
 
-  constructor(app: App, snippet: JsonSnippet) {
+  constructor(app: App, snippet: JsonSnippet, t?: Translator) {
     super(app);
     this.snippet = snippet;
+    this.t = t ?? defaultT;
     this.result = new Promise<string | null>(res => {
       this.resolve = res;
     });
@@ -103,7 +107,7 @@ export class SnippetFillInModal extends Modal {
   /** free-text: visible label + full-width text input */
   private renderFreeTextField(container: HTMLElement, placeholder: SnippetPlaceholder): void {
     const label = container.createEl('label', { cls: 'rp-snippet-modal-label' });
-    label.textContent = placeholder.label;
+    label.textContent = placeholder.label; // User-authored content, not a UI string
 
     const input = container.createEl('input', { type: 'text' });
 
@@ -126,7 +130,7 @@ export class SnippetFillInModal extends Modal {
   ): void {
     const fieldset = container.createEl('fieldset');
     const legend = fieldset.createEl('legend', { cls: 'rp-snippet-modal-label' });
-    legend.textContent = placeholder.label;
+    legend.textContent = placeholder.label; // User-authored content, not a UI string
 
     const optionsDiv = fieldset.createDiv({ cls: 'rp-snippet-modal-options' });
     const options = placeholder.options ?? [];
@@ -155,7 +159,7 @@ export class SnippetFillInModal extends Modal {
         cls: 'rp-snippet-fill-option-row',
         type: 'button',
       });
-      btn.textContent = opt;
+      btn.textContent = opt; // User-authored content, not a UI string
       btn.name = `rp-${placeholder.id}`;
       btn.value = opt;
       btn.setAttribute('aria-pressed', 'false');
@@ -182,17 +186,17 @@ export class SnippetFillInModal extends Modal {
       cls: 'rp-snippet-modal-custom-toggle',
       type: 'button',
     });
-    customToggle.textContent = '✎';
-    customToggle.setAttribute('aria-label', `Show custom value for ${placeholder.label}`);
+    customToggle.textContent = '✎'; // Non-translatable edit-toggle symbol
+    customToggle.setAttribute('aria-label', this.t('snippetPreview.showCustomAria', { label: placeholder.label }));
     customToggle.setAttribute('aria-expanded', 'false');
 
     const customRow = customWrapper.createDiv({ cls: 'rp-snippet-modal-custom-row' });
     customRow.setAttribute('hidden', 'true');
     const customLabel = customRow.createEl('label');
-    customLabel.textContent = 'Custom:';
+    customLabel.textContent = this.t('snippetFillIn.customLabel');
 
     customInput = customRow.createEl('input', { type: 'text' });
-    customInput.setAttribute('aria-label', `Custom value for ${placeholder.label}`);
+    customInput.setAttribute('aria-label', this.t('snippetPreview.customValueAria', { label: placeholder.label }));
 
     const setCustomOpen = (open: boolean): void => {
       customToggle.setAttribute('aria-expanded', open ? 'true' : 'false');
@@ -228,11 +232,11 @@ export class SnippetFillInModal extends Modal {
     const previewSection = this.contentEl.createDiv();
 
     const previewLabel = previewSection.createEl('p', { cls: 'rp-snippet-preview-label' });
-    previewLabel.textContent = 'Preview';
+    previewLabel.textContent = this.t('snippetFillIn.preview');
 
     this.previewTextarea = previewSection.createEl('textarea', { cls: 'rp-snippet-preview' });
     this.previewTextarea.readOnly = true;
-    this.previewTextarea.setAttribute('aria-label', 'Snippet preview');
+    this.previewTextarea.setAttribute('aria-label', this.t('snippetPreview.ariaLabel'));
     // Show the raw template initially (unfilled tokens visible per UI-SPEC empty state)
     this.previewTextarea.value = this.snippet.template;
     this.resizePreview();
@@ -242,8 +246,7 @@ export class SnippetFillInModal extends Modal {
   private resizePreview(): void {
     if (!this.previewTextarea) return;
     const scrollHeight = this.previewTextarea.scrollHeight;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    (this.previewTextarea as any).style.height = `${Math.max(160, scrollHeight)}px`;
+    this.previewTextarea.style.height = `${Math.max(160, scrollHeight)}px`;
   }
 
   /** True when every placeholder has a selected/typed value. */
@@ -269,14 +272,14 @@ export class SnippetFillInModal extends Modal {
     const row = this.contentEl.createDiv({ cls: 'rp-snippet-modal-btn-row' });
 
     const cancelBtn = row.createEl('button');
-    cancelBtn.textContent = 'Cancel';
+    cancelBtn.textContent = this.t('snippetEditor.cancel');
     cancelBtn.addEventListener('click', () => {
       this.safeResolve(null);
       this.close();
     });
 
     const confirmBtn = row.createEl('button', { cls: 'mod-cta' });
-    confirmBtn.textContent = 'Confirm';
+    confirmBtn.textContent = this.t('snippetFillIn.confirm');
     confirmBtn.addEventListener('click', () => {
       const rendered = renderSnippet(this.snippet, this.values);
       this.safeResolve(rendered);

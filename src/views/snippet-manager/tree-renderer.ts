@@ -231,7 +231,7 @@ export class SnippetManagerTreeRenderer {
       const ariaLabel = this.plugin.i18n.t('snippetManager.createInThisFolder');
       const addBtn = createButton(actions, {
         cls: 'radi-snippet-tree-add-btn',
-        attr: { 'aria-label': ariaLabel, title: ariaLabel },
+        attr: { 'aria-label': ariaLabel },
       });
       setIcon(addBtn, 'plus');
       addBtn.addEventListener('click', (ev) => {
@@ -279,9 +279,17 @@ export class SnippetManagerTreeRenderer {
     // F2 inline rename
     row.addEventListener('keydown', (ev) => {
       const ke = ev as KeyboardEvent;
-      if (ke.key !== 'F2') return;
-      ke.preventDefault();
-      this.startInlineRename(node, labelEl);
+      if (ke.key === 'Enter' || ke.key === ' ') {
+        ke.preventDefault();
+        if (node.kind === 'file') {
+          void this.callbacks.openEditModal(node.path);
+        } else {
+          void this.toggleExpand(node.path);
+        }
+      } else if (ke.key === 'F2') {
+        ke.preventDefault();
+        this.startInlineRename(node, labelEl);
+      }
     });
 
     // Children (folders only, when expanded)

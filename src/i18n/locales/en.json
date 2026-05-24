@@ -4,6 +4,7 @@
     "languageLabel": "Language / Язык",
     "languageDesc": "Select the interface language. / Выберите язык интерфейса.",
     "russian": "Русский",
+    "english": "English",
     "textSeparator": "Text separator",
     "textSeparatorDesc": "How accumulated report text is joined between nodes. \"newline\" adds a line break before each new chunk; \"space\" adds a single space.",
     "newline": "Newline (default)",
@@ -11,16 +12,19 @@
     "protocolHeading": "Protocol",
     "protocolFolder": "Protocol folder",
     "protocolFolderDesc": "Vault-relative folder containing your .rp.json protocol files. The inline runner protocol picker scans this folder. Leave empty to disable the picker.",
+    "protocolFolderPlaceholder": "E.g. Protocols",
     "storageHeading": "Storage",
     "snippetFolder": "Snippet folder",
     "snippetFolderDesc": "Vault-relative path for snippet JSON files. Default: .radiprotocol/snippets",
+    "snippetFolderPathPlaceholder": ".radiprotocol/snippets",
     "donateHeading": "Support development",
     "showWalletAddresses": "Show wallet addresses",
     "libraryAdminHeading": "Library admin",
     "libraryMaintainerMode": "Library maintainer mode",
     "libraryMaintainerModeDesc": "Enable admin UI for managing a local RadiProtocol-Library checkout. No GitHub token is stored or used.",
     "libraryRepoPath": "Local library repo path",
-    "libraryRepoPathDesc": "Absolute path to a local clone of vegacepticon/RadiProtocol-Library."
+    "libraryRepoPathDesc": "Absolute path to a local clone of vegacepticon/RadiProtocol-Library.",
+    "libraryRepoPathPlaceholder": "/home/user/radiprotocol-library"
   },
   "protocolEditor": {
     "displayText": "Protocol editor",
@@ -91,7 +95,16 @@
       "text-block": "Text block",
       "loop": "Loop",
       "snippet": "Snippet"
-    }
+    },
+    "defaultNodeText": {
+      "question": "New question",
+      "answer": "New answer",
+      "text-block": "New text block",
+      "loop": "New loop",
+      "snippet": "New snippet"
+    },
+    "close": "Close",
+    "untyped": "untyped"
   },
   "donate": {
     "invitation": "Thank you for your support! If RadiProtocol saves you time, any donation is appreciated.",
@@ -124,7 +137,24 @@
     "validationBannerHeader": "This snippet cannot be used:",
     "duplicate": "Duplicate snippet",
     "duplicateTitle": "Create a copy of this snippet",
-    "duplicateError": "Failed to duplicate snippet: {error}"
+    "duplicateError": "Failed to duplicate snippet: {error}",
+    "dragReorderAria": "Drag to reorder {label}",
+    "removePlaceholderAria": "Remove placeholder {label}",
+    "removeOptionAria": "Remove {label}",
+    "optionNumber": "Option {n}",
+    "addOption": "Add",
+    "addOptionBtn": "+ add option",
+    "template": "Template",
+    "templatePlaceholder": "Enter template text. Use {{placeholder-id}} to insert placeholders.",
+    "placeholders": "Placeholders",
+    "addPlaceholder": "+ add placeholder",
+    "placeholderLabel": "Label",
+    "placeholderLabelPlaceholder": "E.g. Patient age",
+    "placeholderTypeFreeText": "Free text",
+    "placeholderTypeChoice": "Choice",
+    "optionsLabel": "Options",
+    "orphanBadge": "Template still contains {{${id}}} — remove from template or re-add this placeholder.",
+    "close": "Close"
   },
   "insertSnippet": {
     "title": "Insert snippet",
@@ -139,12 +169,22 @@
     "selectFolderCommitted": "✓ Selected",
     "emptyResults": "No matches found",
     "emptyFolder": "Empty here",
-    "searchPlaceholder": "Search…"
+    "searchPlaceholder": "Search…",
+    "openFolder": "Open folder {name}",
+    "selectSnippet": "Select snippet {name}",
+    "selectFolderAria": "Select current folder",
+    "crumbAria": "Go to {name}"
+  },
+  "snippetPicker": {
+    "goToRoot": "Go to root"
   },
   "snippetManager": {
     "newButton": "New",
     "folderButton": "Folder",
     "libraryButton": "Library",
+    "newButtonAria": "Create new snippet",
+    "folderButtonAria": "Create folder",
+    "libraryButtonAria": "Open snippet library",
     "redrawError": "Failed to refresh the snippet list. See console for details.",
     "notFound": "Snippet not found.",
     "subfolderNameLabel": "Subfolder name",
@@ -201,7 +241,10 @@
     "addItem": "Add item",
     "removeItem": "Remove",
     "title": "Self-check checklist",
-    "enabled": "Enable self-check checklist"
+    "enabled": "Enable self-check checklist",
+    "copyResult": "Copy protocol result",
+    "copied": "Protocol result copied to clipboard.",
+    "copyFailed": "Failed to copy result."
   },
   "nodePicker": {
     "start": "Start",
@@ -210,7 +253,8 @@
     "textBlock": "Text",
     "snippet": "Snippet",
     "loop": "Loop",
-    "rootSnippets": "(snippets root)"
+    "rootSnippets": "(snippets root)",
+    "searchPlaceholder": "Search nodes by label\u2026"
   },
   "snippetChip": {
     "separator": "Separator"
@@ -229,16 +273,61 @@
   "canvasParser": {
     "legacyFreeTextInput": "Node \"{id}\" uses the deprecated type \"free-text-input\". This type was removed. Replace the node with question or text-block and rebuild the branch manually."
   },
+  "parser": {
+    "invalidJson": "Protocol file contains invalid JSON",
+    "missingRequiredFields": "Protocol file is missing required schema/version/nodes/edges fields",
+    "nonStringKind": "Node \"{id}\" has non-string kind",
+    "unknownKind": "Node \"{id}\" has unknown kind: \"{kind}\"",
+    "missingNodeId": "Protocol node is missing string id"
+  },
   "graphValidator": {
     "legacyLoopNodes": "Canvas contains deprecated loop-start/loop-end nodes: {ids}. Rebuild the loop with a unified loop node: an «exit» label on one of the outgoing edges marks the exit branch; the rest form the loop body.",
     "loopNoExit": "Loop node \"{label}\" has no exit. Mark exactly one outgoing edge with a \"+\" prefix — the text after \"+\" becomes the exit-button caption.",
     "loopNoExitWithLegacy": "Loop node \"{label}\" has no exit edge with a \"+\" prefix. Add \"+\" to one of the labeled edges ({ids}) — the text after \"+\" becomes the exit-button caption.",
     "loopExitNoLabel": "Loop node \"{label}\": \"+\" edge {edgeId} has no caption — add text after \"+\".",
     "loopNoBody": "Loop node \"{label}\" has no body — add an outgoing edge without a \"+\" prefix.",
-    "snippetFileMissing": "Snippet node \"{label}\" references a missing file \"{relPath}\" — file not found in {folder}. Check the path or restore the file."
+    "snippetFileMissing": "Snippet node \"{label}\" references a missing file \"{relPath}\" — file not found in {folder}. Check the path or restore the file.",
+    "noStartNode": "No start node found. Add a node with radiprotocol_nodeType = \"start\".",
+    "multipleStartNodes": "Multiple start nodes found ({count}). Only one start node is allowed.",
+    "unreachableNodes": "{count} unreachable node(s) found: {nodeList}. Connect these nodes to the protocol or remove them.",
+    "deadEndQuestion": "Question \"{questionText}\" has no outgoing branches. Add at least one answer or snippet node connected from this question.",
+    "unintentionalCycle": "Unintentional cycle detected: {cycleLabel}. Cycles must pass through a loop node. Remove the back-edge or route the cycle through a loop node."
   },
   "protocolRunner": {
-    "legacyLoopRuntime": "Encountered a deprecated loop-start/loop-end node. The canvas should have been rejected by the validator; if you see this message, this is a bug — please contact the plugin author."
+    "legacyLoopRuntime": "Encountered a deprecated loop-start/loop-end node. The canvas should have been rejected by the validator; if you see this message, this is a bug — please contact the plugin author.",
+    "stepBack": "Go back one step",
+    "stepRedo": "Redo",
+    "stepSkip": "Skip this question",
+    "closeProtocol": "Close protocol",
+    "progressLabel": "Protocol progress {percent}%",
+    "starting": "Starting protocol…",
+    "processing": "Processing…",
+    "loadingSnippets": "Loading snippets…"
+  },
+  "inlineRunner": {
+    "protocolFileNotFound": "Protocol file not found: \"{path}\".",
+    "couldNotReadProtocol": "Could not read protocol file: \"{path}\".",
+    "snippetNotFound": "Snippet not found: \"{path}\".",
+    "snippetCannotBeUsed": "Snippet \"{path}\" cannot be used. {error}"
+  },
+  "snippetPreview": {
+    "ariaLabel": "Snippet preview",
+    "showCustomAria": "Show custom value for {label}",
+    "customValueAria": "Custom value for {label}"
+  },
+  "snippetFillIn": {
+    "customLabel": "Custom:",
+    "preview": "Preview",
+    "confirm": "Confirm"
+  },
+  "confirm": {
+    "ok": "OK",
+    "cancel": "Cancel"
+  },
+  "command": {
+    "openMarkdownFirst": "Open a Markdown note first, then run this command.",
+    "setProtocolFolder": "Set a protocol folder in settings to get started.",
+    "noProtocolFiles": "No protocol files found in '{folderPath}'."
   },
   "library": {
     "title": "Snippet Library",
@@ -268,7 +357,13 @@
     "previewClose": "Close",
     "previewCustom": "Custom:",
     "previewCustomAria": "Show custom value for {label}",
-    "networkError": "Network error. Check your connection and the library URL."
+    "previewCustomValueAria": "Custom value for {label}",
+    "networkError": "Network error. Check your connection and the library URL.",
+    "openFolderAria": "Open folder {name}",
+    "previewAria": "Preview snippet {name}",
+    "installAria": "Install snippet {name}",
+    "installAllAria": "Install full library",
+    "installCurrentFolderAria": "Install current folder"
   },
   "admin": {
     "title": "Library Admin",
@@ -277,11 +372,16 @@
     "noRepoPath": "Library repo path is not configured.",
     "setRepoInSettings": "Set the local RadiProtocol-Library repo path in plugin settings.",
     "invalidRepo": "Invalid library repo path.",
+    "notDirectory": "Not a directory",
+    "invalidRepoStructure": "Directory does not look like a RadiProtocol-Library repo (no snippets/, protocols/, or index.json found)",
     "snippetsTab": "Snippets",
     "protocolsTab": "Protocols",
     "resetToRemote": "Reset to remote",
     "updateInstructions": "Update instructions",
     "confirmResetToRemote": "Reset local library to match origin/main? All local changes will be lost.",
+    "resetConfirmTitle": "Revert library to remote",
+    "resetConfirmMessage": "This will discard all local changes in the library repository. Type \"{phrase}\" to confirm.",
+    "resetConfirmPhrase": "revert",
     "resettingToRemote": "Resetting to origin/main…",
     "resetSuccess": "Reset to origin/main complete.",
     "importSnippet": "Import snippet from vault",
@@ -297,6 +397,8 @@
     "select": "Select",
     "nameLabel": "Name",
     "categoryLabel": "Category",
+    "categoryPlaceholderProtocol": "e.g. CT, X-ray",
+    "categoryPlaceholderSnippet": "e.g. Brain, Chest",
     "descriptionLabel": "Description",
     "descriptionPlaceholder": "Short description…",
     "importConfirm": "Import",
@@ -330,6 +432,7 @@
     "createFolder": "New folder",
     "createFolderPrompt": "Folder name",
     "rename": "Rename",
+    "openFolder": "Open folder {name}",
     "renameFolderPrompt": "New folder name",
     "confirmDeleteFolder": "Delete folder \"{path}\"? The folder must be empty.",
     "directoryCreated": "Folder \"{name}\" created.",
@@ -342,7 +445,21 @@
     "invalidDirectoryPath": "Invalid folder path.",
     "directoryAlreadyExists": "Folder already exists.",
     "directoryNotFound": "Folder not found.",
-    "directoryRootProtected": "The root library folder cannot be changed."
+    "directoryRootProtected": "The root library folder cannot be changed.",
+    "updateInstructionsTitle": "Library Update Instructions",
+    "updateSteps": {
+      "1": "1. Update your local copy:\n   cd <path-to-RadiProtocol-Library>\n   git checkout main\n   git pull origin main",
+      "2": "2. Create a new branch for your changes:\n   git checkout -b my-changes",
+      "3": "3. Make changes through the admin panel\n   (creating folders, importing snippets/protocols, editing metadata).\n   Indexes are rebuilt automatically.",
+      "4": "4. Review changes:\n   git status\n   git diff",
+      "5": "5. Commit and push:\n   git add .\n   git commit -m \"description of changes\"\n   git push origin my-changes",
+      "6": "6. Create a Pull Request on GitHub:\n   Go to the repository page → Pull Requests tab → New pull request → select your branch."
+    },
+    "resetToLocalNotice": "To reset your local copy to the GitHub state, use the \"Reset to remote\" button.",
+    "resetSuccessDetail": "Reset to {ref} complete. Local changes discarded. Cleaned {count} untracked item(s).",
+    "resetSuccessNoClean": "Reset to {ref} complete. No untracked files to clean.",
+    "resetFetchFailedHint": "Could not fetch from origin. Check your network connection and remote URL.",
+    "resetFailedHint": "Reset failed. If the repository is locked or has merge conflicts, resolve them manually in the terminal."
   },
   "protocolLibrary": {
     "title": "Protocol Library",

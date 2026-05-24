@@ -3,8 +3,14 @@ import type RadiProtocolPlugin from '../main';
 import type { ProtocolDocumentV1, ProtocolEdgeRecord, ProtocolNodeRecord } from '../protocol/protocol-document';
 import type { RPNodeKind } from '../graph/graph-model';
 import { SnippetTreePicker, type SnippetTreePickerResult } from './snippet-tree-picker';
+import { defaultT, type Translator } from '../i18n';
 
 export const PROTOCOL_EDITOR_VIEW_TYPE = 'radiprotocol-protocol-editor';
+
+/** Throw a consistent error when the protocol file is no longer in the vault. */
+export function protocolMissingFileError(): never {
+	throw new Error('Protocol file disappeared');
+}
 
 /* Phase 4D — default node dimensions and kind-specific defaults */
 const DEFAULT_NODE_WIDTH = 200;
@@ -56,14 +62,19 @@ function worldYToSurfaceY(y: number): number {
 
 const NODE_KIND_DEFAULTS: Record<string, NodeKindDefault> = {
   start: { kind: 'start', fields: {}, color: 'rgba(76, 175, 80, 0.28)' },
-  question: { kind: 'question', fields: { questionText: '' }, text: 'New question', color: 'rgba(33, 150, 243, 0.24)' },
-  answer: { kind: 'answer', fields: { answerText: '' }, text: 'New answer', color: 'rgba(255, 193, 7, 0.28)' },
-  'text-block': { kind: 'text-block', fields: { content: '' }, text: 'New text block', color: 'rgba(255, 235, 59, 0.24)' },
-  loop: { kind: 'loop', fields: { headerText: '' }, text: 'New loop', color: 'rgba(233, 30, 99, 0.24)' },
-  snippet: { kind: 'snippet', fields: {}, text: 'New snippet', color: 'rgba(156, 39, 176, 0.24)' },
+  question: { kind: 'question', fields: { questionText: '' }, color: 'rgba(33, 150, 243, 0.24)' },
+  answer: { kind: 'answer', fields: { answerText: '' }, color: 'rgba(255, 193, 7, 0.28)' },
+  'text-block': { kind: 'text-block', fields: { content: '' }, color: 'rgba(255, 235, 59, 0.24)' },
+  loop: { kind: 'loop', fields: { headerText: '' }, color: 'rgba(233, 30, 99, 0.24)' },
+  snippet: { kind: 'snippet', fields: {}, color: 'rgba(156, 39, 176, 0.24)' },
 };
 
 const EDITABLE_NODE_KINDS: RPNodeKind[] = ['start', 'question', 'answer', 'text-block', 'loop', 'snippet'];
+
+/** CSS/attribute token for a node kind — always raw "untyped", never i18n. */
+export function nodeKindToken(kind: RPNodeKind | null): string {
+  return kind ?? 'untyped';
+}
 
 export function defaultColorForProtocolEditorNodeKind(kind: RPNodeKind | null): string | undefined {
   if (kind === null) return undefined;
@@ -89,13 +100,13 @@ export function isProtocolEditorLoopExitLabel(label: string | undefined): boolea
   return (label ?? '').trim().startsWith('+');
 }
 
-function nodeTitle(node: ProtocolNodeRecord): string {
+export function nodeTitle(node: ProtocolNodeRecord, t: Translator = defaultT): string {
   if (typeof node.text === 'string' && node.text.trim() !== '') return node.text.trim();
   if (typeof node.fields['displayLabel'] === 'string') return node.fields['displayLabel'];
   if (typeof node.fields['questionText'] === 'string') return node.fields['questionText'];
   if (typeof node.fields['answerText'] === 'string') return node.fields['answerText'];
   if (typeof node.fields['content'] === 'string') return node.fields['content'];
-  return node.kind ?? 'untyped';
+  return node.kind ?? t('protocolEditor.untyped');
 }
 
 export function defaultProtocolEditorEdgeLabelForTarget(node: ProtocolNodeRecord | undefined): string | undefined {
@@ -336,6 +347,7 @@ export class ProtocolEditorView extends ItemView {
     if (this.doc !== null) {
       this.minimapEl = workspace.createDiv({ cls: 'rp-protocol-editor-minimap' });
       this.minimapEl.setAttr('role', 'button');
+      this.minimapEl.setAttr('tabindex', '0');
       this.minimapEl.setAttr('aria-label', this.plugin.i18n.t('protocolEditor.minimapLabel'));
       this.minimapSvgEl = this.minimapEl.createSvg('svg', {
         attr: {
@@ -371,6 +383,7 @@ export class ProtocolEditorView extends ItemView {
       ? NODE_KIND_DEFAULTS[kind]
       : { kind: null as RPNodeKind | null, fields: {} };
 
+    const text = defaults.text ?? (kind !== null ? this.plugin.i18n.t(`protocolEditor.defaultNodeText.${kind}`) : undefined);
     return {
       id: nodeUid(),
       kind: defaults.kind,
@@ -379,7 +392,7 @@ export class ProtocolEditorView extends ItemView {
       width: DEFAULT_NODE_WIDTH,
       height: DEFAULT_NODE_HEIGHT,
       color: defaults.color ?? defaultColorForProtocolEditorNodeKind(defaults.kind),
-      text: defaults.text,
+      text,
       fields: { ...defaults.fields },
     };
   }
@@ -390,7 +403,7 @@ export class ProtocolEditorView extends ItemView {
     const newNode = this.createProtocolEditorNode(kind, x, y);
 
     void this.plugin.protocolDocumentStore.update(this.protocolPath, (existing) => {
-      if (existing === null) throw new Error('Protocol file disappeared');
+      if (existing === null) protocolMissingFileError();
       return { ...existing, nodes: [...existing.nodes, newNode], viewport: this.currentViewportState(), updatedAt: new Date().toISOString() };
     }).then(async () => {
       await this.loadProtocol(this.protocolPath!);
@@ -408,7 +421,7 @@ export class ProtocolEditorView extends ItemView {
     const modal = modalEl.createDiv({ cls: 'rp-protocol-editor-modal rp-protocol-editor-node-kind-modal' });
     const header = modal.createDiv({ cls: 'rp-protocol-editor-modal-header' });
     header.createEl('h3', { text: t('protocolEditor.chooseNodeType') });
-    const closeBtn = header.createEl('button', { cls: 'rp-protocol-editor-modal-close', text: '✕' });
+    const closeBtn = header.createEl('button', { cls: 'rp-protocol-editor-modal-close', text: '✕', attr: { 'aria-label': t('protocolEditor.close') } });
     const closeModal = () => { modalEl.remove(); this.restoreEditorFocus(); };
     closeBtn.addEventListener('click', closeModal);
 
@@ -435,7 +448,7 @@ export class ProtocolEditorView extends ItemView {
     const modal = modalEl.createDiv({ cls: 'rp-protocol-editor-modal rp-protocol-editor-node-kind-modal' });
     const header = modal.createDiv({ cls: 'rp-protocol-editor-modal-header' });
     header.createEl('h3', { text: t('protocolEditor.chooseNodeType') });
-    const closeBtn = header.createEl('button', { cls: 'rp-protocol-editor-modal-close', text: '✕' });
+    const closeBtn = header.createEl('button', { cls: 'rp-protocol-editor-modal-close', text: '✕', attr: { 'aria-label': t('protocolEditor.close') } });
     const closeModal = () => { modalEl.remove(); this.restoreEditorFocus(); };
     closeBtn.addEventListener('click', closeModal);
 
@@ -461,7 +474,7 @@ export class ProtocolEditorView extends ItemView {
     const newNode = this.createProtocolEditorNode(kind, x, y);
 
     void this.plugin.protocolDocumentStore.update(this.protocolPath, (existing) => {
-      if (existing === null) throw new Error('Protocol file disappeared');
+      if (existing === null) protocolMissingFileError();
       const sourceNode = existing.nodes.find((n) => n.id === fromNodeId);
       const targetNode = { ...newNode };
       const defaultLabel = defaultProtocolEditorEdgeLabelForTarget(targetNode);
@@ -516,7 +529,10 @@ export class ProtocolEditorView extends ItemView {
       const nodeEl = this.surfaceEl.createDiv({ cls: 'rp-protocol-editor-node' });
       nodeEl.toggleClass('is-untyped', node.kind === null);
       nodeEl.setAttr('data-node-id', node.id);
-      nodeEl.setAttr('data-node-kind', node.kind ?? 'untyped');
+      nodeEl.setAttr('data-node-kind', nodeKindToken(node.kind));
+      nodeEl.setAttr('tabindex', '0');
+      nodeEl.setAttr('role', 'group');
+      nodeEl.setAttr('aria-label', nodeTitle(node, this.plugin.i18n.t.bind(this.plugin.i18n)));
       if (node.color === undefined) node.color = defaultColorForProtocolEditorNodeKind(node.kind);
       this.applyNodePosition(nodeEl, node);
 
@@ -530,8 +546,8 @@ export class ProtocolEditorView extends ItemView {
       outputPort.setAttr('data-port-kind', 'output');
       outputPort.setAttr('aria-label', this.plugin.i18n.t('protocolEditor.outputPortLabel'));
 
-      nodeEl.createDiv({ cls: 'rp-protocol-editor-node-kind', text: node.kind ?? 'untyped' });
-      nodeEl.createDiv({ cls: 'rp-protocol-editor-node-title', text: nodeTitle(node) });
+      nodeEl.createDiv({ cls: 'rp-protocol-editor-node-kind', text: node.kind ?? this.plugin.i18n.t('protocolEditor.untyped') });
+      nodeEl.createDiv({ cls: 'rp-protocol-editor-node-title', text: nodeTitle(node, this.plugin.i18n.t.bind(this.plugin.i18n)) });
       const resizeHandle = nodeEl.createDiv({ cls: 'rp-protocol-editor-resize-handle' });
       resizeHandle.setAttr('aria-label', this.plugin.i18n.t('protocolEditor.resizeNodeLabel'));
 
@@ -545,6 +561,15 @@ export class ProtocolEditorView extends ItemView {
         e.preventDefault();
         e.stopPropagation();
         this.openEditModal(node);
+      });
+
+      nodeEl.addEventListener('keydown', (e: KeyboardEvent) => {
+        if ((e.target as HTMLElement).closest('.rp-protocol-editor-port') !== null) return;
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          e.stopPropagation();
+          this.openEditModal(node);
+        }
       });
     }
 
@@ -629,7 +654,7 @@ export class ProtocolEditorView extends ItemView {
             'text-anchor': 'middle',
           },
         });
-        label.textContent = labelText.length > 28 ? `${labelText.slice(0, 27)}…` : labelText;
+        label.textContent = labelText.length > 28 ? `${labelText.slice(0, 27)}…` : labelText; // User-authored protocol text
       }
     }
   }
@@ -720,7 +745,7 @@ export class ProtocolEditorView extends ItemView {
           width: String(node.width),
           height: String(node.height),
           rx: '4',
-          class: `rp-protocol-editor-minimap-node rp-protocol-editor-minimap-node-${node.kind ?? 'untyped'}`,
+          class: `rp-protocol-editor-minimap-node rp-protocol-editor-minimap-node-${nodeKindToken(node.kind)}`,
         },
       });
     }
@@ -777,7 +802,7 @@ export class ProtocolEditorView extends ItemView {
     if (this.protocolPath === null) return;
     try {
       await this.plugin.protocolDocumentStore.update(this.protocolPath, (existing) => {
-        if (existing === null) throw new Error('Protocol file disappeared');
+        if (existing === null) protocolMissingFileError();
         return {
           ...existing,
           edges: removeProtocolEditorEdge(existing.edges, edgeId),
@@ -904,7 +929,7 @@ export class ProtocolEditorView extends ItemView {
 
     try {
       await this.plugin.protocolDocumentStore.update(this.protocolPath, (existing) => {
-        if (existing === null) throw new Error('Protocol file disappeared');
+        if (existing === null) protocolMissingFileError();
         const currentDecision = canCreateProtocolEditorEdge(existing.edges, state.fromNodeId, toNodeId);
         if (currentDecision !== 'ok') return existing;
         return { ...existing, edges: [...existing.edges, newEdge], viewport: this.currentViewportState(), updatedAt: new Date().toISOString() };
@@ -935,7 +960,7 @@ export class ProtocolEditorView extends ItemView {
     const persist = async () => {
       const items = values.map(value => value.trim()).filter(value => value.length > 0);
       await this.plugin.protocolDocumentStore.update(this.protocolPath!, (existing) => {
-        if (existing === null) throw new Error('Protocol file disappeared');
+        if (existing === null) protocolMissingFileError();
         return { ...existing, selfCheckEnabled: enabled, selfCheckItems: items, updatedAt: new Date().toISOString() };
       });
       if (this.doc !== null) this.doc = { ...this.doc, selfCheckEnabled: enabled, selfCheckItems: items };
@@ -1096,7 +1121,7 @@ export class ProtocolEditorView extends ItemView {
     if (this.protocolPath === null) return;
     try {
       await this.plugin.protocolDocumentStore.update(this.protocolPath, (existing) => {
-        if (existing === null) throw new Error('Protocol file disappeared');
+        if (existing === null) protocolMissingFileError();
         const nodes = existing.nodes.map((n) =>
           n.id === node.id ? { ...n, x: Math.round(node.x), y: Math.round(node.y), width: Math.round(node.width), height: Math.round(node.height) } : n,
         );
@@ -1356,7 +1381,7 @@ export class ProtocolEditorView extends ItemView {
 
     // Persist
     void this.plugin.protocolDocumentStore.update(this.protocolPath, (existing) => {
-      if (existing === null) throw new Error('Protocol file disappeared');
+      if (existing === null) protocolMissingFileError();
       const updatedNodes = existing.nodes.map((n) => {
         const p = positions.get(n.id);
         if (p === undefined) return n;
@@ -1383,6 +1408,13 @@ export class ProtocolEditorView extends ItemView {
 
   private bindMinimapControls(): void {
     if (this.minimapEl === null) return;
+
+    this.minimapEl.addEventListener('keydown', (e: KeyboardEvent) => {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        this.toggleMinimap();
+      }
+    });
 
     this.minimapEl.addEventListener('mousedown', (e: MouseEvent) => {
       if (e.button !== 0) return;
@@ -1494,7 +1526,7 @@ export class ProtocolEditorView extends ItemView {
     const viewport = this.currentViewportState();
     try {
       await this.plugin.protocolDocumentStore.update(this.protocolPath, (existing) => {
-        if (existing === null) throw new Error('Protocol file disappeared');
+        if (existing === null) protocolMissingFileError();
         return { ...existing, viewport, updatedAt: new Date().toISOString() };
       });
       this.doc = { ...this.doc, viewport };
@@ -1510,13 +1542,13 @@ export class ProtocolEditorView extends ItemView {
     const modal = modalEl.createDiv({ cls: 'rp-protocol-editor-modal' });
     const header = modal.createDiv({ cls: 'rp-protocol-editor-modal-header' });
     header.createEl('h3', { text: t('protocolEditor.editEdge') });
-    const closeBtn = header.createEl('button', { cls: 'rp-protocol-editor-modal-close', text: '✕' });
+    const closeBtn = header.createEl('button', { cls: 'rp-protocol-editor-modal-close', text: '✕', attr: { 'aria-label': t('protocolEditor.close') } });
     const closeModal = () => { modalEl.remove(); this.restoreEditorFocus(); };
     closeBtn.addEventListener('click', closeModal);
 
     const body = modal.createDiv({ cls: 'rp-protocol-editor-modal-body' });
     const nodes = this.doc.nodes;
-    const nodeLabelForSelect = (node: ProtocolNodeRecord) => `${nodeTitle(node)} (${node.kind ?? 'untyped'})`;
+    const nodeLabelForSelect = (node: ProtocolNodeRecord) => `${nodeTitle(node, this.plugin.i18n.t.bind(this.plugin.i18n))} (${node.kind ?? this.plugin.i18n.t('protocolEditor.untyped')})`;
     const addNodeSelect = (label: string, initial: string) => {
       const field = body.createDiv({ cls: 'rp-protocol-editor-modal-field' });
       field.createEl('label', { text: label });
@@ -1581,7 +1613,7 @@ export class ProtocolEditorView extends ItemView {
       const nextLabel = shouldDisplayLabel ? typedLabel ?? defaultLabel : undefined;
       try {
         const updated = await this.plugin.protocolDocumentStore.update(this.protocolPath!, (existing) => {
-          if (existing === null) throw new Error('Protocol file disappeared');
+          if (existing === null) protocolMissingFileError();
           const nodes = existing.nodes.map((candidate) => {
             if (candidate.id !== nextTo || candidate.kind !== 'snippet' || typedLabel === undefined || isProtocolEditorLoopExitLabel(typedLabel)) {
               return candidate;
@@ -1627,7 +1659,7 @@ export class ProtocolEditorView extends ItemView {
 
     const header = modal.createDiv({ cls: 'rp-protocol-editor-modal-header' });
     header.createEl('h3', { text: t('protocolEditor.editNode') });
-    const closeBtn = header.createEl('button', { cls: 'rp-protocol-editor-modal-close', text: '✕' });
+    const closeBtn = header.createEl('button', { cls: 'rp-protocol-editor-modal-close', text: '✕', attr: { 'aria-label': t('protocolEditor.close') } });
     const closeModal = () => {
       modalEl.remove();
       this.restoreEditorFocus();
@@ -1822,7 +1854,7 @@ export class ProtocolEditorView extends ItemView {
 
       try {
         await this.plugin.protocolDocumentStore.update(this.protocolPath!, (existing) => {
-          if (existing === null) throw new Error('Protocol file disappeared');
+          if (existing === null) protocolMissingFileError();
           const nodes = existing.nodes.map((n) => n.id === updatedNode.id ? updatedNode : n);
           const edgeNodeById = new Map(nodes.map((n) => [n.id, n]));
           const shouldSyncIncomingLabels = updatedNode.kind === 'answer' || updatedNode.kind === 'snippet';
@@ -1862,7 +1894,7 @@ export class ProtocolEditorView extends ItemView {
       confirmBtn.addEventListener('click', async () => {
         try {
         await this.plugin.protocolDocumentStore.update(this.protocolPath!, (existing) => {
-          if (existing === null) throw new Error('Protocol file disappeared');
+          if (existing === null) protocolMissingFileError();
           const nodes = existing.nodes.filter((n) => n.id !== node.id);
           const edges = existing.edges.filter((e) => e.fromNodeId !== node.id && e.toNodeId !== node.id);
           return { ...existing, nodes, edges, viewport: this.currentViewportState(), updatedAt: new Date().toISOString() };

@@ -50,14 +50,12 @@ export class GraphValidator {
     }
 
     if (startNodes.length === 0) {
-      errors.push('No start node found. Add a node with radiprotocol_nodeType = "start".');
+      errors.push(this.t('graphValidator.noStartNode'));
       // Without a start node, reachability checks are meaningless — return early
       return errors;
     }
     if (startNodes.length > 1) {
-      errors.push(
-        `Multiple start nodes found (${startNodes.length}). Only one start node is allowed.`
-      );
+      errors.push(this.t('graphValidator.multipleStartNodes', { count: String(startNodes.length) }));
       // Continue other checks using the first start node found
     }
 
@@ -93,10 +91,7 @@ export class GraphValidator {
           return node ? `"${this.nodeLabel(node)}"` : `"${id}"`;
         })
         .join(', ');
-      errors.push(
-        `${unreachable.length} unreachable node${unreachable.length > 1 ? 's' : ''} found: ${nodeList}. ` +
-        'Connect these nodes to the protocol or remove them.'
-      );
+      errors.push(this.t('graphValidator.unreachableNodes', { count: String(unreachable.length), nodeList }));
     }
 
     // Check 4: Unintentional cycles — three-color DFS
@@ -109,10 +104,7 @@ export class GraphValidator {
       if (node.kind === 'question') {
         const outgoing = graph.adjacency.get(id);
         if (!outgoing || outgoing.length === 0) {
-          errors.push(
-            `Question "${node.questionText || id}" has no outgoing branches. ` +
-            'Add at least one answer or snippet node connected from this question.'
-          );
+          errors.push(this.t('graphValidator.deadEndQuestion', { questionText: node.questionText || id }));
         }
       }
     }
@@ -262,10 +254,7 @@ export class GraphValidator {
                 return n ? `"${this.nodeLabel(n)}"` : `"${id}"`;
               })
               .join(' → ');
-            errors.push(
-              `Unintentional cycle detected: ${cycleLabel}. ` +
-              'Cycles must pass through a loop node. Remove the back-edge or route the cycle through a loop node.'
-            );
+            errors.push(this.t('graphValidator.unintentionalCycle', { cycleLabel }));
           }
         } else if (neighborColor === 'white') {
           dfs(neighborId, pathStack);

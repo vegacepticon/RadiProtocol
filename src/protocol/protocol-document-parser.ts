@@ -72,11 +72,11 @@ export class ProtocolDocumentParser {
     try {
       raw = JSON.parse(jsonString);
     } catch {
-      return { success: false, error: 'Protocol file contains invalid JSON' };
+      return { success: false, error: this.t('parser.invalidJson') };
     }
 
     if (!isProtocolDocumentV1(raw)) {
-      return { success: false, error: 'Protocol file is missing required schema/version/nodes/edges fields' };
+      return { success: false, error: this.t('parser.missingRequiredFields') };
     }
 
     return this.parseDocument(raw, protocolFilePath);
@@ -156,18 +156,18 @@ export class ProtocolDocumentParser {
     if (raw.kind === null || raw.kind === undefined) return null;
 
     if (typeof raw.kind !== 'string') {
-      return { parseError: `Node "${raw.id}" has non-string kind` };
+      return { parseError: this.t('parser.nonStringKind', { id: raw.id }) };
     }
 
 // free-text-input was removed from RPNodeKind in Phase 46 and never
     // appears in .rp.json documents; the VALID_KINDS gate handles it.
 
     if (!(VALID_KINDS as string[]).includes(raw.kind)) {
-      return { parseError: `Node "${raw.id}" has unknown kind: "${raw.kind}"` };
+      return { parseError: this.t('parser.unknownKind', { id: raw.id, kind: String(raw.kind) }) };
     }
 
     if (typeof raw.id !== 'string') {
-      return { parseError: 'Protocol node is missing string id' };
+      return { parseError: this.t('parser.missingNodeId') };
     }
 
     const fields = typeof raw.fields === 'object' && raw.fields !== null

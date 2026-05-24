@@ -72,7 +72,7 @@ export class InsertSnippetModal extends Modal {
     if (snippet.kind === 'md') return snippet.content;
     if (snippet.placeholders.length === 0) return snippet.template;
 
-    const fillModal = new SnippetFillInModal(this.app, snippet);
+    const fillModal = new SnippetFillInModal(this.app, snippet, this.plugin.i18n.t.bind(this.plugin.i18n));
     fillModal.open();
     return fillModal.result;
   }

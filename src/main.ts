@@ -420,7 +420,7 @@ export default class RadiProtocolPlugin extends Plugin {
 
     const protocolFiles = resolveProtocolDocumentFiles(this.app.vault, folderPath);
     if (protocolFiles.length === 0) {
-      new Notice(`No protocol files found in '${folderPath}'.`);
+      new Notice(this.i18n.t('command.noProtocolFiles', { folderPath }));
       return;
     }
 
@@ -498,14 +498,14 @@ export default class RadiProtocolPlugin extends Plugin {
     // D9 guard: active file must be a markdown note
     const activeFile = this.app.workspace.getActiveFile();
     if (activeFile === null || activeFile.extension !== 'md') {
-      new Notice('Open a Markdown note first, then run this command.');
+      new Notice(this.i18n.t('command.openMarkdownFirst'));
       return;
     }
 
     // Protocol folder enumeration
     const folderPath = this.settings.protocolFolderPath.trim();
     if (folderPath === '') {
-      new Notice('Set a protocol folder in settings to get started.');
+      new Notice(this.i18n.t('command.setProtocolFolder'));
       return;
     }
 
@@ -515,7 +515,7 @@ export default class RadiProtocolPlugin extends Plugin {
 
     // D8 guard: empty list
     if (protocolFiles.length === 0) {
-      new Notice(`No protocol files found in '${folderPath}'.`);
+      new Notice(this.i18n.t('command.noProtocolFiles', { folderPath }));
       return;
     }
 

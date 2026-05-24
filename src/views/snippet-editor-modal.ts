@@ -424,8 +424,9 @@ export class SnippetEditorModal extends Modal {
   private renderValidationBanner(container: HTMLElement, msg: string): void {
     const banner = container.createDiv({ cls: 'radi-snippet-editor-validation-banner' });
     banner.setAttribute('role', 'alert');
-    // Assign banner.textContent to the Russian header + blank-line + the
-    // validationError verbatim. textContent treats the entire string as
+    // Assign banner.textContent to the localized header + blank-line + the
+    // dynamic validationError text (not hardcoded UI copy — msg comes from
+    // model validation). textContent treats the entire string as
     // literal text — a `<script>` substring becomes the characters `<`, `s`,
     // `c`, ... and is NEVER parsed as a DOM child (T-52-09 XSS mitigation).
     // Plan 01 tests B3/B4 assert on `banner.textContent` (via the mock's
@@ -461,8 +462,8 @@ export class SnippetEditorModal extends Modal {
 
     const duplicateBtn = createButton(row, {
       text: this.plugin.i18n.t('snippetEditor.duplicate'),
-      attr: { title: this.plugin.i18n.t('snippetEditor.duplicateTitle') },
     });
+    duplicateBtn.setAttribute('aria-label', this.plugin.i18n.t('snippetEditor.duplicateTitle'));
     duplicateBtn.setAttribute('type', 'button');
     duplicateBtn.addEventListener('click', () => {
       void this.handleDuplicate();
@@ -645,7 +646,7 @@ export class SnippetEditorModal extends Modal {
 
   private showSaveError(msg: string): void {
     if (!this.saveErrorEl) return;
-    this.saveErrorEl.textContent = msg;
+    this.saveErrorEl.textContent = msg; // msg is pass-through localized text from callers
     this.saveErrorEl.toggleClass('rp-snippet-banner-hidden', false);
   }
 

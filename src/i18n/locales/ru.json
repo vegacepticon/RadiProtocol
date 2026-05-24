@@ -4,6 +4,7 @@
     "languageLabel": "Язык / Language",
     "languageDesc": "Выберите язык интерфейса. / Select the interface language.",
     "russian": "Русский",
+    "english": "English",
     "textSeparator": "Разделитель текста",
     "textSeparatorDesc": "Как объединять накопленный текст отчёта между узлами. «Новая строка» добавляет перенос строки; «Пробел» — один пробел.",
     "newline": "Новая строка (по умолчанию)",
@@ -11,16 +12,19 @@
     "protocolHeading": "Протокол",
     "protocolFolder": "Папка протоколов",
     "protocolFolderDesc": "Папка относительно хранилища, содержащая файлы .rp.json. Выбор протокола для inline-запуска сканирует эту папку. Оставьте пустой, чтобы отключить выбор.",
+    "protocolFolderPlaceholder": "Например, Протоколы",
     "storageHeading": "Хранение",
     "snippetFolder": "Папка сниппетов",
     "snippetFolderDesc": "Путь относительно хранилища для JSON-файлов сниппетов. По умолчанию: .radiprotocol/snippets",
+    "snippetFolderPathPlaceholder": ".radiprotocol/snippets",
     "donateHeading": "Помочь разработке",
     "showWalletAddresses": "Показать адреса кошельков",
     "libraryAdminHeading": "Администрирование библиотеки",
     "libraryMaintainerMode": "Режим maintainer библиотеки",
     "libraryMaintainerModeDesc": "Включает admin UI для управления локальным checkout RadiProtocol-Library. GitHub token не хранится и не используется.",
     "libraryRepoPath": "Путь к локальному repo библиотеки",
-    "libraryRepoPathDesc": "Абсолютный путь к локальному clone vegacepticon/RadiProtocol-Library."
+    "libraryRepoPathDesc": "Абсолютный путь к локальному clone vegacepticon/RadiProtocol-Library.",
+    "libraryRepoPathPlaceholder": "/home/user/radiprotocol-library"
   },
   "protocolEditor": {
     "displayText": "Редактор протокола",
@@ -91,7 +95,16 @@
       "text-block": "Текст",
       "loop": "Цикл",
       "snippet": "Сниппет"
-    }
+    },
+    "defaultNodeText": {
+      "question": "Новый вопрос",
+      "answer": "Новый ответ",
+      "text-block": "Новый текстовый блок",
+      "loop": "Новый цикл",
+      "snippet": "Новый сниппет"
+    },
+    "close": "Закрыть",
+    "untyped": "без типа"
   },
   "donate": {
     "invitation": "Спасибо за поддержку! Если RadiProtocol экономит вам время — буду рад любому переводу.",
@@ -124,7 +137,24 @@
     "validationBannerHeader": "Этот сниппет не может быть использован:",
     "duplicate": "Дублировать сниппет",
     "duplicateTitle": "Создать копию этого сниппета",
-    "duplicateError": "Ошибка дублирования сниппета: {error}"
+    "duplicateError": "Ошибка дублирования сниппета: {error}",
+    "dragReorderAria": "Перетащите для изменения порядка {label}",
+    "removePlaceholderAria": "Удалить плейсхолдер {label}",
+    "removeOptionAria": "Удалить {label}",
+    "optionNumber": "Опция {n}",
+    "addOption": "Добавить",
+    "addOptionBtn": "+ добавить вариант",
+    "template": "Шаблон",
+    "templatePlaceholder": "Введите текст шаблона. Используйте {{placeholder-id}} для вставки плейсхолдеров.",
+    "placeholders": "Плейсхолдеры",
+    "addPlaceholder": "+ добавить плейсхолдер",
+    "placeholderLabel": "Метка",
+    "placeholderLabelPlaceholder": "Например: Возраст пациента",
+    "placeholderTypeFreeText": "Свободный текст",
+    "placeholderTypeChoice": "Выбор",
+    "optionsLabel": "Варианты",
+    "orphanBadge": "Шаблон всё ещё содержит {{${id}}} — удалите из шаблона или добавьте плейсхолдер заново.",
+    "close": "Закрыть"
   },
   "insertSnippet": {
     "title": "Вставить сниппет",
@@ -139,12 +169,22 @@
     "selectFolderCommitted": "✓ Выбрано",
     "emptyResults": "Ничего не найдено",
     "emptyFolder": "Здесь пусто",
-    "searchPlaceholder": "Поиск…"
+    "searchPlaceholder": "Поиск…",
+    "openFolder": "Открыть папку {name}",
+    "selectSnippet": "Выбрать сниппет {name}",
+    "selectFolderAria": "Выбрать текущую папку",
+    "crumbAria": "Перейти к {name}"
+  },
+  "snippetPicker": {
+    "goToRoot": "Перейти к корню"
   },
   "snippetManager": {
     "newButton": "Новый",
     "folderButton": "Папка",
     "libraryButton": "Библиотека",
+    "newButtonAria": "Создать новый сниппет",
+    "folderButtonAria": "Создать папку",
+    "libraryButtonAria": "Открыть библиотеку сниппетов",
     "redrawError": "Не удалось обновить список сниппетов. Подробности в консоли.",
     "notFound": "Сниппет не найден.",
     "subfolderNameLabel": "Имя подпапки",
@@ -201,7 +241,10 @@
     "addItem": "Добавить пункт",
     "removeItem": "Удалить",
     "title": "Лист самопроверки",
-    "enabled": "Включить лист самопроверки"
+    "enabled": "Включить лист самопроверки",
+    "copyResult": "Скопировать результат протокола",
+    "copied": "Результат протокола скопирован в буфер обмена.",
+    "copyFailed": "Не удалось скопировать результат."
   },
   "nodePicker": {
     "start": "Старт",
@@ -210,7 +253,8 @@
     "textBlock": "Текст",
     "snippet": "Сниппет",
     "loop": "Цикл",
-    "rootSnippets": "(корень snippets)"
+    "rootSnippets": "(корень snippets)",
+    "searchPlaceholder": "Поиск узлов по метке\u2026"
   },
   "snippetChip": {
     "separator": "Разделитель"
@@ -229,16 +273,61 @@
   "canvasParser": {
     "legacyFreeTextInput": "Узел \"{id}\" использует устаревший тип \"free-text-input\". Этот тип был удалён. Замените узел на question или text-block и перестройте ветвь вручную."
   },
+  "parser": {
+    "invalidJson": "Файл протокола содержит недопустимый JSON",
+    "missingRequiredFields": "В файле протокола отсутствуют обязательные поля schema/version/nodes/edges",
+    "nonStringKind": "Узел \"{id}\" имеет некорректный тип kind",
+    "unknownKind": "Узел \"{id}\" имеет неизвестный тип: \"{kind}\"",
+    "missingNodeId": "Узел протокола не содержит строковый идентификатор"
+  },
   "graphValidator": {
     "legacyLoopNodes": "Канвас содержит устаревшие узлы loop-start/loop-end: {ids}. Пересоберите цикл с единым узлом loop: метка «выход» на одном из исходящих рёбер обозначает ветвь выхода, остальные исходящие рёбра — тело цикла.",
     "loopNoExit": "Loop-узел \"{label}\" не имеет выхода. Пометьте ровно одно исходящее ребро префиксом \"+\" — текст после \"+\" станет подписью кнопки выхода.",
     "loopNoExitWithLegacy": "Loop-узел \"{label}\" не имеет выхода с префиксом \"+\". Добавьте \"+\" к одному из помеченных рёбер ({ids}) — текст после \"+\" станет подписью кнопки выхода.",
     "loopExitNoLabel": "Loop-узел \"{label}\": \"+\"-ребро {edgeId} не имеет подписи — добавьте текст после \"+\".",
     "loopNoBody": "Loop-узел \"{label}\" не имеет тела — добавьте исходящее ребро без префикса \"+\".",
-    "snippetFileMissing": "Snippet-узел \"{label}\" ссылается на несуществующий файл \"{relPath}\" — файл не найден в {folder}. Проверьте путь или восстановите файл."
+    "snippetFileMissing": "Snippet-узел \"{label}\" ссылается на несуществующий файл \"{relPath}\" — файл не найден в {folder}. Проверьте путь или восстановите файл.",
+    "noStartNode": "Стартовый узел не найден. Добавьте узел с radiprotocol_nodeType = \"start\".",
+    "multipleStartNodes": "Обнаружено несколько стартовых узлов ({count}). Допускается только один стартовый узел.",
+    "unreachableNodes": "Найдено недостижимых узлов: {count}: {nodeList}. Подключите эти узлы к протоколу или удалите их.",
+    "deadEndQuestion": "Вопрос \"{questionText}\" не имеет исходящих ветвей. Добавьте хотя бы один ответный или сниппет-узел, подключённый к этому вопросу.",
+    "unintentionalCycle": "Обнаружен непреднамеренный цикл: {cycleLabel}. Циклы должны проходить через loop-узел. Удалите обратное ребро или направьте цикл через loop-узел."
   },
   "protocolRunner": {
-    "legacyLoopRuntime": "Обнаружен устаревший узел loop-start/loop-end. Канвас должен быть отклонён validator-ом; если вы видите это сообщение — это программная ошибка, сообщите автору плагина."
+    "legacyLoopRuntime": "Обнаружен устаревший узел loop-start/loop-end. Канвас должен быть отклонён validator-ом; если вы видите это сообщение — это программная ошибка, сообщите автору плагина.",
+    "stepBack": "Вернуться на шаг назад",
+    "stepRedo": "Повторить",
+    "stepSkip": "Пропустить этот вопрос",
+    "closeProtocol": "Закрыть протокол",
+    "progressLabel": "Прогресс протокола {percent}%",
+    "starting": "Запуск протокола…",
+    "processing": "Обработка…",
+    "loadingSnippets": "Загрузка сниппетов…"
+  },
+  "inlineRunner": {
+    "protocolFileNotFound": "Файл протокола не найден: \"{path}\".",
+    "couldNotReadProtocol": "Не удалось прочитать файл протокола: \"{path}\".",
+    "snippetNotFound": "Сниппет не найден: \"{path}\".",
+    "snippetCannotBeUsed": "Сниппет \"{path}\" нельзя использовать. {error}"
+  },
+  "snippetPreview": {
+    "ariaLabel": "Предпросмотр сниппета",
+    "showCustomAria": "Показать пользовательское значение для {label}",
+    "customValueAria": "Пользовательское значение для {label}"
+  },
+  "snippetFillIn": {
+    "customLabel": "Пользовательский:",
+    "preview": "Предпросмотр",
+    "confirm": "Подтвердить"
+  },
+  "confirm": {
+    "ok": "ОК",
+    "cancel": "Отмена"
+  },
+  "command": {
+    "openMarkdownFirst": "Сначала откройте Markdown-заметку, затем запустите эту команду.",
+    "setProtocolFolder": "Укажите папку протоколов в настройках, чтобы начать.",
+    "noProtocolFiles": "Не найдено файлов протоколов в папке '{folderPath}'."
   },
   "library": {
     "title": "Библиотека сниппетов",
@@ -268,7 +357,13 @@
     "previewClose": "Закрыть",
     "previewCustom": "Другое:",
     "previewCustomAria": "Показать своё значение для {label}",
-    "networkError": "Ошибка сети. Проверьте подключение и URL библиотеки."
+    "previewCustomValueAria": "Пользовательское значение для {label}",
+    "networkError": "Ошибка сети. Проверьте подключение и URL библиотеки.",
+    "openFolderAria": "Открыть папку {name}",
+    "previewAria": "Предпросмотр сниппета {name}",
+    "installAria": "Установить сниппет {name}",
+    "installAllAria": "Установить всю библиотеку",
+    "installCurrentFolderAria": "Установить текущую папку"
   },
   "admin": {
     "title": "Администрирование библиотеки",
@@ -277,11 +372,16 @@
     "noRepoPath": "Путь к repo библиотеки не настроен.",
     "setRepoInSettings": "Укажите локальный путь к RadiProtocol-Library в настройках плагина.",
     "invalidRepo": "Некорректный путь к repo библиотеки.",
+    "notDirectory": "Не является директорией",
+    "invalidRepoStructure": "Директория не похожа на репозиторий RadiProtocol-Library (нет snippets/, protocols/ или index.json)",
     "snippetsTab": "Сниппеты",
     "protocolsTab": "Протоколы",
     "resetToRemote": "Сбросить к remote",
     "updateInstructions": "Инструкция по обновлению",
     "confirmResetToRemote": "Сбросить локальную библиотеку до origin/main? Все локальные изменения будут потеряны.",
+    "resetConfirmTitle": "Вернуть библиотеку к удалённой",
+    "resetConfirmMessage": "Все локальные изменения в репозитории библиотеки будут потеряны. Введите \"{phrase}\" для подтверждения.",
+    "resetConfirmPhrase": "вернуть",
     "resettingToRemote": "Сбрасываю до origin/main…",
     "resetSuccess": "Сброс до origin/main завершён.",
     "importSnippet": "Импорт сниппета из vault",
@@ -297,6 +397,8 @@
     "select": "Выбрать",
     "nameLabel": "Название",
     "categoryLabel": "Категория",
+    "categoryPlaceholderProtocol": "напр. КТ, Рентген",
+    "categoryPlaceholderSnippet": "напр. ГМ, Грудная клетка",
     "descriptionLabel": "Описание",
     "descriptionPlaceholder": "Короткое описание…",
     "importConfirm": "Импортировать",
@@ -330,6 +432,7 @@
     "createFolder": "Новая папка",
     "createFolderPrompt": "Название папки",
     "rename": "Переименовать",
+    "openFolder": "Открыть папку {name}",
     "renameFolderPrompt": "Новое название папки",
     "confirmDeleteFolder": "Удалить папку \"{path}\"? Папка должна быть пустой.",
     "directoryCreated": "Папка \"{name}\" создана.",
@@ -342,7 +445,21 @@
     "invalidDirectoryPath": "Некорректный путь папки.",
     "directoryAlreadyExists": "Папка уже существует.",
     "directoryNotFound": "Папка не найдена.",
-    "directoryRootProtected": "Корневую папку библиотеки нельзя изменять."
+    "directoryRootProtected": "Корневую папку библиотеки нельзя изменять.",
+    "updateInstructionsTitle": "Инструкция по обновлению библиотеки",
+    "updateSteps": {
+      "1": "1. Актуализируйте локальную копию:\n   cd <путь-к-RadiProtocol-Library>\n   git checkout main\n   git pull origin main",
+      "2": "2. Создайте новую ветку для изменений:\n   git checkout -b my-changes",
+      "3": "3. Внесите изменения через панель администрирования\n   (создание папок, импорт сниппетов/протоколов, редактирование метаданных).\n   Индексы пересобираются автоматически.",
+      "4": "4. Проверьте изменения:\n   git status\n   git diff",
+      "5": "5. Закоммитьте и отправьте:\n   git add .\n   git commit -m \"описание изменений\"\n   git push origin my-changes",
+      "6": "6. Создайте Pull Request на GitHub:\n   Перейдите на страницу репозитория → вкладка Pull Requests → New pull request → выберите вашу ветку."
+    },
+    "resetToLocalNotice": "Для сброса локальной копии к состоянию GitHub используйте кнопку «Сбросить к remote».",
+    "resetSuccessDetail": "Сброс до {ref} завершён. Локальные изменения сброшены. Удалено {count} неотслеживаемых элементов.",
+    "resetSuccessNoClean": "Сброс до {ref} завершён. Нет неотслеживаемых файлов для удаления.",
+    "resetFetchFailedHint": "Не удалось получить данные из origin. Проверьте сетевое подключение и URL удалённого репозитория.",
+    "resetFailedHint": "Сброс не удался. Если репозиторий заблокирован или есть конфликты слияния, устраните их вручную в терминале."
   },
   "protocolLibrary": {
     "title": "Библиотека протоколов",

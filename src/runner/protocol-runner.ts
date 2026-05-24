@@ -1,7 +1,7 @@
 // runner/protocol-runner.ts
 // Pure module — zero Obsidian API imports (NFR-01)
 import type { ProtocolGraph, LoopContext } from '../graph/graph-model';
-import type { RunnerState, UndoEntry } from './runner-state';
+import type { RunnerState, UndoEntry, RedoEntry } from './runner-state';
 import { TextAccumulator } from './text-accumulator';
 import { isExitEdge } from '../graph/node-label';
 import { RUNNER_STATUS } from '../constants/runner-states';
@@ -39,6 +39,7 @@ export class ProtocolRunner {
   private currentNodeId: string | null = null;
   private accumulator = new TextAccumulator();
   private undoStack: UndoEntry[] = [];
+  private redoStack: RedoEntry[] = [];
   /** Phase 66 D-01: silently no-ops a second stepBack call in the same synchronous tick. */
   private _stepBackInFlight = false;
   private runnerStatus: RunnerState['status'] = RUNNER_STATUS.IDLE;
@@ -73,6 +74,7 @@ export class ProtocolRunner {
     this.currentNodeId = null;
     this.accumulator = new TextAccumulator();
     this.undoStack = [];
+    this.redoStack = [];
     this.errorMessage = null;
     this.snippetId = null;
     this.snippetNodeId = null;
@@ -97,6 +99,8 @@ export class ProtocolRunner {
       return;
     }
 
+    // Forward action — clear redo stack (any undone transition is now invalidated)
+    this.redoStack = [];
     // Push undo entry BEFORE any mutation (Pitfall 3 — snapshot must come first)
     this.undoStack.push({
       nodeId: this.currentNodeId,
@@ -146,6 +150,8 @@ export class ProtocolRunner {
     }
     if (skipTargetId === undefined) return;  // no answer neighbor — UI hides the button, this is defence in depth
 
+    // Forward action — clear redo stack
+    this.redoStack = [];
     // D-10: Skip is a full choice — push UndoEntry BEFORE any mutation (Pitfall 3).
     this.undoStack.push({
       nodeId: this.currentNodeId,
@@ -202,6 +208,8 @@ export class ProtocolRunner {
       return;
     }
 
+    // Forward action — clear redo stack
+    this.redoStack = [];
     // Phase 31 Pitfall 1: undo-before-mutate with returnToBranchList flag.
     this.undoStack.push({
       nodeId: this.currentNodeId, // question id
@@ -242,6 +250,8 @@ export class ProtocolRunner {
       return;
     }
 
+    // Forward action — clear redo stack
+    this.redoStack = [];
     // Undo-before-mutate (Pitfall 1)
     this.undoStack.push({
       nodeId: this.currentNodeId,
@@ -275,6 +285,7 @@ export class ProtocolRunner {
    * Reverts both currentNodeId and accumulatedText to the state before the last
    * chooseAnswer() call (D-03).
    * No-op if canStepBack is false.
+   * Pushes a RedoEntry so redo() can re-apply the undone state transition.
    */
   stepBack(): void {
     if (this._stepBackInFlight) return;
@@ -283,6 +294,17 @@ export class ProtocolRunner {
 
     const entry = this.undoStack.pop();
     if (entry === undefined) return; // Nothing to undo
+
+    // Capture current state as a RedoEntry before restoring from the popped undo entry.
+    this.redoStack.push({
+      nodeId: this.currentNodeId,
+      textSnapshot: this.accumulator.snapshot(),
+      loopContextStack: this.loopContextStack.map(f => ({ ...f })),
+      runnerStatus: this.runnerStatus,
+      snippetId: this.snippetId,
+      snippetNodeId: this.snippetNodeId,
+      poppedUndoEntry: entry,
+    });
 
     if (entry.returnToBranchList === true) {
       // Phase 31 D-08: close the branch-entered picker, return to the
@@ -307,6 +329,30 @@ export class ProtocolRunner {
   }
 
   /**
+   * Redo the last undone action.
+   * Restores the runner to the state that existed immediately before the most recent stepBack().
+   * Clears the redo stack when a new forward action is taken (chooseAnswer, skip, etc.).
+   * No-op if canRedo is false (redoStack is empty).
+   */
+  redo(): void {
+    const entry = this.redoStack.pop();
+    if (entry === undefined) return; // Nothing to redo
+
+    // Re-push the undo entry that was popped during stepBack, so stepBack
+    // works correctly after a redo.
+    this.undoStack.push(entry.poppedUndoEntry);
+
+    // Restore the state to what it was before stepBack was called.
+    this.currentNodeId = entry.nodeId;
+    this.accumulator.restoreTo(entry.textSnapshot);
+    this.loopContextStack = entry.loopContextStack.map(f => ({ ...f }));
+    this.runnerStatus = entry.runnerStatus;
+    this.snippetId = entry.snippetId;
+    this.snippetNodeId = entry.snippetNodeId;
+    this.errorMessage = null;
+  }
+
+  /**
    * Phase 30 D-08: user picks a snippet at the current snippet node.
    * Valid only in 'awaiting-snippet-pick'. Pushes UndoEntry BEFORE any
    * mutation so stepBack reverts to the snippet node's predecessor.
@@ -318,6 +364,8 @@ export class ProtocolRunner {
     if (this.runnerStatus !== RUNNER_STATUS.AWAITING_SNIPPET_PICK) return;
     if (this.currentNodeId === null) return;
 
+    // Forward action — clear redo stack
+    this.redoStack = [];
     // Pattern A: undo-before-mutate. Deep-copy loopContextStack frames (LOOP-05).
     this.undoStack.push({
       nodeId: this.currentNodeId,
@@ -359,6 +407,8 @@ export class ProtocolRunner {
     if (this.runnerStatus !== RUNNER_STATUS.AT_NODE) return;
     if (this.currentNodeId !== questionNodeId) return;
 
+    // Forward action — clear redo stack
+    this.redoStack = [];
     // D-15 undo-before-mutate — identical UndoEntry shape to pickSnippet (:305).
     this.undoStack.push({
       nodeId: questionNodeId,
@@ -380,6 +430,9 @@ export class ProtocolRunner {
   completeSnippet(renderedText: string): void {
     if (this.runnerStatus !== RUNNER_STATUS.AWAITING_SNIPPET_FILL) return;
     if (this.graph === null || this.snippetNodeId === null) return;
+
+    // Forward action — clear redo stack (even though no undo push, this is a user-driven transition)
+    this.redoStack = [];
 
     const pendingNodeId = this.snippetNodeId;
     const snippetNode = this.graph.nodes.get(pendingNodeId);
@@ -437,6 +490,7 @@ export class ProtocolRunner {
           currentNodeId: this.currentNodeId ?? '',
           accumulatedText: this.accumulator.current,
           canStepBack: this.undoStack.length > 0,
+          canRedo: this.redoStack.length > 0,
         };
       }
       case RUNNER_STATUS.AWAITING_SNIPPET_PICK: {
@@ -452,6 +506,7 @@ export class ProtocolRunner {
           subfolderPath,
           accumulatedText: this.accumulator.current,
           canStepBack: this.undoStack.length > 0,
+          canRedo: this.redoStack.length > 0,
         };
       }
       case RUNNER_STATUS.AWAITING_LOOP_PICK:
@@ -460,6 +515,7 @@ export class ProtocolRunner {
           nodeId: this.currentNodeId ?? '',
           accumulatedText: this.accumulator.current,
           canStepBack: this.undoStack.length > 0,
+          canRedo: this.redoStack.length > 0,
         };
       case RUNNER_STATUS.AWAITING_SNIPPET_FILL:
         return {
@@ -468,6 +524,7 @@ export class ProtocolRunner {
           nodeId: this.snippetNodeId ?? '',
           accumulatedText: this.accumulator.current,
           canStepBack: this.undoStack.length > 0,
+          canRedo: this.redoStack.length > 0,
         };
       case RUNNER_STATUS.COMPLETE:
         return { status: RUNNER_STATUS.COMPLETE, finalText: this.accumulator.current };
@@ -572,6 +629,8 @@ export class ProtocolRunner {
     this.loopContextStack = session.loopContextStack.map(f => ({ ...f }));
     this.snippetId = session.snippetId;
     this.snippetNodeId = session.snippetNodeId;
+    // Redo history does not survive session restore — start with a clean redo stack.
+    this.redoStack = [];
     // errorMessage is always null after a valid restore (SESSION-06)
     this.errorMessage = null;
   }

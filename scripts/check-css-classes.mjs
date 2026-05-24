@@ -153,6 +153,7 @@ const ignoreMissing = new Set([
   'rp-protocol-editor-snippet-folder-picker',
   'rp-skip-btn',
   'rp-step-back-btn',
+  'rp-step-redo-btn',
   // Modifier classes styled via parent selector or generic rule.
   'rp-node-kind-badge',
   'rp-protocol-editor-modal-checkbox-field',

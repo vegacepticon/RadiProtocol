@@ -171,7 +171,7 @@ export class NodePickerModal extends SuggestModal<NodeOption> {
     this.options = options;
     this.onChooseCb = onChoose;
     this.t = plugin ? plugin.i18n.t.bind(plugin.i18n) : defaultT;
-    this.setPlaceholder('Search nodes by label\u2026');
+    this.setPlaceholder(this.t('nodePicker.searchPlaceholder'));
   }
 
   getSuggestions(query: string): NodeOption[] {

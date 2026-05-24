@@ -228,7 +228,7 @@ export class SnippetTreePicker {
       text: this.drillPath.length === 0 ? '/' : this.drillPath.join('/'),
     });
     if (this.drillPath.length > 0) {
-      const upBtn = createButton(breadcrumb, { cls: 'rp-stp-up-btn', attr: { 'aria-label': 'Root (parent)', title: 'Root' } });
+      const upBtn = createButton(breadcrumb, { cls: 'rp-stp-up-btn', attr: { 'aria-label': this.t('snippetPicker.goToRoot') } });
       setIcon(upBtn, 'arrow-up');
       this.addListener(upBtn, 'click', () => {
         this.drillPath = [];
@@ -240,6 +240,7 @@ export class SnippetTreePicker {
       const crumb = createButton(breadcrumb, {
         cls: 'rp-stp-crumb',
         text: segment,
+        attr: { 'aria-label': this.t('snippetTreePicker.crumbAria', { name: segment }) },
       });
       this.addListener(crumb, 'click', () => {
         this.drillPath = this.drillPath.slice(0, index + 1);
@@ -258,6 +259,7 @@ export class SnippetTreePicker {
       const selectBtn = createButton(body, {
         cls: isCommitted ? 'rp-stp-select-folder-btn is-committed' : 'rp-stp-select-folder-btn',
         text: isCommitted ? this.t(SELECT_FOLDER_COMMITTED_KEY) : this.t(SELECT_FOLDER_KEY),
+        attr: { 'aria-label': this.t('snippetTreePicker.selectFolderAria') },
       });
       this.addListener(selectBtn, 'click', () => {
         this.committedRelativePath = currentRel;
@@ -311,7 +313,7 @@ export class SnippetTreePicker {
     folderName: string,
     isSearchResult: boolean,
   ): void {
-    const row = createButton(listEl, { cls: 'rp-stp-folder-row' });
+    const row = createButton(listEl, { cls: 'rp-stp-folder-row', attr: { 'aria-label': this.t('snippetTreePicker.openFolder', { name: basenameOf(folderName) }) } });
     const nameEl = row.createEl('div', { cls: 'rp-stp-result-name' });
     nameEl.setText(`${GLYPH_FOLDER} ${basenameOf(folderName)}`);
     nameEl.empty();
@@ -356,7 +358,7 @@ export class SnippetTreePicker {
       relativePath = snippetOrBasename.relativePath;
     }
 
-    const row = createButton(listEl, { cls: 'rp-stp-file-row' });
+    const row = createButton(listEl, { cls: 'rp-stp-file-row', attr: { 'aria-label': this.t('snippetTreePicker.selectSnippet', { name: basename }) } });
     const nameEl = row.createEl('div', { cls: 'rp-stp-result-name' });
     nameEl.setText(`${fileGlyph(basename)} ${basename}`);
     nameEl.empty();
