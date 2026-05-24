@@ -25,6 +25,7 @@ interface MockEl {
   setAttr: (name: string, value: string | number | boolean) => void;
   addClass: (cls: string) => void;
   removeClass: (cls: string) => void;
+  hasClass: (cls: string) => boolean;
   setAttribute: (k: string, v: string) => void;
   getAttribute: (k: string) => string | null;
   addEventListener: (type: string, handler: (ev: unknown) => void) => void;
@@ -86,6 +87,7 @@ function makeEl(tag = 'div'): MockEl {
     setAttr(name: string, value: string | number | boolean): void { attrs[name] = String(value); },
     addClass(cls: string): void { classList.add(cls); },
     removeClass(cls: string): void { classList.delete(cls); },
+    hasClass(cls: string): boolean { return classList.has(cls); },
     setAttribute(k: string, v: string): void { attrs[k] = v; },
     getAttribute(k: string): string | null { return attrs[k] ?? null; },
     addEventListener(type: string, handler: (ev: unknown) => void): void {
@@ -457,5 +459,36 @@ describe('ProtocolEditorView: floating action button aria-labels', () => {
     expect(minimap).toBeDefined();
     expect(minimap!._attrs['aria-label']).toBe('Minimap — click or drag to pan');
     expect(minimap!._attrs['role']).toBe('button');
+  });
+
+  it('minimap element has tabindex=0 for keyboard focus', () => {
+    const { rootEl } = createShellView();
+    const workspace = rootEl.children.find((c: MockEl) => c.classList.has('rp-protocol-editor-workspace'))!;
+    const minimap = workspace.children.find((c: MockEl) => c.classList.has('rp-protocol-editor-minimap'))!;
+    expect(minimap!._attrs['tabindex']).toBe('0');
+  });
+
+  it('Enter key on minimap toggles visibility', () => {
+    const { rootEl } = createShellView();
+    const workspace = rootEl.children.find((c: MockEl) => c.classList.has('rp-protocol-editor-workspace'))!;
+    const minimap = workspace.children.find((c: MockEl) => c.classList.has('rp-protocol-editor-minimap'))!;
+    expect(minimap!.classList.has('is-hidden')).toBe(false);
+    dispatchKeyDown(minimap!, 'Enter');
+    expect(minimap!.classList.has('is-hidden')).toBe(true);
+    dispatchKeyDown(minimap!, 'Enter');
+    expect(minimap!.classList.has('is-hidden')).toBe(false);
+  });
+
+  it('Space key on minimap toggles visibility and prevents default', () => {
+    const { rootEl } = createShellView();
+    const workspace = rootEl.children.find((c: MockEl) => c.classList.has('rp-protocol-editor-workspace'))!;
+    const minimap = workspace.children.find((c: MockEl) => c.classList.has('rp-protocol-editor-minimap'))!;
+    let prevented = false;
+    const handlers = minimap!._listeners.get('keydown') ?? [];
+    for (const handler of handlers) {
+      handler({ key: ' ', target: minimap!, preventDefault: () => { prevented = true; }, stopPropagation: () => {} });
+    }
+    expect(prevented).toBe(true);
+    expect(minimap!.classList.has('is-hidden')).toBe(true);
   });
 });

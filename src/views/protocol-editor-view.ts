@@ -347,6 +347,7 @@ export class ProtocolEditorView extends ItemView {
     if (this.doc !== null) {
       this.minimapEl = workspace.createDiv({ cls: 'rp-protocol-editor-minimap' });
       this.minimapEl.setAttr('role', 'button');
+      this.minimapEl.setAttr('tabindex', '0');
       this.minimapEl.setAttr('aria-label', this.plugin.i18n.t('protocolEditor.minimapLabel'));
       this.minimapSvgEl = this.minimapEl.createSvg('svg', {
         attr: {
@@ -1407,6 +1408,13 @@ export class ProtocolEditorView extends ItemView {
 
   private bindMinimapControls(): void {
     if (this.minimapEl === null) return;
+
+    this.minimapEl.addEventListener('keydown', (e: KeyboardEvent) => {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        this.toggleMinimap();
+      }
+    });
 
     this.minimapEl.addEventListener('mousedown', (e: MouseEvent) => {
       if (e.button !== 0) return;
