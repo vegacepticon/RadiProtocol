@@ -11,6 +11,7 @@ import { renderBreadcrumb } from './library-admin/breadcrumb';
 import { renderTreeSearch } from './library-admin/search';
 import { renderDirectory, renderSearchResults } from './library-admin/tree-renderer';
 import {
+	ConfirmModal,
 	SendToRemoteModal,
 	TextPromptModal,
 	TypeConfirmModal,
@@ -381,13 +382,15 @@ export class LibraryAdminModal extends Modal {
 		modal.open();
 	}
 
-	private async handleDeleteSnippet(entry: LibrarySnippetEntry): Promise<void> {
+	private handleDeleteSnippet(entry: LibrarySnippetEntry): void {
 		if (!this.admin) return;
-		if (!confirm(this.plugin.i18n.t('admin.confirmDeleteSnippet', { name: entry.name }))) return;
-		const ok = await this.admin.deleteSnippet(entry);
-		if (ok) {
-			void this.refreshAdmin();
-		}
+		new ConfirmModal(
+			this.app,
+			this.plugin.i18n.t('admin.confirmDeleteSnippet', { name: entry.name }),
+			() => { void this.admin!.deleteSnippet(entry).then(ok => { if (ok) void this.refreshAdmin(); }); },
+			() => {},
+			this.plugin.i18n.t.bind(this.plugin.i18n),
+		).open();
 	}
 
 	// ─── Protocol actions ───────────────────────────────────────────────
@@ -469,13 +472,15 @@ export class LibraryAdminModal extends Modal {
 		modal.open();
 	}
 
-	private async handleDeleteProtocol(entry: ProtocolLibraryEntry): Promise<void> {
+	private handleDeleteProtocol(entry: ProtocolLibraryEntry): void {
 		if (!this.admin) return;
-		if (!confirm(this.plugin.i18n.t('admin.confirmDeleteProtocol', { title: entry.title }))) return;
-		const ok = await this.admin.deleteProtocol(entry);
-		if (ok) {
-			void this.refreshAdmin();
-		}
+		new ConfirmModal(
+			this.app,
+			this.plugin.i18n.t('admin.confirmDeleteProtocol', { title: entry.title }),
+			() => { void this.admin!.deleteProtocol(entry).then(ok => { if (ok) void this.refreshAdmin(); }); },
+			() => {},
+			this.plugin.i18n.t.bind(this.plugin.i18n),
+		).open();
 	}
 
 	// ─── Directory actions ──────────────────────────────────────────────
@@ -510,15 +515,23 @@ export class LibraryAdminModal extends Modal {
 		}
 	}
 
-	private async handleDeleteDirectory(section: LibraryAdminSection, dirPath: string): Promise<void> {
+	private handleDeleteDirectory(section: LibraryAdminSection, dirPath: string): void {
 		if (!this.admin) return;
-		if (!confirm(this.plugin.i18n.t('admin.confirmDeleteFolder', { path: dirPath }))) return;
-		const ok = await this.admin.deleteDirectory(section, dirPath);
-		if (ok) {
-			const deletedPath = dirPath.split('/').filter(Boolean).slice(1);
-			if (this.drillPath.join('/') === deletedPath.join('/')) this.drillPath = deletedPath.slice(0, -1);
-			void this.refreshAdmin();
-		}
+		new ConfirmModal(
+			this.app,
+			this.plugin.i18n.t('admin.confirmDeleteFolder', { path: dirPath }),
+			() => {
+				void this.admin!.deleteDirectory(section, dirPath).then(ok => {
+					if (ok) {
+						const deletedPath = dirPath.split('/').filter(Boolean).slice(1);
+						if (this.drillPath.join('/') === deletedPath.join('/')) this.drillPath = deletedPath.slice(0, -1);
+						void this.refreshAdmin();
+					}
+				});
+			},
+			() => {},
+			this.plugin.i18n.t.bind(this.plugin.i18n),
+		).open();
 	}
 
 	private currentDirectoryPath(section: LibraryAdminSection): string {
