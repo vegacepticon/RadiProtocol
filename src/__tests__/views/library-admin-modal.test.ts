@@ -332,4 +332,52 @@ describe('LibraryAdminModal — tab keyboard navigation', () => {
 		expect(protocolTabAfter._attrs['tabindex']).toBe('-1');
 		expect(contentAreaAfter._attrs['aria-labelledby']).toBe('rp-admin-tab-snippets');
 	});
+
+	it('Home key on protocols tab activates snippets tab', () => {
+		const { modal, contentEl } = setupModal('protocols');
+		const protocolTab = contentEl.querySelectorAll('.rp-admin-tab').find((c: MockEl) => c._attrs['id'] === 'rp-admin-tab-protocols')!;
+		fireKeyDown(protocolTab, 'Home');
+		expect((modal as any).currentTab).toBe('snippets');
+	});
+
+	it('End key on snippets tab activates protocols tab', () => {
+		const { modal, contentEl } = setupModal('snippets');
+		const snippetTab = contentEl.querySelectorAll('.rp-admin-tab').find((c: MockEl) => c._attrs['id'] === 'rp-admin-tab-snippets')!;
+		fireKeyDown(snippetTab, 'End');
+		expect((modal as any).currentTab).toBe('protocols');
+	});
+
+	it('Home key on protocols tab updates ARIA attributes to snippets', () => {
+		const { contentEl } = setupModal('protocols');
+		const protocolTab = contentEl.querySelectorAll('.rp-admin-tab').find((c: MockEl) => c._attrs['id'] === 'rp-admin-tab-protocols')!;
+		fireKeyDown(protocolTab, 'Home');
+
+		const tabsAfter = contentEl.querySelectorAll('.rp-admin-tab');
+		const snippetTabAfter = tabsAfter.find((c: MockEl) => c._attrs['id'] === 'rp-admin-tab-snippets')!;
+		const protocolTabAfter = tabsAfter.find((c: MockEl) => c._attrs['id'] === 'rp-admin-tab-protocols')!;
+		const contentAreaAfter = contentEl.children.find((c: MockEl) => c._attrs['id'] === 'rp-admin-content')!;
+
+		expect(snippetTabAfter._attrs['aria-selected']).toBe('true');
+		expect(snippetTabAfter._attrs['tabindex']).toBe('0');
+		expect(protocolTabAfter._attrs['aria-selected']).toBe('false');
+		expect(protocolTabAfter._attrs['tabindex']).toBe('-1');
+		expect(contentAreaAfter._attrs['aria-labelledby']).toBe('rp-admin-tab-snippets');
+	});
+
+	it('End key on snippets tab updates ARIA attributes to protocols', () => {
+		const { contentEl } = setupModal('snippets');
+		const snippetTab = contentEl.querySelectorAll('.rp-admin-tab').find((c: MockEl) => c._attrs['id'] === 'rp-admin-tab-snippets')!;
+		fireKeyDown(snippetTab, 'End');
+
+		const tabsAfter = contentEl.querySelectorAll('.rp-admin-tab');
+		const snippetTabAfter = tabsAfter.find((c: MockEl) => c._attrs['id'] === 'rp-admin-tab-snippets')!;
+		const protocolTabAfter = tabsAfter.find((c: MockEl) => c._attrs['id'] === 'rp-admin-tab-protocols')!;
+		const contentAreaAfter = contentEl.children.find((c: MockEl) => c._attrs['id'] === 'rp-admin-content')!;
+
+		expect(snippetTabAfter._attrs['aria-selected']).toBe('false');
+		expect(snippetTabAfter._attrs['tabindex']).toBe('-1');
+		expect(protocolTabAfter._attrs['aria-selected']).toBe('true');
+		expect(protocolTabAfter._attrs['tabindex']).toBe('0');
+		expect(contentAreaAfter._attrs['aria-labelledby']).toBe('rp-admin-tab-protocols');
+	});
 });

@@ -133,10 +133,12 @@ export class LibraryAdminModal extends Modal {
 			target.focus();
 		};
 		snippetTab.addEventListener('keydown', (e: KeyboardEvent) => {
-			if (e.key === 'ArrowRight') { e.preventDefault(); activateTab('protocols'); }
+			if (e.key === 'ArrowRight' || e.key === 'End') { e.preventDefault(); activateTab('protocols'); }
+			else if (e.key === 'Home') { e.preventDefault(); activateTab('snippets'); }
 		});
 		protocolTab.addEventListener('keydown', (e: KeyboardEvent) => {
-			if (e.key === 'ArrowLeft') { e.preventDefault(); activateTab('snippets'); }
+			if (e.key === 'ArrowLeft' || e.key === 'Home') { e.preventDefault(); activateTab('snippets'); }
+			else if (e.key === 'End') { e.preventDefault(); activateTab('protocols'); }
 		});
 
 		// Content area
