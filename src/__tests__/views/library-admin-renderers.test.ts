@@ -24,7 +24,8 @@ interface MockEl {
 	setAttribute: (k: string, v: string) => void;
 	getAttribute: (k: string) => string | null;
 	addEventListener: (type: string, handler: (ev: unknown) => void) => void;
-	dispatchEvent: (event: { type: string }) => void;
+	dispatchEvent: (event: { type: string; [key: string]: unknown }) => void;
+	closest: (sel: string) => MockEl | null;
 }
 
 function makeEl(tag = 'div'): MockEl {
@@ -71,8 +72,12 @@ function makeEl(tag = 'div'): MockEl {
 			arr.push(handler);
 			listeners.set(type, arr);
 		},
-		dispatchEvent(event: { type: string }): void {
+		dispatchEvent(event: { type: string; [key: string]: unknown }): void {
 			for (const h of listeners.get(event.type) ?? []) h(event);
+		},
+		closest(sel: string): MockEl | null {
+			if (sel === 'button' && el.tagName === 'BUTTON') return el;
+			return null;
 		},
 	};
 	return el;
@@ -454,6 +459,89 @@ describe('renderEntryRow', () => {
 		const row = list.children[0]!;
 		const actions = row.children[1]!;
 		expect(actions.children.length).toBe(0);
+	});
+
+	it('sets tabindex=0, role=button, and aria-label on info when onEdit is provided', () => {
+		const list = makeEl('div');
+		const entry = makeSnippetEntry({ id: 'kb1', name: 'Pneumo' });
+		renderEntryRow(asEl(list), entry, 'snippets', false, mockI18n, () => {}, () => {});
+
+		const row = list.children[0]!;
+		const info = row.children[0]!;
+		expect(info._attrs['tabindex']).toBe('0');
+		expect(info._attrs['role']).toBe('button');
+		expect(info._attrs['aria-label']).toBe('Edit Pneumo');
+	});
+
+	it('does not set tabindex, role, or aria-label on info when onEdit is omitted', () => {
+		const list = makeEl('div');
+		const entry = makeSnippetEntry();
+		renderEntryRow(asEl(list), entry, 'snippets', false, mockI18n);
+
+		const row = list.children[0]!;
+		const info = row.children[0]!;
+		expect(info._attrs['tabindex']).toBeUndefined();
+		expect(info._attrs['role']).toBeUndefined();
+		expect(info._attrs['aria-label']).toBeUndefined();
+	});
+
+	it('Enter key on info fires onEdit with the entry', () => {
+		const list = makeEl('div');
+		const entry = makeSnippetEntry({ id: 'kb-enter' });
+		const edits: string[] = [];
+		renderEntryRow(asEl(list), entry, 'snippets', false, mockI18n, (e) => { edits.push(e.id); }, () => {});
+
+		const row = list.children[0]!;
+		const info = row.children[0]!;
+		let prevented = false;
+		info.dispatchEvent({ type: 'keydown', key: 'Enter', preventDefault: () => { prevented = true; } });
+		expect(edits).toEqual(['kb-enter']);
+		expect(prevented).toBe(true);
+	});
+
+	it('Space key on info fires onEdit and prevents default', () => {
+		const list = makeEl('div');
+		const entry = makeSnippetEntry({ id: 'kb-space' });
+		const edits: string[] = [];
+		renderEntryRow(asEl(list), entry, 'snippets', false, mockI18n, (e) => { edits.push(e.id); }, () => {});
+
+		const row = list.children[0]!;
+		const info = row.children[0]!;
+		let prevented = false;
+		info.dispatchEvent({ type: 'keydown', key: ' ', preventDefault: () => { prevented = true; } });
+		expect(edits).toEqual(['kb-space']);
+		expect(prevented).toBe(true);
+	});
+
+	it('Enter/Space on info does not fire onEdit when target is a button (no double-trigger)', () => {
+		const list = makeEl('div');
+		const entry = makeSnippetEntry({ id: 'kb-nodbl' });
+		const edits: string[] = [];
+		renderEntryRow(asEl(list), entry, 'snippets', false, mockI18n, (e) => { edits.push(e.id); }, () => {});
+
+		const row = list.children[0]!;
+		const info = row.children[0]!;
+		const actions = row.children[1]!;
+		const editBtn = actions.children[0]!;
+
+		let prevented = false;
+		info.dispatchEvent({ type: 'keydown', key: 'Enter', target: editBtn, preventDefault: () => { prevented = true; } });
+		expect(edits).toEqual([]);
+
+		info.dispatchEvent({ type: 'keydown', key: ' ', target: editBtn, preventDefault: () => { prevented = true; } });
+		expect(edits).toEqual([]);
+		expect(prevented).toBe(false);
+	});
+
+	it('Enter/Space on info with onEdit=undefined does not add keydown handler', () => {
+		const list = makeEl('div');
+		const entry = makeSnippetEntry({ id: 'kb-noedit' });
+		renderEntryRow(asEl(list), entry, 'snippets', false, mockI18n);
+
+		const row = list.children[0]!;
+		const info = row.children[0]!;
+		const keydownHandlers = info._listeners.get('keydown');
+		expect(keydownHandlers).toBeUndefined();
 	});
 });
 

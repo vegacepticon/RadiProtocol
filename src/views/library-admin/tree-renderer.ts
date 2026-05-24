@@ -42,10 +42,16 @@ export function renderEntryRow(
 	onDelete?: (entry: AdminEntry) => void,
 ): void {
 	const row = list.createDiv({ cls: 'rp-admin-entry' });
-	const info = row.createDiv({ cls: 'rp-admin-entry-info' });
+	const entryTitle = 'title' in entry ? entry.title : entry.name;
+	const infoAttrs: Record<string, string> = {};
+	if (onEdit) {
+		infoAttrs['tabindex'] = '0';
+		infoAttrs['role'] = 'button';
+		infoAttrs['aria-label'] = t('admin.edit') + ' ' + entryTitle;
+	}
+	const info = row.createDiv({ cls: 'rp-admin-entry-info', attr: infoAttrs });
 	const nameEl = info.createEl('span', { cls: 'rp-admin-entry-name' });
 	nameEl.createEl('span', { cls: 'rp-admin-row-glyph', text: '\uD83D\uDCC4' }); // Non-translatable file glyph symbol
-	const entryTitle = 'title' in entry ? entry.title : entry.name;
 	nameEl.createEl('span', { cls: 'rp-admin-row-title', text: entryTitle });
 	if (section === 'protocols' && 'nodes' in entry) {
 		info.createEl('span', {
@@ -54,6 +60,16 @@ export function renderEntryRow(
 		});
 	}
 	info.createEl('span', { text: showPath ? entry.path : entry.path.split('/').pop() ?? entry.path, cls: 'rp-admin-entry-path' });
+
+	if (onEdit) {
+		info.addEventListener('keydown', (e: KeyboardEvent) => {
+			if ((e.target as HTMLElement)?.closest?.('button')) return;
+			if (e.key === 'Enter' || e.key === ' ') {
+				e.preventDefault();
+				onEdit(entry);
+			}
+		});
+	}
 
 	const actions = row.createDiv({ cls: 'rp-admin-entry-actions' });
 	if (onEdit) {
