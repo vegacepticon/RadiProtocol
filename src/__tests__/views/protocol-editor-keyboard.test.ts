@@ -13,6 +13,7 @@ interface MockEl {
   _attrs: Record<string, string>;
   _listeners: Map<string, Array<(ev: unknown) => void>>;
   _value: string;
+  value: string;
   _placeholder: string;
   _type: string;
   disabled: boolean;
@@ -50,6 +51,7 @@ function makeEl(tag = 'div'): MockEl {
     _attrs: attrs,
     _listeners: listeners,
     _value: '',
+    value: '',
     _placeholder: '',
     _type: '',
     disabled: false,
@@ -57,13 +59,19 @@ function makeEl(tag = 'div'): MockEl {
     createEl(subtag: string, opts?: { text?: string; cls?: string; type?: string; attr?: Record<string, string | number | boolean> }): MockEl {
       const child = makeEl(subtag);
       child.parent = el;
-      if (opts?.text !== undefined) child._text = opts.text;
+      if (opts?.text !== undefined) {
+        child._text = opts.text;
+        child.value = opts.text;
+      }
       if (opts?.cls) {
         for (const c of opts.cls.split(' ').filter(Boolean)) child.classList.add(c);
       }
       if (opts?.type) child._type = opts.type;
       if (opts?.attr) {
-        for (const [k, v] of Object.entries(opts.attr)) child._attrs[k] = String(v);
+        for (const [k, v] of Object.entries(opts.attr)) {
+          child._attrs[k] = String(v);
+          if (k === 'value') child.value = String(v);
+        }
       }
       children.push(child);
       return child;
@@ -145,6 +153,18 @@ function findAllByClass(root: MockEl, cls: string): MockEl[] {
   return results;
 }
 
+function findAllByTag(root: MockEl, tagName: string): MockEl[] {
+  const results: MockEl[] = [];
+  const normalized = tagName.toUpperCase();
+  const stack = [root];
+  while (stack.length > 0) {
+    const cur = stack.pop()!;
+    if (cur.tagName === normalized) results.push(cur);
+    for (const child of cur.children) stack.push(child);
+  }
+  return results;
+}
+
 function dispatchKeyDown(el: MockEl, key: string, target?: MockEl): void {
   const handlers = el._listeners.get('keydown') ?? [];
   for (const handler of handlers) {
@@ -165,6 +185,7 @@ vi.mock('../../utils/dom-helpers', () => ({
       attr: { ...opts.attr ?? {}, ...(opts.placeholder ? { placeholder: opts.placeholder } : {}) },
     });
     input._value = opts.value ?? '';
+    input.value = opts.value ?? '';
     input._placeholder = opts.placeholder ?? '';
     input._type = opts.type ?? 'text';
     return input;
@@ -551,5 +572,118 @@ describe('ProtocolEditorView: floating action button aria-labels', () => {
     }
     expect(prevented).toBe(true);
     expect(minimap!.classList.has('is-hidden')).toBe(true);
+  });
+});
+
+// ── Regression: empty answer text must not fall back to stale node.text ─────
+
+describe('openEditModal — empty multiline field regression (1.22.0 bug)', () => {
+  let savedWindow: unknown;
+  let savedRAF: unknown;
+  let savedDocument: unknown;
+  beforeEach(() => {
+    savedWindow = (globalThis as any).window;
+    savedRAF = (globalThis as any).requestAnimationFrame;
+    savedDocument = (globalThis as any).document;
+    (globalThis as any).window = globalThis;
+    (globalThis as any).requestAnimationFrame = (cb: FrameRequestCallback) => { cb(0); return 0; };
+  });
+  afterEach(() => {
+    (globalThis as any).window = savedWindow;
+    (globalThis as any).requestAnimationFrame = savedRAF;
+    (globalThis as any).document = savedDocument;
+  });
+
+  it('saves empty answerText as empty string, not undefined', async () => {
+    // Reproduces the 1.22.0 bug: clearing answerText kept the stale node.text (' ')
+    // because multiline inputs used `|| undefined` — empty string was coerced to undefined
+    // and then the field was deleted, causing the parser/runner to fall back to node.text.
+    const t = (key: string): string => key;
+
+    const savedNodes: ProtocolNodeRecord[] = [];
+
+    const mockStore = {
+      async update(_path: string, mutator: (doc: ProtocolDocumentV1 | null) => ProtocolDocumentV1): Promise<ProtocolDocumentV1> {
+        const doc: ProtocolDocumentV1 = {
+          schema: 'radiprotocol.protocol', version: 1, id: 'test', title: 'T',
+          createdAt: '2025-01-01T00:00:00Z', updatedAt: '2025-01-01T00:00:00Z',
+          nodes: [{
+            id: 'a1', kind: 'answer', x: 0, y: 0, width: 200, height: 80,
+            text: ' ',
+            fields: { answerText: ' ' },
+          }],
+          edges: [],
+        };
+        const result = mutator(doc);
+        savedNodes.push(...result.nodes);
+        return result;
+      },
+      async read() { return null; },
+    };
+
+    const mockPlugin = { i18n: { t }, settings: {}, protocolDocumentStore: mockStore } as any;
+    const leaf = {} as any;
+    const view = new ProtocolEditorView(leaf, mockPlugin);
+
+    const surfaceEl = makeEl('div');
+    const viewportEl = makeEl('div');
+    // openEditModal checks viewportEl.isConnected before restoring focus
+    Object.defineProperty(viewportEl, 'isConnected', { value: true, writable: true });
+
+    (view as any).surfaceEl = surfaceEl;
+    (view as any).svgEl = makeEl('svg');
+    (view as any).viewportEl = viewportEl;
+    (view as any).rootEl = makeEl('div');
+    (view as any).protocolPath = 'test.rp.json';
+    (view as any).zoom = 1;
+    (view as any).doc = {
+      schema: 'radiprotocol.protocol', version: 1, id: 'test', title: 'T',
+      createdAt: '2025-01-01T00:00:00Z', updatedAt: '2025-01-01T00:00:00Z',
+      nodes: [{
+        id: 'a1', kind: 'answer', x: 0, y: 0, width: 200, height: 80,
+        text: ' ',
+        fields: { answerText: ' ' },
+      }],
+      edges: [],
+    } as ProtocolDocumentV1;
+    (view as any).loadProtocol = vi.fn(async () => {});
+
+    // openEditModal uses document.body.createDiv — point it at surfaceEl
+    (globalThis as any).document = {
+      body: {
+        createDiv: () => surfaceEl,
+      },
+      activeElement: null,
+    };
+
+    (view as any).openEditModal((view as any).doc.nodes[0]);
+
+    const allTextareas = findAllByTag(surfaceEl, 'textarea');
+    const answerTextTA = allTextareas.length >= 2 ? allTextareas[1] : allTextareas[allTextareas.length - 1];
+    expect(answerTextTA).toBeDefined();
+    answerTextTA!.value = '';
+
+    // Click save — find the Save button
+    let saveBtn: MockEl | null = null;
+    const stack2 = [surfaceEl];
+    while (stack2.length > 0) {
+      const cur = stack2.pop()!;
+      if (cur._text === 'protocolEditor.save') {
+        saveBtn = cur;
+        break;
+      }
+      for (const child of cur.children) stack2.push(child);
+    }
+
+    // Trigger click handlers
+    if (saveBtn) {
+      const handlers = saveBtn._listeners.get('click') ?? [];
+      for (const h of handlers) await h({});
+    }
+
+    // Verify: answerText must be empty string, not undefined
+    const savedAnswer = savedNodes.find(n => n.id === 'a1');
+    expect(savedAnswer).toBeDefined();
+    expect(savedAnswer!.fields['answerText']).toBe('');
   });
 });

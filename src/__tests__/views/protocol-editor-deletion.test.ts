@@ -17,6 +17,7 @@ interface MockEl {
   _attrs: Record<string, string>;
   _listeners: Map<string, Array<(ev: unknown) => void>>;
   _value: string;
+  value: string;
   _placeholder: string;
   _type: string;
   disabled: boolean;
@@ -54,6 +55,7 @@ function makeEl(tag = 'div'): MockEl {
     _attrs: attrs,
     _listeners: listeners,
     _value: '',
+    value: '',
     _placeholder: '',
     _type: '',
     disabled: false,
@@ -61,13 +63,19 @@ function makeEl(tag = 'div'): MockEl {
     createEl(subtag: string, opts?: { text?: string; cls?: string; type?: string; attr?: Record<string, string | number | boolean> }): MockEl {
       const child = makeEl(subtag);
       child.parent = el;
-      if (opts?.text !== undefined) child._text = opts.text;
+      if (opts?.text !== undefined) {
+        child._text = opts.text;
+        child.value = opts.text;
+      }
       if (opts?.cls) {
         for (const c of opts.cls.split(' ').filter(Boolean)) child.classList.add(c);
       }
       if (opts?.type) child._type = opts.type;
       if (opts?.attr) {
-        for (const [k, v] of Object.entries(opts.attr)) child._attrs[k] = String(v);
+        for (const [k, v] of Object.entries(opts.attr)) {
+          child._attrs[k] = String(v);
+          if (k === 'value') child.value = String(v);
+        }
       }
       children.push(child);
       return child;

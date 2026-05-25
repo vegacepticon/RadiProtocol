@@ -1676,12 +1676,18 @@ export class ProtocolEditorView extends ItemView {
     const addInput = (key: string, label: string, value: unknown, multiline = false) => {
       const field = body.createDiv({ cls: 'rp-protocol-editor-modal-field' });
       field.createEl('label', { text: label });
+      const initialValue = typeof value === 'string' ? value : '';
       if (multiline) {
-        const input = field.createEl('textarea', { text: typeof value === 'string' ? value : '' }) as HTMLTextAreaElement;
-        textControls.push({ key, value: () => input.value || undefined });
+        const input = field.createEl('textarea') as HTMLTextAreaElement;
+        input.value = initialValue;
+        // Multiline node-body fields (questionText/answerText/content/headerText)
+        // intentionally preserve an empty string. Empty answerText is a valid
+        // skip-like answer, not an instruction to fall back to stale node.text.
+        textControls.push({ key, value: () => input.value });
         if (firstEditableField.length === 0) firstEditableField.push(input);
       } else {
-        const input = field.createEl('input', { attr: { type: 'text', value: typeof value === 'string' ? value : '' } }) as HTMLInputElement;
+        const input = field.createEl('input', { attr: { type: 'text', value: initialValue } }) as HTMLInputElement;
+        input.value = initialValue;
         textControls.push({ key, value: () => input.value || undefined });
         if (firstEditableField.length === 0) firstEditableField.push(input);
       }
