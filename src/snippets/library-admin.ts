@@ -5,6 +5,8 @@
 import { Notice } from 'obsidian';
 import type { LibraryIndex, LibrarySnippetEntry } from './library-model';
 import type { ProtocolLibraryEntry } from '../protocol/protocol-library-model';
+import type { JsonSnippet, Snippet, SnippetPlaceholder } from './snippet-model';
+import { validatePlaceholders } from './snippet-model';
 import type { Translator } from '../i18n';
 
 import * as nodeFs from 'fs';
@@ -193,6 +195,133 @@ export class LibraryAdminService {
     } catch (err) {
       console.error('[RadiProtocol][Admin] importSnippet failed:', err);
       new Notice(this.t('admin.snippetImportFailed', { error: String(err) }));
+      return null;
+    }
+  }
+
+  /** Import a snippet JSON file from vault into an existing library directory. */
+  async importSnippetFromVaultToDirectory(
+    content: string,
+    targetDirectory: string,
+    fallbackName: string,
+    description?: string,
+  ): Promise<LibrarySnippetEntry | null> {
+    ensureModule(nodeFs, 'fs');
+    ensureModule(nodePath, 'path');
+    const fs = nodeFs as typeof import('fs');
+    const path = nodePath as typeof import('path');
+    try {
+      const parsed = JSON.parse(content);
+      const name = typeof parsed.name === 'string' && parsed.name.trim() !== '' ? parsed.name.trim() : fallbackName;
+      const slug = this.slugify(name);
+      const dirRel = this.normaliseDirectoryPath('snippets', targetDirectory);
+      const fullDir = this.resolveRepoPath(dirRel);
+      fs.mkdirSync(fullDir, { recursive: true });
+      const relPath = `${dirRel}/${slug}.json`;
+      fs.writeFileSync(path.join(this.repoPath, relPath), content, 'utf-8');
+
+      const category = await this.displayCategoryFromDirectory(dirRel);
+      const entry: LibrarySnippetEntry = {
+        id: relPath.replace(/^snippets\//, '').replace(/\.json$/, '').replace(/\//g, '-'),
+        name,
+        category,
+        path: relPath,
+        description: description ?? `${category} / ${name}`,
+      };
+      await this.writeSnippetEntryMetadata(entry);
+      await this.regenerateIndexes();
+      new Notice(this.t('admin.snippetImported', { name }));
+      return entry;
+    } catch (err) {
+      console.error('[RadiProtocol][Admin] importSnippet failed:', err);
+      new Notice(this.t('admin.snippetImportFailed', { error: String(err) }));
+      return null;
+    }
+  }
+
+  async readLibrarySnippet(entry: LibrarySnippetEntry): Promise<JsonSnippet | null> {
+    ensureModule(nodeFs, 'fs');
+    const fs = nodeFs as typeof import('fs');
+    try {
+      const raw = fs.readFileSync(this.resolveRepoPath(entry.path), 'utf-8');
+      const parsed = JSON.parse(raw) as Partial<JsonSnippet>;
+      const placeholders: SnippetPlaceholder[] = Array.isArray(parsed.placeholders)
+        ? parsed.placeholders as SnippetPlaceholder[]
+        : [];
+      return {
+        kind: 'json',
+        path: entry.path,
+        name: typeof parsed.name === 'string' && parsed.name.trim() !== '' ? parsed.name.trim() : entry.name,
+        template: typeof parsed.template === 'string' ? parsed.template : '',
+        placeholders,
+        validationError: validatePlaceholders(placeholders, this.t),
+      };
+    } catch (err) {
+      console.error('[RadiProtocol][Admin] readLibrarySnippet failed:', err);
+      new Notice(this.t('admin.readFailed'));
+      return null;
+    }
+  }
+
+  async saveLibrarySnippet(snippet: Snippet): Promise<void> {
+    ensureModule(nodeFs, 'fs');
+    ensureModule(nodePath, 'path');
+    const fs = nodeFs as typeof import('fs');
+    const path = nodePath as typeof import('path');
+    if (snippet.kind !== 'json') {
+      throw new Error('Library admin supports JSON snippets only.');
+    }
+    const fullPath = this.resolveRepoPath(snippet.path);
+    fs.mkdirSync(path.dirname(fullPath), { recursive: true });
+    fs.writeFileSync(fullPath, JSON.stringify({
+      name: snippet.name,
+      template: snippet.template,
+      placeholders: snippet.placeholders,
+    }, null, 2) + '\n', 'utf-8');
+    await this.regenerateIndexes();
+    new Notice(this.t('admin.snippetUpdated', { name: snippet.name }));
+  }
+
+  async snippetPathExists(relPath: string): Promise<boolean> {
+    ensureModule(nodeFs, 'fs');
+    const fs = nodeFs as typeof import('fs');
+    return fs.existsSync(this.resolveRepoPath(relPath));
+  }
+
+  async listSnippetDirectories(): Promise<string[]> {
+    const dirs = await this.listDirectories('snippets');
+    return ['snippets', ...dirs.map(d => d.path)].sort((a, b) => a.localeCompare(b, 'ru'));
+  }
+
+  async moveSnippetToDirectory(entry: LibrarySnippetEntry, targetDirectory: string): Promise<LibrarySnippetEntry | null> {
+    ensureModule(nodeFs, 'fs');
+    ensureModule(nodePath, 'path');
+    const fs = nodeFs as typeof import('fs');
+    const path = nodePath as typeof import('path');
+    try {
+      const dirRel = this.normaliseDirectoryPath('snippets', targetDirectory);
+      const oldFullPath = this.resolveRepoPath(entry.path);
+      const newRelPath = `${dirRel}/${path.basename(entry.path)}`;
+      const newFullPath = this.resolveRepoPath(newRelPath);
+      if (entry.path === newRelPath) return entry;
+      if (fs.existsSync(newFullPath)) throw new Error(this.t('snippetService.pathExists', { path: newRelPath }));
+      fs.mkdirSync(path.dirname(newFullPath), { recursive: true });
+      fs.renameSync(oldFullPath, newFullPath);
+      const category = await this.displayCategoryFromDirectory(dirRel);
+      const updated: LibrarySnippetEntry = {
+        ...entry,
+        id: newRelPath.replace(/^snippets\//, '').replace(/\.json$/, '').replace(/\//g, '-'),
+        category,
+        path: newRelPath,
+        description: entry.description === `${entry.category} / ${entry.name}` ? `${category} / ${entry.name}` : entry.description,
+      };
+      await this.writeSnippetEntryMetadata(updated);
+      await this.regenerateIndexes();
+      new Notice(this.t('admin.snippetMoved', { name: entry.name }));
+      return updated;
+    } catch (err) {
+      console.error('[RadiProtocol][Admin] moveSnippetToDirectory failed:', err);
+      new Notice(this.t('admin.moveSnippetFailed', { error: String(err) }));
       return null;
     }
   }
@@ -957,6 +1086,13 @@ export class LibraryAdminService {
       throw new Error(this.t('admin.invalidDirectoryPath'));
     }
     return fullPath;
+  }
+
+  private async displayCategoryFromDirectory(dirRel: string): Promise<string> {
+    const fullPath = this.resolveRepoPath(dirRel);
+    const metaName = await this.readDirectoryDisplayName(fullPath);
+    if (metaName !== null && metaName.trim() !== '') return metaName.trim();
+    return this.displayCategoryFromRelativePath(`${dirRel}/placeholder.json`);
   }
 
   private displayCategoryFromRelativePath(relPath: string): string {

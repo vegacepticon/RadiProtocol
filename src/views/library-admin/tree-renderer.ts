@@ -40,6 +40,7 @@ export function renderEntryRow(
 	t: I18nFn,
 	onEdit?: (entry: AdminEntry) => void,
 	onDelete?: (entry: AdminEntry) => void,
+	onMove?: (entry: AdminEntry) => void,
 ): void {
 	const row = list.createDiv({ cls: 'rp-admin-entry' });
 	const entryTitle = 'title' in entry ? entry.title : entry.name;
@@ -79,6 +80,10 @@ export function renderEntryRow(
 		const editBtn = actions.createEl('button', { text: t('admin.edit'), cls: 'rp-admin-btn rp-admin-btn-edit', attr: { 'aria-label': editAriaLabel } });
 		editBtn.addEventListener('click', () => { onEdit(entry); });
 	}
+	if (section === 'snippets' && onMove) {
+		const moveBtn = actions.createEl('button', { text: t('admin.move'), cls: 'rp-admin-btn rp-admin-btn-move', attr: { 'aria-label': t('admin.moveSnippet', { name: entryTitle }) } });
+		moveBtn.addEventListener('click', () => { onMove(entry); });
+	}
 	if (onDelete) {
 		const delBtn = actions.createEl('button', { text: t('admin.delete'), cls: 'rp-admin-btn rp-admin-btn-delete', attr: { 'aria-label': t('admin.delete') } });
 		delBtn.addEventListener('click', () => { onDelete(entry); });
@@ -96,6 +101,7 @@ export function renderDirectory(
 	onEditEntry: (entry: AdminEntry) => void,
 	onDeleteEntry: (entry: AdminEntry) => void,
 	entryCount: number,
+	onMoveEntry?: (entry: AdminEntry) => void,
 ): void {
 	host.createDiv({
 		cls: 'rp-admin-directory-meta',
@@ -118,7 +124,7 @@ export function renderDirectory(
 
 	const list = host.createDiv({ cls: 'rp-admin-list rp-admin-tree-list' });
 	for (const entry of node.entries) {
-		renderEntryRow(list, entry, section, false, t, onEditEntry, onDeleteEntry);
+		renderEntryRow(list, entry, section, false, t, onEditEntry, onDeleteEntry, onMoveEntry);
 	}
 	if (node.children.size === 0 && list.children.length === 0) {
 		list.createEl('div', { cls: 'rp-admin-empty', text: t('admin.emptyFolder') });
@@ -133,6 +139,7 @@ export function renderSearchResults(
 	t: I18nFn,
 	onEdit?: (entry: AdminEntry) => void,
 	onDelete?: (entry: AdminEntry) => void,
+	onMove?: (entry: AdminEntry) => void,
 ): void {
 	const lower = query.trim().toLowerCase();
 	const matches = lower === '' ? entries : entries.filter((entry) => {
@@ -141,7 +148,7 @@ export function renderSearchResults(
 	});
 	host.createDiv({ cls: 'rp-admin-directory-meta', text: t('admin.searchResults', { count: String(matches.length) }), attr: { 'aria-live': 'polite' } });
 	const list = host.createDiv({ cls: 'rp-admin-list rp-admin-tree-list' });
-	for (const entry of matches) renderEntryRow(list, entry, section, true, t, onEdit, onDelete);
+	for (const entry of matches) renderEntryRow(list, entry, section, true, t, onEdit, onDelete, onMove);
 	if (list.children.length === 0) {
 		list.createEl('div', { cls: 'rp-admin-empty', text: t('admin.emptyResults') });
 	}

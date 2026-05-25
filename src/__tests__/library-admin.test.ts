@@ -248,6 +248,109 @@ describe('LibraryAdminService', () => {
     expect(result.hint).toBe('admin.sendBranchCheckoutFailed');
   });
 
+
+  it('imports a snippet directly into a specific subdirectory', async () => {
+    // Create the target directory structure
+    fs.mkdirSync(path.join(repo, 'snippets', 'chest-ct'), { recursive: true });
+
+    const result = await service.importSnippetFromVaultToDirectory(
+      JSON.stringify({ name: 'Nodule', template: '{{size}} nodule', placeholders: [{ id: 'size', label: 'Size', type: 'free-text' }] }),
+      'snippets/chest-ct',
+      'Nodule',
+    );
+
+    expect(result).not.toBeNull();
+    expect(result!.path).toBe('snippets/chest-ct/nodule.json');
+    expect(fs.existsSync(path.join(repo, 'snippets', 'chest-ct', 'nodule.json'))).toBe(true);
+  });
+
+  it('reads and saves library snippet content including placeholders', async () => {
+    const snippetContent = JSON.stringify({
+      name: 'Pneumonia',
+      template: 'Pneumonia {{side}} {{lobe}}',
+      placeholders: [
+        { id: 'side', label: 'Side', type: 'choice', options: ['Right', 'Left', 'Bilateral'] },
+        { id: 'lobe', label: 'Lobe', type: 'free-text' },
+      ],
+    }, null, 2);
+    fs.mkdirSync(path.join(repo, 'snippets', 'infectious'), { recursive: true });
+    fs.writeFileSync(path.join(repo, 'snippets', 'infectious', 'pneumonia.json'), snippetContent + '\n');
+
+    const entry: import('../snippets/library-model').LibrarySnippetEntry = {
+      id: 'infectious-pneumonia',
+      name: 'Pneumonia',
+      category: 'Infectious',
+      path: 'snippets/infectious/pneumonia.json',
+      description: 'Infectious / Pneumonia',
+    };
+
+    const read = await service.readLibrarySnippet(entry);
+    expect(read).not.toBeNull();
+    expect(read!.name).toBe('Pneumonia');
+    expect(read!.template).toContain('Pneumonia {{side}} {{lobe}}');
+    expect(read!.placeholders).toHaveLength(2);
+    expect(read!.validationError).toBeNull();
+
+    const modified = { ...read! };
+    if (modified.kind !== 'json') return;
+    modified.name = 'Pneumonia Updated';
+    modified.template = 'Community-acquired pneumonia {{side}}';
+    modified.placeholders = [{ id: 'side', label: 'Side', type: 'choice', options: ['Right', 'Left'] }];
+    await service.saveLibrarySnippet(modified);
+
+    const reRead = await service.readLibrarySnippet(entry);
+    expect(reRead!.name).toBe('Pneumonia Updated');
+    expect(reRead!.placeholders).toHaveLength(1);
+  });
+
+  it('moves a snippet to a different directory and updates path', async () => {
+    fs.mkdirSync(path.join(repo, 'snippets', 'chest-xray'), { recursive: true });
+    fs.mkdirSync(path.join(repo, 'snippets', 'chest-ct'), { recursive: true });
+    fs.writeFileSync(path.join(repo, 'snippets', 'chest-xray', 'effusion.json'),
+      JSON.stringify({ name: 'Effusion', template: 'Effusion {{side}}', placeholders: [] }) + '\n');
+
+    const entry: import('../snippets/library-model').LibrarySnippetEntry = {
+      id: 'chest-xray-effusion', name: 'Effusion', category: 'Chest Xray',
+      path: 'snippets/chest-xray/effusion.json', description: 'Chest Xray / Effusion',
+    };
+
+    const result = await service.moveSnippetToDirectory(entry, 'snippets/chest-ct');
+    expect(result).not.toBeNull();
+    expect(result!.path).toBe('snippets/chest-ct/effusion.json');
+    expect(fs.existsSync(path.join(repo, 'snippets', 'chest-xray', 'effusion.json'))).toBe(false);
+    expect(fs.existsSync(path.join(repo, 'snippets', 'chest-ct', 'effusion.json'))).toBe(true);
+
+    const index = JSON.parse(fs.readFileSync(path.join(repo, 'index.json'), 'utf-8'));
+    expect(index.snippets[0].path).toBe('snippets/chest-ct/effusion.json');
+  });
+
+  it('moveSnippetToDirectory skips when already in same directory', async () => {
+    fs.mkdirSync(path.join(repo, 'snippets', 'cat1'), { recursive: true });
+    fs.writeFileSync(path.join(repo, 'snippets', 'cat1', 'test.json'),
+      JSON.stringify({ name: 'Test', template: '', placeholders: [] }) + '\n');
+
+    const entry: import('../snippets/library-model').LibrarySnippetEntry = {
+      id: 'cat1-test', name: 'Test', category: 'Cat1',
+      path: 'snippets/cat1/test.json', description: 'Cat1 / Test',
+    };
+
+    const result = await service.moveSnippetToDirectory(entry, 'snippets/cat1');
+    expect(result!.path).toBe('snippets/cat1/test.json'); // Returns original when path unchanged
+  });
+
+  it('listSnippetDirectories returns all snippet subdirectories sorted', async () => {
+    fs.mkdirSync(path.join(repo, 'snippets', 'chest-ct'), { recursive: true });
+    fs.mkdirSync(path.join(repo, 'snippets', 'chest-ct', 'subdir'), { recursive: true });
+    fs.mkdirSync(path.join(repo, 'snippets', 'abdominal'), { recursive: true });
+
+    const dirs = await service.listSnippetDirectories();
+    expect(dirs).toContain('snippets');
+    expect(dirs).toContain('snippets/chest-ct');
+    expect(dirs).toContain('snippets/chest-ct/subdir');
+    expect(dirs).toContain('snippets/abdominal');
+    expect(dirs[0]).toBe('snippets'); // sorted
+  });
+
   it('gitCommitAndPushBranch returns hint when push fails', async () => {
     const mockExec = (cmd: string) => {
       if (cmd.includes('checkout')) return '';

@@ -18,9 +18,10 @@ import {
 	ImportSnippetPickerModal,
 	ImportProtocolPickerModal,
 	ImportDetailsModal,
-	EditSnippetMetadataModal,
 	EditProtocolMetadataModal,
 } from './library-admin/helper-modals';
+import { MoveSnippetModal } from './library-admin/move-snippet-modal';
+import { SnippetEditorModal } from './snippet-editor-modal';
 import { SEARCH_DEBOUNCE_MS, buildAdminTree, findNodeByDrillPath, collectEntries } from './library-admin/types';
 import type { AdminEntry } from './library-admin/types';
 
@@ -259,15 +260,18 @@ export class LibraryAdminModal extends Modal {
 				section,
 				query,
 				this.plugin.i18n.t.bind(this.plugin.i18n),
-				(entry) => {
-					if (section === 'snippets') this.openEditSnippetModal(entry as LibrarySnippetEntry);
-					else this.openEditProtocolModal(entry as ProtocolLibraryEntry);
-				},
-				(entry) => {
-					if (section === 'snippets') void this.handleDeleteSnippet(entry as LibrarySnippetEntry);
-					else void this.handleDeleteProtocol(entry as ProtocolLibraryEntry);
-				},
-			);
+			(entry) => {
+				if (section === 'snippets') void this.openEditSnippetModal(entry as LibrarySnippetEntry);
+				else this.openEditProtocolModal(entry as ProtocolLibraryEntry);
+			},
+			(entry) => {
+				if (section === 'snippets') void this.handleDeleteSnippet(entry as LibrarySnippetEntry);
+				else void this.handleDeleteProtocol(entry as ProtocolLibraryEntry);
+			},
+			(entry) => {
+				if (section === 'snippets') this.handleMoveSnippet(entry as LibrarySnippetEntry);
+			},
+		);
 		} else {
 			const { node, validPath } = findNodeByDrillPath(tree, this.drillPath);
 			this.drillPath = validPath;
@@ -287,15 +291,18 @@ export class LibraryAdminModal extends Modal {
 				(childNode) => {
 					void this.handleDeleteDirectory(section, childNode.path);
 				},
-				(entry) => {
-					if (section === 'snippets') this.openEditSnippetModal(entry as LibrarySnippetEntry);
-					else this.openEditProtocolModal(entry as ProtocolLibraryEntry);
-				},
-				(entry) => {
-					if (section === 'snippets') void this.handleDeleteSnippet(entry as LibrarySnippetEntry);
-					else void this.handleDeleteProtocol(entry as ProtocolLibraryEntry);
-				},
-				collectEntries(node).length,
+			(entry) => {
+				if (section === 'snippets') void this.openEditSnippetModal(entry as LibrarySnippetEntry);
+				else this.openEditProtocolModal(entry as ProtocolLibraryEntry);
+			},
+			(entry) => {
+				if (section === 'snippets') void this.handleDeleteSnippet(entry as LibrarySnippetEntry);
+				else void this.handleDeleteProtocol(entry as ProtocolLibraryEntry);
+			},
+			collectEntries(node).length,
+			(entry) => {
+				if (section === 'snippets') this.handleMoveSnippet(entry as LibrarySnippetEntry);
+			},
 			);
 		}
 	}
@@ -336,12 +343,27 @@ export class LibraryAdminModal extends Modal {
 				const name = typeof parsed.name === 'string' && parsed.name.trim() !== ''
 					? parsed.name.trim()
 					: file.basename;
-				this.openImportSnippetDetailsModal(content, name);
+				const targetDir = this.currentDirectoryPath('snippets');
+				await this.doImportSnippetToDirectory(content, name, targetDir);
 			} catch {
 				new Notice(this.plugin.i18n.t('admin.readFailed'));
 			}
 		});
 		modal.open();
+	}
+
+	private async doImportSnippetToDirectory(
+		content: string,
+		name: string,
+		targetDirectory: string,
+	): Promise<void> {
+		if (!this.admin) return;
+		const result = await this.admin.importSnippetFromVaultToDirectory(
+			content,
+			targetDirectory,
+			name,
+		);
+		if (result) void this.refreshAdmin();
 	}
 
 	private openImportSnippetDetailsModal(content: string, suggestedName: string): void {
@@ -371,14 +393,41 @@ export class LibraryAdminModal extends Modal {
 		});
 	}
 
-	private openEditSnippetModal(entry: LibrarySnippetEntry): void {
-		const modal = new EditSnippetMetadataModal(this.app, entry, this.plugin, async (updates) => {
-			if (!this.admin) return;
-			const result = await this.admin.updateSnippetMetadata(entry, updates);
-			if (result) {
-				void this.refreshAdmin();
-			}
+	private async openEditSnippetModal(entry: LibrarySnippetEntry): Promise<void> {
+		if (!this.admin) return;
+		const snippet = await this.admin.readLibrarySnippet(entry);
+		if (!snippet) return;
+
+		const modal = new SnippetEditorModal(this.app, this.plugin, {
+			mode: 'edit',
+			snippet,
+			initialFolder: snippet.path.substring(0, snippet.path.lastIndexOf('/')),
+			snippetServiceOverride: {
+				save: (draft) => this.admin!.saveLibrarySnippet(draft),
+				exists: (path) => this.admin!.snippetPathExists(path),
+				listFolderDescendants: async () => ({ folders: [] }),
+				moveSnippet: async () => snippet.path,
+				renameSnippet: async () => snippet.path,
+				duplicateSnippet: async (path) => path,
+			},
+			disableFolderPicker: true,
 		});
+		modal.open();
+		const result = await modal.result;
+		if (result.saved) {
+			void this.refreshAdmin();
+		}
+	}
+
+	private handleMoveSnippet(entry: LibrarySnippetEntry): void {
+		if (!this.admin) return;
+		const modal = new MoveSnippetModal(
+			this.app,
+			this.admin,
+			entry,
+			this.plugin.i18n.t.bind(this.plugin.i18n),
+			async () => { void this.refreshAdmin(); },
+		);
 		modal.open();
 	}
 

@@ -39,6 +39,17 @@ interface SnippetEditorOptions {
   snippet?: Snippet;
   /** Create mode only; defaults to 'json' */
   initialKind?: 'json' | 'md';
+  /** Optional storage adapter for non-vault snippet stores such as Library Admin. */
+  snippetServiceOverride?: {
+    save(snippet: Snippet): Promise<void>;
+    exists(path: string): Promise<boolean>;
+    listFolderDescendants(root: string): Promise<{ folders: string[] }>;
+    moveSnippet(oldPath: string, newFolder: string): Promise<string>;
+    renameSnippet(oldPath: string, newBasename: string): Promise<string>;
+    duplicateSnippet(path: string): Promise<string>;
+  };
+  /** Hide the folder picker when the caller manages moves separately. */
+  disableFolderPicker?: boolean;
 }
 
 // Phase 84 (I18N-02): copy keys; resolved at render time via this.plugin.i18n.t().
@@ -256,6 +267,17 @@ export class SnippetEditorModal extends Modal {
     super.close();
   }
 
+  private snippetService(): {
+    save(snippet: Snippet): Promise<void>;
+    exists(path: string): Promise<boolean>;
+    listFolderDescendants(root: string): Promise<{ folders: string[] }>;
+    moveSnippet(oldPath: string, newFolder: string): Promise<string>;
+    renameSnippet(oldPath: string, newBasename: string): Promise<string>;
+    duplicateSnippet(path: string): Promise<string>;
+  } {
+    return this.options.snippetServiceOverride ?? this.plugin.snippetService;
+  }
+
   // -------------------- Rendering --------------------
 
   private renderTypeToggle(container: HTMLElement): void {
@@ -292,6 +314,13 @@ export class SnippetEditorModal extends Modal {
   }
 
   private async renderFolderDropdown(container: HTMLElement): Promise<void> {
+    if (this.options.disableFolderPicker) {
+      const row = container.createDiv({ cls: 'radi-snippet-editor-row' });
+      row.createEl('label', { text: this.plugin.i18n.t('snippetEditor.folder') });
+      row.createEl('span', { cls: 'rp-snippet-editor-folder-static', text: this.currentFolder });
+      return;
+    }
+
     // Phase 51 D-07 (PICKER-02) — folder-only SnippetTreePicker replaces the legacy
     // flat-list <select>. Same contract: writing this.currentFolder + setting
     // hasUnsavedChanges + scheduling collision check.
@@ -357,7 +386,7 @@ export class SnippetEditorModal extends Modal {
    *  confirmed orphaned. */
   private async buildFolderOptions(): Promise<string[]> {
     const root = this.plugin.settings.snippetFolderPath;
-    const descendants = await this.plugin.snippetService.listFolderDescendants(root);
+    const descendants = await this.snippetService().listFolderDescendants(root);
     const folders = new Set<string>([root]);
     for (const f of descendants.folders) folders.add(f);
     return Array.from(folders).sort((a, b) => a.localeCompare(b));
@@ -513,7 +542,7 @@ export class SnippetEditorModal extends Modal {
       return;
     }
     try {
-      const exists = await this.plugin.snippetService.exists(candidatePath);
+      const exists = await this.snippetService().exists(candidatePath);
       this.hasCollision = exists;
     } catch {
       this.hasCollision = false;
@@ -577,7 +606,7 @@ export class SnippetEditorModal extends Modal {
     try {
       if (this.options.mode === 'create' || oldPath === null || oldPath === newPath) {
         // Simple save (no move) — unchanged Phase 33 flow
-        await this.plugin.snippetService.save(draftToSave);
+        await this.snippetService().save(draftToSave);
         this.savedFolder = this.currentFolder; // Phase 56 D-08 — commit baseline
         this.updateFolderUnsavedDot();
         this.safeResolve({ saved: true, snippet: draftToSave, movedFrom: null });
@@ -598,7 +627,7 @@ export class SnippetEditorModal extends Modal {
         this.draftKind === 'json'
           ? { ...(this.draft as JsonSnippet), path: oldPath }
           : { ...(this.draft as MdSnippet), path: oldPath };
-      await this.plugin.snippetService.save(draftAtOldPath);
+      await this.snippetService().save(draftAtOldPath);
 
       const oldFolder = dirname(oldPath);
       const newFolder = newPath.slice(0, newPath.lastIndexOf('/'));
@@ -614,10 +643,10 @@ export class SnippetEditorModal extends Modal {
       const basenameChanged = newBasenameNoExt !== oldBasenameNoExt;
 
       if (folderChanged) {
-        currentPath = await this.plugin.snippetService.moveSnippet(currentPath, newFolder);
+        currentPath = await this.snippetService().moveSnippet(currentPath, newFolder);
       }
       if (basenameChanged) {
-        currentPath = await this.plugin.snippetService.renameSnippet(currentPath, newBasenameNoExt);
+        currentPath = await this.snippetService().renameSnippet(currentPath, newBasenameNoExt);
       }
 
       const finalDraft: Snippet =
@@ -662,7 +691,7 @@ export class SnippetEditorModal extends Modal {
   private async handleDuplicate(): Promise<void> {
     if (this.options.mode !== 'edit' || !this.options.snippet) return;
     try {
-      const newPath = await this.plugin.snippetService.duplicateSnippet(this.options.snippet.path);
+      const newPath = await this.snippetService().duplicateSnippet(this.options.snippet.path);
       this.safeResolve({ saved: false, duplicatedTo: newPath });
       super.close();
     } catch (err) {

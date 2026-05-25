@@ -175,9 +175,14 @@ export class SendToRemoteModal extends Modal {
 	private commitMessageInput = '';
 
 	private suggestBranchName(): string {
-		return this.branchText && this.branchText !== 'main' && this.branchText !== 'master'
-			? this.branchText
-			: 'library-update';
+		if (this.branchText && this.branchText !== 'main' && this.branchText !== 'master') {
+			return this.branchText;
+		}
+		const stamp = new Date().toISOString()
+			.replace(/[-:]/g, '')
+			.replace(/\.\d{3}Z$/, 'Z')
+			.replace('T', '-');
+		return `library-update-${stamp}`;
 	}
 
 	private getManualSteps(): string[] {
