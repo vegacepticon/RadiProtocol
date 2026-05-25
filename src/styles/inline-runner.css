@@ -221,6 +221,11 @@
   width: 100%;
 }
 
+.rp-stp-inline-host .rp-stp-body {
+  min-height: 0;
+  height: auto;
+}
+
 /* Error panel */
 .rp-inline-runner-content .rp-error-panel {
   background: var(--background-modifier-error);

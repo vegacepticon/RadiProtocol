@@ -438,7 +438,7 @@
     "rename": "Rename",
     "openFolder": "Open folder {name}",
     "renameFolderPrompt": "New folder name",
-    "confirmDeleteFolder": "Delete folder \"{path}\"? The folder must be empty.",
+    "confirmDeleteFolder": "Delete folder \"{path}\" and all of its contents?",
     "directoryCreated": "Folder \"{name}\" created.",
     "directoryRenamed": "Folder renamed to \"{name}\".",
     "directoryDeleted": "Folder deleted.",

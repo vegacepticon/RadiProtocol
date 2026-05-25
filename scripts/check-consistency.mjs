@@ -31,7 +31,7 @@ console.log('\n▸ Check 1: README version vs manifest.json');
 const manifest = JSON.parse(readFileSync(`${repo}/manifest.json`, 'utf8'));
 const readme = readFileSync(`${repo}/README.md`, 'utf8');
 const manifestVersion = manifest.version;
-const readmeMatch = readme.match(/\*\*Latest release:\*\*\s*(v?\d+\.\d+\.\d+)/);
+const readmeMatch = readme.match(/\*\*Latest release:\*\*\s*(v?[\d.]+(?:-[a-zA-Z0-9.]+)?)/);
 
 if (!readmeMatch) {
   fail('README: no "Latest release" line found');

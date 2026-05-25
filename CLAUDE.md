@@ -56,7 +56,7 @@ git tag --sort=-v:refname | head -10
 - Protocol execution is **inline-only** as of RadiProtocol 1.15.0.
 - Runtime host: `src/views/inline-runner-modal.ts`.
 - Pure engine: `src/runner/protocol-runner.ts`.
-- Plugin-level inline runner registry lives in `src/main.ts` and keys instances by `canvasPath#notePath`.
+- Plugin-level inline runner registry lives in `src/main.ts` and keys instances by `protocolPath#notePath`.
 - Do **not** restore sidebar/tab `RunnerView` or deleted runner-view CSS to fix inline-runner issues. The decision is recorded in `docs/adr/0001-inline-runner-only.md`.
 - Keep product session persistence separate from internal runner snapshots: do not delete snapshot helpers just because persisted session recovery is out of scope.
 

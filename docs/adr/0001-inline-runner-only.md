@@ -29,7 +29,7 @@ The plugin keeps these boundaries:
 
 - `ProtocolRunner` remains the pure traversal/state machine.
 - `InlineRunnerModal` owns runtime UI, note insertion, floating layout, and per-instance lifecycle.
-- Plugin-level registry keys inline runner instances by `canvasPath#notePath` and prevents duplicate runners for the same pair.
+- Plugin-level registry keys inline runner instances by `protocolPath#notePath` and prevents duplicate runners for the same pair.
 - Commands that start execution require an active Markdown note, then launch an inline runner against that note.
 - Sidebar/tab `RunnerView`, canvas selector view chrome, and `RunnerView` session-recovery coordinator are not product surfaces.
 
@@ -55,7 +55,7 @@ Negative / trade-offs:
 - `.planning/` remains local historical GSD context and is intentionally gitignored; architectural decisions that need to survive outside that local context belong in tracked ADRs under `docs/adr/`.
 - Do not restore `RunnerView` to solve inline-runner issues. Fix the inline host or add a new explicitly scoped host behind a separate ADR.
 - `SessionService` and the session-folder setting were removed after `RunnerView`; inline runners keep progress in their own live `ProtocolRunner` instances and do not persist/resume sessions.
-- Parallel inline runners remain supported: progress isolation is by live modal instance and registry key `canvasPath#notePath`, not by persisted session files.
+- Parallel inline runners remain supported: progress isolation is by live modal instance and registry key `protocolPath#notePath`, not by persisted session files.
 
 ## Alternatives considered
 
