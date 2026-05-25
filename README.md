@@ -4,7 +4,7 @@ RadiProtocol is an [Obsidian](https://obsidian.md) plugin for radiologists who w
 
 Protocols are authored as **`.rp.json`** files in the built-in visual protocol editor. Legacy `.canvas` protocol files can still be used and migrated, but new protocol work should use `.rp.json`.
 
-**Latest release:** 1.21.0 (2026-05-24) — HESO UX followups, library admin polish, inline runner shortcuts
+**Latest release:** v1.22.0-beta.0 (BRAT preview)
 
 ## What RadiProtocol helps with
 
@@ -89,7 +89,7 @@ RadiProtocol — плагин для [Obsidian](https://obsidian.md), котор
 
 Протоколы создаются как файлы **`.rp.json`** во встроенном визуальном редакторе. Старые протоколы `.canvas` всё ещё поддерживаются и могут быть конвертированы, но новые протоколы следует создавать в формате `.rp.json`.
 
-**Последний релиз:** 1.21.0 (2026-05-24) — HESO UX followups, library admin polish, inline runner shortcuts
+**Последний релиз:** v1.22.0-beta.0 (BRAT preview)
 
 ## Для чего нужен RadiProtocol
 
