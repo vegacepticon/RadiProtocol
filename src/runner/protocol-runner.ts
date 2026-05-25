@@ -108,8 +108,10 @@ export class ProtocolRunner {
       loopContextStack: this.loopContextStack.map(f => ({ ...f })),
     });
 
-    // Append the answer text
-    this.accumulator.appendWithSeparator(answerNode.answerText, this.resolveSeparator(answerNode));
+    // Append only explicit answer text. A truly empty answer behaves like Skip:
+    // it still advances through the selected branch, but does not insert the
+    // configured separator as a standalone character.
+    this.appendAnswerText(answerNode.answerText, this.resolveSeparator(answerNode));
 
     // Advance to the next node after this answer.
     // Phase 44 UAT-fix: dead-end answer inside a loop body returns to the owning picker
@@ -657,6 +659,11 @@ export class ProtocolRunner {
     return node.radiprotocol_separator ?? this.defaultSeparator;
   }
 
+  private appendAnswerText(text: string, separator: 'newline' | 'space'): void {
+    if (text.length === 0) return;
+    this.accumulator.appendWithSeparator(text, separator);
+  }
+
   /**
    * Internal auto-advance loop.
    * Processes nodes that do not require user input (start, text-block, answer) and
@@ -727,9 +734,9 @@ export class ProtocolRunner {
           return;
         }
         case 'answer': {
-          // Answer nodes are traversed as pass-through: append text, follow edge.
+          // Answer nodes are traversed as pass-through: append non-empty text, follow edge.
           // This handles answer → text-block → question chains correctly.
-          this.accumulator.appendWithSeparator(node.answerText, this.resolveSeparator(node));
+          this.appendAnswerText(node.answerText, this.resolveSeparator(node));
           const next = this.firstNeighbour(cursor);
 
           // Quick-exit from loop body: if an answer node inside a loop body is wired

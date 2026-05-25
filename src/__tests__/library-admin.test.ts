@@ -178,8 +178,46 @@ describe('LibraryAdminService', () => {
     expect(result.branchUrl).toBe('https://github.com/vegacepticon/RadiProtocol-Library/compare/test-branch');
     expect(calls.some(c => c.includes('checkout -b test-branch'))).toBe(true);
     expect(calls.some(c => c.includes('add -A'))).toBe(true);
-    expect(calls.some(c => c.includes('commit -m'))).toBe(true);
+    expect(calls.some(c => c.includes('commit -m msg'))).toBe(true);
     expect(calls.some(c => c.includes('push -u origin test-branch'))).toBe(true);
+  });
+
+  it('gitCommitAndPushBranch shell-quotes commit messages with spaces and quotes', async () => {
+    const calls: string[] = [];
+    const mockExec = (cmd: string) => {
+      calls.push(cmd);
+      if (cmd.includes('checkout -b')) return '';
+      if (cmd.includes('add -A')) return '';
+      if (cmd.includes('commit')) return '[branch abc1234] msg';
+      if (cmd.includes('push')) return '';
+      if (cmd.includes('remote get-url')) return 'https://github.com/vegacepticon/RadiProtocol-Library\n';
+      return '';
+    };
+    const svc = new LibraryAdminService(repo, t, mockExec as unknown as typeof import('node:child_process').execSync);
+
+    const result = await svc.gitCommitAndPushBranch('test-branch', `Обновление содержимого библиотеки`);
+
+    expect(result.success).toBe(true);
+    expect(calls).toContain(`git commit -m 'Обновление содержимого библиотеки'`);
+  });
+
+  it('gitCommitAndPushBranch shell-quotes single quotes safely', async () => {
+    const calls: string[] = [];
+    const mockExec = (cmd: string) => {
+      calls.push(cmd);
+      if (cmd.includes('checkout -b')) return '';
+      if (cmd.includes('add -A')) return '';
+      if (cmd.includes('commit')) return '[branch abc1234] msg';
+      if (cmd.includes('push')) return '';
+      if (cmd.includes('remote get-url')) return 'https://github.com/vegacepticon/RadiProtocol-Library\n';
+      return '';
+    };
+    const svc = new LibraryAdminService(repo, t, mockExec as unknown as typeof import('node:child_process').execSync);
+
+    const result = await svc.gitCommitAndPushBranch('test-branch', `Bob's update`);
+
+    expect(result.success).toBe(true);
+    expect(calls).toContain(`git commit -m 'Bob'"'"'s update'`);
   });
 
   it('gitCommitAndPushBranch returns branchUrl with ssh remote converted to https', async () => {

@@ -71,6 +71,71 @@ describe('ProtocolRunner', () => {
       expect(state.finalText).toBe('A2');
     });
 
+    it('does not insert a separator when the selected answer text is truly empty', () => {
+      const graph: ProtocolGraph = {
+        canvasFilePath: 'empty-answer.rp.json',
+        nodes: new Map([
+          ['s', { id: 's', kind: 'start', x: 0, y: 0, width: 100, height: 60 }],
+          ['tb', { id: 'tb', kind: 'text-block', content: 'Before', x: 0, y: 60, width: 100, height: 60 }],
+          ['q', { id: 'q', kind: 'question', questionText: 'Q', x: 0, y: 120, width: 100, height: 60 }],
+          ['a-empty', { id: 'a-empty', kind: 'answer', answerText: '', x: 0, y: 180, width: 100, height: 60 }],
+        ]),
+        edges: [
+          { id: 'e1', fromNodeId: 's', toNodeId: 'tb' },
+          { id: 'e2', fromNodeId: 'tb', toNodeId: 'q' },
+          { id: 'e3', fromNodeId: 'q', toNodeId: 'a-empty' },
+        ],
+        adjacency: new Map([
+          ['s', ['tb']], ['tb', ['q']], ['q', ['a-empty']],
+        ]),
+        reverseAdjacency: new Map([
+          ['tb', ['s']], ['q', ['tb']], ['a-empty', ['q']],
+        ]),
+        startNodeId: 's',
+      };
+      const runner = new ProtocolRunner({ defaultSeparator: 'space' });
+
+      runner.start(graph);
+      runner.chooseAnswer('a-empty');
+
+      const state = runner.getState();
+      expect(state.status).toBe('complete');
+      if (state.status !== 'complete') return;
+      expect(state.finalText).toBe('Before');
+    });
+
+    it('auto-advanced empty answer nodes do not insert a separator', () => {
+      const graph: ProtocolGraph = {
+        canvasFilePath: 'empty-pass-through-answer.rp.json',
+        nodes: new Map([
+          ['s', { id: 's', kind: 'start', x: 0, y: 0, width: 100, height: 60 }],
+          ['tb', { id: 'tb', kind: 'text-block', content: 'Before', x: 0, y: 60, width: 100, height: 60 }],
+          ['a-empty', { id: 'a-empty', kind: 'answer', answerText: '', x: 0, y: 120, width: 100, height: 60 }],
+          ['q', { id: 'q', kind: 'question', questionText: 'Q', x: 0, y: 180, width: 100, height: 60 }],
+        ]),
+        edges: [
+          { id: 'e1', fromNodeId: 's', toNodeId: 'tb' },
+          { id: 'e2', fromNodeId: 'tb', toNodeId: 'a-empty' },
+          { id: 'e3', fromNodeId: 'a-empty', toNodeId: 'q' },
+        ],
+        adjacency: new Map([
+          ['s', ['tb']], ['tb', ['a-empty']], ['a-empty', ['q']],
+        ]),
+        reverseAdjacency: new Map([
+          ['tb', ['s']], ['a-empty', ['tb']], ['q', ['a-empty']],
+        ]),
+        startNodeId: 's',
+      };
+      const runner = new ProtocolRunner({ defaultSeparator: 'space' });
+
+      runner.start(graph);
+
+      const state = runner.getState();
+      expect(state.status).toBe('at-node');
+      if (state.status !== 'at-node') return;
+      expect(state.accumulatedText).toBe('Before');
+    });
+
     it('auto-appends text-block content after answer without extra user action (RUN-05)', () => {
       // text-block.canvas: start → n-q1 → n-a1 (answerText="Size: normal") → n-tb1 (content="Findings: normal liver.", terminal)
       const runner = new ProtocolRunner();

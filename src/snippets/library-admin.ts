@@ -766,7 +766,8 @@ export class LibraryAdminService {
   private runGit(...args: string[]): Promise<{ success: boolean; output: string }> {
     ensureModule(nodeChildProcess, 'child_process');
     try {
-      const output = this.gitExec(`git ${args.join(' ')}`, {
+      const command = `git ${args.map(arg => this.quoteShellArg(arg)).join(' ')}`;
+      const output = this.gitExec(command, {
         cwd: this.repoPath,
         encoding: 'utf-8',
         timeout: 30000,
@@ -775,6 +776,11 @@ export class LibraryAdminService {
     } catch (err: unknown) {
       return Promise.resolve({ success: false, output: this.formatGitError(err) });
     }
+  }
+
+  private quoteShellArg(arg: string): string {
+    if (/^[A-Za-z0-9_./:@%+=,-]+$/.test(arg)) return arg;
+    return `'${arg.replace(/'/g, `'"'"'`)}'`;
   }
 
   private formatGitError(err: unknown): string {

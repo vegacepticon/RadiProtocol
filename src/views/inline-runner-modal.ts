@@ -615,22 +615,6 @@ export class InlineRunnerModal {
       });
     });
 
-    const copyRow = checklist.createDiv({ cls: 'rp-inline-runner-self-check-copy-row' });
-    const copyBtn = copyRow.createEl('button', {
-      cls: 'rp-inline-runner-copy-result-btn',
-      attr: { type: 'button', 'aria-label': this.plugin.i18n.t('selfCheck.copyResult') },
-    });
-    setIcon(copyBtn, 'copy');
-    copyBtn.createSpan({ text: this.plugin.i18n.t('selfCheck.copyResult') });
-    copyBtn.addEventListener('click', () => {
-      const state = this.runner.getState();
-      const text = state.status === 'complete' ? state.finalText : '';
-      if (text.length === 0) return;
-      navigator.clipboard.writeText(text).then(
-        () => { new Notice(this.plugin.i18n.t('selfCheck.copied')); },
-        () => { new Notice(this.plugin.i18n.t('selfCheck.copyFailed')); },
-      );
-    });
   }
 
   // ── Event Handlers ────────────────────────────────────────────────────────
