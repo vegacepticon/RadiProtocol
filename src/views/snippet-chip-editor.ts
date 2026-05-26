@@ -12,7 +12,7 @@
 //   - No path derivation — the modal save handler (Plan 03) owns path logic.
 //   - insertAtCursor and PH_COLOR are module-local helpers (not exported).
 
-import type { JsonSnippet, SnippetPlaceholder } from '../snippets/snippet-model';
+import type { JsonSnippet, MdTemplateSnippet, SnippetPlaceholder } from '../snippets/snippet-model';
 import { defaultT, type Translator } from '../i18n';
 
 // --- Module-local helpers (copied verbatim from legacy snippet-manager-view.ts) ---
@@ -70,9 +70,11 @@ type ListenerTuple = {
  * The container is emptied on mount; the returned handle's `destroy()`
  * removes all listeners and empties the container again.
  */
+type EditableTemplateSnippet = JsonSnippet | MdTemplateSnippet;
+
 export function mountChipEditor(
   container: HTMLElement,
-  draft: JsonSnippet,
+  draft: EditableTemplateSnippet,
   onChange: () => void,
   options: MountChipEditorOptions = {},
 ): ChipEditorHandle {
@@ -448,7 +450,7 @@ export function mountChipEditor(
 
 // --- Orphan badge refresh --------------------------------------------------
 
-function refreshOrphanBadges(draft: JsonSnippet, container: HTMLElement, t: Translator = defaultT): void {
+function refreshOrphanBadges(draft: EditableTemplateSnippet, container: HTMLElement, t: Translator = defaultT): void {
   container.querySelectorAll('.rp-placeholder-orphan-badge').forEach(el => el.remove());
   const templateText = draft.template;
   const activeIds = new Set(draft.placeholders.map(p => p.id));

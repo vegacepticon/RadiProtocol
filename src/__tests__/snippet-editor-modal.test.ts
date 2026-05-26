@@ -324,7 +324,7 @@ vi.mock('../views/snippet-tree-picker', () => ({
 
 // --- Now import the module under test -------------------------------------
 import { SnippetEditorModal } from '../views/snippet-editor-modal';
-import type { JsonSnippet, MdSnippet, Snippet } from '../snippets/snippet-model';
+import type { JsonSnippet, MdSnippet, MdTemplateSnippet, Snippet } from '../snippets/snippet-model';
 // Phase 84 (I18N-02): SnippetEditorModal calls plugin.i18n.t(...) at render
 // time. Tests mount it with a real I18nService('en'), so the rendered copy is
 // the canonical English locale (not stubs); assertions assert on those strings.
@@ -426,13 +426,17 @@ describe('SnippetEditorModal', () => {
     await modal.onOpen();
     // Title (Phase 84 I18N-02: English locale)
     expect((modal.titleEl as unknown as MockEl)._text).toBe('New snippet');
-    // Type toggle buttons (JSON + Markdown) exist
+    // Type toggle buttons are removed; create mode is always Markdown Template.
     const toggleBtns = findAll(
       modal.contentEl as unknown as MockEl,
       (el) => el.tagName === 'BUTTON' && el.getAttribute('role') === 'radio',
     );
-    expect(toggleBtns.length).toBe(2);
-    expect(toggleBtns.map((b) => b.getAttribute('data-kind')).sort()).toEqual(['json', 'md']);
+    expect(toggleBtns.length).toBe(0);
+    const typeLabel = findEl(
+      modal.contentEl as unknown as MockEl,
+      (el) => el.tagName === 'SPAN' && el._text === 'Markdown template',
+    );
+    expect(typeLabel).not.toBeNull();
   });
 
   it('MODAL-02: edit mode sets «Редактирование: {name}» title and pre-fills name input', async () => {
@@ -528,44 +532,41 @@ describe('SnippetEditorModal', () => {
     await new Promise((r) => setTimeout(r, 20));
     expect(service.save).toHaveBeenCalled();
     const saved = service.save.mock.calls[0]?.[0] as Snippet;
-    expect(saved.path).toBe('.radiprotocol/snippets/b/note.json');
+    expect(saved.kind).toBe('md-template');
+    expect(saved.path).toBe('.radiprotocol/snippets/b/note.md');
   });
 
-  it('MODAL-06: JSON create mode mounts the chip editor with a JsonSnippet draft', async () => {
+  it('MODAL-06: create mode mounts the chip editor with an md-template draft', async () => {
     const { plugin } = makeMockPlugin();
     const modal = new SnippetEditorModal({} as never, plugin as never, {
       mode: 'create',
       initialFolder: '.radiprotocol/snippets',
-      initialKind: 'json',
     });
     await modal.onOpen();
     expect(mountChipEditorSpy).toHaveBeenCalledTimes(1);
     const [, draftArg] = mountChipEditorSpy.mock.calls[0] as [unknown, { kind: string }, unknown];
-    expect(draftArg.kind).toBe('json');
+    expect(draftArg.kind).toBe('md-template');
   });
 
-  it('MODAL-07: switching to MD swaps the chip editor for a textarea', async () => {
+  it('create md-template does NOT show a type toggle (JSON/MD removed)', async () => {
     const { plugin } = makeMockPlugin();
     const modal = new SnippetEditorModal({} as never, plugin as never, {
       mode: 'create',
       initialFolder: '.radiprotocol/snippets',
-      initialKind: 'json',
     });
     await modal.onOpen();
-    expect(mountChipEditorSpy).toHaveBeenCalledTimes(1);
-    // Click the Markdown toggle
-    const mdBtn = findEl(
+    // No type toggle buttons exist — only the static label "Markdown Template"
+    const staticLabel = findEl(
       modal.contentEl as unknown as MockEl,
-      (el) => el.tagName === 'BUTTON' && el.getAttribute('data-kind') === 'md',
-    )!;
-    mdBtn.dispatchEvent({ type: 'click' });
-    const textarea = findEl(
-      modal.contentEl as unknown as MockEl,
-      (el) => el.tagName === 'TEXTAREA',
+      (el) => el.tagName === 'SPAN' && el._text === 'Markdown template',
     );
-    expect(textarea).not.toBeNull();
-    // No new chip editor mount fired (still one total)
-    expect(mountChipEditorSpy).toHaveBeenCalledTimes(1);
+    expect(staticLabel).not.toBeNull();
+    // No radio buttons for JSON/MD type switching
+    const radioBtns = findAll(
+      modal.contentEl as unknown as MockEl,
+      (el) => el.tagName === 'BUTTON' && el.getAttribute('data-kind') !== null,
+    );
+    expect(radioBtns.length).toBe(0);
   });
 
   it('MODAL-08: unsaved-changes guard opens a 3-button ConfirmModal with discardLabel', async () => {
@@ -759,7 +760,7 @@ describe('SnippetEditorModal', () => {
 
   it('Name collision disables Save and shows the inline error', async () => {
     const { plugin } = makeMockPlugin({
-      existsReturns: (p: string) => p === '.radiprotocol/snippets/dup.json',
+      existsReturns: (p: string) => p === '.radiprotocol/snippets/dup.md',
     });
     const modal = new SnippetEditorModal({} as never, plugin as never, {
       mode: 'create',
@@ -789,21 +790,20 @@ describe('SnippetEditorModal', () => {
     expect(errorEl!.style['display']).not.toBe('none');
   });
 
-  it('MD mode: editing the textarea marks the draft as unsaved and routes to MD save', async () => {
+  it('Create mode saves a new md-template snippet as .md', async () => {
     void sampleMdSnippet; // touch to avoid unused-import pruning in strict builds
     const { plugin, service } = makeMockPlugin();
     const modal = new SnippetEditorModal({} as never, plugin as never, {
       mode: 'create',
       initialFolder: '.radiprotocol/snippets',
-      initialKind: 'md',
     });
     await modal.onOpen();
+    // Create mode now uses md-template — chip editor renders, no TEXTAREA
     const ta = findEl(
       modal.contentEl as unknown as MockEl,
       (el) => el.tagName === 'TEXTAREA',
-    )!;
-    ta.value = 'Hello markdown';
-    ta.dispatchEvent({ type: 'input' });
+    );
+    expect(ta).toBeNull();
     // Provide a name
     const nameInput = findEl(
       modal.contentEl as unknown as MockEl,
@@ -819,9 +819,9 @@ describe('SnippetEditorModal', () => {
     saveBtn.dispatchEvent({ type: 'click' });
     await new Promise((r) => setTimeout(r, 20));
     expect(service.save).toHaveBeenCalled();
-    const saved = service.save.mock.calls[0]?.[0] as MdSnippet;
-    expect(saved.kind).toBe('md');
+    const saved = service.save.mock.calls[0]?.[0] as MdTemplateSnippet;
+    expect(saved.kind).toBe('md-template');
     expect(saved.path).toBe('.radiprotocol/snippets/doc.md');
-    expect(saved.content).toBe('Hello markdown');
+    expect(saved.template).toBe('');
   });
 });
