@@ -377,12 +377,13 @@ describe('snippet-chip-editor Phase 52 — options-list roundtrip (SC 2 regressi
     const chip = container.querySelectorAll('.rp-placeholder-chip')[0];
     if (!chip) throw new Error('chip missing');
     chip.dispatchEvent({ type: 'click' });
-    // Find the [+ add option] button
-    const allButtons = container.querySelectorAll('button');
-    const addBtn = allButtons.find(
+    // Find the [+ add option] button within the expanded chip section
+    // (not the mini-form one which may also exist but is hidden)
+    const expanded = container.querySelectorAll('.rp-placeholder-expanded')[0];
+    const addBtn = expanded?.querySelectorAll('button').find(
       (b) => (b as unknown as { _text: string })._text === '+ add option',
     );
-    if (!addBtn) throw new Error('+ add option button missing');
+    if (!addBtn) throw new Error('+ add option button missing in expanded section');
     addBtn.dispatchEvent({ type: 'click' });
     expect(draft.placeholders[0]!.options).toHaveLength(1);
     expect(onChange).toHaveBeenCalled();

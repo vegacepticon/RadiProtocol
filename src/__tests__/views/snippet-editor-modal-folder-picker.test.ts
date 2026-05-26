@@ -209,7 +209,15 @@ vi.mock('obsidian', () => {
     addButton(): this { return this; }
   }
   class TFile { path: string; constructor(p = '') { this.path = p; } }
-  return { Modal, Notice, Plugin, ItemView, WorkspaceLeaf, PluginSettingTab, SuggestModal, Setting, TFile };
+  class AbstractInputSuggest {
+    app: unknown;
+    inputEl: unknown;
+    constructor(app: unknown, inputEl: unknown) { this.app = app; this.inputEl = inputEl; }
+    setValue(_v: string): void {}
+    open(): void {}
+    close(): void {}
+  }
+  return { Modal, Notice, Plugin, ItemView, WorkspaceLeaf, PluginSettingTab, SuggestModal, Setting, TFile, AbstractInputSuggest };
 });
 
 // --- SnippetTreePicker spy -----------------------------------------------
@@ -312,7 +320,7 @@ function findFirst(root: MockEl, pred: (el: MockEl) => boolean): MockEl | null {
 
 // ── Tests ─────────────────────────────────────────────────────────────────
 
-describe('Phase 51 Plan 04 — SnippetEditorModal «Папка» uses SnippetTreePicker (D-07)', () => {
+describe('SnippetEditorModal «Папка» path input', () => {
   beforeEach(() => {
     pickerCtorSpy.mockClear();
     pickerMountSpy.mockClear();
@@ -320,7 +328,7 @@ describe('Phase 51 Plan 04 — SnippetEditorModal «Папка» uses SnippetTre
     pickerInstances.length = 0;
   });
 
-  it('Test 1: opening the modal mounts a SnippetTreePicker with mode folder-only and rootPath = settings.snippetFolderPath', async () => {
+  it('opening the modal renders a compact folder path input instead of SnippetTreePicker', async () => {
     const { plugin } = makeMockPlugin();
     const modal = new SnippetEditorModal(
       {} as never,
@@ -329,14 +337,18 @@ describe('Phase 51 Plan 04 — SnippetEditorModal «Папка» uses SnippetTre
     );
     await modal.onOpen();
 
-    expect(pickerCtorSpy).toHaveBeenCalledTimes(1);
-    const opts = pickerInstances[0]!.options as Record<string, unknown>;
-    expect(opts.mode).toBe('folder-only');
-    expect(opts.rootPath).toBe('.radiprotocol/snippets');
-    expect(pickerMountSpy).toHaveBeenCalledTimes(1);
+    expect(pickerCtorSpy).not.toHaveBeenCalled();
+    expect(pickerMountSpy).not.toHaveBeenCalled();
+
+    const contentEl = modal.contentEl as unknown as MockEl;
+    const label = findFirst(contentEl, (el) => el.tagName === 'LABEL' && el.textContent === 'Folder');
+    expect(label).not.toBeNull();
+    const inputs = findAll(contentEl, (el) => el.tagName === 'INPUT' && el.placeholder === 'E.g. studies/CT');
+    expect(inputs).toHaveLength(1);
+    expect(inputs[0]!.value).toBe('');
   });
 
-  it('Test 2: edit-mode (snippet at "abdomen/ct-routine.json") seeds initialSelection = "abdomen"', async () => {
+  it('edit-mode snippet inside the snippet root seeds the input with the relative folder path', async () => {
     const { plugin } = makeMockPlugin();
     const snippet = sampleJsonSnippet();
     const modal = new SnippetEditorModal(
@@ -346,24 +358,13 @@ describe('Phase 51 Plan 04 — SnippetEditorModal «Папка» uses SnippetTre
     );
     await modal.onOpen();
 
-    const opts = pickerInstances[0]!.options as Record<string, unknown>;
-    expect(opts.initialSelection).toBe('abdomen');
+    const contentEl = modal.contentEl as unknown as MockEl;
+    const label = findFirst(contentEl, (el) => el.tagName === 'LABEL' && el.textContent === 'Folder');
+    const input = findAll(label!.parent!, (el) => el.tagName === 'INPUT')[0];
+    expect(input!.value).toBe('abdomen');
   });
 
-  it('Test 3: create-mode with initialFolder = settings.snippetFolderPath seeds initialSelection = ""', async () => {
-    const { plugin } = makeMockPlugin();
-    const modal = new SnippetEditorModal(
-      {} as never,
-      plugin as never,
-      { mode: 'create', initialFolder: '.radiprotocol/snippets' },
-    );
-    await modal.onOpen();
-
-    const opts = pickerInstances[0]!.options as Record<string, unknown>;
-    expect(opts.initialSelection).toBe('');
-  });
-
-  it('Test 4: selecting folder "liver" updates currentFolder to `${rootPath}/liver` AND sets hasUnsavedChanges AND triggers runCollisionCheck', async () => {
+  it('typing a relative folder path updates currentFolder under the configured snippet root and marks unsaved changes', async () => {
     const { plugin, service } = makeMockPlugin();
     const modal = new SnippetEditorModal(
       {} as never,
@@ -371,44 +372,43 @@ describe('Phase 51 Plan 04 — SnippetEditorModal «Папка» uses SnippetTre
       { mode: 'create', initialFolder: '.radiprotocol/snippets' },
     );
     await modal.onOpen();
-
-    // Baseline: exists was called once during initial renderCollisionCheck (onOpen)
     const existsCallsBefore = service.exists.mock.calls.length;
 
-    const opts = pickerInstances[0]!.options as { onSelect: (r: unknown) => void };
-    // Simulate user selecting a folder
-    opts.onSelect({ kind: 'folder', relativePath: 'liver' });
+    const contentEl = modal.contentEl as unknown as MockEl;
+    const label = findFirst(contentEl, (el) => el.tagName === 'LABEL' && el.textContent === 'Folder');
+    const input = findAll(label!.parent!, (el) => el.tagName === 'INPUT')[0]!;
+    input.value = 'liver';
+    input.dispatchEvent({ type: 'input' });
 
-    // currentFolder is private — probe via the modal internals
     const internals = modal as unknown as { currentFolder: string; hasUnsavedChanges: boolean };
     expect(internals.currentFolder).toBe('.radiprotocol/snippets/liver');
     expect(internals.hasUnsavedChanges).toBe(true);
-
-    // runCollisionCheck schedules an async exists() call. Await microtasks.
     await Promise.resolve();
     await Promise.resolve();
-    // Not strictly necessary that exists was called here (if name is empty, short-circuits),
-    // but the function must have RUN, which is indicated by not throwing.
     expect(service.exists.mock.calls.length).toBeGreaterThanOrEqual(existsCallsBefore);
   });
 
-  it('Test 5: selecting root (relativePath === "") updates currentFolder to rootPath', async () => {
+  it('clearing the folder path input resets currentFolder to the configured snippet root', async () => {
     const { plugin } = makeMockPlugin();
     const modal = new SnippetEditorModal(
       {} as never,
       plugin as never,
-      { mode: 'create', initialFolder: '.radiprotocol/snippets' },
+      { mode: 'create', initialFolder: '.radiprotocol/snippets/liver' },
     );
     await modal.onOpen();
 
-    const opts = pickerInstances[0]!.options as { onSelect: (r: unknown) => void };
-    opts.onSelect({ kind: 'folder', relativePath: '' });
+    const contentEl = modal.contentEl as unknown as MockEl;
+    const label = findFirst(contentEl, (el) => el.tagName === 'LABEL' && el.textContent === 'Folder');
+    const input = findAll(label!.parent!, (el) => el.tagName === 'INPUT')[0]!;
+    expect(input.value).toBe('liver');
+    input.value = '';
+    input.dispatchEvent({ type: 'input' });
 
     const internals = modal as unknown as { currentFolder: string };
     expect(internals.currentFolder).toBe('.radiprotocol/snippets');
   });
 
-  it('Test 6: closing the modal calls picker.unmount()', async () => {
+  it('closing the modal does not try to unmount the removed tree picker', async () => {
     const { plugin } = makeMockPlugin();
     const modal = new SnippetEditorModal(
       {} as never,
@@ -416,13 +416,11 @@ describe('Phase 51 Plan 04 — SnippetEditorModal «Папка» uses SnippetTre
       { mode: 'create', initialFolder: '.radiprotocol/snippets' },
     );
     await modal.onOpen();
-    expect(pickerUnmountSpy).toHaveBeenCalledTimes(0);
-
     modal.onClose();
-    expect(pickerUnmountSpy).toHaveBeenCalledTimes(1);
+    expect(pickerUnmountSpy).not.toHaveBeenCalled();
   });
 
-  it('Test 7 (preservation): legacy <select> element is no longer rendered in the «Папка» row', async () => {
+  it('legacy <select> element and old picker host wrapper are no longer rendered in the «Папка» row', async () => {
     const { plugin } = makeMockPlugin();
     const modal = new SnippetEditorModal(
       {} as never,
@@ -432,30 +430,10 @@ describe('Phase 51 Plan 04 — SnippetEditorModal «Папка» uses SnippetTre
     await modal.onOpen();
 
     const contentEl = modal.contentEl as unknown as MockEl;
-    // Locate the «Папка» row by its label.
     const label = findFirst(contentEl, (el) => el.tagName === 'LABEL' && el.textContent === 'Folder');
     expect(label).not.toBeNull();
     const folderRow = label!.parent!;
-    // Within this row there must be zero <select> elements.
-    const selects = findAll(folderRow, (el) => el.tagName === 'SELECT');
-    expect(selects.length).toBe(0);
-
-    // Rest of the modal is preserved: name input and content region still exist.
-    const nameInput = findFirst(contentEl, (el) => el.tagName === 'INPUT' && el._type === 'text');
-    expect(nameInput).not.toBeNull();
-  });
-
-  it('Test 8 (host wrapper): picker host div with class rp-stp-editor-host is rendered', async () => {
-    const { plugin } = makeMockPlugin();
-    const modal = new SnippetEditorModal(
-      {} as never,
-      plugin as never,
-      { mode: 'create', initialFolder: '.radiprotocol/snippets' },
-    );
-    await modal.onOpen();
-
-    const contentEl = modal.contentEl as unknown as MockEl;
-    const host = findFirst(contentEl, (el) => el.classList.has('rp-stp-editor-host'));
-    expect(host).not.toBeNull();
+    expect(findAll(folderRow, (el) => el.tagName === 'SELECT')).toHaveLength(0);
+    expect(findFirst(contentEl, (el) => el.classList.has('rp-stp-editor-host'))).toBeNull();
   });
 });

@@ -21,10 +21,9 @@ import { App, Modal, Notice } from 'obsidian';
 import type { Snippet, JsonSnippet, MdSnippet, MdTemplateSnippet } from '../snippets/snippet-model';
 import { mountChipEditor, type ChipEditorHandle } from './snippet-chip-editor';
 import { ConfirmModal } from './confirm-modal';
-import { SnippetTreePicker } from './snippet-tree-picker';
 import type RadiProtocolPlugin from '../main';
-import { CSS_CLASS } from '../constants/css-classes';
 import { createButton, createInput, createTextarea } from '../utils/dom-helpers';
+import { FolderSuggest } from './folder-suggest';
 
 type SnippetEditorResult =
   | { saved: true; snippet: Snippet; movedFrom: string | null }
@@ -112,15 +111,7 @@ export class SnippetEditorModal extends Modal {
   /** Phase 56 D-08 — bullet ("•") rendered inside the folder label; toggles
    *  via the .is-visible modifier whenever currentFolder !== savedFolder. */
   private folderUnsavedDotEl: HTMLSpanElement | null = null;
-  /** @deprecated Phase 51 D-07 — superseded by snippetTreePicker (folder-only
-   *  SnippetTreePicker mounted in renderFolderDropdown). Field retained per
-   *  CLAUDE.md Shared Pattern G (never remove existing code you didn't add);
-   *  no new writes occur to this field. */
-  private folderSelectEl!: HTMLSelectElement;
-
-  /** Phase 51 D-07 — SnippetTreePicker instance for the folder row.
-   *  Replaces the legacy <select> dropdown; null until renderFolderDropdown mounts it. */
-  private snippetTreePicker: SnippetTreePicker | null = null;
+  private folderPathInputEl: HTMLInputElement | null = null;
 
   // Debounce
   private collisionCheckTimer: number | null = null;
@@ -193,7 +184,7 @@ export class SnippetEditorModal extends Modal {
       });
     }
 
-    // Folder dropdown
+    // Folder input (after type row, before name)
     await this.renderFolderDropdown(contentEl);
 
     // Name input
@@ -239,6 +230,8 @@ export class SnippetEditorModal extends Modal {
       this.contentRegionEl.toggleClass('rp-snippet-form-locked', true);
     }
 
+    this.nameInputEl.focus();
+
     // Initial collision check (edit mode pre-populated name shouldn't collide with self)
     void this.runCollisionCheck();
   }
@@ -253,12 +246,8 @@ export class SnippetEditorModal extends Modal {
       clearTimeout(this.collisionCheckTimer);
       this.collisionCheckTimer = null;
     }
-    // Phase 51 D-07 — unmount the SnippetTreePicker to release its DOM listeners.
-    if (this.snippetTreePicker !== null) {
-      this.snippetTreePicker.unmount();
-      this.snippetTreePicker = null;
-    }
-    // Phase 52 D-04: release banner reference so a subsequent onOpen sees null.
+    this.folderPathInputEl = null;
+    // Phase 52 D-04: release banner reference so a subsequent onOpen sees null;
     this.validationBannerEl = null;
     this.contentEl.empty();
   }
@@ -295,63 +284,37 @@ export class SnippetEditorModal extends Modal {
   }
 
   private async renderFolderDropdown(container: HTMLElement): Promise<void> {
-    if (this.options.disableFolderPicker) {
-      const row = container.createDiv({ cls: 'radi-snippet-editor-row' });
-      row.createEl('label', { text: this.plugin.i18n.t('snippetEditor.folder') });
-      row.createEl('span', { cls: 'rp-snippet-editor-folder-static', text: this.currentFolder });
-      return;
-    }
-
-    // Phase 51 D-07 (PICKER-02) — folder-only SnippetTreePicker replaces the legacy
-    // flat-list <select>. Same contract: writing this.currentFolder + setting
-    // hasUnsavedChanges + scheduling collision check.
-    // Host wrapper class `rp-stp-editor-host` is defined in src/styles/snippet-tree-picker.css
-    // (owned by Plan 02). This plan does NOT modify CSS.
-    // See `docs/ARCHITECTURE-NOTES.md#snippet-node-binding-and-picker`.
-    const row = container.createDiv({ cls: 'radi-snippet-editor-row' });
+    const row = container.createDiv({ cls: 'radi-snippet-editor-row rp-snippet-editor-folder-row' });
     const folderLabel = row.createEl('label', { text: this.plugin.i18n.t('snippetEditor.folder') });
-    // Phase 56 D-08: bullet indicator inside the label; toggled by
-    // updateFolderUnsavedDot() whenever currentFolder !== savedFolder.
     this.folderUnsavedDotEl = folderLabel.createEl('span', {
       cls: 'rp-snippet-editor-unsaved-dot',
       text: '\u2022',
     }) as unknown as HTMLSpanElement;
     this.folderUnsavedDotEl.setAttribute('aria-label', this.plugin.i18n.t('snippetEditor.unsavedAriaLabel'));
     this.updateFolderUnsavedDot();
-    const pickerHost = row.createDiv({ cls: CSS_CLASS.STP_EDITOR_HOST });
 
-    const rootPath = this.plugin.settings.snippetFolderPath;
-    // Compute relative initialSelection from absolute currentFolder.
-    const initialSelection: string | undefined =
-      this.currentFolder === rootPath
-        ? ''
-        : this.currentFolder.startsWith(rootPath + '/')
-          ? this.currentFolder.slice(rootPath.length + 1)
-          : undefined;
-
-    if (this.snippetTreePicker !== null) {
-      this.snippetTreePicker.unmount();
-      this.snippetTreePicker = null;
+    if (this.options.disableFolderPicker) {
+      row.createEl('span', { cls: 'rp-snippet-editor-folder-static', text: this.currentFolder });
+      return;
     }
 
-    this.snippetTreePicker = new SnippetTreePicker({
-      app: this.app,
-      snippetService: this.plugin.snippetService,
-      container: pickerHost,
-      mode: 'folder-only',
-      rootPath,
-      initialSelection,
-      onSelect: (result) => {
-        // folder-only mode emits kind: 'folder' only
-        this.currentFolder = result.relativePath === ''
-          ? rootPath
-          : `${rootPath}/${result.relativePath}`;
-        this.hasUnsavedChanges = true;
-        void this.runCollisionCheck();
-        this.updateFolderUnsavedDot(); // Phase 56 D-08
-      },
+    const input = createInput(row, { type: 'text' });
+    input.value = this.folderInputValue();
+    input.placeholder = this.plugin.i18n.t('snippetEditor.folderPathPlaceholder');
+    input.setAttribute('aria-label', this.plugin.i18n.t('snippetEditor.folder'));
+    this.folderPathInputEl = input;
+    new FolderSuggest(this.app, input, {
+      rootPath: this.plugin.settings.snippetFolderPath,
+      relativeToRoot: true,
+      includeRoot: true,
     });
-    void this.snippetTreePicker.mount();
+
+    input.addEventListener('input', () => {
+      this.currentFolder = this.folderFromInput(input.value);
+      this.hasUnsavedChanges = true;
+      this.scheduleCollisionCheck();
+      this.updateFolderUnsavedDot();
+    });
   }
 
   /** Phase 56 D-08 — toggle the folder-label bullet based on whether the
@@ -362,9 +325,25 @@ export class SnippetEditorModal extends Modal {
     this.folderUnsavedDotEl.toggleClass('is-visible', diff);
   }
 
-  /** @deprecated Phase 51 D-07 — replaced by SnippetTreePicker. Retained per
-   *  CLAUDE.md Shared Pattern G; safe to remove in a future cleanup phase if
-   *  confirmed orphaned. */
+  /** Compute the relative path from snippet root for display in the input. */
+  private folderInputValue(): string {
+    const root = this.plugin.settings.snippetFolderPath;
+    if (this.currentFolder === root) return '';
+    if (this.currentFolder.startsWith(root + '/')) {
+      return this.currentFolder.slice(root.length + 1);
+    }
+    return this.currentFolder;
+  }
+
+  /** Convert the user's input (relative to snippet root) back to an absolute folder path. */
+  private folderFromInput(value: string): string {
+    const root = this.plugin.settings.snippetFolderPath;
+    const trimmed = value.trim();
+    if (trimmed === '' || trimmed === root) return root;
+    return root + '/' + trimmed;
+  }
+
+  /** @deprecated Phase 51 D-07 — replaced by folder input. Safe to remove in future cleanup. */
   private async buildFolderOptions(): Promise<string[]> {
     const root = this.plugin.settings.snippetFolderPath;
     const descendants = await this.snippetService().listFolderDescendants(root);

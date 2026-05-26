@@ -123,7 +123,15 @@ vi.mock('obsidian', () => {
 	class Notice { constructor(_m: string) {} }
 	class TFile { path = ''; extension = ''; basename = ''; constructor(p = '') { this.path = p; } }
 	class TFolder { path = ''; name = ''; children: unknown[] = []; constructor(p = '') { this.path = p; this.name = p.split('/').pop() ?? ''; } }
-	return { Modal, Setting, Notice, TFile, TFolder, App: class {} };
+	class AbstractInputSuggest {
+		app: unknown;
+		inputEl: unknown;
+		constructor(app: unknown, inputEl: unknown) { this.app = app; this.inputEl = inputEl; }
+		setValue(_v: string): void {}
+		open(): void {}
+		close(): void {}
+	}
+	return { Modal, Setting, Notice, TFile, TFolder, App: class {}, AbstractInputSuggest };
 });
 
 vi.mock('../../views/library-admin/helper-modals', () => ({

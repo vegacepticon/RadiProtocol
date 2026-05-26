@@ -482,7 +482,8 @@
    The banner element retains its Phase 52 base rule `.radi-snippet-editor-validation-banner`; the new
    `.rp-snippet-banner-hidden` class is independent and can coexist with legacy `radi-` classes. */
 .rp-snippet-editor-modal {
-  max-width: 800px;
+  max-width: 920px;
+  width: min(920px, calc(100vw - 48px));
 }
 
 .rp-snippet-editor-save-error {
@@ -496,6 +497,33 @@
 .rp-snippet-form-locked {
   pointer-events: none;
   opacity: 0.5;
+}
+
+/* Phase: folder input row — inline with label, input fills remaining space */
+.rp-snippet-editor-folder-row {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: var(--size-4-2);
+  margin-bottom: var(--size-4-2);
+}
+
+.rp-snippet-editor-folder-row label {
+  flex-shrink: 0;
+}
+
+.rp-snippet-editor-folder-row input {
+  flex: 1;
+  min-width: 0;
+}
+
+/* Phase: inline choice-options section in the add-placeholder mini-form */
+.rp-add-choice-options {
+  margin-top: var(--size-4-1);
+  padding: var(--size-4-1);
+  background: var(--background-secondary);
+  border: 1px solid var(--background-modifier-border);
+  border-radius: var(--radius-s);
 }
 
 /* Phase 86/87: Library browser modal */
