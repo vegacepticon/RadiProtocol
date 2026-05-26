@@ -68,11 +68,49 @@ export interface MdSnippet {
 }
 
 /**
+ * Phase 93 (EXTERNAL-LIB-01): Markdown template snippet — `.md` file with
+ * YAML-like frontmatter containing metadata and placeholder definitions.
+ * Supports placeholder substitution like JsonSnippet.
+ */
+export interface MdTemplateSnippet {
+  readonly kind: 'md-template';
+  /** Full vault-relative path including `.md` extension */
+  path: string;
+  name: string;
+  /** Template body (without frontmatter) */
+  template: string;
+  placeholders: SnippetPlaceholder[];
+  validationError: string | null;
+  /** Optional metadata from frontmatter */
+  id?: string;
+  lang?: 'ru' | 'en';
+  category?: string;
+  description?: string;
+  version?: number;
+}
+
+/**
  * Phase 32 (D-01): Discriminated union over snippet kinds. Callsites MUST
  * branch on `kind` to access variant-specific fields — mirrors the `RPNode`
  * pattern already established in `graph-model.ts`.
  */
-export type Snippet = JsonSnippet | MdSnippet;
+export type Snippet = JsonSnippet | MdSnippet | MdTemplateSnippet;
+
+/**
+ * Phase 93 (EXTERNAL-LIB-01): renderSnippet-like interface for md-template
+ * snippets. Same {{id}} -> value substitution engine as JsonSnippet.
+ */
+export function renderMdTemplateSnippet(
+  snippet: MdTemplateSnippet,
+  values: Record<string, string>,
+): string {
+  let output = snippet.template;
+  for (const placeholder of snippet.placeholders) {
+    const raw = values[placeholder.id] ?? '';
+    output = output.split(`{{${placeholder.id}}}`).join(raw);
+  }
+  return output;
+}
 
 /**
  * Phase 32 (D-01, Claude's Discretion): backwards-compat alias for the
@@ -124,6 +162,7 @@ export function validatePlaceholders(
  * Phase 32: signature accepts `JsonSnippet` (was `SnippetFile`). Since
  * `SnippetFile = JsonSnippet`, existing JSON-only callers remain compatible.
  * `MdSnippet` is not renderable — callers must branch on `kind` first.
+ * `MdTemplateSnippet` callers should use `renderMdTemplateSnippet`.
  */
 export function renderSnippet(
   snippet: JsonSnippet,

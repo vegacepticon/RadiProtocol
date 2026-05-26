@@ -26,7 +26,7 @@ export interface TreeNodeFile {
   kind: 'file';
   path: string;
   name: string;
-  snippetKind: 'json' | 'md';
+  snippetKind: 'json' | 'md' | 'md-template';
 }
 export type TreeNode = TreeNodeFolder | TreeNodeFile;
 
@@ -56,6 +56,7 @@ export interface TreeRendererCallbacks {
   handleDeleteSnippet(path: string, name: string): Promise<void>;
   handleDeleteFolder(path: string, name: string): Promise<void>;
   openMovePicker(node: TreeNode): Promise<void>;
+  exportLibraryContribution(path: string): Promise<void>;
   performMove(srcPath: string, srcKind: 'file' | 'folder', dstFolder: string): Promise<void>;
   rebuildTreeModel(): Promise<void>;
   saveSettings(): Promise<void>;

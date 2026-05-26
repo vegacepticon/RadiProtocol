@@ -1,17 +1,17 @@
 // views/library-snippet-preview-modal.ts
 // Preview a remote library snippet without installing it into the vault.
 import { App, Modal } from 'obsidian';
-import type { JsonSnippet, SnippetPlaceholder } from '../snippets/snippet-model';
-import { renderSnippet } from '../snippets/snippet-model';
+import type { JsonSnippet, MdTemplateSnippet, SnippetPlaceholder } from '../snippets/snippet-model';
+import { renderSnippet, renderMdTemplateSnippet } from '../snippets/snippet-model';
 import type { Translator } from '../i18n';
 
 export class LibrarySnippetPreviewModal extends Modal {
-  private readonly snippet: JsonSnippet;
+  private readonly snippet: JsonSnippet | MdTemplateSnippet;
   private readonly t: Translator;
   private readonly values: Record<string, string> = {};
   private previewTextarea: HTMLTextAreaElement | null = null;
 
-  constructor(app: App, snippet: JsonSnippet, t: Translator) {
+  constructor(app: App, snippet: JsonSnippet | MdTemplateSnippet, t: Translator) {
     super(app);
     this.snippet = snippet;
     this.t = t;
@@ -178,7 +178,9 @@ export class LibrarySnippetPreviewModal extends Modal {
 
   private updatePreview(): void {
     if (!this.previewTextarea) return;
-    this.previewTextarea.value = renderSnippet(this.snippet, this.values);
+    this.previewTextarea.value = this.snippet.kind === 'md-template'
+      ? renderMdTemplateSnippet(this.snippet, this.values)
+      : renderSnippet(this.snippet, this.values);
     this.resizePreview();
   }
 

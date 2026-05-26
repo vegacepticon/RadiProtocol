@@ -8,7 +8,8 @@
 // the modal, not directly.
 import { ItemView, Modal, Notice, WorkspaceLeaf, setIcon, type EventRef } from 'obsidian';
 import type RadiProtocolPlugin from '../main';
-import type { Snippet } from '../snippets/snippet-model';
+import type { Snippet, MdTemplateSnippet } from '../snippets/snippet-model';
+import { serializeMarkdownTemplate } from '../snippets/md-template';
 import { SnippetEditorModal } from './snippet-editor-modal';
 import { ConfirmModal } from './confirm-modal';
 import { LibraryBrowserModal } from './library-browser-modal';
@@ -17,6 +18,7 @@ import { rewriteProtocolSnippetRefs } from '../snippets/protocol-ref-sync';
 import { SnippetManagerTreeRenderer } from './snippet-manager/tree-renderer';
 import type { TreeNode, TreeNodeFolder, TreeNodeFile } from './snippet-manager/tree-renderer';
 import { basenameNoExt } from './snippet-manager/tree-renderer';
+import { ensureFolderPath } from '../utils/vault-utils';
 
 export const SNIPPET_MANAGER_VIEW_TYPE = 'radiprotocol-snippet-manager';
 
@@ -126,6 +128,7 @@ export class SnippetManagerView extends ItemView {
         handleDeleteSnippet: (path, name) => this.handleDeleteSnippet(path, name),
         handleDeleteFolder: (path, name) => this.handleDeleteFolder(path, name),
         openMovePicker: (node) => this.openMovePicker(node),
+        exportLibraryContribution: (path) => this.exportLibraryContribution(path),
         performMove: (srcPath, srcKind, dstFolder) => this.performMove(srcPath, srcKind, dstFolder),
         rebuildTreeModel: () => this.rebuildTreeModel(),
         saveSettings: () => this.plugin.saveSettings(),
@@ -582,5 +585,49 @@ export class SnippetManagerView extends ItemView {
   // Phase 86 (TEMPLATE-LIB-02): open the external snippet library browser.
   private openLibraryBrowser(): void {
     new LibraryBrowserModal(this.app, this.plugin).open();
+  }
+
+  private async exportLibraryContribution(path: string): Promise<void> {
+    const t = this.plugin.i18n.t.bind(this.plugin.i18n);
+    const snippet = await this.plugin.snippetService.load(path);
+    if (snippet === null) {
+      new Notice(t('snippetManager.notFound'));
+      return;
+    }
+    if (snippet.kind === 'md') {
+      new Notice(t('snippetManager.exportContributionRawMarkdownUnsupported'));
+      return;
+    }
+
+    const rel = toSnippetRelativePath(path, this.plugin.settings.snippetFolderPath);
+    const relParent = dirname(rel);
+    const category = relParent === '' ? 'Uncategorized' : relParent;
+    const baseName = basenameNoExt(path);
+    const lang = this.plugin.settings.locale;
+    const contributionFolder = `RadiProtocol Library Contributions/snippets/${lang}/${category}`;
+    const contributionPath = `${contributionFolder}/${baseName}.md`;
+    const template: MdTemplateSnippet = snippet.kind === 'md-template'
+      ? { ...snippet, path: contributionPath, lang, category }
+      : {
+        kind: 'md-template',
+        path: contributionPath,
+        name: snippet.name,
+        template: snippet.template,
+        placeholders: snippet.placeholders.map((placeholder) => ({ ...placeholder })),
+        validationError: snippet.validationError,
+        id: snippet.id ?? baseName,
+        lang,
+        category,
+        description: category === 'Uncategorized' ? snippet.name : `${category} / ${snippet.name}`,
+      };
+
+    try {
+      await ensureFolderPath(this.app.vault, contributionFolder);
+      await this.app.vault.adapter.write(contributionPath, serializeMarkdownTemplate(template));
+      new Notice(t('snippetManager.exportContributionSaved', { path: contributionPath }));
+    } catch (e) {
+      const error = (e as Error)?.message ?? t('snippetManager.unknownError');
+      new Notice(t('snippetManager.exportContributionFailed', { error }));
+    }
   }
 }

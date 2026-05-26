@@ -2,7 +2,7 @@
 // Phase 86 (TEMPLATE-LIB-02): browse and install snippets from an external library.
 import { App, Modal, Notice } from 'obsidian';
 import type RadiProtocolPlugin from '../main';
-import type { LibrarySnippetEntry } from '../snippets/library-model';
+import type { LibraryLanguageFilter, LibrarySnippetEntry } from '../snippets/library-model';
 import { LibrarySnippetPreviewModal } from './library-snippet-preview-modal';
 import { createButton, createInput } from '../utils/dom-helpers';
 
@@ -102,6 +102,7 @@ export class LibraryBrowserModal extends Modal {
   private allEntries: LibrarySnippetEntry[] = [];
   private drillPath: string[] = [];
   private currentQuery = '';
+  private languageFilter: LibraryLanguageFilter;
   private searchDebounceTimer: number | null = null;
   private bodyEl: HTMLElement | null = null;
   private searchInputEl: HTMLInputElement | null = null;
@@ -110,6 +111,7 @@ export class LibraryBrowserModal extends Modal {
   constructor(app: App, plugin: RadiProtocolPlugin) {
     super(app);
     this.plugin = plugin;
+    this.languageFilter = plugin.settings.locale;
   }
 
   async onOpen(): Promise<void> {
@@ -118,7 +120,7 @@ export class LibraryBrowserModal extends Modal {
     this.contentEl.empty();
     this.contentEl.addClass('rp-library-modal');
 
-    const index = await this.plugin.libraryService.fetchIndex();
+    const index = await this.plugin.libraryService.fetchIndex(this.languageFilter);
     if (index === null) {
       this.contentEl.createEl('p', {
         text: this.plugin.i18n.t('library.loadError'),
@@ -153,7 +155,32 @@ export class LibraryBrowserModal extends Modal {
     this.busy = false;
   }
 
+  private async reloadIndex(): Promise<void> {
+    const index = await this.plugin.libraryService.fetchIndex(this.languageFilter);
+    if (index === null) {
+      new Notice(this.plugin.i18n.t('library.loadError'));
+      return;
+    }
+    this.allEntries = [...index.snippets];
+    this.tree = buildLibraryTree(this.allEntries);
+    this.drillPath = [];
+    this.clearSearch();
+    this.renderBody();
+  }
+
   private renderToolbar(root: HTMLElement): void {
+    const langWrap = root.createDiv({ cls: 'rp-library-language-filter' });
+    langWrap.createEl('label', { text: this.plugin.i18n.t('library.languageFilter') });
+    const langSelect = langWrap.createEl('select');
+    langSelect.createEl('option', { value: 'ru', text: this.plugin.i18n.t('library.languageRu') });
+    langSelect.createEl('option', { value: 'en', text: this.plugin.i18n.t('library.languageEn') });
+    langSelect.createEl('option', { value: 'all', text: this.plugin.i18n.t('library.languageAll') });
+    langSelect.value = this.languageFilter;
+    langSelect.addEventListener('change', () => {
+      this.languageFilter = langSelect.value as LibraryLanguageFilter;
+      void this.reloadIndex();
+    });
+
     const searchWrap = root.createDiv({ cls: 'rp-library-search' });
     const searchInput = createInput(searchWrap, {
       cls: 'rp-library-search-input',

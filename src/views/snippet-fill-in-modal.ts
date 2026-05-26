@@ -1,8 +1,8 @@
 // views/snippet-fill-in-modal.ts
 // Runtime fill-in modal for dynamic snippets (SNIP-04, SNIP-05, SNIP-09, D-10 through D-13)
 import { Modal, App } from 'obsidian';
-import type { JsonSnippet, SnippetPlaceholder } from '../snippets/snippet-model';
-import { renderSnippet } from '../snippets/snippet-model';
+import type { JsonSnippet, MdTemplateSnippet, SnippetPlaceholder } from '../snippets/snippet-model';
+import { renderMdTemplateSnippet, renderSnippet } from '../snippets/snippet-model';
 import type { Translator } from '../i18n';
 import { defaultT } from '../i18n';
 
@@ -26,7 +26,7 @@ import { defaultT } from '../i18n';
  * resolves its promise. The caller decides what to do with the result.
  */
 export class SnippetFillInModal extends Modal {
-  private readonly snippet: JsonSnippet;
+  private readonly snippet: JsonSnippet | MdTemplateSnippet;
   private resolve!: (value: string | null) => void;
   /** Double-resolve guard (T-5-11, RESEARCH.md Pitfall 3) */
   private resolved = false;
@@ -40,7 +40,7 @@ export class SnippetFillInModal extends Modal {
   private previewTextarea: HTMLTextAreaElement | null = null;
   private readonly t: Translator;
 
-  constructor(app: App, snippet: JsonSnippet, t?: Translator) {
+  constructor(app: App, snippet: JsonSnippet | MdTemplateSnippet, t?: Translator) {
     super(app);
     this.snippet = snippet;
     this.t = t ?? defaultT;
@@ -258,13 +258,19 @@ export class SnippetFillInModal extends Modal {
   /** Update the live preview textarea with current field values. */
   private updatePreview(): void {
     if (this.previewTextarea) {
-      this.previewTextarea.value = renderSnippet(this.snippet, this.values);
+      this.previewTextarea.value = this.renderCurrentSnippet();
       this.previewTextarea.toggleClass(
         'rp-snippet-preview-complete',
         this.areAllPlaceholdersFilled(),
       );
       this.resizePreview();
     }
+  }
+
+  private renderCurrentSnippet(): string {
+    return this.snippet.kind === 'md-template'
+      ? renderMdTemplateSnippet(this.snippet, this.values)
+      : renderSnippet(this.snippet, this.values);
   }
 
   /** Render the Cancel / Confirm button row. Confirm is the last tab stop (D-12). */
@@ -281,7 +287,7 @@ export class SnippetFillInModal extends Modal {
     const confirmBtn = row.createEl('button', { cls: 'mod-cta' });
     confirmBtn.textContent = this.t('snippetFillIn.confirm');
     confirmBtn.addEventListener('click', () => {
-      const rendered = renderSnippet(this.snippet, this.values);
+      const rendered = this.renderCurrentSnippet();
       this.safeResolve(rendered);
       this.close();
     });

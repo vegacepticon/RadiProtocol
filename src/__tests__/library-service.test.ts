@@ -47,9 +47,9 @@ describe('LibraryService', () => {
 
       const result = await service.fetchIndex();
 
-      expect(result).toEqual({ version: '1.0.0', snippets: [] });
+      expect(result).toEqual({ version: '1.0.0', language: 'ru', snippets: [] });
       expect(obsidian.requestUrl).toHaveBeenCalledWith({
-        url: 'https://raw.githubusercontent.com/vegacepticon/RadiProtocol-Library/main/index.json',
+        url: 'https://raw.githubusercontent.com/vegacepticon/RadiProtocol-Library/main/generated/index.ru.json',
         method: 'GET',
       });
     });
@@ -107,9 +107,10 @@ describe('LibraryService', () => {
       expect(mockApp.vault.createFolder).toHaveBeenCalledWith('.radiprotocol/snippets/Library/General');
       expect(mockApp.vault.createFolder).not.toHaveBeenCalledWith('.radiprotocol/snippets/Library/General/Test Snippet.json');
       expect(mockApp.vault.adapter.write).toHaveBeenCalledWith(
-        '.radiprotocol/snippets/Library/General/Test Snippet.json',
+        '.radiprotocol/snippets/Library/General/test.json',
         '{"name":"Test Snippet","template":"ok","placeholders":[]}',
       );
+      expect(mockApp.vault.adapter.write).toHaveBeenCalledTimes(2);
     });
   });
 

@@ -4,6 +4,7 @@ import type { App } from 'obsidian';
 import type { RadiProtocolSettings } from '../settings';
 import type { Snippet, JsonSnippet } from './snippet-model';
 import { validatePlaceholders } from './snippet-model';
+import { parseMarkdownTemplate, serializeMarkdownTemplate, hasMarkdownTemplateFrontmatter } from './md-template';
 import { WriteMutex } from '../utils/write-mutex';
 import { ensureFolderPath } from '../utils/vault-utils';
 import { defaultT, type Translator } from '../i18n';
@@ -142,12 +143,16 @@ export class SnippetService {
       } else if (filePath.endsWith('.md')) {
         try {
           const raw = await this.app.vault.adapter.read(filePath);
-          snippets.push({
-            kind: 'md',
-            path: filePath,
-            name: basename,
-            content: raw,
-          });
+          if (hasMarkdownTemplateFrontmatter(raw)) {
+            snippets.push(parseMarkdownTemplate(filePath, raw, basename, this.t));
+          } else {
+            snippets.push({
+              kind: 'md',
+              path: filePath,
+              name: basename,
+              content: raw,
+            });
+          }
         } catch {
           // Unreadable — skip silently.
         }
@@ -186,6 +191,9 @@ export class SnippetService {
         };
       }
       if (normalized.endsWith('.md')) {
+        if (hasMarkdownTemplateFrontmatter(raw)) {
+          return parseMarkdownTemplate(normalized, raw, basename, this.t);
+        }
         return { kind: 'md', path: normalized, name: basename, content: raw };
       }
       return null;
@@ -217,9 +225,12 @@ export class SnippetService {
       if (snippet.kind === 'json') {
         const clean = this.sanitizeJson(snippet);
         payload = JSON.stringify(clean, null, 2);
+      } else if (snippet.kind === 'md-template') {
+        payload = serializeMarkdownTemplate(snippet);
       } else {
         // md: raw free-text content, no sanitisation (D-01)
-        payload = snippet.content;
+        const mdSnippet = snippet as Extract<Snippet, { kind: 'md' }>;
+        payload = mdSnippet.content;
       }
       const exists = await this.app.vault.adapter.exists(normalized);
       if (exists) {

@@ -1,11 +1,12 @@
 // snippets/library-service.ts
-// Phase 86 (TEMPLATE-LIB-01): fetch library index, download snippets, track installs.
+// Phase 86/93: fetch library indexes, download snippets, track installs.
 import { App, Notice, requestUrl } from 'obsidian';
 import { DEFAULT_LIBRARY_URL, type RadiProtocolSettings } from '../settings';
 import { SnippetService } from './snippet-service';
-import type { JsonSnippet } from './snippet-model';
+import type { JsonSnippet, MdTemplateSnippet } from './snippet-model';
 import { validatePlaceholders } from './snippet-model';
-import type { LibraryIndex, LibrarySnippetEntry, LibraryManifest } from './library-model';
+import { parseMarkdownTemplate } from './md-template';
+import type { LibraryIndex, LibraryLanguage, LibraryLanguageFilter, LibraryManifest, LibrarySnippetEntry } from './library-model';
 import type { Translator } from '../i18n';
 import { ensureFolderPath } from '../utils/vault-utils';
 import { WriteMutex } from '../utils/write-mutex';
@@ -29,10 +30,22 @@ export class LibraryService {
     this.t = t;
   }
 
-  /** Fetch library index JSON from settings.libraryUrl or the bundled default via requestUrl().
-   *  Returns null on network or parse failure. */
-  async fetchIndex(): Promise<LibraryIndex | null> {
-    const url = this.getLibraryUrl();
+  /** Fetch one or both generated language indexes. Legacy index.json still works. */
+  async fetchIndex(language: LibraryLanguageFilter = this.settings.locale ?? 'ru'): Promise<LibraryIndex | null> {
+    if (language === 'all') {
+      const [ru, en] = await Promise.all([this.fetchSingleIndex('ru'), this.fetchSingleIndex('en')]);
+      const available = [ru, en].filter((index): index is LibraryIndex => index !== null);
+      if (available.length === 0) return null;
+      return {
+        version: available.map((index) => index.version).join('+'),
+        snippets: available.flatMap((index) => index.snippets),
+      };
+    }
+    return this.fetchSingleIndex(language);
+  }
+
+  private async fetchSingleIndex(language: LibraryLanguage): Promise<LibraryIndex | null> {
+    const url = this.getLibraryIndexUrl(language);
     try {
       const response = await requestUrl({ url, method: 'GET' });
       const parsed = JSON.parse(response.text) as LibraryIndex;
@@ -40,10 +53,19 @@ export class LibraryService {
         console.error('[RadiProtocol][Library] Index JSON missing version or snippets array');
         return null;
       }
-      return parsed;
+      return {
+        ...parsed,
+        language: parsed.language ?? language,
+        snippets: parsed.snippets.map((entry) => ({
+          ...entry,
+          lang: entry.lang ?? parsed.language ?? language,
+          format: entry.format ?? inferFormat(entry.path),
+        })),
+      };
     } catch (err) {
+      // EN can legitimately be empty/missing during phased rollout; keep RU usable.
       console.error('[RadiProtocol][Library] fetchIndex failed:', err);
-      new Notice(this.t('library.networkError'));
+      if (language === this.settings.locale) new Notice(this.t('library.networkError'));
       return null;
     }
   }
@@ -52,19 +74,31 @@ export class LibraryService {
     return this.settings.libraryUrl.trim() || DEFAULT_LIBRARY_URL;
   }
 
-  /** Derive the base URL (directory of the index file) so snippet paths can be resolved. */
-  private getBaseUrl(): string {
+  private getLibraryIndexUrl(language: LibraryLanguage): string {
+    const configured = this.getLibraryUrl();
+    if (configured.includes('/generated/index.') || configured.endsWith('/index.json')) {
+      return configured.replace(/(?:generated\/)?index(?:\.[a-z]{2})?\.json$/, `generated/index.${language}.json`);
+    }
+    return configured;
+  }
+
+  /** Repository root URL for resolving generated snippet paths. */
+  private getRepoBaseUrl(): string {
     const url = this.getLibraryUrl();
+    const generatedPos = url.lastIndexOf('/generated/');
+    if (generatedPos > 0) return url.slice(0, generatedPos + 1);
     const lastSlash = url.lastIndexOf('/');
     return lastSlash > 0 ? url.slice(0, lastSlash + 1) : url;
   }
 
-  async fetchSnippetPreview(entry: LibrarySnippetEntry): Promise<JsonSnippet | null> {
-    const baseUrl = this.getBaseUrl();
-    const rawUrl = baseUrl + entry.path;
+  async fetchSnippetPreview(entry: LibrarySnippetEntry): Promise<JsonSnippet | MdTemplateSnippet | null> {
+    const raw = await this.fetchSnippetText(entry);
+    if (raw === null) return null;
+    if (entry.path.endsWith('.md')) {
+      return parseMarkdownTemplate(entry.path, raw, entry.name, this.t);
+    }
     try {
-      const response = await requestUrl({ url: rawUrl, method: 'GET' });
-      const parsed = JSON.parse(response.text) as Partial<JsonSnippet>;
+      const parsed = JSON.parse(raw) as Partial<JsonSnippet>;
       if (typeof parsed.template !== 'string' || !Array.isArray(parsed.placeholders)) {
         console.error('[RadiProtocol][Library] preview snippet missing template or placeholders');
         return null;
@@ -78,30 +112,20 @@ export class LibraryService {
         validationError: validatePlaceholders(parsed.placeholders, this.t),
       };
     } catch (err) {
-      console.error('[RadiProtocol][Library] fetchSnippetPreview failed:', err);
-      new Notice(this.t('library.networkError'));
+      console.error('[RadiProtocol][Library] fetchSnippetPreview parse failed:', err);
       return null;
     }
   }
 
   /** Install a single library snippet into the vault.
-   *  Target path: snippetFolderPath/Library/<category>/<name>.json
-   *  Overwrites silently if already present. */
+   *  New target path: snippetFolderPath/Library/<lang>/<category>/<source basename>.md
+   *  Legacy JSON entries still install as .json under Library/<category>/.
+   */
   async installSnippet(entry: LibrarySnippetEntry): Promise<boolean> {
-    const baseUrl = this.getBaseUrl();
-    const rawUrl = baseUrl + entry.path;
-    let content: string;
-    try {
-      const response = await requestUrl({ url: rawUrl, method: 'GET' });
-      content = response.text;
-    } catch (err) {
-      console.error('[RadiProtocol][Library] installSnippet download failed:', err);
-      new Notice(this.t('library.networkError'));
-      return false;
-    }
+    const content = await this.fetchSnippetText(entry);
+    if (content === null) return false;
 
-    const root = this.settings.snippetFolderPath;
-    const targetPath = `${root}/Library/${entry.category}/${entry.name}.json`;
+    const targetPath = this.targetPathForEntry(entry);
 
     try {
       await this.mutex.runExclusive(targetPath, async () => {
@@ -116,13 +140,14 @@ export class LibraryService {
       return false;
     }
 
-    // Update manifest
     const manifest = (await this.readManifest()) ?? { installed: [] };
-    const existing = manifest.installed.find((i) => i.id === entry.id);
+    const existing = manifest.installed.find((i) => i.id === entry.id && i.lang === entry.lang);
+    const version = String(entry.version ?? 'unknown');
     if (existing) {
-      existing.version = 'unknown'; // MVP: no remote version tracking yet
+      existing.version = version;
+      existing.path = targetPath;
     } else {
-      manifest.installed.push({ id: entry.id, version: 'unknown' });
+      manifest.installed.push({ id: entry.id, version, lang: entry.lang, path: targetPath });
     }
     await this.writeManifest(manifest);
     return true;
@@ -163,4 +188,53 @@ export class LibraryService {
     }
     await this.app.vault.adapter.write(path, JSON.stringify(manifest, null, 2));
   }
+
+  private async fetchSnippetText(entry: LibrarySnippetEntry): Promise<string | null> {
+    const rawUrl = this.getRepoBaseUrl() + entry.path;
+    try {
+      const response = await requestUrl({ url: rawUrl, method: 'GET' });
+      return response.text;
+    } catch (err) {
+      console.error('[RadiProtocol][Library] snippet download failed:', err);
+      new Notice(this.t('library.networkError'));
+      return null;
+    }
+  }
+
+  private targetPathForEntry(entry: LibrarySnippetEntry): string {
+    const root = this.settings.snippetFolderPath;
+    const lang = entry.lang ?? this.settings.locale;
+    const ext = entry.path.endsWith('.md') ? 'md' : 'json';
+    const basename = safeSegment(stripExtension(entry.path.split('/').pop() || entry.id || entry.name));
+    if (ext === 'md') {
+      return `${root}/Library/${lang}/${safeCategoryPath(entry.category)}/${basename}.md`;
+    }
+    return `${root}/Library/${safeCategoryPath(entry.category)}/${basename}.json`;
+  }
+}
+
+function inferFormat(path: string): 'json' | 'md-template' | 'md' {
+  if (path.endsWith('.json')) return 'json';
+  if (path.endsWith('.md')) return 'md-template';
+  return 'md';
+}
+
+function stripExtension(name: string): string {
+  return name.replace(/\.(json|md)$/i, '');
+}
+
+function safeCategoryPath(category: string): string {
+  return category
+    .split('/')
+    .map(safeSegment)
+    .filter((segment) => segment !== '')
+    .join('/') || 'Uncategorized';
+}
+
+function safeSegment(value: string): string {
+  return value
+    .trim()
+    .replace(/[\\/#?%*:|"<>]/g, '-')
+    .replace(/\s+/g, ' ')
+    .replace(/^-+|-+$/g, '') || 'untitled';
 }

@@ -17,7 +17,7 @@ export interface InlineRunnerLayout {
   height?: number;
 }
 
-export const DEFAULT_LIBRARY_URL = 'https://raw.githubusercontent.com/vegacepticon/RadiProtocol-Library/main/index.json';
+export const DEFAULT_LIBRARY_URL = 'https://raw.githubusercontent.com/vegacepticon/RadiProtocol-Library/main/generated/index.ru.json';
 export const DEFAULT_PROTOCOL_LIBRARY_URL = 'https://raw.githubusercontent.com/vegacepticon/RadiProtocol-Library/main/protocols-index.json';
 
 export interface RadiProtocolSettings {
@@ -131,35 +131,6 @@ export class RadiProtocolSettingsTab extends PluginSettingTab {
             await this.plugin.saveSettings();
           });
       });
-
-    // Library Admin section
-    new Setting(containerEl).setName(this.plugin.i18n.t('settings.libraryAdminHeading')).setHeading();
-
-    new Setting(containerEl)
-      .setName(this.plugin.i18n.t('settings.libraryMaintainerMode'))
-      .setDesc(this.plugin.i18n.t('settings.libraryMaintainerModeDesc'))
-      .addToggle(toggle => toggle
-        .setValue(this.plugin.settings.libraryMaintainerMode ?? false)
-        .onChange(async (value) => {
-          this.plugin.settings.libraryMaintainerMode = value;
-          await this.plugin.saveSettings();
-          this.display();
-        })
-      );
-
-    if (this.plugin.settings.libraryMaintainerMode) {
-      new Setting(containerEl)
-        .setName(this.plugin.i18n.t('settings.libraryRepoPath'))
-        .setDesc(this.plugin.i18n.t('settings.libraryRepoPathDesc'))
-        .addText(text => text
-          .setPlaceholder(this.plugin.i18n.t('settings.libraryRepoPathPlaceholder'))
-          .setValue(this.plugin.settings.libraryRepoPath ?? '')
-          .onChange(async (value) => {
-            this.plugin.settings.libraryRepoPath = value.trim();
-            await this.plugin.saveSettings();
-          })
-        );
-    }
 
     // Quick 260430-s48: relocated to bottom; addresses collapsed behind <details>.
     // Stateless: addresses are hard-coded constants in ./donate/wallets, no settings persistence.

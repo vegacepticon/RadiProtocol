@@ -17,7 +17,7 @@ import { InlineRunnerModal } from './views/inline-runner-modal';
 import { InsertSnippetModal } from './views/insert-snippet-modal';
 import { ProtocolEditorView, PROTOCOL_EDITOR_VIEW_TYPE } from './views/protocol-editor-view';
 import { ProtocolLibraryBrowserModal } from './views/protocol-library-browser-modal';
-import { LibraryAdminModal } from './views/library-admin-modal';
+
 
 /**
  * Phase 59 INLINE-FIX-01 — Nested-path-safe protocol folder enumeration.
@@ -265,13 +265,6 @@ export default class RadiProtocolPlugin extends Plugin {
       id: 'browse-protocol-library',
       name: 'Browse protocol library',
       callback: () => { new ProtocolLibraryBrowserModal(this.app, this).open(); },
-    });
-
-    // Command: open-library-admin (only shown in command palette when maintainer mode is on)
-    this.addCommand({
-      id: 'open-library-admin',
-      name: 'Open library admin',
-      callback: () => { new LibraryAdminModal(this.app, this).open(); },
     });
 
     // Settings tab

@@ -18,7 +18,7 @@
 //   - Drag-and-drop
 //   - Inline F2 rename
 import { App, Modal, Notice } from 'obsidian';
-import type { Snippet, JsonSnippet, MdSnippet } from '../snippets/snippet-model';
+import type { Snippet, JsonSnippet, MdSnippet, MdTemplateSnippet } from '../snippets/snippet-model';
 import { slugifyLabel } from '../snippets/snippet-model';
 import { mountChipEditor, type ChipEditorHandle } from './snippet-chip-editor';
 import { ConfirmModal } from './confirm-modal';
@@ -90,8 +90,8 @@ export class SnippetEditorModal extends Modal {
   private readonly options: SnippetEditorOptions;
 
   // Form state
-  private draft: JsonSnippet | MdSnippet;
-  private draftKind: 'json' | 'md';
+  private draft: JsonSnippet | MdSnippet | MdTemplateSnippet;
+  private draftKind: 'json' | 'md' | 'md-template';
   private currentFolder: string;
   /** Phase 56 D-08 — baseline against which the folder-row unsaved-dot is computed.
    *  Initialised to the same value as currentFolder; advanced to the new
@@ -738,7 +738,7 @@ export class SnippetEditorModal extends Modal {
 
 // ------------- helpers -------------
 
-function cloneSnippet(s: Snippet): JsonSnippet | MdSnippet {
+function cloneSnippet(s: Snippet): JsonSnippet | MdSnippet | MdTemplateSnippet {
   if (s.kind === 'json') {
     return {
       kind: 'json',
@@ -749,10 +749,21 @@ function cloneSnippet(s: Snippet): JsonSnippet | MdSnippet {
       validationError: s.validationError, // Phase 52 D-03
     };
   }
+  if (s.kind === 'md-template') {
+    return {
+      kind: 'md-template',
+      path: s.path,
+      name: s.name,
+      template: s.template,
+      placeholders: s.placeholders.map((p) => ({ ...p })),
+      validationError: s.validationError ?? null,
+    };
+  }
+  const mdSnippet = s as Extract<Snippet, { kind: 'md' }>;
   return {
-    kind: 'md',
-    path: s.path,
-    name: s.name,
-    content: s.content,
+    kind: 'md' as const,
+    path: mdSnippet.path,
+    name: mdSnippet.name,
+    content: mdSnippet.content,
   };
 }
