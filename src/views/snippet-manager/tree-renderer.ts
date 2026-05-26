@@ -514,6 +514,7 @@ export class SnippetManagerTreeRenderer {
     };
 
     const onKeyDown = (ev: KeyboardEvent): void => {
+      ev.stopPropagation();
       if (ev.key === 'Enter') {
         ev.preventDefault();
         if (settled) return;

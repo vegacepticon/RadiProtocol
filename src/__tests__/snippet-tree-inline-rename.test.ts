@@ -345,12 +345,14 @@ function fire(el: MockEl, event: { type: string; [k: string]: unknown }): void {
 
 function makeKeyEvent(type: string, key: string): any {
   let prevented = false;
+  let stopped = false;
   return {
     type,
     key,
     preventDefault(): void { prevented = true; },
-    stopPropagation(): void {},
+    stopPropagation(): void { stopped = true; },
     get defaultPrevented() { return prevented; },
+    get propagationStopped() { return stopped; },
   };
 }
 
@@ -470,6 +472,23 @@ describe('SnippetManagerView — F2 inline rename (Phase 34 Plan 03)', () => {
       await Promise.resolve();
       await Promise.resolve();
       expect(service.renameSnippet).toHaveBeenCalledTimes(1);
+    });
+
+    it('Space inside inline rename input inserts text without bubbling to row activation', async () => {
+      const { service, view } = makeTreeView();
+      await view.onOpen();
+      const openEditModalSpy = vi.spyOn((view as any).treeRenderer['callbacks'], 'openEditModal');
+      const row = findRow(view, `${root}/note.json`);
+      fire(row!, makeKeyEvent('keydown', 'F2'));
+      const input = findInputInRow(row!)!;
+      input.value = 'Upper Case';
+      const keyEvent = makeKeyEvent('keydown', ' ');
+      fire(input, keyEvent);
+      expect(keyEvent.defaultPrevented).toBe(false);
+      expect(keyEvent.propagationStopped).toBe(true);
+      expect(openEditModalSpy).not.toHaveBeenCalled();
+      expect(service.renameSnippet).not.toHaveBeenCalled();
+      expect(findInputInRow(row!)).toBe(input);
     });
 
     it('folder rename: expand-state paths are prefix-rewritten', async () => {

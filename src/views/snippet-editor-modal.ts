@@ -19,7 +19,6 @@
 //   - Inline F2 rename
 import { App, Modal, Notice } from 'obsidian';
 import type { Snippet, JsonSnippet, MdSnippet, MdTemplateSnippet } from '../snippets/snippet-model';
-import { slugifyLabel } from '../snippets/snippet-model';
 import { mountChipEditor, type ChipEditorHandle } from './snippet-chip-editor';
 import { ConfirmModal } from './confirm-modal';
 import { SnippetTreePicker } from './snippet-tree-picker';
@@ -64,6 +63,10 @@ function dirname(path: string): string {
 function basename(path: string): string {
   const i = path.lastIndexOf('/');
   return i >= 0 ? path.slice(i + 1) : path;
+}
+
+function normalizeSnippetBasename(name: string): string {
+  return name.trim().replace(/[\\/]/g, '-');
 }
 
 function emptyMdTemplateDraft(folder: string, locale: string, cat: string): MdTemplateSnippet {
@@ -287,8 +290,8 @@ export class SnippetEditorModal extends Modal {
 
   private computeCandidatePath(): string {
     const ext = this.draftKind === 'json' ? 'json' : 'md';
-    const slug = slugifyLabel(this.draft.name);
-    return this.currentFolder + '/' + slug + '.' + ext;
+    const basename = normalizeSnippetBasename(this.draft.name);
+    return this.currentFolder + '/' + basename + '.' + ext;
   }
 
   private async renderFolderDropdown(container: HTMLElement): Promise<void> {
@@ -495,15 +498,18 @@ export class SnippetEditorModal extends Modal {
       return;
     }
     const candidatePath = this.computeCandidatePath();
-    // Edit mode: if candidate equals the snippet's own path, no collision.
-    if (
-      this.options.mode === 'edit' &&
-      this.options.snippet &&
-      candidatePath === this.options.snippet.path
-    ) {
-      this.hasCollision = false;
-      this.updateCollisionUI();
-      return;
+    // Edit mode: unchanged display name may map to a different filename after
+    // pre-1.22.5 slugification, so it must not collide with itself.
+    if (this.options.mode === 'edit' && this.options.snippet) {
+      const original = this.options.snippet;
+      const originalExt = original.path.toLowerCase().endsWith('.json') ? 'json' : 'md';
+      const originalNamePath = dirname(original.path) + '/' + normalizeSnippetBasename(original.name) + '.' + originalExt;
+      const unchangedName = this.draft.name.trim() === original.name.trim();
+      if (candidatePath === original.path || (unchangedName && candidatePath === originalNamePath)) {
+        this.hasCollision = false;
+        this.updateCollisionUI();
+        return;
+      }
     }
     try {
       const exists = await this.snippetService().exists(candidatePath);

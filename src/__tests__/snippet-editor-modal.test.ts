@@ -338,6 +338,7 @@ interface MockSnippetService {
   exists: ReturnType<typeof vi.fn>;
   listFolderDescendants: ReturnType<typeof vi.fn>;
   moveSnippet: ReturnType<typeof vi.fn>;
+  renameSnippet: ReturnType<typeof vi.fn>;
 }
 
 function makeMockPlugin(opts: {
@@ -359,6 +360,9 @@ function makeMockPlugin(opts: {
       .fn()
       .mockResolvedValue(opts.descendants ?? { files: [], folders: [], total: 0 }),
     moveSnippet: vi.fn().mockImplementation(opts.moveSnippetImpl ?? defaultMove),
+    renameSnippet: vi.fn().mockImplementation(async (_oldPath: string, newName: string) => {
+      return `.radiprotocol/snippets/${newName}.json`;
+    }),
   };
   const plugin = {
     app: {},
@@ -823,5 +827,61 @@ describe('SnippetEditorModal', () => {
     expect(saved.kind).toBe('md-template');
     expect(saved.path).toBe('.radiprotocol/snippets/doc.md');
     expect(saved.template).toBe('');
+  });
+
+  it('edit mode: no false collision when display name has uppercase and spaces (non-slugified candidate path differs from original path)', async () => {
+    // Snippet saved as "patient-age.md" but display name is "Patient Age"
+    const { plugin } = makeMockPlugin({
+      existsReturns: (p: string) => p === '.radiprotocol/snippets/Patient Age.md',
+    });
+    const snippet: JsonSnippet = {
+      kind: 'json',
+      path: '.radiprotocol/snippets/patient-age.json',
+      name: 'Patient Age',
+      template: '',
+      placeholders: [],
+      validationError: null,
+    };
+    const modal = new SnippetEditorModal({} as never, plugin as never, {
+      mode: 'edit',
+      initialFolder: '.radiprotocol/snippets',
+      snippet,
+    });
+    await modal.onOpen();
+    // Wait for debounced collision check
+    await new Promise((r) => setTimeout(r, 220));
+    const saveBtn = findEl(
+      modal.contentEl as unknown as MockEl,
+      (el) => el.tagName === 'BUTTON' && el._text === 'Save',
+    )!;
+    // Save should be enabled — the display name hasn't changed
+    expect(saveBtn.disabled).toBe(false);
+  });
+
+  it('create mode saves display name with uppercase and spaces preserved', async () => {
+    const { plugin, service } = makeMockPlugin();
+    const modal = new SnippetEditorModal({} as never, plugin as never, {
+      mode: 'create',
+      initialFolder: '.radiprotocol/snippets',
+    });
+    await modal.onOpen();
+    const nameInput = findEl(
+      modal.contentEl as unknown as MockEl,
+      (el) => el.tagName === 'INPUT' && (el as MockEl)._type === 'text',
+    )!;
+    nameInput.value = 'Patient Age (мм)';
+    nameInput.dispatchEvent({ type: 'input' });
+    await new Promise((r) => setTimeout(r, 220));
+    const saveBtn = findEl(
+      modal.contentEl as unknown as MockEl,
+      (el) => el.tagName === 'BUTTON' && el._text === 'Create',
+    )!;
+    saveBtn.dispatchEvent({ type: 'click' });
+    await new Promise((r) => setTimeout(r, 20));
+    expect(service.save).toHaveBeenCalled();
+    const saved = service.save.mock.calls[0]?.[0] as Snippet;
+    // Path uses normalizeSnippetBasename (no lowercase, no slugify)
+    expect(saved.path).toBe('.radiprotocol/snippets/Patient Age (мм).md');
+    expect(saved.name).toBe('Patient Age (мм)');
   });
 });
