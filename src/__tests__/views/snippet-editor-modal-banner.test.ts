@@ -205,7 +205,7 @@ vi.mock('obsidian', () => {
   class ItemView {}
   class WorkspaceLeaf {}
   class PluginSettingTab {}
-  class SuggestModal<T> {
+  class _SuggestModal<T> {
     app: unknown;
     constructor(app: unknown) { this.app = app; }
     getSuggestions(_q: string): T[] { return []; }
@@ -234,7 +234,15 @@ vi.mock('obsidian', () => {
     addButton(): this { return this; }
   }
   class TFile { path: string; constructor(p = '') { this.path = p; } }
-  return { Modal, Notice, Plugin, ItemView, WorkspaceLeaf, PluginSettingTab, SuggestModal, Setting, TFile };
+  class AbstractInputSuggest {
+    app: unknown;
+    inputEl: unknown;
+    constructor(app: unknown, inputEl: unknown) { this.app = app; this.inputEl = inputEl; }
+    setValue(_v: string): void {}
+    open(): void {}
+    close(): void {}
+  }
+  return { Modal, Notice, Plugin, ItemView, WorkspaceLeaf, PluginSettingTab, Setting, TFile, AbstractInputSuggest };
 });
 
 // Stub dependencies the modal pulls in

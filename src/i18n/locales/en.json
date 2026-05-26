@@ -15,7 +15,7 @@
     "protocolFolderPlaceholder": "E.g. Protocols",
     "storageHeading": "Storage",
     "snippetFolder": "Snippet folder",
-    "snippetFolderDesc": "Vault-relative path for snippet JSON files. Default: Snippets",
+    "snippetFolderDesc": "Vault-relative path for md snippet files. Default: Snippets",
     "snippetFolderPathPlaceholder": "Snippets",
     "donateHeading": "Support development",
     "showWalletAddresses": "Show wallet addresses",
@@ -154,7 +154,8 @@
     "placeholderTypeChoice": "Choice",
     "optionsLabel": "Options",
     "orphanBadge": "Template still contains {{${id}}} — remove from template or re-add this placeholder.",
-    "close": "Close"
+    "close": "Close",
+    "folderPathPlaceholder": "E.g. studies/CT"
   },
   "insertSnippet": {
     "title": "Insert snippet",

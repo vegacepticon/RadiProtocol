@@ -157,6 +157,56 @@ export function mountChipEditor(
     opt.value = value;
   }
 
+  const miniChoiceSection = addPlaceholderForm.createDiv({ cls: 'rp-snippet-form-section rp-stack rp-add-choice-options' });
+  miniChoiceSection.toggleClass('rp-chip-form-hidden', true);
+  miniChoiceSection.createEl('label', { text: t('snippetEditor.optionsLabel') });
+  const miniChoiceList = miniChoiceSection.createDiv({ cls: 'rp-option-list' });
+  let miniChoiceOptions: string[] = [];
+
+  const renderMiniChoiceOptions = (): void => {
+    miniChoiceList.empty();
+    miniChoiceOptions.forEach((opt, oi) => {
+      const optRow = miniChoiceList.createDiv({ cls: 'rp-option-row' });
+      const optLabel = optRow.createEl('label', { cls: 'rp-chip-option-label-hidden' });
+      optLabel.htmlFor = `rp-add-opt-${oi}`;
+      optLabel.textContent = t('snippetEditor.optionNumber', { n: String(oi + 1) });
+      const optInput = optRow.createEl('input', { type: 'text' });
+      optInput.id = `rp-add-opt-${oi}`;
+      optInput.value = opt;
+      optInput.placeholder = t('snippetEditor.optionNumber', { n: String(oi + 1) });
+      on(optInput, 'input', () => {
+        miniChoiceOptions[oi] = optInput.value;
+      });
+      const removeOptBtn = optRow.createEl('button', { text: '×' });
+      removeOptBtn.setAttribute('type', 'button');
+      removeOptBtn.setAttribute('aria-label', t('snippetEditor.removeOptionAria', { label: opt || t('snippetEditor.optionNumber', { n: String(oi + 1) }) }));
+      on(removeOptBtn, 'click', () => {
+        miniChoiceOptions.splice(oi, 1);
+        renderMiniChoiceOptions();
+      });
+    });
+  };
+
+  const miniAddOptionBtn = miniChoiceSection.createEl('button', { text: t('snippetEditor.addOptionBtn') });
+  miniAddOptionBtn.setAttribute('type', 'button');
+  on(miniAddOptionBtn, 'click', () => {
+    miniChoiceOptions.push('');
+    renderMiniChoiceOptions();
+    const inputs = miniChoiceList.querySelectorAll('input');
+    (inputs[inputs.length - 1] as HTMLInputElement | undefined)?.focus();
+  });
+
+  const syncMiniChoiceVisibility = (): void => {
+    miniChoiceSection.toggleClass('rp-chip-form-hidden', miniTypeSelect.value !== 'choice');
+  };
+  on(miniTypeSelect, 'change', () => {
+    if (miniTypeSelect.value === 'choice' && miniChoiceOptions.length === 0) {
+      miniChoiceOptions.push('');
+      renderMiniChoiceOptions();
+    }
+    syncMiniChoiceVisibility();
+  });
+
   const miniActionRow = addPlaceholderForm.createDiv({ cls: 'rp-chip-row-flex' });
 
   const miniAddBtn = miniActionRow.createEl('button', { text: t('snippetEditor.addOption') });
@@ -176,6 +226,9 @@ export function mountChipEditor(
     addPlaceholderForm.toggleClass('rp-chip-form-hidden', false);
     miniLabelInput.value = '';
     miniTypeSelect.value = 'free-text';
+    miniChoiceOptions = [];
+    renderMiniChoiceOptions();
+    syncMiniChoiceVisibility();
     miniLabelInput.focus();
   });
 
@@ -197,7 +250,7 @@ export function mountChipEditor(
       id: slug,
       label: rawLabel,
       type: phType,
-      ...(phType === 'choice' ? { options: [] } : {}),
+      ...(phType === 'choice' ? { options: miniChoiceOptions.slice() } : {}),
     };
 
     draft.placeholders.push(newPh);

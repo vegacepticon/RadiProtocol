@@ -107,6 +107,12 @@ function makeEl(tag = 'div'): MockEl {
       const child = makeEl(subtag);
       child.parent = el as unknown as MockEl;
       if (opts?.text !== undefined) child.textContent = opts.text;
+      const extra = opts as { placeholder?: string; value?: string; attr?: Record<string, string | number | boolean> } | undefined;
+      if (extra?.placeholder !== undefined) child.placeholder = String(extra.placeholder);
+      if (extra?.value !== undefined) child.value = String(extra.value);
+      if (extra?.attr) {
+        for (const [key, value] of Object.entries(extra.attr)) child.setAttribute(key, String(value));
+      }
       if (opts?.cls) {
         for (const cls of opts.cls.split(/\s+/).filter(Boolean)) {
           child.classList.add(cls);
@@ -268,7 +274,15 @@ vi.mock('obsidian', () => {
     addButton(): this { return this; }
   }
   class TFile { path: string; constructor(p = '') { this.path = p; } }
-  return { Modal, Notice, Plugin, ItemView, WorkspaceLeaf, PluginSettingTab, SuggestModal, Setting, TFile };
+  class AbstractInputSuggest {
+    app: unknown;
+    inputEl: unknown;
+    constructor(app: unknown, inputEl: unknown) { this.app = app; this.inputEl = inputEl; }
+    setValue(_v: string): void {}
+    open(): void {}
+    close(): void {}
+  }
+  return { Modal, Notice, Plugin, ItemView, WorkspaceLeaf, PluginSettingTab, AbstractInputSuggest, SuggestModal, Setting, TFile };
 });
 
 // --- Stub chip editor: records calls, returns a destroy() spy -------------
@@ -304,23 +318,15 @@ vi.mock('../snippets/canvas-ref-sync', () => ({
   },
 }));
 
-// --- Stub SnippetTreePicker (Phase 51 Plan 04 D-07) ---
-// The real picker traverses real DOM (element.classList.contains); our MockEl uses
-// Set-based classList without .contains(). Stub it here and capture the latest onSelect
-// callback so existing tests that used to drive «Папка» change via the legacy <select>
-// can now drive the new picker via the captured callback. The new SnippetEditorModal
-// folder-picker behaviour is also covered by
-// src/__tests__/views/snippet-editor-modal-folder-picker.test.ts.
-let lastPickerOnSelect: ((result: { kind: 'folder' | 'file'; relativePath: string }) => void) | null = null;
-vi.mock('../views/snippet-tree-picker', () => ({
-  SnippetTreePicker: class {
-    constructor(opts: { onSelect: (r: { kind: 'folder' | 'file'; relativePath: string }) => void }) {
-      lastPickerOnSelect = opts.onSelect;
-    }
-    async mount(): Promise<void> {}
-    unmount(): void {}
-  },
-}));
+function setFolderPathInput(modal: SnippetEditorModal, value: string): void {
+  const folderInput = findEl(
+    modal.contentEl as unknown as MockEl,
+    (el) => el.tagName === 'INPUT' && el.placeholder === 'E.g. studies/CT',
+  );
+  if (!folderInput) throw new Error('folder path input missing');
+  folderInput.value = value;
+  folderInput.dispatchEvent({ type: 'input' });
+}
 
 // --- Now import the module under test -------------------------------------
 import { SnippetEditorModal } from '../views/snippet-editor-modal';
@@ -416,7 +422,6 @@ describe('SnippetEditorModal', () => {
     confirmModalCtorSpy.mockClear();
     rewriteCanvasRefsSpy.mockClear();
     confirmModalNextResult = 'cancel';
-    lastPickerOnSelect = null;
   });
 
   it('MODAL-01: create mode sets «Новый сниппет» title and renders type toggle', async () => {
@@ -455,7 +460,7 @@ describe('SnippetEditorModal', () => {
     expect((modal.titleEl as unknown as MockEl)._text).toBe('Editing: sample');
     const input = findEl(
       modal.contentEl as unknown as MockEl,
-      (el) => el.tagName === 'INPUT' && (el as MockEl)._type === 'text',
+      (el) => el.tagName === 'INPUT' && el.placeholder === 'E.g. greeting-template',
     );
     expect(input).not.toBeNull();
     expect(input!.value).toBe('sample');
@@ -519,13 +524,11 @@ describe('SnippetEditorModal', () => {
     // Type a name
     const nameInput = findEl(
       modal.contentEl as unknown as MockEl,
-      (el) => el.tagName === 'INPUT' && (el as MockEl)._type === 'text',
+      (el) => el.tagName === 'INPUT' && el.placeholder === 'E.g. greeting-template',
     )!;
     nameInput.value = 'note';
     nameInput.dispatchEvent({ type: 'input' });
-    // Phase 51 D-07 — change the folder via the picker's onSelect callback.
-    expect(lastPickerOnSelect).not.toBeNull();
-    lastPickerOnSelect!({ kind: 'folder', relativePath: 'b' });
+    setFolderPathInput(modal, 'b');
     // Click Save button (Phase 84 I18N-02: English locale → "Create")
     const saveBtn = findEl(
       modal.contentEl as unknown as MockEl,
@@ -585,7 +588,7 @@ describe('SnippetEditorModal', () => {
     // Mutate the name input to fire hasUnsavedChanges
     const nameInput = findEl(
       modal.contentEl as unknown as MockEl,
-      (el) => el.tagName === 'INPUT' && (el as MockEl)._type === 'text',
+      (el) => el.tagName === 'INPUT' && el.placeholder === 'E.g. greeting-template',
     )!;
     nameInput.value = 'edited';
     nameInput.dispatchEvent({ type: 'input' });
@@ -632,9 +635,7 @@ describe('SnippetEditorModal', () => {
       snippet,
     });
     await modal.onOpen();
-    // Phase 51 D-07 — change folder via picker onSelect callback
-    expect(lastPickerOnSelect).not.toBeNull();
-    lastPickerOnSelect!({ kind: 'folder', relativePath: 'b' });
+    setFolderPathInput(modal, 'b');
     // Click Save (Phase 84 I18N-02: English)
     const saveBtn = findEl(
       modal.contentEl as unknown as MockEl,
@@ -690,9 +691,7 @@ describe('SnippetEditorModal', () => {
         snippet,
       });
       await modal.onOpen();
-      // Phase 51 D-07 — change folder via picker onSelect callback
-      expect(lastPickerOnSelect).not.toBeNull();
-      lastPickerOnSelect!({ kind: 'folder', relativePath: 'b' });
+      setFolderPathInput(modal, 'b');
       const saveBtn = findEl(
         modal.contentEl as unknown as MockEl,
         (el) => el.tagName === 'BUTTON' && el._text === 'Save',
@@ -736,9 +735,7 @@ describe('SnippetEditorModal', () => {
     void modal.result.then(() => {
       resolved = true;
     });
-    // Phase 51 D-07 — change folder via picker onSelect callback
-    expect(lastPickerOnSelect).not.toBeNull();
-    lastPickerOnSelect!({ kind: 'folder', relativePath: 'b' });
+    setFolderPathInput(modal, 'b');
     const saveBtn = findEl(
       modal.contentEl as unknown as MockEl,
       (el) => el.tagName === 'BUTTON' && el._text === 'Save',
@@ -773,7 +770,7 @@ describe('SnippetEditorModal', () => {
     await modal.onOpen();
     const nameInput = findEl(
       modal.contentEl as unknown as MockEl,
-      (el) => el.tagName === 'INPUT' && (el as MockEl)._type === 'text',
+      (el) => el.tagName === 'INPUT' && el.placeholder === 'E.g. greeting-template',
     )!;
     nameInput.value = 'dup';
     nameInput.dispatchEvent({ type: 'input' });
@@ -811,7 +808,7 @@ describe('SnippetEditorModal', () => {
     // Provide a name
     const nameInput = findEl(
       modal.contentEl as unknown as MockEl,
-      (el) => el.tagName === 'INPUT' && (el as MockEl)._type === 'text',
+      (el) => el.tagName === 'INPUT' && el.placeholder === 'E.g. greeting-template',
     )!;
     nameInput.value = 'doc';
     nameInput.dispatchEvent({ type: 'input' });
@@ -867,7 +864,7 @@ describe('SnippetEditorModal', () => {
     await modal.onOpen();
     const nameInput = findEl(
       modal.contentEl as unknown as MockEl,
-      (el) => el.tagName === 'INPUT' && (el as MockEl)._type === 'text',
+      (el) => el.tagName === 'INPUT' && el.placeholder === 'E.g. greeting-template',
     )!;
     nameInput.value = 'Patient Age (мм)';
     nameInput.dispatchEvent({ type: 'input' });

@@ -15,7 +15,7 @@
     "protocolFolderPlaceholder": "Например, Протоколы",
     "storageHeading": "Хранение",
     "snippetFolder": "Папка сниппетов",
-    "snippetFolderDesc": "Путь относительно хранилища для JSON-файлов сниппетов. По умолчанию: Snippets",
+    "snippetFolderDesc": "Путь относительно хранилища для md-сниппетов. По умолчанию: Snippets",
     "snippetFolderPathPlaceholder": "Snippets",
     "donateHeading": "Помочь разработке",
     "showWalletAddresses": "Показать адреса кошельков",
@@ -154,7 +154,8 @@
     "placeholderTypeChoice": "Выбор",
     "optionsLabel": "Варианты",
     "orphanBadge": "Шаблон всё ещё содержит {{${id}}} — удалите из шаблона или добавьте плейсхолдер заново.",
-    "close": "Закрыть"
+    "close": "Закрыть",
+    "folderPathPlaceholder": "Например: исследования/КТ"
   },
   "insertSnippet": {
     "title": "Вставить сниппет",
