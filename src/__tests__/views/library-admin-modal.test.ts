@@ -141,7 +141,6 @@ vi.mock('../../views/library-admin/helper-modals', () => ({
 	ImportSnippetPickerModal: class { constructor() {} open() {} },
 	ImportProtocolPickerModal: class { constructor() {} open() {} },
 	ImportDetailsModal: class { constructor() {} open() {} },
-	EditSnippetMetadataModal: class { constructor() {} open() {} },
 	EditProtocolMetadataModal: class { constructor() {} open() {} },
 }));
 

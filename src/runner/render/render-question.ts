@@ -5,9 +5,9 @@ import type { RunnerState } from '../runner-state';
 import { isFileBoundSnippetNode, snippetBranchLabel } from '../snippet-label';
 import { createButton } from '../../utils/dom-helpers';
 
-export type AtNodeState = Extract<RunnerState, { status: 'at-node' }>;
+type AtNodeState = Extract<RunnerState, { status: 'at-node' }>;
 
-export type RenderQuestionResult = 'rendered' | 'not-question' | 'error';
+type RenderQuestionResult = 'rendered' | 'not-question' | 'error';
 
 export interface QuestionBranchHost {
   bindClick(el: HTMLElement, handler: (ev: MouseEvent) => void): void;

@@ -517,6 +517,17 @@
   min-width: 0;
 }
 
+.rp-snippet-editor-folder-static {
+  flex: 1 1 auto;
+  min-width: 0;
+  color: var(--text-muted);
+  font-family: var(--font-monospace);
+  font-size: var(--font-ui-smaller);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 /* Phase: inline choice-options section in the add-placeholder mini-form */
 .rp-add-choice-options {
   margin-top: var(--size-4-1);
@@ -547,6 +558,10 @@
   display: flex;
   gap: var(--size-4-2);
   align-items: center;
+}
+
+.rp-library-language-filter {
+  flex: 0 0 auto;
 }
 
 .rp-library-search-input {

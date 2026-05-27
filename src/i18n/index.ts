@@ -2,7 +2,6 @@
 import { I18nService } from './i18n-service';
 
 export { I18nService } from './i18n-service';
-export type { Locale } from './i18n-service';
 
 /** Phase 84 (I18N-02): Translator function shape used by pure modules
  *  (canvas-parser, graph-validator, protocol-runner) that have no plugin

@@ -38,10 +38,6 @@ export function snippetNodeWithExitGraph(): ProtocolGraph {
   return loadGraphFromFixture('snippet-node-with-exit.canvas');
 }
 
-export function loopStartGraph(): ProtocolGraph {
-  return loadGraphFromFixture('loop-start.canvas');
-}
-
 export function startTextBlockGraph(): ProtocolGraph {
   return loadGraphFromFixture('start-text-block.canvas');
 }

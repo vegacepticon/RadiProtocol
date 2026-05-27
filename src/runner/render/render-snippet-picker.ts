@@ -25,9 +25,9 @@ import { CSS_CLASS } from '../../constants/css-classes';
 import { SnippetTreePicker } from '../../views/snippet-tree-picker';
 import { renderRunnerFooter, type RunnerFooterHost } from './render-footer';
 
-export type AwaitingSnippetPickState = Extract<RunnerState, { status: 'awaiting-snippet-pick' }>;
+type AwaitingSnippetPickState = Extract<RunnerState, { status: 'awaiting-snippet-pick' }>;
 
-export type SnippetPickerHostClass = typeof CSS_CLASS.STP_INLINE_HOST;
+type SnippetPickerHostClass = typeof CSS_CLASS.STP_INLINE_HOST;
 
 /** Host-supplied copy for async errors surfaced by the picker. */
 export interface SnippetPickerCopy {

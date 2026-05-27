@@ -1,7 +1,7 @@
 {
   "name": "radiprotocol",
   "version": "1.22.6",
-  "description": "Canvas-based guided protocol runner for Obsidian",
+  "description": "Guided structured radiology protocol runner for Obsidian",
   "main": "main.js",
   "scripts": {
     "dev": "node esbuild.config.mjs",
@@ -15,7 +15,8 @@
     "check:agent-docs": "node scripts/check-agent-docs.mjs",
     "check:css": "node scripts/check-css-classes.mjs",
     "audit:i18n": "node scripts/audit-i18n-ui-text.mjs",
-    "check": "npm run build && npm run lint && npm test && npm run check:planning && npm run check:consistency && npm run check:agent-docs"
+    "check": "npm run build && npm run lint && npm test && npm run check:planning && npm run check:consistency && npm run check:agent-docs",
+    "check:release": "npm run check && npm run check:css && npm run audit:i18n"
   },
   "keywords": [],
   "author": "",

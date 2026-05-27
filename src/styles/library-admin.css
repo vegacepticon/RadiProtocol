@@ -173,6 +173,71 @@
   color: var(--text-error);
 }
 
+.rp-admin-btn-move {
+  color: var(--text-accent);
+}
+
+.rp-admin-move-hint {
+  margin-bottom: var(--size-4-2);
+  color: var(--text-muted);
+  font-size: var(--font-ui-small);
+}
+
+.rp-admin-move-body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--size-4-2);
+}
+
+.rp-admin-move-path {
+  color: var(--text-muted);
+  font-family: var(--font-monospace);
+  font-size: var(--font-ui-smaller);
+}
+
+.rp-admin-move-folder-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--size-2-1);
+  max-height: min(360px, calc(100vh - 260px));
+  overflow-y: auto;
+}
+
+.rp-admin-move-folder-item {
+  display: flex;
+  align-items: center;
+  gap: var(--size-4-1);
+  padding: var(--size-4-2);
+  border-radius: var(--radius-s);
+  cursor: pointer;
+}
+
+.rp-admin-move-folder-item:hover,
+.rp-admin-move-folder-item.is-selected {
+  background: var(--background-modifier-hover);
+}
+
+.rp-admin-move-folder-back {
+  color: var(--text-accent);
+}
+
+.rp-admin-move-folder-back-label,
+.rp-admin-move-folder-glyph {
+  flex: 0 0 auto;
+}
+
+.rp-admin-move-folder-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.rp-admin-move-empty {
+  color: var(--text-muted);
+  font-style: italic;
+  padding: var(--size-4-2);
+}
+
 .rp-admin-tree-root {
   display: flex;
   flex-direction: column;
