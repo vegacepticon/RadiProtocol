@@ -1,6 +1,5 @@
 import { Modal, Setting, App, AbstractInputSuggest, TFile, Notice } from 'obsidian';
 import type RadiProtocolPlugin from '../../main';
-import type { LibrarySnippetEntry } from '../../snippets/library-model';
 import type { ProtocolLibraryEntry } from '../../protocol/protocol-library-model';
 import type { LibraryAdminService } from '../../snippets/library-admin';
 import { SnippetTreePicker } from '../snippet-tree-picker';
@@ -541,57 +540,6 @@ class LibraryCategorySuggest extends AbstractInputSuggest<string> {
 		this.setValue(category);
 		this.inputElRef.dispatchEvent(new Event('input', { bubbles: true }));
 		super.selectSuggestion(category, evt);
-	}
-}
-
-export class EditSnippetMetadataModal extends Modal {
-	private categoryInput: string;
-	private descriptionInput: string;
-
-	constructor(
-		app: App,
-		private entry: LibrarySnippetEntry,
-		private plugin: RadiProtocolPlugin,
-		private onSubmit: (updates: { category?: string; description?: string }) => void,
-	) {
-		super(app);
-		this.categoryInput = entry.category;
-		this.descriptionInput = entry.description;
-		this.titleEl.setText(plugin.i18n.t('admin.editSnippet', { name: entry.name }));
-	}
-
-	onOpen(): void {
-		const { contentEl } = this;
-		contentEl.empty();
-
-		new Setting(contentEl)
-			.setName(this.plugin.i18n.t('admin.nameLabel'))
-			.setDesc(this.entry.name)
-			.setDisabled(true);
-
-		new Setting(contentEl)
-			.setName(this.plugin.i18n.t('admin.categoryLabel'))
-			.addText(text => text
-				.setValue(this.categoryInput)
-				.onChange(v => { this.categoryInput = v; }));
-
-		new Setting(contentEl)
-			.setName(this.plugin.i18n.t('admin.descriptionLabel'))
-			.addText(text => text
-				.setValue(this.descriptionInput)
-				.onChange(v => { this.descriptionInput = v; }));
-
-		new Setting(contentEl)
-			.addButton(btn => btn
-				.setButtonText(this.plugin.i18n.t('admin.save'))
-				.setCta()
-				.onClick(() => {
-					this.close();
-					this.onSubmit({
-						category: this.categoryInput,
-						description: this.descriptionInput,
-					});
-				}));
 	}
 }
 

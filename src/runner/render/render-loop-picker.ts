@@ -5,7 +5,7 @@ import { isExitEdge, nodeLabel, stripExitPrefix } from '../../graph/node-label';
 import type { RunnerState } from '../runner-state';
 import { createButton } from '../../utils/dom-helpers';
 
-export type AwaitingLoopPickState = Extract<RunnerState, { status: 'awaiting-loop-pick' }>;
+type AwaitingLoopPickState = Extract<RunnerState, { status: 'awaiting-loop-pick' }>;
 
 export interface LoopPickerHost {
   bindClick(el: HTMLElement, handler: (ev: MouseEvent) => void): void;

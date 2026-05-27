@@ -1,22 +1,22 @@
 import type { InlineRunnerLayout } from '../settings';
 
-export interface InlineRunnerViewport {
+interface InlineRunnerViewport {
   width: number;
   height: number;
 }
 
-export interface InlineRunnerSize {
+interface InlineRunnerSize {
   width: number;
   height: number;
 }
 
-export const INLINE_RUNNER_DEFAULT_WIDTH = 420;
-export const INLINE_RUNNER_DEFAULT_HEIGHT = 320;
-export const INLINE_RUNNER_DEFAULT_MARGIN = 16;
-export const INLINE_RUNNER_MIN_VISIBLE_WIDTH = 160;
-export const INLINE_RUNNER_MIN_VISIBLE_HEADER_HEIGHT = 40;
+const INLINE_RUNNER_DEFAULT_WIDTH = 420;
+const INLINE_RUNNER_DEFAULT_HEIGHT = 320;
+const INLINE_RUNNER_DEFAULT_MARGIN = 16;
+const INLINE_RUNNER_MIN_VISIBLE_WIDTH = 160;
+const INLINE_RUNNER_MIN_VISIBLE_HEADER_HEIGHT = 40;
 
-export function isFiniteInlineRunnerPosition(position: InlineRunnerLayout | null): position is InlineRunnerLayout {
+function isFiniteInlineRunnerPosition(position: InlineRunnerLayout | null): position is InlineRunnerLayout {
   return position !== null && Number.isFinite(position.left) && Number.isFinite(position.top);
 }
 
@@ -65,7 +65,7 @@ export function clampInlineRunnerLayout(
   return { left: positionOnly.left, top: positionOnly.top, width, height };
 }
 
-export interface InlineRunnerLayoutManagerOptions {
+interface InlineRunnerLayoutManagerOptions {
   containerEl: HTMLElement;
   getSavedLayout: () => InlineRunnerLayout | null;
   saveLayout: (layout: InlineRunnerLayout) => Promise<void> | void;

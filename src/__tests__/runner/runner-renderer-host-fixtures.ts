@@ -137,7 +137,7 @@ export function makeEl(tag = 'div'): MockEl {
   return el;
 }
 
-export function walk(root: MockEl, sel: string): MockEl[] {
+function walk(root: MockEl, sel: string): MockEl[] {
   const out: MockEl[] = [];
   const match = buildMatcher(sel);
   const stack: MockEl[] = [...root.children];
@@ -149,7 +149,7 @@ export function walk(root: MockEl, sel: string): MockEl[] {
   return out;
 }
 
-export function buildMatcher(sel: string): (el: MockEl) => boolean {
+function buildMatcher(sel: string): (el: MockEl) => boolean {
   if (sel.startsWith('.')) {
     const cls = sel.slice(1);
     return (el) => el.classList.has(cls);
@@ -241,13 +241,13 @@ export function createObsidianModuleMock(): Record<string, unknown> {
 }
 
 // Minimal setIcon mock for tests that import render-runner-footer
-export function mockSetIcon(_el: unknown, _iconId: string): void {
+function mockSetIcon(_el: unknown, _iconId: string): void {
   // no-op
 }
 
 // ───── SnippetFillInModal mock ─────────────────────────────────────────────
 
-export interface FillModalInstance {
+interface FillModalInstance {
   snippet: unknown;
   result: Promise<string | null>;
   __resolve: (v: string | null) => void;

@@ -13,10 +13,11 @@
 ## Code map
 
 - `src/main.ts` — plugin registration, commands, settings wiring, inline-runner registry.
-- `src/protocol/` — `.rp.json` document model, parser, store, write coordination.
+- `src/protocol/` — `.rp.json` document model, parser, store, write coordination, file resolver.
+- `src/views/protocol-picker-modal.ts` — Suggest modals for choosing/creating .rp.json documents (extracted from main.ts).
 - `src/graph/` — protocol graph types/validation and compatibility helpers.
 - `src/runner/` — pure protocol execution engine and runner state helpers.
-- `src/views/` — Obsidian UI hosts/modals, including inline runner and protocol editor.
+- `src/views/` — Obsidian UI hosts/modals, including inline runner, protocol editor, and snippet pickers.
 - `src/snippets/` — snippet discovery, binding, insertion, placeholder handling.
 - `src/i18n/` — translation service and locale dictionaries.
 - `src/constants/` — shared constants for CSS classes, runner/editor states, etc.

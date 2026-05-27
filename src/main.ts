@@ -1,6 +1,5 @@
 // main.ts
-import { Plugin, Notice, TFile, TFolder, SuggestModal, MarkdownView } from 'obsidian';
-import type { App } from 'obsidian';
+import { Plugin, Notice, TFile, SuggestModal, MarkdownView } from 'obsidian';
 import { RadiProtocolSettings, DEFAULT_SETTINGS, RadiProtocolSettingsTab, type InlineRunnerLayout } from './settings';
 import { ProtocolDocumentParser } from './protocol/protocol-document-parser';
 import { ProtocolDocumentStore } from './protocol/protocol-document-store';
@@ -10,6 +9,7 @@ import { WriteMutex } from './utils/write-mutex';
 import { I18nService } from './i18n';
 import { LibraryService } from './snippets/library-service';
 import { ProtocolLibraryService } from './protocol/protocol-library-service';
+import { normalizeProtocolFolderPath, resolveProtocolDocumentFiles } from './protocol/protocol-file-resolver';
 // Phase 45 (LOOP-06): start-from-node command dependencies
 import { NodePickerModal, buildStartableProtocolNodeOptions } from './views/node-picker-modal';
 // Phase 54: inline protocol display mode
@@ -17,165 +17,15 @@ import { InlineRunnerModal } from './views/inline-runner-modal';
 import { InsertSnippetModal } from './views/insert-snippet-modal';
 import { ProtocolEditorView, PROTOCOL_EDITOR_VIEW_TYPE } from './views/protocol-editor-view';
 import { ProtocolLibraryBrowserModal } from './views/protocol-library-browser-modal';
+import {
+  ProtocolEditorPickerModal,
+  ProtocolPickerSuggestModal,
+  protocolDisplayName,
+  protocolDocumentId,
+  type ProtocolEditorPickerSuggestion,
+  type ProtocolPickerSuggestion,
+} from './views/protocol-picker-modal';
 
-
-/**
- * Phase 59 INLINE-FIX-01 — Nested-path-safe protocol folder enumeration.
- *
- * Called by {@link RadiProtocolPlugin.handleRunProtocolInline} and the protocol
- * editor picker to resolve the configured `protocolFolderPath` setting to a
- * flat list of protocol files.
- *
- * Handles three known failure modes in the pre-Phase-59 implementation:
- *   1. Trailing / leading slashes in the stored setting — stripped via regex.
- *   2. Windows backslash path separators — replaced with forward slash.
- *   3. Obsidian vault-index returning null for an otherwise-valid nested folder —
- *      fallback to a `vault.getFiles()` prefix scan filtered by suffix.
- *
- * Returns an empty array when the folder does not exist, has no matching files,
- * or the path is blank. The caller is responsible for the "No protocol files
- * found" Notice when the result is empty.
- *
- * Exported (not a private method) so it can be unit-tested from
- * `src/__tests__/main-inline-command.test.ts` without instrumenting the plugin class.
- */
-function normalizeProtocolFolderPath(folderPath: string): string {
-  return folderPath
-    .trim()
-    .replace(/\\/g, '/')          // Windows backslash → forward slash (Pitfall 5 / A1)
-    .replace(/^\/+|\/+$/g, '');   // strip leading/trailing slashes
-}
-
-function resolveProtocolFilesBySuffix(
-  vault: import('obsidian').Vault,
-  folderPath: string,
-  suffix: string,
-  debugLabel: string,
-): TFile[] {
-  const normalized = normalizeProtocolFolderPath(folderPath);
-  if (normalized === '') {
-    console.debug(`[RadiProtocol][${debugLabel}] folderPath normalized to empty — skipping resolution.`);
-    return [];
-  }
-
-  const folder = vault.getAbstractFileByPath(normalized);
-  const out: TFile[] = [];
-
-  if (folder instanceof TFolder) {
-    const walk = (f: TFolder): void => {
-      for (const child of f.children) {
-        if (child instanceof TFolder) walk(child);
-        else if (child instanceof TFile && child.path.endsWith(suffix)) out.push(child);
-      }
-    };
-    walk(folder);
-    console.debug(
-      `[RadiProtocol][${debugLabel}] Resolved '${folderPath}' → '${normalized}' via TFolder walk; ${out.length} file(s).`,
-    );
-    return out;
-  }
-
-  // Fallback — getAbstractFileByPath returned null or non-folder. Scan all vault files.
-  const prefix = normalized + '/';
-  for (const f of vault.getFiles()) {
-    if (!f.path.endsWith(suffix)) continue;
-    if (f.path === normalized || f.path.startsWith(prefix)) out.push(f);
-  }
-  console.debug(
-    `[RadiProtocol][${debugLabel}] Resolved '${folderPath}' → '${normalized}' via getFiles() fallback; ${out.length} file(s). (getAbstractFileByPath returned ${folder === null ? 'null' : typeof folder})`,
-  );
-  return out;
-}
-
-export function resolveProtocolDocumentFiles(
-  vault: import('obsidian').Vault,
-  folderPath: string,
-): TFile[] {
-  return resolveProtocolFilesBySuffix(vault, folderPath, '.rp.json', 'PROTOCOL-DOC');
-}
-
-type ProtocolPickerSuggestion = { file: TFile; name: string };
-type ProtocolEditorPickerSuggestion =
-  | { kind: 'existing'; file: TFile; name: string }
-  | { kind: 'create'; title: string };
-
-function protocolDisplayName(file: TFile): string {
-  return file.basename.replace(/\.rp$/, '');
-}
-
-function protocolDocumentId(): string {
-  return `protocol-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-}
-
-class ProtocolPickerSuggestModal extends SuggestModal<ProtocolPickerSuggestion> {
-  constructor(
-    app: App,
-    private readonly protocolFiles: TFile[],
-    private readonly onChoose: (item: ProtocolPickerSuggestion) => void,
-  ) {
-    super(app);
-  }
-
-  getSuggestions(query: string): ProtocolPickerSuggestion[] {
-    const q = query.toLowerCase();
-    return this.protocolFiles
-      .map(f => ({ file: f, name: protocolDisplayName(f) }))
-      .filter(item => item.name.toLowerCase().includes(q));
-  }
-
-  renderSuggestion(item: ProtocolPickerSuggestion, el: HTMLElement): void {
-    el.createEl('div', { text: item.name });
-  }
-
-  onChooseSuggestion(item: ProtocolPickerSuggestion): void {
-    this.onChoose(item);
-  }
-}
-
-class ProtocolEditorPickerModal extends SuggestModal<ProtocolEditorPickerSuggestion> {
-  private lastQuery = '';
-
-  constructor(
-    app: App,
-    private readonly protocolFiles: TFile[],
-    private readonly t: (key: string, vars?: Record<string, string>) => string,
-    private readonly onOpenExisting: (file: TFile) => void,
-    private readonly onCreate: (title: string) => void,
-  ) {
-    super(app);
-    this.setPlaceholder(this.t('protocolEditor.openPickerPlaceholder'));
-  }
-
-  getSuggestions(query: string): ProtocolEditorPickerSuggestion[] {
-    this.lastQuery = query.trim();
-    const q = this.lastQuery.toLowerCase();
-    const existing = this.protocolFiles
-      .map(file => ({ kind: 'existing' as const, file, name: protocolDisplayName(file) }))
-      .filter(item => item.name.toLowerCase().includes(q));
-
-    if (this.lastQuery === '') return existing;
-    if (existing.some(item => item.name.toLowerCase() === q)) return existing;
-    return [{ kind: 'create', title: this.lastQuery }, ...existing];
-  }
-
-  renderSuggestion(item: ProtocolEditorPickerSuggestion, el: HTMLElement): void {
-    if (item.kind === 'create') {
-      el.createEl('div', { text: this.t('protocolEditor.createProtocolSuggestion', { title: item.title }) });
-      el.createEl('small', { text: this.t('protocolEditor.createProtocolHint') });
-      return;
-    }
-    el.createEl('div', { text: item.name });
-    el.createEl('small', { text: item.file.path });
-  }
-
-  onChooseSuggestion(item: ProtocolEditorPickerSuggestion): void {
-    if (item.kind === 'create') {
-      this.onCreate(item.title);
-      return;
-    }
-    this.onOpenExisting(item.file);
-  }
-}
 
 export default class RadiProtocolPlugin extends Plugin {
   settings!: RadiProtocolSettings;

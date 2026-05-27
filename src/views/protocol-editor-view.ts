@@ -151,7 +151,7 @@ export function shouldDisplayProtocolEditorEdgeLabel(
   return false;
 }
 
-export function deriveProtocolEditorEdgeLabel(
+function deriveProtocolEditorEdgeLabel(
   targetNode: ProtocolNodeRecord | undefined,
   currentLabel: string | undefined,
 ): string | undefined {

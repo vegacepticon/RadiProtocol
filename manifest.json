@@ -2,10 +2,10 @@
 	"id": "radiprotocol",
 	"name": "RadiProtocol",
 	"minAppVersion": "1.5.7",
-	"description": "Canvas-based guided protocol runner for radiologists.",
+	"description": "Guided structured radiology protocol runner for radiologists.",
 	"author": "vegacepticon",
 	"authorUrl": "https://github.com/vegacepticon",
 	"fundingUrl": "",
 	"isDesktopOnly": true,
-	"version": "1.22.6"
+	"version": "1.22.7-beta.0"
 }

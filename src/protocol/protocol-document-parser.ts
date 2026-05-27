@@ -259,10 +259,3 @@ export class ProtocolDocumentParser {
   }
 }
 
-export function parseProtocolDocument(
-  jsonString: string,
-  protocolFilePath: string,
-  t: Translator = defaultT
-): ParseResult {
-  return new ProtocolDocumentParser(t).parse(jsonString, protocolFilePath);
-}
