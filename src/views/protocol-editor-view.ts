@@ -200,7 +200,38 @@ export function normalizeProtocolEditorSnippetFolderSelection(relativePath: stri
   return trimmed === '' ? undefined : trimmed;
 }
 
-export function protocolEditorEdgeRoute(x1: number, y1: number, x2: number, y2: number): ProtocolEditorEdgeRoute {
+export function protocolEditorEdgeRoute(x1: number, y1: number, x2: number, y2: number, direction?: 'LR' | 'TB'): ProtocolEditorEdgeRoute {
+  const dir = direction ?? 'LR';
+
+  if (dir === 'TB') {
+    if (y2 >= y1 + 24) {
+      const mid = Math.max(40, Math.abs(y2 - y1) / 2);
+      return {
+        d: `M ${x1} ${y1} C ${x1} ${y1 + mid}, ${x2} ${y2 - mid}, ${x2} ${y2}`,
+        labelX: (x1 + x2) / 2 + 16,
+        labelY: (y1 + y2) / 2,
+      };
+    }
+
+    // Loop-around for backward edges in TB direction:
+    // route down, then right, then up to target.
+    const gap = 60;
+    const outY = y1 + gap;
+    const inY = Math.max(y2 - gap, 0);
+    const loopX = Math.max(x1, x2) + 80;
+
+    return {
+      d: [
+        `M ${x1} ${y1}`,
+        `C ${x1} ${outY}, ${loopX} ${outY}, ${loopX} ${outY}`,
+        `L ${loopX} ${inY}`,
+        `C ${loopX} ${inY}, ${x2} ${inY}, ${x2} ${y2}`,
+      ].join(' '),
+      labelX: loopX + 16,
+      labelY: (outY + inY) / 2,
+    };
+  }
+
   if (x2 >= x1 + 24) {
     const mid = Math.max(40, Math.abs(x2 - x1) / 2);
     return {
@@ -211,9 +242,9 @@ export function protocolEditorEdgeRoute(x1: number, y1: number, x2: number, y2: 
   }
 
   const horizontalGap = Math.max(56, Math.min(120, Math.abs(x2 - x1) / 2 + 48));
-  const direction = y2 >= y1 ? 1 : -1;
+  const loopDirection = y2 >= y1 ? 1 : -1;
   const verticalGap = Math.max(48, Math.min(140, Math.abs(y2 - y1) / 2 + 40));
-  const loopY = Math.min(Math.max(y1, y2) + direction * verticalGap, DEFAULT_VIEWPORT_HEIGHT - 80);
+  const loopY = Math.min(Math.max(y1, y2) + loopDirection * verticalGap, DEFAULT_VIEWPORT_HEIGHT - 80);
   const outX = Math.min(x1 + horizontalGap, DEFAULT_VIEWPORT_WIDTH - 40);
   const inX = Math.max(x2 - horizontalGap, 40);
 
@@ -245,6 +276,7 @@ export class ProtocolEditorView extends ItemView {
   private panState: PanState | null = null;
   private connectionDragState: ConnectionDragState | null = null;
   private viewportSaveTimer: number | null = null;
+  private layoutDirection: 'LR' | 'TB' = 'LR';
 
   constructor(leaf: WorkspaceLeaf, plugin: RadiProtocolPlugin) {
     super(leaf);
@@ -326,15 +358,25 @@ export class ProtocolEditorView extends ItemView {
     setIcon(minimapToggleBtn, 'map');
     minimapToggleBtn.addEventListener('click', () => this.toggleMinimap());
 
-    const autoLayoutBtn = floatingActions.createEl('button', {
+    const autoLayoutVerticalBtn = floatingActions.createEl('button', {
       cls: 'rp-protocol-editor-floating-action',
       attr: {
         type: 'button',
-        'aria-label': this.plugin.i18n.t('protocolEditor.autoLayout'),
+        'aria-label': this.plugin.i18n.t('protocolEditor.autoLayoutVertical'),
       },
     });
-    setIcon(autoLayoutBtn, 'layout');
-    autoLayoutBtn.addEventListener('click', () => this.autoLayoutNodes());
+    setIcon(autoLayoutVerticalBtn, 'layout');
+    autoLayoutVerticalBtn.addEventListener('click', () => this.autoLayoutNodes('TB'));
+
+    const autoLayoutHorizontalBtn = floatingActions.createEl('button', {
+      cls: 'rp-protocol-editor-floating-action',
+      attr: {
+        type: 'button',
+        'aria-label': this.plugin.i18n.t('protocolEditor.autoLayoutHorizontal'),
+      },
+    });
+    setIcon(autoLayoutHorizontalBtn, 'layout');
+    autoLayoutHorizontalBtn.addEventListener('click', () => this.autoLayoutNodes('LR'));
 
     workspace.createDiv({
       cls: 'rp-protocol-editor-canvas-title',
@@ -588,11 +630,20 @@ export class ProtocolEditorView extends ItemView {
       const from = nodeById.get(edge.fromNodeId);
       const to = nodeById.get(edge.toNodeId);
       if (from === undefined || to === undefined) continue;
-      const x1 = worldXToSurfaceX(from.x + from.width);
-      const y1 = worldYToSurfaceY(from.y + from.height / 2);
-      const x2 = worldXToSurfaceX(to.x);
-      const y2 = worldYToSurfaceY(to.y + to.height / 2);
-      const route = protocolEditorEdgeRoute(x1, y1, x2, y2);
+      const dir = this.layoutDirection;
+      let x1: number, y1: number, x2: number, y2: number;
+      if (dir === 'TB') {
+        x1 = worldXToSurfaceX(from.x + from.width / 2);
+        y1 = worldYToSurfaceY(from.y + from.height);
+        x2 = worldXToSurfaceX(to.x + to.width / 2);
+        y2 = worldYToSurfaceY(to.y);
+      } else {
+        x1 = worldXToSurfaceX(from.x + from.width);
+        y1 = worldYToSurfaceY(from.y + from.height / 2);
+        x2 = worldXToSurfaceX(to.x);
+        y2 = worldYToSurfaceY(to.y + to.height / 2);
+      }
+      const route = protocolEditorEdgeRoute(x1, y1, x2, y2, dir);
       const group = this.svgEl.createSvg('g', {
         attr: {
           class: 'rp-protocol-editor-edge-group',
@@ -1218,7 +1269,7 @@ export class ProtocolEditorView extends ItemView {
     });
   }
 
-  private autoLayoutNodes(): void {
+  private autoLayoutNodes(direction: 'LR' | 'TB'): void {
     if (this.doc === null || this.protocolPath === null) return;
     const nodes = this.doc.nodes;
     const edges = this.doc.edges;
@@ -1227,7 +1278,7 @@ export class ProtocolEditorView extends ItemView {
     // Build dagre graph with actual node dimensions
     const g = new dagre.graphlib.Graph({ compound: false });
     g.setGraph({
-      rankdir: 'LR',
+      rankdir: direction,
       nodesep: 80,
       ranksep: 120,
       marginx: 40,
@@ -1277,6 +1328,7 @@ export class ProtocolEditorView extends ItemView {
     }
 
     // Persist
+    this.layoutDirection = direction;
     void this.plugin.protocolDocumentStore.update(this.protocolPath, (existing) => {
       if (existing === null) protocolMissingFileError();
       const updatedNodes = existing.nodes.map((n) => {

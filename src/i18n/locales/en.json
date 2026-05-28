@@ -73,6 +73,8 @@
     "minimapLabel": "Minimap — click or drag to pan",
     "toggleMinimap": "Toggle minimap",
     "autoLayout": "Auto layout",
+    "autoLayoutVertical": "Vertical layout",
+    "autoLayoutHorizontal": "Horizontal layout",
     "autoLayoutDone": "Nodes auto-arranged.",
     "confirmDelete": "Confirm delete",
     "snippetTargetLabel": "Snippet target",

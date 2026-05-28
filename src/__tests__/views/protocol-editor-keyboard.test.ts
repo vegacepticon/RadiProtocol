@@ -251,7 +251,8 @@ const t = (key: string, _params?: Record<string, string>): string => {
     'protocolEditor.startPointEnabledLabel': 'Start point',
     'selfCheck.title': 'Self-check',
     'protocolEditor.toggleMinimap': 'Minimap',
-    'protocolEditor.autoLayout': 'Auto layout',
+    'protocolEditor.autoLayoutVertical': 'Vertical layout',
+    'protocolEditor.autoLayoutHorizontal': 'Horizontal layout',
     'protocolEditor.noEditableFields': 'No editable fields',
     'protocolEditor.openPickerPlaceholder': 'Open…',
     'protocolEditor.edgeFromLabel': 'From',
@@ -525,13 +526,15 @@ describe('ProtocolEditorView: floating action button aria-labels', () => {
     expect(minimapBtn._attrs['aria-label']).toBe('Minimap');
   });
 
-  it('auto-layout floating button has localized aria-label', () => {
+  it('auto-layout floating buttons have localized aria-labels', () => {
     const { rootEl } = createShellView();
     const workspace = rootEl.children.find((c: MockEl) => c.classList.has('rp-protocol-editor-workspace'))!;
     const floatingActions = workspace.children.find((c: MockEl) => c.classList.has('rp-protocol-editor-floating-actions'))!;
     const buttons = floatingActions.children.filter((c: MockEl) => c.tagName === 'BUTTON');
-    const autoLayoutBtn = buttons.find((b: MockEl) => b._attrs['aria-label'] === 'Auto layout')!;
-    expect(autoLayoutBtn._attrs['aria-label']).toBe('Auto layout');
+    const verticalBtn = buttons.find((b: MockEl) => b._attrs['aria-label'] === 'Vertical layout')!;
+    expect(verticalBtn._attrs['aria-label']).toBe('Vertical layout');
+    const horizontalBtn = buttons.find((b: MockEl) => b._attrs['aria-label'] === 'Horizontal layout')!;
+    expect(horizontalBtn._attrs['aria-label']).toBe('Horizontal layout');
   });
 
   it('minimap element has localized aria-label', () => {

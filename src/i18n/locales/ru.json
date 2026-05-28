@@ -73,6 +73,8 @@
     "minimapLabel": "Миникарта — кликните или перетащите для панорамирования",
     "toggleMinimap": "Скрыть/показать миникарту",
     "autoLayout": "Авторазмещение",
+    "autoLayoutVertical": "Вертикальное размещение",
+    "autoLayoutHorizontal": "Горизонтальное размещение",
     "autoLayoutDone": "Узлы размещены автоматически.",
     "confirmDelete": "Подтвердить удаление",
     "snippetTargetLabel": "Цель сниппета",
