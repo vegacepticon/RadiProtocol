@@ -33,6 +33,10 @@ interface NodeKindDefault {
   color?: string;
 }
 
+type ProtocolEditorLayoutDirection = 'LR' | 'TB';
+
+type ProtocolEditorPortSide = 'left' | 'right' | 'top' | 'bottom';
+
 interface ConnectionDragState {
   fromNodeId: string;
   startX: number;
@@ -44,6 +48,78 @@ interface ProtocolEditorEdgeRoute {
   d: string;
   labelX: number;
   labelY: number;
+}
+
+interface ProtocolEditorPortAnchor {
+  x: number;
+  y: number;
+  side: ProtocolEditorPortSide;
+}
+
+interface ProtocolEditorNodeMeasurement {
+  width: number;
+  height: number;
+}
+
+interface ProtocolEditorLayoutOptions {
+  direction: ProtocolEditorLayoutDirection;
+  nodesep: number;
+  ranksep: number;
+  edgesep: number;
+}
+
+const PROTOCOL_EDITOR_LAYOUT_CONFIG: Record<ProtocolEditorLayoutDirection, ProtocolEditorLayoutOptions> = {
+  LR: {
+    direction: 'LR',
+    nodesep: 96,
+    ranksep: 152,
+    edgesep: 32,
+  },
+  TB: {
+    direction: 'TB',
+    nodesep: 112,
+    ranksep: 144,
+    edgesep: 36,
+  },
+};
+
+function protocolEditorInputPortSide(direction: ProtocolEditorLayoutDirection): ProtocolEditorPortSide {
+  return direction === 'TB' ? 'top' : 'left';
+}
+
+function protocolEditorOutputPortSide(direction: ProtocolEditorLayoutDirection): ProtocolEditorPortSide {
+  return direction === 'TB' ? 'bottom' : 'right';
+}
+
+function protocolEditorPortAnchor(node: Pick<ProtocolNodeRecord, 'x' | 'y' | 'width' | 'height'>, side: ProtocolEditorPortSide): ProtocolEditorPortAnchor {
+  switch (side) {
+    case 'left':
+      return { x: node.x, y: node.y + node.height / 2, side };
+    case 'right':
+      return { x: node.x + node.width, y: node.y + node.height / 2, side };
+    case 'top':
+      return { x: node.x + node.width / 2, y: node.y, side };
+    case 'bottom':
+      return { x: node.x + node.width / 2, y: node.y + node.height, side };
+  }
+}
+
+function protocolEditorNodeMeasurement(node: Pick<ProtocolNodeRecord, 'width' | 'height'>): ProtocolEditorNodeMeasurement {
+  return {
+    width: Math.max(MIN_NODE_WIDTH, Math.round(node.width || DEFAULT_NODE_WIDTH)),
+    height: Math.max(MIN_NODE_HEIGHT, Math.round(node.height || DEFAULT_NODE_HEIGHT)),
+  };
+}
+
+function protocolEditorAnchorToSurfacePoint(anchor: ProtocolEditorPortAnchor): { x: number; y: number } {
+  return {
+    x: worldXToSurfaceX(anchor.x),
+    y: worldYToSurfaceY(anchor.y),
+  };
+}
+
+function protocolEditorLayoutDirectionFromDocument(doc: ProtocolDocumentV1 | null | undefined): ProtocolEditorLayoutDirection {
+  return doc?.layoutDirection === 'TB' ? 'TB' : 'LR';
 }
 
 interface PanState {
@@ -200,26 +276,38 @@ export function normalizeProtocolEditorSnippetFolderSelection(relativePath: stri
   return trimmed === '' ? undefined : trimmed;
 }
 
-export function protocolEditorEdgeRoute(x1: number, y1: number, x2: number, y2: number, direction?: 'LR' | 'TB'): ProtocolEditorEdgeRoute {
-  const dir = direction ?? 'LR';
+export function protocolEditorEdgeRoute(
+  x1: number,
+  y1: number,
+  x2: number,
+  y2: number,
+  direction: ProtocolEditorLayoutDirection = 'LR',
+): ProtocolEditorEdgeRoute {
+  const forwardGap = 24;
+  const primaryDelta = direction === 'TB' ? y2 - y1 : x2 - x1;
+  const secondaryDelta = direction === 'TB' ? x2 - x1 : y2 - y1;
 
-  if (dir === 'TB') {
-    if (y2 >= y1 + 24) {
-      const mid = Math.max(40, Math.abs(y2 - y1) / 2);
+  if (primaryDelta >= forwardGap) {
+    const controlOffset = Math.max(48, Math.abs(primaryDelta) / 2);
+    if (direction === 'TB') {
       return {
-        d: `M ${x1} ${y1} C ${x1} ${y1 + mid}, ${x2} ${y2 - mid}, ${x2} ${y2}`,
-        labelX: (x1 + x2) / 2 + 16,
+        d: `M ${x1} ${y1} C ${x1} ${y1 + controlOffset}, ${x2} ${y2 - controlOffset}, ${x2} ${y2}`,
+        labelX: (x1 + x2) / 2 + (Math.abs(secondaryDelta) > 28 ? 16 : 0),
         labelY: (y1 + y2) / 2,
       };
     }
 
-    // Loop-around for backward edges in TB direction:
-    // route down, then right, then up to target.
-    const gap = 60;
-    const outY = y1 + gap;
-    const inY = Math.max(y2 - gap, 0);
-    const loopX = Math.max(x1, x2) + 80;
+    return {
+      d: `M ${x1} ${y1} C ${x1 + controlOffset} ${y1}, ${x2 - controlOffset} ${y2}, ${x2} ${y2}`,
+      labelX: (x1 + x2) / 2,
+      labelY: (y1 + y2) / 2 - (Math.abs(secondaryDelta) > 28 ? 8 : 0),
+    };
+  }
 
+  if (direction === 'TB') {
+    const loopX = Math.max(x1, x2) + Math.max(88, Math.abs(secondaryDelta) / 2 + 56);
+    const outY = y1 + 56;
+    const inY = y2 - 56;
     return {
       d: [
         `M ${x1} ${y1}`,
@@ -232,30 +320,17 @@ export function protocolEditorEdgeRoute(x1: number, y1: number, x2: number, y2: 
     };
   }
 
-  if (x2 >= x1 + 24) {
-    const mid = Math.max(40, Math.abs(x2 - x1) / 2);
-    return {
-      d: `M ${x1} ${y1} C ${x1 + mid} ${y1}, ${x2 - mid} ${y2}, ${x2} ${y2}`,
-      labelX: (x1 + x2) / 2,
-      labelY: (y1 + y2) / 2 - 8,
-    };
-  }
-
-  const horizontalGap = Math.max(56, Math.min(120, Math.abs(x2 - x1) / 2 + 48));
-  const loopDirection = y2 >= y1 ? 1 : -1;
-  const verticalGap = Math.max(48, Math.min(140, Math.abs(y2 - y1) / 2 + 40));
-  const loopY = Math.min(Math.max(y1, y2) + loopDirection * verticalGap, DEFAULT_VIEWPORT_HEIGHT - 80);
-  const outX = Math.min(x1 + horizontalGap, DEFAULT_VIEWPORT_WIDTH - 40);
-  const inX = Math.max(x2 - horizontalGap, 40);
-
+  const loopY = Math.max(y1, y2) + Math.max(64, Math.abs(secondaryDelta) / 2 + 44);
+  const outX = x1 + 56;
+  const inX = x2 - 56;
   return {
     d: [
       `M ${x1} ${y1}`,
-      `C ${outX} ${y1}, ${outX} ${loopY}, ${x1} ${loopY}`,
-      `L ${x2} ${loopY}`,
+      `C ${outX} ${y1}, ${outX} ${loopY}, ${outX} ${loopY}`,
+      `L ${inX} ${loopY}`,
       `C ${inX} ${loopY}, ${inX} ${y2}, ${x2} ${y2}`,
     ].join(' '),
-    labelX: (x1 + x2) / 2,
+    labelX: (outX + inX) / 2,
     labelY: loopY - 8,
   };
 }
@@ -276,7 +351,7 @@ export class ProtocolEditorView extends ItemView {
   private panState: PanState | null = null;
   private connectionDragState: ConnectionDragState | null = null;
   private viewportSaveTimer: number | null = null;
-  private layoutDirection: 'LR' | 'TB' = 'LR';
+  private layoutDirection: ProtocolEditorLayoutDirection = 'LR';
 
   constructor(leaf: WorkspaceLeaf, plugin: RadiProtocolPlugin) {
     super(leaf);
@@ -324,6 +399,7 @@ export class ProtocolEditorView extends ItemView {
 
     this.protocolPath = file.path;
     this.doc = doc;
+    this.layoutDirection = protocolEditorLayoutDirectionFromDocument(doc);
     this.zoom = clampProtocolEditorZoom(doc.viewport?.zoom ?? 1);
     this.renderShell();
     this.renderDocument();
@@ -384,6 +460,7 @@ export class ProtocolEditorView extends ItemView {
     });
     this.viewportEl = workspace.createDiv({ cls: 'rp-protocol-editor-viewport' });
     this.viewportEl.setAttr('data-zoom', String(this.zoom));
+    this.viewportEl.setAttr('data-layout-direction', this.layoutDirection);
     this.surfaceEl = this.viewportEl.createDiv({ cls: 'rp-protocol-editor-surface' });
     this.svgEl = this.viewportEl.createSvg('svg', { cls: 'rp-protocol-editor-edges' });
 
@@ -582,11 +659,13 @@ export class ProtocolEditorView extends ItemView {
       const inputPort = nodeEl.createDiv({ cls: 'rp-protocol-editor-port rp-protocol-editor-port-input' });
       inputPort.setAttr('data-node-id', node.id);
       inputPort.setAttr('data-port-kind', 'input');
+      inputPort.setAttr('data-port-side', protocolEditorInputPortSide(this.layoutDirection));
       inputPort.setAttr('aria-label', this.plugin.i18n.t('protocolEditor.inputPortLabel'));
 
       const outputPort = nodeEl.createDiv({ cls: 'rp-protocol-editor-port rp-protocol-editor-port-output' });
       outputPort.setAttr('data-node-id', node.id);
       outputPort.setAttr('data-port-kind', 'output');
+      outputPort.setAttr('data-port-side', protocolEditorOutputPortSide(this.layoutDirection));
       outputPort.setAttr('aria-label', this.plugin.i18n.t('protocolEditor.outputPortLabel'));
 
       nodeEl.createDiv({ cls: 'rp-protocol-editor-node-kind', text: node.kind ?? this.plugin.i18n.t('protocolEditor.untyped') });
@@ -626,24 +705,15 @@ export class ProtocolEditorView extends ItemView {
     if (this.doc === null || this.svgEl === null) return;
     this.svgEl.empty();
     const nodeById = new Map(this.doc.nodes.map(node => [node.id, node]));
+    const outputSide = protocolEditorOutputPortSide(this.layoutDirection);
+    const inputSide = protocolEditorInputPortSide(this.layoutDirection);
     for (const edge of this.doc.edges) {
       const from = nodeById.get(edge.fromNodeId);
       const to = nodeById.get(edge.toNodeId);
       if (from === undefined || to === undefined) continue;
-      const dir = this.layoutDirection;
-      let x1: number, y1: number, x2: number, y2: number;
-      if (dir === 'TB') {
-        x1 = worldXToSurfaceX(from.x + from.width / 2);
-        y1 = worldYToSurfaceY(from.y + from.height);
-        x2 = worldXToSurfaceX(to.x + to.width / 2);
-        y2 = worldYToSurfaceY(to.y);
-      } else {
-        x1 = worldXToSurfaceX(from.x + from.width);
-        y1 = worldYToSurfaceY(from.y + from.height / 2);
-        x2 = worldXToSurfaceX(to.x);
-        y2 = worldYToSurfaceY(to.y + to.height / 2);
-      }
-      const route = protocolEditorEdgeRoute(x1, y1, x2, y2, dir);
+      const source = protocolEditorAnchorToSurfacePoint(protocolEditorPortAnchor(from, outputSide));
+      const target = protocolEditorAnchorToSurfacePoint(protocolEditorPortAnchor(to, inputSide));
+      const route = protocolEditorEdgeRoute(source.x, source.y, target.x, target.y, this.layoutDirection);
       const group = this.svgEl.createSvg('g', {
         attr: {
           class: 'rp-protocol-editor-edge-group',
@@ -884,15 +954,14 @@ export class ProtocolEditorView extends ItemView {
       e.preventDefault();
       e.stopPropagation();
 
-      const startX = worldXToSurfaceX(node.x + node.width);
-      const startY = worldYToSurfaceY(node.y + node.height / 2);
+      const start = protocolEditorAnchorToSurfacePoint(protocolEditorPortAnchor(node, protocolEditorOutputPortSide(this.layoutDirection)));
       const previewPath = this.svgEl.createSvg('path', {
         attr: {
-          d: protocolEditorEdgeRoute(startX, startY, startX + 80, startY).d,
+          d: protocolEditorEdgeRoute(start.x, start.y, start.x + (this.layoutDirection === 'TB' ? 0 : 80), start.y + (this.layoutDirection === 'TB' ? 80 : 0), this.layoutDirection).d,
           class: 'rp-protocol-editor-edge rp-protocol-editor-edge-preview',
         },
       }) as SVGPathElement;
-      this.connectionDragState = { fromNodeId: node.id, startX, startY, previewPath };
+      this.connectionDragState = { fromNodeId: node.id, startX: start.x, startY: start.y, previewPath };
 
       const onMove = (ev: MouseEvent) => this.updateConnectionPreview(ev);
       const onUp = (ev: MouseEvent) => {
@@ -914,6 +983,7 @@ export class ProtocolEditorView extends ItemView {
       this.connectionDragState.startY,
       point.x,
       point.y,
+      this.layoutDirection,
     ).d);
   }
 
@@ -1269,75 +1339,77 @@ export class ProtocolEditorView extends ItemView {
     });
   }
 
-  private autoLayoutNodes(direction: 'LR' | 'TB'): void {
+  private autoLayoutNodes(direction: ProtocolEditorLayoutDirection): void {
     if (this.doc === null || this.protocolPath === null) return;
     const nodes = this.doc.nodes;
     const edges = this.doc.edges;
     if (nodes.length === 0) return;
 
-    // Build dagre graph with actual node dimensions
+    const layout = PROTOCOL_EDITOR_LAYOUT_CONFIG[direction];
     const g = new dagre.graphlib.Graph({ compound: false });
     g.setGraph({
-      rankdir: direction,
-      nodesep: 80,
-      ranksep: 120,
-      marginx: 40,
-      marginy: 40,
+      rankdir: layout.direction,
+      nodesep: layout.nodesep,
+      ranksep: layout.ranksep,
+      edgesep: layout.edgesep,
+      marginx: 64,
+      marginy: 64,
     });
     g.setDefaultEdgeLabel(() => ({}));
 
     const nodeMap = new Map<string, ProtocolNodeRecord>();
     for (const node of nodes) {
       nodeMap.set(node.id, node);
-      g.setNode(node.id, { width: node.width, height: node.height });
+      const measurement = protocolEditorNodeMeasurement(node);
+      g.setNode(node.id, measurement);
     }
     for (const edge of edges) {
-      // Skip edges referencing non-existent nodes (guard)
       if (!nodeMap.has(edge.fromNodeId) || !nodeMap.has(edge.toNodeId)) continue;
       g.setEdge(edge.fromNodeId, edge.toNodeId);
     }
 
     dagre.layout(g);
 
-    // dagre returns center positions; convert to top-left corner
     const positions = new Map<string, { x: number; y: number }>();
     for (const node of nodes) {
       const dagreNode = g.node(node.id);
       if (dagreNode === undefined) continue;
+      const measurement = protocolEditorNodeMeasurement(node);
       positions.set(node.id, {
-        x: dagreNode.x - node.width / 2,
-        y: dagreNode.y - node.height / 2,
+        x: dagreNode.x - measurement.width / 2,
+        y: dagreNode.y - measurement.height / 2,
       });
     }
 
-    // Center bounding box at (0,0) world space
     let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
     for (const node of nodes) {
-      const p = positions.get(node.id)!;
+      const p = positions.get(node.id);
+      if (p === undefined) continue;
+      const measurement = protocolEditorNodeMeasurement(node);
       if (p.x < minX) minX = p.x;
-      if (p.x + node.width > maxX) maxX = p.x + node.width;
+      if (p.x + measurement.width > maxX) maxX = p.x + measurement.width;
       if (p.y < minY) minY = p.y;
-      if (p.y + node.height > maxY) maxY = p.y + node.height;
+      if (p.y + measurement.height > maxY) maxY = p.y + measurement.height;
     }
-    const shiftX = (minX + maxX) / 2;
-    const shiftY = (minY + maxY) / 2;
-    for (const node of nodes) {
-      const p = positions.get(node.id)!;
-      p.x = Math.round(p.x - shiftX);
-      p.y = Math.round(p.y - shiftY);
+    const shiftX = Number.isFinite(minX) && Number.isFinite(maxX) ? (minX + maxX) / 2 : 0;
+    const shiftY = Number.isFinite(minY) && Number.isFinite(maxY) ? (minY + maxY) / 2 : 0;
+    for (const position of positions.values()) {
+      position.x = Math.round(position.x - shiftX);
+      position.y = Math.round(position.y - shiftY);
     }
 
-    // Persist
     this.layoutDirection = direction;
     void this.plugin.protocolDocumentStore.update(this.protocolPath, (existing) => {
       if (existing === null) protocolMissingFileError();
       const updatedNodes = existing.nodes.map((n) => {
         const p = positions.get(n.id);
         if (p === undefined) return n;
-        return { ...n, x: p.x, y: p.y };
+        const measurement = protocolEditorNodeMeasurement(n);
+        return { ...n, x: p.x, y: p.y, width: measurement.width, height: measurement.height };
       });
       return {
         ...existing,
+        layoutDirection: direction,
         nodes: updatedNodes,
         viewport: this.currentViewportState(),
         updatedAt: new Date().toISOString(),
@@ -1392,6 +1464,7 @@ export class ProtocolEditorView extends ItemView {
     const scaledHeight = `${DEFAULT_VIEWPORT_HEIGHT * this.zoom}px`;
     if (this.viewportEl !== null) {
       this.viewportEl.setAttr('data-zoom', String(this.zoom));
+      this.viewportEl.setAttr('data-layout-direction', this.layoutDirection);
       this.viewportEl.style.setProperty('--rp-protocol-editor-zoom', String(this.zoom));
       const indicator = this.rootEl?.querySelector('.rp-protocol-editor-zoom-indicator');
       indicator?.setText(`${Math.round(this.zoom * 100)}%`);

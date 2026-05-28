@@ -47,6 +47,8 @@ export interface ProtocolDocumentV1 {
     y: number;
     zoom: number;
   };
+  /** Optional preferred editor auto-layout direction. */
+  layoutDirection?: 'LR' | 'TB';
 }
 
 /**
@@ -118,6 +120,7 @@ export function createEmptyProtocolDocument(
     updatedAt: iso,
     nodes: [],
     edges: [],
+    layoutDirection: 'LR',
   };
 }
 

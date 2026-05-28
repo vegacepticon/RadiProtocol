@@ -160,7 +160,6 @@
 
   --rp-protocol-editor-port-color: var(--interactive-accent);
 
-  top: 50%;
   z-index: 2;
   width: 18px;
   height: 18px;
@@ -168,7 +167,6 @@
   border-radius: 50%;
   background: var(--background-primary);
   box-shadow: 0 0 0 3px color-mix(in srgb, var(--rp-protocol-editor-port-color) 18%, transparent);
-  transform: translateY(-50%);
   cursor: crosshair;
 }
 
@@ -177,15 +175,36 @@
 }
 
 .rp-protocol-editor-port-input {
-  left: -12px;
-
   --rp-protocol-editor-port-color: #4caf50;
 }
 
 .rp-protocol-editor-port-output {
-  right: -12px;
-
   --rp-protocol-editor-port-color: #ff9800;
+}
+
+.rp-protocol-editor-port[data-port-side="left"] {
+  left: -12px;
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+.rp-protocol-editor-port[data-port-side="right"] {
+  right: -12px;
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+.rp-protocol-editor-port[data-port-side="top"] {
+  top: -12px;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.rp-protocol-editor-port[data-port-side="bottom"] {
+  bottom: -12px;
+  left: 50%;
+  top: auto;
+  transform: translateX(-50%);
 }
 
 .rp-protocol-editor-zoom-indicator {

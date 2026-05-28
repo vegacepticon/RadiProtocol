@@ -126,17 +126,29 @@ describe('protocol editor helper functions', () => {
       expect(shouldAutoRefreshProtocolEditorEdgeLabel('Manual', 'Old')).toBe(false);
     });
 
-    it('routes backward edges around nodes instead of through them', () => {
-      const route = protocolEditorEdgeRoute(500, 100, 200, 120);
-      expect(route.d).toContain('L 200');
+    it('routes backward horizontal edges around nodes instead of through them', () => {
+      const route = protocolEditorEdgeRoute(500, 100, 200, 120, 'LR');
+      expect(route.d).toContain('L 144');
       expect(route.labelY).toBeGreaterThan(120);
     });
 
-    it('keeps forward edges as direct bezier curves', () => {
-      const route = protocolEditorEdgeRoute(100, 100, 500, 120);
+    it('keeps forward horizontal edges as direct bezier curves', () => {
+      const route = protocolEditorEdgeRoute(100, 100, 500, 120, 'LR');
       expect(route.d).toContain('C');
       expect(route.d).not.toContain('L 500');
       expect(route.labelX).toBe(300);
+    });
+
+    it('routes forward vertical edges from bottom to top anchors', () => {
+      const route = protocolEditorEdgeRoute(200, 100, 240, 420, 'TB');
+      expect(route.d).toContain('C 200 260');
+      expect(route.labelY).toBe(260);
+    });
+
+    it('routes backward vertical edges around the right side', () => {
+      const route = protocolEditorEdgeRoute(200, 320, 160, 120, 'TB');
+      expect(route.d).toContain('L 288 64');
+      expect(route.labelX).toBeGreaterThan(260);
     });
 
     it('shows labels for answer/snippet targets and loop exit edges regardless of target kind', () => {
