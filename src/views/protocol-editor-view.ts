@@ -139,50 +139,6 @@ function protocolEditorMeasuredNodeAnchor(
   }, side);
 }
 
-function protocolEditorDagrePolylineToPath(points: Array<{ x: number; y: number }>): string {
-  if (points.length === 0) return '';
-  const firstPoint = points[0]!;
-  return `M ${firstPoint.x} ${firstPoint.y}` + points.slice(1).map((point) => ` L ${point.x} ${point.y}`).join('');
-}
-
-function protocolEditorPolylineMidpoint(points: Array<{ x: number; y: number }>): { x: number; y: number } {
-  if (points.length === 0) return { x: 0, y: 0 };
-  const firstPoint = points[0]!;
-  if (points.length === 1) return { x: firstPoint.x, y: firstPoint.y };
-
-  let totalLength = 0;
-  const segments: Array<{ start: { x: number; y: number }; end: { x: number; y: number }; length: number }> = [];
-  for (let index = 1; index < points.length; index += 1) {
-    const start = points[index - 1]!;
-    const end = points[index]!;
-    const length = Math.hypot(end.x - start.x, end.y - start.y);
-    segments.push({ start, end, length });
-    totalLength += length;
-  }
-
-  if (totalLength <= 0) {
-    const fallback = points[Math.floor(points.length / 2)] ?? firstPoint;
-    return { x: fallback.x, y: fallback.y };
-  }
-
-  let traversed = 0;
-  const midpointDistance = totalLength / 2;
-  for (const segment of segments) {
-    if (traversed + segment.length >= midpointDistance) {
-      const remaining = midpointDistance - traversed;
-      const ratio = segment.length <= 0 ? 0 : remaining / segment.length;
-      return {
-        x: segment.start.x + (segment.end.x - segment.start.x) * ratio,
-        y: segment.start.y + (segment.end.y - segment.start.y) * ratio,
-      };
-    }
-    traversed += segment.length;
-  }
-
-  const last = points[points.length - 1] ?? firstPoint;
-  return { x: last.x, y: last.y };
-}
-
 function protocolEditorAnchorToSurfacePoint(anchor: ProtocolEditorPortAnchor): { x: number; y: number } {
   return {
     x: worldXToSurfaceX(anchor.x),
@@ -809,30 +765,8 @@ export class ProtocolEditorView extends ItemView {
     if (this.doc === null || this.svgEl === null) return;
     this.svgEl.empty();
     const nodeById = new Map(this.doc.nodes.map(node => [node.id, node]));
-    const nodeGeometry = this.collectCurrentNodeGeometry();
     const outputSide = protocolEditorOutputPortSide(this.layoutDirection);
     const inputSide = protocolEditorInputPortSide(this.layoutDirection);
-    const graph = new dagre.graphlib.Graph({ compound: false });
-    const layout = PROTOCOL_EDITOR_LAYOUT_CONFIG[this.layoutDirection];
-    graph.setGraph({
-      rankdir: layout.direction,
-      nodesep: layout.nodesep,
-      ranksep: layout.ranksep,
-      edgesep: layout.edgesep,
-      marginx: 64,
-      marginy: 64,
-    });
-    graph.setDefaultEdgeLabel(() => ({}));
-    for (const node of this.doc.nodes) {
-      const geometry = nodeGeometry.get(node.id) ?? this.fallbackNodeGeometry(node);
-      graph.setNode(node.id, { width: geometry.width, height: geometry.height });
-    }
-    for (const edge of this.doc.edges) {
-      if (!nodeById.has(edge.fromNodeId) || !nodeById.has(edge.toNodeId)) continue;
-      graph.setEdge(edge.fromNodeId, edge.toNodeId, {});
-    }
-    dagre.layout(graph);
-
     for (const edge of this.doc.edges) {
       const from = nodeById.get(edge.fromNodeId);
       const to = nodeById.get(edge.toNodeId);
@@ -841,19 +775,11 @@ export class ProtocolEditorView extends ItemView {
       const targetNodeEl = this.nodeElementById.get(to.id);
       const source = sourceNodeEl !== undefined
         ? protocolEditorAnchorToSurfacePoint(protocolEditorMeasuredNodeAnchor(sourceNodeEl, outputSide))
-        : protocolEditorAnchorToSurfacePoint(protocolEditorPortAnchor((nodeGeometry.get(from.id) ?? from), outputSide));
+        : protocolEditorAnchorToSurfacePoint(protocolEditorPortAnchor(from, outputSide));
       const target = targetNodeEl !== undefined
         ? protocolEditorAnchorToSurfacePoint(protocolEditorMeasuredNodeAnchor(targetNodeEl, inputSide))
-        : protocolEditorAnchorToSurfacePoint(protocolEditorPortAnchor((nodeGeometry.get(to.id) ?? to), inputSide));
-      const dagreEdge = graph.edge(edge.fromNodeId, edge.toNodeId) as { points?: Array<{ x: number; y: number }> } | undefined;
-      const interiorPoints = dagreEdge?.points?.slice(1, -1) ?? [];
-      const routePoints = [source, ...interiorPoints, target];
-      const midpoint = protocolEditorPolylineMidpoint(routePoints);
-      const route = {
-        d: protocolEditorDagrePolylineToPath(routePoints),
-        labelX: midpoint.x,
-        labelY: midpoint.y,
-      };
+        : protocolEditorAnchorToSurfacePoint(protocolEditorPortAnchor(to, inputSide));
+      const route = protocolEditorEdgeRoute(source.x, source.y, target.x, target.y, this.layoutDirection);
       const group = this.svgEl.createSvg('g', {
         attr: {
           class: 'rp-protocol-editor-edge-group',
