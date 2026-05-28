@@ -926,7 +926,7 @@ export class InlineRunnerModal {
       return;
     }
 
-    const pickId = snippet.kind === 'md' ? snippet.path : (snippet.id ?? snippet.name);
+    const pickId = (snippet.kind === 'md' || snippet.kind === 'md-template') ? snippet.path : (snippet.id ?? snippet.name);
     this.runner.pickSnippet(pickId);
 
     if (snippet.kind === 'md') {
@@ -973,23 +973,36 @@ export class InlineRunnerModal {
       ? snippetId
       : isPhase51FullPath
         ? `${root}/${snippetId}`
-        : `${root}/${snippetId}.json`;
+        : null; // determined below via extension trial
 
-    let snippet = await this.plugin.snippetService.load(absPath);
+    let snippet = null as Awaited<ReturnType<typeof this.plugin.snippetService.load>>;
+    // Try .json then .md when snippetId lacks extension (picker basename case).
+    if (absPath !== null) {
+      snippet = await this.plugin.snippetService.load(absPath);
+    } else {
+      snippet = await this.plugin.snippetService.load(`${root}/${snippetId}.json`);
+      if (snippet === null) {
+        snippet = await this.plugin.snippetService.load(`${root}/${snippetId}.md`);
+      }
+    }
 
     // Phase 59 INLINE-FIX-05: fallback scan for JSON snippets in subdirectories.
     // When a snippet was selected from a picker in a subdirectory, pickId is a
     // basename, so the direct path misses the subdirectory. Scan vault files
     // under the snippet root for a matching basename.
     if (snippet === null && !isPhase51FullPath) {
-      const targetBasename = `${snippetId}.json`;
-      const candidates = this.app.vault.getFiles().filter((f) => {
-        if (!f.path.startsWith(root + '/')) return false;
-        const parts = f.path.split('/');
-        return parts[parts.length - 1]! === targetBasename;
-      });
-      if (candidates.length === 1) {
-        snippet = await this.plugin.snippetService.load(candidates[0]!.path);
+      // Try .json then .md in subdirectories.
+      for (const ext of ['.json', '.md']) {
+        const targetBasename = `${snippetId}${ext}`;
+        const candidates = this.app.vault.getFiles().filter((f) => {
+          if (!f.path.startsWith(root + '/')) return false;
+          const parts = f.path.split('/');
+          return parts[parts.length - 1]! === targetBasename;
+        });
+        if (candidates.length === 1) {
+          snippet = await this.plugin.snippetService.load(candidates[0]!.path);
+          if (snippet !== null) break;
+        }
       }
     }
 
@@ -1017,6 +1030,35 @@ export class InlineRunnerModal {
       }
       // Legacy path — MD snippet via non-full-path id; treat as not-found.
       renderSnippetFillNotFound(questionZone, snippetId);
+      return;
+    }
+
+    if (snippet.kind === 'md-template') {
+      if (snippet.placeholders.length === 0) {
+        this.runner.completeSnippet(snippet.template);
+        await this.appendDeltaFromAccumulator(beforeText);
+        this.render();
+        return;
+      }
+      // md-template with placeholders — open the stacked fill-in modal.
+      const modal = new SnippetFillInModal(this.app, snippet, this.plugin.i18n.t.bind(this.plugin.i18n));
+      this.fillModal = modal;
+      this.isFillModalOpen = true;
+      modal.open();
+      let rendered: string | null;
+      try {
+        rendered = await modal.result;
+      } finally {
+        this.isFillModalOpen = false;
+        this.fillModal = null;
+      }
+      if (rendered !== null) {
+        this.runner.completeSnippet(rendered);
+      } else {
+        this.runner.completeSnippet('');
+      }
+      await this.appendDeltaFromAccumulator(beforeText);
+      this.render();
       return;
     }
 
