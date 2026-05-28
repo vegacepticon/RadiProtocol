@@ -128,26 +128,28 @@ describe('protocol editor helper functions', () => {
 
     it('routes backward horizontal edges around nodes instead of through them', () => {
       const route = protocolEditorEdgeRoute(500, 100, 200, 120, 'LR');
-      expect(route.d).toContain('L 144');
+      expect(route.d).toContain('L 540 144');
+      expect(route.d).toContain('L 136 168');
       expect(route.labelY).toBeGreaterThan(120);
     });
 
-    it('keeps forward horizontal edges as direct bezier curves', () => {
+    it('keeps forward horizontal edges as stepped orthogonal segments', () => {
       const route = protocolEditorEdgeRoute(100, 100, 500, 120, 'LR');
-      expect(route.d).toContain('C');
-      expect(route.d).not.toContain('L 500');
+      expect(route.d).toContain('Q 300 100 300 124');
+      expect(route.d).toContain('L 500 120');
       expect(route.labelX).toBe(300);
     });
 
-    it('routes forward vertical edges from bottom to top anchors', () => {
+    it('routes forward vertical edges from bottom to top anchors with orthogonal bends', () => {
       const route = protocolEditorEdgeRoute(200, 100, 240, 420, 'TB');
-      expect(route.d).toContain('C 200 260');
-      expect(route.labelY).toBe(260);
+      expect(route.d).toContain('Q 200 260 224 260');
+      expect(route.d).toContain('L 240 420');
+      expect(route.labelY).toBe(250);
     });
 
     it('routes backward vertical edges around the right side', () => {
       const route = protocolEditorEdgeRoute(200, 320, 160, 120, 'TB');
-      expect(route.d).toContain('L 288 64');
+      expect(route.d).toContain('L 260 56');
       expect(route.labelX).toBeGreaterThan(260);
     });
 

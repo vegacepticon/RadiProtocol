@@ -61,6 +61,11 @@ interface ProtocolEditorNodeMeasurement {
   height: number;
 }
 
+interface ProtocolEditorMeasuredNodeGeometry extends ProtocolEditorNodeMeasurement {
+  x: number;
+  y: number;
+}
+
 interface ProtocolEditorLayoutOptions {
   direction: ProtocolEditorLayoutDirection;
   nodesep: number;
@@ -109,6 +114,73 @@ function protocolEditorNodeMeasurement(node: Pick<ProtocolNodeRecord, 'width' | 
     width: Math.max(MIN_NODE_WIDTH, Math.round(node.width || DEFAULT_NODE_WIDTH)),
     height: Math.max(MIN_NODE_HEIGHT, Math.round(node.height || DEFAULT_NODE_HEIGHT)),
   };
+}
+
+function protocolEditorNormalizeNodeMeasurement(width: number, height: number): ProtocolEditorNodeMeasurement {
+  return {
+    width: Math.max(MIN_NODE_WIDTH, Math.round(width || DEFAULT_NODE_WIDTH)),
+    height: Math.max(MIN_NODE_HEIGHT, Math.round(height || DEFAULT_NODE_HEIGHT)),
+  };
+}
+
+function protocolEditorMeasuredNodeAnchor(
+  nodeEl: HTMLElement,
+  side: ProtocolEditorPortSide,
+): ProtocolEditorPortAnchor {
+  const left = parseFloat(nodeEl.style.left || '0');
+  const top = parseFloat(nodeEl.style.top || '0');
+  const width = Math.max(MIN_NODE_WIDTH, nodeEl.offsetWidth);
+  const height = Math.max(MIN_NODE_HEIGHT, nodeEl.offsetHeight);
+  return protocolEditorPortAnchor({
+    x: left - PROTOCOL_EDITOR_ORIGIN_X,
+    y: top - PROTOCOL_EDITOR_ORIGIN_Y,
+    width,
+    height,
+  }, side);
+}
+
+function protocolEditorDagrePolylineToPath(points: Array<{ x: number; y: number }>): string {
+  if (points.length === 0) return '';
+  const firstPoint = points[0]!;
+  return `M ${firstPoint.x} ${firstPoint.y}` + points.slice(1).map((point) => ` L ${point.x} ${point.y}`).join('');
+}
+
+function protocolEditorPolylineMidpoint(points: Array<{ x: number; y: number }>): { x: number; y: number } {
+  if (points.length === 0) return { x: 0, y: 0 };
+  const firstPoint = points[0]!;
+  if (points.length === 1) return { x: firstPoint.x, y: firstPoint.y };
+
+  let totalLength = 0;
+  const segments: Array<{ start: { x: number; y: number }; end: { x: number; y: number }; length: number }> = [];
+  for (let index = 1; index < points.length; index += 1) {
+    const start = points[index - 1]!;
+    const end = points[index]!;
+    const length = Math.hypot(end.x - start.x, end.y - start.y);
+    segments.push({ start, end, length });
+    totalLength += length;
+  }
+
+  if (totalLength <= 0) {
+    const fallback = points[Math.floor(points.length / 2)] ?? firstPoint;
+    return { x: fallback.x, y: fallback.y };
+  }
+
+  let traversed = 0;
+  const midpointDistance = totalLength / 2;
+  for (const segment of segments) {
+    if (traversed + segment.length >= midpointDistance) {
+      const remaining = midpointDistance - traversed;
+      const ratio = segment.length <= 0 ? 0 : remaining / segment.length;
+      return {
+        x: segment.start.x + (segment.end.x - segment.start.x) * ratio,
+        y: segment.start.y + (segment.end.y - segment.start.y) * ratio,
+      };
+    }
+    traversed += segment.length;
+  }
+
+  const last = points[points.length - 1] ?? firstPoint;
+  return { x: last.x, y: last.y };
 }
 
 function protocolEditorAnchorToSurfacePoint(anchor: ProtocolEditorPortAnchor): { x: number; y: number } {
@@ -283,55 +355,85 @@ export function protocolEditorEdgeRoute(
   y2: number,
   direction: ProtocolEditorLayoutDirection = 'LR',
 ): ProtocolEditorEdgeRoute {
-  const forwardGap = 24;
-  const primaryDelta = direction === 'TB' ? y2 - y1 : x2 - x1;
-  const secondaryDelta = direction === 'TB' ? x2 - x1 : y2 - y1;
+  const bend = 24;
+  const rankDelta = direction === 'TB' ? y2 - y1 : x2 - x1;
+  const normalDelta = direction === 'TB' ? x2 - x1 : y2 - y1;
+  const forward = rankDelta >= 0;
 
-  if (primaryDelta >= forwardGap) {
-    const controlOffset = Math.max(48, Math.abs(primaryDelta) / 2);
+  if (forward) {
     if (direction === 'TB') {
+      const midY = y1 + rankDelta / 2;
+      const horizontalSign = Math.sign(normalDelta || 1);
       return {
-        d: `M ${x1} ${y1} C ${x1} ${y1 + controlOffset}, ${x2} ${y2 - controlOffset}, ${x2} ${y2}`,
-        labelX: (x1 + x2) / 2 + (Math.abs(secondaryDelta) > 28 ? 16 : 0),
-        labelY: (y1 + y2) / 2,
+        d: [
+          `M ${x1} ${y1}`,
+          `L ${x1} ${midY - bend}`,
+          `Q ${x1} ${midY} ${x1 + horizontalSign * bend} ${midY}`,
+          `L ${x2 - horizontalSign * bend} ${midY}`,
+          `Q ${x2} ${midY} ${x2} ${midY + bend}`,
+          `L ${x2} ${y2}`,
+        ].join(' '),
+        labelX: (x1 + x2) / 2,
+        labelY: midY - 10,
       };
     }
 
+    const midX = x1 + rankDelta / 2;
+    const verticalSign = Math.sign(normalDelta || 1);
     return {
-      d: `M ${x1} ${y1} C ${x1 + controlOffset} ${y1}, ${x2 - controlOffset} ${y2}, ${x2} ${y2}`,
-      labelX: (x1 + x2) / 2,
-      labelY: (y1 + y2) / 2 - (Math.abs(secondaryDelta) > 28 ? 8 : 0),
+      d: [
+        `M ${x1} ${y1}`,
+        `L ${midX - bend} ${y1}`,
+        `Q ${midX} ${y1} ${midX} ${y1 + verticalSign * bend}`,
+        `L ${midX} ${y2 - verticalSign * bend}`,
+        `Q ${midX} ${y2} ${midX + bend} ${y2}`,
+        `L ${x2} ${y2}`,
+      ].join(' '),
+      labelX: midX,
+      labelY: (y1 + y2) / 2 - 10,
     };
   }
 
   if (direction === 'TB') {
-    const loopX = Math.max(x1, x2) + Math.max(88, Math.abs(secondaryDelta) / 2 + 56);
-    const outY = y1 + 56;
-    const inY = y2 - 56;
+    const routeX = Math.max(x1, x2) + Math.max(56, Math.abs(normalDelta) / 2 + 40);
+    const exitY = y1 + 40;
+    const entryY = y2 - 40;
     return {
       d: [
         `M ${x1} ${y1}`,
-        `C ${x1} ${outY}, ${loopX} ${outY}, ${loopX} ${outY}`,
-        `L ${loopX} ${inY}`,
-        `C ${loopX} ${inY}, ${x2} ${inY}, ${x2} ${y2}`,
+        `L ${x1} ${exitY - bend}`,
+        `Q ${x1} ${exitY} ${x1 + bend} ${exitY}`,
+        `L ${routeX - bend} ${exitY}`,
+        `Q ${routeX} ${exitY} ${routeX} ${exitY + bend}`,
+        `L ${routeX} ${entryY - bend}`,
+        `Q ${routeX} ${entryY} ${routeX - bend} ${entryY}`,
+        `L ${x2 + bend} ${entryY}`,
+        `Q ${x2} ${entryY} ${x2} ${entryY + bend}`,
+        `L ${x2} ${y2}`,
       ].join(' '),
-      labelX: loopX + 16,
-      labelY: (outY + inY) / 2,
+      labelX: routeX + 14,
+      labelY: (exitY + entryY) / 2,
     };
   }
 
-  const loopY = Math.max(y1, y2) + Math.max(64, Math.abs(secondaryDelta) / 2 + 44);
-  const outX = x1 + 56;
-  const inX = x2 - 56;
+  const routeY = Math.max(y1, y2) + Math.max(48, Math.abs(normalDelta) / 2 + 32);
+  const exitX = x1 + 40;
+  const entryX = x2 - 40;
   return {
     d: [
       `M ${x1} ${y1}`,
-      `C ${outX} ${y1}, ${outX} ${loopY}, ${outX} ${loopY}`,
-      `L ${inX} ${loopY}`,
-      `C ${inX} ${loopY}, ${inX} ${y2}, ${x2} ${y2}`,
+      `L ${exitX - bend} ${y1}`,
+      `Q ${exitX} ${y1} ${exitX} ${y1 + bend}`,
+      `L ${exitX} ${routeY - bend}`,
+      `Q ${exitX} ${routeY} ${exitX + bend} ${routeY}`,
+      `L ${entryX - bend} ${routeY}`,
+      `Q ${entryX} ${routeY} ${entryX} ${routeY - bend}`,
+      `L ${entryX} ${y2 + bend}`,
+      `Q ${entryX} ${y2} ${entryX + bend} ${y2}`,
+      `L ${x2} ${y2}`,
     ].join(' '),
-    labelX: (outX + inX) / 2,
-    labelY: loopY - 8,
+    labelX: (exitX + entryX) / 2,
+    labelY: routeY - 10,
   };
 }
 
@@ -347,11 +449,13 @@ export class ProtocolEditorView extends ItemView {
   private minimapSvgEl: SVGSVGElement | null = null;
   private minimapViewportEl: SVGRectElement | null = null;
   private minimapWorldBounds: { x: number; y: number; width: number; height: number } | null = null;
-  private zoom = 1;
+  private readonly nodeElementById = new Map<string, HTMLElement>();
   private panState: PanState | null = null;
+
   private connectionDragState: ConnectionDragState | null = null;
   private viewportSaveTimer: number | null = null;
   private layoutDirection: ProtocolEditorLayoutDirection = 'LR';
+  private zoom: number = 1;
 
   constructor(leaf: WorkspaceLeaf, plugin: RadiProtocolPlugin) {
     super(leaf);
@@ -643,8 +747,6 @@ export class ProtocolEditorView extends ItemView {
       return;
     }
 
-    this.renderEdges();
-
     for (const node of this.doc.nodes) {
       const nodeEl = this.surfaceEl.createDiv({ cls: 'rp-protocol-editor-node' });
       nodeEl.toggleClass('is-untyped', node.kind === null);
@@ -679,6 +781,7 @@ export class ProtocolEditorView extends ItemView {
       this.bindConnectionDrag(outputPort, node);
       this.bindDrag(nodeEl, node);
       this.bindResize(resizeHandle, nodeEl, node);
+      this.nodeElementById.set(node.id, nodeEl);
 
       /* Phase 4D — double-click to edit */
       nodeEl.addEventListener('dblclick', (e) => {
@@ -698,6 +801,7 @@ export class ProtocolEditorView extends ItemView {
       });
     }
 
+    this.renderEdges();
     this.renderMinimap();
   }
 
@@ -705,15 +809,51 @@ export class ProtocolEditorView extends ItemView {
     if (this.doc === null || this.svgEl === null) return;
     this.svgEl.empty();
     const nodeById = new Map(this.doc.nodes.map(node => [node.id, node]));
+    const nodeGeometry = this.collectCurrentNodeGeometry();
     const outputSide = protocolEditorOutputPortSide(this.layoutDirection);
     const inputSide = protocolEditorInputPortSide(this.layoutDirection);
+    const graph = new dagre.graphlib.Graph({ compound: false });
+    const layout = PROTOCOL_EDITOR_LAYOUT_CONFIG[this.layoutDirection];
+    graph.setGraph({
+      rankdir: layout.direction,
+      nodesep: layout.nodesep,
+      ranksep: layout.ranksep,
+      edgesep: layout.edgesep,
+      marginx: 64,
+      marginy: 64,
+    });
+    graph.setDefaultEdgeLabel(() => ({}));
+    for (const node of this.doc.nodes) {
+      const geometry = nodeGeometry.get(node.id) ?? this.fallbackNodeGeometry(node);
+      graph.setNode(node.id, { width: geometry.width, height: geometry.height });
+    }
+    for (const edge of this.doc.edges) {
+      if (!nodeById.has(edge.fromNodeId) || !nodeById.has(edge.toNodeId)) continue;
+      graph.setEdge(edge.fromNodeId, edge.toNodeId, {});
+    }
+    dagre.layout(graph);
+
     for (const edge of this.doc.edges) {
       const from = nodeById.get(edge.fromNodeId);
       const to = nodeById.get(edge.toNodeId);
       if (from === undefined || to === undefined) continue;
-      const source = protocolEditorAnchorToSurfacePoint(protocolEditorPortAnchor(from, outputSide));
-      const target = protocolEditorAnchorToSurfacePoint(protocolEditorPortAnchor(to, inputSide));
-      const route = protocolEditorEdgeRoute(source.x, source.y, target.x, target.y, this.layoutDirection);
+      const sourceNodeEl = this.nodeElementById.get(from.id);
+      const targetNodeEl = this.nodeElementById.get(to.id);
+      const source = sourceNodeEl !== undefined
+        ? protocolEditorAnchorToSurfacePoint(protocolEditorMeasuredNodeAnchor(sourceNodeEl, outputSide))
+        : protocolEditorAnchorToSurfacePoint(protocolEditorPortAnchor((nodeGeometry.get(from.id) ?? from), outputSide));
+      const target = targetNodeEl !== undefined
+        ? protocolEditorAnchorToSurfacePoint(protocolEditorMeasuredNodeAnchor(targetNodeEl, inputSide))
+        : protocolEditorAnchorToSurfacePoint(protocolEditorPortAnchor((nodeGeometry.get(to.id) ?? to), inputSide));
+      const dagreEdge = graph.edge(edge.fromNodeId, edge.toNodeId) as { points?: Array<{ x: number; y: number }> } | undefined;
+      const interiorPoints = dagreEdge?.points?.slice(1, -1) ?? [];
+      const routePoints = [source, ...interiorPoints, target];
+      const midpoint = protocolEditorPolylineMidpoint(routePoints);
+      const route = {
+        d: protocolEditorDagrePolylineToPath(routePoints),
+        labelX: midpoint.x,
+        labelY: midpoint.y,
+      };
       const group = this.svgEl.createSvg('g', {
         attr: {
           class: 'rp-protocol-editor-edge-group',
@@ -946,6 +1086,38 @@ export class ProtocolEditorView extends ItemView {
 
   private applyNodePosition(nodeEl: HTMLElement, node: ProtocolNodeRecord): void {
     nodeEl.setAttr('style', `left:${worldXToSurfaceX(node.x)}px;top:${worldYToSurfaceY(node.y)}px;width:${node.width}px;min-height:${node.height}px;${node.color !== undefined ? `--rp-node-color:${node.color};` : ''}`);
+  }
+
+  private fallbackNodeGeometry(node: ProtocolNodeRecord): ProtocolEditorMeasuredNodeGeometry {
+    const measurement = protocolEditorNodeMeasurement(node);
+    return {
+      x: node.x,
+      y: node.y,
+      width: measurement.width,
+      height: measurement.height,
+    };
+  }
+
+  private collectCurrentNodeGeometry(): Map<string, ProtocolEditorMeasuredNodeGeometry> {
+    const geometry = new Map<string, ProtocolEditorMeasuredNodeGeometry>();
+    if (this.doc === null) return geometry;
+    for (const node of this.doc.nodes) {
+      const nodeEl = this.nodeElementById.get(node.id);
+      if (nodeEl === undefined) {
+        geometry.set(node.id, this.fallbackNodeGeometry(node));
+        continue;
+      }
+      const left = parseFloat(nodeEl.style.left || '0');
+      const top = parseFloat(nodeEl.style.top || '0');
+      const measurement = protocolEditorNormalizeNodeMeasurement(nodeEl.offsetWidth, nodeEl.offsetHeight);
+      geometry.set(node.id, {
+        x: left - PROTOCOL_EDITOR_ORIGIN_X,
+        y: top - PROTOCOL_EDITOR_ORIGIN_Y,
+        width: measurement.width,
+        height: measurement.height,
+      });
+    }
+    return geometry;
   }
 
   private bindConnectionDrag(outputPort: HTMLElement, node: ProtocolNodeRecord): void {
@@ -1357,10 +1529,11 @@ export class ProtocolEditorView extends ItemView {
     });
     g.setDefaultEdgeLabel(() => ({}));
 
+    const currentGeometry = this.collectCurrentNodeGeometry();
     const nodeMap = new Map<string, ProtocolNodeRecord>();
     for (const node of nodes) {
       nodeMap.set(node.id, node);
-      const measurement = protocolEditorNodeMeasurement(node);
+      const measurement = currentGeometry.get(node.id) ?? this.fallbackNodeGeometry(node);
       g.setNode(node.id, measurement);
     }
     for (const edge of edges) {
@@ -1371,10 +1544,12 @@ export class ProtocolEditorView extends ItemView {
     dagre.layout(g);
 
     const positions = new Map<string, { x: number; y: number }>();
+    const measuredSizes = new Map<string, ProtocolEditorNodeMeasurement>();
     for (const node of nodes) {
       const dagreNode = g.node(node.id);
       if (dagreNode === undefined) continue;
-      const measurement = protocolEditorNodeMeasurement(node);
+      const measurement = currentGeometry.get(node.id) ?? this.fallbackNodeGeometry(node);
+      measuredSizes.set(node.id, { width: measurement.width, height: measurement.height });
       positions.set(node.id, {
         x: dagreNode.x - measurement.width / 2,
         y: dagreNode.y - measurement.height / 2,
@@ -1385,7 +1560,7 @@ export class ProtocolEditorView extends ItemView {
     for (const node of nodes) {
       const p = positions.get(node.id);
       if (p === undefined) continue;
-      const measurement = protocolEditorNodeMeasurement(node);
+      const measurement = measuredSizes.get(node.id) ?? protocolEditorNodeMeasurement(node);
       if (p.x < minX) minX = p.x;
       if (p.x + measurement.width > maxX) maxX = p.x + measurement.width;
       if (p.y < minY) minY = p.y;
@@ -1404,7 +1579,7 @@ export class ProtocolEditorView extends ItemView {
       const updatedNodes = existing.nodes.map((n) => {
         const p = positions.get(n.id);
         if (p === undefined) return n;
-        const measurement = protocolEditorNodeMeasurement(n);
+        const measurement = measuredSizes.get(n.id) ?? protocolEditorNodeMeasurement(n);
         return { ...n, x: p.x, y: p.y, width: measurement.width, height: measurement.height };
       });
       return {
