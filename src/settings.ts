@@ -37,10 +37,6 @@ export interface RadiProtocolSettings {
   libraryUrl: string;
   /** URL of the external protocol library index JSON. */
   protocolLibraryUrl: string;
-  /** Enable library maintainer admin mode for managing local library repo. */
-  libraryMaintainerMode?: boolean;
-  /** Absolute path to the local RadiProtocol-Library repo checkout. */
-  libraryRepoPath?: string;
 }
 
 export const DEFAULT_SETTINGS: RadiProtocolSettings = {
@@ -52,8 +48,6 @@ export const DEFAULT_SETTINGS: RadiProtocolSettings = {
   locale: 'en',
   libraryUrl: DEFAULT_LIBRARY_URL,
   protocolLibraryUrl: DEFAULT_PROTOCOL_LIBRARY_URL,
-  libraryMaintainerMode: false,
-  libraryRepoPath: '',
 };
 
 export class RadiProtocolSettingsTab extends PluginSettingTab {

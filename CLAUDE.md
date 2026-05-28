@@ -71,7 +71,6 @@ Current source files:
 - `snippet-manager.css` — snippet manager + placeholder chips.
 - `snippet-fill-modal.css` — snippet fill-in modal.
 - `library-preview-modal.css` — library snippet preview modal.
-- `library-admin.css` — library maintainer/admin modal.
 - `loop-support.css` — loop iteration UI hooks shared by runner UI.
 - `snippet-tree-picker.css` — snippet tree picker.
 - `inline-runner.css` — inline runner modal UI.
