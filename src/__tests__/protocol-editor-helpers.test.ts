@@ -126,6 +126,20 @@ describe('protocol editor helper functions', () => {
       expect(shouldAutoRefreshProtocolEditorEdgeLabel('Manual', 'Old')).toBe(false);
     });
 
+    it('renders perfectly straight horizontal edges as simple lines', () => {
+      const route = protocolEditorEdgeRoute(100, 100, 500, 100, 'LR');
+      expect(route.d).toBe('M 100 100 L 500 100');
+      expect(route.labelX).toBe(300);
+      expect(route.labelY).toBe(90);
+    });
+
+    it('renders perfectly straight vertical edges as simple lines', () => {
+      const route = protocolEditorEdgeRoute(200, 100, 200, 400, 'TB');
+      expect(route.d).toBe('M 200 100 L 200 400');
+      expect(route.labelX).toBe(200);
+      expect(route.labelY).toBe(240);
+    });
+
     it('routes backward horizontal edges around nodes instead of through them', () => {
       const route = protocolEditorEdgeRoute(500, 100, 200, 120, 'LR');
       expect(route.d).toContain('L 540 144');

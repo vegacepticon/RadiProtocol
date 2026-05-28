@@ -318,6 +318,13 @@ export function protocolEditorEdgeRoute(
 
   if (forward) {
     if (direction === 'TB') {
+      if (Math.abs(normalDelta) < 1) {
+        return {
+          d: `M ${x1} ${y1} L ${x2} ${y2}`,
+          labelX: (x1 + x2) / 2,
+          labelY: (y1 + y2) / 2 - 10,
+        };
+      }
       const midY = y1 + rankDelta / 2;
       const horizontalSign = Math.sign(normalDelta || 1);
       return {
@@ -335,6 +342,13 @@ export function protocolEditorEdgeRoute(
     }
 
     const midX = x1 + rankDelta / 2;
+    if (Math.abs(normalDelta) < 1) {
+      return {
+        d: `M ${x1} ${y1} L ${x2} ${y2}`,
+        labelX: midX,
+        labelY: y1 - 10,
+      };
+    }
     const verticalSign = Math.sign(normalDelta || 1);
     return {
       d: [
@@ -1257,6 +1271,7 @@ export class ProtocolEditorView extends ItemView {
       nodeEl.addClass('rp-node-dragging');
       document.body.addClass('rp-protocol-editor-drag-active');
 
+      let dragRafId: number | null = null;
       const onMove = (ev: MouseEvent) => {
         const dx = screenDeltaToProtocolEditorDelta(ev.clientX - startX, this.zoom);
         const dy = screenDeltaToProtocolEditorDelta(ev.clientY - startY, this.zoom);
@@ -1265,10 +1280,19 @@ export class ProtocolEditorView extends ItemView {
         node.x = newX;
         node.y = newY;
         this.applyNodePosition(nodeEl, node);
-        this.renderEdges();
+        if (dragRafId === null) {
+          dragRafId = window.requestAnimationFrame(() => {
+            dragRafId = null;
+            this.renderEdges();
+          });
+        }
       };
 
       const onUp = (ev: MouseEvent) => {
+        if (dragRafId !== null) {
+          window.cancelAnimationFrame(dragRafId);
+          dragRafId = null;
+        }
         document.removeEventListener('mousemove', onMove);
         document.removeEventListener('mouseup', onUp);
         nodeEl.removeClass('rp-node-dragging');
