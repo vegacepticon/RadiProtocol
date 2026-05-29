@@ -198,9 +198,19 @@ export class LibraryService {
       const response = await requestUrl({ url: rawUrl, method: 'GET' });
       return response.text;
     } catch (err) {
-      console.error('[RadiProtocol][Library] snippet download failed:', err);
-      new Notice(this.t('library.networkError'));
-      return null;
+      // Obsidian's requestUrl may re-decode or re-encode the URL on some
+      // platforms/versions. Fall back to standard fetch() which passes URLs
+      // through unmolested.
+      console.warn('[RadiProtocol][Library] requestUrl failed, trying fetch():', (err as Error)?.message ?? err);
+      try {
+        const response = await fetch(rawUrl);
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        return await response.text();
+      } catch (fetchErr) {
+        console.error('[RadiProtocol][Library] fetch() fallback also failed:', fetchErr);
+        new Notice(this.t('library.networkError'));
+        return null;
+      }
     }
   }
 

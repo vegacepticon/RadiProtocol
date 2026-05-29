@@ -27,6 +27,7 @@ interface MockEl {
 	setAttribute: (k: string, v: string) => void;
 	getAttribute: (k: string) => string | null;
 	addEventListener: (type: string, handler: (ev: unknown) => void) => void;
+	setCssProps: (props: Record<string, string>) => void;
 }
 
 function makeEl(tag = 'div'): MockEl {
@@ -74,6 +75,7 @@ function makeEl(tag = 'div'): MockEl {
 			arr.push(handler);
 			listeners.set(type, arr);
 		},
+		setCssProps(_props: Record<string, string>): void { /* no-op in test mock */ },
 	};
 	return el;
 }

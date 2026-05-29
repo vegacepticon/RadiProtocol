@@ -323,11 +323,13 @@ export class LibraryBrowserModal extends Modal {
     const actions = row.createDiv({ cls: 'rp-library-entry-actions' });
     const previewBtn = createButton(actions, { cls: 'rp-library-preview-btn', attr: { 'aria-label': this.plugin.i18n.t('library.previewAria', { name: entry.name }) } });
     previewBtn.setText(this.plugin.i18n.t('library.preview'));
+    previewBtn.setCssProps({ 'min-width': '80px', 'padding': 'var(--size-2-1) var(--size-4-3)' });
     previewBtn.addEventListener('click', () => {
       void this.openPreview(entry, previewBtn);
     });
     const installBtn = createButton(actions, { cls: 'mod-cta rp-library-install-btn', attr: { 'aria-label': this.plugin.i18n.t('library.installAria', { name: entry.name }) } });
     installBtn.setText(this.plugin.i18n.t('library.install'));
+    installBtn.setCssProps({ 'min-width': '80px', 'padding': 'var(--size-2-1) var(--size-4-3)' });
     installBtn.addEventListener('click', () => {
       void this.installSingleEntry(entry, installBtn);
     });
