@@ -669,16 +669,16 @@
   gap: var(--size-4-1);
 }
 
-.rp-library-preview-btn,
-.rp-library-install-btn,
-.rp-library-install-all-btn,
-.rp-library-install-folder-btn {
+button.rp-library-preview-btn,
+button.rp-library-install-btn,
+button.rp-library-install-all-btn,
+button.rp-library-install-folder-btn {
   flex-shrink: 0;
   font-size: var(--font-ui-smaller);
-  padding: var(--size-2-1) var(--size-4-3);
+  padding: var(--size-2-1) var(--size-4-3) !important;
   line-height: 1;
   height: auto;
-  min-width: 80px;
+  min-width: 80px !important;
 }
 
 .rp-library-error {
