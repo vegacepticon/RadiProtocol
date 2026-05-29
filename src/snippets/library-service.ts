@@ -190,7 +190,10 @@ export class LibraryService {
   }
 
   private async fetchSnippetText(entry: LibrarySnippetEntry): Promise<string | null> {
-    const rawUrl = this.getRepoBaseUrl() + entry.path;
+    // URL-encode each path segment: raw.githubusercontent.com requires
+    // Cyrillic characters to be percent-encoded or it returns 404.
+    const encodedPath = entry.path.split('/').map(encodeURIComponent).join('/');
+    const rawUrl = this.getRepoBaseUrl() + encodedPath;
     try {
       const response = await requestUrl({ url: rawUrl, method: 'GET' });
       return response.text;
