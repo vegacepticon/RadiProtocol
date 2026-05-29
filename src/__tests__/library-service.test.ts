@@ -33,7 +33,7 @@ describe('LibraryService', () => {
         },
       },
     };
-    vi.spyOn(obsidian, 'requestUrl').mockResolvedValue({ text: '' } as never);
+    vi.spyOn(obsidian, 'requestUrl').mockResolvedValue({ text: '', status: 200 } as never);
 
     service = new LibraryService(mockApp, mockSettings, mockSnippetService, mockT);
   });
@@ -42,6 +42,7 @@ describe('LibraryService', () => {
     it('uses bundled RadiProtocol-Library index when URL setting is empty', async () => {
       vi.spyOn(obsidian, 'requestUrl').mockResolvedValue({
         text: JSON.stringify({ version: '1.0.0', snippets: [] }),
+        status: 200,
       } as never);
       service = new LibraryService(mockApp, { ...mockSettings, libraryUrl: '' }, mockSnippetService, mockT);
 
@@ -70,6 +71,7 @@ describe('LibraryService', () => {
           template: 'Finding: {{finding}}',
           placeholders: [{ id: 'finding', label: 'Finding', type: 'free-text' }],
         }),
+        status: 200,
       } as never);
 
       const result = await service.fetchSnippetPreview(entry);
@@ -95,7 +97,7 @@ describe('LibraryService', () => {
         path: 'general/test.json',
         description: 'A test snippet',
       };
-      vi.spyOn(obsidian, 'requestUrl').mockResolvedValue({ text: '{"name":"Test Snippet","template":"ok","placeholders":[]}' } as never);
+      vi.spyOn(obsidian, 'requestUrl').mockResolvedValue({ text: '{"name":"Test Snippet","template":"ok","placeholders":[]}', status: 200 } as never);
 
       const result = await service.installSnippet(entry);
 

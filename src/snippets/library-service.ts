@@ -196,6 +196,9 @@ export class LibraryService {
     const rawUrl = this.getRepoBaseUrl() + encodedPath;
     try {
       const response = await requestUrl({ url: rawUrl, method: 'GET' });
+      if (response.status !== 200) {
+        throw new Error(`HTTP ${response.status} from raw.githubusercontent.com`);
+      }
       return response.text;
     } catch (err) {
       // Obsidian's requestUrl may re-decode or re-encode the URL on some
@@ -207,7 +210,7 @@ export class LibraryService {
         if (!response.ok) throw new Error(`HTTP ${response.status}`);
         return await response.text();
       } catch (fetchErr) {
-        console.error('[RadiProtocol][Library] fetch() fallback also failed:', fetchErr);
+        console.error('[RadiProtocol][Library] fetch() fallback also failed:', (fetchErr as Error)?.message ?? fetchErr);
         new Notice(this.t('library.networkError'));
         return null;
       }
