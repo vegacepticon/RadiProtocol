@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import * as obsidian from 'obsidian';
 import { LibraryService } from '../snippets/library-service';
 import type { LibrarySnippetEntry } from '../snippets/library-model';
@@ -33,9 +33,18 @@ describe('LibraryService', () => {
         },
       },
     };
+    // fetchSnippetText uses fetch() first, requestUrl as fallback
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
+      ok: true,
+      text: vi.fn().mockResolvedValue(''),
+    }));
     vi.spyOn(obsidian, 'requestUrl').mockResolvedValue({ text: '', status: 200 } as never);
 
     service = new LibraryService(mockApp, mockSettings, mockSnippetService, mockT);
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
   });
 
   describe('fetchIndex', () => {
@@ -65,14 +74,15 @@ describe('LibraryService', () => {
         path: 'general/test.json',
         description: 'A test snippet',
       };
-      vi.spyOn(obsidian, 'requestUrl').mockResolvedValue({
-        text: JSON.stringify({
-          name: 'Remote Name',
-          template: 'Finding: {{finding}}',
-          placeholders: [{ id: 'finding', label: 'Finding', type: 'free-text' }],
-        }),
-        status: 200,
-      } as never);
+      const snippetJson = JSON.stringify({
+        name: 'Remote Name',
+        template: 'Finding: {{finding}}',
+        placeholders: [{ id: 'finding', label: 'Finding', type: 'free-text' }],
+      });
+      vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
+        ok: true,
+        text: vi.fn().mockResolvedValue(snippetJson),
+      }));
 
       const result = await service.fetchSnippetPreview(entry);
 
@@ -97,20 +107,21 @@ describe('LibraryService', () => {
         path: 'general/test.json',
         description: 'A test snippet',
       };
-      vi.spyOn(obsidian, 'requestUrl').mockResolvedValue({ text: '{"name":"Test Snippet","template":"ok","placeholders":[]}', status: 200 } as never);
+      const snippetText = '{"name":"Test Snippet","template":"ok","placeholders":[]}';
+      vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
+        ok: true,
+        text: vi.fn().mockResolvedValue(snippetText),
+      }));
 
       const result = await service.installSnippet(entry);
 
       expect(result).toBe(true);
-      expect(obsidian.requestUrl).toHaveBeenCalledWith({
-        url: 'https://example.com/general/test.json',
-        method: 'GET',
-      });
+      expect(fetch).toHaveBeenCalledWith('https://example.com/general/test.json');
       expect(mockApp.vault.createFolder).toHaveBeenCalledWith('.radiprotocol/snippets/Library/General');
       expect(mockApp.vault.createFolder).not.toHaveBeenCalledWith('.radiprotocol/snippets/Library/General/Test Snippet.json');
       expect(mockApp.vault.adapter.write).toHaveBeenCalledWith(
         '.radiprotocol/snippets/Library/General/test.json',
-        '{"name":"Test Snippet","template":"ok","placeholders":[]}',
+        snippetText,
       );
       expect(mockApp.vault.adapter.write).toHaveBeenCalledTimes(2);
     });

@@ -194,23 +194,23 @@ export class LibraryService {
     // Cyrillic characters to be percent-encoded or it returns 404.
     const encodedPath = entry.path.split('/').map(encodeURIComponent).join('/');
     const rawUrl = this.getRepoBaseUrl() + encodedPath;
+    // fetch() passes already-encoded URLs through unmolested.
+    // Obsidian's requestUrl may re-decode or re-encode on some platforms,
+    // causing double-encoding and a 404 from raw.githubusercontent.com.
     try {
-      const response = await requestUrl({ url: rawUrl, method: 'GET' });
-      if (response.status !== 200) {
-        throw new Error(`HTTP ${response.status} from raw.githubusercontent.com`);
-      }
-      return response.text;
-    } catch (err) {
-      // Obsidian's requestUrl may re-decode or re-encode the URL on some
-      // platforms/versions. Fall back to standard fetch() which passes URLs
-      // through unmolested.
-      console.warn('[RadiProtocol][Library] requestUrl failed, trying fetch():', (err as Error)?.message ?? err);
+      const response = await fetch(rawUrl);
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      return await response.text();
+    } catch (fetchErr) {
+      console.warn('[RadiProtocol][Library] fetch failed, trying requestUrl():', (fetchErr as Error)?.message ?? fetchErr);
       try {
-        const response = await fetch(rawUrl);
-        if (!response.ok) throw new Error(`HTTP ${response.status}`);
-        return await response.text();
-      } catch (fetchErr) {
-        console.error('[RadiProtocol][Library] fetch() fallback also failed:', (fetchErr as Error)?.message ?? fetchErr);
+        const response = await requestUrl({ url: rawUrl, method: 'GET' });
+        if (response.status !== 200) {
+          throw new Error(`HTTP ${response.status} from raw.githubusercontent.com (requestUrl fallback)`);
+        }
+        return response.text;
+      } catch (err) {
+        console.error('[RadiProtocol][Library] requestUrl() fallback also failed:', (err as Error)?.message ?? err);
         new Notice(this.t('library.networkError'));
         return null;
       }
