@@ -1,6 +1,6 @@
 {
   "name": "radiprotocol",
-  "version": "1.23.2",
+  "version": "1.23.3",
   "description": "Guided structured radiology protocol runner for Obsidian",
   "main": "main.js",
   "scripts": {
