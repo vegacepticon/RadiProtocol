@@ -453,6 +453,7 @@ export class ProtocolEditorView extends ItemView {
   private viewportSaveTimer: number | null = null;
   private layoutDirection: ProtocolEditorLayoutDirection = 'LR';
   private zoom: number = 1;
+  private loadGeneration = 0;
 
   constructor(leaf: WorkspaceLeaf, plugin: RadiProtocolPlugin) {
     super(leaf);
@@ -498,6 +499,7 @@ export class ProtocolEditorView extends ItemView {
       return;
     }
 
+    this.loadGeneration++;
     this.protocolPath = file.path;
     this.doc = doc;
     this.layoutDirection = protocolEditorLayoutDirectionFromDocument(doc);
@@ -1445,6 +1447,8 @@ export class ProtocolEditorView extends ItemView {
   /* Phase 4D — persist node position/size change */
   private async saveNodeGeometry(node: ProtocolNodeRecord): Promise<void> {
     const protocolPath = this.protocolPath;
+    const generation = this.loadGeneration;
+    const isStaleSave = () => this.loadGeneration !== generation;
     if (protocolPath === null) return;
 
     const geometry = {
@@ -1459,6 +1463,7 @@ export class ProtocolEditorView extends ItemView {
     try {
       const updated = await this.plugin.protocolDocumentStore.update(protocolPath, (existing) => {
         if (existing === null) protocolMissingFileError();
+        if (isStaleSave()) return existing;
         const nodes = existing.nodes.map((n) =>
           n.id === geometry.id
             ? { ...n, x: geometry.x, y: geometry.y, width: geometry.width, height: geometry.height }
@@ -1466,7 +1471,7 @@ export class ProtocolEditorView extends ItemView {
         );
         return { ...existing, nodes, viewport, updatedAt: new Date().toISOString() };
       });
-      if (this.protocolPath !== protocolPath) return;
+      if (this.loadGeneration !== generation) return;
 
       this.doc = updated;
       const nodeEl = this.nodeElementById.get(geometry.id);

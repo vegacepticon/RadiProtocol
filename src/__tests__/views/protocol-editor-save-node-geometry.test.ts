@@ -110,15 +110,18 @@ describe('ProtocolEditorView — saveNodeGeometry', () => {
     expect(renderMinimap).toHaveBeenCalledTimes(1);
   });
 
-  it('does not mutate the active view when the protocol path changes while saving', async () => {
+  it('does not mutate the active view when a concurrent loadProtocol occurs while saving', async () => {
     const node = makeNode({ x: 42, y: 43 });
     const otherDoc = makeDoc(makeNode({ id: 'other-node' }));
     let viewRef: ProtocolEditorView | null = null;
     const update = vi.fn<StoreUpdate>(async (_protocolPath, mutator) => {
-      const updated = mutator(makeDoc(makeNode()));
       if (viewRef === null) throw new Error('view not initialized');
       (viewRef as any).protocolPath = 'Protocols/other.rp.json';
       (viewRef as any).doc = otherDoc;
+      (viewRef as any).loadGeneration += 1;
+      const existingDoc = makeDoc(makeNode());
+      const updated = mutator(existingDoc);
+      expect(updated).toBe(existingDoc);
       return updated;
     });
     const { view, nodeEl, updateEdgePaths, renderMinimap } = createView(update, makeDoc(node));
@@ -129,6 +132,32 @@ describe('ProtocolEditorView — saveNodeGeometry', () => {
     expect(update).toHaveBeenCalledWith('Protocols/current.rp.json', expect.any(Function));
     expect((view as any).protocolPath).toBe('Protocols/other.rp.json');
     expect((view as any).doc).toBe(otherDoc);
+    expect(nodeEl.attrs['style']).toBeUndefined();
+    expect(updateEdgePaths).not.toHaveBeenCalled();
+    expect(renderMinimap).not.toHaveBeenCalled();
+  });
+
+  it('abandons stale save when a concurrent loadProtocol occurs on the same path', async () => {
+    const node = makeNode({ x: 10, y: 20 });
+    const updatedDoc = makeDoc(makeNode({ id: 'updated-node' }));
+    let viewRef: ProtocolEditorView | null = null;
+    const update = vi.fn<StoreUpdate>(async (_protocolPath, mutator) => {
+      if (viewRef === null) throw new Error('view not initialized');
+      (viewRef as any).doc = updatedDoc;
+      (viewRef as any).loadGeneration += 1;
+      const existingDoc = makeDoc(makeNode());
+      const updated = mutator(existingDoc);
+      expect(updated).toBe(existingDoc);
+      return updated;
+    });
+    const { view, nodeEl, updateEdgePaths, renderMinimap } = createView(update, makeDoc(node));
+    viewRef = view;
+
+    await (view as any).saveNodeGeometry(node);
+
+    expect(update).toHaveBeenCalledWith('Protocols/current.rp.json', expect.any(Function));
+    expect((view as any).protocolPath).toBe('Protocols/current.rp.json');
+    expect((view as any).doc).toBe(updatedDoc);
     expect(nodeEl.attrs['style']).toBeUndefined();
     expect(updateEdgePaths).not.toHaveBeenCalled();
     expect(renderMinimap).not.toHaveBeenCalled();
