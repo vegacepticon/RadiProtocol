@@ -103,6 +103,8 @@
   fill: none;
   stroke: var(--interactive-accent);
   stroke-width: 2;
+  stroke-linejoin: round;
+  stroke-linecap: round;
 }
 
 .rp-protocol-editor-edge-preview {
