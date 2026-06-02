@@ -323,10 +323,10 @@ rm src/__tests__/views/library-browser-modal-aria.test.ts
 > **Note**: `src/settings.ts` changes moved to Slice 4 — constants/fields removed alongside library files that import them, following `e1d9b3a` precedent.
 
 #### Automated Verification:
-- [ ] Type checking passes: `npx tsc --noEmit`
-- [ ] Build passes: `npm run build`
-- [ ] Grep for removed imports: `grep -rn "LibraryService\|ProtocolLibraryService\|LibraryBrowserModal\|ProtocolLibraryBrowserModal" src/main.ts src/settings.ts src/views/snippet-manager-view.ts src/views/snippet-manager/tree-renderer.ts` returns no matches
-- [ ] Grep for `exportLibraryContribution` in tree-renderer.ts returns no match: `grep -n "exportLibraryContribution" src/views/snippet-manager/tree-renderer.ts` returns no output
+- [x] Type checking passes: `npx tsc --noEmit`
+- [x] Build passes: `npm run build`
+- [x] Grep for removed imports: `grep -rn "LibraryService\|ProtocolLibraryService\|LibraryBrowserModal\|ProtocolLibraryBrowserModal" src/main.ts src/settings.ts src/views/snippet-manager-view.ts src/views/snippet-manager/tree-renderer.ts` returns no matches
+- [x] Grep for `exportLibraryContribution` in tree-renderer.ts returns no match: `grep -n "exportLibraryContribution" src/views/snippet-manager/tree-renderer.ts` returns no output
 
 #### Manual Verification:
 - [ ] Snippet manager view opens without errors (no library button visible)
