@@ -17,9 +17,6 @@ export interface InlineRunnerLayout {
   height?: number;
 }
 
-export const DEFAULT_LIBRARY_URL = 'https://raw.githubusercontent.com/vegacepticon/RadiProtocol-Library/main/generated/index.ru.json';
-export const DEFAULT_PROTOCOL_LIBRARY_URL = 'https://raw.githubusercontent.com/vegacepticon/RadiProtocol-Library/main/protocols-index.json';
-
 export interface RadiProtocolSettings {
   /** Vault-relative path for snippet JSON files (D-15, SNIP-08). Default: .radiprotocol/snippets */
   snippetFolderPath: string;
@@ -33,10 +30,6 @@ export interface RadiProtocolSettings {
   inlineRunnerPosition?: InlineRunnerLayout | null;
   /** Phase 84 (I18N-01): UI language. Default 'en' for new installs; existing installs without this key default to 'ru' for backward compat. */
   locale: 'en' | 'ru';
-  /** Phase 86 (TEMPLATE-LIB-01): URL of the external snippet library index JSON. */
-  libraryUrl: string;
-  /** URL of the external protocol library index JSON. */
-  protocolLibraryUrl: string;
 }
 
 export const DEFAULT_SETTINGS: RadiProtocolSettings = {
@@ -46,8 +39,6 @@ export const DEFAULT_SETTINGS: RadiProtocolSettings = {
   textSeparator: 'newline',
   inlineRunnerPosition: null,
   locale: 'en',
-  libraryUrl: DEFAULT_LIBRARY_URL,
-  protocolLibraryUrl: DEFAULT_PROTOCOL_LIBRARY_URL,
 };
 
 export class RadiProtocolSettingsTab extends PluginSettingTab {
