@@ -142,28 +142,32 @@ describe('protocol editor helper functions', () => {
 
     it('routes backward horizontal edges around nodes instead of through them', () => {
       const route = protocolEditorEdgeRoute(500, 100, 200, 120, 'LR');
-      expect(route.d).toContain('L 540 144');
-      expect(route.d).toContain('L 136 168');
+      // Dynamic bend: backward routes clamp to min(40/2, 32) = 20
+      expect(route.d).toContain('L 540 148');
+      expect(route.d).toContain('L 140 168');
       expect(route.labelY).toBeGreaterThan(120);
     });
 
     it('keeps forward horizontal edges as stepped orthogonal segments', () => {
       const route = protocolEditorEdgeRoute(100, 100, 500, 120, 'LR');
-      expect(route.d).toContain('Q 300 100 300 124');
+      // Dynamic bend: forward LR, rankDelta=400, normalDelta=20 → min(400/2, 20/2, 32) = 10
+      expect(route.d).toContain('Q 300 100 300 110');
       expect(route.d).toContain('L 500 120');
       expect(route.labelX).toBe(300);
     });
 
     it('routes forward vertical edges from bottom to top anchors with orthogonal bends', () => {
       const route = protocolEditorEdgeRoute(200, 100, 240, 420, 'TB');
-      expect(route.d).toContain('Q 200 260 224 260');
+      // Dynamic bend: forward TB, rankDelta=320, normalDelta=40 → min(320/2, 40/2, 32) = 20
+      expect(route.d).toContain('Q 200 260 220 260');
       expect(route.d).toContain('L 240 420');
       expect(route.labelY).toBe(250);
     });
 
     it('routes backward vertical edges around the right side', () => {
       const route = protocolEditorEdgeRoute(200, 320, 160, 120, 'TB');
-      expect(route.d).toContain('L 260 56');
+      // Dynamic bend: backward routes clamp to min(40/2, 32) = 20
+      expect(route.d).toContain('L 260 60');
       expect(route.labelX).toBeGreaterThan(260);
     });
 
@@ -212,6 +216,39 @@ describe('protocol editor helper functions', () => {
         loopNodeA,
         textNode,
       )).toBe(true);
+    });
+
+    function routeRankCoordinates(d: string, direction: 'LR' | 'TB'): number[] {
+      const values = [...d.matchAll(/-?\d+(?:\.\d+)?/g)].map(([value]) => Number(value));
+      const rankCoordinates: number[] = [];
+      const rankOffset = direction === 'LR' ? 0 : 1;
+      for (let index = rankOffset; index < values.length; index += 2) {
+        rankCoordinates.push(values[index]!);
+      }
+      return rankCoordinates;
+    }
+
+    function expectNoForwardRankBacktracking(d: string, direction: 'LR' | 'TB'): void {
+      const rankCoordinates = routeRankCoordinates(d, direction);
+      for (let index = 1; index < rankCoordinates.length; index += 1) {
+        expect(rankCoordinates[index]!).toBeGreaterThanOrEqual(rankCoordinates[index - 1]!);
+      }
+    }
+
+    it('does not backtrack on very short forward horizontal doglegs', () => {
+      const route = protocolEditorEdgeRoute(100, 100, 110, 102, 'LR');
+      // Safe bend: forward LR, rankDelta=10, normalDelta=2 → min(10/2, 2/2, 32) = 1.
+      expect(route.d).toContain('L 104 100');
+      expect(route.d).toContain('Q 105 100 105 101');
+      expectNoForwardRankBacktracking(route.d, 'LR');
+    });
+
+    it('does not backtrack on very short forward vertical doglegs', () => {
+      const route = protocolEditorEdgeRoute(200, 100, 202, 110, 'TB');
+      // Safe bend: forward TB, rankDelta=10, normalDelta=2 → min(10/2, 2/2, 32) = 1.
+      expect(route.d).toContain('L 200 104');
+      expect(route.d).toContain('Q 200 105 201 105');
+      expectNoForwardRankBacktracking(route.d, 'TB');
     });
   });
 

@@ -1,0 +1,136 @@
+import { describe, expect, it, vi } from 'vitest';
+import { ProtocolEditorView } from '../../views/protocol-editor-view';
+import type { ProtocolDocumentV1, ProtocolNodeRecord } from '../../protocol/protocol-document';
+
+type UpdateMutator = (doc: ProtocolDocumentV1 | null) => ProtocolDocumentV1;
+type StoreUpdate = (protocolPath: string, mutator: UpdateMutator) => Promise<ProtocolDocumentV1>;
+
+interface MockNodeElement {
+  attrs: Record<string, string>;
+  setAttr(name: string, value: string | number | boolean): void;
+}
+
+vi.mock('obsidian', () => ({
+  ItemView: class {
+    leaf = {};
+    app = {};
+    containerEl = { children: [] };
+    constructor() {}
+    getViewType(): string { return ''; }
+    getDisplayText(): string { return ''; }
+    getIcon(): string { return ''; }
+    onOpen(): void {}
+    onClose(): void {}
+    registerDomEvent(): void {}
+  },
+  Notice: class { constructor(_message?: string) {} },
+  TFile: class { path: string; constructor(path = '') { this.path = path; } },
+  WorkspaceLeaf: class {},
+  setIcon: () => {},
+}));
+
+vi.mock('../../views/snippet-tree-picker', () => ({
+  SnippetTreePicker: class { mount(): Promise<void> { return Promise.resolve(); } unmount(): void {} },
+}));
+
+function makeNode(overrides: Partial<ProtocolNodeRecord> = {}): ProtocolNodeRecord {
+  return {
+    id: 'node-1',
+    kind: 'question',
+    x: 10,
+    y: 20,
+    width: 200,
+    height: 80,
+    text: 'Question',
+    fields: { questionText: 'Question' },
+    ...overrides,
+  };
+}
+
+function makeDoc(node = makeNode()): ProtocolDocumentV1 {
+  return {
+    schema: 'radiprotocol.protocol',
+    version: 1,
+    id: 'doc-1',
+    title: 'Protocol',
+    createdAt: '2026-01-01T00:00:00Z',
+    updatedAt: '2026-01-01T00:00:00Z',
+    nodes: [node],
+    edges: [],
+    viewport: { x: 0, y: 0, zoom: 1 },
+  };
+}
+
+function makeNodeElement(): MockNodeElement {
+  return {
+    attrs: {},
+    setAttr(name: string, value: string | number | boolean): void {
+      this.attrs[name] = String(value);
+    },
+  };
+}
+
+function createView(update: StoreUpdate, doc = makeDoc()) {
+  const plugin = {
+    i18n: { t: (key: string, params?: Record<string, string>) => params?.error ?? key },
+    protocolDocumentStore: { update },
+    settings: { snippetFolderPath: '.radiprotocol/snippets' },
+  } as any;
+  const view = new ProtocolEditorView({} as any, plugin);
+  const nodeEl = makeNodeElement();
+  (view as any).protocolPath = 'Protocols/current.rp.json';
+  (view as any).doc = doc;
+  (view as any).zoom = 1;
+  (view as any).viewportEl = { scrollLeft: 15010, scrollTop: 12020 };
+  (view as any).nodeElementById.set(doc.nodes[0]!.id, nodeEl as unknown as HTMLElement);
+  const updateEdgePaths = vi.spyOn(view as any, 'updateEdgePaths').mockImplementation(() => {});
+  const renderMinimap = vi.spyOn(view as any, 'renderMinimap').mockImplementation(() => {});
+  return { view, nodeEl, updateEdgePaths, renderMinimap };
+}
+
+describe('ProtocolEditorView — saveNodeGeometry', () => {
+  it('updates node DOM, edges, and minimap after a successful geometry save', async () => {
+    const node = makeNode({ x: 12.6, y: 34.2, width: 210.7, height: 88.4 });
+    let savedDoc: ProtocolDocumentV1 | null = null;
+    const update = vi.fn<StoreUpdate>(async (_protocolPath, mutator) => {
+      const nextDoc = mutator(makeDoc(makeNode()));
+      savedDoc = nextDoc;
+      return nextDoc;
+    });
+    const { view, nodeEl, updateEdgePaths, renderMinimap } = createView(update, makeDoc(node));
+
+    await (view as any).saveNodeGeometry(node);
+
+    expect(update).toHaveBeenCalledWith('Protocols/current.rp.json', expect.any(Function));
+    expect((savedDoc as unknown as ProtocolDocumentV1).nodes[0]).toMatchObject({ x: 13, y: 34, width: 211, height: 88 });
+    expect((savedDoc as unknown as ProtocolDocumentV1).viewport).toEqual({ x: 10, y: 20, zoom: 1 });
+    expect((view as any).doc).toBe(savedDoc);
+    expect(nodeEl.attrs['style']).toContain('left:15013px;top:12034px;width:211px;min-height:88px;');
+    expect(updateEdgePaths).toHaveBeenCalledTimes(1);
+    expect(renderMinimap).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not mutate the active view when the protocol path changes while saving', async () => {
+    const node = makeNode({ x: 42, y: 43 });
+    const otherDoc = makeDoc(makeNode({ id: 'other-node' }));
+    let viewRef: ProtocolEditorView | null = null;
+    const update = vi.fn<StoreUpdate>(async (_protocolPath, mutator) => {
+      const updated = mutator(makeDoc(makeNode()));
+      if (viewRef === null) throw new Error('view not initialized');
+      (viewRef as any).protocolPath = 'Protocols/other.rp.json';
+      (viewRef as any).doc = otherDoc;
+      return updated;
+    });
+    const { view, nodeEl, updateEdgePaths, renderMinimap } = createView(update, makeDoc(node));
+    viewRef = view;
+
+    await (view as any).saveNodeGeometry(node);
+
+    expect(update).toHaveBeenCalledWith('Protocols/current.rp.json', expect.any(Function));
+    expect((view as any).protocolPath).toBe('Protocols/other.rp.json');
+    expect((view as any).doc).toBe(otherDoc);
+    expect(nodeEl.attrs['style']).toBeUndefined();
+    expect(updateEdgePaths).not.toHaveBeenCalled();
+    expect(renderMinimap).not.toHaveBeenCalled();
+  });
+});

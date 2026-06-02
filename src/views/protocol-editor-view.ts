@@ -304,6 +304,33 @@ export function normalizeProtocolEditorSnippetFolderSelection(relativePath: stri
   return trimmed === '' ? undefined : trimmed;
 }
 
+/** Maximum configured bend radius for edge Q-curves. */
+const CONFIGURED_MAX_BEND = 32;
+/** Backward route exit/entry offset in pixels. */
+const BACKWARD_OFFSET = 40;
+
+function computeEdgeBend(
+  rankDelta: number,
+  normalDelta: number,
+  forward: boolean,
+): number {
+  if (forward) {
+    // Forward: first L segment is rankDelta/2 - bend (must be >= 0)
+    // Middle L segment is |normalDelta| - 2*bend (must be >= 0)
+    // The computed safe maximum is authoritative: applying a visual minimum above
+    // this value reintroduces backtracking on very short doglegs.
+    return Math.max(0, Math.min(
+      rankDelta / 2,
+      Math.abs(normalDelta) / 2,
+      CONFIGURED_MAX_BEND,
+    ));
+  }
+  // Backward: exit/entry offset constrains first/last L: BACKWARD_OFFSET - bend >= 0
+  // Middle horizontal: routeX/routeY extends beyond nodes, midSpace = |normalDelta|/2 + BACKWARD_OFFSET
+  // gives bend <= midSpace/2. Conservative: limit to BACKWARD_OFFSET/2.
+  return Math.max(0, Math.min(BACKWARD_OFFSET / 2, CONFIGURED_MAX_BEND));
+}
+
 export function protocolEditorEdgeRoute(
   x1: number,
   y1: number,
@@ -311,10 +338,10 @@ export function protocolEditorEdgeRoute(
   y2: number,
   direction: ProtocolEditorLayoutDirection = 'LR',
 ): ProtocolEditorEdgeRoute {
-  const bend = 24;
   const rankDelta = direction === 'TB' ? y2 - y1 : x2 - x1;
   const normalDelta = direction === 'TB' ? x2 - x1 : y2 - y1;
   const forward = rankDelta >= 0;
+  const bend = computeEdgeBend(rankDelta, normalDelta, forward);
 
   if (forward) {
     if (direction === 'TB') {
@@ -864,6 +891,49 @@ export class ProtocolEditorView extends ItemView {
     }
   }
 
+  /**
+   * Incrementally update edge path geometry in-place during drag/resize.
+   * Unlike renderEdges(), this does NOT destroy or recreate SVG elements —
+   * it only updates the `d` attribute on existing hitbox and visible path elements,
+   * plus label position. Modeled after updateConnectionPreview() at line 1093.
+   * Uses world-coordinate anchors from this.doc to avoid forced layout reads.
+   */
+  private updateEdgePaths(): void {
+    if (this.doc === null || this.svgEl === null) return;
+    const nodeById = new Map(this.doc.nodes.map(node => [node.id, node]));
+    const outputSide = protocolEditorOutputPortSide(this.layoutDirection);
+    const inputSide = protocolEditorInputPortSide(this.layoutDirection);
+    for (const edge of this.doc.edges) {
+      const from = nodeById.get(edge.fromNodeId);
+      const to = nodeById.get(edge.toNodeId);
+      if (from === undefined || to === undefined) continue;
+      // Use world-coordinate anchors (no forced layout reads)
+      const source = protocolEditorAnchorToSurfacePoint(protocolEditorPortAnchor(from, outputSide));
+      const target = protocolEditorAnchorToSurfacePoint(protocolEditorPortAnchor(to, inputSide));
+      const route = protocolEditorEdgeRoute(source.x, source.y, target.x, target.y, this.layoutDirection);
+      const group = this.svgEl.querySelector(`[data-edge-id="${CSS.escape(edge.id)}"]`) as SVGGElement | null;
+      if (group === null) continue;
+      const hitboxEl = group.querySelector('.rp-protocol-editor-edge-hitbox') as SVGPathElement | null;
+      if (hitboxEl !== null) hitboxEl.setAttr('d', route.d);
+      const pathEl = group.querySelector('.rp-protocol-editor-edge') as SVGPathElement | null;
+      if (pathEl !== null) pathEl.setAttr('d', route.d);
+      const labelGroup = group.querySelector('.rp-protocol-editor-edge-label-group') as SVGGElement | null;
+      if (labelGroup !== null) {
+        const rectEl = labelGroup.querySelector('rect');
+        const textEl = labelGroup.querySelector('text');
+        if (rectEl !== null && textEl !== null) {
+          const labelText = textEl.textContent ?? '';
+          const approxWidth = Math.min(220, Math.max(48, labelText.length * 7 + 18));
+          rectEl.setAttr('x', String(route.labelX - approxWidth / 2));
+          rectEl.setAttr('y', String(route.labelY - 15));
+          rectEl.setAttr('width', String(approxWidth));
+          textEl.setAttr('x', String(route.labelX));
+          textEl.setAttr('y', String(route.labelY));
+        }
+      }
+    }
+  }
+
   private renderMinimap(): void {
     if (this.doc === null || this.minimapSvgEl === null) return;
     this.minimapSvgEl.empty();
@@ -1275,15 +1345,14 @@ export class ProtocolEditorView extends ItemView {
       const onMove = (ev: MouseEvent) => {
         const dx = screenDeltaToProtocolEditorDelta(ev.clientX - startX, this.zoom);
         const dy = screenDeltaToProtocolEditorDelta(ev.clientY - startY, this.zoom);
-        const newX = origX + dx;
-        const newY = origY + dy;
-        node.x = newX;
-        node.y = newY;
-        this.applyNodePosition(nodeEl, node);
+        node.x = origX + dx;
+        node.y = origY + dy;
+        // Batch position writes and edge updates into a single rAF frame
         if (dragRafId === null) {
           dragRafId = window.requestAnimationFrame(() => {
             dragRafId = null;
-            this.renderEdges();
+            this.applyNodePosition(nodeEl, node);
+            this.updateEdgePaths();
           });
         }
       };
@@ -1330,16 +1399,26 @@ export class ProtocolEditorView extends ItemView {
       nodeEl.addClass('rp-node-resizing');
       document.body.addClass('rp-protocol-editor-resize-active');
 
+      let resizeRafId: number | null = null;
       const onMove = (ev: MouseEvent) => {
         const dx = screenDeltaToProtocolEditorDelta(ev.clientX - startX, this.zoom);
         const dy = screenDeltaToProtocolEditorDelta(ev.clientY - startY, this.zoom);
         node.width = Math.max(MIN_NODE_WIDTH, origWidth + dx);
         node.height = Math.max(MIN_NODE_HEIGHT, origHeight + dy);
-        this.applyNodePosition(nodeEl, node);
-        this.renderEdges();
+        if (resizeRafId === null) {
+          resizeRafId = window.requestAnimationFrame(() => {
+            resizeRafId = null;
+            this.applyNodePosition(nodeEl, node);
+            this.updateEdgePaths();
+          });
+        }
       };
 
       const onUp = (ev: MouseEvent) => {
+        if (resizeRafId !== null) {
+          window.cancelAnimationFrame(resizeRafId);
+          resizeRafId = null;
+        }
         document.removeEventListener('mousemove', onMove);
         document.removeEventListener('mouseup', onUp);
         nodeEl.removeClass('rp-node-resizing');
@@ -1365,16 +1444,38 @@ export class ProtocolEditorView extends ItemView {
 
   /* Phase 4D — persist node position/size change */
   private async saveNodeGeometry(node: ProtocolNodeRecord): Promise<void> {
-    if (this.protocolPath === null) return;
+    const protocolPath = this.protocolPath;
+    if (protocolPath === null) return;
+
+    const geometry = {
+      id: node.id,
+      x: Math.round(node.x),
+      y: Math.round(node.y),
+      width: Math.round(node.width),
+      height: Math.round(node.height),
+    };
+    const viewport = this.currentViewportState();
+
     try {
-      await this.plugin.protocolDocumentStore.update(this.protocolPath, (existing) => {
+      const updated = await this.plugin.protocolDocumentStore.update(protocolPath, (existing) => {
         if (existing === null) protocolMissingFileError();
         const nodes = existing.nodes.map((n) =>
-          n.id === node.id ? { ...n, x: Math.round(node.x), y: Math.round(node.y), width: Math.round(node.width), height: Math.round(node.height) } : n,
+          n.id === geometry.id
+            ? { ...n, x: geometry.x, y: geometry.y, width: geometry.width, height: geometry.height }
+            : n,
         );
-        return { ...existing, nodes, viewport: this.currentViewportState(), updatedAt: new Date().toISOString() };
+        return { ...existing, nodes, viewport, updatedAt: new Date().toISOString() };
       });
-      await this.loadProtocol(this.protocolPath);
+      if (this.protocolPath !== protocolPath) return;
+
+      this.doc = updated;
+      const nodeEl = this.nodeElementById.get(geometry.id);
+      const updatedNode = updated.nodes.find((n) => n.id === geometry.id);
+      if (nodeEl !== undefined && updatedNode !== undefined) {
+        this.applyNodePosition(nodeEl, updatedNode);
+      }
+      this.updateEdgePaths();
+      this.renderMinimap();
     } catch (err) {
       new Notice(this.plugin.i18n.t('protocolEditor.saveFailed', { error: String(err) }));
     }
