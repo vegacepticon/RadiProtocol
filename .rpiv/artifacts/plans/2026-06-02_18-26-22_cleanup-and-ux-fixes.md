@@ -223,10 +223,10 @@ it('does not produce degenerate segments on short backward vertical routes', () 
 ### Success Criteria:
 
 #### Automated Verification:
-- [ ] Type checking passes: `npx tsc --noEmit`
-- [ ] Build passes: `npm run build`
-- [ ] Protocol editor helper tests pass, including existing forward-route tests: `npx vitest run src/__tests__/protocol-editor-helpers.test.ts`
-- [ ] Full test suite passes after this editor slice: `npm test`
+- [x] Type checking passes: `npx tsc --noEmit`
+- [x] Build passes: `npm run build`
+- [x] Protocol editor helper tests pass, including existing forward-route tests: `npx vitest run src/__tests__/protocol-editor-helpers.test.ts`
+- [x] Full test suite passes after this editor slice: `npm test`
 
 #### Manual Verification:
 
