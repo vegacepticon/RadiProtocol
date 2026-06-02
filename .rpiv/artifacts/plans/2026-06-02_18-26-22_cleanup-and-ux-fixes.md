@@ -439,16 +439,16 @@ const requestUrl = vi.fn();
 ### Success Criteria:
 
 #### Automated Verification:
-- [ ] Type checking passes: `npx tsc --noEmit`
-- [ ] Build passes: `npm run build`
-- [ ] Full test suite passes: `npm test`
-- [ ] Zero library imports remain: `grep -rn "LibraryService\|ProtocolLibraryService\|LibraryBrowserModal\|ProtocolLibraryBrowserModal\|LibrarySnippetPreviewModal\|library-model\|protocol-library-model\|library-service\|protocol-library-service" src/ --include="*.ts"` returns no matches
-- [ ] Zero library i18n keys: `grep -c '"library"' src/i18n/locales/en.json src/i18n/locales/ru.json` both return 0
-- [ ] Zero protocolLibrary i18n keys: `grep -c '"protocolLibrary"' src/i18n/locales/en.json src/i18n/locales/ru.json` both return 0
-- [ ] CSS bundle clean: `grep "library-preview-modal" esbuild.config.mjs` returns no match
-- [ ] Zero library CSS in snippet-manager: `grep -c "rp-library" src/styles/snippet-manager.css` returns 0
-- [ ] Zero requestUrl stubs: `grep -rn "requestUrl" src/__tests__/snippet-vault-watcher.test.ts src/__tests__/snippet-tree-view.test.ts src/__tests__/snippet-tree-inline-rename.test.ts` returns no matches
-- [ ] Zero libraryUrl in test mocks: `grep -rn "libraryUrl\|protocolLibraryUrl" src/__tests__/ --include="*.ts"` returns no matches (or only in deleted files)
+- [x] Type checking passes: `npx tsc --noEmit`
+- [x] Build passes: `npm run build`
+- [x] Full test suite passes: `npm test`
+- [x] Zero library imports remain: `grep -rn "LibraryService\|ProtocolLibraryService\|LibraryBrowserModal\|ProtocolLibraryBrowserModal\|LibrarySnippetPreviewModal\|library-model\|protocol-library-model\|library-service\|protocol-library-service" src/ --include="*.ts"` returns no matches
+- [x] Zero library i18n keys: `grep -c '"library"' src/i18n/locales/en.json src/i18n/locales/ru.json` both return 0
+- [x] Zero protocolLibrary i18n keys: `grep -c '"protocolLibrary"' src/i18n/locales/en.json src/i18n/locales/ru.json` both return 0
+- [x] CSS bundle clean: `grep "library-preview-modal" esbuild.config.mjs` returns no match
+- [x] Zero library CSS in snippet-manager: `grep -c "rp-library" src/styles/snippet-manager.css` returns 0
+- [x] Zero requestUrl stubs: `grep -rn "requestUrl" src/__tests__/snippet-vault-watcher.test.ts src/__tests__/snippet-tree-view.test.ts src/__tests__/snippet-tree-inline-rename.test.ts` returns no matches
+- [x] Zero libraryUrl in test mocks: `grep -rn "libraryUrl\|protocolLibraryUrl" src/__tests__/ --include="*.ts"` returns no matches (or only in deleted files)
 
 #### Manual Verification:
 - [ ] Plugin Settings tab: no library URL fields visible
