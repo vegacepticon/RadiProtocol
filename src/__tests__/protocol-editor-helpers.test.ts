@@ -142,9 +142,9 @@ describe('protocol editor helper functions', () => {
 
     it('routes backward horizontal edges around nodes instead of through them', () => {
       const route = protocolEditorEdgeRoute(500, 100, 200, 120, 'LR');
-      // Dynamic bend: backward routes clamp to min(40/2, 32) = 20
-      expect(route.d).toContain('L 540 148');
-      expect(route.d).toContain('L 140 168');
+      // Dynamic bend: backward LR, normalDelta=20 → min(40, 10, 32) = 10
+      expect(route.d).toContain('L 540 158');
+      expect(route.d).toContain('L 150 168');
       expect(route.labelY).toBeGreaterThan(120);
     });
 
@@ -166,7 +166,7 @@ describe('protocol editor helper functions', () => {
 
     it('routes backward vertical edges around the right side', () => {
       const route = protocolEditorEdgeRoute(200, 320, 160, 120, 'TB');
-      // Dynamic bend: backward routes clamp to min(40/2, 32) = 20
+      // Dynamic bend: backward TB, |normalDelta|=40 → min(40, 20, 32) = 20
       expect(route.d).toContain('L 260 60');
       expect(route.labelX).toBeGreaterThan(260);
     });
@@ -249,6 +249,24 @@ describe('protocol editor helper functions', () => {
       expect(route.d).toContain('L 200 104');
       expect(route.d).toContain('Q 200 105 201 105');
       expectNoForwardRankBacktracking(route.d, 'TB');
+    });
+
+    it('does not produce degenerate segments on short backward horizontal routes', () => {
+      const route = protocolEditorEdgeRoute(500, 100, 460, 120, 'LR');
+      // rankDelta=-40, normalDelta=20 → bend = min(40, 10, 32) = 10
+      expect(route.d).not.toContain('NaN');
+      const qCount = (route.d.match(/Q/g) || []).length;
+      expect(qCount).toBe(4); // backward routes have 4 Q-curves
+      expect(route.labelX).toBeGreaterThanOrEqual(480);
+    });
+
+    it('does not produce degenerate segments on short backward vertical routes', () => {
+      const route = protocolEditorEdgeRoute(200, 320, 220, 300, 'TB');
+      // rankDelta=-20, normalDelta=20 → bend = min(40, 10, 32) = 10
+      expect(route.d).not.toContain('NaN');
+      const qCount = (route.d.match(/Q/g) || []).length;
+      expect(qCount).toBe(4);
+      expect(route.labelX).toBeGreaterThan(240);
     });
   });
 

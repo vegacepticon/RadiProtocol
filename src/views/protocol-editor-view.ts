@@ -326,9 +326,13 @@ function computeEdgeBend(
     ));
   }
   // Backward: exit/entry offset constrains first/last L: BACKWARD_OFFSET - bend >= 0
-  // Middle horizontal: routeX/routeY extends beyond nodes, midSpace = |normalDelta|/2 + BACKWARD_OFFSET
-  // gives bend <= midSpace/2. Conservative: limit to BACKWARD_OFFSET/2.
-  return Math.max(0, Math.min(BACKWARD_OFFSET / 2, CONFIGURED_MAX_BEND));
+  // Cross-direction constraint: L2 + L4 = |normalDelta| - 2*bend >= 0 → bend <= |normalDelta|/2
+  // Conservative bound |normalDelta|/2 always ≤ actual L2/L4 constraint (TB adds 40-56px margin).
+  return Math.max(0, Math.min(
+    BACKWARD_OFFSET,
+    Math.abs(normalDelta) / 2,
+    CONFIGURED_MAX_BEND,
+  ));
 }
 
 export function protocolEditorEdgeRoute(
@@ -629,9 +633,9 @@ export class ProtocolEditorView extends ItemView {
       if (existing === null) protocolMissingFileError();
       return { ...existing, nodes: [...existing.nodes, newNode], viewport: this.currentViewportState(), updatedAt: new Date().toISOString() };
     }).then(async () => {
+      this.openEditModal(newNode, { autofocusFirstTextField: true });
       await this.loadProtocol(this.protocolPath!);
       new Notice(this.plugin.i18n.t('protocolEditor.nodeCreated'));
-      this.openEditModal(newNode, { autofocusFirstTextField: true });
     }).catch((err) => {
       new Notice(this.plugin.i18n.t('protocolEditor.saveFailed', { error: String(err) }));
     });
@@ -723,9 +727,9 @@ export class ProtocolEditorView extends ItemView {
         updatedAt: new Date().toISOString(),
       };
     }).then(async () => {
+      this.openEditModal(newNode, { autofocusFirstTextField: true });
       await this.loadProtocol(this.protocolPath!);
       new Notice(this.plugin.i18n.t('protocolEditor.nodeCreated'));
-      this.openEditModal(newNode, { autofocusFirstTextField: true });
     }).catch((err) => {
       new Notice(this.plugin.i18n.t('protocolEditor.saveFailed', { error: String(err) }));
     });
