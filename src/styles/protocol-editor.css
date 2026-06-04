@@ -273,6 +273,11 @@
   background: rgba(0, 0, 0, 0.5);
 }
 
+.rp-protocol-editor-modal-backdrop.is-saving {
+  opacity: 0.85;
+  cursor: wait;
+}
+
 .rp-protocol-editor-modal {
   display: flex;
   flex-direction: column;

@@ -146,6 +146,12 @@ interface ProtocolEditorLayoutOptions {
   edgesep: number;
 }
 
+interface ProtocolEditorCreateNodeOptions {
+  onEditModalOpened?: () => void;
+  onCreateAbandoned?: () => void;
+  onCreateFailed?: () => void;
+}
+
 const PROTOCOL_EDITOR_LAYOUT_CONFIG: Record<ProtocolEditorLayoutDirection, ProtocolEditorLayoutOptions> = {
   LR: {
     direction: 'LR',
@@ -686,8 +692,23 @@ export class ProtocolEditorView extends ItemView {
     };
   }
 
-  private addNodeAtWorldPoint(kind: RPNodeKind | null, x: number, y: number): void {
-    if (this.doc === null || this.protocolPath === null) return;
+  private setNodeKindPickerBusy(modalEl: HTMLElement, busy: boolean): void {
+    modalEl.toggleClass('is-saving', busy);
+    for (const button of Array.from(modalEl.querySelectorAll('button'))) {
+      (button as HTMLButtonElement).disabled = busy;
+    }
+  }
+
+  private addNodeAtWorldPoint(
+    kind: RPNodeKind | null,
+    x: number,
+    y: number,
+    options: ProtocolEditorCreateNodeOptions = {},
+  ): void {
+    if (this.doc === null || this.protocolPath === null) {
+      options.onCreateAbandoned?.();
+      return;
+    }
 
     const newNode = this.createProtocolEditorNode(kind, x, y);
     const protocolPath = this.protocolPath;
@@ -697,11 +718,22 @@ export class ProtocolEditorView extends ItemView {
       if (existing === null) protocolMissingFileError();
       return { ...existing, nodes: [...existing.nodes, newNode], viewport: this.currentViewportState(), updatedAt: new Date().toISOString() };
     }).then((updated) => {
-      if (this.protocolPath !== protocolPath || this.loadGeneration !== generation) return;
-      const createdNode = this.applyCreatedProtocolDocument(updated, newNode.id) ?? newNode;
-      this.openEditModal(createdNode, { autofocusFirstTextField: true });
-      new Notice(this.plugin.i18n.t('protocolEditor.nodeCreated'));
-    }).catch((err) => {
+      try {
+        if (this.protocolPath !== protocolPath || this.loadGeneration !== generation) {
+          options.onCreateAbandoned?.();
+          return;
+        }
+        const createdNode = this.applyCreatedProtocolDocument(updated, newNode.id) ?? newNode;
+        this.openEditModal(createdNode, { autofocusFirstTextField: true });
+        options.onEditModalOpened?.();
+        new Notice(this.plugin.i18n.t('protocolEditor.nodeCreated'));
+      } catch (err) {
+        console.error('[RadiProtocol] Failed to update Protocol Editor UI after creating node:', err);
+        options.onCreateFailed?.();
+        new Notice(this.plugin.i18n.t('protocolEditor.saveFailed', { error: String(err) }));
+      }
+    }, (err) => {
+      options.onCreateFailed?.();
       new Notice(this.plugin.i18n.t('protocolEditor.saveFailed', { error: String(err) }));
     });
   }
@@ -714,8 +746,23 @@ export class ProtocolEditorView extends ItemView {
     const header = modal.createDiv({ cls: 'rp-protocol-editor-modal-header' });
     header.createEl('h3', { text: t('protocolEditor.chooseNodeType') });
     const closeBtn = header.createEl('button', { cls: 'rp-protocol-editor-modal-close', text: '✕', attr: { 'aria-label': t('protocolEditor.close') } });
-    const closeModal = () => { modalEl.remove(); this.restoreEditorFocus(); };
-    closeBtn.addEventListener('click', closeModal);
+    let isCreating = false;
+    const closeModal = (options?: { restoreFocus?: boolean }) => {
+      modalEl.remove();
+      if (options?.restoreFocus !== false) this.restoreEditorFocus();
+    };
+    const beginCreate = () => {
+      isCreating = true;
+      this.setNodeKindPickerBusy(modalEl, true);
+    };
+    const restorePicker = () => {
+      isCreating = false;
+      this.setNodeKindPickerBusy(modalEl, false);
+    };
+    closeBtn.addEventListener('click', () => {
+      if (isCreating) return;
+      closeModal();
+    });
 
     const body = modal.createDiv({ cls: 'rp-protocol-editor-modal-body' });
     const grid = body.createDiv({ cls: 'rp-protocol-editor-node-kind-grid' });
@@ -726,11 +773,19 @@ export class ProtocolEditorView extends ItemView {
       });
       btn.setAttr('data-node-kind', kind);
       btn.addEventListener('click', () => {
-        closeModal();
-        this.addNodeAtWorldPoint(kind, x, y);
+        if (isCreating) return;
+        beginCreate();
+        this.addNodeAtWorldPoint(kind, x, y, {
+          onEditModalOpened: () => closeModal({ restoreFocus: false }),
+          onCreateAbandoned: () => closeModal(),
+          onCreateFailed: restorePicker,
+        });
       });
     }
-    modalEl.addEventListener('click', (e) => { if (e.target === modalEl) closeModal(); });
+    modalEl.addEventListener('click', (e) => {
+      if (isCreating) return;
+      if (e.target === modalEl) closeModal();
+    });
   }
 
   private openNodeKindPickerAndConnectAtWorldPoint(fromNodeId: string, x: number, y: number): void {
@@ -741,8 +796,23 @@ export class ProtocolEditorView extends ItemView {
     const header = modal.createDiv({ cls: 'rp-protocol-editor-modal-header' });
     header.createEl('h3', { text: t('protocolEditor.chooseNodeType') });
     const closeBtn = header.createEl('button', { cls: 'rp-protocol-editor-modal-close', text: '✕', attr: { 'aria-label': t('protocolEditor.close') } });
-    const closeModal = () => { modalEl.remove(); this.restoreEditorFocus(); };
-    closeBtn.addEventListener('click', closeModal);
+    let isCreating = false;
+    const closeModal = (options?: { restoreFocus?: boolean }) => {
+      modalEl.remove();
+      if (options?.restoreFocus !== false) this.restoreEditorFocus();
+    };
+    const beginCreate = () => {
+      isCreating = true;
+      this.setNodeKindPickerBusy(modalEl, true);
+    };
+    const restorePicker = () => {
+      isCreating = false;
+      this.setNodeKindPickerBusy(modalEl, false);
+    };
+    closeBtn.addEventListener('click', () => {
+      if (isCreating) return;
+      closeModal();
+    });
 
     const body = modal.createDiv({ cls: 'rp-protocol-editor-modal-body' });
     const grid = body.createDiv({ cls: 'rp-protocol-editor-node-kind-grid' });
@@ -753,15 +823,32 @@ export class ProtocolEditorView extends ItemView {
       });
       btn.setAttr('data-node-kind', kind);
       btn.addEventListener('click', () => {
-        closeModal();
-        this.addNodeAndConnectAtWorldPoint(fromNodeId, kind, x, y);
+        if (isCreating) return;
+        beginCreate();
+        this.addNodeAndConnectAtWorldPoint(fromNodeId, kind, x, y, {
+          onEditModalOpened: () => closeModal({ restoreFocus: false }),
+          onCreateAbandoned: () => closeModal(),
+          onCreateFailed: restorePicker,
+        });
       });
     }
-    modalEl.addEventListener('click', (e) => { if (e.target === modalEl) closeModal(); });
+    modalEl.addEventListener('click', (e) => {
+      if (isCreating) return;
+      if (e.target === modalEl) closeModal();
+    });
   }
 
-  private addNodeAndConnectAtWorldPoint(fromNodeId: string, kind: RPNodeKind | null, x: number, y: number): void {
-    if (this.doc === null || this.protocolPath === null) return;
+  private addNodeAndConnectAtWorldPoint(
+    fromNodeId: string,
+    kind: RPNodeKind | null,
+    x: number,
+    y: number,
+    options: ProtocolEditorCreateNodeOptions = {},
+  ): void {
+    if (this.doc === null || this.protocolPath === null) {
+      options.onCreateAbandoned?.();
+      return;
+    }
 
     const newNode = this.createProtocolEditorNode(kind, x, y);
     const protocolPath = this.protocolPath;
@@ -794,11 +881,22 @@ export class ProtocolEditorView extends ItemView {
         updatedAt: new Date().toISOString(),
       };
     }).then((updated) => {
-      if (this.protocolPath !== protocolPath || this.loadGeneration !== generation) return;
-      const createdNode = this.applyCreatedProtocolDocument(updated, newNode.id) ?? newNode;
-      this.openEditModal(createdNode, { autofocusFirstTextField: true });
-      new Notice(this.plugin.i18n.t('protocolEditor.nodeCreated'));
-    }).catch((err) => {
+      try {
+        if (this.protocolPath !== protocolPath || this.loadGeneration !== generation) {
+          options.onCreateAbandoned?.();
+          return;
+        }
+        const createdNode = this.applyCreatedProtocolDocument(updated, newNode.id) ?? newNode;
+        this.openEditModal(createdNode, { autofocusFirstTextField: true });
+        options.onEditModalOpened?.();
+        new Notice(this.plugin.i18n.t('protocolEditor.nodeCreated'));
+      } catch (err) {
+        console.error('[RadiProtocol] Failed to update Protocol Editor UI after creating connected node:', err);
+        options.onCreateFailed?.();
+        new Notice(this.plugin.i18n.t('protocolEditor.saveFailed', { error: String(err) }));
+      }
+    }, (err) => {
+      options.onCreateFailed?.();
       new Notice(this.plugin.i18n.t('protocolEditor.saveFailed', { error: String(err) }));
     });
   }

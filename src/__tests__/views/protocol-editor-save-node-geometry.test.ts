@@ -218,3 +218,201 @@ describe('ProtocolEditorView — saveNodeGeometry', () => {
     }
   });
 });
+
+describe('ProtocolEditorView — node creation modal handoff', () => {
+  it('runs standalone creation handoff only after opening the edit modal', async () => {
+    const update = vi.fn<StoreUpdate>(async (_protocolPath, mutator) => mutator(makeDoc(makeNode())));
+    const { view } = createView(update);
+    const order: string[] = [];
+
+    vi.spyOn(view as any, 'applyCreatedProtocolDocument').mockImplementation(((updated: ProtocolDocumentV1, newNodeId: string) => {
+      order.push('apply-created');
+      (view as any).doc = updated;
+      return updated.nodes.find((node) => node.id === newNodeId) ?? null;
+    }) as any);
+    vi.spyOn(view as any, 'openEditModal').mockImplementation(() => {
+      order.push('open-edit-modal');
+    });
+
+    await new Promise<void>((resolve) => {
+      (view as any).addNodeAtWorldPoint('question', 32, 48, {
+        onEditModalOpened: () => {
+          order.push('handoff');
+          resolve();
+        },
+      });
+    });
+
+    expect(order).toEqual(['apply-created', 'open-edit-modal', 'handoff']);
+    expect(update).toHaveBeenCalledWith('Protocols/current.rp.json', expect.any(Function));
+  });
+
+  it('runs connected creation handoff only after opening the edit modal', async () => {
+    const source = makeNode({ id: 'source', kind: 'question' });
+    const doc = makeDoc(source);
+    const update = vi.fn<StoreUpdate>(async (_protocolPath, mutator) => mutator(doc));
+    const { view } = createView(update, doc);
+    const order: string[] = [];
+
+    vi.spyOn(view as any, 'applyCreatedProtocolDocument').mockImplementation(((updated: ProtocolDocumentV1, newNodeId: string) => {
+      order.push('apply-created');
+      (view as any).doc = updated;
+      return updated.nodes.find((node) => node.id === newNodeId) ?? null;
+    }) as any);
+    vi.spyOn(view as any, 'openEditModal').mockImplementation(() => {
+      order.push('open-edit-modal');
+    });
+
+    await new Promise<void>((resolve) => {
+      (view as any).addNodeAndConnectAtWorldPoint('source', 'answer', 120, 64, {
+        onEditModalOpened: () => {
+          order.push('handoff');
+          resolve();
+        },
+      });
+    });
+
+    expect(order).toEqual(['apply-created', 'open-edit-modal', 'handoff']);
+    expect(update).toHaveBeenCalledWith('Protocols/current.rp.json', expect.any(Function));
+  });
+
+  it('abandons stale standalone creation without opening the edit modal or successful handoff', async () => {
+    let viewRef: ProtocolEditorView | null = null;
+    const update = vi.fn<StoreUpdate>(async (_protocolPath, mutator) => {
+      if (viewRef === null) throw new Error('view not initialized');
+      (viewRef as any).loadGeneration += 1;
+      return mutator(makeDoc(makeNode()));
+    });
+    const { view } = createView(update);
+    viewRef = view;
+    let handoffCount = 0;
+    let abandonedCount = 0;
+    const openEditModal = vi.spyOn(view as any, 'openEditModal').mockImplementation(() => {});
+
+    await new Promise<void>((resolve) => {
+      (view as any).addNodeAtWorldPoint('question', 0, 0, {
+        onEditModalOpened: () => {
+          handoffCount += 1;
+        },
+        onCreateAbandoned: () => {
+          abandonedCount += 1;
+          resolve();
+        },
+      });
+    });
+
+    expect(handoffCount).toBe(0);
+    expect(abandonedCount).toBe(1);
+    expect(openEditModal).not.toHaveBeenCalled();
+  });
+
+  it('runs failed-creation recovery without opening the edit modal or successful handoff', async () => {
+    const update = vi.fn<StoreUpdate>(async () => {
+      throw new Error('write failed');
+    });
+    const { view } = createView(update);
+    let handoffCount = 0;
+    let failureCount = 0;
+    const openEditModal = vi.spyOn(view as any, 'openEditModal').mockImplementation(() => {});
+
+    await new Promise<void>((resolve) => {
+      (view as any).addNodeAtWorldPoint('question', 0, 0, {
+        onEditModalOpened: () => {
+          handoffCount += 1;
+        },
+        onCreateFailed: () => {
+          failureCount += 1;
+          resolve();
+        },
+      });
+    });
+
+    expect(handoffCount).toBe(0);
+    expect(failureCount).toBe(1);
+    expect(openEditModal).not.toHaveBeenCalled();
+  });
+
+  it('abandons stale connected creation without opening the edit modal or successful handoff', async () => {
+    const source = makeNode({ id: 'source', kind: 'question' });
+    const doc = makeDoc(source);
+    let viewRef: ProtocolEditorView | null = null;
+    const update = vi.fn<StoreUpdate>(async (_protocolPath, mutator) => {
+      if (viewRef === null) throw new Error('view not initialized');
+      (viewRef as any).loadGeneration += 1;
+      return mutator(doc);
+    });
+    const { view } = createView(update, doc);
+    viewRef = view;
+    let handoffCount = 0;
+    let abandonedCount = 0;
+    const openEditModal = vi.spyOn(view as any, 'openEditModal').mockImplementation(() => {});
+
+    await new Promise<void>((resolve) => {
+      (view as any).addNodeAndConnectAtWorldPoint('source', 'answer', 0, 0, {
+        onEditModalOpened: () => {
+          handoffCount += 1;
+        },
+        onCreateAbandoned: () => {
+          abandonedCount += 1;
+          resolve();
+        },
+      });
+    });
+
+    expect(handoffCount).toBe(0);
+    expect(abandonedCount).toBe(1);
+    expect(openEditModal).not.toHaveBeenCalled();
+  });
+
+  it('runs failed connected-creation recovery without opening the edit modal or successful handoff', async () => {
+    const source = makeNode({ id: 'source', kind: 'question' });
+    const doc = makeDoc(source);
+    const update = vi.fn<StoreUpdate>(async () => {
+      throw new Error('write failed');
+    });
+    const { view } = createView(update, doc);
+    let handoffCount = 0;
+    let failureCount = 0;
+    const openEditModal = vi.spyOn(view as any, 'openEditModal').mockImplementation(() => {});
+
+    await new Promise<void>((resolve) => {
+      (view as any).addNodeAndConnectAtWorldPoint('source', 'answer', 0, 0, {
+        onEditModalOpened: () => {
+          handoffCount += 1;
+        },
+        onCreateFailed: () => {
+          failureCount += 1;
+          resolve();
+        },
+      });
+    });
+
+    expect(handoffCount).toBe(0);
+    expect(failureCount).toBe(1);
+    expect(openEditModal).not.toHaveBeenCalled();
+  });
+
+  it('calls onCreateFailed when standalone UI update fails after successful save', async () => {
+    const update = vi.fn<StoreUpdate>(async (_protocolPath, mutator) => mutator(makeDoc(makeNode())));
+    const { view } = createView(update);
+    let failureCount = 0;
+
+    vi.spyOn(view as any, 'applyCreatedProtocolDocument').mockImplementation(() => {
+      throw new Error('UI update failed');
+    });
+
+    await new Promise<void>((resolve) => {
+      (view as any).addNodeAtWorldPoint('question', 0, 0, {
+        onEditModalOpened: () => {
+          // Should not be called
+        },
+        onCreateFailed: () => {
+          failureCount += 1;
+          resolve();
+        },
+      });
+    });
+
+    expect(failureCount).toBe(1);
+  });
+});
