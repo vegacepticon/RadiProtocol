@@ -28,14 +28,8 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Build
-        run: npm run build
-
-      - name: Lint
-        run: npm run lint
-
-      - name: Test
-        run: npm test
+      - name: Release checks
+        run: npm run check:release
 
       - name: Verify version matches tag
         run: |
