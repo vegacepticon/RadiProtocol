@@ -1,10 +1,10 @@
 # RadiProtocol
 
+[Русская версия](README.ru.md)
+
 RadiProtocol is an [Obsidian](https://obsidian.md) plugin for radiologists who want to run structured examination protocols inside their reporting vault. It turns a protocol into a guided clinical checklist: choose the relevant branch, insert prepared report text or snippets, repeat sections for multiple findings, and write the generated text into the active Markdown note.
 
 Protocols are authored as **`.rp.json`** files in the built-in visual protocol editor. Legacy `.canvas` protocol files can still be used and migrated, but new protocol work should use `.rp.json`.
-
-**Latest release:** 1.23.4
 
 ## What RadiProtocol helps with
 
@@ -36,7 +36,7 @@ RadiProtocol is a documentation aid. The radiologist remains responsible for cli
 
 ### Manual installation
 
-1. Download `main.js`, `styles.css`, and `manifest.json` from the latest GitHub release.
+1. Download `main.js`, `styles.css`, and `manifest.json` from the latest [GitHub release](https://github.com/vegacepticon/RadiProtocol/releases).
 2. Copy those files into `<your-vault>/.obsidian/plugins/radiprotocol/`.
 3. Reload Obsidian.
 4. Enable **RadiProtocol** in Obsidian's Community plugins list.
@@ -60,8 +60,6 @@ RadiProtocol is a documentation aid. The radiologist remains responsible for cli
 7. Use **Loop** nodes when the same reporting section may need to be repeated.
 8. Save the protocol and test it with **Run protocol in inline** on a Markdown note.
 
-For the detailed node and edge model, see [`docs/PROTOCOL-AUTHORING.md`](docs/PROTOCOL-AUTHORING.md).
-
 ## Snippets
 
 RadiProtocol supports two snippet types:
@@ -75,96 +73,15 @@ A snippet node can point to a specific snippet file or to a directory. When it p
 
 Existing JSON Canvas protocol files remain supported for compatibility. Use **Convert Canvas protocol to .rp.json** when you are ready to migrate them to the current protocol format. New protocols should be created as `.rp.json`.
 
-## Documentation
+## For contributors
 
-- [`docs/PROTOCOL-AUTHORING.md`](docs/PROTOCOL-AUTHORING.md) — protocol node and edge authoring guide.
-- [`docs/CONTRIBUTING.md`](docs/CONTRIBUTING.md) — development and contribution notes.
-- [`docs/adr/0001-inline-runner-only.md`](docs/adr/0001-inline-runner-only.md) — inline-only runner architecture decision.
+Repository hooks live in `.githooks/` and are optional for each local clone. To enable them, run:
 
----
+`git config core.hooksPath .githooks`
 
-# RadiProtocol на русском
+The pre-commit hook runs staged TypeScript/CSS lint plus affected Vitest tests. The pre-push hook runs `npm run check`. Bypass hooks only when you have a clear reason and run the equivalent checks manually before opening a pull request.
 
-RadiProtocol — плагин для [Obsidian](https://obsidian.md), который помогает врачу-рентгенологу выполнять структурированные протоколы исследования прямо в рабочем хранилище. Плагин превращает протокол в пошаговый клинический сценарий: выберите нужную ветку, вставьте готовый текст или сниппет, повторите раздел для нескольких находок и добавьте сформированный текст в активную Markdown-заметку.
-
-Протоколы создаются как файлы **`.rp.json`** во встроенном визуальном редакторе. Старые протоколы `.canvas` всё ещё поддерживаются и могут быть конвертированы, но новые протоколы следует создавать в формате `.rp.json`.
-
-**Последний релиз:** 1.23.4
-
-## Для чего нужен RadiProtocol
-
-- **Стандартизация радиологических заключений.** Можно оформить локальные протоколы, алгоритмы по модальностям, рекомендации по follow-up или шаблоны структурированных заключений как дерево решений.
-- **Пошаговые клинические ветвления.** Узлы вопросов и ответов помогают выбрать подходящий клинический путь без поиска по длинным статическим шаблонам.
-- **Повторно используемые фрагменты текста.** Узлы сниппетов вставляют подготовленный текст из настроенной папки. JSON-сниппеты могут запрашивать плейсхолдеры: свободный текст, выбор, множественный выбор, число или дату.
-- **Повторяющиеся находки.** Узлы циклов подходят для нескольких очагов, узлов, измерений, анатомических уровней или других повторяемых разделов.
-- **Inline-запуск поверх заметки.** Runner открывается как перетаскиваемая inline-панель над активной Markdown-заметкой и добавляет выбранный текст протокола в эту заметку.
-- **Визуальное создание протоколов.** Редактор протоколов поддерживает узлы старта, вопроса, ответа, текстового блока, сниппета и цикла, соединённые в граф.
-
-## Типичный клинический сценарий
-
-1. Откройте или создайте Markdown-заметку для заключения.
-2. Запустите команду **Run protocol in inline** из палитры команд.
-3. Выберите протокол из настроенной папки протоколов.
-4. Ответьте на клинические вопросы в inline runner.
-5. Заполните плейсхолдеры сниппетов, если они появятся.
-6. Проверьте добавленный в заметку текст и при необходимости отредактируйте его перед финальным заключением.
-
-RadiProtocol помогает оформлять документацию. Клиническое решение, формулировки и финальная проверка заключения остаются ответственностью врача.
-
-## Установка
-
-### Через BRAT (рекомендуется)
-
-1. Установите [Obsidian BRAT plugin](https://github.com/TfTHacker/obsidian42-brat).
-2. В настройках BRAT выберите **Add Beta plugin** и вставьте GitHub URL этого репозитория.
-3. Включите **RadiProtocol** в списке Community plugins Obsidian.
-
-### Ручная установка
-
-1. Скачайте `main.js`, `styles.css` и `manifest.json` из последнего GitHub release.
-2. Скопируйте эти файлы в `<your-vault>/.obsidian/plugins/radiprotocol/`.
-3. Перезагрузите Obsidian.
-4. Включите **RadiProtocol** в списке Community plugins.
-
-## Настройка
-
-1. Откройте настройки RadiProtocol.
-2. Укажите **Protocol folder** — папку в хранилище, где лежат файлы протоколов `.rp.json`.
-3. Укажите **Snippet folder** — папку в хранилище, где лежат JSON- или Markdown-сниппеты.
-4. Выберите разделитель накопленного текста заключения: новая строка или пробел.
-5. При необходимости выберите язык интерфейса.
-
-## Создание протокола
-
-1. Запустите **Open protocol editor**.
-2. Создайте или откройте `.rp.json` файл в настроенной папке протоколов.
-3. Добавьте узел **Start**.
-4. Добавьте клинические узлы **Question** и соедините их с узлами **Answer** или другими узлами протокола.
-5. Используйте **Text block** для фиксированного текста заключения.
-6. Используйте **Snippet** для вставки повторно используемых фрагментов из файла или папки.
-7. Используйте **Loop**, если один и тот же раздел может повторяться.
-8. Сохраните протокол и проверьте его командой **Run protocol in inline** на Markdown-заметке.
-
-Подробное описание узлов и связей см. в [`docs/PROTOCOL-AUTHORING.md`](docs/PROTOCOL-AUTHORING.md).
-
-## Сниппеты
-
-RadiProtocol поддерживает два типа сниппетов:
-
-- **Markdown-сниппеты**: вставляются как обычный текст.
-- **JSON-сниппеты**: структурированные сниппеты с плейсхолдерами, которые заполняются во время выполнения протокола.
-
-Узел сниппета может ссылаться на конкретный файл или на папку. Если выбрана папка, inline runner во время выполнения предложит выбрать один сниппет из этой папки.
-
-## Существующие `.canvas` протоколы
-
-Старые протоколы JSON Canvas остаются доступными для совместимости. Используйте команду **Convert Canvas protocol to .rp.json**, когда будете готовы перенести их в текущий формат. Новые протоколы следует создавать как `.rp.json`.
-
-## Документация
-
-- [`docs/PROTOCOL-AUTHORING.md`](docs/PROTOCOL-AUTHORING.md) — руководство по узлам и связям протокола.
-- [`docs/CONTRIBUTING.md`](docs/CONTRIBUTING.md) — заметки по разработке и участию в проекте.
-- [`docs/adr/0001-inline-runner-only.md`](docs/adr/0001-inline-runner-only.md) — решение об inline-only архитектуре runner.
+For releases, use `npm version X.Y.Z` so `manifest.json` and `versions.json` are updated by the version lifecycle. Git tags are numeric because `.npmrc` sets an empty tag prefix. Release assets are `main.js`, `styles.css`, and `manifest.json` from the latest GitHub release.
 
 ## License
 
