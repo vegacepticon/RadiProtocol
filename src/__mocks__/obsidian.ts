@@ -305,10 +305,6 @@ export class SuggestModal<T> {
   close(): void {}
 }
 
-export async function requestUrl(_request: unknown): Promise<{ text: string }> {
-  return { text: '' };
-}
-
 export class Notice {
   constructor(_message: string, _timeout?: number) {}
 }
