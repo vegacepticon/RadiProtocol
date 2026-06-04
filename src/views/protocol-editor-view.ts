@@ -1003,7 +1003,8 @@ export class ProtocolEditorView extends ItemView {
    * Unlike renderEdges(), this does NOT destroy or recreate SVG elements —
    * it only updates the `d` attribute on existing hitbox and visible path elements,
    * plus label position. Modeled after updateConnectionPreview() at line 1093.
-   * Uses world-coordinate anchors from this.doc to avoid forced layout reads.
+   * Uses cached live node geometry first, falling back to document coordinates,
+   * so drag listeners remain correct after async saves replace this.doc.
    */
   private updateEdgePaths(): void {
     if (this.doc === null || this.svgEl === null) return;

@@ -184,27 +184,37 @@ describe('ProtocolEditorView — saveNodeGeometry', () => {
         return null;
       },
     } as unknown as SVGGElement;
+    const previousCSS = (globalThis as any).CSS;
     (globalThis as any).CSS = { escape: (value: string) => value };
-    (view as any).svgEl = {
-      querySelector: (selector: string) => selector === '[data-edge-id="edge-1"]' ? group : null,
-    };
 
-    // Simulate the post-save state: this.doc has replacement node objects at old
-    // coordinates, while the still-bound drag listener is moving the old object.
-    (view as any).doc = {
-      ...doc,
-      nodes: [
-        { ...sourceNode, x: 0, y: 0 },
-        { ...targetNode, x: 400, y: 0 },
-      ],
-    };
-    (view as any).liveNodeGeometryById.set('source', { id: 'source', x: 50, y: 30, width: 200, height: 80 });
+    try {
+      (view as any).svgEl = {
+        querySelector: (selector: string) => selector === '[data-edge-id="edge-1"]' ? group : null,
+      };
 
-    (view as any).updateEdgePaths();
+      // Simulate the post-save state: this.doc has replacement node objects at old
+      // coordinates, while the still-bound drag listener is moving the old object.
+      (view as any).doc = {
+        ...doc,
+        nodes: [
+          { ...sourceNode, x: 0, y: 0 },
+          { ...targetNode, x: 400, y: 0 },
+        ],
+      };
+      (view as any).liveNodeGeometryById.set('source', { id: 'source', x: 50, y: 30, width: 200, height: 80 });
 
-    expect(pathEl.attrs.d).toContain('M 15250 12070');
-    expect(hitboxEl.attrs.d).toBe(pathEl.attrs.d);
-    // Stale-doc anchor would have produced M 15000 12040 — make sure that did not happen.
-    expect(pathEl.attrs.d).not.toContain('M 15000 12040');
+      (view as any).updateEdgePaths();
+
+      expect(pathEl.attrs.d).toContain('M 15250 12070');
+      expect(hitboxEl.attrs.d).toBe(pathEl.attrs.d);
+      // Stale-doc LR output anchor would have produced M 15200 12040.
+      expect(pathEl.attrs.d).not.toContain('M 15200 12040');
+    } finally {
+      if (previousCSS === undefined) {
+        delete (globalThis as any).CSS;
+      } else {
+        (globalThis as any).CSS = previousCSS;
+      }
+    }
   });
 });
