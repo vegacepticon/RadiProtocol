@@ -50,6 +50,75 @@ interface ProtocolEditorEdgeRoute {
   labelY: number;
 }
 
+interface ProtocolEditorEdgePoint {
+  x: number;
+  y: number;
+}
+
+const EDGE_ROUTE_EPSILON = 0.5;
+
+function roundProtocolEditorEdgeCoord(value: number): number {
+  return Math.round(value * 100) / 100;
+}
+
+function formatProtocolEditorEdgeCoord(value: number): string {
+  return String(roundProtocolEditorEdgeCoord(value));
+}
+
+function sameProtocolEditorEdgePoint(a: ProtocolEditorEdgePoint, b: ProtocolEditorEdgePoint): boolean {
+  return Math.hypot(a.x - b.x, a.y - b.y) < EDGE_ROUTE_EPSILON;
+}
+
+function normalizeProtocolEditorEdgePoints(points: ProtocolEditorEdgePoint[]): ProtocolEditorEdgePoint[] {
+  const normalized: ProtocolEditorEdgePoint[] = [];
+  for (const point of points) {
+    const rounded = { x: roundProtocolEditorEdgeCoord(point.x), y: roundProtocolEditorEdgeCoord(point.y) };
+    const previous = normalized[normalized.length - 1];
+    if (previous !== undefined && sameProtocolEditorEdgePoint(previous, rounded)) continue;
+    normalized.push(rounded);
+  }
+  return normalized;
+}
+
+function protocolEditorLineCommand(point: ProtocolEditorEdgePoint): string {
+  return `L ${formatProtocolEditorEdgeCoord(point.x)} ${formatProtocolEditorEdgeCoord(point.y)}`;
+}
+
+function roundedProtocolEditorOrthogonalPath(points: ProtocolEditorEdgePoint[], maxBend: number): string {
+  const normalized = normalizeProtocolEditorEdgePoints(points);
+  if (normalized.length === 0) return '';
+  if (normalized.length === 1) return `M ${formatProtocolEditorEdgeCoord(normalized[0]!.x)} ${formatProtocolEditorEdgeCoord(normalized[0]!.y)}`;
+
+  const commands = [`M ${formatProtocolEditorEdgeCoord(normalized[0]!.x)} ${formatProtocolEditorEdgeCoord(normalized[0]!.y)}`];
+  for (let index = 1; index < normalized.length; index += 1) {
+    const current = normalized[index]!;
+    const next = normalized[index + 1];
+    if (next === undefined || maxBend <= EDGE_ROUTE_EPSILON) {
+      commands.push(protocolEditorLineCommand(current));
+      continue;
+    }
+
+    const previous = normalized[index - 1]!;
+    const inLength = Math.hypot(current.x - previous.x, current.y - previous.y);
+    const outLength = Math.hypot(next.x - current.x, next.y - current.y);
+    const bend = Math.min(maxBend, inLength / 2, outLength / 2);
+    if (bend <= EDGE_ROUTE_EPSILON) {
+      commands.push(protocolEditorLineCommand(current));
+      continue;
+    }
+
+    const inUnit = { x: (current.x - previous.x) / inLength, y: (current.y - previous.y) / inLength };
+    const outUnit = { x: (next.x - current.x) / outLength, y: (next.y - current.y) / outLength };
+    const bendStart = { x: current.x - inUnit.x * bend, y: current.y - inUnit.y * bend };
+    const bendEnd = { x: current.x + outUnit.x * bend, y: current.y + outUnit.y * bend };
+
+    commands.push(protocolEditorLineCommand(bendStart));
+    commands.push(`Q ${formatProtocolEditorEdgeCoord(current.x)} ${formatProtocolEditorEdgeCoord(current.y)} ${formatProtocolEditorEdgeCoord(bendEnd.x)} ${formatProtocolEditorEdgeCoord(bendEnd.y)}`);
+  }
+
+  return commands.join(' ');
+}
+
 interface ProtocolEditorPortAnchor {
   x: number;
   y: number;
@@ -64,6 +133,10 @@ interface ProtocolEditorNodeMeasurement {
 interface ProtocolEditorMeasuredNodeGeometry extends ProtocolEditorNodeMeasurement {
   x: number;
   y: number;
+}
+
+interface ProtocolEditorLiveNodeGeometry extends ProtocolEditorMeasuredNodeGeometry {
+  id: string;
 }
 
 interface ProtocolEditorLayoutOptions {
@@ -357,16 +430,13 @@ export function protocolEditorEdgeRoute(
         };
       }
       const midY = y1 + rankDelta / 2;
-      const horizontalSign = Math.sign(normalDelta || 1);
       return {
-        d: [
-          `M ${x1} ${y1}`,
-          `L ${x1} ${midY - bend}`,
-          `Q ${x1} ${midY} ${x1 + horizontalSign * bend} ${midY}`,
-          `L ${x2 - horizontalSign * bend} ${midY}`,
-          `Q ${x2} ${midY} ${x2} ${midY + bend}`,
-          `L ${x2} ${y2}`,
-        ].join(' '),
+        d: roundedProtocolEditorOrthogonalPath([
+          { x: x1, y: y1 },
+          { x: x1, y: midY },
+          { x: x2, y: midY },
+          { x: x2, y: y2 },
+        ], bend),
         labelX: (x1 + x2) / 2,
         labelY: midY - 10,
       };
@@ -380,16 +450,13 @@ export function protocolEditorEdgeRoute(
         labelY: y1 - 10,
       };
     }
-    const verticalSign = Math.sign(normalDelta || 1);
     return {
-      d: [
-        `M ${x1} ${y1}`,
-        `L ${midX - bend} ${y1}`,
-        `Q ${midX} ${y1} ${midX} ${y1 + verticalSign * bend}`,
-        `L ${midX} ${y2 - verticalSign * bend}`,
-        `Q ${midX} ${y2} ${midX + bend} ${y2}`,
-        `L ${x2} ${y2}`,
-      ].join(' '),
+      d: roundedProtocolEditorOrthogonalPath([
+        { x: x1, y: y1 },
+        { x: midX, y: y1 },
+        { x: midX, y: y2 },
+        { x: x2, y: y2 },
+      ], bend),
       labelX: midX,
       labelY: (y1 + y2) / 2 - 10,
     };
@@ -400,18 +467,14 @@ export function protocolEditorEdgeRoute(
     const exitY = y1 + 40;
     const entryY = y2 - 40;
     return {
-      d: [
-        `M ${x1} ${y1}`,
-        `L ${x1} ${exitY - bend}`,
-        `Q ${x1} ${exitY} ${x1 + bend} ${exitY}`,
-        `L ${routeX - bend} ${exitY}`,
-        `Q ${routeX} ${exitY} ${routeX} ${exitY + bend}`,
-        `L ${routeX} ${entryY - bend}`,
-        `Q ${routeX} ${entryY} ${routeX - bend} ${entryY}`,
-        `L ${x2 + bend} ${entryY}`,
-        `Q ${x2} ${entryY} ${x2} ${entryY + bend}`,
-        `L ${x2} ${y2}`,
-      ].join(' '),
+      d: roundedProtocolEditorOrthogonalPath([
+        { x: x1, y: y1 },
+        { x: x1, y: exitY },
+        { x: routeX, y: exitY },
+        { x: routeX, y: entryY },
+        { x: x2, y: entryY },
+        { x: x2, y: y2 },
+      ], bend),
       labelX: routeX + 14,
       labelY: (exitY + entryY) / 2,
     };
@@ -421,18 +484,14 @@ export function protocolEditorEdgeRoute(
   const exitX = x1 + 40;
   const entryX = x2 - 40;
   return {
-    d: [
-      `M ${x1} ${y1}`,
-      `L ${exitX - bend} ${y1}`,
-      `Q ${exitX} ${y1} ${exitX} ${y1 + bend}`,
-      `L ${exitX} ${routeY - bend}`,
-      `Q ${exitX} ${routeY} ${exitX + bend} ${routeY}`,
-      `L ${entryX - bend} ${routeY}`,
-      `Q ${entryX} ${routeY} ${entryX} ${routeY - bend}`,
-      `L ${entryX} ${y2 + bend}`,
-      `Q ${entryX} ${y2} ${entryX + bend} ${y2}`,
-      `L ${x2} ${y2}`,
-    ].join(' '),
+    d: roundedProtocolEditorOrthogonalPath([
+      { x: x1, y: y1 },
+      { x: exitX, y: y1 },
+      { x: exitX, y: routeY },
+      { x: entryX, y: routeY },
+      { x: entryX, y: y2 },
+      { x: x2, y: y2 },
+    ], bend),
     labelX: (exitX + entryX) / 2,
     labelY: routeY - 10,
   };
@@ -451,6 +510,7 @@ export class ProtocolEditorView extends ItemView {
   private minimapViewportEl: SVGRectElement | null = null;
   private minimapWorldBounds: { x: number; y: number; width: number; height: number } | null = null;
   private readonly nodeElementById = new Map<string, HTMLElement>();
+  private readonly liveNodeGeometryById = new Map<string, ProtocolEditorLiveNodeGeometry>();
   private panState: PanState | null = null;
 
   private connectionDragState: ConnectionDragState | null = null;
@@ -486,6 +546,8 @@ export class ProtocolEditorView extends ItemView {
     this.protocolPath = null;
     this.panState = null;
     this.connectionDragState = null;
+    this.nodeElementById.clear();
+    this.liveNodeGeometryById.clear();
     document.body.removeClass('rp-protocol-editor-drag-active');
     document.body.removeClass('rp-protocol-editor-resize-active');
   }
@@ -628,13 +690,16 @@ export class ProtocolEditorView extends ItemView {
     if (this.doc === null || this.protocolPath === null) return;
 
     const newNode = this.createProtocolEditorNode(kind, x, y);
+    const protocolPath = this.protocolPath;
+    const generation = this.loadGeneration;
 
-    void this.plugin.protocolDocumentStore.update(this.protocolPath, (existing) => {
+    void this.plugin.protocolDocumentStore.update(protocolPath, (existing) => {
       if (existing === null) protocolMissingFileError();
       return { ...existing, nodes: [...existing.nodes, newNode], viewport: this.currentViewportState(), updatedAt: new Date().toISOString() };
-    }).then(async () => {
-      this.openEditModal(newNode, { autofocusFirstTextField: true });
-      await this.loadProtocol(this.protocolPath!);
+    }).then((updated) => {
+      if (this.protocolPath !== protocolPath || this.loadGeneration !== generation) return;
+      const createdNode = this.applyCreatedProtocolDocument(updated, newNode.id) ?? newNode;
+      this.openEditModal(createdNode, { autofocusFirstTextField: true });
       new Notice(this.plugin.i18n.t('protocolEditor.nodeCreated'));
     }).catch((err) => {
       new Notice(this.plugin.i18n.t('protocolEditor.saveFailed', { error: String(err) }));
@@ -699,8 +764,10 @@ export class ProtocolEditorView extends ItemView {
     if (this.doc === null || this.protocolPath === null) return;
 
     const newNode = this.createProtocolEditorNode(kind, x, y);
+    const protocolPath = this.protocolPath;
+    const generation = this.loadGeneration;
 
-    void this.plugin.protocolDocumentStore.update(this.protocolPath, (existing) => {
+    void this.plugin.protocolDocumentStore.update(protocolPath, (existing) => {
       if (existing === null) protocolMissingFileError();
       const sourceNode = existing.nodes.find((n) => n.id === fromNodeId);
       const targetNode = { ...newNode };
@@ -726,9 +793,10 @@ export class ProtocolEditorView extends ItemView {
         viewport: this.currentViewportState(),
         updatedAt: new Date().toISOString(),
       };
-    }).then(async () => {
-      this.openEditModal(newNode, { autofocusFirstTextField: true });
-      await this.loadProtocol(this.protocolPath!);
+    }).then((updated) => {
+      if (this.protocolPath !== protocolPath || this.loadGeneration !== generation) return;
+      const createdNode = this.applyCreatedProtocolDocument(updated, newNode.id) ?? newNode;
+      this.openEditModal(createdNode, { autofocusFirstTextField: true });
       new Notice(this.plugin.i18n.t('protocolEditor.nodeCreated'));
     }).catch((err) => {
       new Notice(this.plugin.i18n.t('protocolEditor.saveFailed', { error: String(err) }));
@@ -737,6 +805,8 @@ export class ProtocolEditorView extends ItemView {
 
   private renderDocument(): void {
     if (this.doc === null || this.surfaceEl === null || this.svgEl === null) return;
+    this.nodeElementById.clear();
+    this.liveNodeGeometryById.clear();
     this.surfaceEl.empty();
     this.svgEl.empty();
     this.applyZoom();
@@ -751,61 +821,92 @@ export class ProtocolEditorView extends ItemView {
     }
 
     for (const node of this.doc.nodes) {
-      const nodeEl = this.surfaceEl.createDiv({ cls: 'rp-protocol-editor-node' });
-      nodeEl.toggleClass('is-untyped', node.kind === null);
-      nodeEl.setAttr('data-node-id', node.id);
-      nodeEl.setAttr('data-node-kind', nodeKindToken(node.kind));
-      nodeEl.setAttr('tabindex', '0');
-      nodeEl.setAttr('role', 'group');
-      nodeEl.setAttr('aria-label', nodeTitle(node, this.plugin.i18n.t.bind(this.plugin.i18n)));
-      if (node.color === undefined) node.color = defaultColorForProtocolEditorNodeKind(node.kind);
-      this.applyNodePosition(nodeEl, node);
-
-      const inputPort = nodeEl.createDiv({ cls: 'rp-protocol-editor-port rp-protocol-editor-port-input' });
-      inputPort.setAttr('data-node-id', node.id);
-      inputPort.setAttr('data-port-kind', 'input');
-      inputPort.setAttr('data-port-side', protocolEditorInputPortSide(this.layoutDirection));
-      inputPort.setAttr('aria-label', this.plugin.i18n.t('protocolEditor.inputPortLabel'));
-
-      const outputPort = nodeEl.createDiv({ cls: 'rp-protocol-editor-port rp-protocol-editor-port-output' });
-      outputPort.setAttr('data-node-id', node.id);
-      outputPort.setAttr('data-port-kind', 'output');
-      outputPort.setAttr('data-port-side', protocolEditorOutputPortSide(this.layoutDirection));
-      outputPort.setAttr('aria-label', this.plugin.i18n.t('protocolEditor.outputPortLabel'));
-
-      nodeEl.createDiv({ cls: 'rp-protocol-editor-node-kind', text: node.kind ?? this.plugin.i18n.t('protocolEditor.untyped') });
-      const displayTitle = nodeTitle(node, this.plugin.i18n.t.bind(this.plugin.i18n));
-      if (displayTitle !== (node.kind ?? this.plugin.i18n.t('protocolEditor.untyped'))) {
-        nodeEl.createDiv({ cls: 'rp-protocol-editor-node-title', text: displayTitle });
-      }
-      const resizeHandle = nodeEl.createDiv({ cls: 'rp-protocol-editor-resize-handle' });
-      resizeHandle.setAttr('aria-label', this.plugin.i18n.t('protocolEditor.resizeNodeLabel'));
-
-      this.bindConnectionDrag(outputPort, node);
-      this.bindDrag(nodeEl, node);
-      this.bindResize(resizeHandle, nodeEl, node);
-      this.nodeElementById.set(node.id, nodeEl);
-
-      /* Phase 4D — double-click to edit */
-      nodeEl.addEventListener('dblclick', (e) => {
-        if ((e.target as HTMLElement).closest('.rp-protocol-editor-port') !== null) return;
-        e.preventDefault();
-        e.stopPropagation();
-        this.openEditModal(node);
-      });
-
-      nodeEl.addEventListener('keydown', (e: KeyboardEvent) => {
-        if ((e.target as HTMLElement).closest('.rp-protocol-editor-port') !== null) return;
-        if (e.key === 'Enter' || e.key === ' ') {
-          e.preventDefault();
-          e.stopPropagation();
-          this.openEditModal(node);
-        }
-      });
+      this.renderNode(node);
     }
 
     this.renderEdges();
     this.renderMinimap();
+  }
+
+  private renderNode(node: ProtocolNodeRecord): HTMLElement | null {
+    if (this.surfaceEl === null) return null;
+    this.surfaceEl.querySelector('.rp-protocol-editor-empty')?.remove();
+
+    const nodeEl = this.surfaceEl.createDiv({ cls: 'rp-protocol-editor-node' });
+    nodeEl.toggleClass('is-untyped', node.kind === null);
+    nodeEl.setAttr('data-node-id', node.id);
+    nodeEl.setAttr('data-node-kind', nodeKindToken(node.kind));
+    nodeEl.setAttr('tabindex', '0');
+    nodeEl.setAttr('role', 'group');
+    nodeEl.setAttr('aria-label', nodeTitle(node, this.plugin.i18n.t.bind(this.plugin.i18n)));
+    if (node.color === undefined) node.color = defaultColorForProtocolEditorNodeKind(node.kind);
+    this.applyNodePosition(nodeEl, node);
+
+    const inputPort = nodeEl.createDiv({ cls: 'rp-protocol-editor-port rp-protocol-editor-port-input' });
+    inputPort.setAttr('data-node-id', node.id);
+    inputPort.setAttr('data-port-kind', 'input');
+    inputPort.setAttr('data-port-side', protocolEditorInputPortSide(this.layoutDirection));
+    inputPort.setAttr('aria-label', this.plugin.i18n.t('protocolEditor.inputPortLabel'));
+
+    const outputPort = nodeEl.createDiv({ cls: 'rp-protocol-editor-port rp-protocol-editor-port-output' });
+    outputPort.setAttr('data-node-id', node.id);
+    outputPort.setAttr('data-port-kind', 'output');
+    outputPort.setAttr('data-port-side', protocolEditorOutputPortSide(this.layoutDirection));
+    outputPort.setAttr('aria-label', this.plugin.i18n.t('protocolEditor.outputPortLabel'));
+
+    nodeEl.createDiv({ cls: 'rp-protocol-editor-node-kind', text: node.kind ?? this.plugin.i18n.t('protocolEditor.untyped') });
+    const displayTitle = nodeTitle(node, this.plugin.i18n.t.bind(this.plugin.i18n));
+    if (displayTitle !== (node.kind ?? this.plugin.i18n.t('protocolEditor.untyped'))) {
+      nodeEl.createDiv({ cls: 'rp-protocol-editor-node-title', text: displayTitle });
+    }
+    const resizeHandle = nodeEl.createDiv({ cls: 'rp-protocol-editor-resize-handle' });
+    resizeHandle.setAttr('aria-label', this.plugin.i18n.t('protocolEditor.resizeNodeLabel'));
+
+    this.bindConnectionDrag(outputPort, node);
+    this.bindDrag(nodeEl, node);
+    this.bindResize(resizeHandle, nodeEl, node);
+    this.nodeElementById.set(node.id, nodeEl);
+
+    nodeEl.addEventListener('dblclick', (e) => {
+      if ((e.target as HTMLElement).closest('.rp-protocol-editor-port') !== null) return;
+      e.preventDefault();
+      e.stopPropagation();
+      this.openEditModal(node);
+    });
+
+    nodeEl.addEventListener('keydown', (e: KeyboardEvent) => {
+      if ((e.target as HTMLElement).closest('.rp-protocol-editor-port') !== null) return;
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        e.stopPropagation();
+        this.openEditModal(node);
+      }
+    });
+
+    return nodeEl;
+  }
+
+  private applyCreatedProtocolDocument(updated: ProtocolDocumentV1, newNodeId: string): ProtocolNodeRecord | null {
+    this.doc = updated;
+    this.layoutDirection = protocolEditorLayoutDirectionFromDocument(updated);
+    this.viewportEl?.setAttr('data-layout-direction', this.layoutDirection);
+
+    const createdNode = updated.nodes.find((node) => node.id === newNodeId) ?? null;
+    if (createdNode === null) {
+      this.renderDocument();
+      return null;
+    }
+
+    const existingNodeEl = this.nodeElementById.get(createdNode.id);
+    if (existingNodeEl === undefined || !existingNodeEl.isConnected) {
+      this.renderNode(createdNode);
+    } else {
+      this.applyNodePosition(existingNodeEl, createdNode);
+    }
+
+    this.renderEdges();
+    this.renderMinimap();
+    return createdNode;
   }
 
   private renderEdges(): void {
@@ -913,9 +1014,9 @@ export class ProtocolEditorView extends ItemView {
       const from = nodeById.get(edge.fromNodeId);
       const to = nodeById.get(edge.toNodeId);
       if (from === undefined || to === undefined) continue;
-      // Use world-coordinate anchors (no forced layout reads)
-      const source = protocolEditorAnchorToSurfacePoint(protocolEditorPortAnchor(from, outputSide));
-      const target = protocolEditorAnchorToSurfacePoint(protocolEditorPortAnchor(to, inputSide));
+      // Use live geometry when available, fall back to document coordinates
+      const source = protocolEditorAnchorToSurfacePoint(protocolEditorPortAnchor(this.currentNodeGeometry(from), outputSide));
+      const target = protocolEditorAnchorToSurfacePoint(protocolEditorPortAnchor(this.currentNodeGeometry(to), inputSide));
       const route = protocolEditorEdgeRoute(source.x, source.y, target.x, target.y, this.layoutDirection);
       const group = this.svgEl.querySelector(`[data-edge-id="${CSS.escape(edge.id)}"]`) as SVGGElement | null;
       if (group === null) continue;
@@ -1101,6 +1202,7 @@ export class ProtocolEditorView extends ItemView {
   }
 
   private applyNodePosition(nodeEl: HTMLElement, node: ProtocolNodeRecord): void {
+    this.rememberLiveNodeGeometry(node);
     nodeEl.setAttr('style', `left:${worldXToSurfaceX(node.x)}px;top:${worldYToSurfaceY(node.y)}px;width:${node.width}px;min-height:${node.height}px;${node.color !== undefined ? `--rp-node-color:${node.color};` : ''}`);
   }
 
@@ -1112,6 +1214,20 @@ export class ProtocolEditorView extends ItemView {
       width: measurement.width,
       height: measurement.height,
     };
+  }
+
+  private rememberLiveNodeGeometry(node: Pick<ProtocolNodeRecord, 'id' | 'x' | 'y' | 'width' | 'height'>): void {
+    this.liveNodeGeometryById.set(node.id, {
+      id: node.id,
+      x: node.x,
+      y: node.y,
+      width: node.width,
+      height: node.height,
+    });
+  }
+
+  private currentNodeGeometry(node: ProtocolNodeRecord): ProtocolEditorMeasuredNodeGeometry {
+    return this.liveNodeGeometryById.get(node.id) ?? this.fallbackNodeGeometry(node);
   }
 
   private collectCurrentNodeGeometry(): Map<string, ProtocolEditorMeasuredNodeGeometry> {
@@ -1383,6 +1499,8 @@ export class ProtocolEditorView extends ItemView {
 
         node.x = newX;
         node.y = newY;
+        this.applyNodePosition(nodeEl, node);
+        this.updateEdgePaths();
         void this.saveNodeGeometry(node);
       };
 

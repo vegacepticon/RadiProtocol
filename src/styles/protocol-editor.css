@@ -76,6 +76,7 @@
   stroke: transparent;
   stroke-width: 18;
   pointer-events: stroke;
+  vector-effect: non-scaling-stroke;
 }
 
 .rp-protocol-editor-edge-group:focus {
@@ -105,6 +106,8 @@
   stroke-width: 2;
   stroke-linejoin: round;
   stroke-linecap: round;
+  vector-effect: non-scaling-stroke;
+  shape-rendering: geometricprecision;
 }
 
 .rp-protocol-editor-edge-preview {

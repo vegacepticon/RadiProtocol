@@ -162,4 +162,49 @@ describe('ProtocolEditorView — saveNodeGeometry', () => {
     expect(updateEdgePaths).not.toHaveBeenCalled();
     expect(renderMinimap).not.toHaveBeenCalled();
   });
+
+  it('updates edge paths from live geometry after doc replacement leaves drag listeners with older node objects', () => {
+    const sourceNode = makeNode({ id: 'source', x: 0, y: 0, width: 200, height: 80 });
+    const targetNode = makeNode({ id: 'target', x: 400, y: 0, width: 200, height: 80 });
+    const doc: ProtocolDocumentV1 = {
+      ...makeDoc(sourceNode),
+      nodes: [sourceNode, targetNode],
+      edges: [{ id: 'edge-1', fromNodeId: 'source', toNodeId: 'target' }],
+    };
+    const update = vi.fn<StoreUpdate>(async (_protocolPath, mutator) => mutator(doc));
+    const { view, updateEdgePaths } = createView(update, doc);
+    updateEdgePaths.mockRestore();
+
+    const hitboxEl = makeNodeElement();
+    const pathEl = makeNodeElement();
+    const group = {
+      querySelector(selector: string) {
+        if (selector === '.rp-protocol-editor-edge-hitbox') return hitboxEl;
+        if (selector === '.rp-protocol-editor-edge') return pathEl;
+        return null;
+      },
+    } as unknown as SVGGElement;
+    (globalThis as any).CSS = { escape: (value: string) => value };
+    (view as any).svgEl = {
+      querySelector: (selector: string) => selector === '[data-edge-id="edge-1"]' ? group : null,
+    };
+
+    // Simulate the post-save state: this.doc has replacement node objects at old
+    // coordinates, while the still-bound drag listener is moving the old object.
+    (view as any).doc = {
+      ...doc,
+      nodes: [
+        { ...sourceNode, x: 0, y: 0 },
+        { ...targetNode, x: 400, y: 0 },
+      ],
+    };
+    (view as any).liveNodeGeometryById.set('source', { id: 'source', x: 50, y: 30, width: 200, height: 80 });
+
+    (view as any).updateEdgePaths();
+
+    expect(pathEl.attrs.d).toContain('M 15250 12070');
+    expect(hitboxEl.attrs.d).toBe(pathEl.attrs.d);
+    // Stale-doc anchor would have produced M 15000 12040 — make sure that did not happen.
+    expect(pathEl.attrs.d).not.toContain('M 15000 12040');
+  });
 });

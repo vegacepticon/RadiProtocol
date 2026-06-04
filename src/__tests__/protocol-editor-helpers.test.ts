@@ -142,9 +142,10 @@ describe('protocol editor helper functions', () => {
 
     it('routes backward horizontal edges around nodes instead of through them', () => {
       const route = protocolEditorEdgeRoute(500, 100, 200, 120, 'LR');
-      // Dynamic bend: backward LR, normalDelta=20 → min(40, 10, 32) = 10
+      // Dynamic bend: backward LR, normalDelta=20 → min(40, 10, 32) = 10.
+      // The third corner now approaches from the right side of entryX (170), not past it (150).
       expect(route.d).toContain('L 540 158');
-      expect(route.d).toContain('L 150 168');
+      expect(route.d).toContain('L 170 168');
       expect(route.labelY).toBeGreaterThan(120);
     });
 
@@ -166,9 +167,38 @@ describe('protocol editor helper functions', () => {
 
     it('routes backward vertical edges around the right side', () => {
       const route = protocolEditorEdgeRoute(200, 320, 160, 120, 'TB');
-      // Dynamic bend: backward TB, |normalDelta|=40 → min(40, 20, 32) = 20
-      expect(route.d).toContain('L 260 60');
+      // Dynamic bend: backward TB, |normalDelta|=40 → min(40, 20, 32) = 20.
+      // The route now approaches the lower return corner without overshooting it.
+      expect(route.d).toContain('L 260 100 Q 260 80 240 80');
       expect(route.labelX).toBeGreaterThan(260);
+    });
+
+    it('does not overshoot backward horizontal U-turn corners', () => {
+      const route = protocolEditorEdgeRoute(500, 100, 200, 120, 'LR');
+      expect(route.d).toContain('L 170 168 Q 160 168 160 158');
+      expect(route.d).not.toContain('L 150 168');
+    });
+
+    it('does not overshoot backward vertical U-turn corners', () => {
+      const route = protocolEditorEdgeRoute(200, 320, 160, 120, 'TB');
+      expect(route.d).toContain('L 260 100 Q 260 80 240 80');
+      expect(route.d).not.toContain('L 260 60');
+    });
+
+    it('omits zero-radius Q-curves on aligned backward U-shaped routes', () => {
+      const horizontal = protocolEditorEdgeRoute(500, 100, 200, 100, 'LR');
+      const vertical = protocolEditorEdgeRoute(200, 320, 200, 120, 'TB');
+      expect(horizontal.d).not.toContain('Q');
+      expect(vertical.d).not.toContain('Q');
+      expect(horizontal.d).not.toContain('NaN');
+      expect(vertical.d).not.toContain('NaN');
+    });
+
+    it('keeps forward dogleg routes rank-monotonic after rounded path cleanup', () => {
+      const horizontal = protocolEditorEdgeRoute(100, 100, 110, 102, 'LR');
+      const vertical = protocolEditorEdgeRoute(200, 100, 202, 110, 'TB');
+      expectNoForwardRankBacktracking(horizontal.d, 'LR');
+      expectNoForwardRankBacktracking(vertical.d, 'TB');
     });
 
     it('shows labels for answer/snippet targets and loop exit edges regardless of target kind', () => {
