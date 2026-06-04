@@ -1,72 +1,110 @@
-# Protocol Document Layer
+# Protocol Layer Architecture
 
 ## Responsibility
-On-disk serialization and persistence for `.rp.json` protocol files. Owns the canonical schema, parsing (JSON string → `ProtocolGraph`), vault CRUD, file resolution, and remote library install.
+On-disk document model for `.rp.json` protocol files: schema definition, pure parser (V1 JSON → runtime `ProtocolGraph`), Obsidian-vault CRUD store, and path resolution. The parser and document model are pure TypeScript (zero Obsidian imports, NFR-01). Only the store and resolver touch the vault.
 
 ## Dependencies
-- **obsidian**: Vault I/O, `requestUrl`, `Notice`
-- **graph-model**: Runtime types (`RPNode`, `RPNodeKind`, `ProtocolGraph`)
-- **write-mutex / vault-utils**: Per-path concurrency, folder creation
+- **graph/graph-model**: Runtime types (`ProtocolGraph`, `RPNode`, `ParseResult`, `RPNodeKind`)
+- **i18n**: Translator injection for parser error messages
+- **utils/write-mutex**: Per-file-path write serialization
+- **utils/vault-utils**: `ensureFolderPath` for safe folder creation
+- **obsidian** (store + resolver only): `TFile`, `TFolder`, `App`, `Vault`
 
 ## Consumers
-- `main.ts` — wires parser, store, and library service
-- `views/` — editor, library browser (types only)
-- `snippets/` — protocol reference sync (`protocol-ref-sync.ts`)
+- **main.ts**: Constructs and wires parser, store, and resolver
+- **views/protocol-editor-view.ts**: Holds `doc: ProtocolDocumentV1`, mutates node/edge records
+- **views/node-picker-modal.ts**: Reads `ProtocolNodeRecord` for node selection
+- **snippets/protocol-ref-sync.ts**: Cross-protocol snippet reference rewriting
 
 ## Module Structure
 ```
-protocol/
-├── protocol-document.ts          # Schema definition, type guard, factory
-├── protocol-document-parser.ts   # Pure parser (JSON string → ParseResult)
-├── protocol-document-store.ts    # Vault CRUD with WriteMutex
-├── protocol-file-resolver.ts     # Stateless path resolution (Vault arg)
-├── protocol-library-model.ts     # Remote library index types (pure)
-└── protocol-library-service.ts   # Remote library fetch/install
+src/protocol/
+├── protocol-document.ts         # On-disk schema (ProtocolDocumentV1, NodeRecord, EdgeRecord)
+├── protocol-document-parser.ts  # Pure parser: V1 JSON → ProtocolGraph (never throws)
+├── protocol-document-store.ts   # Vault CRUD + WriteMutex
+└── protocol-file-resolver.ts    # Path normalization + recursive file walker (dual-strategy)
 ```
 
-## Versioned Document Schema
+## Versioned Document Schema (Sentinel Fields)
 
 ```typescript
-// Factory + type guard — deterministic via optional `now: Date` parameter
-export function createEmptyDocument(id: string, title: string, now = new Date()): DocumentV1 {
-  return { schema: SCHEMA_ID, version: 1, id, title,
-    createdAt: now.toISOString(), updatedAt: now.toISOString(),
-    items: [], edges: [], viewport: { x: 0, y: 0, zoom: 1 },
-  };
+export const PROTOCOL_SCHEMA = 'radiprotocol.protocol' as const;
+export const PROTOCOL_VERSION = 1 as const;
+
+export interface ProtocolDocumentV1 {
+  schema: typeof PROTOCOL_SCHEMA;    // sentinel — must equal exact string
+  version: typeof PROTOCOL_VERSION;  // version — must equal integer
+  id: string; title: string;
+  nodes: ProtocolNodeRecord[];       // order-insensitive
+  edges: ProtocolEdgeRecord[];       // order-insensitive
+  // optional: viewport, layoutDirection, selfCheckEnabled, selfCheckItems
+}
+
+export interface ProtocolNodeRecord {
+  id: string;
+  kind: RPNodeKind | null;              // null = untyped authoring intermediate, skipped by parser
+  fields: Record<string, unknown>;       // per-kind typed extraction happens in parser
+  x: number; y: number; width: number; height: number;
+  color?: string; text?: string;
 }
 ```
 
-## Pure Parser → Discriminated Result
+- `isProtocolDocumentV1()` type guard checks schema + version sentinels, NOT per-node semantics.
+- `createEmptyProtocolDocument(id, title, now = new Date())` — injectable clock for tests.
+
+## Pure Parser with ParseResult (Never Throws)
 
 ```typescript
-export type ParseResult =
-  | { success: true; graph: ProtocolGraph }
-  | { success: false; error: string };
+export class ProtocolDocumentParser {
+  constructor(private readonly t: Translator = defaultT) {}  // injectable i18n
 
-// Never throws — errors are values
-parser.parse(jsonString, filePath) // → ParseResult
+  parse(jsonString: string, filePath: string): ParseResult { /* never throws */ }
+}
+
+// Triple return from parseNode(): RPNode (valid) | null (skip untyped) | { parseError } (reject)
+// All errors collected before returning — caller sees every problem at once
+// Legacy compatibility: getString(fields, 'questionText', fallback, 'radiprotocol_questionText')
+//   checks modern key first, then radiprotocol_* prefixed legacy key (one-way bridge)
 ```
 
-## Mutex-Protected Vault Store
+## Vault Store (CRUD + WriteMutex)
 
 ```typescript
-// Per-path locking via WriteMutex; missing/corrupt files return null
-store.read(path)           // → DocumentV1 | null
-store.write(path, doc)     // → void (mutex-protected)
-store.update(path, fn)     // → DocumentV1 (read-modify-write)
-store.create(folder, title, id) // → { file, doc }
+export class ProtocolDocumentStore {
+  private readonly mutex = new WriteMutex(); // per-path serialized writes
+
+  async read(path: string): Promise<ProtocolDocumentV1 | null>    // null = missing/invalid, never throws
+  async write(path: string, doc: ProtocolDocumentV1): Promise<void> // mutex + ensure parent folder + trailing newline
+  async update(path: string, mutator: (doc | null) => ProtocolDocumentV1): Promise<ProtocolDocumentV1>
+  async create(folder: string, title: string, id: string): Promise<{ file: TFile; doc: ProtocolDocumentV1 }>
+  async list(folder: string): Promise<TFile[]>                 // recursive walk, dual-strategy
+  async delete(path: string): Promise<void>                    // fileManager.trashFile (soft delete)
+}
 ```
+
+- `write()` uses `JSON.stringify(doc, null, 2) + '\n'` — pretty-printed with trailing newline for clean diffs.
+- `update()` is read-modify-write: mutator receives `ProtocolDocumentV1 | null`.
+- `create()` sanitizes title (`/\` → `-`) to prevent path injection.
+- `list()` has dual strategy: TFolder walk (fast) with `vault.getFiles()` fallback (test compatibility).
 
 ## Architectural Boundaries
-- **NO Obsidian imports in model/parser files**: `protocol-document.ts` and `protocol-document-parser.ts` are pure — testable in Node.js
-- **NO Result<T>**: Store returns `null` for missing/corrupt, never throws
-- **NO unqueued vault writes**: Every write goes through `WriteMutex.runExclusive`
+- **NO Obsidian imports in document + parser**: Pure TypeScript, fully unit-testable without Obsidian stubs.
+- **NO Result<T> in stores**: Stores return `null` for missing/invalid data.
+- **NO unqueued DB ops**: All vault writes go through `WriteMutex.runExclusive()`.
 
-<important if="you are adding a new node kind to the parser">
-## Adding a New Node Kind
-1. Add kind string to `RPNodeKind` union in `graph-model.ts`
-2. Add interface extending `RPNodeBase` with typed fields
-3. Add `case` to `parseNode()` switch — use `getString()`/`getOptionalString()` for field extraction with legacy `radiprotocol_*` fallback
-4. Add `case` to `nodeLabel()` in `graph/node-label.ts`
-5. Write parser tests: modern fields, legacy fallback, missing optionals, unknown-kind rejection
+<important if="you are adding a new field to an existing node kind">
+## Adding a New Field to a Node Kind
+1. Add the field (with `?` for optionality) to the interface in `graph-model.ts`
+2. In `protocol-document-parser.ts`, add extraction in `parseNode()` switch case: `getString(fields, 'newField', fallback, 'radiprotocol_newField')`
+3. If the field references another resource (like snippet path), add it to `protocol-ref-sync.ts`
+4. Do NOT bump `PROTOCOL_VERSION` — adding optional fields is backward-compatible
+</important>
+
+<important if="you are writing or modifying tests for the protocol layer">
+## Testing Conventions
+- Pure modules (document, parser): construct directly, no mocking needed
+- Store tests: use `makeVault()` + `makeApp()` mock factory (see `__tests__/protocol-document-store.test.ts`)
+- Mock vault uses in-memory `Record<string, string>`, `vi.fn()` on every method
+- Parser tests verify both success paths and error collection (multiple errors separated by `;`)
+- Store tests verify both return values AND side effects on mock files
 </important>

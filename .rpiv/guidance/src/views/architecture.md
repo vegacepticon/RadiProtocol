@@ -1,91 +1,159 @@
-# Views Layer
+# Views Layer Architecture
 
 ## Responsibility
-UI surface — transforms domain objects (protocols, snippets, graphs) into interactive Obsidian components. Two `ItemView` panes, multiple `Modal`/`SuggestModal` dialogs, and reusable DOM widgets. No business logic — delegates to services in lower layers.
+Obsidian UI surface — Modal subclasses, ItemView panels, suggest modals, standalone DOM components, and the inline runner overlay. All Obsidian API coupling lives here. Views delegate all business logic to domain services and never contain domain logic themselves.
 
 ## Dependencies
-- **All lower layers**: `runner/`, `snippets/`, `protocol/`, `graph/`, `utils/`, `constants/`, `i18n/`
-- **obsidian**: `ItemView`, `Modal`, `SuggestModal`, `Notice`, `Menu`, `setIcon`
-- **dagre**: DAG auto-layout in `protocol-editor-view.ts`
+- **All lower layers**: protocol, runner, runner/render, graph, snippets, utils, constants, i18n
+- **obsidian**: Modal, ItemView, SuggestModal, AbstractInputSuggest, App, Notice, setIcon, Menu, TFile, WorkspaceLeaf
+- **main.ts**: Type-only import of `RadiProtocolPlugin` (prevents circular deps)
+- **dagre**: Auto-layout algorithm for `ProtocolEditorView`
 
 ## Consumers
-- `main.ts` — registers view types, wires commands
-- `runner/render/render-snippet-picker.ts` — imports `SnippetTreePicker` (intentional exception)
+- **main.ts**: Registers views, modals, and commands on plugin load
 
 ## Module Structure
 ```
-views/
-├── protocol-editor-view.ts          # ItemView — graph editor (dagre layout)
-├── snippet-manager-view.ts          # ItemView — snippet library tree
-├── snippet-manager/tree-renderer.ts # Delegated tree renderer (DnD, rename)
-├── inline-runner-modal.ts           # Floating DOM panel (NOT an Obsidian Modal — historic name)
-├── inline-runner-layout.ts          # Position/drag/resize manager
-├── snippet-editor-modal.ts          # Create/edit modal with unsaved-changes guard
-├── confirm-modal.ts                 # Generic 2/3-button confirmation dialog
-├── snippet-tree-picker.ts           # Reusable hierarchical file/folder picker
-├── {snippet-chip-editor, snippet-fill-in-modal, ...}  # Specialized widgets
-└── {library-browser-modal, node-picker-modal, ...}    # Feature modals
+src/views/
+├── confirm-modal.ts, node-picker-modal.ts, protocol-picker-modal.ts, insert-snippet-modal.ts, folder-suggest.ts
+│                                    # Modals & pickers (Promise-based result pattern)
+├── inline-runner-modal.ts, inline-runner-layout.ts     # Inline runner (non-Modal class)
+├── protocol-editor-view.ts                             # Canvas editor (ItemView + dagre auto-layout)
+├── snippet-editor-modal.ts, snippet-fill-in-modal.ts, snippet-chip-editor.ts
+│                                    # Snippet editor modals + inline chip editor
+├── snippet-manager-view.ts, snippet-tree-picker.ts     # Snippet manager (ItemView + picker)
+└── snippet-manager/tree-renderer.ts                    # Extracted DnD + inline-rename (Phase 82)
 ```
 
-## Modal-as-Promise Pattern
+## Promise-Based Modal Result (safeResolve Double-Guard)
 
 ```typescript
-class MyModal extends Modal {
-  readonly result: Promise<MyResult>;   // Caller awaits this
-  private resolve!: (v: MyResult) => void;
+export class MyModal extends Modal {
+  readonly result: Promise<MyResult>;
+  private resolve!: (value: MyResult) => void;
   private resolved = false;
-  private safeResolve(v: MyResult) {    // Double-guard against Esc + click race
-    if (!this.resolved) { this.resolved = true; this.resolve(v); }
+
+  constructor(app: App) {
+    super(app);
+    this.result = new Promise<MyResult>((res) => { this.resolve = res; });
   }
-  onClose() { this.safeResolve({ saved: false }); }  // Fallback
+
+  onClose(): void { this.safeResolve({ saved: false }); }
+
+  private finish(value: MyResult): void {
+    this.safeResolve(value);
+    this.close();  // triggers onClose, but safeResolve is idempotent
+  }
+
+  private safeResolve(value: MyResult): void {
+    if (!this.resolved) { this.resolved = true; this.resolve(value); }
+  }
 }
-// Usage: const res = await new MyModal(app, plugin).open().result;
+// Caller: const modal = new MyModal(app); modal.open(); const result = await modal.result;
 ```
 
-## ItemView Lifecycle
+Result types are always discriminated unions: `{ saved: true; data: T } | { saved: false }`.
+
+## Obsidian ItemView (Debounced Vault Watcher)
 
 ```typescript
-class MyView extends ItemView {
-  constructor(leaf, plugin) { super(leaf); this.plugin = plugin; }
-  async onOpen()    { this.contentEl.empty(); /* build + render */ }
-  async onClose()   { /* null refs, no dangling closures */ }
-  // registerDomEvent / registerEvent for auto-cleanup
+async onOpen(): Promise<void> {
+  this.registerEvent(this.app.vault.on('create', (file) => {
+    if (this.shouldHandle(file.path)) this.scheduleRedraw();
+  }));
 }
+
+private scheduleRedraw(): void {
+  if (this.redrawTimer !== null) window.clearTimeout(this.redrawTimer);
+  this.redrawTimer = window.setTimeout(async () => {
+    this.redrawTimer = null;
+    await this.rebuildModel();
+    this.renderTree();
+  }, 120);  // 120ms debounce — coalesce rapid vault events
+}
+```
+
+Use `registerEvent` (not bare `on`) for auto-cleanup on view close.
+
+## State-Machine Render Dispatch (InlineRunnerModal)
+
+```typescript
+switch (state.status) {
+  case 'at-node':       renderQuestionAtNode(textZone, actionZone, graph, state, host); break;
+  case 'awaiting-loop-pick': renderLoopPicker(textZone, actionZone, graph, state, host); break;
+  // ... every status covered
+  default: { const _exhaustive: never = state; void _exhaustive; }
+}
+```
+
+Always uses `default: never` exhaustiveness check — compile error if a new status is unhandled.
+
+## Tracked-Listener Cleanup (Destroyable DOM Components)
+
+```typescript
+type ListenerTuple = { el: EventTarget; type: string; handler: EventListener };
+const listeners: ListenerTuple[] = [];
+
+const on = (el, type, handler) => {
+  el.addEventListener(type, handler);
+  listeners.push({ el, type, handler });
+};
+
+return { destroy() {
+  for (const l of listeners) l.el.removeEventListener(l.type, l.handler);
+  listeners.length = 0; container.empty();
+} };
+```
+
+## Mutation-Tracking Dirty State + Unsaved-Changes Guard
+
+```typescript
+// Every input mutation sets the flag
+this.hasUnsavedChanges = true;
+
+// close() interception prevents data loss
+close(): void {
+  if (!this.resolved && this.hasUnsavedChanges) {
+    void this.runUnsavedGuard();  // ConfirmModal with Save/Discard/Cancel
+    return;
+  }
+  super.close();
+}
+```
+
+## I18N Injection Pattern
+
+```typescript
+// Plugin views: const t = this.plugin.i18n.t.bind(this.plugin.i18n);
+// Standalone modals: constructor(app, ..., t?: Translator) { this.t = t ?? defaultT; }
+// All user-visible strings use t('key.with.dots')
+// User-authored content is NEVER wrapped in t()
 ```
 
 ## Architectural Boundaries
-- **NO business logic**: Views delegate to services — they never access vault directly for snippet CRUD
-- **View-last loading**: Views receive `RadiProtocolPlugin` via constructor, access services through `plugin.*`
-- **NO direct access to view internals**: Sub-renderers communicate via typed callback interfaces
-- **`InlineRunnerModal` naming**: Is a historical artifact — it is a floating DOM panel, not an Obsidian `Modal` subclass
+- **Views never contain domain logic** — all persistence through `SnippetService`, `ProtocolDocumentStore`, `rewriteProtocolSnippetRefs`
+- **Type-only import from main.ts** — `import type RadiProtocolPlugin` prevents circular deps
+- **One cross-layer exception**: `runner/render/render-snippet-picker.ts` imports `SnippetTreePicker` from views — documented
+- **CSS namespaces**: `rp-inline-runner-*`, `rp-protocol-editor-*`, `radi-snippet-*`, `rp-stp-*`
 
-<important if="you are adding a new modal">
-## Adding a New Modal
-1. Create `src/views/my-modal.ts` extending `Modal`
-2. Define `Result` type + `readonly result: Promise<Result>`
-3. Implement `safeResolve` double-guard
-4. Build form DOM in `onOpen()`, clean up in `onClose()`
-5. Override `close()` if unsaved-changes guard is needed
-6. Wire into main plugin: add command and call `new MyModal(app, plugin, opts).open()`
+<important if="you are adding a new Modal dialog">
+## Adding a Promise-Based Modal
+1. Create `src/views/my-modal.ts`, extend `Modal` from `obsidian`
+2. Add `readonly result: Promise<ResultType>` with `safeResolve` double-guard
+3. Define discriminated-union result type (`{ saved: true; data: T } | { saved: false }`)
+4. Implement `onOpen()` with DOM building, `onClose()` with `safeResolve(cancelResult)` + `contentEl.empty()`
+5. If unsaved-changes guard needed, override `close()` and use `ConfirmModal`
+6. Wire in `main.ts` via command that `new MyModal(app, ...).open()`
 </important>
 
-<important if="you are adding a new ItemView pane">
-## Adding a New View
-1. Create `src/views/my-view.ts` extending `ItemView`
-2. Define view type constant (`export const MY_VIEW_TYPE = 'radiprotocol-my-view'`)
-3. Constructor accepts `leaf` + `plugin`, calls `super(leaf)`
-4. Implement `getViewType()`, `getDisplayText()`, `getIcon()`
-5. Build DOM shell in `onOpen()`, null refs in `onClose()`
-6. Use `registerDomEvent`/`registerEvent` for auto-cleanup
-7. Register in `main.ts` via `this.registerView(MY_VIEW_TYPE, ...)`
-</important>
-
-<important if="you are adding a new reusable UI component (chip editor, tree renderer, etc.)">
-## Adding a Reusable UI Component
-1. Create `src/views/my-component.ts` — export a `mount()` function
-2. Return a handle with `destroy()` for cleanup
-3. Track all event listeners via array for manual removal
-4. Mutate draft in-place (caller owns state), call `onChange` callback
-5. Accept `Translator` as optional param with `defaultT` fallback
-6. Container-emptied on mount AND on destroy
+<important if="you are adding a new ItemView sidebar panel">
+## Adding a New ItemView
+1. Define view type constant: `export const MY_VIEW_TYPE = 'radiprotocol-my-view'`
+2. Extend `ItemView`, inject `RadiProtocolPlugin` via constructor
+3. Implement `getViewType()`, `getDisplayText()`, `getIcon()`
+4. In `onOpen()`: build header + content, `rebuildModel()` then `renderTree()`
+5. Register vault watchers with `registerEvent()` + `shouldHandle()` prefix filter
+6. Add `scheduleRedraw()` with 120ms debounce
+7. In `onClose()`: clear debounce timer + `contentEl.empty()`
+8. Register in `main.ts` `onload()` via `addLeafView()`
 </important>
