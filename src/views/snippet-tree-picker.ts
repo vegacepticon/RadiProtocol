@@ -372,7 +372,7 @@ export class SnippetTreePicker {
       relativePath = snippetOrBasename.relativePath;
     }
 
-    const row = createButton(listEl, { cls: 'rp-stp-file-row', attr: { 'aria-label': this.t('snippetTreePicker.selectSnippet', { name: basename }) } });
+    const row = createButton(listEl, { cls: 'rp-stp-file-row' });
     const nameEl = row.createEl('div', { cls: 'rp-stp-result-name' });
     nameEl.setText(`${fileGlyph(basename)} ${basename}`);
     nameEl.empty();

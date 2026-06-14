@@ -219,11 +219,28 @@
 /* Snippet picker inline host */
 .rp-stp-inline-host {
   width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+}
+
+.rp-stp-inline-host .rp-stp-root,
+.rp-stp-inline-host .rp-stp-body,
+.rp-stp-inline-host .rp-stp-search,
+.rp-stp-inline-host .rp-stp-list {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
 }
 
 .rp-stp-inline-host .rp-stp-body {
   min-height: 0;
   height: auto;
+}
+
+.rp-stp-inline-host .rp-stp-list {
+  overflow-x: hidden;
 }
 
 /* Error panel */

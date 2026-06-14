@@ -1047,3 +1047,24 @@ describe('Lifecycle', () => {
     expect(onSelect).not.toHaveBeenCalled();
   });
 });
+
+describe('File row accessibility (no tooltip-triggering attributes)', () => {
+  let svc: FakeSnippetService;
+
+  beforeEach(() => {
+    svc = makeFakeSnippetService();
+  });
+
+  it('file rows do not carry tooltip-triggering title or aria-label attributes', async () => {
+    svc.listFolder.mockResolvedValue({
+      folders: [],
+      snippets: [jsonSnippet(`${ROOT}/report.json`)],
+    });
+    const { picker, container } = makePicker({ mode: 'file-only' }, svc);
+    await picker.mount();
+
+    const fileRow = findByClass(container, 'rp-stp-file-row')[0];
+    expect(fileRow?.getAttribute('title')).toBeNull();
+    expect(fileRow?.getAttribute('aria-label')).toBeNull();
+  });
+});
