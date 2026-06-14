@@ -23,9 +23,14 @@
   box-sizing: border-box;
 }
 
-.rp-stp-inline-host .rp-stp-body,
 .rp-stp-modal-host .rp-stp-body {
   height: 360px;
+}
+
+.rp-stp-inline-host .rp-stp-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  height: 100%;
 }
 
 .rp-stp-editor-host .rp-stp-body {
@@ -34,6 +39,14 @@
 
 .rp-stp-body .rp-stp-list {
   flex: 1 1 auto;
+}
+
+.rp-stp-inline-host .rp-stp-root {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-height: 0;
+  height: 100%;
 }
 
 .rp-stp-search {
@@ -236,6 +249,13 @@
 .rp-stp-modal-host .rp-stp-list {
   min-height: 240px;
   max-height: 480px;
+  overflow-y: auto;
+}
+
+.rp-stp-inline-host .rp-stp-list {
+  flex: 1 1 auto;
+  min-height: 0;
+  max-height: none;
   overflow-y: auto;
 }
 

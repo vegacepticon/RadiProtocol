@@ -34,7 +34,11 @@ interface MockEl {
   closest: (selector: string) => MockEl | null;
   querySelector: (sel: string) => MockEl | null;
   createSpan: (opts?: { cls?: string; text?: string }) => MockEl;
+  isConnected: boolean;
   remove: () => void;
+  focus: (opts?: { preventScroll?: boolean }) => void;
+  select: () => void;
+  toggleAttribute: (name: string, force?: boolean) => void;
 }
 
 function makeEl(tag = 'div'): MockEl {
@@ -55,6 +59,7 @@ function makeEl(tag = 'div'): MockEl {
     _placeholder: '',
     _type: '',
     disabled: false,
+    isConnected: true,
     style: { setProperty() {} },
     createEl(subtag: string, opts?: { text?: string; cls?: string; type?: string; attr?: Record<string, string | number | boolean> }): MockEl {
       const child = makeEl(subtag);
@@ -131,7 +136,20 @@ function makeEl(tag = 'div'): MockEl {
       }
       return null;
     },
+    focus: vi.fn(),
+    select: vi.fn(),
+    toggleAttribute(name: string, force?: boolean): void {
+      const enabled = force ?? !attrs[name];
+      if (enabled) attrs[name] = '';
+      else delete attrs[name];
+      if (name === 'disabled') el.disabled = enabled;
+    },
     remove(): void {
+      const markDisconnected = (node: MockEl): void => {
+        node.isConnected = false;
+        for (const child of node.children) markDisconnected(child);
+      };
+      markDisconnected(el);
       if (el.parent) {
         const idx = el.parent.children.indexOf(el);
         if (idx >= 0) el.parent.children.splice(idx, 1);
@@ -224,9 +242,22 @@ vi.mock('obsidian', () => ({
 }));;
 
 // ── Mock SnippetTreePicker (imported by protocol-editor-view) ────────────────
+const pickerSpies = vi.hoisted(() => ({
+  ctor: vi.fn(),
+  mount: vi.fn(),
+  unmount: vi.fn(),
+  instances: [] as Array<{ options: any }>,
+}));
 
 vi.mock('../../views/snippet-tree-picker', () => ({
-  SnippetTreePicker: class { constructor() {} mount() { return Promise.resolve(); } unmount() {} },
+  SnippetTreePicker: class {
+    constructor(options: any) {
+      pickerSpies.ctor(options);
+      pickerSpies.instances.push({ options });
+    }
+    mount() { pickerSpies.mount(); return Promise.resolve(); }
+    unmount() { pickerSpies.unmount(); }
+  },
 }));
 
 // ── Mock plugin i18n ───────────────────────────────────────────────────────
@@ -270,11 +301,20 @@ const t = (key: string, _params?: Record<string, string>): string => {
     'protocolEditor.edgeLabelPlaceholder': 'Label',
     'protocolEditor.answerButtonLabelLabel': 'Answer label',
     'protocolEditor.snippetTargetLabel': 'Snippet target',
+    'protocolEditor.browseSnippetTarget': 'Browse',
+    'protocolEditor.browseSnippetTargetTitle': 'Browse snippet target',
+    'protocolEditor.noSnippetTarget': 'No target',
+    'protocolEditor.snippetTargetHelp': 'Choose a folder or snippet',
+    'protocolEditor.snippetFolderTarget': 'Folder',
+    'protocolEditor.snippetFileTarget': 'Snippet',
     'protocolEditor.snippetFolderPlaceholder': 'Folder',
     'protocolEditor.snippetFilePlaceholder': 'File',
     'protocolEditor.clearSnippetTarget': 'Clear',
     'protocolEditor.chooseNodeType': 'Choose node type',
     'protocolEditor.minimapLabel': 'Minimap — click or drag to pan',
+    'protocolEditor.useGlobalSeparator': 'Use global',
+    'settings.newline': 'Newline',
+    'settings.space': 'Space',
   };
   return map[key] ?? key;
 };
@@ -697,5 +737,126 @@ describe('openEditModal — empty multiline field regression (1.22.0 bug)', () =
     const savedAnswer = savedNodes.find(n => n.id === 'a1');
     expect(savedAnswer).toBeDefined();
     expect(savedAnswer!.fields['answerText']).toBe('');
+  });
+});
+
+describe('openEditModal — snippet target picker lifecycle', () => {
+  let savedDocument: unknown;
+  let savedWindow: unknown;
+  let savedHTMLElement: unknown;
+
+  beforeEach(() => {
+    savedDocument = (globalThis as any).document;
+    savedWindow = (globalThis as any).window;
+    savedHTMLElement = (globalThis as any).HTMLElement;
+    pickerSpies.ctor.mockClear();
+    pickerSpies.mount.mockClear();
+    pickerSpies.unmount.mockClear();
+    pickerSpies.instances.length = 0;
+  });
+
+  afterEach(() => {
+    (globalThis as any).document = savedDocument;
+    (globalThis as any).window = savedWindow;
+    (globalThis as any).HTMLElement = savedHTMLElement;
+  });
+
+  function clickText(root: MockEl, text: string): MockEl {
+    const button = findAllByTag(root, 'button').find(el => el._text === text);
+    expect(button).toBeDefined();
+    for (const handler of button!._listeners.get('click') ?? []) handler({ target: button });
+    return button!;
+  }
+
+  async function save(root: MockEl): Promise<void> {
+    const saveBtn = findAllByTag(root, 'button').find(el => el._text === 'Save')!;
+    for (const handler of saveBtn._listeners.get('click') ?? []) await handler({ target: saveBtn });
+  }
+
+  function openSnippetModal(initialFields: Record<string, unknown> = {}) {
+    const documentBody = makeEl('body');
+    const savedNodes: ProtocolNodeRecord[] = [];
+    const node: ProtocolNodeRecord = { id: 's1', kind: 'snippet', x: 0, y: 0, width: 200, height: 80, fields: initialFields };
+    const mockStore = {
+      async update(_path: string, mutator: (doc: ProtocolDocumentV1) => ProtocolDocumentV1) {
+        const doc: ProtocolDocumentV1 = {
+          schema: 'radiprotocol.protocol', version: 1, id: 'test', title: 'T',
+          createdAt: '2025-01-01T00:00:00Z', updatedAt: '2025-01-01T00:00:00Z',
+          nodes: [node], edges: [],
+        };
+        const result = mutator(doc);
+        savedNodes.push(...result.nodes);
+        return result;
+      },
+    };
+    const view = new ProtocolEditorView({} as any, {
+      i18n: { t },
+      settings: { snippetFolderPath: '.radiprotocol/snippets' },
+      snippetService: {},
+      protocolDocumentStore: mockStore,
+    } as any);
+    (view as any).protocolPath = 'test.rp.json';
+    (view as any).viewportEl = makeEl('div');
+    (view as any).loadProtocol = vi.fn(async () => {});
+    (globalThis as any).document = { body: documentBody, activeElement: null };
+    (globalThis as any).window = {
+      setTimeout: (fn: () => void) => { fn(); return 0; },
+      requestAnimationFrame: (fn: () => void) => { fn(); return 0; },
+    };
+    (globalThis as any).HTMLElement = class HTMLElement {};
+    (view as any).openEditModal(node);
+    return { documentBody, savedNodes };
+  }
+
+  it('selecting a folder persists subfolderPath only', async () => {
+    const { documentBody, savedNodes } = openSnippetModal();
+    clickText(documentBody, 'Browse');
+    pickerSpies.instances[0]!.options.onSelect({ kind: 'folder', relativePath: 'abdomen/ct' });
+    await save(documentBody);
+    const saved = savedNodes[savedNodes.length - 1]!;
+    expect(saved.fields.subfolderPath).toBe('abdomen/ct');
+    expect(saved.fields.snippetPath).toBeUndefined();
+  });
+
+  it('selecting a file persists snippetPath only', async () => {
+    const { documentBody, savedNodes } = openSnippetModal({ subfolderPath: 'old' });
+    clickText(documentBody, 'Browse');
+    pickerSpies.instances[0]!.options.onSelect({ kind: 'file', relativePath: 'abdomen/ct/report.md' });
+    await save(documentBody);
+    const saved = savedNodes[savedNodes.length - 1]!;
+    expect(saved.fields.snippetPath).toBe('abdomen/ct/report.md');
+    expect(saved.fields.subfolderPath).toBeUndefined();
+  });
+
+  it('cancelling the picker preserves the existing target', async () => {
+    const { documentBody, savedNodes } = openSnippetModal({ subfolderPath: 'existing/folder' });
+    clickText(documentBody, 'Browse');
+    const pickerClose = findAllByClass(documentBody, 'rp-protocol-editor-modal-close').find(el => el.closest('.rp-protocol-editor-snippet-target-picker-shell'))!;
+    for (const handler of pickerClose._listeners.get('click') ?? []) handler({ target: pickerClose });
+    await save(documentBody);
+    const saved = savedNodes[savedNodes.length - 1]!;
+    expect(saved.fields.subfolderPath).toBe('existing/folder');
+    expect(saved.fields.snippetPath).toBeUndefined();
+  });
+
+  it('closing the parent while the picker is open unmounts and removes the picker overlay', () => {
+    const { documentBody } = openSnippetModal();
+    clickText(documentBody, 'Browse');
+    expect(findAllByClass(documentBody, 'rp-protocol-editor-snippet-target-picker-backdrop')).toHaveLength(1);
+    const parentCloseBtn = findAllByClass(documentBody, 'rp-protocol-editor-modal-close').find(el => !el.closest('.rp-protocol-editor-snippet-target-picker-shell'))!;
+    for (const handler of parentCloseBtn._listeners.get('click') ?? []) handler({ target: parentCloseBtn });
+    expect(pickerSpies.unmount).toHaveBeenCalledTimes(1);
+    expect(findAllByClass(documentBody, 'rp-protocol-editor-snippet-target-picker-backdrop')).toHaveLength(0);
+  });
+
+  it('Escape closes the picker before the parent and restores focus to Browse', () => {
+    const { documentBody } = openSnippetModal();
+    const browseBtn = clickText(documentBody, 'Browse');
+    const pickerBackdrop = findAllByClass(documentBody, 'rp-protocol-editor-snippet-target-picker-backdrop')[0]!;
+    dispatchKeyDown(pickerBackdrop, 'Escape');
+    expect(pickerSpies.unmount).toHaveBeenCalledTimes(1);
+    expect(findAllByClass(documentBody, 'rp-protocol-editor-snippet-target-picker-backdrop')).toHaveLength(0);
+    expect(browseBtn.focus).toHaveBeenCalledWith({ preventScroll: true });
+    expect(findAllByClass(documentBody, 'rp-protocol-editor-modal')).toHaveLength(1);
   });
 });

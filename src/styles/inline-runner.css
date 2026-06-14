@@ -138,6 +138,9 @@
 /* When content is fullscreen (no actions zone visible), content takes all */
 .rp-inline-runner-container.rp-state-content-only .rp-inline-runner-content {
   flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
 }
 .rp-inline-runner-container.rp-state-content-only .rp-inline-runner-actions {
   display: none;
@@ -221,6 +224,10 @@
   width: 100%;
   max-width: 100%;
   min-width: 0;
+  flex: 1 1 auto;
+  min-height: 0;
+  height: 100%;
+  overflow: hidden;
   box-sizing: border-box;
 }
 
@@ -231,16 +238,27 @@
   width: 100%;
   max-width: 100%;
   min-width: 0;
+  min-height: 0;
   box-sizing: border-box;
+}
+
+.rp-stp-inline-host .rp-stp-root,
+.rp-stp-inline-host .rp-stp-body {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
 }
 
 .rp-stp-inline-host .rp-stp-body {
   min-height: 0;
-  height: auto;
+  height: 100%;
 }
 
 .rp-stp-inline-host .rp-stp-list {
+  flex: 1 1 auto;
+  max-height: none;
   overflow-x: hidden;
+  overflow-y: auto;
 }
 
 /* Error panel */
@@ -299,6 +317,11 @@
 .rp-runner-icon-btn svg {
   width: 14px;
   height: 14px;
+}
+
+.rp-inline-runner-container.rp-state-content-only .rp-inline-runner-content > .rp-runner-footer-row {
+  flex: 0 0 auto;
+  margin-top: var(--size-2-3);
 }
 
 /* Self-check */

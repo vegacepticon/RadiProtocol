@@ -486,6 +486,31 @@
   min-width: min(520px, 100%);
 }
 
+.rp-protocol-editor-modal-backdrop.rp-protocol-editor-snippet-target-picker-backdrop {
+  z-index: 1001;
+}
+
+.rp-protocol-editor-snippet-target-picker-shell {
+  width: min(640px, 92vw);
+  max-height: min(82vh, 720px);
+}
+
+.rp-protocol-editor-snippet-target-picker-body {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.rp-protocol-editor-snippet-target-picker-modal {
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+.rp-protocol-editor-snippet-target-picker-modal .rp-stp-root,
+.rp-protocol-editor-snippet-target-picker-modal .rp-stp-body {
+  min-height: 0;
+}
+
 .rp-protocol-editor-snippet-target-picker-modal .rp-stp-list {
   min-height: 280px;
   max-height: min(52vh, 520px);

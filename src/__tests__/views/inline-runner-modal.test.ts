@@ -443,3 +443,25 @@ describe('InlineRunnerModal — self-check completion', () => {
   });
 });
 
+describe('InlineRunnerModal — snippet picker resize CSS regression', () => {
+  it('inline snippet picker uses flex growth instead of fixed body/list height caps', () => {
+    const snippetPickerCss = fs.readFileSync(
+      path.resolve(__dirname, '../../styles/snippet-tree-picker.css'),
+      'utf8',
+    );
+    const inlineRunnerCss = fs.readFileSync(
+      path.resolve(__dirname, '../../styles/inline-runner.css'),
+      'utf8',
+    );
+
+    expect(snippetPickerCss).not.toMatch(/\.rp-stp-inline-host\s+\.rp-stp-body,\s*\.rp-stp-modal-host\s+\.rp-stp-body\s*\{[^}]*height:\s*360px/);
+    expect(snippetPickerCss).toMatch(/\.rp-stp-inline-host\s+\.rp-stp-body\s*\{[^}]*height:\s*100%/);
+    expect(snippetPickerCss).toMatch(/\.rp-stp-inline-host\s+\.rp-stp-list\s*\{[^}]*max-height:\s*none/);
+
+    expect(inlineRunnerCss).toMatch(/\.rp-inline-runner-container\.rp-state-content-only\s+\.rp-inline-runner-content\s*\{[^}]*display:\s*flex/);
+    expect(inlineRunnerCss).toMatch(/\.rp-stp-inline-host\s*\{[^}]*flex:\s*1 1 auto/);
+    expect(inlineRunnerCss).toMatch(/\.rp-stp-inline-host\s*\{[^}]*overflow:\s*hidden/);
+    expect(inlineRunnerCss).toMatch(/\.rp-stp-inline-host\s+\.rp-stp-list\s*\{[^}]*overflow-y:\s*auto/);
+  });
+});
+

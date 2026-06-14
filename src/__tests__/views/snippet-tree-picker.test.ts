@@ -1048,7 +1048,7 @@ describe('Lifecycle', () => {
   });
 });
 
-describe('File row accessibility (no tooltip-triggering attributes)', () => {
+describe('Picker row accessibility (no tooltip-triggering attributes)', () => {
   let svc: FakeSnippetService;
 
   beforeEach(() => {
@@ -1066,5 +1066,36 @@ describe('File row accessibility (no tooltip-triggering attributes)', () => {
     const fileRow = findByClass(container, 'rp-stp-file-row')[0];
     expect(fileRow?.getAttribute('title')).toBeNull();
     expect(fileRow?.getAttribute('aria-label')).toBeNull();
+  });
+
+  it('folder rows do not carry tooltip-triggering title or aria-label attributes', async () => {
+    svc.listFolder.mockResolvedValue({
+      folders: ['abdomen'],
+      snippets: [],
+    });
+    const { picker, container } = makePicker({ mode: 'file-only' }, svc);
+    await picker.mount();
+
+    const folderRow = findByClass(container, 'rp-stp-folder-row')[0];
+    expect(folderRow?.getAttribute('title')).toBeNull();
+    expect(folderRow?.getAttribute('aria-label')).toBeNull();
+  });
+
+  it('folder rows in search results do not carry tooltip-triggering title or aria-label attributes', async () => {
+    svc.listFolder.mockResolvedValue({ folders: [], snippets: [] });
+    svc.listFolderDescendants.mockResolvedValue({
+      folders: [`${ROOT}/abdomen`],
+      files: [],
+    });
+    const { picker, container } = makePicker({ mode: 'both' }, svc);
+    await picker.mount();
+
+    const input = findFirst(container, (el) => el.classList.has('rp-stp-search-input'))!;
+    triggerInput(input, 'abdomen');
+    await flushDebounce();
+
+    const folderRow = findByClass(container, 'rp-stp-folder-row')[0];
+    expect(folderRow?.getAttribute('title')).toBeNull();
+    expect(folderRow?.getAttribute('aria-label')).toBeNull();
   });
 });

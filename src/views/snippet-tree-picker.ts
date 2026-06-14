@@ -327,7 +327,7 @@ export class SnippetTreePicker {
     folderName: string,
     isSearchResult: boolean,
   ): void {
-    const row = createButton(listEl, { cls: 'rp-stp-folder-row', attr: { 'aria-label': this.t('snippetTreePicker.openFolder', { name: basenameOf(folderName) }) } });
+    const row = createButton(listEl, { cls: 'rp-stp-folder-row' });
     const nameEl = row.createEl('div', { cls: 'rp-stp-result-name' });
     nameEl.setText(`${GLYPH_FOLDER} ${basenameOf(folderName)}`);
     nameEl.empty();

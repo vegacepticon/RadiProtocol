@@ -1,4 +1,4 @@
-import { ItemView, Modal, Notice, TFile, WorkspaceLeaf, setIcon } from 'obsidian';
+import { ItemView, Notice, TFile, WorkspaceLeaf, setIcon } from 'obsidian';
 import type RadiProtocolPlugin from '../main';
 import type { ProtocolDocumentV1, ProtocolEdgeRecord, ProtocolNodeRecord } from '../protocol/protocol-document';
 import type { RPNodeKind } from '../graph/graph-model';
@@ -2134,10 +2134,26 @@ export class ProtocolEditorView extends ItemView {
     const header = modal.createDiv({ cls: 'rp-protocol-editor-modal-header' });
     header.createEl('h3', { text: t('protocolEditor.editNode') });
     const closeBtn = header.createEl('button', { cls: 'rp-protocol-editor-modal-close', text: '✕', attr: { 'aria-label': t('protocolEditor.close') } });
+    let closeActiveSnippetTargetPicker: (() => void) | null = null;
     const closeModal = () => {
+      if (closeActiveSnippetTargetPicker !== null) {
+        closeActiveSnippetTargetPicker();
+        closeActiveSnippetTargetPicker = null;
+      }
       modalEl.remove();
       this.restoreEditorFocus();
     };
+    modalEl.setAttr('tabindex', '-1');
+    modalEl.addEventListener('keydown', (e: KeyboardEvent) => {
+      if (e.key !== 'Escape') return;
+      e.preventDefault();
+      e.stopPropagation();
+      if (closeActiveSnippetTargetPicker !== null) {
+        closeActiveSnippetTargetPicker();
+        return;
+      }
+      closeModal();
+    });
     closeBtn.addEventListener('click', closeModal);
 
     const body = modal.createDiv({ cls: 'rp-protocol-editor-modal-body' });
@@ -2244,44 +2260,76 @@ export class ProtocolEditorView extends ItemView {
       };
 
       const openBrowseModal = () => {
-        const pickerModal = new Modal(this.app);
-        pickerModal.setTitle(t('protocolEditor.browseSnippetTargetTitle'));
+        if (closeActiveSnippetTargetPicker !== null) return;
+
+        const pickerBackdrop = document.body.createDiv({
+          cls: 'rp-protocol-editor-modal-backdrop rp-protocol-editor-snippet-target-picker-backdrop',
+        });
+        pickerBackdrop.setAttr('tabindex', '-1');
+
+        const pickerShell = pickerBackdrop.createDiv({ cls: 'rp-protocol-editor-modal rp-protocol-editor-snippet-target-picker-shell' });
+        const pickerHeader = pickerShell.createDiv({ cls: 'rp-protocol-editor-modal-header' });
+        pickerHeader.createEl('h3', { text: t('protocolEditor.browseSnippetTargetTitle') });
+        const pickerCloseBtn = pickerHeader.createEl('button', {
+          cls: 'rp-protocol-editor-modal-close',
+          text: '✕',
+          attr: { 'aria-label': t('protocolEditor.close') },
+        });
+
+        const pickerBody = pickerShell.createDiv({ cls: 'rp-protocol-editor-modal-body rp-protocol-editor-snippet-target-picker-body' });
+        pickerBody.createDiv({ cls: 'rp-protocol-editor-snippet-target-picker-help', text: t('protocolEditor.snippetTargetHelp') });
+        const pickerHost = pickerBody.createDiv({ cls: 'rp-stp-modal-host rp-protocol-editor-snippet-target-picker-modal' });
+
         let picker: SnippetTreePicker | null = null;
-
-        pickerModal.onOpen = () => {
-          pickerModal.contentEl.empty();
-          pickerModal.contentEl.createDiv({
-            cls: 'rp-protocol-editor-snippet-target-picker-help',
-            text: t('protocolEditor.snippetTargetHelp'),
-          });
-          const pickerHost = pickerModal.contentEl.createDiv({
-            cls: 'rp-stp-modal-host rp-protocol-editor-snippet-target-picker-modal',
-          });
-          picker = new SnippetTreePicker({
-            app: this.app,
-            snippetService: this.plugin.snippetService,
-            container: pickerHost,
-            mode: 'both',
-            rootPath: this.plugin.settings.snippetFolderPath,
-            initialSelection: selectedFile ?? selectedFolder,
-            t,
-            onSelect: (result) => {
-              applySelection(result);
-              pickerModal.close();
-            },
-          });
-          void picker.mount();
-        };
-
-        pickerModal.onClose = () => {
+        let closed = false;
+        const closePicker = (options?: { restoreFocus?: boolean }) => {
+          if (closed) return;
+          closed = true;
           if (picker !== null) {
             picker.unmount();
             picker = null;
           }
-          pickerModal.contentEl.empty();
+          pickerBackdrop.remove();
+          if (closeActiveSnippetTargetPicker === closePicker) closeActiveSnippetTargetPicker = null;
+          if (options?.restoreFocus === false) return;
+          window.requestAnimationFrame(() => {
+            if (browseBtn.isConnected) browseBtn.focus({ preventScroll: true });
+          });
         };
 
-        pickerModal.open();
+        picker = new SnippetTreePicker({
+          app: this.app,
+          snippetService: this.plugin.snippetService,
+          container: pickerHost,
+          mode: 'both',
+          rootPath: this.plugin.settings.snippetFolderPath,
+          initialSelection: selectedFile ?? selectedFolder,
+          t,
+          onSelect: (result) => {
+            if (!modalEl.isConnected) {
+              closePicker({ restoreFocus: false });
+              return;
+            }
+            applySelection(result);
+            closePicker();
+          },
+        });
+        closeActiveSnippetTargetPicker = closePicker;
+
+        pickerCloseBtn.addEventListener('click', () => closePicker());
+        pickerBackdrop.addEventListener('click', (e) => { if (e.target === pickerBackdrop) closePicker(); });
+        pickerBackdrop.addEventListener('keydown', (e: KeyboardEvent) => {
+          if (e.key !== 'Escape') return;
+          e.preventDefault();
+          e.stopPropagation();
+          closePicker();
+        });
+
+        void picker.mount();
+        window.setTimeout(() => {
+          const searchInput = pickerBackdrop.querySelector('.rp-stp-search-input') as HTMLElement | null;
+          (searchInput ?? pickerBackdrop).focus({ preventScroll: true });
+        }, 0);
       };
 
       browseBtn.addEventListener('click', openBrowseModal);
