@@ -1,4 +1,4 @@
-import { ItemView, Notice, TFile, WorkspaceLeaf, setIcon } from 'obsidian';
+import { ItemView, Modal, Notice, TFile, WorkspaceLeaf, setIcon } from 'obsidian';
 import type RadiProtocolPlugin from '../main';
 import type { ProtocolDocumentV1, ProtocolEdgeRecord, ProtocolNodeRecord } from '../protocol/protocol-document';
 import type { RPNodeKind } from '../graph/graph-model';
@@ -2187,29 +2187,50 @@ export class ProtocolEditorView extends ItemView {
     const addSnippetTargetPicker = (folderValue: unknown, fileValue: unknown) => {
       let selectedFolder = normalizeProtocolEditorSnippetFolderSelection(typeof folderValue === 'string' ? folderValue : '');
       let selectedFile = normalizeProtocolEditorSnippetFolderSelection(typeof fileValue === 'string' ? fileValue : '');
+      if (selectedFile !== undefined) selectedFolder = undefined;
+      type SelectedSnippetTarget = { kind: 'folder' | 'file'; path: string } | null;
+
       const field = body.createDiv({ cls: 'rp-protocol-editor-modal-field rp-protocol-editor-snippet-target-field' });
       field.createEl('label', { text: t('protocolEditor.snippetTargetLabel') });
-      const folderInput = field.createEl('input', {
-        attr: {
-          type: 'text',
-          value: selectedFolder ?? '',
-          readonly: 'readonly',
-          placeholder: t('protocolEditor.snippetFolderPlaceholder'),
-        },
-      }) as HTMLInputElement;
-      const fileInput = field.createEl('input', {
-        attr: {
-          type: 'text',
-          value: selectedFile ?? '',
-          readonly: 'readonly',
-          placeholder: t('protocolEditor.snippetFilePlaceholder'),
-        },
-      }) as HTMLInputElement;
-      const clearBtn = field.createEl('button', {
+
+      const summary = field.createDiv({ cls: 'rp-protocol-editor-snippet-target-summary' });
+      const summaryKind = summary.createSpan({ cls: 'rp-protocol-editor-snippet-target-kind' });
+      const summaryPath = summary.createSpan({ cls: 'rp-protocol-editor-snippet-target-path' });
+
+      const actions = field.createDiv({ cls: 'rp-protocol-editor-snippet-target-actions' });
+      const browseBtn = actions.createEl('button', {
+        cls: 'rp-protocol-editor-modal-btn',
+        text: t('protocolEditor.browseSnippetTarget'),
+        attr: { type: 'button' },
+      });
+      const clearBtn = actions.createEl('button', {
         cls: 'rp-protocol-editor-modal-btn',
         text: t('protocolEditor.clearSnippetTarget'),
+        attr: { type: 'button' },
       });
-      const pickerHost = field.createDiv({ cls: 'rp-protocol-editor-snippet-folder-picker' });
+
+      const currentTarget = (): SelectedSnippetTarget => {
+        if (selectedFile !== undefined) return { kind: 'file', path: selectedFile };
+        if (selectedFolder !== undefined) return { kind: 'folder', path: selectedFolder };
+        return null;
+      };
+
+      const renderSummary = () => {
+        const target = currentTarget();
+        clearBtn.toggleAttribute('disabled', target === null);
+        if (target === null) {
+          summaryKind.setText(t('protocolEditor.noSnippetTarget'));
+          summaryPath.setText(t('protocolEditor.snippetTargetHelp'));
+          summary.toggleClass('is-empty', true);
+          return;
+        }
+        summaryKind.setText(target.kind === 'folder'
+          ? t('protocolEditor.snippetFolderTarget')
+          : t('protocolEditor.snippetFileTarget'));
+        summaryPath.setText(target.path);
+        summary.toggleClass('is-empty', false);
+      };
+
       const applySelection = (result: SnippetTreePickerResult) => {
         const normalized = normalizeProtocolEditorSnippetFolderSelection(result.relativePath);
         if (result.kind === 'folder') {
@@ -2219,26 +2240,58 @@ export class ProtocolEditorView extends ItemView {
           selectedFile = normalized;
           selectedFolder = undefined;
         }
-        folderInput.value = selectedFolder ?? '';
-        fileInput.value = selectedFile ?? '';
+        renderSummary();
       };
+
+      const openBrowseModal = () => {
+        const pickerModal = new Modal(this.app);
+        pickerModal.setTitle(t('protocolEditor.browseSnippetTargetTitle'));
+        let picker: SnippetTreePicker | null = null;
+
+        pickerModal.onOpen = () => {
+          pickerModal.contentEl.empty();
+          pickerModal.contentEl.createDiv({
+            cls: 'rp-protocol-editor-snippet-target-picker-help',
+            text: t('protocolEditor.snippetTargetHelp'),
+          });
+          const pickerHost = pickerModal.contentEl.createDiv({
+            cls: 'rp-stp-modal-host rp-protocol-editor-snippet-target-picker-modal',
+          });
+          picker = new SnippetTreePicker({
+            app: this.app,
+            snippetService: this.plugin.snippetService,
+            container: pickerHost,
+            mode: 'both',
+            rootPath: this.plugin.settings.snippetFolderPath,
+            initialSelection: selectedFile ?? selectedFolder,
+            t,
+            onSelect: (result) => {
+              applySelection(result);
+              pickerModal.close();
+            },
+          });
+          void picker.mount();
+        };
+
+        pickerModal.onClose = () => {
+          if (picker !== null) {
+            picker.unmount();
+            picker = null;
+          }
+          pickerModal.contentEl.empty();
+        };
+
+        pickerModal.open();
+      };
+
+      browseBtn.addEventListener('click', openBrowseModal);
       clearBtn.addEventListener('click', () => {
         selectedFolder = undefined;
         selectedFile = undefined;
-        folderInput.value = '';
-        fileInput.value = '';
+        renderSummary();
       });
-      const picker = new SnippetTreePicker({
-        app: this.app,
-        snippetService: this.plugin.snippetService,
-        container: pickerHost,
-        mode: 'both',
-        rootPath: this.plugin.settings.snippetFolderPath,
-        initialSelection: selectedFile ?? selectedFolder,
-        t,
-        onSelect: applySelection,
-      });
-      void picker.mount();
+
+      renderSummary();
       textControls.push({ key: 'subfolderPath', value: () => selectedFolder });
       textControls.push({ key: 'snippetPath', value: () => selectedFile });
     };

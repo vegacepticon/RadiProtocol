@@ -186,6 +186,15 @@ vi.mock('obsidian', () => {
       onClose() {}
       registerDomEvent() {}
     },
+    Modal: class {
+      contentEl = makeEl('div');
+      title = '';
+      setTitle(title: string): void { this.title = title; }
+      open(): void { this.onOpen(); }
+      close(): void { this.onClose(); }
+      onOpen(): void {}
+      onClose(): void {}
+    },
     WorkspaceLeaf: class {},
     Notice,
     setIcon: () => {},

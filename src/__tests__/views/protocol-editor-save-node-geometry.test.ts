@@ -23,11 +23,19 @@ vi.mock('obsidian', () => ({
     onClose(): void {}
     registerDomEvent(): void {}
   },
+  Modal: class {
+    contentEl = { empty(): void {} };
+    setTitle(_title: string): void {}
+    open(): void { this.onOpen(); }
+    close(): void { this.onClose(); }
+    onOpen(): void {}
+    onClose(): void {}
+  },
   Notice: class { constructor(_message?: string) {} },
   TFile: class { path: string; constructor(path = '') { this.path = path; } },
   WorkspaceLeaf: class {},
   setIcon: () => {},
-}));
+}));;
 
 vi.mock('../../views/snippet-tree-picker', () => ({
   SnippetTreePicker: class { mount(): Promise<void> { return Promise.resolve(); } unmount(): void {} },
