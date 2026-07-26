@@ -1,0 +1,15 @@
+{
+  "dimension": "design-readiness",
+  "pass": false,
+  "score": 72,
+  "severity": "medium",
+  "graded_at": "2026-07-26T16:14:19+0300",
+  "artifact": ".rpiv/artifacts/slices/2026-07-26_16-13-35_snippet-create-from-selection-and-insert-modal-ux.md",
+  "findings": [
+    {
+      "detail": "Slice 4 bundles two independent capabilities via '+' in its title and scope: (1) keyboard navigation c4 (ArrowUp/ArrowDown highlight + Enter dispatch, highlightedIndex/highlightedRowEl field, .rp-stp-row-highlighted class, keydown listener on search input, broadening removeListenersExceptSearch to preserve 'keydown', i18n aria-label keys) and (2) name-only display c5 (hideSearchResultPath option on SnippetTreePickerOptions, gating the path div in renderFileRow/renderFolderRow, passing hideSearchResultPath:true from InsertSnippetModal.onOpen). These are two distinct architecture decisions on the same file with disjoint mechanics and independent user outcomes (interaction rule vs display rule), so a single design-slice pass would have to resolve two decisions at once. design-slice does no discovery and reads only the slice's Draws-on, so a bundled slice silently starves one of the two decisions. Re-cut: split Slice 4 along the feature seam into 4a (keyboard navigation only) and 4b (name-only display only). 4a keeps Draws-on snippet-tree-picker.ts mount()/:130 addListener, :168 removeListenersExceptSearch, :377-380 renderFileRow, inline-runner-modal.ts:672-695, i18n locales. 4b keeps Draws-on snippet-tree-picker.ts:62-72 SnippetTreePickerOptions, :377-380 path-div gate (shared cite is fine), insert-snippet-modal.ts:21-43 onOpen. Both remain standalone verticals with no deps and clean fences; Slice 4 currently owns one shared contract (hideSearchResultPath) which stays with 4b, so the <=1 contract rule holds for each re-cut slice.",
+      "where": "## Slice 4"
+    }
+  ],
+  "feedback": "Split Slice 4 into two slices along the keyboard-nav vs name-only-display seam: 4a = SnippetTreePicker keyboard navigation (c4), 4b = SnippetTreePicker name-only display via hideSearchResultPath (c5). Each is one coherent architecture decision with a bounded cited footing, standalone vertical, no deps, and <=1 shared contract (hideSearchResultPath stays with 4b). Slices 1-3 pass as written."
+}

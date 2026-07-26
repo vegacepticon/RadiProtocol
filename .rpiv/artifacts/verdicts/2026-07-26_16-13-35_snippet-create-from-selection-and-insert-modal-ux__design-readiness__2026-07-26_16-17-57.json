@@ -1,0 +1,13 @@
+{
+  "dimension": "design-readiness",
+  "pass": true,
+  "score": 86,
+  "severity": "low",
+  "graded_at": "2026-07-26T16:17:57+0300",
+  "artifact": ".rpiv/artifacts/slices/2026-07-26_16-13-35_snippet-create-from-selection-and-insert-modal-ux.md",
+  "findings": [
+    { "detail": "Slice 4 (keyboard nav) cites renderFileRow at snippet-tree-picker.ts:377-380 but never cites renderFolderRow (~lines 318-345), even though keyboard highlight must cover folder rows too (Insert snippet modal is file-only so this is muted there, but the Runner snippet-pick consumer and 'both'/folder-only modes render folder rows). renderFolderRow sits directly above renderFileRow in the same file so the design pass reading the cited lines will reach it via natural fan-out, but strictly the footing omits a row-creation site the highlight mechanism must touch.", "where": "## Slice 4: SnippetTreePicker keyboard navigation (ArrowUp/Down + Enter)" },
+    { "detail": "Slice 1 title uses 'Pre-fill snippet editor from selection + standalone create-snippet command' joined by '+'. The substance is one coherent vertical (the initialTemplate option is the mechanism, the standalone command is the observable outcome that exercises it) and the shared contract initialTemplate has exactly one owning slice, so this is not an epic bundled via 'and'. Flagged only as a phrasing quibble — the body makes the single-decision shape clear.", "where": "## Slice 1: Pre-fill snippet editor from selection + standalone create-snippet command" }
+  ],
+  "feedback": "PASS — all five slices are single coherent decisions on bounded real footings with standalone observable value, clean fences, and at most one shared contract each (initialTemplate owned by Slice 1, hideSearchResultPath owned by Slice 5). Spot-checks confirmed every cited file:line resolves and says what the slice claims (snippet-chip-editor.ts:125 templateArea.value=draft.template, snippet-manager-view.ts:257-267 openCreateModal, main.ts:96-100 addCommand block, main.ts:282-297 handleInsertSnippet, inline-runner-modal.ts:226-227 boundKeyHandler add + 251-254 remove, footer rebuild at ~424-433, renderFileRow path-div gate). Two low nits below do not block design-slice: Slice 4 under-cites renderFolderRow (folder rows also need highlight) and Slice 1 title uses '+'."
+}

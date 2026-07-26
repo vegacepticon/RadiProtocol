@@ -1,0 +1,10 @@
+{
+  "dimension": "actionability",
+  "pass": true,
+  "score": 94,
+  "severity": "none",
+  "graded_at": "2026-07-26T16:38:37+0300",
+  "artifact": ".rpiv/artifacts/plans/2026-07-26_16-27-21_snippet-create-from-selection-and-insert-modal-ux.md",
+  "findings": [],
+  "feedback": "Every phase ships verbatim code blocks anchored to file:line, explicit insertion points, named symbols, and dual automated+manual success criteria; no hand-waving markers present."
+}

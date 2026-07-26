@@ -1,0 +1,20 @@
+{
+  "dimension": "correctness",
+  "pass": true,
+  "score": 93,
+  "severity": "none",
+  "graded_at": "2026-07-26T16:30:39+0300",
+  "artifact": ".rpiv/artifacts/plans/2026-07-26_16-27-21_snippet-create-from-selection-and-insert-modal-ux.md",
+  "findings": [
+    { "detail": "Minor line drift: Phase 3 cites the existing .rp-insert-snippet-picker-host width block as :222-228; the block actually starts at line 220 (selector at 220, closing brace at 226). Content of the claim is accurate, off by ~2 lines.", "where": "src/styles/snippet-tree-picker.css:220" },
+    { "detail": "Minor line drift: Phase 5 cites the existing default-false result-path test at :647-655; the test body (makePicker through the expect(...).toBe('abdomen/ct/ct-routine.md')) actually spans ~645-654. Claim content is accurate, off by ~2 lines.", "where": "src/__tests__/views/snippet-tree-picker.test.ts:645" },
+    { "detail": "Minor line drift: Phase 1 cites the draftToSave spread at snippet-editor-modal.ts:536-537; the actual spreads are at 535/537/539 (three kind branches). The claim that the spread carries template through is accurate.", "where": "src/views/snippet-editor-modal.ts:535" }
+  ],
+  "risk_rulings": [
+    { "id": "r1", "pass": true },
+    { "id": "r2", "pass": true },
+    { "id": "r3", "pass": true },
+    { "id": "r4", "pass": true }
+  ],
+  "feedback": "All spot-checked file:line references resolve to the claimed content (a few off by 1-2 lines, cosmetic only). r1 premise verified: InlineRunnerModal is a plain class (inline-runner-modal.ts:38, no Modal extends), so the modal-stacking concern is real and correctly flagged for validation-time verification. r3 verified disjoint: Phase 4 touches mount() keydown (~130), removeListenersExceptSearch() keep-predicate (~168-182), renderDrillView/renderSearchResults re-render calls (~219,433), plus new private methods; Phase 5 touches the options interface (62) and the renderFileRow path-div gate (381) — no shared line. r4 verified: rows carry .rp-stp-folder-row (330) / .rp-stp-file-row (375) under .rp-stp-list (289 drill / 462 search); Phase 5 only narrows the path-div gate at 381 and does not touch row classes, so currentRows() contract holds across both render paths."
+}

@@ -1,0 +1,10 @@
+{
+  "dimension": "architecture-fit",
+  "pass": true,
+  "score": 92,
+  "severity": "none",
+  "graded_at": "2026-07-26T16:30:52+0300",
+  "artifact": ".rpiv/artifacts/plans/2026-07-26_16-27-21_snippet-create-from-selection-and-insert-modal-ux.md",
+  "findings": [],
+  "feedback": "Plan respects module boundaries and dependency direction: every edit is within views/ (intra-layer), main.ts wiring, styles/, i18n/, or __tests__/; no lower layer gains a new views import (confirmed the only lower->views edge, runner/render/render-snippet-picker.ts:25, is untouched). Phase 2's inline-runner-modal -> SnippetEditorModal import is intra-view; main.ts -> SnippetEditorModal mirrors the existing insert-snippet wiring. Decisions follow the research constraints verbatim: Approach A modal delegation for the create command, optional-field extension for initialTemplate and hideSearchResultPath, modalEl.addClass CSS-scoping pattern for the insert-modal pin, removeListenersExceptSearch keep-predicate broadening for the keydown listener, footer per-render re-add for the create-snippet button, and i18n keys added to both en+ru per phase. The risky modal-stacking-from-custom-backdrop scenario is explicitly flagged as r1 with the established modalEl-scoped-class fallback named, not hidden."
+}

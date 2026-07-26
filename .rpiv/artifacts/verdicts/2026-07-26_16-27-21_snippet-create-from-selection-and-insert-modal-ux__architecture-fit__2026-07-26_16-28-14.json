@@ -1,0 +1,10 @@
+{
+  "dimension": "architecture-fit",
+  "pass": true,
+  "score": 95,
+  "severity": "none",
+  "graded_at": "2026-07-26T16:28:14+0300",
+  "artifact": ".rpiv/artifacts/plans/2026-07-26_16-27-21_snippet-create-from-selection-and-insert-modal-ux.md",
+  "findings": [],
+  "feedback": "Plan respects module boundaries and dependency direction; all changes stay in views/ plus the main.ts entry, i18n, CSS, and tests, with no lower-layer file touched, and follows every architectural constraint recorded in the research."
+}

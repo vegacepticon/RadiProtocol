@@ -1,0 +1,10 @@
+{
+  "dimension": "actionability",
+  "pass": true,
+  "score": 96,
+  "severity": "none",
+  "graded_at": "2026-07-26T16:34:18+0300",
+  "artifact": ".rpiv/artifacts/plans/2026-07-26_16-27-21_snippet-create-from-selection-and-insert-modal-ux.md",
+  "findings": [],
+  "feedback": "Every phase is executable as written: each cites concrete file:line targets, embeds full code blocks to insert/replace, and carries explicit automated + manual success criteria. No hand-waving found (the only 'etc.'/'??' matches are legitimate nullish coalescing and an in-comment abbreviation, not vague instructions)."
+}
