@@ -135,6 +135,7 @@
     "movedNotice": "Сниппет перемещён.",
     "renamedNotice": "Сниппет переименован.",
     "movedAndRenamedNotice": "Сниппет перемещён и переименован.",
+    "createdNotice": "Сниппет создан.",
     "validationLockTitle": "Сниппет содержит ошибку — исправьте источник и откройте заново.",
     "validationBannerHeader": "Этот сниппет не может быть использован:",
     "duplicate": "Дублировать сниппет",
@@ -177,7 +178,8 @@
     "selectSnippet": "Выбрать сниппет {name}",
     "selectFolderAria": "Выбрать текущую папку",
     "crumbAria": "Перейти к {name}",
-    "breadcrumbNavLabel": "Папки сниппетов"
+    "breadcrumbNavLabel": "Папки сниппетов",
+    "highlightAria": "Подсвечено: {name}"
   },
   "snippetPicker": {
     "goToRoot": "Перейти к корню"
@@ -307,7 +309,8 @@
     "loadingSnippets": "Загрузка сниппетов…",
     "keyStepBack": "Ctrl+← Назад",
     "keyStepRedo": "Ctrl+→ Повторить",
-    "keyClose": "Esc Закрыть"
+    "keyClose": "Esc Закрыть",
+    "createSnippetFromSelection": "Создать сниппет из выделения"
   },
   "inlineRunner": {
     "protocolFileNotFound": "Файл протокола не найден: \"{path}\".",

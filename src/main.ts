@@ -13,6 +13,7 @@ import { NodePickerModal, buildStartableProtocolNodeOptions } from './views/node
 // Phase 54: inline protocol display mode
 import { InlineRunnerModal } from './views/inline-runner-modal';
 import { InsertSnippetModal } from './views/insert-snippet-modal';
+import { SnippetEditorModal } from './views/snippet-editor-modal';
 import { ProtocolEditorView, PROTOCOL_EDITOR_VIEW_TYPE } from './views/protocol-editor-view';
 import {
   ProtocolEditorPickerModal,
@@ -97,6 +98,12 @@ export default class RadiProtocolPlugin extends Plugin {
       id: 'insert-snippet',
       name: 'Insert snippet',
       callback: () => { void this.handleInsertSnippet(); },
+    });
+
+    this.addCommand({
+      id: 'create-snippet',
+      name: 'Create snippet from selection',
+      callback: () => { void this.handleCreateSnippet(); },
     });
 
     // Settings tab
@@ -308,6 +315,30 @@ export default class RadiProtocolPlugin extends Plugin {
       await this.app.vault.modify(activeFile, `${current}${separator}${rendered}`);
     });
     new Notice(this.i18n.t('insertSnippet.inserted'));
+  }
+
+  /**
+   * "Create snippet from selection" command. Opens SnippetEditorModal in create
+   * mode with the active Markdown editor's selection pre-filled as the template.
+   *
+   * No md-guard bail: when there is no active MarkdownView or no selection, the
+   * modal still opens with an empty template so the command remains useful for
+   * authoring a snippet from scratch.
+   */
+  private async handleCreateSnippet(): Promise<void> {
+    const activeView = this.app.workspace.getActiveViewOfType(MarkdownView);
+    const initialTemplate = activeView?.editor?.getSelection() ?? '';
+
+    const modal = new SnippetEditorModal(this.app, this, {
+      mode: 'create',
+      initialFolder: this.settings.snippetFolderPath,
+      initialTemplate,
+    });
+    modal.open();
+    const result = await modal.result;
+    if (result.saved) {
+      new Notice(this.i18n.t('snippetEditor.createdNotice'));
+    }
   }
 
   /**

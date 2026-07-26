@@ -226,6 +226,27 @@
   box-sizing: border-box;
 }
 
+/* Slice 3 — Pin insert-snippet modal near the top + stabilize body height so the
+   search-result rebuild (removeBody + bare .rp-stp-list on host) doesn't recenter
+   the modal on every keystroke. The insert host previously had only width CSS. */
+.rp-insert-snippet-modal {
+  /* Opt out of .modal-container's align-items: center; anchor to top padding. */
+  align-self: flex-start;
+  margin-top: 0;
+}
+
+.rp-insert-snippet-picker-host .rp-stp-root > .rp-stp-body {
+  /* Stabilize drill view outer height (matches .rp-stp-modal-host treatment). */
+  height: 360px;
+}
+
+.rp-insert-snippet-picker-host .rp-stp-root > .rp-stp-list {
+  /* Bare search-result list recreated on host by renderSearchResults().
+     Global .rp-stp-list { max-height: 320px } (src/styles/snippet-tree-picker.css:148)
+     still applies, so min==max==320px fixes the height regardless of result count. */
+  min-height: 320px;
+}
+
 /* Phase 51 Plan 03 — Node Editor inline mount host (consumed by editor-panel-view.ts). */
 /* Caps height + scroll inside the editor panel so the picker doesn't dominate. */
 .rp-stp-editor-host {
@@ -274,4 +295,19 @@
 .rp-stp-select-folder-btn.is-committed:hover {
   background-color: var(--interactive-accent-hover);
   color: var(--text-on-accent);
+}
+
+/* Phase 4 — keyboard-nav highlight + screen-reader-only status span. */
+.rp-stp-row-highlighted {
+  background: var(--background-modifier-hover);
+  border-color: var(--background-modifier-border);
+}
+
+.rp-stp-sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
 }

@@ -9,6 +9,7 @@ import type { ProtocolGraph, AnswerNode } from '../graph/graph-model';
 import type { RunnerState } from '../runner/runner-state';
 import { SnippetTreePicker } from './snippet-tree-picker';
 import { SnippetFillInModal } from './snippet-fill-in-modal';
+import { SnippetEditorModal } from './snippet-editor-modal';
 import { renderLoopPicker } from '../runner/render/render-loop-picker';
 import { renderQuestionAtNode } from '../runner/render/render-question';
 import { renderSnippetPicker } from '../runner/render/render-snippet-picker';
@@ -74,6 +75,10 @@ export class InlineRunnerModal {
   private isFillModalOpen = false;
 
   private boundKeyHandler: ((e: KeyboardEvent) => void) | null = null;
+
+  /** Phase 2 — create-snippet-from-selection footer button + selection listener. */
+  private createSnippetBtnEl: HTMLButtonElement | null = null;
+  private boundSelectionHandler: (() => void) | null = null;
 
   constructor(
     app: App,
@@ -225,6 +230,13 @@ export class InlineRunnerModal {
     // Keyboard shortcuts: Ctrl/Alt+Left = step back, Ctrl/Alt+Right = redo, Escape = close
     this.boundKeyHandler = (e: KeyboardEvent) => this.handleKeydown(e);
     this.containerEl?.addEventListener('keydown', this.boundKeyHandler);
+
+    // Phase 2 — track text selection inside contentEl to enable/disable the
+    // create-snippet-from-selection footer button. mouseup covers drag-selection;
+    // selectionchange covers keyboard Shift+Arrow selection.
+    this.boundSelectionHandler = () => this.updateCreateSnippetButtonState();
+    this.contentEl?.addEventListener('mouseup', this.boundSelectionHandler);
+    document.addEventListener('selectionchange', this.boundSelectionHandler);
   }
 
   close(): void {
@@ -252,6 +264,15 @@ export class InlineRunnerModal {
       this.containerEl.removeEventListener('keydown', this.boundKeyHandler);
     }
     this.boundKeyHandler = null;
+
+    // Phase 2 — detach selection listeners and release DOM refs (parity with boundKeyHandler).
+    // Runs BEFORE contentEl/containerEl are nulled below so removeEventListener still sees the node.
+    if (this.boundSelectionHandler !== null) {
+      this.contentEl?.removeEventListener('mouseup', this.boundSelectionHandler);
+      document.removeEventListener('selectionchange', this.boundSelectionHandler);
+      this.boundSelectionHandler = null;
+    }
+    this.createSnippetBtnEl = null;
     if (this.activeFileEventRef !== null) {
       this.app.workspace.offref(this.activeFileEventRef);
       this.activeFileEventRef = null;
@@ -425,13 +446,31 @@ export class InlineRunnerModal {
     // Recreate footer-row children (close btn destroyed by empty, must re-add)
     if (this.footerBtnRowEl !== null) {
       this.footerBtnRowEl.empty();
+
+      // Phase 2 — left group holds close + create-snippet-from-selection.
+      const leftGroup = this.footerBtnRowEl.createDiv({ cls: 'rp-runner-footer-left' });
+
       // Close button — always present on the left
-      const closeBtn = this.footerBtnRowEl.createEl('button', { cls: 'rp-inline-runner-close-btn rp-runner-icon-btn' });
+      const closeBtn = leftGroup.createEl('button', { cls: 'rp-inline-runner-close-btn rp-runner-icon-btn' });
       setIcon(closeBtn, 'x');
       closeBtn.setAttribute('aria-label', this.plugin.i18n.t('protocolRunner.closeProtocol'));
       closeBtn.addEventListener('click', () => {
         this.close();
       });
+
+      // Create-snippet-from-selection — always visible, disabled until contentEl has a selection.
+      const createSnippetBtn = leftGroup.createEl('button', {
+        cls: 'rp-inline-runner-create-snippet-btn rp-runner-icon-btn',
+        attr: { 'aria-label': this.plugin.i18n.t('protocolRunner.createSnippetFromSelection') },
+      });
+      setIcon(createSnippetBtn, 'file-plus');
+      createSnippetBtn.disabled = true;
+      createSnippetBtn.addEventListener('click', () => {
+        void this.handleCreateSnippetFromSelection();
+      });
+      this.createSnippetBtnEl = createSnippetBtn;
+      // Re-evaluate against the live selection so an existing selection at render time enables it.
+      this.updateCreateSnippetButtonState();
     }
 
     switch (state.status) {
@@ -694,6 +733,47 @@ export class InlineRunnerModal {
       this.render();
       return;
     }
+  }
+
+  /** Phase 2 — Return the current selection's text iff its anchor node is contained
+   *  in contentEl. Selections outside the runner (e.g. in the note behind it) return ''. */
+  private getSelectedContentText(): string {
+    if (this.contentEl === null) return '';
+    if (typeof window === 'undefined') return '';
+    const sel = window.getSelection();
+    if (sel === null || sel.isCollapsed) return '';
+    const anchorNode = sel.anchorNode;
+    if (anchorNode === null) return '';
+
+    const contentEl = this.contentEl;
+    let node: Node | null = anchorNode;
+    while (node !== null) {
+      if (node === contentEl) return sel.toString();
+      node = node.parentNode;
+    }
+    return '';
+  }
+
+  /** Phase 2 — Enable/disable the create-snippet button based on the live selection. */
+  private updateCreateSnippetButtonState(): void {
+    if (this.createSnippetBtnEl === null) return;
+    this.createSnippetBtnEl.disabled = this.getSelectedContentText().length === 0;
+  }
+
+  /** Phase 2 — Capture the selection, open SnippetEditorModal in create mode pre-filled
+   *  with the selected text, await its result. The inline runner stays open underneath
+   *  (SnippetEditorModal mounts to document.body and stacks above the runner overlay).
+   *  Defensive guard: no-op when the selection is empty (covers disabled-button edge). */
+  private async handleCreateSnippetFromSelection(): Promise<void> {
+    const template = this.getSelectedContentText();
+    if (template.length === 0) return;
+    const modal = new SnippetEditorModal(this.app, this.plugin, {
+      mode: 'create',
+      initialFolder: this.plugin.settings.snippetFolderPath,
+      initialTemplate: template,
+    });
+    modal.open();
+    await modal.result;
   }
 
   /** Phase 85 INLINE-MULTI-02: public so the cascade logic in another modal's

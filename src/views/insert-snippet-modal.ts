@@ -18,6 +18,11 @@ export class InsertSnippetModal extends Modal {
   }
 
   onOpen(): void {
+    const modalEl = (this as unknown as { modalEl?: { addClass?: (cls: string) => void } }).modalEl;
+    if (typeof modalEl?.addClass === 'function') {
+      modalEl.addClass('rp-insert-snippet-modal');
+    }
+
     const { contentEl, titleEl } = this;
     contentEl.empty();
     titleEl.setText(this.plugin.i18n.t('insertSnippet.title'));
@@ -35,6 +40,7 @@ export class InsertSnippetModal extends Modal {
       container: pickerHost,
       mode: 'file-only',
       rootPath,
+      hideSearchResultPath: true,
       t: this.plugin.i18n.t.bind(this.plugin.i18n),
       onSelect: (result) => {
         void this.handleSelect(rootPath, result.relativePath);

@@ -71,6 +71,11 @@ export interface SnippetTreePickerOptions {
   /** Phase 84 (I18N-02): translator for user-visible copy. Optional —
    *  unit tests and standalone callers fall back to the English defaultT. */
   t?: Translator;
+  /** Phase 5: when true, search-result file rows omit the secondary
+   *  `.rp-stp-result-path` line and render basename-only. Default `false`
+   *  preserves the prior two-line behavior (basename + full relative path).
+   *  Drill-view rows never render the path line regardless of this flag. */
+  hideSearchResultPath?: boolean;
 }
 
 // ── Implementation ───────────────────────────────────────────────────────
@@ -94,6 +99,17 @@ export class SnippetTreePicker {
   private listeners: TrackedListener[] = [];
   private searchInputEl: HTMLInputElement | null = null;
 
+  /** Phase 4 — keyboard-nav highlight cursor. -1 = nothing highlighted.
+   *  Reset on each mount() and on every body re-render via clearHighlight(). */
+  private highlightedIndex: number = -1;
+  /** The currently-highlighted row DOM node. Detached by removeBody() on the
+   *  next re-render, so clearHighlight() only resets the cursor (no class
+   *  removal needed — the old element is gone). */
+  private highlightedRowEl: HTMLElement | null = null;
+  /** Visually-hidden aria-live="polite" status span created in mount(); survives
+   *  removeBody() because it lives inside .rp-stp-search. Updated by moveHighlight(). */
+  private highlightStatusEl: HTMLElement | null = null;
+
   /** Phase 56 D-10 (PICKER-01 follow-up): relative path (drillPath.join('/'))
    *  of the folder the user has "committed" via the select-folder button.
    *  null when no commit has occurred in the current drill session, or when
@@ -111,6 +127,9 @@ export class SnippetTreePicker {
     this.currentQuery = '';
     this.searchInputEl = null;
     this.committedRelativePath = null;
+    this.highlightedIndex = -1;
+    this.highlightedRowEl = null;
+    this.highlightStatusEl = null;
 
     const container = this.options.container;
     this.containerEl = container;
@@ -131,6 +150,21 @@ export class SnippetTreePicker {
       const value = searchInput.value;
       this.onSearchInput(value);
     });
+    // Phase 4 — keyboard navigation (ArrowUp/Down + Enter) on the search input.
+    // Tracked via addListener so unmount()/clearContainer() tear it down, and
+    // preserved across body re-renders by removeListenersExceptSearch().
+    this.addListener(searchInput, 'keydown', (e) => {
+      this.handleSearchKeydown(e as KeyboardEvent);
+    });
+
+    // Phase 4 — visually-hidden aria-live="polite" status span for screen-reader
+    // announcements of the highlighted row title. Lives inside .rp-stp-search so
+    // removeBody() (which keeps .rp-stp-search) preserves it across re-renders.
+    const statusSpan = searchWrap.createEl('span', {
+      cls: 'rp-stp-sr-only',
+      attr: { 'aria-live': 'polite', role: 'status' },
+    });
+    this.highlightStatusEl = statusSpan;
 
     // Breadcrumb + list host container. Both drill and search views render into here.
     // We keep the search input fixed above so typing never blows away focus.
@@ -149,6 +183,9 @@ export class SnippetTreePicker {
     this.containerEl = null;
     this.searchInputEl = null;
     this.committedRelativePath = null;
+    this.highlightedIndex = -1;
+    this.highlightedRowEl = null;
+    this.highlightStatusEl = null;
   }
 
   // ── Listener tracking ─────────────────────────────────────────────────
@@ -170,7 +207,10 @@ export class SnippetTreePicker {
     const keep: TrackedListener[] = [];
     const drop: TrackedListener[] = [];
     for (const entry of this.listeners) {
-      if (entry.el === (this.searchInputEl as unknown as HTMLElement) && entry.type === 'input') {
+      if (
+        entry.el === (this.searchInputEl as unknown as HTMLElement) &&
+        (entry.type === 'input' || entry.type === 'keydown')
+      ) {
         keep.push(entry);
       } else {
         drop.push(entry);
@@ -217,6 +257,7 @@ export class SnippetTreePicker {
     // Remove any body (everything except the search wrap) + reset listeners EXCEPT the search input.
     this.removeListenersExceptSearch();
     this.removeBody(host);
+    this.clearHighlight();
 
     // ── Body wrapper (stabilises layout across folder changes) ───────────
     const body = host.createDiv({ cls: 'rp-stp-body' });
@@ -378,7 +419,7 @@ export class SnippetTreePicker {
     nameEl.empty();
     nameEl.createEl('span', { cls: 'rp-stp-row-glyph', text: fileGlyph(basename) });
     nameEl.createEl('span', { cls: 'rp-stp-row-title', text: basename });
-    if (isSearchResult) {
+    if (isSearchResult && !this.options.hideSearchResultPath) {
       const pathEl = row.createEl('div', { cls: 'rp-stp-result-path' });
       pathEl.setText(relativePath);
     }
@@ -431,6 +472,7 @@ export class SnippetTreePicker {
 
     this.removeListenersExceptSearch();
     this.removeBody(host);
+    this.clearHighlight();
 
     const lowerQ = query.toLowerCase();
     const rootPrefix = `${this.options.rootPath}/`;
@@ -477,5 +519,83 @@ export class SnippetTreePicker {
     if (listEl.children.length === 0) {
       listEl.createEl('div', { cls: 'rp-stp-empty', text: this.t(EMPTY_RESULTS_KEY) });
     }
+  }
+
+  // ── Keyboard navigation (Phase 4) ──────────────────────────────────────
+
+  private handleSearchKeydown(e: KeyboardEvent): void {
+    // Ignore modifier-laden keys (Ctrl/Cmd/Alt+Arrow etc.) — those belong to the
+    // host (e.g. InlineRunnerModal Ctrl+← / Ctrl+→ / Esc) and must pass through
+    // unchanged. The runner's handleKeydown INPUT/TEXTAREA bail holds regardless.
+    if (e.ctrlKey || e.metaKey || e.altKey) return;
+
+    if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+      e.preventDefault();
+      const rows = this.currentRows();
+      if (rows.length === 0) return;
+      const delta = e.key === 'ArrowDown' ? 1 : -1;
+      this.moveHighlight(rows, delta);
+      return;
+    }
+
+    if (e.key === 'Enter') {
+      // No-op + no-throw when nothing is highlighted.
+      if (this.highlightedIndex === -1 || this.highlightedRowEl === null) return;
+      e.preventDefault();
+      // Dispatch the row's registered click handler — same path as a mouse click
+      // (file row → onSelect, folder row → drill).
+      this.highlightedRowEl.click();
+      return;
+    }
+  }
+
+  /** All visible folder/file rows under the current root, in document order.
+   *  Never cached — always re-queried so a fresh re-render's rows are used. */
+  private currentRows(): HTMLElement[] {
+    const root = this.rootEl();
+    if (!root) return [];
+    return Array.from(root.querySelectorAll<HTMLElement>('.rp-stp-folder-row, .rp-stp-file-row'));
+  }
+
+  /** Move the highlight cursor by `delta` with wrap-around modulo rows.length. */
+  private moveHighlight(rows: HTMLElement[], delta: number): void {
+    const count = rows.length;
+    if (count === 0) return;
+
+    // Toggle the old highlight off (the old element is still live at this point).
+    if (this.highlightedRowEl !== null) {
+      this.highlightedRowEl.classList.remove('rp-stp-row-highlighted');
+    }
+
+    let next: number;
+    if (this.highlightedIndex === -1) {
+      // Nothing highlighted: ArrowDown → first (0), ArrowUp → last (count-1).
+      next = delta === 1 ? 0 : count - 1;
+    } else {
+      next = (this.highlightedIndex + delta + count) % count;
+    }
+    const row = rows[next]!;
+
+    row.classList.add('rp-stp-row-highlighted');
+    row.scrollIntoView({ block: 'nearest' });
+
+    this.highlightedIndex = next;
+    this.highlightedRowEl = row;
+
+    // Announce the highlighted row title via the aria-live status span.
+    const titleEl = row.querySelector<HTMLElement>('.rp-stp-row-title');
+    const name = titleEl?.textContent ?? '';
+    if (this.highlightStatusEl !== null) {
+      this.highlightStatusEl.textContent = this.t('snippetTreePicker.highlightAria', { name });
+    }
+  }
+
+  /** Reset the highlight cursor. Called at the top of every body re-render
+   *  (renderDrillView / renderSearchResults) right after removeBody(host) —
+   *  the previously-highlighted row is already detached by removeBody(), so
+   *  no class removal is needed; just reset the cursor. */
+  private clearHighlight(): void {
+    this.highlightedIndex = -1;
+    this.highlightedRowEl = null;
   }
 }

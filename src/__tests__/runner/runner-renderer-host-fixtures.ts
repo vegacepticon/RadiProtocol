@@ -237,7 +237,15 @@ export function createObsidianModuleMock(): Record<string, unknown> {
       this.children = children;
     }
   }
-  return { Modal, Notice, Plugin, ItemView, WorkspaceLeaf, PluginSettingTab, SuggestModal, Setting, TFile, TFolder, setIcon: mockSetIcon };
+  class AbstractInputSuggest<T> {
+    app: unknown;
+    inputEl: unknown;
+    constructor(app: unknown, inputEl: unknown) { this.app = app; this.inputEl = inputEl; }
+    setValue(_v: T): void {}
+    open(): void {}
+    close(): void {}
+  }
+  return { Modal, Notice, Plugin, ItemView, WorkspaceLeaf, PluginSettingTab, SuggestModal, Setting, TFile, TFolder, AbstractInputSuggest, setIcon: mockSetIcon };
 }
 
 // Minimal setIcon mock for tests that import render-runner-footer

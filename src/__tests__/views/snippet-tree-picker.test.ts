@@ -54,6 +54,10 @@ interface MockEl {
   addEventListener: (type: string, handler: (ev: unknown) => void) => void;
   removeEventListener: (type: string, handler: (ev: unknown) => void) => void;
   dispatchEvent: (event: { type: string; target?: unknown }) => void;
+  querySelector: (selector: string) => MockEl | null;
+  querySelectorAll: (selector: string) => MockEl[];
+  scrollIntoView: (opts?: unknown) => void;
+  click: () => void;
   remove: () => void;
   focus: () => void;
 }
@@ -136,6 +140,42 @@ function makeEl(tag = 'div'): MockEl {
     dispatchEvent(event: { type: string; target?: unknown }): void {
       const arr = listeners.get(event.type) ?? [];
       for (const h of arr) h(event);
+    },
+    querySelector(selector: string): MockEl | null {
+      // Minimal: supports a single '.class' selector. Returns first descendant
+      // match in document order (mirrors DOM querySelector semantics — not self).
+      const cls = selector.trim().startsWith('.') ? selector.trim().slice(1) : selector.trim();
+      function walk(node: MockEl): MockEl | null {
+        for (const c of node.children) {
+          if (c.classList.has(cls)) return c;
+          const r = walk(c);
+          if (r) return r;
+        }
+        return null;
+      }
+      return walk(el);
+    },
+    querySelectorAll(selector: string): MockEl[] {
+      // Minimal: supports comma-separated '.class1, .class2' selectors. Returns
+      // all descendant matches in document order.
+      const classes = selector
+        .split(',')
+        .map((s) => s.trim())
+        .filter((s) => s.startsWith('.'))
+        .map((s) => s.slice(1));
+      const out: MockEl[] = [];
+      function walk(node: MockEl): void {
+        for (const c of node.children) {
+          if (classes.some((cls) => c.classList.has(cls))) out.push(c);
+          walk(c);
+        }
+      }
+      walk(el);
+      return out;
+    },
+    scrollIntoView(_opts?: unknown): void {},
+    click(): void {
+      el.dispatchEvent({ type: 'click', target: el });
     },
     remove(): void {
       const p = el.parent;
@@ -290,6 +330,30 @@ async function flushDebounce(): Promise<void> {
   await new Promise((resolve) => setTimeout(resolve, 180));
   // Allow microtasks (the debounced handler awaits listFolderDescendants) to flush.
   for (let i = 0; i < 5; i++) await Promise.resolve();
+}
+
+function triggerKeydown(
+  inputEl: MockEl | undefined,
+  key: string,
+  mods: { ctrlKey?: boolean; altKey?: boolean; metaKey?: boolean } = {},
+): void {
+  if (!inputEl) throw new Error('triggerKeydown: element is undefined');
+  const event = {
+    type: 'keydown',
+    key,
+    target: inputEl,
+    ctrlKey: !!mods.ctrlKey,
+    altKey: !!mods.altKey,
+    metaKey: !!mods.metaKey,
+    preventDefault: vi.fn(),
+  };
+  inputEl.dispatchEvent(event as unknown as { type: string; target?: unknown });
+}
+
+function rowsOf(container: MockEl): MockEl[] {
+  return findAll(container, (el) =>
+    el.classList.has('rp-stp-folder-row') || el.classList.has('rp-stp-file-row'),
+  );
 }
 
 // =========================================================================
@@ -1097,5 +1161,249 @@ describe('Picker row accessibility (no tooltip-triggering attributes)', () => {
     const folderRow = findByClass(container, 'rp-stp-folder-row')[0];
     expect(folderRow?.getAttribute('title')).toBeNull();
     expect(folderRow?.getAttribute('aria-label')).toBeNull();
+  });
+});
+
+describe('Keyboard navigation (Phase 4)', () => {
+  let svc: FakeSnippetService;
+
+  beforeEach(() => {
+    svc = makeFakeSnippetService();
+  });
+
+  it('ArrowDown moves the highlight onto the first row, then the second', async () => {
+    svc.listFolder.mockResolvedValue({
+      folders: ['abdomen', 'chest'],
+      snippets: [jsonSnippet(`${ROOT}/report.json`)],
+    });
+    const { picker, container } = makePicker({ mode: 'both' }, svc);
+    await picker.mount();
+
+    const input = findFirst(container, (el) => el.classList.has('rp-stp-search-input'))!;
+    triggerKeydown(input, 'ArrowDown');
+    let rows = rowsOf(container);
+    expect(rows[0]!.classList.has('rp-stp-row-highlighted')).toBe(true);
+    expect(rows[1]!.classList.has('rp-stp-row-highlighted')).toBe(false);
+
+    triggerKeydown(input, 'ArrowDown');
+    rows = rowsOf(container);
+    expect(rows[1]!.classList.has('rp-stp-row-highlighted')).toBe(true);
+    expect(rows[0]!.classList.has('rp-stp-row-highlighted')).toBe(false);
+  });
+
+  it('ArrowUp moves the highlight back to the previous row', async () => {
+    svc.listFolder.mockResolvedValue({
+      folders: ['abdomen', 'chest'],
+      snippets: [],
+    });
+    const { picker, container } = makePicker({ mode: 'folder-only' }, svc);
+    await picker.mount();
+
+    const input = findFirst(container, (el) => el.classList.has('rp-stp-search-input'))!;
+    triggerKeydown(input, 'ArrowDown'); // → 0
+    triggerKeydown(input, 'ArrowDown'); // → 1
+    triggerKeydown(input, 'ArrowUp');   // → 0
+    const rows = rowsOf(container);
+    expect(rows[0]!.classList.has('rp-stp-row-highlighted')).toBe(true);
+    expect(rows[1]!.classList.has('rp-stp-row-highlighted')).toBe(false);
+  });
+
+  it('wrap-around: ArrowDown from last wraps to first; ArrowUp from first wraps to last', async () => {
+    svc.listFolder.mockResolvedValue({
+      folders: ['abdomen', 'chest'],
+      snippets: [jsonSnippet(`${ROOT}/report.json`)],
+    });
+    const { picker, container } = makePicker({ mode: 'both' }, svc);
+    await picker.mount();
+
+    const input = findFirst(container, (el) => el.classList.has('rp-stp-search-input'))!;
+    triggerKeydown(input, 'ArrowDown'); // → 0
+    triggerKeydown(input, 'ArrowDown'); // → 1
+    triggerKeydown(input, 'ArrowDown'); // → 2 (last)
+    let rows = rowsOf(container);
+    expect(rows[2]!.classList.has('rp-stp-row-highlighted')).toBe(true);
+
+    triggerKeydown(input, 'ArrowDown'); // wrap last → first
+    rows = rowsOf(container);
+    expect(rows[0]!.classList.has('rp-stp-row-highlighted')).toBe(true);
+    expect(rows[2]!.classList.has('rp-stp-row-highlighted')).toBe(false);
+
+    triggerKeydown(input, 'ArrowUp'); // wrap first → last
+    rows = rowsOf(container);
+    expect(rows[2]!.classList.has('rp-stp-row-highlighted')).toBe(true);
+    expect(rows[0]!.classList.has('rp-stp-row-highlighted')).toBe(false);
+  });
+
+  it('Enter on a highlighted file row dispatches the row click handler (onSelect with kind: file)', async () => {
+    svc.listFolder.mockResolvedValue({
+      folders: [],
+      snippets: [jsonSnippet(`${ROOT}/report.json`)],
+    });
+    const { picker, container, onSelect } = makePicker({ mode: 'file-only' }, svc);
+    await picker.mount();
+
+    const input = findFirst(container, (el) => el.classList.has('rp-stp-search-input'))!;
+    triggerKeydown(input, 'ArrowDown'); // → file row (only row)
+    triggerKeydown(input, 'Enter');
+    expect(onSelect).toHaveBeenCalledWith({ kind: 'file', relativePath: 'report.json' });
+  });
+
+  it('Enter on a highlighted folder row drills in (same path as a mouse click)', async () => {
+    svc.listFolder
+      .mockResolvedValueOnce({ folders: ['abdomen'], snippets: [] })
+      .mockResolvedValueOnce({ folders: ['ct'], snippets: [] });
+    const { picker, container, onSelect } = makePicker({ mode: 'both' }, svc);
+    await picker.mount();
+
+    const input = findFirst(container, (el) => el.classList.has('rp-stp-search-input'))!;
+    triggerKeydown(input, 'ArrowDown'); // → folder row (first row)
+    triggerKeydown(input, 'Enter');
+    await Promise.resolve(); await Promise.resolve(); await Promise.resolve();
+
+    // onSelect NOT called — folder click drills (D-12).
+    expect(onSelect).not.toHaveBeenCalled();
+    expect(svc.listFolder).toHaveBeenCalledWith(`${ROOT}/abdomen`);
+  });
+
+  it('Enter with no highlighted row is a no-op and does not throw', async () => {
+    svc.listFolder.mockResolvedValue({
+      folders: ['abdomen'],
+      snippets: [jsonSnippet(`${ROOT}/r.json`)],
+    });
+    const { picker, container, onSelect } = makePicker({ mode: 'both' }, svc);
+    await picker.mount();
+
+    const input = findFirst(container, (el) => el.classList.has('rp-stp-search-input'))!;
+    expect(() => triggerKeydown(input, 'Enter')).not.toThrow();
+    expect(onSelect).not.toHaveBeenCalled();
+  });
+
+  it('after a debounced search re-render the keydown listener is still active (ArrowDown moves highlight on freshly-rendered rows)', async () => {
+    svc.listFolder.mockResolvedValue({ folders: [], snippets: [] });
+    svc.listFolderDescendants.mockResolvedValue({
+      files: [`${ROOT}/abdomen/ct.md`, `${ROOT}/abdomen/mri.md`],
+      folders: [],
+      total: 2,
+    });
+    const { picker, container } = makePicker({ mode: 'file-only' }, svc);
+    await picker.mount();
+
+    const input = findFirst(container, (el) => el.classList.has('rp-stp-search-input'))!;
+    triggerInput(input, 'm');
+    await flushDebounce();
+
+    // Search results rendered — proves removeListenersExceptSearch() preserved
+    // the keydown listener (it would have been dropped by the old input-only
+    // keep-predicate).
+    expect(rowsOf(container).length).toBe(2);
+
+    triggerKeydown(input, 'ArrowDown');
+    const rows = rowsOf(container);
+    expect(rows[0]!.classList.has('rp-stp-row-highlighted')).toBe(true);
+  });
+
+  it('after a drill re-render the highlight resets (no row carries rp-stp-row-highlighted)', async () => {
+    svc.listFolder
+      .mockResolvedValueOnce({ folders: ['abdomen'], snippets: [] })
+      .mockResolvedValueOnce({ folders: ['ct'], snippets: [] });
+    const { picker, container } = makePicker({ mode: 'folder-only' }, svc);
+    await picker.mount();
+
+    const input = findFirst(container, (el) => el.classList.has('rp-stp-search-input'))!;
+    triggerKeydown(input, 'ArrowDown'); // → row 0 highlighted
+    expect(rowsOf(container)[0]!.classList.has('rp-stp-row-highlighted')).toBe(true);
+
+    // Drill in via click → renderDrillView → clearHighlight resets the cursor.
+    triggerClick(rowsOf(container)[0]);
+    await Promise.resolve(); await Promise.resolve(); await Promise.resolve();
+
+    const rowsAfter = rowsOf(container);
+    expect(rowsAfter.every((r) => !r.classList.has('rp-stp-row-highlighted'))).toBe(true);
+  });
+
+  it('aria-live status span announces the highlighted row title via snippetTreePicker.highlightAria (defaultT → English)', async () => {
+    svc.listFolder.mockResolvedValue({
+      folders: ['abdomen'],
+      snippets: [],
+    });
+    const { picker, container } = makePicker({ mode: 'folder-only' }, svc);
+    await picker.mount();
+
+    const input = findFirst(container, (el) => el.classList.has('rp-stp-search-input'))!;
+    triggerKeydown(input, 'ArrowDown');
+
+    const status = findFirst(container, (el) => el.classList.has('rp-stp-sr-only'));
+    expect(status?.textContent).toBe('Highlighted: abdomen');
+  });
+
+  it('modifier-laden keys (Ctrl+ArrowDown) are ignored — no highlight moves, no throw', async () => {
+    svc.listFolder.mockResolvedValue({
+      folders: ['abdomen', 'chest'],
+      snippets: [],
+    });
+    const { picker, container } = makePicker({ mode: 'folder-only' }, svc);
+    await picker.mount();
+
+    const input = findFirst(container, (el) => el.classList.has('rp-stp-search-input'))!;
+    expect(() => triggerKeydown(input, 'ArrowDown', { ctrlKey: true })).not.toThrow();
+    expect(rowsOf(container).every((r) => !r.classList.has('rp-stp-row-highlighted'))).toBe(true);
+  });
+});
+
+describe('hideSearchResultPath option (Phase 5)', () => {
+  let svc: FakeSnippetService;
+
+  beforeEach(() => {
+    svc = makeFakeSnippetService();
+  });
+
+  it('hideSearchResultPath: true in file-only mode renders name but omits the result-path line', async () => {
+    svc.listFolder.mockResolvedValue({ folders: [], snippets: [] });
+    svc.listFolderDescendants.mockResolvedValue({
+      files: [`${ROOT}/abdomen/ct/ct-routine.md`],
+      folders: [],
+      total: 1,
+    });
+    const { picker, container } = makePicker(
+      { mode: 'file-only', hideSearchResultPath: true },
+      svc,
+    );
+    await picker.mount();
+
+    const input = findFirst(container, (el) => el.classList.has('rp-stp-search-input'))!;
+    triggerInput(input, 'ct');
+    await flushDebounce();
+
+    // Name line present (glyph + basename).
+    const nameEl = findFirst(container, (el) => el.classList.has('rp-stp-result-name'));
+    expect(nameEl).not.toBeNull();
+    expect(nameEl?.textContent).toContain('ct-routine.md');
+
+    // No result-path element rendered anywhere in the picker.
+    const pathEl = findFirst(container, (el) => el.classList.has('rp-stp-result-path'));
+    expect(pathEl).toBeNull();
+
+    // The file row itself is still present and selectable.
+    const fileRows = findByClass(container, 'rp-stp-file-row');
+    expect(fileRows.length).toBe(1);
+  });
+
+  it('hideSearchResultPath omitted (default false) still renders the result-path line — regression guard', async () => {
+    svc.listFolder.mockResolvedValue({ folders: [], snippets: [] });
+    svc.listFolderDescendants.mockResolvedValue({
+      files: [`${ROOT}/abdomen/ct/ct-routine.md`],
+      folders: [],
+      total: 1,
+    });
+    const { picker, container } = makePicker({ mode: 'file-only' }, svc);
+    await picker.mount();
+
+    const input = findFirst(container, (el) => el.classList.has('rp-stp-search-input'))!;
+    triggerInput(input, 'ct');
+    await flushDebounce();
+
+    const pathEl = findFirst(container, (el) => el.classList.has('rp-stp-result-path'));
+    expect(pathEl).not.toBeNull();
+    expect(pathEl?.textContent).toBe('abdomen/ct/ct-routine.md');
   });
 });

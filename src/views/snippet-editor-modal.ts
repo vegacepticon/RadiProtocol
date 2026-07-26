@@ -48,6 +48,10 @@ interface SnippetEditorOptions {
   };
   /** Hide the folder picker when the caller manages moves separately. */
   disableFolderPicker?: boolean;
+  /** Pre-fill the template textarea in create mode (verbatim, no transformation).
+   *  Defaults to '' so existing callers (e.g. SnippetManagerView.openCreateModal
+   *  at src/views/snippet-manager-view.ts:258-267) compile and behave unchanged. */
+  initialTemplate?: string;
 }
 
 // Phase 84 (I18N-02): copy keys; resolved at render time via this.plugin.i18n.t().
@@ -68,12 +72,17 @@ function normalizeSnippetBasename(name: string): string {
   return name.trim().replace(/[\\/]/g, '-');
 }
 
-function emptyMdTemplateDraft(folder: string, locale: string, cat: string): MdTemplateSnippet {
+function emptyMdTemplateDraft(
+  folder: string,
+  locale: string,
+  cat: string,
+  initialTemplate: string = '',
+): MdTemplateSnippet {
   return {
     kind: 'md-template',
     path: folder + '/.md',
     name: '',
-    template: '',
+    template: initialTemplate,
     placeholders: [],
     validationError: null,
     lang: locale as 'ru' | 'en' | undefined,
@@ -138,6 +147,7 @@ export class SnippetEditorModal extends Modal {
         this.currentFolder,
         this.plugin.settings.locale ?? 'ru',
         basename(this.currentFolder),
+        options.initialTemplate ?? '',
       );
     }
 
