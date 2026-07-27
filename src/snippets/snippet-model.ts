@@ -19,39 +19,6 @@ export interface SnippetPlaceholder {
 }
 
 /**
- * Phase 32 (D-01): JSON snippet variant of the Snippet discriminated union.
- * Replaces the legacy `SnippetFile` interface; `SnippetFile` is retained below
- * as a type alias to minimize callsite churn during the phase 32 refactor.
- *
- * Identity (D-02): the full vault-relative `path` (including `.json`
- * extension) is the source of truth. The deprecated `id` field may still
- * appear in v1.4-era JSON files on disk and is tolerated on the type for
- * compatibility, but it is ignored at runtime — basename is authoritative.
- *
- * Phase 52 (D-03): non-optional `validationError` field. Non-null means the
- * file on disk declared a removed placeholder type ('number', 'multichoice',
- * 'multi-choice') or a 'choice' placeholder with invalid options. Consumers
- * MUST check before rendering in Editor or Runner — see SnippetEditorModal
- * banner surface and inline-runner snippet-fill guard.
- */
-export interface JsonSnippet {
-  readonly kind: 'json';
-  /** Full vault-relative path including `.json` extension — identity (D-02) */
-  path: string;
-  name: string;
-  template: string;
-  placeholders: SnippetPlaceholder[];
-  /** Phase 52 D-03: null on valid snippet; localized error string on legacy.
-   *  Phase 84 (I18N-01): message language follows the translator passed to
-   *  validatePlaceholders (defaults to English via defaultT). */
-  validationError: string | null;
-  /** @deprecated D-02: basename is source of truth; tolerated on disk only.
-   *  Not `readonly` to preserve legacy snippet-manager-view write behavior
-   *  until Phase 33 replaces that view. */
-  id?: string;
-}
-
-/**
  * Phase 32 (D-01): Markdown snippet variant of the Snippet discriminated union.
  * A `.md` file under the snippet root is a first-class snippet whose raw file
  * contents are inserted as-is by the runner (Phase 35). No placeholder
@@ -70,7 +37,7 @@ export interface MdSnippet {
 /**
  * Phase 93 (EXTERNAL-LIB-01): Markdown template snippet — `.md` file with
  * YAML-like frontmatter containing metadata and placeholder definitions.
- * Supports placeholder substitution like JsonSnippet.
+ * Supports placeholder substitution via {{id}} token replacement.
  */
 export interface MdTemplateSnippet {
   readonly kind: 'md-template';
@@ -93,12 +60,17 @@ export interface MdTemplateSnippet {
  * Phase 32 (D-01): Discriminated union over snippet kinds. Callsites MUST
  * branch on `kind` to access variant-specific fields — mirrors the `RPNode`
  * pattern already established in `graph-model.ts`.
+ *
+ * Phase 2 (JSON-removal): narrowed to the two Markdown variants. Legacy
+ * `.json` snippet files remain on disk but are no longer parsed, listed, or
+ * loaded — `SnippetService.resolveSnippet` reports them as `legacy-json` so
+ * runners can surface an explicit unsupported-format message.
  */
-export type Snippet = JsonSnippet | MdSnippet | MdTemplateSnippet;
+export type Snippet = MdSnippet | MdTemplateSnippet;
 
 /**
- * Phase 93 (EXTERNAL-LIB-01): renderSnippet-like interface for md-template
- * snippets. Same {{id}} -> value substitution engine as JsonSnippet.
+ * Phase 93 (EXTERNAL-LIB-01): render interface for md-template snippets.
+ * Same {{id}} -> value substitution engine as the legacy JSON renderer used.
  */
 export function renderMdTemplateSnippet(
   snippet: MdTemplateSnippet,
@@ -111,14 +83,6 @@ export function renderMdTemplateSnippet(
   }
   return output;
 }
-
-/**
- * Phase 32 (D-01, Claude's Discretion): backwards-compat alias for the
- * pre-phase-32 `SnippetFile` interface. Existing callsites that only deal
- * with JSON snippets can keep using `SnippetFile` without churn; new code
- * should prefer `JsonSnippet` or the `Snippet` union.
- */
-export type SnippetFile = JsonSnippet;
 
 /**
  * Phase 52 D-03: scan an untyped placeholder array for legacy types or
@@ -151,30 +115,6 @@ export function validatePlaceholders(
     }
   }
   return null;
-}
-
-/**
- * Render a snippet template by substituting {{id}} tokens with values.
- * Phase 52 D-05/D-07: pure string-replace. Callers (SnippetFillInModal)
- * pre-join choice values using `placeholder.separator`. No unit suffix.
- * Uses split/join for compatibility with ES6 targets (RESEARCH.md Pitfall / key_research_finding 4).
- *
- * Phase 32: signature accepts `JsonSnippet` (was `SnippetFile`). Since
- * `SnippetFile = JsonSnippet`, existing JSON-only callers remain compatible.
- * `MdSnippet` is not renderable — callers must branch on `kind` first.
- * `MdTemplateSnippet` callers should use `renderMdTemplateSnippet`.
- */
-export function renderSnippet(
-  snippet: JsonSnippet,
-  values: Record<string, string>,
-): string {
-  let output = snippet.template;
-  for (const placeholder of snippet.placeholders) {
-    const raw = values[placeholder.id] ?? '';
-    // split/join replaces all occurrences without requiring replaceAll (ES2021+)
-    output = output.split(`{{${placeholder.id}}}`).join(raw);
-  }
-  return output;
 }
 
 /**

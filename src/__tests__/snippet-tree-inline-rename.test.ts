@@ -229,8 +229,8 @@ import type { Snippet } from '../snippets/snippet-model';
 // Phase 84 (I18N-02): plugin.i18n required by SnippetManagerView/tree-renderer.
 import { I18nService } from '../i18n';
 
-function makeSnippet(kind: 'json' | 'md', p: string, name: string): Snippet {
-  if (kind === 'json') return { kind: 'json', path: p, name, template: '', placeholders: [], validationError: null };
+function makeSnippet(kind: 'md-template' | 'md', p: string, name: string): Snippet {
+  if (kind === 'md-template') return { kind: 'md-template', path: p, name, template: '', placeholders: [], validationError: null };
   return { kind: 'md', path: p, name, content: '' };
 }
 
@@ -354,7 +354,7 @@ describe('SnippetManagerView — F2 inline rename (Phase 34 Plan 03)', () => {
       listings: {
         [root]: {
           folders: ['a'],
-          snippets: [makeSnippet('json', `${root}/note.json`, 'note')],
+          snippets: [makeSnippet('md-template', `${root}/note.md`, 'note')],
         },
         [`${root}/a`]: { folders: ['sub'], snippets: [makeSnippet('md', `${root}/a/leaf.md`, 'leaf')] },
         [`${root}/a/sub`]: { folders: [], snippets: [] },
@@ -369,7 +369,7 @@ describe('SnippetManagerView — F2 inline rename (Phase 34 Plan 03)', () => {
     it('F2 on focused file row replaces label span with input and focuses it', async () => {
       const { view } = makeTreeView();
       await view.onOpen();
-      const row = findRow(view, `${root}/note.json`);
+      const row = findRow(view, `${root}/note.md`);
       expect(row).not.toBeNull();
       // Before: label span present, no input
       expect(findLabelInRow(row!)).not.toBeNull();
@@ -395,10 +395,10 @@ describe('SnippetManagerView — F2 inline rename (Phase 34 Plan 03)', () => {
     it('context menu Переименовать triggers same inline-rename flow', async () => {
       const { view } = makeTreeView();
       await view.onOpen();
-      const row = findRow(view, `${root}/note.json`);
+      const row = findRow(view, `${root}/note.md`);
       // Open context menu on the file row via the delegated treeRenderer
       (view as any).treeRenderer['openContextMenu']({ preventDefault() {}, stopPropagation() {} }, {
-        kind: 'file', path: `${root}/note.json`, name: 'note', snippetKind: 'json',
+        kind: 'file', path: `${root}/note.md`, name: 'note', snippetKind: 'md-template',
       });
       const renameItem = lastMenuItems.find((i) => i.title === 'Rename');
       expect(renameItem).toBeDefined();
@@ -413,14 +413,14 @@ describe('SnippetManagerView — F2 inline rename (Phase 34 Plan 03)', () => {
     it('Enter commits via snippetService.renameSnippet (file)', async () => {
       const { service, view } = makeTreeView();
       await view.onOpen();
-      const row = findRow(view, `${root}/note.json`);
+      const row = findRow(view, `${root}/note.md`);
       fire(row!, makeKeyEvent('keydown', 'F2'));
       const input = findInputInRow(row!)!;
       input.value = 'renamed';
       fire(input, makeKeyEvent('keydown', 'Enter'));
       await Promise.resolve();
       await Promise.resolve();
-      expect(service.renameSnippet).toHaveBeenCalledWith(`${root}/note.json`, 'renamed');
+      expect(service.renameSnippet).toHaveBeenCalledWith(`${root}/note.md`, 'renamed');
       expect(rewriteProtocolSnippetRefsSpy).not.toHaveBeenCalled();
     });
 
@@ -446,7 +446,7 @@ describe('SnippetManagerView — F2 inline rename (Phase 34 Plan 03)', () => {
     it('settled flag prevents Enter+blur double-commit', async () => {
       const { service, view } = makeTreeView();
       await view.onOpen();
-      const row = findRow(view, `${root}/note.json`);
+      const row = findRow(view, `${root}/note.md`);
       fire(row!, makeKeyEvent('keydown', 'F2'));
       const input = findInputInRow(row!)!;
       input.value = 'renamed';
@@ -462,7 +462,7 @@ describe('SnippetManagerView — F2 inline rename (Phase 34 Plan 03)', () => {
       const { service, view } = makeTreeView();
       await view.onOpen();
       const openEditModalSpy = vi.spyOn((view as any).treeRenderer['callbacks'], 'openEditModal');
-      const row = findRow(view, `${root}/note.json`);
+      const row = findRow(view, `${root}/note.md`);
       fire(row!, makeKeyEvent('keydown', 'F2'));
       const input = findInputInRow(row!)!;
       input.value = 'Upper Case';
@@ -499,7 +499,7 @@ describe('SnippetManagerView — F2 inline rename (Phase 34 Plan 03)', () => {
     it('Escape cancels without calling service', async () => {
       const { service, view } = makeTreeView();
       await view.onOpen();
-      const row = findRow(view, `${root}/note.json`);
+      const row = findRow(view, `${root}/note.md`);
       fire(row!, makeKeyEvent('keydown', 'F2'));
       const input = findInputInRow(row!)!;
       input.value = 'renamed';
@@ -513,7 +513,7 @@ describe('SnippetManagerView — F2 inline rename (Phase 34 Plan 03)', () => {
     it('blur with empty value reverts without service call', async () => {
       const { service, view } = makeTreeView();
       await view.onOpen();
-      const row = findRow(view, `${root}/note.json`);
+      const row = findRow(view, `${root}/note.md`);
       fire(row!, makeKeyEvent('keydown', 'F2'));
       const input = findInputInRow(row!)!;
       input.value = '   ';
@@ -525,7 +525,7 @@ describe('SnippetManagerView — F2 inline rename (Phase 34 Plan 03)', () => {
     it('blur with unchanged value does not call service', async () => {
       const { service, view } = makeTreeView();
       await view.onOpen();
-      const row = findRow(view, `${root}/note.json`);
+      const row = findRow(view, `${root}/note.md`);
       fire(row!, makeKeyEvent('keydown', 'F2'));
       const input = findInputInRow(row!)!;
       // value already 'note' (basename without ext)
@@ -540,21 +540,21 @@ describe('SnippetManagerView — F2 inline rename (Phase 34 Plan 03)', () => {
       const { view } = makeTreeView();
       await view.onOpen();
       const openEditModalSpy = vi.spyOn((view as any).treeRenderer['callbacks'], 'openEditModal');
-      const row = findRow(view, `${root}/note.json`);
+      const row = findRow(view, `${root}/note.md`);
       expect(row).not.toBeNull();
       fire(row!, makeKeyEvent('keydown', 'Enter'));
-      expect(openEditModalSpy).toHaveBeenCalledWith(`${root}/note.json`);
+      expect(openEditModalSpy).toHaveBeenCalledWith(`${root}/note.md`);
     });
 
     it('Space on a file row calls openEditModal with the snippet path', async () => {
       const { view } = makeTreeView();
       await view.onOpen();
       const openEditModalSpy = vi.spyOn((view as any).treeRenderer['callbacks'], 'openEditModal');
-      const row = findRow(view, `${root}/note.json`);
+      const row = findRow(view, `${root}/note.md`);
       expect(row).not.toBeNull();
       const ke = makeKeyEvent('keydown', ' ');
       fire(row!, ke);
-      expect(openEditModalSpy).toHaveBeenCalledWith(`${root}/note.json`);
+      expect(openEditModalSpy).toHaveBeenCalledWith(`${root}/note.md`);
       expect(ke.defaultPrevented).toBe(true);
     });
 
@@ -585,7 +585,7 @@ describe('SnippetManagerView — F2 inline rename (Phase 34 Plan 03)', () => {
     it('F2 still triggers inline rename on file rows', async () => {
       const { view } = makeTreeView();
       await view.onOpen();
-      const row = findRow(view, `${root}/note.json`);
+      const row = findRow(view, `${root}/note.md`);
       expect(row).not.toBeNull();
       expect(findInputInRow(row!)).toBeNull();
       fire(row!, makeKeyEvent('keydown', 'F2'));

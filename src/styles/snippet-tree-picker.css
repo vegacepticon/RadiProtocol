@@ -232,19 +232,28 @@
 .rp-insert-snippet-modal {
   /* Opt out of .modal-container's align-items: center; anchor to top padding. */
   align-self: flex-start;
-  margin-top: 0;
+  margin-top: var(--size-4-6);
+  /* Cap below viewport height and provide vertical overflow as the final
+     short-viewport safety net so the modal clamps and scrolls without recentering. */
+  max-height: calc(100vh - var(--size-4-12));
+  overflow-y: auto;
 }
 
 .rp-insert-snippet-picker-host .rp-stp-root > .rp-stp-body {
-  /* Stabilize drill view outer height (matches .rp-stp-modal-host treatment). */
-  height: 360px;
+  /* Normal viewports reach 480px; short viewports reserve space for modal/search
+     chrome and shrink before the modal cap. min-height: 0 allows flex shrinking. */
+  height: min(480px, calc(100vh - 10rem));
+  min-height: 0;
 }
 
 .rp-insert-snippet-picker-host .rp-stp-root > .rp-stp-list {
   /* Bare search-result list recreated on host by renderSearchResults().
-     Global .rp-stp-list { max-height: 320px } (src/styles/snippet-tree-picker.css:148)
-     still applies, so min==max==320px fixes the height regardless of result count. */
-  min-height: 320px;
+     Direct-child bare list: viewport-derived height capped at 440px, reserving
+     the additional search-row space and allowing it to shrink. The flexed inner
+     drill-view list is untouched. min-height: 0 allows flex shrinking. */
+  height: min(440px, calc(100vh - 12.5rem));
+  max-height: min(440px, calc(100vh - 12.5rem));
+  min-height: 0;
 }
 
 /* Phase 51 Plan 03 — Node Editor inline mount host (consumed by editor-panel-view.ts). */
@@ -297,10 +306,18 @@
   color: var(--text-on-accent);
 }
 
-/* Phase 4 — keyboard-nav highlight + screen-reader-only status span. */
+/* Phase 4 — keyboard-nav highlight + screen-reader-only status span.
+   Phase 5: strengthen the highlight with a 2px inset accent stripe and an
+   active-hover background, plus a semibold title. The base 1px transparent
+   border geometry is preserved (no border-width change -> no content shift). */
 .rp-stp-row-highlighted {
-  background: var(--background-modifier-hover);
+  background: var(--background-modifier-active-hover);
   border-color: var(--background-modifier-border);
+  box-shadow: inset 2px 0 0 var(--interactive-accent);
+}
+
+.rp-stp-row-highlighted .rp-stp-row-title {
+  font-weight: var(--font-semibold);
 }
 
 .rp-stp-sr-only {

@@ -1,26 +1,23 @@
 // runner/render/render-snippet-fill.ts
 // Phase 75 Plan 05 (DEDUP-01) — shared awaiting-snippet-fill renderer helpers.
 import { CSS_CLASS } from '../../constants/css-classes';
+import type { Translator } from '../../i18n';
 //
 // Owns:
 //   - "Loading snippet..." placeholder paragraph rendered while host loads the
 //     snippet asynchronously.
-//   - "Snippet '{id}' not found" copy emitted when the host's load returns null.
-//   - Phase 51 D-14 path-shape detection — distinguishes legacy id-string callers
-//     (Phase 32/35) from full-vault-path callers (Phase 51 auto-insert).
+//   - "Snippet '{id}' not found" copy emitted when resolution returns `missing`.
+//   - Phase 2 (JSON-removal): "unsupported legacy JSON format" copy emitted
+//     when `SnippetService.resolveSnippet` returns `legacy-json`.
 //
 // Hosts retain:
-//   - Snippet path resolution (InlineRunnerModal WR-03 + basename fallback scan).
+//   - SnippetService.resolveSnippet orchestration (InlineRunnerModal handleSnippetFill).
 //   - SnippetFillInModal lifecycle (`fillModal`/`isFillModalOpen` gate is host-owned).
-//   - Validation-error chrome (Notice copy + stepBack/render policy is host-owned).
 //   - completeSnippet dispatch + autosave / accumulator-delta append + re-render.
-
-/** Phase 51 D-14 path-shape detection shared with InlineRunnerModal handleSnippetFill. */
-export function isFullSnippetPath(snippetId: string): boolean {
-  return snippetId.includes('/') ||
-    snippetId.endsWith('.md') ||
-    snippetId.endsWith('.json');
-}
+//
+// Phase 2 (JSON-removal): path-shape detection (`isFullSnippetPath`) and all
+// root-checked snippet-ID resolution moved into `SnippetService.resolveSnippet`.
+// This module is now presentation-only.
 
 /** Render the "Loading snippet..." placeholder. Host calls this synchronously
  *  before kicking off the async snippet load. */
@@ -51,3 +48,19 @@ export function renderSnippetFillNotFound(
     cls: CSS_CLASS.EMPTY_STATE_BODY,
   });
 }
+
+/** Phase 2 (JSON-removal): Replace the zone with the localised unsupported-
+ *  legacy-JSON-format message. Consumed by InlineRunnerModal when
+ *  `SnippetService.resolveSnippet` returns `{ status: 'legacy-json', path }`. */
+export function renderSnippetFillUnsupportedFormat(
+  zone: HTMLElement,
+  path: string,
+  t: Translator,
+): void {
+  zone.empty();
+  zone.createEl('p', {
+    text: t('inlineRunner.snippetLegacyJson', { path }),
+    cls: CSS_CLASS.EMPTY_STATE_BODY,
+  });
+}
+

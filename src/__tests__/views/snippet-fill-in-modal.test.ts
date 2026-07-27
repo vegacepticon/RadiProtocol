@@ -248,17 +248,17 @@ vi.mock('obsidian', () => {
 
 // Import after the mock is installed.
 import { SnippetFillInModal } from '../../views/snippet-fill-in-modal';
-import type { JsonSnippet } from '../../snippets/snippet-model';
+import type { MdTemplateSnippet } from '../../snippets/snippet-model';
 
 const app = {} as never;
 
 function makeSnippet(
-  placeholders: JsonSnippet['placeholders'],
+  placeholders: MdTemplateSnippet['placeholders'],
   template = 'R: {{f}}',
-): JsonSnippet {
+): MdTemplateSnippet {
   return {
-    kind: 'json',
-    path: 'Protocols/Snippets/t.json',
+    kind: 'md-template',
+    path: 'Protocols/Snippets/t.md',
     name: 't',
     template,
     placeholders,

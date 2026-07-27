@@ -1,7 +1,7 @@
 // views/snippet-chip-editor.ts
 // Phase 33 (MODAL-06): Reusable placeholder chip editor extracted from legacy
 // SnippetManagerView. This module owns ZERO plugin/view state — the caller
-// passes a JsonSnippet draft, which is mutated in place, and an onChange
+// passes a Markdown template draft, which is mutated in place, and an onChange
 // callback invoked after every user-visible mutation so the consumer can
 // track `hasUnsavedChanges` for the modal guard (MODAL-08).
 //
@@ -12,7 +12,7 @@
 //   - No path derivation — the modal save handler (Plan 03) owns path logic.
 //   - insertAtCursor and PH_COLOR are module-local helpers (not exported).
 
-import type { JsonSnippet, MdTemplateSnippet, SnippetPlaceholder } from '../snippets/snippet-model';
+import type { MdTemplateSnippet, SnippetPlaceholder } from '../snippets/snippet-model';
 import { defaultT, type Translator } from '../i18n';
 
 // --- Module-local helpers (copied verbatim from legacy snippet-manager-view.ts) ---
@@ -70,7 +70,7 @@ type ListenerTuple = {
  * The container is emptied on mount; the returned handle's `destroy()`
  * removes all listeners and empties the container again.
  */
-type EditableTemplateSnippet = JsonSnippet | MdTemplateSnippet;
+type EditableTemplateSnippet = MdTemplateSnippet;
 
 export function mountChipEditor(
   container: HTMLElement,

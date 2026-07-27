@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import type { SnippetFile, SnippetPlaceholder } from '../snippets/snippet-model';
-import { renderSnippet, slugifyLabel } from '../snippets/snippet-model';
+import type { SnippetPlaceholder, MdTemplateSnippet } from '../snippets/snippet-model';
+import { renderMdTemplateSnippet, slugifyLabel } from '../snippets/snippet-model';
 
 describe('SnippetPlaceholder interface (SNIP-02, D-16)', () => {
   it('has optional options field for choice', () => {
@@ -12,7 +12,6 @@ describe('SnippetPlaceholder interface (SNIP-02, D-16)', () => {
   });
 
   it('has optional separator field for choice placeholders (D-02)', () => {
-    // `separator` not yet on SnippetPlaceholder pre-Plan-02; cast via unknown.
     const p = {
       id: 'findings', label: 'Findings', type: 'choice',
       options: ['cyst', 'mass'], separator: ' and ',
@@ -21,13 +20,10 @@ describe('SnippetPlaceholder interface (SNIP-02, D-16)', () => {
   });
 });
 
-describe('renderSnippet (SNIP-02)', () => {
-  // validationError not yet on JsonSnippet pre-Plan-02; cast via unknown so
-  // tsc accepts the forward-compat field.
-  const snippet: SnippetFile = {
-    kind: 'json',
-    path: '.radiprotocol/snippets/liver-report.json',
-    id: 'liver-report',
+describe('renderMdTemplateSnippet (EXTERNAL-LIB-01)', () => {
+  const snippet: MdTemplateSnippet = {
+    kind: 'md-template',
+    path: '.radiprotocol/snippets/liver-report.md',
     name: 'Liver report',
     template: 'Patient age: {{age}}. Side: {{laterality}}.',
     placeholders: [
@@ -35,33 +31,33 @@ describe('renderSnippet (SNIP-02)', () => {
       { id: 'laterality', label: 'Side', type: 'choice', options: ['Left', 'Right'] },
     ],
     validationError: null,
-  } as unknown as SnippetFile;
+  };
 
   it('substitutes free-text placeholder tokens', () => {
-    const result = renderSnippet(snippet, { age: '45', laterality: 'Left' });
+    const result = renderMdTemplateSnippet(snippet, { age: '45', laterality: 'Left' });
     expect(result).toContain('Patient age: 45');
   });
 
   it('leaves unfilled tokens as empty string (not as {{id}})', () => {
-    const result = renderSnippet(snippet, { age: '', laterality: '' });
+    const result = renderMdTemplateSnippet(snippet, { age: '', laterality: '' });
     expect(result).not.toContain('{{age}}');
   });
 });
 
-describe('renderSnippet choice (D-02, D-05)', () => {
+describe('renderMdTemplateSnippet choice (D-02, D-05)', () => {
   it('inserts pre-joined choice values verbatim (caller pre-joins with separator)', () => {
-    const s: SnippetFile = {
-      kind: 'json',
-      path: '.radiprotocol/snippets/findings.json',
-      id: 'findings', name: 'Findings',
+    const s: MdTemplateSnippet = {
+      kind: 'md-template',
+      path: '.radiprotocol/snippets/findings.md',
+      name: 'Findings',
       template: 'Findings: {{f}}.',
       placeholders: [{
         id: 'f', label: 'Findings', type: 'choice',
         options: ['cyst', 'mass'], separator: ' and ',
       }],
       validationError: null,
-    } as unknown as SnippetFile;
-    const result = renderSnippet(s, { f: 'cyst and mass' });
+    };
+    const result = renderMdTemplateSnippet(s, { f: 'cyst and mass' });
     expect(result).toBe('Findings: cyst and mass.');
   });
 });

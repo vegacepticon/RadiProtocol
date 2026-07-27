@@ -104,11 +104,23 @@ export interface ProtocolEdgeRecord {
 /**
  * Utility: generate a new ProtocolDocumentV1 with minimal valid structure.
  * Used by ProtocolDocumentStore.create() and tests.
+ *
+ * Phase 4: seeds one Start node so newly created protocols open with a visible
+ * green Start node and never trip the `noStartNode` validation error. The
+ * seeded node uses the editor's default Start dimensions (200×80) and color
+ * (rgba(76, 175, 80, 0.28)) — see NODE_KIND_DEFAULTS['start'] in
+ * src/views/protocol-editor-view.ts. The values are inlined here with a cross
+ * reference comment rather than imported from the views layer, to preserve the
+ * protocol → views dependency direction (lower layers never import views).
+ *
+ * @param startNodeId Optional explicit Start node ID. Defaults to a generated
+ *   `node-<timestamp>-<random>` ID derived from the injected `now`.
  */
 export function createEmptyProtocolDocument(
   id: string,
   title: string,
-  now = new Date()
+  now = new Date(),
+  startNodeId = `node-${now.getTime()}-${Math.random().toString(36).slice(2, 8)}`,
 ): ProtocolDocumentV1 {
   const iso = now.toISOString();
   return {
@@ -118,7 +130,19 @@ export function createEmptyProtocolDocument(
     title,
     createdAt: iso,
     updatedAt: iso,
-    nodes: [],
+    nodes: [
+      {
+        id: startNodeId,
+        kind: 'start',
+        x: 0,
+        y: 0,
+        width: 200,
+        height: 80,
+        // Matches NODE_KIND_DEFAULTS['start'].color in protocol-editor-view.ts.
+        color: 'rgba(76, 175, 80, 0.28)',
+        fields: {},
+      },
+    ],
     edges: [],
     layoutDirection: 'LR',
   };

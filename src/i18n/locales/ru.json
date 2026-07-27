@@ -165,7 +165,6 @@
     "setSnippetFolderFirst": "Сначала укажи папку сниппетов в настройках.",
     "openMarkdownFirst": "Сначала открой Markdown-заметку, затем вставь сниппет.",
     "notFound": "Сниппет не найден: {path}",
-    "cannotBeUsed": "Сниппет «{path}» не может быть использован. {error}",
     "inserted": "Сниппет вставлен."
   },
   "snippetTreePicker": {
@@ -309,14 +308,13 @@
     "loadingSnippets": "Загрузка сниппетов…",
     "keyStepBack": "Ctrl+← Назад",
     "keyStepRedo": "Ctrl+→ Повторить",
-    "keyClose": "Esc Закрыть",
-    "createSnippetFromSelection": "Создать сниппет из выделения"
+    "keyClose": "Esc Закрыть"
   },
   "inlineRunner": {
     "protocolFileNotFound": "Файл протокола не найден: \"{path}\".",
     "couldNotReadProtocol": "Не удалось прочитать файл протокола: \"{path}\".",
     "snippetNotFound": "Сниппет не найден: \"{path}\".",
-    "snippetCannotBeUsed": "Сниппет \"{path}\" нельзя использовать. {error}"
+    "snippetLegacyJson": "Сниппет \"{path}\" использует устаревший формат JSON, который больше не поддерживается. Создай его заново как Markdown-шаблон и обнови протокол."
   },
   "snippetPreview": {
     "ariaLabel": "Предпросмотр сниппета",

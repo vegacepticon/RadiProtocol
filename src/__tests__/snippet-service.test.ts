@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { SnippetService } from '../snippets/snippet-service';
-import type { JsonSnippet, MdSnippet } from '../snippets/snippet-model';
+import type { MdSnippet, MdTemplateSnippet } from '../snippets/snippet-model';
+import { serializeMarkdownTemplate } from '../snippets/md-template';
 
 // ---------------------------------------------------------------------------
 // Shared mock infrastructure
@@ -62,6 +63,9 @@ function makeVault(opts: MockVaultOptions = {}) {
     getAbstractFileByPath: vi.fn((p: string) => {
       return p in abstractFiles ? abstractFiles[p] : null;
     }),
+    getFiles: vi.fn(() => {
+      return Object.keys(files).map((p) => ({ path: p, stat: {} }));
+    }),
     trash: vi.fn(async (_file: unknown, _system: boolean) => {
       // no-op; tests spy on call args
     }),
@@ -89,12 +93,24 @@ const settings = {
 
 const ROOT = '.radiprotocol/snippets';
 
+/** A minimal md-template frontmatter string with the given body + placeholders. */
+function mdTemplateFile(name: string, body: string, placeholders: MdTemplateSnippet['placeholders']): string {
+  return serializeMarkdownTemplate({
+    kind: 'md-template',
+    path: '',
+    name,
+    template: body,
+    placeholders,
+    validationError: null,
+  });
+}
+
 // ---------------------------------------------------------------------------
 // API presence
 // ---------------------------------------------------------------------------
 
 describe('SnippetService API surface (Phase 32 D-03)', () => {
-  it('exposes listFolder / load / save / delete / exists', () => {
+  it('exposes listFolder / load / save / delete / exists / resolveSnippet', () => {
     const { vault } = makeVault();
     const svc = new SnippetService(makeSnippetServiceApp(vault) as never, settings);
     expect(typeof svc.listFolder).toBe('function');
@@ -102,28 +118,28 @@ describe('SnippetService API surface (Phase 32 D-03)', () => {
     expect(typeof svc.save).toBe('function');
     expect(typeof svc.delete).toBe('function');
     expect(typeof svc.exists).toBe('function');
+    expect(typeof svc.resolveSnippet).toBe('function');
   });
 
   it('does NOT expose removed legacy list() method', () => {
     const { vault } = makeVault();
     const svc = new SnippetService(makeSnippetServiceApp(vault) as never, settings);
-    // Phase 32: legacy flat-list `list()` is removed.
     expect((svc as unknown as { list?: unknown }).list).toBeUndefined();
   });
 });
 
 // ---------------------------------------------------------------------------
-// listFolder — happy paths (retained from Phase 30) + MD routing (MD-05, D-09)
+// listFolder — happy paths + MD routing (Phase 2 JSON-removal)
 // ---------------------------------------------------------------------------
 
 describe('listFolder (D-18..D-21, T-30-01)', () => {
   it('happy path — returns direct-children folders and parsed snippets sorted', async () => {
-    const aPath = `${ROOT}/CT/a.json`;
-    const bPath = `${ROOT}/CT/b.json`;
+    const aPath = `${ROOT}/CT/a.md`;
+    const bPath = `${ROOT}/CT/b.md`;
     const { vault } = makeVault({
       files: {
-        [aPath]: JSON.stringify({ id: 'a', name: 'Zebra', template: 't', placeholders: [] }),
-        [bPath]: JSON.stringify({ id: 'b', name: 'Apple', template: 't', placeholders: [] }),
+        [aPath]: mdTemplateFile('Zebra', 't', []),
+        [bPath]: mdTemplateFile('Apple', 't', []),
       },
       folders: [`${ROOT}/CT`, `${ROOT}/CT/kidney`, `${ROOT}/CT/adrenal`],
     });
@@ -132,11 +148,9 @@ describe('listFolder (D-18..D-21, T-30-01)', () => {
     const result = await svc.listFolder(`${ROOT}/CT`);
 
     expect(result.folders).toEqual(['adrenal', 'kidney']);
-    // Phase 33 (D-02): basename is authoritative for `name` — JSON's inner
-    // `name` field is ignored at read time so external vault rename reflects
-    // in the tree immediately (SYNC-02).
-    expect(result.snippets.map((s) => s.name)).toEqual(['a', 'b']);
-    expect(result.snippets.every((s) => s.kind === 'json')).toBe(true);
+    // md-template `name` comes from frontmatter; sorted by name.
+    expect(result.snippets.map((s) => s.name)).toEqual(['Apple', 'Zebra']);
+    expect(result.snippets.every((s) => s.kind === 'md-template')).toBe(true);
   });
 
   it('missing folder returns empty and does not call adapter.list', async () => {
@@ -149,13 +163,13 @@ describe('listFolder (D-18..D-21, T-30-01)', () => {
     expect(vault.adapter.list).toHaveBeenCalledTimes(0);
   });
 
-  it('corrupt JSON is skipped silently', async () => {
-    const goodPath = `${ROOT}/CT/good.json`;
-    const badPath = `${ROOT}/CT/bad.json`;
+  it('skips legacy .json files — they never render as selectable rows', async () => {
+    const mdPath = `${ROOT}/CT/notes.md`;
+    const jsonPath = `${ROOT}/CT/legacy.json`;
     const { vault } = makeVault({
       files: {
-        [goodPath]: JSON.stringify({ name: 'Good', template: 't', placeholders: [] }),
-        [badPath]: '{bad',
+        [mdPath]: 'raw md body',
+        [jsonPath]: JSON.stringify({ name: 'legacy', template: 't', placeholders: [] }),
       },
       folders: [`${ROOT}/CT`],
     });
@@ -163,8 +177,9 @@ describe('listFolder (D-18..D-21, T-30-01)', () => {
 
     const result = await svc.listFolder(`${ROOT}/CT`);
 
-    // Phase 33 (D-02): basename is authoritative — `name` comes from filename.
-    expect(result.snippets.map((s) => s.name)).toEqual(['good']);
+    expect(result.snippets).toHaveLength(1);
+    expect(result.snippets[0]!.kind).toBe('md');
+    expect(result.snippets[0]!.name).toBe('notes');
   });
 
   it('rejects path with .. segments before any disk I/O', async () => {
@@ -193,11 +208,6 @@ describe('listFolder (D-18..D-21, T-30-01)', () => {
 
     expect(result).toEqual({ folders: [], snippets: [] });
     expect(vault.adapter.exists).toHaveBeenCalledTimes(0);
-    expect(
-      errSpy.mock.calls.some((c) =>
-        /snippet-service rejected unsafe path/.test(String(c[0])),
-      ),
-    ).toBe(true);
     errSpy.mockRestore();
   });
 
@@ -215,19 +225,17 @@ describe('listFolder (D-18..D-21, T-30-01)', () => {
 });
 
 // ---------------------------------------------------------------------------
-// listFolder extension routing (MD-05) + JSON/MD coexistence (D-09)
+// listFolder extension routing (MD-05)
 // ---------------------------------------------------------------------------
 
 describe('listFolder extension routing (MD-05)', () => {
-  it('returns JsonSnippet for .json files', async () => {
-    const p = `${ROOT}/CT/alpha.json`;
+  it('returns MdTemplateSnippet for .md files with frontmatter', async () => {
+    const p = `${ROOT}/CT/alpha.md`;
     const { vault } = makeVault({
       files: {
-        [p]: JSON.stringify({
-          name: 'Alpha',
-          template: 'hello {{x}}',
-          placeholders: [{ id: 'x', label: 'X', type: 'free-text' }],
-        }),
+        [p]: mdTemplateFile('Alpha', 'hello {{x}}', [
+          { id: 'x', label: 'X', type: 'free-text' },
+        ]),
       },
       folders: [`${ROOT}/CT`],
     });
@@ -236,16 +244,15 @@ describe('listFolder extension routing (MD-05)', () => {
     const { snippets } = await svc.listFolder(`${ROOT}/CT`);
 
     expect(snippets).toHaveLength(1);
-    expect(snippets[0]!.kind).toBe('json');
-    const s = snippets[0] as JsonSnippet;
-    // Phase 33 (D-02): basename is authoritative for `name`.
-    expect(s.name).toBe('alpha');
+    expect(snippets[0]!.kind).toBe('md-template');
+    const s = snippets[0] as MdTemplateSnippet;
+    expect(s.name).toBe('Alpha');
     expect(s.template).toBe('hello {{x}}');
     expect(s.placeholders).toHaveLength(1);
     expect(s.path).toBe(p);
   });
 
-  it('returns MdSnippet for .md files with raw content', async () => {
+  it('returns MdSnippet for .md files without frontmatter (raw content)', async () => {
     const p = `${ROOT}/CT/notes.md`;
     const raw = '# Notes\n\nFree-text markdown body.';
     const { vault } = makeVault({
@@ -264,34 +271,13 @@ describe('listFolder extension routing (MD-05)', () => {
     expect(s.path).toBe(p);
   });
 
-  it('returns both when foo.json and foo.md coexist (D-09)', async () => {
-    const jsonP = `${ROOT}/CT/foo.json`;
-    const mdP = `${ROOT}/CT/foo.md`;
+  it('skips non-.md files (e.g. .txt)', async () => {
+    const mdPath = `${ROOT}/CT/a.md`;
+    const txtPath = `${ROOT}/CT/ignore.txt`;
     const { vault } = makeVault({
       files: {
-        [jsonP]: JSON.stringify({ name: 'foo', template: 't', placeholders: [] }),
-        [mdP]: 'raw md body',
-      },
-      folders: [`${ROOT}/CT`],
-    });
-    const svc = new SnippetService(makeSnippetServiceApp(vault) as never, settings);
-
-    const { snippets } = await svc.listFolder(`${ROOT}/CT`);
-
-    expect(snippets).toHaveLength(2);
-    const kinds = snippets.map((s) => s.kind).sort();
-    expect(kinds).toEqual(['json', 'md']);
-    // Both derive `name` = 'foo' (basename)
-    expect(snippets.every((s) => s.name === 'foo')).toBe(true);
-  });
-
-  it('skips non-.json/.md files', async () => {
-    const jsonP = `${ROOT}/CT/a.json`;
-    const txtP = `${ROOT}/CT/ignore.txt`;
-    const { vault } = makeVault({
-      files: {
-        [jsonP]: JSON.stringify({ name: 'a', template: 't', placeholders: [] }),
-        [txtP]: 'ignore me',
+        [mdPath]: 'raw md body',
+        [txtPath]: 'ignore me',
       },
       folders: [`${ROOT}/CT`],
     });
@@ -300,7 +286,7 @@ describe('listFolder extension routing (MD-05)', () => {
     const { snippets } = await svc.listFolder(`${ROOT}/CT`);
 
     expect(snippets).toHaveLength(1);
-    expect(snippets[0]!.kind).toBe('json');
+    expect(snippets[0]!.kind).toBe('md');
   });
 });
 
@@ -309,25 +295,22 @@ describe('listFolder extension routing (MD-05)', () => {
 // ---------------------------------------------------------------------------
 
 describe('load(path) routing (D-03)', () => {
-  it('returns JsonSnippet for .json path', async () => {
-    const p = `${ROOT}/CT/a.json`;
+  it('returns MdTemplateSnippet for .md path with frontmatter', async () => {
+    const p = `${ROOT}/CT/a.md`;
     const { vault } = makeVault({
-      files: {
-        [p]: JSON.stringify({ name: 'Alpha', template: 't', placeholders: [] }),
-      },
+      files: { [p]: mdTemplateFile('Alpha', 't', []) },
     });
     const svc = new SnippetService(makeSnippetServiceApp(vault) as never, settings);
 
     const snippet = await svc.load(p);
 
     expect(snippet).not.toBeNull();
-    expect(snippet!.kind).toBe('json');
-    // Phase 33 (D-02): basename is authoritative — `a.json` → `a`.
-    expect((snippet as JsonSnippet).name).toBe('a');
+    expect(snippet!.kind).toBe('md-template');
+    expect((snippet as MdTemplateSnippet).name).toBe('Alpha');
     expect(snippet!.path).toBe(p);
   });
 
-  it('returns MdSnippet with raw content for .md path', async () => {
+  it('returns MdSnippet with raw content for .md path without frontmatter', async () => {
     const p = `${ROOT}/CT/note.md`;
     const raw = 'body\nwith\nlines';
     const { vault } = makeVault({ files: { [p]: raw } });
@@ -341,11 +324,22 @@ describe('load(path) routing (D-03)', () => {
     expect((snippet as MdSnippet).name).toBe('note');
   });
 
+  it('returns null for a legacy .json path (no longer loadable)', async () => {
+    const p = `${ROOT}/CT/legacy.json`;
+    const { vault } = makeVault({
+      files: { [p]: JSON.stringify({ name: 'legacy', template: 't', placeholders: [] }) },
+    });
+    const svc = new SnippetService(makeSnippetServiceApp(vault) as never, settings);
+
+    const snippet = await svc.load(p);
+    expect(snippet).toBeNull();
+  });
+
   it('returns null for missing file', async () => {
     const { vault } = makeVault();
     const svc = new SnippetService(makeSnippetServiceApp(vault) as never, settings);
 
-    const snippet = await svc.load(`${ROOT}/missing.json`);
+    const snippet = await svc.load(`${ROOT}/missing.md`);
     expect(snippet).toBeNull();
   });
 
@@ -361,9 +355,11 @@ describe('load(path) routing (D-03)', () => {
     errSpy.mockRestore();
   });
 
-  it('returns null for corrupt JSON', async () => {
-    const p = `${ROOT}/bad.json`;
-    const { vault } = makeVault({ files: { [p]: '{not json' } });
+  it('returns null for corrupt .md read (unreadable)', async () => {
+    const p = `${ROOT}/bad.md`;
+    const { vault } = makeVault({ files: { [p]: 'not relevant' } });
+    // Force read to throw
+    vault.adapter.read = vi.fn(async () => { throw new Error('ENOENT'); });
     const svc = new SnippetService(makeSnippetServiceApp(vault) as never, settings);
 
     const snippet = await svc.load(p);
@@ -376,13 +372,13 @@ describe('load(path) routing (D-03)', () => {
 // ---------------------------------------------------------------------------
 
 describe('save(Snippet) branching (D-03, D-11)', () => {
-  it('JSON save writes serialised JSON without runtime-only kind/path fields', async () => {
-    const p = `${ROOT}/CT/a.json`;
+  it('md-template save writes frontmatter + body', async () => {
+    const p = `${ROOT}/CT/a.md`;
     const { vault, files } = makeVault({ folders: [ROOT, `${ROOT}/CT`] });
     const svc = new SnippetService(makeSnippetServiceApp(vault) as never, settings);
 
-    const snippet: JsonSnippet = {
-      kind: 'json',
+    const snippet: MdTemplateSnippet = {
+      kind: 'md-template',
       path: p,
       name: 'Alpha',
       template: 'hello {{x}}',
@@ -391,19 +387,11 @@ describe('save(Snippet) branching (D-03, D-11)', () => {
     };
     await svc.save(snippet);
 
-    // Either create() or adapter.write() was used to persist payload
     const persisted = files[p];
     expect(persisted).toBeDefined();
-    const parsed = JSON.parse(persisted!);
-    expect(parsed).toEqual({
-      name: 'Alpha',
-      template: 'hello {{x}}',
-      placeholders: [{ id: 'x', label: 'X', type: 'free-text' }],
-    });
-    // runtime-only fields must NOT be persisted
-    expect(parsed).not.toHaveProperty('kind');
-    expect(parsed).not.toHaveProperty('path');
-    expect(parsed).not.toHaveProperty('id');
+    expect(persisted).toContain('---');
+    expect(persisted).toContain('name: Alpha');
+    expect(persisted).toContain('hello {{x}}');
   });
 
   it('MD save writes raw content verbatim', async () => {
@@ -424,19 +412,16 @@ describe('save(Snippet) branching (D-03, D-11)', () => {
   });
 
   it('concurrent saves on the same path serialise via WriteMutex', async () => {
-    const p = `${ROOT}/CT/a.json`;
+    const p = `${ROOT}/CT/a.md`;
     const order: string[] = [];
-    // Override write to be async and record ordering
     const { vault, files } = makeVault({ folders: [ROOT, `${ROOT}/CT`] });
     const origCreate = vault.create;
     vault.create = vi.fn(async (path: string, data: string) => {
       order.push('start:' + path);
-      // yield to event loop so interleaving is possible if mutex is absent
       await new Promise((r) => setTimeout(r, 10));
       order.push('end:' + path);
       await origCreate(path, data);
     }) as unknown as typeof origCreate;
-    // After the first save create()s the file, subsequent writes go through adapter.write()
     const origWrite = vault.adapter.write;
     vault.adapter.write = vi.fn(async (path: string, data: string) => {
       order.push('start:' + path);
@@ -446,69 +431,28 @@ describe('save(Snippet) branching (D-03, D-11)', () => {
     }) as unknown as typeof origWrite;
 
     const svc = new SnippetService(makeSnippetServiceApp(vault) as never, settings);
-    const s1: JsonSnippet = {
-      kind: 'json',
-      path: p,
-      name: 'One',
-      template: 't',
-      placeholders: [],
-      validationError: null,
-    };
-    const s2: JsonSnippet = {
-      kind: 'json',
-      path: p,
-      name: 'Two',
-      template: 't',
-      placeholders: [],
-      validationError: null,
-    };
+    const s1: MdSnippet = { kind: 'md', path: p, name: 'one', content: 'one' };
+    const s2: MdSnippet = { kind: 'md', path: p, name: 'two', content: 'two' };
 
     await Promise.all([svc.save(s1), svc.save(s2)]);
 
-    // Serialised: start/end must come in pairs, never interleaved
     expect(order).toHaveLength(4);
     expect(order[0]!.startsWith('start:')).toBe(true);
     expect(order[1]!.startsWith('end:')).toBe(true);
     expect(order[2]!.startsWith('start:')).toBe(true);
     expect(order[3]!.startsWith('end:')).toBe(true);
-    // Final persisted value corresponds to one of the two writes
     expect(files[p]).toBeDefined();
-  });
-
-  it('JSON save strips control characters (sanitise, T-5-01)', async () => {
-    const p = `${ROOT}/CT/ctrl.json`;
-    const { vault, files } = makeVault({ folders: [ROOT, `${ROOT}/CT`] });
-    const svc = new SnippetService(makeSnippetServiceApp(vault) as never, settings);
-
-    const snippet: JsonSnippet = {
-      kind: 'json',
-      path: p,
-      name: 'Na\u0001me',
-      template: 'tmpl\u0000here',
-      placeholders: [
-        { id: 'x', label: 'Lbl\u001F', type: 'free-text' },
-      ],
-      validationError: null,
-    };
-    await svc.save(snippet);
-
-    const parsed = JSON.parse(files[p]!);
-    expect(parsed.name).toBe('Name');
-    expect(parsed.template).toBe('tmplhere');
-    expect(parsed.placeholders[0].label).toBe('Lbl');
   });
 
   it('save rejects unsafe path (D-10)', async () => {
     const { vault } = makeVault();
     const svc = new SnippetService(makeSnippetServiceApp(vault) as never, settings);
 
-    const snippet: JsonSnippet = {
-      kind: 'json',
-      path: `${ROOT}/../../escape.json`,
+    const snippet: MdSnippet = {
+      kind: 'md',
+      path: `${ROOT}/../../escape.md`,
       name: 'x',
-      template: '',
-      placeholders: [],
-      validationError: null,
+      content: '',
     };
     await expect(svc.save(snippet)).rejects.toThrow(/unsafe path/);
     expect(vault.adapter.write).toHaveBeenCalledTimes(0);
@@ -522,10 +466,8 @@ describe('save(Snippet) branching (D-03, D-11)', () => {
 
 describe('delete(path) uses Obsidian trash (DEL-01, D-08)', () => {
   it('routes deletion through FileManager trash once', async () => {
-    const p = `${ROOT}/CT/victim.json`;
-    const { vault } = makeVault({
-      files: { [p]: JSON.stringify({ name: 'v', template: 't', placeholders: [] }) },
-    });
+    const p = `${ROOT}/CT/victim.md`;
+    const { vault } = makeVault({ files: { [p]: 'raw' } });
     const svc = new SnippetService(makeSnippetServiceApp(vault) as never, settings);
 
     await svc.delete(p);
@@ -533,13 +475,12 @@ describe('delete(path) uses Obsidian trash (DEL-01, D-08)', () => {
     expect(vault.trash).toHaveBeenCalledTimes(1);
     const [file, system] = vault.trash.mock.calls[0]!;
     expect((file as { path: string }).path).toBe(p);
-    // CRITICAL: system=false — goes to Obsidian .trash/, not OS trash
     expect(system).toBe(false);
   });
 
   it('no-op when file missing (no throw, trash not called)', async () => {
-    const p = `${ROOT}/CT/ghost.json`;
-    const { vault } = makeVault(); // no abstract file
+    const p = `${ROOT}/CT/ghost.md`;
+    const { vault } = makeVault();
     const svc = new SnippetService(makeSnippetServiceApp(vault) as never, settings);
 
     await expect(svc.delete(p)).resolves.toBeUndefined();
@@ -565,8 +506,8 @@ describe('delete(path) uses Obsidian trash (DEL-01, D-08)', () => {
 
 describe('exists(path) (D-03)', () => {
   it('returns true for existing safe path', async () => {
-    const p = `${ROOT}/CT/a.json`;
-    const { vault } = makeVault({ files: { [p]: '{}' } });
+    const p = `${ROOT}/CT/a.md`;
+    const { vault } = makeVault({ files: { [p]: 'raw' } });
     const svc = new SnippetService(makeSnippetServiceApp(vault) as never, settings);
     expect(await svc.exists(p)).toBe(true);
   });
@@ -574,7 +515,7 @@ describe('exists(path) (D-03)', () => {
   it('returns false for missing safe path', async () => {
     const { vault } = makeVault();
     const svc = new SnippetService(makeSnippetServiceApp(vault) as never, settings);
-    expect(await svc.exists(`${ROOT}/missing.json`)).toBe(false);
+    expect(await svc.exists(`${ROOT}/missing.md`)).toBe(false);
   });
 
   it('returns false for out-of-root path without touching adapter', async () => {
@@ -596,10 +537,10 @@ describe('exists(path) (D-03)', () => {
 
 describe('path-safety gate applies to every entry point (D-10)', () => {
   const unsafePaths = [
-    `${ROOT}/../evil.json`,
-    '/absolute/path.json',
-    `${ROOT}/sub/../../escape.json`,
-    '.radiprotocol/snippets-evil/foo.json',
+    `${ROOT}/../evil.md`,
+    '/absolute/path.md',
+    `${ROOT}/sub/../../escape.md`,
+    '.radiprotocol/snippets-evil/foo.md',
   ];
 
   let _errSpy: ReturnType<typeof vi.spyOn>;
@@ -619,13 +560,11 @@ describe('path-safety gate applies to every entry point (D-10)', () => {
     it(`save() rejects ${bad}`, async () => {
       const { vault } = makeVault();
       const svc = new SnippetService(makeSnippetServiceApp(vault) as never, settings);
-      const snippet: JsonSnippet = {
-        kind: 'json',
+      const snippet: MdSnippet = {
+        kind: 'md',
         path: bad,
         name: 'x',
-        template: '',
-        placeholders: [],
-        validationError: null,
+        content: '',
       };
       await expect(svc.save(snippet)).rejects.toThrow(/unsafe path/);
       expect(vault.adapter.write).toHaveBeenCalledTimes(0);
@@ -719,11 +658,11 @@ describe('deleteFolder (Phase 33 D-17)', () => {
 });
 
 describe('listFolderDescendants (Phase 33 D-15)', () => {
-  it('returns files, folders, and total', async () => {
+  it('returns files, folders, and total (extension-agnostic — includes .json)', async () => {
     const { vault } = makeVault({
       files: {
-        [`${ROOT}/a/one.json`]: '{}',
-        [`${ROOT}/a/b/two.md`]: '',
+        [`${ROOT}/a/one.md`]: 'raw',
+        [`${ROOT}/a/b/legacy.json`]: '{}',
       },
       folders: [ROOT, `${ROOT}/a`, `${ROOT}/a/b`],
     });
@@ -732,8 +671,8 @@ describe('listFolderDescendants (Phase 33 D-15)', () => {
     expect(result.total).toBe(result.files.length + result.folders.length);
     expect(result.files).toEqual(
       expect.arrayContaining([
-        expect.stringMatching(/one\.json$/),
-        expect.stringMatching(/two\.md$/),
+        expect.stringMatching(/one\.md$/),
+        expect.stringMatching(/legacy\.json$/),
       ]),
     );
     expect(result.folders).toEqual(expect.arrayContaining([`${ROOT}/a/b`]));
@@ -754,10 +693,10 @@ describe('listFolderDescendants (Phase 33 D-15)', () => {
 // ---------------------------------------------------------------------------
 
 describe('duplicateSnippet (Phase 36)', () => {
-  it('duplicates a JSON snippet with placeholders — path, name, and placeholders cloned', async () => {
-    const p = `${ROOT}/CT/chest.json`;
-    const original: JsonSnippet = {
-      kind: 'json',
+  it('duplicates an md-template snippet — path, name, and placeholders cloned', async () => {
+    const p = `${ROOT}/CT/chest.md`;
+    const original: MdTemplateSnippet = {
+      kind: 'md-template',
       path: p,
       name: 'chest',
       template: 'Finding: {{finding}}. Side: {{side}}.',
@@ -768,50 +707,31 @@ describe('duplicateSnippet (Phase 36)', () => {
       validationError: null,
     };
     const { vault, files } = makeVault({
-      files: { [p]: JSON.stringify(original) },
+      files: { [p]: serializeMarkdownTemplate(original) },
       folders: [ROOT, `${ROOT}/CT`],
     });
     const svc = new SnippetService(makeSnippetServiceApp(vault) as never, settings);
 
     const newPath = await svc.duplicateSnippet(p);
 
-    // Path suffix is -copy.json
-    expect(newPath).toBe(`${ROOT}/CT/chest-copy.json`);
-
-    // File was persisted
+    expect(newPath).toBe(`${ROOT}/CT/chest-copy.md`);
     expect(files[newPath]).toBeDefined();
+    expect(files[newPath]).toContain('Finding: {{finding}}. Side: {{side}}.');
 
-    const parsed = JSON.parse(files[newPath]!);
-    expect(parsed.name).toBe('chest-copy');
-    expect(parsed.template).toBe('Finding: {{finding}}. Side: {{side}}.');
-    expect(parsed.placeholders).toHaveLength(2);
-    // Placeholder values are preserved
-    expect(parsed.placeholders[0]).toEqual({
-      id: 'finding',
-      label: 'Finding',
-      type: 'free-text',
-    });
-    expect(parsed.placeholders[1]).toEqual({
-      id: 'side',
-      label: 'Side',
-      type: 'choice',
-      options: ['left', 'right'],
-      separator: ', ',
-    });
-
-    // Loaded duplicate has deep-cloned placeholders (not same references as original)
     const loaded = await svc.load(newPath);
-    const dup = loaded as JsonSnippet;
+    const dup = loaded as MdTemplateSnippet;
+    expect(dup.kind).toBe('md-template');
+    expect(dup.placeholders).toHaveLength(2);
     expect(dup.placeholders).not.toBe(original.placeholders);
     expect(dup.placeholders[0]).not.toBe(original.placeholders[0]);
     expect(dup.placeholders[1]).not.toBe(original.placeholders[1]);
   });
 
   it('increments suffix when -copy already exists', async () => {
-    const p = `${ROOT}/CT/chest.json`;
-    const cp = `${ROOT}/CT/chest-copy.json`;
-    const orig: JsonSnippet = {
-      kind: 'json',
+    const p = `${ROOT}/CT/chest.md`;
+    const cp = `${ROOT}/CT/chest-copy.md`;
+    const orig: MdTemplateSnippet = {
+      kind: 'md-template',
       path: p,
       name: 'chest',
       template: 't',
@@ -820,8 +740,8 @@ describe('duplicateSnippet (Phase 36)', () => {
     };
     const { vault } = makeVault({
       files: {
-        [p]: JSON.stringify(orig),
-        [cp]: JSON.stringify({ name: 'chest-copy', template: 't', placeholders: [] }),
+        [p]: serializeMarkdownTemplate(orig),
+        [cp]: serializeMarkdownTemplate({ ...orig, path: cp, name: 'chest-copy' }),
       },
       folders: [ROOT, `${ROOT}/CT`],
     });
@@ -829,7 +749,7 @@ describe('duplicateSnippet (Phase 36)', () => {
 
     const newPath = await svc.duplicateSnippet(p);
 
-    expect(newPath).toBe(`${ROOT}/CT/chest-copy-2.json`);
+    expect(newPath).toBe(`${ROOT}/CT/chest-copy-2.md`);
   });
 
   it('duplicates an MD snippet — content preserved, no placeholders', async () => {
@@ -857,6 +777,153 @@ describe('duplicateSnippet (Phase 36)', () => {
     const { vault } = makeVault();
     const svc = new SnippetService(makeSnippetServiceApp(vault) as never, settings);
 
-    await expect(svc.duplicateSnippet(`${ROOT}/missing.json`)).rejects.toThrow(/not found/i);
+    await expect(svc.duplicateSnippet(`${ROOT}/missing.md`)).rejects.toThrow(/not found/i);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// resolveSnippet — Phase 2 (JSON-removal) discriminated resolver
+// ---------------------------------------------------------------------------
+
+describe('resolveSnippet (Phase 2 JSON-removal)', () => {
+  it('found — direct .md path resolves to a loaded Markdown snippet', async () => {
+    const p = `${ROOT}/CT/alpha.md`;
+    const { vault } = makeVault({
+      files: { [p]: mdTemplateFile('Alpha', 'hello {{x}}', [
+        { id: 'x', label: 'X', type: 'free-text' },
+      ]) },
+      folders: [ROOT, `${ROOT}/CT`],
+    });
+    const svc = new SnippetService(makeSnippetServiceApp(vault) as never, settings);
+
+    const resolution = await svc.resolveSnippet(p);
+
+    expect(resolution.status).toBe('found');
+    if (resolution.status === 'found') {
+      expect(resolution.snippet.kind).toBe('md-template');
+      expect(resolution.snippet.path).toBe(p);
+    }
+  });
+
+  it('found — extensionless id resolves to a root .md file', async () => {
+    const p = `${ROOT}/greeting.md`;
+    const { vault } = makeVault({
+      files: { [p]: 'plain md body' },
+      folders: [ROOT],
+    });
+    const svc = new SnippetService(makeSnippetServiceApp(vault) as never, settings);
+
+    const resolution = await svc.resolveSnippet('greeting');
+
+    expect(resolution.status).toBe('found');
+    if (resolution.status === 'found') {
+      expect(resolution.snippet.kind).toBe('md');
+    }
+  });
+
+  it('found — extensionless id backed by a unique-subdir .md file', async () => {
+    const p = `${ROOT}/CT/abdomen.md`;
+    const { vault } = makeVault({
+      files: { [p]: mdTemplateFile('Abdomen', 'body', []) },
+      folders: [ROOT, `${ROOT}/CT`],
+    });
+    const svc = new SnippetService(makeSnippetServiceApp(vault) as never, settings);
+
+    const resolution = await svc.resolveSnippet('abdomen');
+
+    expect(resolution.status).toBe('found');
+    if (resolution.status === 'found') {
+      expect(resolution.snippet.path).toBe(p);
+    }
+  });
+
+  it('legacy-json — explicit .json reference returns legacy-json with path', async () => {
+    const p = `${ROOT}/CT/legacy.json`;
+    const { vault } = makeVault({
+      files: { [p]: JSON.stringify({ name: 'legacy', template: 't', placeholders: [] }) },
+      folders: [ROOT, `${ROOT}/CT`],
+    });
+    const svc = new SnippetService(makeSnippetServiceApp(vault) as never, settings);
+
+    const resolution = await svc.resolveSnippet(p);
+
+    expect(resolution.status).toBe('legacy-json');
+    if (resolution.status === 'legacy-json') {
+      expect(resolution.path).toBe(p);
+    }
+  });
+
+  it('legacy-json — extensionless id whose root .json file exists returns legacy-json', async () => {
+    const p = `${ROOT}/legacy.json`;
+    const { vault } = makeVault({
+      files: { [p]: JSON.stringify({ name: 'legacy', template: 't', placeholders: [] }) },
+      folders: [ROOT],
+    });
+    const svc = new SnippetService(makeSnippetServiceApp(vault) as never, settings);
+
+    const resolution = await svc.resolveSnippet('legacy');
+
+    expect(resolution.status).toBe('legacy-json');
+    if (resolution.status === 'legacy-json') {
+      expect(resolution.path).toBe(p);
+    }
+  });
+
+  it('legacy-json — extensionless id backed by a unique-subdir .json file', async () => {
+    const p = `${ROOT}/CT/oldformat.json`;
+    const { vault } = makeVault({
+      files: { [p]: JSON.stringify({ name: 'oldformat', template: 't', placeholders: [] }) },
+      folders: [ROOT, `${ROOT}/CT`],
+    });
+    const svc = new SnippetService(makeSnippetServiceApp(vault) as never, settings);
+
+    const resolution = await svc.resolveSnippet('oldformat');
+
+    expect(resolution.status).toBe('legacy-json');
+    if (resolution.status === 'legacy-json') {
+      expect(resolution.path).toBe(p);
+    }
+  });
+
+  it('missing — no .md or .json match exists', async () => {
+    const { vault } = makeVault({ folders: [ROOT] });
+    const svc = new SnippetService(makeSnippetServiceApp(vault) as never, settings);
+
+    const resolution = await svc.resolveSnippet('nonexistent');
+
+    expect(resolution.status).toBe('missing');
+  });
+
+  it('missing — unsafe/traversal-escaping id returns missing without touching the vault', async () => {
+    const { vault } = makeVault({ folders: [ROOT] });
+    const svc = new SnippetService(makeSnippetServiceApp(vault) as never, settings);
+    const errSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+    const resolution = await svc.resolveSnippet('../../etc/passwd');
+
+    expect(resolution.status).toBe('missing');
+    expect(vault.adapter.exists).toHaveBeenCalledTimes(0);
+    expect(vault.getFiles).toHaveBeenCalledTimes(0);
+    errSpy.mockRestore();
+  });
+
+  it('prefers .md over .json when both exist for the same extensionless id', async () => {
+    const mdPath = `${ROOT}/dupe.md`;
+    const jsonPath = `${ROOT}/dupe.json`;
+    const { vault } = makeVault({
+      files: {
+        [mdPath]: 'md body',
+        [jsonPath]: JSON.stringify({ name: 'dupe', template: 't', placeholders: [] }),
+      },
+      folders: [ROOT],
+    });
+    const svc = new SnippetService(makeSnippetServiceApp(vault) as never, settings);
+
+    const resolution = await svc.resolveSnippet('dupe');
+
+    expect(resolution.status).toBe('found');
+    if (resolution.status === 'found') {
+      expect(resolution.snippet.path).toBe(mdPath);
+    }
   });
 });

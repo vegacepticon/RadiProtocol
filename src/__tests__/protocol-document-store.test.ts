@@ -195,7 +195,7 @@ describe('ProtocolDocumentStore — update', () => {
 });
 
 describe('ProtocolDocumentStore — create', () => {
-  it('creates a protocol file with title and id', async () => {
+  it('creates a protocol file with title and id, seeded with one Start node', async () => {
     const { vault } = makeVault({
       folders: ['protocols'],
     });
@@ -204,6 +204,9 @@ describe('ProtocolDocumentStore — create', () => {
     expect(result.doc.id).toBe('gen-id-123');
     expect(result.doc.title).toBe('My Protocol');
     expect(result.file.path).toBe('protocols/My Protocol.rp.json');
+    // Phase 4: a newly created protocol seeds one Start node.
+    expect(result.doc.nodes.length).toBe(1);
+    expect(result.doc.nodes[0]!.kind).toBe('start');
   });
 
   it('sanitizes slashes in title', async () => {
@@ -214,6 +217,9 @@ describe('ProtocolDocumentStore — create', () => {
     const result = await store.create('protocols', 'bad/title', 'gen-id-2');
     expect(result.doc.title).not.toContain('/');
     expect(result.file.path).not.toContain('/title');
+    // Seeded Start node is present even when the title is sanitized.
+    expect(result.doc.nodes.length).toBe(1);
+    expect(result.doc.nodes[0]!.kind).toBe('start');
   });
 });
 

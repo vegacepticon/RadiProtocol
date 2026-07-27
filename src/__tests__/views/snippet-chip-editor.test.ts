@@ -262,12 +262,12 @@ if (typeof (globalThis as { Event?: unknown }).Event === 'undefined') {
 }
 
 import { mountChipEditor } from '../../views/snippet-chip-editor';
-import type { JsonSnippet } from '../../snippets/snippet-model';
+import type { MdTemplateSnippet } from '../../snippets/snippet-model';
 
-function makeDraft(placeholders: JsonSnippet['placeholders'] = []): JsonSnippet {
+function makeDraft(placeholders: MdTemplateSnippet['placeholders'] = []): MdTemplateSnippet {
   return {
-    kind: 'json',
-    path: 'Protocols/Snippets/t.json',
+    kind: 'md-template',
+    path: 'Protocols/Snippets/t.md',
     name: 't',
     template: '',
     placeholders,

@@ -330,7 +330,7 @@ function setFolderPathInput(modal: SnippetEditorModal, value: string): void {
 
 // --- Now import the module under test -------------------------------------
 import { SnippetEditorModal } from '../views/snippet-editor-modal';
-import type { JsonSnippet, MdSnippet, MdTemplateSnippet, Snippet } from '../snippets/snippet-model';
+import type { MdSnippet, MdTemplateSnippet, Snippet } from '../snippets/snippet-model';
 // Phase 84 (I18N-02): SnippetEditorModal calls plugin.i18n.t(...) at render
 // time. Tests mount it with a real I18nService('en'), so the rendered copy is
 // the canonical English locale (not stubs); assertions assert on those strings.
@@ -367,7 +367,7 @@ function makeMockPlugin(opts: {
       .mockResolvedValue(opts.descendants ?? { files: [], folders: [], total: 0 }),
     moveSnippet: vi.fn().mockImplementation(opts.moveSnippetImpl ?? defaultMove),
     renameSnippet: vi.fn().mockImplementation(async (_oldPath: string, newName: string) => {
-      return `.radiprotocol/snippets/${newName}.json`;
+      return `.radiprotocol/snippets/${newName}.md`;
     }),
   };
   const plugin = {
@@ -379,9 +379,9 @@ function makeMockPlugin(opts: {
   return { plugin, service };
 }
 
-function sampleJsonSnippet(path = '.radiprotocol/snippets/sample.json'): JsonSnippet {
+function sampleJsonSnippet(path = '.radiprotocol/snippets/sample.md'): MdTemplateSnippet {
   return {
-    kind: 'json',
+    kind: 'md-template',
     path,
     name: 'sample',
     template: 'Hello {{who}}',
@@ -486,7 +486,7 @@ describe('SnippetEditorModal', () => {
       (el) => el.classList.has('radi-snippet-editor-type-static'),
     );
     expect(staticLabel).not.toBeNull();
-    expect(staticLabel!._text).toBe('JSON');
+    expect(staticLabel!._text).toBe('Markdown');
   });
 
   it('MODAL-04: create mode seeds the «Папка» picker to initialFolder', async () => {
@@ -621,9 +621,9 @@ describe('SnippetEditorModal', () => {
       },
     });
     // Seed an edit-mode snippet at folder /a
-    const snippet: JsonSnippet = {
-      kind: 'json',
-      path: '.radiprotocol/snippets/a/note.json',
+    const snippet: MdTemplateSnippet = {
+      kind: 'md-template',
+      path: '.radiprotocol/snippets/a/note.md',
       name: 'note',
       template: 'x',
       placeholders: [],
@@ -646,10 +646,10 @@ describe('SnippetEditorModal', () => {
     // Save-at-old-path first
     expect(service.save).toHaveBeenCalled();
     const savedArg = service.save.mock.calls[0]?.[0] as Snippet;
-    expect(savedArg.path).toBe('.radiprotocol/snippets/a/note.json');
+    expect(savedArg.path).toBe('.radiprotocol/snippets/a/note.md');
     // Atomic moveSnippet replaces save+delete pipeline
     expect(service.moveSnippet).toHaveBeenCalledWith(
-      '.radiprotocol/snippets/a/note.json',
+      '.radiprotocol/snippets/a/note.md',
       '.radiprotocol/snippets/b',
     );
     // Phase 34 cleanup: no delete, no rewriteCanvasRefs from the modal move branch
@@ -677,9 +677,9 @@ describe('SnippetEditorModal', () => {
           total: 2,
         },
       });
-      const snippet: JsonSnippet = {
-        kind: 'json',
-        path: '.radiprotocol/snippets/a/note.json',
+      const snippet: MdTemplateSnippet = {
+        kind: 'md-template',
+        path: '.radiprotocol/snippets/a/note.md',
         name: 'note',
         template: 'x',
         placeholders: [],
@@ -713,12 +713,12 @@ describe('SnippetEditorModal', () => {
         total: 2,
       },
       moveSnippetImpl: async () => {
-        throw new Error('Path already exists: .radiprotocol/snippets/b/note.json');
+        throw new Error('Path already exists: .radiprotocol/snippets/b/note.md');
       },
     });
-    const snippet: JsonSnippet = {
-      kind: 'json',
-      path: '.radiprotocol/snippets/a/note.json',
+    const snippet: MdTemplateSnippet = {
+      kind: 'md-template',
+      path: '.radiprotocol/snippets/a/note.md',
       name: 'note',
       template: 'x',
       placeholders: [],
@@ -831,9 +831,9 @@ describe('SnippetEditorModal', () => {
     const { plugin } = makeMockPlugin({
       existsReturns: (p: string) => p === '.radiprotocol/snippets/Patient Age.md',
     });
-    const snippet: JsonSnippet = {
-      kind: 'json',
-      path: '.radiprotocol/snippets/patient-age.json',
+    const snippet: MdTemplateSnippet = {
+      kind: 'md-template',
+      path: '.radiprotocol/snippets/patient-age.md',
       name: 'Patient Age',
       template: '',
       placeholders: [],

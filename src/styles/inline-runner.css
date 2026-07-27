@@ -338,15 +338,6 @@
   line-height: 1.4;
 }
 
-/* Phase 2 — footer left group: close + create-snippet-from-selection, pushed to the
-   space-between row's start side (Back/Redo/Skip group stays on the end side). */
-.rp-runner-footer-left {
-  display: flex;
-  align-items: center;
-  gap: var(--size-4-2);
-  justify-content: flex-start;
-}
-
 /* Phase 2 — disabled icon buttons read as inactive. Additive: also styles the
    Back/Redo/Skip buttons' disabled state set via .disabled = true in renderFooterIcons. */
 .rp-runner-icon-btn:disabled,

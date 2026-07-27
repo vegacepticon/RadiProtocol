@@ -4,16 +4,16 @@
 
 RadiProtocol is an [Obsidian](https://obsidian.md) plugin for radiologists who want to run structured examination protocols inside their reporting vault. It turns a protocol into a guided clinical checklist: choose the relevant branch, insert prepared report text or snippets, repeat sections for multiple findings, and write the generated text into the active Markdown note.
 
-Protocols are authored as **`.rp.json`** files in the built-in visual protocol editor. Legacy `.canvas` protocol files can still be used and migrated, but new protocol work should use `.rp.json`.
+Protocols are authored as **`.rp.json`** files in the built-in visual protocol editor.
 
 ## What RadiProtocol helps with
 
 - **Standardized radiology reporting.** Encode local protocols, modality workflows, follow-up recommendations, or structured report templates as reusable decision trees.
 - **Guided branching.** Question and answer nodes let the radiologist choose the clinically appropriate path without searching through long static templates.
-- **Reusable report fragments.** Snippet nodes insert prepared text from a configurable snippet folder. JSON snippets can ask for typed placeholders such as free text, choice, multi-choice, number, or date.
+- **Reusable report fragments.** Snippet nodes insert prepared text from a configurable snippet folder. Markdown templates can ask for placeholders such as free text or choice, filled during protocol execution.
 - **Repeated findings.** Loop nodes support workflows such as multiple lesions, multiple nodules, repeated measurements, or several anatomical levels.
 - **Inline note-anchored execution.** The runner opens as a draggable inline panel over the active Markdown note and appends the selected protocol output to that note.
-- **Visual protocol authoring.** The protocol editor supports start, question, answer, text-block, snippet, and loop nodes connected as a graph.
+- **Visual protocol authoring.** The protocol editor supports start, question, answer, snippet, and loop nodes connected as a graph. (Existing text-block nodes from older versions remain supported — see the compatibility note below.)
 
 ## Typical clinical workflow
 
@@ -45,7 +45,7 @@ RadiProtocol is a documentation aid. The radiologist remains responsible for cli
 
 1. Open RadiProtocol settings.
 2. Set **Protocol folder** to the vault-relative folder that contains `.rp.json` protocol files.
-3. Set **Snippet folder** to the vault-relative folder that contains snippet JSON or Markdown files.
+3. Set **Snippet folder** to the vault-relative folder that contains snippet Markdown files.
 4. Choose the preferred text separator for accumulated report text: newline or space.
 5. Select the interface language if needed.
 
@@ -55,23 +55,23 @@ RadiProtocol is a documentation aid. The radiologist remains responsible for cli
 2. Create or open a `.rp.json` protocol file in the configured protocol folder.
 3. Add a **Start** node.
 4. Add clinical **Question** nodes and connect them to **Answer** nodes or other protocol nodes.
-5. Use **Text block** nodes for fixed report text.
+5. Chain **Answer** nodes for fixed pass-through report text (`Question → Answer1 → Answer2`): select Answer1 to append it, and downstream Answer2 is appended automatically without another click.
 6. Use **Snippet** nodes to insert reusable report fragments from a file or folder.
 7. Use **Loop** nodes when the same reporting section may need to be repeated.
 8. Save the protocol and test it with **Run protocol in inline** on a Markdown note.
 
+> **Text block compatibility.** New protocols no longer offer a **Text block** node type in the creation menu — chain **Answer** nodes instead. Existing protocols that contain `text-block` nodes (including snippet-backed ones) continue to load, run, edit, and appear in **Start from specific node**; you do not need to migrate them.
+
 ## Snippets
 
-RadiProtocol supports two snippet types:
+RadiProtocol supports two Markdown snippet formats, both stored as `.md` files in the snippet folder:
 
-- **Markdown snippets**: inserted as written.
-- **JSON snippets**: structured snippets with placeholders that are filled during protocol execution.
+- **Plain Markdown snippets**: the file contents are inserted as written, with no placeholder substitution.
+- **Markdown templates**: a `.md` file with a YAML-like frontmatter block that declares placeholders. Supported placeholder types are **free text** and **choice** (with optional predefined options). Placeholders are filled during protocol execution and substituted into the template body via `{{id}}` tokens.
 
 A snippet node can point to a specific snippet file or to a directory. When it points to a directory, the inline runner lets the user choose one snippet from that directory during execution.
 
-## Existing `.canvas` protocols
-
-Existing JSON Canvas protocol files remain supported for compatibility. Use **Convert Canvas protocol to .rp.json** when you are ready to migrate them to the current protocol format. New protocols should be created as `.rp.json`.
+> **Legacy JSON snippets.** Older versions stored snippets as `.json` files. These legacy files are **not converted or deleted** — they are left untouched on disk but are no longer listed, searchable, or insertable. To keep using their content, recreate them as frontmatter-backed Markdown templates and update the protocol's snippet references.
 
 ## For contributors
 

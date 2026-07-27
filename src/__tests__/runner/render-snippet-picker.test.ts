@@ -104,11 +104,9 @@ function findByText(root: FakeNode, text: string): FakeNode[] {
 
 const RU_COPY = {
   notFound: (rel: string) => `Сниппет не найден: ${rel}`,
-  validationError: (p: string, m: string) => `Сниппет «${p}» не может быть использован. ${m}`,
 };
 const EN_COPY = {
   notFound: (rel: string) => `Snippet not found: ${rel}`,
-  validationError: (p: string, m: string) => `Snippet "${p}" cannot be used. ${m}`,
 };
 
 const STATE = {
@@ -240,47 +238,6 @@ describe('renderSnippetPicker (Phase 75 Plan 04)', () => {
     const errs = findByText(zone, 'Сниппет не найден');
     expect(errs.length).toBeGreaterThanOrEqual(1);
     expect(errs[0]!.text).toContain('missing.md');
-  });
-
-  it('routes validation errors through host copy and presenter', async () => {
-    const zone = makeFakeNode();
-    const broken: Snippet = {
-      kind: 'json',
-      id: 'broken',
-      name: 'broken',
-      path: '.radiprotocol/snippets/abdomen/broken.json',
-      template: 't',
-      placeholders: [],
-      validationError: 'Bad placeholder definition',
-    } as Snippet;
-    const load = vi.fn<(p: string) => Promise<Snippet | null>>().mockResolvedValue(broken);
-    const presentAsyncError = vi.fn();
-    const onSnippetReady = vi.fn();
-
-    renderSnippetPicker(zone as unknown as HTMLElement, STATE, {
-      app: {} as never,
-      snippetService: { load, listFolder: vi.fn(), listFolderDescendants: vi.fn() } as never,
-      rootPath: '.radiprotocol/snippets',
-      hostClass: 'rp-stp-inline-host',
-      copy: EN_COPY,
-      bindClick: (el, handler) => { (el as unknown as FakeNode).clickHandler = handler; },
-      getCurrentNodeId: () => 'n1',
-      isStillMounted: () => true,
-      presentAsyncError,
-      onSnippetReady,
-      onBack: vi.fn(),
-    });
-
-    const opts = pickerInstances[0]!.options as Record<string, unknown>;
-    const onSelect = opts.onSelect as (r: { kind: string; relativePath: string }) => void;
-    onSelect({ kind: 'file', relativePath: 'broken.json' });
-    await new Promise((r) => setTimeout(r, 0));
-    await new Promise((r) => setTimeout(r, 0));
-
-    expect(onSnippetReady).not.toHaveBeenCalled();
-    expect(presentAsyncError).toHaveBeenCalledWith(
-      'Snippet ".radiprotocol/snippets/abdomen/broken.json" cannot be used. Bad placeholder definition',
-    );
   });
 
   it('suppresses dispatch when stale-state guard returns a different nodeId', async () => {

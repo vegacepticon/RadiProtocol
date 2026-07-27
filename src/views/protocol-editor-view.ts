@@ -253,7 +253,7 @@ const NODE_KIND_DEFAULTS: Record<string, NodeKindDefault> = {
   snippet: { kind: 'snippet', fields: {}, color: 'rgba(156, 39, 176, 0.24)' },
 };
 
-const EDITABLE_NODE_KINDS: RPNodeKind[] = ['start', 'question', 'answer', 'text-block', 'loop', 'snippet'];
+const EDITABLE_NODE_KINDS: RPNodeKind[] = ['start', 'question', 'answer', 'loop', 'snippet'];
 
 /** CSS/attribute token for a node kind — always raw "untyped", never i18n. */
 export function nodeKindToken(kind: RPNodeKind | null): string {

@@ -280,8 +280,8 @@ interface MockService {
   moveFolder: ReturnType<typeof vi.fn>;
 }
 
-function makeSnippet(kind: 'json' | 'md', p: string, name: string): Snippet {
-  if (kind === 'json') return { kind: 'json', path: p, name, template: '', placeholders: [], validationError: null };
+function makeSnippet(kind: 'md-template' | 'md', p: string, name: string): Snippet {
+  if (kind === 'md-template') return { kind: 'md-template', path: p, name, template: '', placeholders: [], validationError: null };
   return { kind: 'md', path: p, name, content: '' };
 }
 
@@ -401,9 +401,9 @@ describe('SnippetManagerView — drag-and-drop (Phase 34 Plan 02)', () => {
       listings: {
         [root]: {
           folders: ['a', 'b'],
-          snippets: [makeSnippet('json', `${root}/note.json`, 'note')],
+          snippets: [makeSnippet('md-template', `${root}/note.md`, 'note')],
         },
-        [`${root}/a`]: { folders: ['sub'], snippets: [makeSnippet('json', `${root}/a/leaf.json`, 'leaf')] },
+        [`${root}/a`]: { folders: ['sub'], snippets: [makeSnippet('md-template', `${root}/a/leaf.md`, 'leaf')] },
         [`${root}/a/sub`]: { folders: [], snippets: [] },
         [`${root}/b`]: { folders: [], snippets: [] },
       },
@@ -418,12 +418,12 @@ describe('SnippetManagerView — drag-and-drop (Phase 34 Plan 02)', () => {
     it('sets application/x-radi-snippet-file MIME on file row', async () => {
       const { view } = makeTreeView();
       await view.onOpen();
-      const row = findRow(view, `${root}/note.json`);
+      const row = findRow(view, `${root}/note.md`);
       expect(row).not.toBeNull();
       const dt = makeDataTransfer();
       const ev = makeDragEvent('dragstart', dt);
       fire(row!, ev);
-      expect(dt.getData(MIME_FILE)).toBe(`${root}/note.json`);
+      expect(dt.getData(MIME_FILE)).toBe(`${root}/note.md`);
       expect(dt.types).toContain(MIME_FILE);
       expect(dt.effectAllowed).toBe('move');
     });
@@ -443,7 +443,7 @@ describe('SnippetManagerView — drag-and-drop (Phase 34 Plan 02)', () => {
     it('adds is-dragging class to source row', async () => {
       const { view } = makeTreeView();
       await view.onOpen();
-      const row = findRow(view, `${root}/note.json`);
+      const row = findRow(view, `${root}/note.md`);
       fire(row!, makeDragEvent('dragstart', makeDataTransfer()));
       expect(row!.classList.has('is-dragging')).toBe(true);
     });
@@ -454,7 +454,7 @@ describe('SnippetManagerView — drag-and-drop (Phase 34 Plan 02)', () => {
       const { view } = makeTreeView();
       await view.onOpen();
       const targetRow = findRow(view, `${root}/b`);
-      const dt = makeDataTransfer({ [MIME_FILE]: `${root}/note.json` });
+      const dt = makeDataTransfer({ [MIME_FILE]: `${root}/note.md` });
       const ev = makeDragEvent('dragover', dt);
       fire(targetRow!, ev);
       expect(ev.defaultPrevented).toBe(true);
@@ -491,13 +491,13 @@ describe('SnippetManagerView — drag-and-drop (Phase 34 Plan 02)', () => {
       const { service, view } = makeTreeView();
       await view.onOpen();
       const targetRow = findRow(view, `${root}/b`);
-      const dt = makeDataTransfer({ [MIME_FILE]: `${root}/note.json` });
+      const dt = makeDataTransfer({ [MIME_FILE]: `${root}/note.md` });
       const ev = makeDragEvent('drop', dt);
       fire(targetRow!, ev);
       // drop handler is async — wait for microtasks
       await Promise.resolve();
       await Promise.resolve();
-      expect(service.moveSnippet).toHaveBeenCalledWith(`${root}/note.json`, `${root}/b`);
+      expect(service.moveSnippet).toHaveBeenCalledWith(`${root}/note.md`, `${root}/b`);
       expect(service.moveFolder).not.toHaveBeenCalled();
       expect(rewriteProtocolSnippetRefsSpy).toHaveBeenCalledTimes(1);
       expect(rewriteProtocolSnippetRefsSpy).toHaveBeenCalledTimes(1);
@@ -549,15 +549,15 @@ describe('SnippetManagerView — drag-and-drop (Phase 34 Plan 02)', () => {
     it('drop on file-row redirects to parent folder', async () => {
       const { service, view } = makeTreeView();
       await view.onOpen();
-      // Drag root/note.json onto root/a/leaf.json → target should be dirname(leaf) = root/a
-      const fileRow = findRow(view, `${root}/a/leaf.json`);
+      // Drag root/note.md onto root/a/leaf.md → target should be dirname(leaf) = root/a
+      const fileRow = findRow(view, `${root}/a/leaf.md`);
       expect(fileRow).not.toBeNull();
-      const dt = makeDataTransfer({ [MIME_FILE]: `${root}/note.json` });
+      const dt = makeDataTransfer({ [MIME_FILE]: `${root}/note.md` });
       const ev = makeDragEvent('drop', dt);
       fire(fileRow!, ev);
       await Promise.resolve();
       await Promise.resolve();
-      expect(service.moveSnippet).toHaveBeenCalledWith(`${root}/note.json`, `${root}/a`);
+      expect(service.moveSnippet).toHaveBeenCalledWith(`${root}/note.md`, `${root}/a`);
     });
   });
 
@@ -597,7 +597,7 @@ describe('SnippetManagerView — drag-and-drop (Phase 34 Plan 02)', () => {
     it('file branch: selecting folder in picker calls moveSnippet; rewriteCanvasRefs and rewriteProtocolSnippetRefs called', async () => {
       const { plugin, service } = makePlugin({
         listings: {
-          [root]: { folders: ['dst'], snippets: [makeSnippet('json', `${root}/note.json`, 'note')] },
+          [root]: { folders: ['dst'], snippets: [makeSnippet('md-template', `${root}/note.md`, 'note')] },
           [`${root}/dst`]: { folders: [], snippets: [] },
         },
         allFolders: [root, `${root}/dst`],
@@ -605,7 +605,7 @@ describe('SnippetManagerView — drag-and-drop (Phase 34 Plan 02)', () => {
       const view = makeView(plugin);
       await view.onOpen();
 
-      const node = { kind: 'file' as const, path: `${root}/note.json`, name: 'note', snippetKind: 'json' as const };
+      const node = { kind: 'file' as const, path: `${root}/note.md`, name: 'note', snippetKind: 'md-template' as const };
       await (view as any).openMovePicker(node);
 
       // Phase 51 D-07 — Modal + SnippetTreePicker is the picker surface
@@ -616,11 +616,11 @@ describe('SnippetManagerView — drag-and-drop (Phase 34 Plan 02)', () => {
 
       await selectAbsolute(`${root}/dst`);
 
-      expect(service.moveSnippet).toHaveBeenCalledWith(`${root}/note.json`, `${root}/dst`);
+      expect(service.moveSnippet).toHaveBeenCalledWith(`${root}/note.md`, `${root}/dst`);
       expect(service.moveFolder).not.toHaveBeenCalled();
       expect(rewriteProtocolSnippetRefsSpy).toHaveBeenCalledTimes(1);
       const protocolMapping = rewriteProtocolSnippetRefsSpy.mock.calls[0]![1] as Map<string, string>;
-      expect(Array.from(protocolMapping.entries())).toEqual([['note.json', 'dst/note.json']]);
+      expect(Array.from(protocolMapping.entries())).toEqual([['note.md', 'dst/note.md']]);
     });
 
     it('folder branch: selecting target calls moveFolder then rewriteCanvasRefs and rewriteProtocolSnippetRefs with snippet-root-relative keys', async () => {

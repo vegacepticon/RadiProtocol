@@ -7,8 +7,9 @@
 // Decisions: D-08 surface, D-09 mode-filtered search, D-10 substring matcher, D-11 two-line rows,
 // D-12 search-row click semantics + clearing-search-restores-drillPath.
 //
-// File-row glyphs preserve Phase 35 MD-01: .json → 📄, .md → 📝, otherwise → 📄 (default).
-// This makes the picker MD/JSON-aware in all consumer call-sites without per-site customisation.
+// File-row glyphs: .md → 📝, otherwise → 📄 (default). Legacy .json files are
+// filtered from listing and search before reaching this glyph dispatch, so the
+// .json glyph branch is removed.
 //
 // Public API: SnippetTreePicker class. Owns drill-state + search-state — reset on each mount().
 // No global state. No localStorage. No singleton.
@@ -33,15 +34,15 @@ const SEARCH_PLACEHOLDER_KEY = 'snippetTreePicker.searchPlaceholder';
 
 // Phase 35 MD-01 preservation — extension-based glyph dispatch.
 const GLYPH_FOLDER = '\uD83D\uDCC1';  // 📁
-const GLYPH_JSON = '\uD83D\uDCC4';    // 📄
+const GLYPH_FILE = '\uD83D\uDCC4';    // 📄
 const GLYPH_MD = '\uD83D\uDCDD';      // 📝
 
-/** Phase 35 MD-01 preservation — dispatch file row glyph by extension.
- *  .md → 📝, .json → 📄, otherwise → 📄 (default). Case-insensitive on extension. */
+/** Dispatch file row glyph by extension.
+ *  .md → 📝, otherwise → 📄 (default). Case-insensitive on extension. */
 function fileGlyph(basename: string): string {
   const lower = basename.toLowerCase();
   if (lower.endsWith('.md')) return GLYPH_MD;
-  return GLYPH_JSON;  // .json AND default fallback
+  return GLYPH_FILE;  // default fallback (legacy .json never reaches here)
 }
 
 function basenameOf(path: string): string {
@@ -489,6 +490,11 @@ export class SnippetTreePicker {
     }
     const fileMatches: Array<{ basename: string; relativePath: string }> = [];
     for (const abs of files) {
+      // Phase 2 (JSON-removal): filter to `.md` before basename matching so
+      // legacy `.json` files returned by the raw recursive listing never
+      // render as selectable search rows. `listFolderDescendants()` stays
+      // extension-agnostic so folder-delete counts include all physical files.
+      if (!abs.toLowerCase().endsWith('.md')) continue;
       const relative = abs.startsWith(rootPrefix) ? abs.slice(rootPrefix.length) : abs;
       if (relative === '') continue;
       const base = basenameOf(relative);

@@ -5,7 +5,7 @@
 // routes through this class.
 //
 // Responsibilities:
-//   - Create or edit a Snippet (JsonSnippet | MdSnippet)
+//   - Create or edit a Snippet (MdSnippet | MdTemplateSnippet)
 //   - JSON ↔ Markdown type toggle (create only; locked in edit mode per D-06)
 //   - Folder dropdown populated from listFolderDescendants(root)
 //   - Name collision pre-flight via snippetService.exists (debounced, D-12)
@@ -18,7 +18,7 @@
 //   - Drag-and-drop
 //   - Inline F2 rename
 import { App, Modal, Notice } from 'obsidian';
-import type { Snippet, JsonSnippet, MdSnippet, MdTemplateSnippet } from '../snippets/snippet-model';
+import type { Snippet, MdSnippet, MdTemplateSnippet } from '../snippets/snippet-model';
 import { mountChipEditor, type ChipEditorHandle } from './snippet-chip-editor';
 import { ConfirmModal } from './confirm-modal';
 import type RadiProtocolPlugin from '../main';
@@ -99,8 +99,8 @@ export class SnippetEditorModal extends Modal {
   private readonly options: SnippetEditorOptions;
 
   // Form state
-  private draft: JsonSnippet | MdSnippet | MdTemplateSnippet;
-  private draftKind: 'json' | 'md' | 'md-template';
+  private draft: MdSnippet | MdTemplateSnippet;
+  private draftKind: 'md' | 'md-template';
   private currentFolder: string;
   /** Phase 56 D-08 — baseline against which the folder-row unsaved-dot is computed.
    *  Initialised to the same value as currentFolder; advanced to the new
@@ -189,7 +189,7 @@ export class SnippetEditorModal extends Modal {
       const typeRow = contentEl.createDiv({ cls: 'radi-snippet-editor-row' });
       typeRow.createEl('label', { text: this.plugin.i18n.t('snippetEditor.type') });
       typeRow.createEl('span', {
-        text: this.draftKind === 'json' ? 'JSON' : 'Markdown',
+        text: 'Markdown',
         cls: 'radi-snippet-editor-type-static',
       });
     }
@@ -204,8 +204,8 @@ export class SnippetEditorModal extends Modal {
     // sees it immediately. Banner is rendered above the chip editor; the form
     // remains mounted but is locked further down (Save disabled + aria-disabled
     // on contentRegionEl). Uses textContent only — T-52-09 mitigation.
-    if (this.draftKind === 'json' || this.draftKind === 'md-template') {
-      const vErr = (this.draft as JsonSnippet | MdTemplateSnippet).validationError;
+    if (this.draftKind === 'md-template') {
+      const vErr = (this.draft as MdTemplateSnippet).validationError;
       if (vErr !== null) {
         this.renderValidationBanner(contentEl, vErr);
       }
@@ -288,7 +288,7 @@ export class SnippetEditorModal extends Modal {
   // -------------------- Rendering --------------------
 
   private computeCandidatePath(): string {
-    const ext = this.draftKind === 'json' ? 'json' : 'md';
+    const ext = 'md';
     const basename = normalizeSnippetBasename(this.draft.name);
     return this.currentFolder + '/' + basename + '.' + ext;
   }
@@ -389,8 +389,8 @@ export class SnippetEditorModal extends Modal {
       this.chipEditorHandle = null;
     }
 
-    if (this.draftKind === 'json' || this.draftKind === 'md-template') {
-      const templateDraft = this.draft as JsonSnippet | MdTemplateSnippet;
+    if (this.draftKind === 'md-template') {
+      const templateDraft = this.draft as MdTemplateSnippet;
       this.chipEditorHandle = mountChipEditor(
         this.contentRegionEl,
         templateDraft,
@@ -491,7 +491,7 @@ export class SnippetEditorModal extends Modal {
     // pre-1.22.5 slugification, so it must not collide with itself.
     if (this.options.mode === 'edit' && this.options.snippet) {
       const original = this.options.snippet;
-      const originalExt = original.path.toLowerCase().endsWith('.json') ? 'json' : 'md';
+      const originalExt = 'md';
       const originalNamePath = dirname(original.path) + '/' + normalizeSnippetBasename(original.name) + '.' + originalExt;
       const unchangedName = this.draft.name.trim() === original.name.trim();
       if (candidatePath === original.path || (unchangedName && candidatePath === originalNamePath)) {
@@ -541,9 +541,7 @@ export class SnippetEditorModal extends Modal {
 
     const newPath = this.computeCandidatePath();
     let draftToSave: Snippet;
-    if (this.draftKind === 'json') {
-      draftToSave = { ...(this.draft as JsonSnippet), path: newPath } as JsonSnippet;
-    } else if (this.draftKind === 'md-template') {
+    if (this.draftKind === 'md-template') {
       draftToSave = { ...(this.draft as MdTemplateSnippet), path: newPath } as MdTemplateSnippet;
     } else {
       draftToSave = { ...(this.draft as MdSnippet), path: newPath } as MdSnippet;
@@ -575,11 +573,9 @@ export class SnippetEditorModal extends Modal {
       // 4. No canvas-ref-sync — SnippetNode.subfolderPath is a folder-only
       //    reference, so file moves/renames are canvas-invisible (D-03 Phase 34).
       const draftAtOldPath: Snippet =
-        this.draftKind === 'json'
-          ? { ...(this.draft as JsonSnippet), path: oldPath }
-          : this.draftKind === 'md-template'
-            ? { ...(this.draft as MdTemplateSnippet), path: oldPath }
-            : { ...(this.draft as MdSnippet), path: oldPath };
+        this.draftKind === 'md-template'
+          ? { ...(this.draft as MdTemplateSnippet), path: oldPath }
+          : { ...(this.draft as MdSnippet), path: oldPath };
       await this.snippetService().save(draftAtOldPath);
 
       const oldFolder = dirname(oldPath);
@@ -603,11 +599,9 @@ export class SnippetEditorModal extends Modal {
       }
 
       const finalDraft: Snippet =
-        this.draftKind === 'json'
-          ? { ...(this.draft as JsonSnippet), path: currentPath }
-          : this.draftKind === 'md-template'
-            ? { ...(this.draft as MdTemplateSnippet), path: currentPath }
-            : { ...(this.draft as MdSnippet), path: currentPath };
+        this.draftKind === 'md-template'
+          ? { ...(this.draft as MdTemplateSnippet), path: currentPath }
+          : { ...(this.draft as MdSnippet), path: currentPath };
 
       // Phase 34 MOVE-04 regression guard: folder-only change still emits the
       // i18n-keyed «Snippet moved» notice (asserted by the move-on-save test).
@@ -693,17 +687,7 @@ export class SnippetEditorModal extends Modal {
 
 // ------------- helpers -------------
 
-function cloneSnippet(s: Snippet): JsonSnippet | MdSnippet | MdTemplateSnippet {
-  if (s.kind === 'json') {
-    return {
-      kind: 'json',
-      path: s.path,
-      name: s.name,
-      template: s.template,
-      placeholders: s.placeholders.map((p) => ({ ...p })),
-      validationError: s.validationError, // Phase 52 D-03
-    };
-  }
+function cloneSnippet(s: Snippet): MdSnippet | MdTemplateSnippet {
   if (s.kind === 'md-template') {
     return {
       kind: 'md-template',

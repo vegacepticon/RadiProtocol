@@ -317,7 +317,7 @@ export function makeBasePlugin(opts: { textSeparator?: string; snippetFolderPath
       protocolFolderPath: 'Protocols',
       locale: 'ru',
     },
-    snippetService: { load: vi.fn(async (_absPath: string) => null) },
+    snippetService: { load: vi.fn(async (_absPath: string) => null), resolveSnippet: vi.fn(async (_id: string) => ({ status: 'missing' })) },
     insertMutex: { runExclusive: vi.fn(async (_path: string, fn: () => Promise<void>) => fn()) },
     canvasLiveEditor: { getCanvasJSON: () => null },
     _vaultModifyCalls: [] as Array<[string, string]>,

@@ -238,9 +238,9 @@ interface MockService {
   listFolderDescendants: ReturnType<typeof vi.fn>;
 }
 
-function makeSnippet(kind: 'json' | 'md', p: string, name: string): Snippet {
-  if (kind === 'json') {
-    return { kind: 'json', path: p, name, template: '', placeholders: [], validationError: null };
+function makeSnippet(kind: 'md-template' | 'md', p: string, name: string): Snippet {
+  if (kind === 'md-template') {
+    return { kind: 'md-template', path: p, name, template: '', placeholders: [], validationError: null };
   }
   return { kind: 'md', path: p, name, content: '' };
 }
@@ -309,7 +309,7 @@ describe('SnippetManagerView — tree rendering and interactions', () => {
       listings: {
         [root]: {
           folders: ['fldA'],
-          snippets: [makeSnippet('json', `${root}/a.json`, 'a'), makeSnippet('md', `${root}/b.md`, 'b')],
+          snippets: [makeSnippet('md-template', `${root}/a.md`, 'a'), makeSnippet('md', `${root}/b.md`, 'b')],
         },
         [`${root}/fldA`]: { folders: [], snippets: [] },
       },
@@ -318,10 +318,10 @@ describe('SnippetManagerView — tree rendering and interactions', () => {
     await view.onOpen();
 
     const rows = walkRows((view as any).contentEl as MockEl);
-    expect(rows.length).toBeGreaterThanOrEqual(3); // fldA + a.json + b.md
+    expect(rows.length).toBeGreaterThanOrEqual(3); // fldA + a.md + b.md
     const paths = rows.map((r) => r._attrs['data-path']).filter(Boolean);
     expect(paths).toContain(`${root}/fldA`);
-    expect(paths).toContain(`${root}/a.json`);
+    expect(paths).toContain(`${root}/a.md`);
     expect(paths).toContain(`${root}/b.md`);
   });
 
@@ -349,7 +349,7 @@ describe('SnippetManagerView — tree rendering and interactions', () => {
       listings: {
         [root]: {
           folders: [],
-          snippets: [makeSnippet('json', `${root}/hi.json`, 'hi')],
+          snippets: [makeSnippet('md-template', `${root}/hi.md`, 'hi')],
         },
       },
     });
@@ -357,7 +357,7 @@ describe('SnippetManagerView — tree rendering and interactions', () => {
     await view.onOpen();
 
     const rows = walkRows((view as any).contentEl as MockEl);
-    const fileRow = rows.find((r) => r._attrs['data-path'] === `${root}/hi.json`);
+    const fileRow = rows.find((r) => r._attrs['data-path'] === `${root}/hi.md`);
     expect(fileRow).toBeDefined();
     fileRow!.dispatchEvent({ type: 'click', target: fileRow });
     // Allow the async chain (load → new modal → await result)
@@ -367,7 +367,7 @@ describe('SnippetManagerView — tree rendering and interactions', () => {
     const call = snippetEditorModalCtorSpy.mock.calls[0]!;
     const options = call[2];
     expect((options as any).mode).toBe('edit');
-    expect((options as any).snippet.path).toBe(`${root}/hi.json`);
+    expect((options as any).snippet.path).toBe(`${root}/hi.md`);
   });
 
   it('TREE-04: expanded empty folders render an explicit «(пусто)» placeholder', async () => {
@@ -514,7 +514,7 @@ describe('SnippetManagerView — tree rendering and interactions', () => {
     const root = '.radiprotocol/snippets';
     const { plugin, service } = makePlugin({
       listings: {
-        [root]: { folders: [], snippets: [makeSnippet('json', `${root}/gone.json`, 'gone')] },
+        [root]: { folders: [], snippets: [makeSnippet('md-template', `${root}/gone.md`, 'gone')] },
       },
     });
     const view = makeView(plugin);
@@ -522,20 +522,20 @@ describe('SnippetManagerView — tree rendering and interactions', () => {
     confirmModalNextResult = 'confirm';
 
     const handleDeleteSnippet = (view as any).handleDeleteSnippet.bind(view);
-    await handleDeleteSnippet(`${root}/gone.json`, 'gone');
+    await handleDeleteSnippet(`${root}/gone.md`, 'gone');
 
     expect(confirmModalCtorSpy).toHaveBeenCalled();
     const options = confirmModalCtorSpy.mock.calls[0]![0] as any;
     expect(options.title).toBe('Delete snippet?');
     expect(String(options.body)).toContain('gone');
     expect(options.destructive).toBe(true);
-    expect(service.delete).toHaveBeenCalledWith(`${root}/gone.json`);
+    expect(service.delete).toHaveBeenCalledWith(`${root}/gone.md`);
   });
 
   it('DEL-03: after delete, rebuild omits the deleted path from listFolder results', async () => {
     const root = '.radiprotocol/snippets';
     const listings: Record<string, { folders: string[]; snippets: Snippet[] }> = {
-      [root]: { folders: [], snippets: [makeSnippet('json', `${root}/x.json`, 'x')] },
+      [root]: { folders: [], snippets: [makeSnippet('md-template', `${root}/x.md`, 'x')] },
     };
     const { plugin, service } = makePlugin({ listings });
     // Service.delete mutates the fixture to emulate disk-level removal.
@@ -547,13 +547,13 @@ describe('SnippetManagerView — tree rendering and interactions', () => {
     await view.onOpen();
     confirmModalNextResult = 'confirm';
 
-    await (view as any).handleDeleteSnippet(`${root}/x.json`, 'x');
+    await (view as any).handleDeleteSnippet(`${root}/x.md`, 'x');
     // After the handler, service.listFolder should no longer see the path.
     const listing = (await (service.listFolder as unknown as (p: string) => Promise<{ folders: string[]; snippets: Snippet[] }>)(root));
-    expect(listing.snippets.find((s: Snippet) => s.path === `${root}/x.json`)).toBeUndefined();
+    expect(listing.snippets.find((s: Snippet) => s.path === `${root}/x.md`)).toBeUndefined();
     // And the rendered tree should not include it either
     const rows = walkRows((view as any).contentEl as MockEl);
-    expect(rows.find((r) => r._attrs['data-path'] === `${root}/x.json`)).toBeUndefined();
+    expect(rows.find((r) => r._attrs['data-path'] === `${root}/x.md`)).toBeUndefined();
   });
 
   it('MODAL-04: global "+ Новый" opens create modal pre-filled to snippetFolderPath (root)', async () => {

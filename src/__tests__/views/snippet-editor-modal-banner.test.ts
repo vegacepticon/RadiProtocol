@@ -264,21 +264,21 @@ vi.mock('../../views/snippet-tree-picker', () => ({
 }));
 
 import { SnippetEditorModal } from '../../views/snippet-editor-modal';
-import type { JsonSnippet } from '../../snippets/snippet-model';
+import type { MdTemplateSnippet } from '../../snippets/snippet-model';
 // Phase 84 (I18N-02): SnippetEditorModal now reads plugin.i18n.t(...) for copy.
 import { I18nService } from '../../i18n';
 
-type BrokenSnippet = JsonSnippet & { validationError: string | null };
+type BrokenSnippet = MdTemplateSnippet;
 
 function makeBrokenSnippet(validationError: string | null): BrokenSnippet {
   return {
-    kind: 'json',
-    path: 'Protocols/Snippets/broken.json',
+    kind: 'md-template',
+    path: 'Protocols/Snippets/broken.md',
     name: 'broken',
     template: 'V: {{v}}',
     placeholders: [{ id: 'v', label: 'V', type: 'choice', options: [] }],
     validationError,
-  } as BrokenSnippet;
+  };
 }
 
 function makePlugin() {
@@ -307,7 +307,7 @@ async function openModal(snippet: BrokenSnippet) {
     {
       mode: 'edit',
       initialFolder: 'Protocols/Snippets',
-      snippet: snippet as unknown as JsonSnippet,
+      snippet: snippet as unknown as MdTemplateSnippet,
     },
   );
   // SnippetEditorModal.onOpen is async — allow microtasks to flush

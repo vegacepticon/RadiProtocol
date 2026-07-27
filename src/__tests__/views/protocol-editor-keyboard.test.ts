@@ -860,3 +860,42 @@ describe('openEditModal — snippet target picker lifecycle', () => {
     expect(findAllByClass(documentBody, 'rp-protocol-editor-modal')).toHaveLength(1);
   });
 });
+
+describe('ProtocolEditorView: node-kind creation picker omits text-block (Phase 3)', () => {
+  function nodeKindsInPicker(root: MockEl): string[] {
+    const kinds: string[] = [];
+    const stack: MockEl[] = [root];
+    while (stack.length > 0) {
+      const cur = stack.pop()!;
+      const k = cur.getAttribute('data-node-kind');
+      if (k !== null) kinds.push(k);
+      // Push children in reverse so document order is preserved.
+      for (let i = cur.children.length - 1; i >= 0; i--) stack.push(cur.children[i]!);
+    }
+    return kinds;
+  }
+
+  function openPickerDocument(): MockEl {
+    const documentBody = makeEl('body');
+    (globalThis as any).document = { body: documentBody, activeElement: null };
+    return documentBody;
+  }
+
+  it('openNodeKindPickerAtWorldPoint offers start/question/answer/loop/snippet and NOT text-block', () => {
+    const { view } = createTestView();
+    const documentBody = openPickerDocument();
+    (view as any).openNodeKindPickerAtWorldPoint(0, 0);
+    const kinds = nodeKindsInPicker(documentBody);
+    expect(kinds).toEqual(['start', 'question', 'answer', 'loop', 'snippet']);
+    expect(kinds).not.toContain('text-block');
+  });
+
+  it('openNodeKindPickerAndConnectAtWorldPoint offers the same set and NOT text-block', () => {
+    const { view } = createTestView();
+    const documentBody = openPickerDocument();
+    (view as any).openNodeKindPickerAndConnectAtWorldPoint('node-1', 0, 0);
+    const kinds = nodeKindsInPicker(documentBody);
+    expect(kinds).toEqual(['start', 'question', 'answer', 'loop', 'snippet']);
+    expect(kinds).not.toContain('text-block');
+  });
+});

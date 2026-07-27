@@ -72,11 +72,10 @@ function spyRunnerState(
   return { setText: t => { accumulatedText = t; }, getText: () => accumulatedText };
 }
 
-const JSON_FILL_SNIPPET = {
-  kind: 'json',
-  id: 'fill',
+const MD_TEMPLATE_FILL_SNIPPET = {
+  kind: 'md-template',
   name: 'fill',
-  path: 'Snippets/fill.json',
+  path: 'Snippets/fill.md',
   template: 'R: {{f}}',
   placeholders: [{ id: 'f', label: 'Findings', type: 'free-text' as const }],
   validationError: null,
@@ -98,12 +97,12 @@ describe('InlineRunnerModal — snippet insert separator (INLINE-FIX-04)', () =>
     );
   });
 
-  it('(b) JSON zero-placeholder snippet append applies separator', async () => {
+  it('(b) md-template zero-placeholder snippet append applies separator', async () => {
     const { modal, app } = setupModal({ vaultContent: 'Prior answer' });
     spyRunnerState(modal, 'awaiting-snippet-pick', 'Prior answer', '\n');
 
-    const jsonSnippet = { kind: 'json', id: 'static', name: 'static', path: 'Snippets/static.json', template: 'Static text', placeholders: [], validationError: null };
-    await (modal as any).handleSnippetPickerSelection(jsonSnippet);
+    const templateSnippet = { kind: 'md-template', name: 'static', path: 'Snippets/static.md', template: 'Static text', placeholders: [], validationError: null };
+    await (modal as any).handleSnippetPickerSelection(templateSnippet);
 
     expect(app.vault.modify).toHaveBeenCalledWith(
       expect.anything(),
@@ -151,15 +150,15 @@ describe('InlineRunnerModal — JSON fill-in modal (INLINE-FIX-05)', () => {
     spyRunnerState(modal, 'awaiting-snippet-fill', '', '');
 
     const zone = makeEl('div');
-    vi.spyOn((modal as any).plugin.snippetService, 'load').mockResolvedValue(JSON_FILL_SNIPPET);
+    vi.spyOn((modal as any).plugin.snippetService, 'resolveSnippet').mockResolvedValue({ status: 'found', snippet: MD_TEMPLATE_FILL_SNIPPET });
 
-    const promise = (modal as any).handleSnippetFill('fill.json', zone);
+    const promise = (modal as any).handleSnippetFill('fill', zone);
     await new Promise(r => setTimeout(r, 10));
 
     const instances = getFillModalInstances();
     expect(instances.length).toBeGreaterThanOrEqual(1);
     const instance = instances[instances.length - 1]!;
-    expect(instance.snippet).toBe(JSON_FILL_SNIPPET);
+    expect(instance.snippet).toBe(MD_TEMPLATE_FILL_SNIPPET);
     expect(instance.opened).toBe(true);
 
     instance.__resolve('R: resolved');
@@ -171,9 +170,9 @@ describe('InlineRunnerModal — JSON fill-in modal (INLINE-FIX-05)', () => {
     spyRunnerState(modal, 'awaiting-snippet-fill', 'Prior text', '\n');
 
     const zone = makeEl('div');
-    vi.spyOn((modal as any).plugin.snippetService, 'load').mockResolvedValue(JSON_FILL_SNIPPET);
+    vi.spyOn((modal as any).plugin.snippetService, 'resolveSnippet').mockResolvedValue({ status: 'found', snippet: MD_TEMPLATE_FILL_SNIPPET });
 
-    const promise = (modal as any).handleSnippetFill('fill.json', zone);
+    const promise = (modal as any).handleSnippetFill('fill', zone);
     await new Promise(r => setTimeout(r, 10));
 
     const instances = getFillModalInstances();
@@ -191,9 +190,9 @@ describe('InlineRunnerModal — JSON fill-in modal (INLINE-FIX-05)', () => {
     spyRunnerState(modal, 'awaiting-snippet-fill', '', '');
 
     const zone = makeEl('div');
-    vi.spyOn((modal as any).plugin.snippetService, 'load').mockResolvedValue(JSON_FILL_SNIPPET);
+    vi.spyOn((modal as any).plugin.snippetService, 'resolveSnippet').mockResolvedValue({ status: 'found', snippet: MD_TEMPLATE_FILL_SNIPPET });
 
-    const promise = (modal as any).handleSnippetFill('fill.json', zone);
+    const promise = (modal as any).handleSnippetFill('fill', zone);
     await new Promise(r => setTimeout(r, 10));
 
     const instances = getFillModalInstances();
@@ -221,13 +220,13 @@ describe('InlineRunnerModal — JSON fill-in modal (INLINE-FIX-05)', () => {
     } as any));
 
     const zone = makeEl('div');
-    vi.spyOn((modal as any).plugin.snippetService, 'load').mockResolvedValue(JSON_FILL_SNIPPET);
+    vi.spyOn((modal as any).plugin.snippetService, 'resolveSnippet').mockResolvedValue({ status: 'found', snippet: MD_TEMPLATE_FILL_SNIPPET });
 
     // Simulate container being attached
     (modal as any).containerEl = makeEl('div') as MockEl;
     (modal as any).containerEl.setAttribute('class', 'rp-inline-runner-container');
 
-    const promise = (modal as any).handleSnippetFill('fill.json', zone);
+    const promise = (modal as any).handleSnippetFill('fill', zone);
     await new Promise(r => setTimeout(r, 10));
 
     const instances = getFillModalInstances();
@@ -235,6 +234,71 @@ describe('InlineRunnerModal — JSON fill-in modal (INLINE-FIX-05)', () => {
     expect(instance.opened).toBe(true);
     instance.__resolve('R: resolved');
     await promise;
+  });
+});
+
+describe('InlineRunnerModal — resolveSnippet outcomes (Phase 2 JSON-removal)', () => {
+  beforeEach(() => {
+    resetFillModalInstances();
+  });
+
+  it('legacy-json (explicit .json ref) renders the unsupported-format state and calls stepBack', async () => {
+    const { modal } = setupModal();
+    spyRunnerState(modal, 'awaiting-snippet-fill', '', '');
+    const stepBackSpy = vi.spyOn((modal as any).runner, 'stepBack').mockImplementation(() => {});
+    const renderSpy = vi.spyOn((modal as any), 'render').mockImplementation(() => {});
+
+    const zone = makeEl('div');
+    vi.spyOn((modal as any).plugin.snippetService, 'resolveSnippet').mockResolvedValue({
+      status: 'legacy-json',
+      path: 'Snippets/legacy.json',
+    });
+
+    await (modal as any).handleSnippetFill('legacy.json', zone);
+
+    expect(stepBackSpy).toHaveBeenCalledTimes(1);
+    expect(renderSpy).toHaveBeenCalled();
+    // No fill-in modal is opened for legacy-json.
+    expect(getFillModalInstances()).toHaveLength(0);
+    // The zone renders the localized unsupported-format message containing the path.
+    expect(zone.children.length).toBeGreaterThanOrEqual(1);
+    expect(zone.children[0]!._text).toContain('Snippets/legacy.json');
+  });
+
+  it('legacy-json (extensionless id backed by a .json file) renders the unsupported-format state and calls stepBack', async () => {
+    const { modal } = setupModal();
+    spyRunnerState(modal, 'awaiting-snippet-fill', '', '');
+    const stepBackSpy = vi.spyOn((modal as any).runner, 'stepBack').mockImplementation(() => {});
+    vi.spyOn((modal as any), 'render').mockImplementation(() => {});
+
+    const zone = makeEl('div');
+    vi.spyOn((modal as any).plugin.snippetService, 'resolveSnippet').mockResolvedValue({
+      status: 'legacy-json',
+      path: 'Snippets/sub/old.json',
+    });
+
+    await (modal as any).handleSnippetFill('old', zone);
+
+    expect(stepBackSpy).toHaveBeenCalledTimes(1);
+    expect(getFillModalInstances()).toHaveLength(0);
+    expect(zone.children[0]!._text).toContain('Snippets/sub/old.json');
+  });
+
+  it('missing renders the not-found state and does NOT call stepBack', async () => {
+    const { modal } = setupModal();
+    spyRunnerState(modal, 'awaiting-snippet-fill', '', '');
+    const stepBackSpy = vi.spyOn((modal as any).runner, 'stepBack').mockImplementation(() => {});
+
+    const zone = makeEl('div');
+    vi.spyOn((modal as any).plugin.snippetService, 'resolveSnippet').mockResolvedValue({
+      status: 'missing' });
+
+    await (modal as any).handleSnippetFill('nonexistent', zone);
+
+    expect(stepBackSpy).not.toHaveBeenCalled();
+    expect(getFillModalInstances()).toHaveLength(0);
+    expect(zone.children.length).toBeGreaterThanOrEqual(1);
+    expect(zone.children[0]!._text).toContain("Snippet 'nonexistent' not found.");
   });
 });
 
@@ -282,14 +346,14 @@ describe('InlineRunnerModal — INLINE-FIX-04 (c) JSON with-placeholder + separa
     resetFillModalInstances();
   });
 
-  it('(c) JSON with-placeholder snippet insert applies separator after modal resolves', async () => {
+  it('(c) md-template with-placeholder snippet insert applies separator after modal resolves', async () => {
     const { modal, app } = setupModal({ vaultContent: 'Prior text' });
     spyRunnerState(modal, 'awaiting-snippet-fill', 'Prior text', '\n');
 
     const zone = makeEl('div');
-    vi.spyOn((modal as any).plugin.snippetService, 'load').mockResolvedValue(JSON_FILL_SNIPPET);
+    vi.spyOn((modal as any).plugin.snippetService, 'resolveSnippet').mockResolvedValue({ status: 'found', snippet: MD_TEMPLATE_FILL_SNIPPET });
 
-    const promise = (modal as any).handleSnippetFill('fill.json', zone);
+    const promise = (modal as any).handleSnippetFill('fill', zone);
     await new Promise(r => setTimeout(r, 10));
 
     const instances = getFillModalInstances();

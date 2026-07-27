@@ -6,9 +6,9 @@
 
 import { describe, expect, it } from 'vitest';
 import {
-  isFullSnippetPath,
   renderSnippetFillLoading,
   renderSnippetFillNotFound,
+  renderSnippetFillUnsupportedFormat,
 } from '../../runner/render/render-snippet-fill';
 
 interface FakeNode {
@@ -48,23 +48,6 @@ function makeFakeNode(tag = 'div'): FakeNode {
 
 function asHtml(n: FakeNode): HTMLElement { return n as unknown as HTMLElement; }
 
-describe('isFullSnippetPath', () => {
-  it('treats slash-bearing ids as full paths', () => {
-    expect(isFullSnippetPath('abdomen/ct.json')).toBe(true);
-    expect(isFullSnippetPath('a/b/c.md')).toBe(true);
-  });
-
-  it('treats explicit .md / .json suffixes as full paths', () => {
-    expect(isFullSnippetPath('foo.md')).toBe(true);
-    expect(isFullSnippetPath('foo.json')).toBe(true);
-  });
-
-  it('treats bare legacy ids as non-full paths', () => {
-    expect(isFullSnippetPath('legacy_id')).toBe(false);
-    expect(isFullSnippetPath('snippet42')).toBe(false);
-  });
-});
-
 describe('renderSnippetFillLoading', () => {
   it('emits the localised loading paragraph with the empty-state class', () => {
     const zone = makeFakeNode();
@@ -96,5 +79,20 @@ describe('renderSnippetFillNotFound', () => {
     expect(zone.children[0]!.text).toBe(
       `Snippet 'foo' not found. The snippet may have been deleted. Use step-back to continue.`,
     );
+  });
+});
+
+describe('renderSnippetFillUnsupportedFormat', () => {
+  it('clears the zone and renders the localised legacy-JSON message', () => {
+    const zone = makeFakeNode();
+    zone.createEl('p', { text: 'Previous' });
+    renderSnippetFillUnsupportedFormat(asHtml(zone), 'Snippets/legacy.json', (key, vars) => {
+      expect(key).toBe('inlineRunner.snippetLegacyJson');
+      expect(vars).toEqual({ path: 'Snippets/legacy.json' });
+      return `legacy ${vars?.path}`;
+    });
+    expect(zone.children).toHaveLength(1);
+    expect(zone.children[0]!.text).toBe('legacy Snippets/legacy.json');
+    expect(zone.children[0]!.cls).toBe('rp-empty-state-body');
   });
 });

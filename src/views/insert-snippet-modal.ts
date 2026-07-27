@@ -63,10 +63,6 @@ export class InsertSnippetModal extends Modal {
       new Notice(this.plugin.i18n.t('insertSnippet.notFound', { path }));
       return;
     }
-    if (snippet.kind === 'json' && snippet.validationError !== null) {
-      new Notice(this.plugin.i18n.t('insertSnippet.cannotBeUsed', { path, error: snippet.validationError }));
-      return;
-    }
 
     const rendered = await this.renderSnippetForInsert(snippet);
     if (rendered === null) return;

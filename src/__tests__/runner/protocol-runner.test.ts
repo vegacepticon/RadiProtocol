@@ -1051,3 +1051,145 @@ describe('ProtocolRunner', () => {
     });
   });
 });
+
+  describe('Answer-chain auto-advance (Phase 3 — Text block deprecation)', () => {
+    // Structure: start → q1 → a1 → a2 → q2 → a3 (terminal)
+    // Selecting a1 must append a1 AND auto-advance through a2 (appended once),
+    // then halt at q2 without another click.
+    function buildAnswerChainGraph(): ProtocolGraph {
+      return {
+        canvasFilePath: 'answer-chain.canvas',
+        nodes: new Map([
+          ['s', { id: 's', kind: 'start', x: 0, y: 0, width: 100, height: 60 }],
+          ['q1', { id: 'q1', kind: 'question', questionText: 'Q1', x: 0, y: 60, width: 100, height: 60 }],
+          ['a1', { id: 'a1', kind: 'answer', answerText: 'ans1', x: 0, y: 120, width: 100, height: 60 }],
+          ['a2', { id: 'a2', kind: 'answer', answerText: 'ans2', x: 0, y: 180, width: 100, height: 60 }],
+          ['q2', { id: 'q2', kind: 'question', questionText: 'Q2', x: 0, y: 240, width: 100, height: 60 }],
+          ['a3', { id: 'a3', kind: 'answer', answerText: 'ans3', x: 0, y: 300, width: 100, height: 60 }],
+        ]),
+        edges: [
+          { id: 'e1', fromNodeId: 's', toNodeId: 'q1' },
+          { id: 'e2', fromNodeId: 'q1', toNodeId: 'a1' },
+          { id: 'e3', fromNodeId: 'a1', toNodeId: 'a2' },
+          { id: 'e4', fromNodeId: 'a2', toNodeId: 'q2' },
+          { id: 'e5', fromNodeId: 'q2', toNodeId: 'a3' },
+        ],
+        adjacency: new Map([
+          ['s', ['q1']], ['q1', ['a1']], ['a1', ['a2']], ['a2', ['q2']], ['q2', ['a3']],
+        ]),
+        reverseAdjacency: new Map([
+          ['q1', ['s']], ['a1', ['q1']], ['a2', ['a1']], ['q2', ['a2']], ['a3', ['q2']],
+        ]),
+        startNodeId: 's',
+      };
+    }
+
+    it('Question → Answer1 → Answer2 → Question2: selecting Answer1 appends both answers and halts at Question2', () => {
+      const runner = new ProtocolRunner({ defaultSeparator: 'newline' });
+      runner.start(buildAnswerChainGraph());
+      // Runner first halts at q1.
+      let state = runner.getState();
+      expect(state.status).toBe('at-node');
+      if (state.status !== 'at-node') return;
+      expect(state.currentNodeId).toBe('q1');
+
+      // Select Answer1 — appends ans1, auto-advances through Answer2 (ans2), halts at q2.
+      runner.chooseAnswer('a1');
+      state = runner.getState();
+      expect(state.status).toBe('at-node');
+      if (state.status !== 'at-node') return;
+      expect(state.currentNodeId).toBe('q2');
+      expect(state.accumulatedText).toBe('ans1\nans2');
+
+      // Traversal halts at q2 — no further auto-advance until another click.
+      runner.chooseAnswer('a3');
+      state = runner.getState();
+      expect(state.status).toBe('complete');
+      if (state.status !== 'complete') return;
+      expect(state.finalText).toBe('ans1\nans2\nans3');
+    });
+
+    it('empty downstream Answer appends nothing extra and still halts at the next interactive node', () => {
+      const graph: ProtocolGraph = {
+        canvasFilePath: 'empty-downstream.canvas',
+        nodes: new Map([
+          ['s', { id: 's', kind: 'start', x: 0, y: 0, width: 100, height: 60 }],
+          ['q1', { id: 'q1', kind: 'question', questionText: 'Q1', x: 0, y: 60, width: 100, height: 60 }],
+          ['a1', { id: 'a1', kind: 'answer', answerText: 'ans1', x: 0, y: 120, width: 100, height: 60 }],
+          ['a2', { id: 'a2', kind: 'answer', answerText: '', x: 0, y: 180, width: 100, height: 60 }],
+          ['q2', { id: 'q2', kind: 'question', questionText: 'Q2', x: 0, y: 240, width: 100, height: 60 }],
+        ]),
+        edges: [
+          { id: 'e1', fromNodeId: 's', toNodeId: 'q1' },
+          { id: 'e2', fromNodeId: 'q1', toNodeId: 'a1' },
+          { id: 'e3', fromNodeId: 'a1', toNodeId: 'a2' },
+          { id: 'e4', fromNodeId: 'a2', toNodeId: 'q2' },
+        ],
+        adjacency: new Map([['s', ['q1']], ['q1', ['a1']], ['a1', ['a2']], ['a2', ['q2']]]),
+        reverseAdjacency: new Map([['q1', ['s']], ['a1', ['q1']], ['a2', ['a1']], ['q2', ['a2']]]),
+        startNodeId: 's',
+      };
+      const runner = new ProtocolRunner({ defaultSeparator: 'newline' });
+      runner.start(graph);
+      runner.chooseAnswer('a1');
+      const state = runner.getState();
+      expect(state.status).toBe('at-node');
+      if (state.status !== 'at-node') return;
+      expect(state.currentNodeId).toBe('q2');
+      // Empty downstream answer contributes no text/separ­ator.
+      expect(state.accumulatedText).toBe('ans1');
+    });
+
+    it('answer→answer→terminal completes without another click', () => {
+      const graph: ProtocolGraph = {
+        canvasFilePath: 'answer-terminal.canvas',
+        nodes: new Map([
+          ['s', { id: 's', kind: 'start', x: 0, y: 0, width: 100, height: 60 }],
+          ['q1', { id: 'q1', kind: 'question', questionText: 'Q1', x: 0, y: 60, width: 100, height: 60 }],
+          ['a1', { id: 'a1', kind: 'answer', answerText: 'ans1', x: 0, y: 120, width: 100, height: 60 }],
+          ['a2', { id: 'a2', kind: 'answer', answerText: 'ans2', x: 0, y: 180, width: 100, height: 60 }],
+        ]),
+        edges: [
+          { id: 'e1', fromNodeId: 's', toNodeId: 'q1' },
+          { id: 'e2', fromNodeId: 'q1', toNodeId: 'a1' },
+          { id: 'e3', fromNodeId: 'a1', toNodeId: 'a2' },
+        ],
+        adjacency: new Map([['s', ['q1']], ['q1', ['a1']], ['a1', ['a2']]]),
+        reverseAdjacency: new Map([['q1', ['s']], ['a1', ['q1']], ['a2', ['a1']]]),
+        startNodeId: 's',
+      };
+      const runner = new ProtocolRunner({ defaultSeparator: 'newline' });
+      runner.start(graph);
+      runner.chooseAnswer('a1');
+      const state = runner.getState();
+      expect(state.status).toBe('complete');
+      if (state.status !== 'complete') return;
+      expect(state.finalText).toBe('ans1\nans2');
+    });
+
+    it('stepBack reverts the auto-advanced answer chain to the question', () => {
+      const runner = new ProtocolRunner({ defaultSeparator: 'newline' });
+      runner.start(buildAnswerChainGraph());
+      runner.chooseAnswer('a1');
+      let state = runner.getState();
+      expect(state.status).toBe('at-node');
+      if (state.status !== 'at-node') return;
+      expect(state.currentNodeId).toBe('q2');
+
+      runner.stepBack();
+      state = runner.getState();
+      expect(state.status).toBe('at-node');
+      if (state.status !== 'at-node') return;
+      // Reverts to q1 (the question where the user clicked Answer1).
+      expect(state.currentNodeId).toBe('q1');
+      expect(state.accumulatedText).toBe('');
+
+      // redo re-applies the auto-advance.
+      runner.redo();
+      state = runner.getState();
+      expect(state.status).toBe('at-node');
+      if (state.status !== 'at-node') return;
+      expect(state.currentNodeId).toBe('q2');
+      expect(state.accumulatedText).toBe('ans1\nans2');
+    });
+  });

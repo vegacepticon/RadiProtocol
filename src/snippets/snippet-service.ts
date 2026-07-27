@@ -2,17 +2,26 @@
 // Receives App and settings as constructor parameters — no direct Obsidian imports (NFR-01)
 import type { App } from 'obsidian';
 import type { RadiProtocolSettings } from '../settings';
-import type { Snippet, JsonSnippet } from './snippet-model';
-import { validatePlaceholders } from './snippet-model';
+import type { Snippet, MdTemplateSnippet, MdSnippet } from './snippet-model';
 import { parseMarkdownTemplate, serializeMarkdownTemplate, hasMarkdownTemplateFrontmatter } from './md-template';
 import { WriteMutex } from '../utils/write-mutex';
 import { ensureFolderPath } from '../utils/vault-utils';
 import { defaultT, type Translator } from '../i18n';
 
 /**
+ * Phase 2 (JSON-removal): Discriminated result of resolving a runner snippet
+ * reference. The view switches on `status` and delegates presentation to
+ * `render-snippet-fill.ts`; no path probing or vault scans remain in views.
+ */
+export type SnippetResolution =
+  | { status: 'found'; snippet: MdSnippet | MdTemplateSnippet }
+  | { status: 'legacy-json'; path: string }
+  | { status: 'missing' };
+
+/**
  * Phase 34 (D-03): Build a canvas-ref mapping key from a vault-relative path.
  * - Strips `snippetRoot + '/'` prefix if present
- * - Strips trailing `.json` / `.md` (case-insensitive), once
+ * - Strips trailing `.md` (case-insensitive), once
  * - Returns '' when vaultPath === snippetRoot
  *
  * This is the single source of truth for converting between vault-relative
@@ -23,7 +32,7 @@ export function toSnippetRelativePath(vaultPath: string, snippetRoot: string): s
   if (vaultPath === snippetRoot) return '';
   const prefix = snippetRoot + '/';
   let rel = vaultPath.startsWith(prefix) ? vaultPath.slice(prefix.length) : vaultPath;
-  rel = rel.replace(/\.(json|md)$/i, '');
+  rel = rel.replace(/\.(md)$/i, '');
   return rel;
 }
 
@@ -87,7 +96,7 @@ export class SnippetService {
    *
    * @param folderPath Full vault-relative path (D-19). Caller composes
    *   `${settings.snippetFolderPath}/${node.subfolderPath}` when subfolderPath is set.
-   * @returns Direct-children folders (basenames, sorted) and parsed SnippetFile objects (sorted by name).
+   * @returns Direct-children folders (basenames, sorted) and parsed Snippet objects (sorted by name).
    *   Missing folder → empty. Corrupt JSON → skipped silently.
    *   Path outside snippet root → silently rejected (T-30-01).
    */
@@ -116,48 +125,30 @@ export class SnippetService {
     }
     folders.sort((a, b) => a.localeCompare(b));
 
-    // Phase 32 (D-01, D-02): parse .json as JsonSnippet, read .md as MdSnippet.
-    // basename is authoritative for `name` (D-02); corrupt files skipped silently.
+    // Phase 2 (JSON-removal): only `.md` snippets are parsed and listed.
+    // Legacy `.json` files are skipped here so they never render as selectable
+    // rows; `listFolderDescendants()` stays extension-agnostic so folder-delete
+    // counts still include every physical file. basename is authoritative for
+    // `name`; corrupt files skipped silently.
     const snippets: Snippet[] = [];
     for (const filePath of listing.files) {
+      if (!filePath.endsWith('.md')) continue;
       const basename = this.basenameNoExt(filePath);
-      if (filePath.endsWith('.json')) {
-        try {
-          const raw = await this.app.vault.adapter.read(filePath);
-          const parsed = JSON.parse(raw) as Partial<JsonSnippet>;
-          // Phase 52 D-03: hard-validation — surface legacy placeholder types
-          // and empty-choice options as validationError so Editor/Runner can
-          // block rendering. Syntax-broken JSON still silently skipped via catch.
-          const validationError = validatePlaceholders(parsed.placeholders, this.t);
+      try {
+        const raw = await this.app.vault.adapter.read(filePath);
+        if (hasMarkdownTemplateFrontmatter(raw)) {
+          snippets.push(parseMarkdownTemplate(filePath, raw, basename, this.t));
+        } else {
           snippets.push({
-            kind: 'json',
+            kind: 'md',
             path: filePath,
             name: basename,
-            template: parsed.template ?? '',
-            placeholders: (parsed.placeholders ?? []) as JsonSnippet['placeholders'],
-            validationError,
+            content: raw,
           });
-        } catch {
-          // Corrupt file — skip silently (D-03 explicit: syntax-broken JSON stays silent-skip).
         }
-      } else if (filePath.endsWith('.md')) {
-        try {
-          const raw = await this.app.vault.adapter.read(filePath);
-          if (hasMarkdownTemplateFrontmatter(raw)) {
-            snippets.push(parseMarkdownTemplate(filePath, raw, basename, this.t));
-          } else {
-            snippets.push({
-              kind: 'md',
-              path: filePath,
-              name: basename,
-              content: raw,
-            });
-          }
-        } catch {
-          // Unreadable — skip silently.
-        }
+      } catch {
+        // Unreadable — skip silently.
       }
-      // Other extensions: skip.
     }
     snippets.sort((a, b) => a.name.localeCompare(b.name));
 
@@ -166,37 +157,25 @@ export class SnippetService {
 
   /**
    * Phase 32 (D-03): Load a snippet by full vault-relative path.
-   * Routes by extension: `.json` → JsonSnippet, `.md` → MdSnippet.
-   * Returns null if path is unsafe, file missing, or JSON corrupt.
+   * Routes by extension: `.md` → MdSnippet / MdTemplateSnippet.
+   * Phase 2 (JSON-removal): `.json` (and any non-`.md` path) returns `null` —
+   * legacy JSON files are no longer loadable as snippets. Runner ID resolution
+   * is owned by `resolveSnippet`, which reports legacy `.json` refs explicitly.
+   * Returns null if path is unsafe, file missing, or read/parse fails.
    */
   async load(path: string): Promise<Snippet | null> {
     const normalized = this.assertInsideRoot(path);
     if (normalized === null) return null;
+    if (!normalized.endsWith('.md')) return null;
     const exists = await this.app.vault.adapter.exists(normalized);
     if (!exists) return null;
     try {
       const raw = await this.app.vault.adapter.read(normalized);
       const basename = this.basenameNoExt(normalized);
-      if (normalized.endsWith('.json')) {
-        const parsed = JSON.parse(raw) as Partial<JsonSnippet>;
-        // Phase 52 D-03: populate validationError on every JsonSnippet return.
-        const validationError = validatePlaceholders(parsed.placeholders, this.t);
-        return {
-          kind: 'json',
-          path: normalized,
-          name: basename,
-          template: parsed.template ?? '',
-          placeholders: (parsed.placeholders ?? []) as JsonSnippet['placeholders'],
-          validationError,
-        };
+      if (hasMarkdownTemplateFrontmatter(raw)) {
+        return parseMarkdownTemplate(normalized, raw, basename, this.t);
       }
-      if (normalized.endsWith('.md')) {
-        if (hasMarkdownTemplateFrontmatter(raw)) {
-          return parseMarkdownTemplate(normalized, raw, basename, this.t);
-        }
-        return { kind: 'md', path: normalized, name: basename, content: raw };
-      }
-      return null;
+      return { kind: 'md', path: normalized, name: basename, content: raw };
     } catch {
       return null;
     }
@@ -204,8 +183,8 @@ export class SnippetService {
 
   /**
    * Phase 32 (D-03): Save a snippet. Branches on `kind`:
-   *   - `json` → sanitize + JSON.stringify
-   *   - `md`   → write raw content (free-text, no sanitisation)
+   *   - `md-template` → serialize frontmatter + body
+   *   - `md`         → write raw content (free-text, no sanitisation)
    * Wraps write in WriteMutex per-path (D-11). Ensures parent folder exists.
    * Throws on unsafe path (D-10).
    */
@@ -221,17 +200,9 @@ export class SnippetService {
       if (parent !== '' && parent !== this.settings.snippetFolderPath) {
         await ensureFolderPath(this.app.vault, parent);
       }
-      let payload: string;
-      if (snippet.kind === 'json') {
-        const clean = this.sanitizeJson(snippet);
-        payload = JSON.stringify(clean, null, 2);
-      } else if (snippet.kind === 'md-template') {
-        payload = serializeMarkdownTemplate(snippet);
-      } else {
-        // md: raw free-text content, no sanitisation (D-01)
-        const mdSnippet = snippet as Extract<Snippet, { kind: 'md' }>;
-        payload = mdSnippet.content;
-      }
+      const payload = snippet.kind === 'md-template'
+        ? serializeMarkdownTemplate(snippet)
+        : snippet.content;
       const exists = await this.app.vault.adapter.exists(normalized);
       if (exists) {
         await this.app.vault.adapter.write(normalized, payload);
@@ -347,7 +318,7 @@ export class SnippetService {
       index += 1;
     }
 
-    const duplicate = original.kind === 'json'
+    const duplicate: Snippet = original.kind === 'md-template'
       ? { ...original, path: candidate, name: this.basenameNoExt(candidate), placeholders: original.placeholders.map((p) => ({ ...p })) }
       : { ...original, path: candidate, name: this.basenameNoExt(candidate) };
     await this.save(duplicate);
@@ -367,13 +338,18 @@ export class SnippetService {
     if (normalizedOld === null) {
       throw new Error(`[RadiProtocol] renameSnippet rejected unsafe path: ${oldPath}`);
     }
+    // Phase 2 (JSON-removal): reject every non-`.md` source before computing a
+    // destination or touching the vault, so legacy JSON bytes can never be
+    // relabeled as Markdown.
+    if (!normalizedOld.toLowerCase().endsWith('.md')) {
+      throw new Error(this.t('snippetService.invalidName'));
+    }
     if (/[\\/]/.test(newBasename) || newBasename.trim() === '') {
       throw new Error(this.t('snippetService.invalidName'));
     }
     const lastSlash = normalizedOld.lastIndexOf('/');
     const parent = lastSlash > 0 ? normalizedOld.slice(0, lastSlash) : '';
-    const lower = normalizedOld.toLowerCase();
-    const ext = lower.endsWith('.md') ? '.md' : '.json';
+    const ext = '.md';
     const newPath = parent === '' ? `${newBasename}${ext}` : `${parent}/${newBasename}${ext}`;
     const normalizedNew = this.assertInsideRoot(newPath);
     if (normalizedNew === null) {
@@ -513,28 +489,85 @@ export class SnippetService {
   }
 
   /**
-   * Phase 32: Strip control characters (U+0000–U+001F, U+007F) from all
-   * string values in a JsonSnippet and produce a plain disk payload object
-   * (without runtime-only `kind` / `path` / deprecated `id`). Preserves
-   * ASVS V5 input sanitization (T-5-01).
+   * Phase 2 (JSON-removal): Discriminated result of resolving a runner snippet
+   * reference. `found` carries a loaded Markdown snippet; `legacy-json` reports
+   * a `.json` file matched on disk (no longer supported); `missing` means no
+   * `.md`/`.json` match exists. The view switches on `status` and delegates
+   * presentation to `render-snippet-fill.ts`.
    */
-  private sanitizeJson(snippet: JsonSnippet): {
-    name: string;
-    template: string;
-    placeholders: JsonSnippet['placeholders'];
-  } {
-    // eslint-disable-next-line no-control-regex
-    const clean = (s: string): string => s.replace(new RegExp('[\\x00-\\x1f\\x7f]', 'g'), '');
-    return {
-      name: clean(snippet.name),
-      template: clean(snippet.template),
-      placeholders: snippet.placeholders.map((p) => ({
-        ...p,
-        label: clean(p.label),
-        options: p.options?.map(clean),
-        // Phase 52 D-02: legacy join-field renamed to `separator`; D-07: legacy unit field removed.
-        separator: p.separator !== undefined ? clean(p.separator) : undefined,
-      })),
-    };
+  async resolveSnippet(snippetId: string): Promise<SnippetResolution> {
+    const root = this.settings.snippetFolderPath;
+    const normalizedRoot = this.assertInsideRoot(root);
+    if (normalizedRoot === null) return { status: 'missing' };
+
+    const isFullPath = snippetId.includes('/') || snippetId.endsWith('.md') || snippetId.endsWith('.json');
+
+    // Direct full-path reference: probe `${root}/${id}` when id is relative,
+    // or the id itself when it is already anchored under the snippet root.
+    if (isFullPath) {
+      const candidate = snippetId.startsWith(normalizedRoot + '/')
+        ? snippetId
+        : `${normalizedRoot}/${snippetId}`;
+      const safe = this.assertInsideRoot(candidate);
+      if (safe === null) return { status: 'missing' };
+      const exists = await this.app.vault.adapter.exists(safe);
+      if (exists) {
+        if (safe.toLowerCase().endsWith('.json')) {
+          return { status: 'legacy-json', path: safe };
+        }
+        const snippet = await this.load(safe);
+        if (snippet !== null) return { status: 'found', snippet };
+      }
+      return { status: 'missing' };
+    }
+
+    // Extensionless id: probe the snippet root for `${id}.md` then `${id}.json`.
+    const mdCandidate = this.assertInsideRoot(`${normalizedRoot}/${snippetId}.md`);
+    if (mdCandidate !== null) {
+      if (await this.app.vault.adapter.exists(mdCandidate)) {
+        const snippet = await this.load(mdCandidate);
+        if (snippet !== null) return { status: 'found', snippet };
+      }
+    }
+    const jsonCandidate = this.assertInsideRoot(`${normalizedRoot}/${snippetId}.json`);
+    if (jsonCandidate !== null) {
+      if (await this.app.vault.adapter.exists(jsonCandidate)) {
+        return { status: 'legacy-json', path: jsonCandidate };
+      }
+    }
+
+    // Fallback: unique-subdirectory scan via vault.getFiles() scoped to the
+    // snippet root. Try `.md` first, then `.json`.
+    const mdMatch = await this.findUniqueSubdirMatch(snippetId, '.md');
+    if (mdMatch !== null) {
+      const snippet = await this.load(mdMatch);
+      if (snippet !== null) return { status: 'found', snippet };
+    }
+    const jsonMatch = await this.findUniqueSubdirMatch(snippetId, '.json');
+    if (jsonMatch !== null) {
+      return { status: 'legacy-json', path: jsonMatch };
+    }
+
+    return { status: 'missing' };
+  }
+
+  /**
+   * Phase 2 (JSON-removal): scan vault files under the snippet root for a
+   * basename of `${snippetId}${ext}`. Returns the unique matching path when
+   * exactly one candidate exists, otherwise null. Every considered path is
+   * re-checked through `assertInsideRoot` so traversal-escaping ids never reach
+   * the vault adapter.
+   */
+  private async findUniqueSubdirMatch(snippetId: string, ext: string): Promise<string | null> {
+    const root = this.settings.snippetFolderPath;
+    const targetBasename = `${snippetId}${ext}`;
+    const candidates = this.app.vault.getFiles().filter((f) => {
+      if (!f.path.startsWith(root + '/')) return false;
+      const parts = f.path.split('/');
+      return parts[parts.length - 1] === targetBasename;
+    });
+    if (candidates.length !== 1) return null;
+    const safe = this.assertInsideRoot(candidates[0]!.path);
+    return safe;
   }
 }

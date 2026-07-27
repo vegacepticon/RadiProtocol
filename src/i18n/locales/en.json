@@ -165,7 +165,6 @@
     "setSnippetFolderFirst": "Set a snippet folder in settings before inserting snippets.",
     "openMarkdownFirst": "Open a Markdown note first, then insert a snippet.",
     "notFound": "Snippet not found: {path}",
-    "cannotBeUsed": "Snippet «{path}» cannot be used. {error}",
     "inserted": "Snippet inserted."
   },
   "snippetTreePicker": {
@@ -309,14 +308,13 @@
     "loadingSnippets": "Loading snippets…",
     "keyStepBack": "Ctrl+← Back",
     "keyStepRedo": "Ctrl+→ Redo",
-    "keyClose": "Esc Close",
-    "createSnippetFromSelection": "Create snippet from selection"
+    "keyClose": "Esc Close"
   },
   "inlineRunner": {
     "protocolFileNotFound": "Protocol file not found: \"{path}\".",
     "couldNotReadProtocol": "Could not read protocol file: \"{path}\".",
     "snippetNotFound": "Snippet not found: \"{path}\".",
-    "snippetCannotBeUsed": "Snippet \"{path}\" cannot be used. {error}"
+    "snippetLegacyJson": "Snippet \"{path}\" uses the legacy JSON format, which is no longer supported. Please recreate it as a Markdown template, then update the protocol."
   },
   "snippetPreview": {
     "ariaLabel": "Snippet preview",

@@ -264,7 +264,7 @@ vi.mock('../../snippets/canvas-ref-sync', () => ({
 
 // --- Import SUT ----------------------------------------------------------
 import { SnippetEditorModal } from '../../views/snippet-editor-modal';
-import type { JsonSnippet } from '../../snippets/snippet-model';
+import type { MdTemplateSnippet } from '../../snippets/snippet-model';
 // Phase 84 (I18N-02): SnippetEditorModal calls plugin.i18n.t(...) at render time.
 import { I18nService } from '../../i18n';
 
@@ -294,8 +294,8 @@ function makeMockPlugin(): { plugin: { app: unknown; settings: { snippetFolderPa
   return { plugin, service };
 }
 
-function sampleJsonSnippet(path = '.radiprotocol/snippets/abdomen/ct-routine.json'): JsonSnippet {
-  return { kind: 'json', path, name: 'ct-routine', template: '', placeholders: [], validationError: null };
+function sampleJsonSnippet(path = '.radiprotocol/snippets/abdomen/ct-routine.md'): MdTemplateSnippet {
+  return { kind: 'md-template', path, name: 'ct-routine', template: '', placeholders: [], validationError: null };
 }
 
 // Helper: find all descendants matching predicate

@@ -1,13 +1,13 @@
 // views/snippet-fill-in-modal.ts
 // Runtime fill-in modal for dynamic snippets (SNIP-04, SNIP-05, SNIP-09, D-10 through D-13)
 import { Modal, App } from 'obsidian';
-import type { JsonSnippet, MdTemplateSnippet, SnippetPlaceholder } from '../snippets/snippet-model';
-import { renderMdTemplateSnippet, renderSnippet } from '../snippets/snippet-model';
+import type { MdTemplateSnippet, SnippetPlaceholder } from '../snippets/snippet-model';
+import { renderMdTemplateSnippet } from '../snippets/snippet-model';
 import type { Translator } from '../i18n';
 import { defaultT } from '../i18n';
 
-// Phase 32 (D-01): JsonSnippet is the canonical type for fill-in modal input.
-// Previously typed as `SnippetFile`, which is now an alias for `JsonSnippet`.
+// Phase 2 (JSON-removal): the fill-in modal accepts Markdown template snippets
+// only and renders exclusively via renderMdTemplateSnippet.
 
 /**
  * SnippetFillInModal — presented by a runner host when the runner reaches a text-block
@@ -22,11 +22,11 @@ import { defaultT } from '../i18n';
  *   - string  — fully-rendered snippet text (Confirm path)
  *   - null    — user cancelled or pressed Escape (runner skips snippet, D-11)
  *
- * The modal has zero knowledge of the runner — it receives a SnippetFile and
- * resolves its promise. The caller decides what to do with the result.
+ * The modal has zero knowledge of the runner — it receives a Markdown template
+ * snippet and resolves its promise. The caller decides what to do with the result.
  */
 export class SnippetFillInModal extends Modal {
-  private readonly snippet: JsonSnippet | MdTemplateSnippet;
+  private readonly snippet: MdTemplateSnippet;
   private resolve!: (value: string | null) => void;
   /** Double-resolve guard (T-5-11, RESEARCH.md Pitfall 3) */
   private resolved = false;
@@ -40,7 +40,7 @@ export class SnippetFillInModal extends Modal {
   private previewTextarea: HTMLTextAreaElement | null = null;
   private readonly t: Translator;
 
-  constructor(app: App, snippet: JsonSnippet | MdTemplateSnippet, t?: Translator) {
+  constructor(app: App, snippet: MdTemplateSnippet, t?: Translator) {
     super(app);
     this.snippet = snippet;
     this.t = t ?? defaultT;
@@ -268,9 +268,7 @@ export class SnippetFillInModal extends Modal {
   }
 
   private renderCurrentSnippet(): string {
-    return this.snippet.kind === 'md-template'
-      ? renderMdTemplateSnippet(this.snippet, this.values)
-      : renderSnippet(this.snippet, this.values);
+    return renderMdTemplateSnippet(this.snippet, this.values);
   }
 
   /** Render the Cancel / Confirm button row. Confirm is the last tab stop (D-12). */

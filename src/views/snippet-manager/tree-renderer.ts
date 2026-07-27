@@ -26,7 +26,7 @@ export interface TreeNodeFile {
   kind: 'file';
   path: string;
   name: string;
-  snippetKind: 'json' | 'md' | 'md-template';
+  snippetKind: 'md' | 'md-template';
 }
 export type TreeNode = TreeNodeFolder | TreeNodeFile;
 
@@ -43,7 +43,7 @@ export function basenameNoExt(path: string): string {
 
 function iconForNode(node: TreeNode, expanded: boolean): string {
   if (node.kind === 'folder') return expanded ? 'folder-open' : 'folder';
-  return node.snippetKind === 'json' ? 'file-json' : 'file-text';
+  return 'file-text';
 }
 
 // ---------------------------------------------------------------------------

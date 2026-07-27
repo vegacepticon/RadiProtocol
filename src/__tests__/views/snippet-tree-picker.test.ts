@@ -243,11 +243,11 @@ function makeFakeSnippetService(): FakeSnippetService {
   };
 }
 
-function jsonSnippet(path: string, name?: string): Snippet {
+function mdTemplateSnippet(path: string, name?: string): Snippet {
   return {
-    kind: 'json',
+    kind: 'md-template',
     path,
-    name: name ?? path.split('/').pop()!.replace(/\.json$/, ''),
+    name: name ?? path.split('/').pop()!.replace(/\.md$/, ''),
     template: '',
     placeholders: [],
     validationError: null,
@@ -370,7 +370,7 @@ describe('Mode discriminator (D-08, D-09)', () => {
   it('folder-only mode hides files in drill view', async () => {
     svc.listFolder.mockResolvedValue({
       folders: ['abdomen'],
-      snippets: [jsonSnippet(`${ROOT}/report.json`)],
+      snippets: [mdTemplateSnippet(`${ROOT}/report.md`)],
     });
     const { picker, container } = makePicker({ mode: 'folder-only' }, svc);
     await picker.mount();
@@ -427,7 +427,7 @@ describe('Mode discriminator (D-08, D-09)', () => {
   it('file-only mode shows folders (drill) + files (select) in drill view', async () => {
     svc.listFolder.mockResolvedValue({
       folders: ['abdomen'],
-      snippets: [jsonSnippet(`${ROOT}/report.json`)],
+      snippets: [mdTemplateSnippet(`${ROOT}/report.md`)],
     });
     const { picker, container } = makePicker({ mode: 'file-only' }, svc);
     await picker.mount();
@@ -459,20 +459,20 @@ describe('Mode discriminator (D-08, D-09)', () => {
   it('file-only mode emits onSelect with kind: file on file row click', async () => {
     svc.listFolder.mockResolvedValue({
       folders: [],
-      snippets: [jsonSnippet(`${ROOT}/report.json`)],
+      snippets: [mdTemplateSnippet(`${ROOT}/report.md`)],
     });
     const { picker, container, onSelect } = makePicker({ mode: 'file-only' }, svc);
     await picker.mount();
 
     const fileRow = findByClass(container, 'rp-stp-file-row')[0];
     triggerClick(fileRow);
-    expect(onSelect).toHaveBeenCalledWith({ kind: 'file', relativePath: 'report.json' });
+    expect(onSelect).toHaveBeenCalledWith({ kind: 'file', relativePath: 'report.md' });
   });
 
   it('both mode shows folders + files in drill view', async () => {
     svc.listFolder.mockResolvedValue({
       folders: ['abdomen'],
-      snippets: [jsonSnippet(`${ROOT}/r.json`)],
+      snippets: [mdTemplateSnippet(`${ROOT}/r.md`)],
     });
     const { picker, container } = makePicker({ mode: 'both' }, svc);
     await picker.mount();
@@ -752,23 +752,10 @@ describe('File glyph dispatch (Phase 35 MD-01 preservation)', () => {
     expect(name?.textContent).toContain('report.md');
   });
 
-  it('file row for .json file renders 📄 prefix in primary text (drill view, file-only mode)', async () => {
-    svc.listFolder.mockResolvedValue({
-      folders: [],
-      snippets: [jsonSnippet(`${ROOT}/report.json`)],
-    });
-    const { picker, container } = makePicker({ mode: 'file-only' }, svc);
-    await picker.mount();
-
-    const name = findFirst(container, (el) => el.classList.has('rp-stp-result-name'));
-    expect(name?.textContent).toContain('📄');
-    expect(name?.textContent).toContain('report.json');
-  });
-
-  it('search results show 📝 for .md matches AND 📄 for .json matches in mixed-extension fixture (both mode)', async () => {
+  it('search results OMIT legacy .json files from raw listFolderDescendants while .md files in the same listing ARE shown', async () => {
     svc.listFolder.mockResolvedValue({ folders: [], snippets: [] });
     svc.listFolderDescendants.mockResolvedValue({
-      files: [`${ROOT}/a.md`, `${ROOT}/a.json`],
+      files: [`${ROOT}/a.md`, `${ROOT}/legacy.json`],
       folders: [],
       total: 2,
     });
@@ -776,14 +763,20 @@ describe('File glyph dispatch (Phase 35 MD-01 preservation)', () => {
     await picker.mount();
 
     const input = findFirst(container, (el) => el.classList.has('rp-stp-search-input'))!;
+
+    // Query 'leg' matches legacy.json's basename — but .json files are filtered
+    // out of search results BEFORE basename matching, so NO file row renders.
+    triggerInput(input, 'leg');
+    await flushDebounce();
+    expect(findByClass(container, 'rp-stp-file-row').length).toBe(0);
+
+    // Query 'a' matches a.md's basename — the .md file SHOULD render as a row.
     triggerInput(input, 'a');
     await flushDebounce();
-
-    const names = findAll(container, (el) => el.classList.has('rp-stp-result-name')).map((e) => e.textContent);
-    const hasMd = names.some((t) => t.includes('📝') && t.includes('a.md'));
-    const hasJson = names.some((t) => t.includes('📄') && t.includes('a.json'));
-    expect(hasMd).toBe(true);
-    expect(hasJson).toBe(true);
+    const mdRows = findByClass(container, 'rp-stp-file-row');
+    expect(mdRows.length).toBe(1);
+    const name = findFirst(mdRows[0], (el) => el.classList.has('rp-stp-result-name'));
+    expect(name?.textContent).toContain('a.md');
   });
 
   it('case-insensitive extension dispatch — .MD file renders 📝 (verifies lowercased ext check)', async () => {
@@ -868,8 +861,8 @@ describe('Search row click (D-12)', () => {
   it('manually clearing search input restores drill view at CURRENT drillPath, NOT rootPath', async () => {
     svc.listFolder
       .mockResolvedValueOnce({ folders: ['abdomen'], snippets: [] })     // root
-      .mockResolvedValueOnce({ folders: [], snippets: [jsonSnippet(`${ROOT}/abdomen/r.json`)] })  // abdomen after drill
-      .mockResolvedValueOnce({ folders: [], snippets: [jsonSnippet(`${ROOT}/abdomen/r.json`)] }); // abdomen after clearing search
+      .mockResolvedValueOnce({ folders: [], snippets: [mdTemplateSnippet(`${ROOT}/abdomen/r.md`)] })  // abdomen after drill
+      .mockResolvedValueOnce({ folders: [], snippets: [mdTemplateSnippet(`${ROOT}/abdomen/r.md`)] }); // abdomen after clearing search
     svc.listFolderDescendants.mockResolvedValue({
       files: [`${ROOT}/abdomen/r.json`],
       folders: [],
@@ -1122,7 +1115,7 @@ describe('Picker row accessibility (no tooltip-triggering attributes)', () => {
   it('file rows do not carry tooltip-triggering title or aria-label attributes', async () => {
     svc.listFolder.mockResolvedValue({
       folders: [],
-      snippets: [jsonSnippet(`${ROOT}/report.json`)],
+      snippets: [mdTemplateSnippet(`${ROOT}/report.md`)],
     });
     const { picker, container } = makePicker({ mode: 'file-only' }, svc);
     await picker.mount();
@@ -1174,7 +1167,7 @@ describe('Keyboard navigation (Phase 4)', () => {
   it('ArrowDown moves the highlight onto the first row, then the second', async () => {
     svc.listFolder.mockResolvedValue({
       folders: ['abdomen', 'chest'],
-      snippets: [jsonSnippet(`${ROOT}/report.json`)],
+      snippets: [mdTemplateSnippet(`${ROOT}/report.md`)],
     });
     const { picker, container } = makePicker({ mode: 'both' }, svc);
     await picker.mount();
@@ -1211,7 +1204,7 @@ describe('Keyboard navigation (Phase 4)', () => {
   it('wrap-around: ArrowDown from last wraps to first; ArrowUp from first wraps to last', async () => {
     svc.listFolder.mockResolvedValue({
       folders: ['abdomen', 'chest'],
-      snippets: [jsonSnippet(`${ROOT}/report.json`)],
+      snippets: [mdTemplateSnippet(`${ROOT}/report.md`)],
     });
     const { picker, container } = makePicker({ mode: 'both' }, svc);
     await picker.mount();
@@ -1237,7 +1230,7 @@ describe('Keyboard navigation (Phase 4)', () => {
   it('Enter on a highlighted file row dispatches the row click handler (onSelect with kind: file)', async () => {
     svc.listFolder.mockResolvedValue({
       folders: [],
-      snippets: [jsonSnippet(`${ROOT}/report.json`)],
+      snippets: [mdTemplateSnippet(`${ROOT}/report.md`)],
     });
     const { picker, container, onSelect } = makePicker({ mode: 'file-only' }, svc);
     await picker.mount();
@@ -1245,7 +1238,7 @@ describe('Keyboard navigation (Phase 4)', () => {
     const input = findFirst(container, (el) => el.classList.has('rp-stp-search-input'))!;
     triggerKeydown(input, 'ArrowDown'); // → file row (only row)
     triggerKeydown(input, 'Enter');
-    expect(onSelect).toHaveBeenCalledWith({ kind: 'file', relativePath: 'report.json' });
+    expect(onSelect).toHaveBeenCalledWith({ kind: 'file', relativePath: 'report.md' });
   });
 
   it('Enter on a highlighted folder row drills in (same path as a mouse click)', async () => {
@@ -1268,7 +1261,7 @@ describe('Keyboard navigation (Phase 4)', () => {
   it('Enter with no highlighted row is a no-op and does not throw', async () => {
     svc.listFolder.mockResolvedValue({
       folders: ['abdomen'],
-      snippets: [jsonSnippet(`${ROOT}/r.json`)],
+      snippets: [mdTemplateSnippet(`${ROOT}/r.md`)],
     });
     const { picker, container, onSelect } = makePicker({ mode: 'both' }, svc);
     await picker.mount();

@@ -9,7 +9,6 @@ import type { ProtocolGraph, AnswerNode } from '../graph/graph-model';
 import type { RunnerState } from '../runner/runner-state';
 import { SnippetTreePicker } from './snippet-tree-picker';
 import { SnippetFillInModal } from './snippet-fill-in-modal';
-import { SnippetEditorModal } from './snippet-editor-modal';
 import { renderLoopPicker } from '../runner/render/render-loop-picker';
 import { renderQuestionAtNode } from '../runner/render/render-question';
 import { renderSnippetPicker } from '../runner/render/render-snippet-picker';
@@ -18,9 +17,9 @@ import { renderErrorList } from '../runner/render/render-error';
 import { createButton } from '../utils/dom-helpers';
 import { CSS_CLASS } from '../constants/css-classes';
 import {
-  isFullSnippetPath,
   renderSnippetFillLoading,
   renderSnippetFillNotFound,
+  renderSnippetFillUnsupportedFormat,
 } from '../runner/render/render-snippet-fill';
 import type { InlineRunnerLayout } from '../settings';
 import { InlineRunnerLayoutManager } from './inline-runner-layout';
@@ -75,10 +74,6 @@ export class InlineRunnerModal {
   private isFillModalOpen = false;
 
   private boundKeyHandler: ((e: KeyboardEvent) => void) | null = null;
-
-  /** Phase 2 — create-snippet-from-selection footer button + selection listener. */
-  private createSnippetBtnEl: HTMLButtonElement | null = null;
-  private boundSelectionHandler: (() => void) | null = null;
 
   constructor(
     app: App,
@@ -230,13 +225,6 @@ export class InlineRunnerModal {
     // Keyboard shortcuts: Ctrl/Alt+Left = step back, Ctrl/Alt+Right = redo, Escape = close
     this.boundKeyHandler = (e: KeyboardEvent) => this.handleKeydown(e);
     this.containerEl?.addEventListener('keydown', this.boundKeyHandler);
-
-    // Phase 2 — track text selection inside contentEl to enable/disable the
-    // create-snippet-from-selection footer button. mouseup covers drag-selection;
-    // selectionchange covers keyboard Shift+Arrow selection.
-    this.boundSelectionHandler = () => this.updateCreateSnippetButtonState();
-    this.contentEl?.addEventListener('mouseup', this.boundSelectionHandler);
-    document.addEventListener('selectionchange', this.boundSelectionHandler);
   }
 
   close(): void {
@@ -265,14 +253,6 @@ export class InlineRunnerModal {
     }
     this.boundKeyHandler = null;
 
-    // Phase 2 — detach selection listeners and release DOM refs (parity with boundKeyHandler).
-    // Runs BEFORE contentEl/containerEl are nulled below so removeEventListener still sees the node.
-    if (this.boundSelectionHandler !== null) {
-      this.contentEl?.removeEventListener('mouseup', this.boundSelectionHandler);
-      document.removeEventListener('selectionchange', this.boundSelectionHandler);
-      this.boundSelectionHandler = null;
-    }
-    this.createSnippetBtnEl = null;
     if (this.activeFileEventRef !== null) {
       this.app.workspace.offref(this.activeFileEventRef);
       this.activeFileEventRef = null;
@@ -447,30 +427,14 @@ export class InlineRunnerModal {
     if (this.footerBtnRowEl !== null) {
       this.footerBtnRowEl.empty();
 
-      // Phase 2 — left group holds close + create-snippet-from-selection.
-      const leftGroup = this.footerBtnRowEl.createDiv({ cls: 'rp-runner-footer-left' });
-
-      // Close button — always present on the left
-      const closeBtn = leftGroup.createEl('button', { cls: 'rp-inline-runner-close-btn rp-runner-icon-btn' });
+      // Close button — direct child of the footer row, anchors the left side.
+      // renderFooterIcons() appends Back/Redo/Skip as the second flex item (right side).
+      const closeBtn = this.footerBtnRowEl.createEl('button', { cls: 'rp-inline-runner-close-btn rp-runner-icon-btn' });
       setIcon(closeBtn, 'x');
       closeBtn.setAttribute('aria-label', this.plugin.i18n.t('protocolRunner.closeProtocol'));
       closeBtn.addEventListener('click', () => {
         this.close();
       });
-
-      // Create-snippet-from-selection — always visible, disabled until contentEl has a selection.
-      const createSnippetBtn = leftGroup.createEl('button', {
-        cls: 'rp-inline-runner-create-snippet-btn rp-runner-icon-btn',
-        attr: { 'aria-label': this.plugin.i18n.t('protocolRunner.createSnippetFromSelection') },
-      });
-      setIcon(createSnippetBtn, 'file-plus');
-      createSnippetBtn.disabled = true;
-      createSnippetBtn.addEventListener('click', () => {
-        void this.handleCreateSnippetFromSelection();
-      });
-      this.createSnippetBtnEl = createSnippetBtn;
-      // Re-evaluate against the live selection so an existing selection at render time enables it.
-      this.updateCreateSnippetButtonState();
     }
 
     switch (state.status) {
@@ -735,47 +699,6 @@ export class InlineRunnerModal {
     }
   }
 
-  /** Phase 2 — Return the current selection's text iff its anchor node is contained
-   *  in contentEl. Selections outside the runner (e.g. in the note behind it) return ''. */
-  private getSelectedContentText(): string {
-    if (this.contentEl === null) return '';
-    if (typeof window === 'undefined') return '';
-    const sel = window.getSelection();
-    if (sel === null || sel.isCollapsed) return '';
-    const anchorNode = sel.anchorNode;
-    if (anchorNode === null) return '';
-
-    const contentEl = this.contentEl;
-    let node: Node | null = anchorNode;
-    while (node !== null) {
-      if (node === contentEl) return sel.toString();
-      node = node.parentNode;
-    }
-    return '';
-  }
-
-  /** Phase 2 — Enable/disable the create-snippet button based on the live selection. */
-  private updateCreateSnippetButtonState(): void {
-    if (this.createSnippetBtnEl === null) return;
-    this.createSnippetBtnEl.disabled = this.getSelectedContentText().length === 0;
-  }
-
-  /** Phase 2 — Capture the selection, open SnippetEditorModal in create mode pre-filled
-   *  with the selected text, await its result. The inline runner stays open underneath
-   *  (SnippetEditorModal mounts to document.body and stacks above the runner overlay).
-   *  Defensive guard: no-op when the selection is empty (covers disabled-button edge). */
-  private async handleCreateSnippetFromSelection(): Promise<void> {
-    const template = this.getSelectedContentText();
-    if (template.length === 0) return;
-    const modal = new SnippetEditorModal(this.app, this.plugin, {
-      mode: 'create',
-      initialFolder: this.plugin.settings.snippetFolderPath,
-      initialTemplate: template,
-    });
-    modal.open();
-    await modal.result;
-  }
-
   /** Phase 85 INLINE-MULTI-02: public so the cascade logic in another modal's
    *  open() can read this instance's current applied position. */
   getAppliedLayout(): InlineRunnerLayout | null {
@@ -960,8 +883,6 @@ export class InlineRunnerModal {
       hostClass: CSS_CLASS.STP_INLINE_HOST,
       copy: {
         notFound: (relativePath) => this.plugin.i18n.t('inlineRunner.snippetNotFound', { path: relativePath }),
-        validationError: (snippetPath, validationMessage) =>
-          this.plugin.i18n.t('inlineRunner.snippetCannotBeUsed', { path: snippetPath, error: validationMessage }),
       },
       t: this.plugin.i18n.t.bind(this.plugin.i18n),
       bindClick: (el, handler) => el.addEventListener('click', handler),
@@ -999,15 +920,11 @@ export class InlineRunnerModal {
     });
   }
 
-  /** Handle snippet picker selection — append to note and advance. */
+  /** Handle snippet picker selection — append to note and advance.
+   *  Phase 2 (JSON-removal): Snippet is now MdSnippet | MdTemplateSnippet, so
+   *  the JSON validation gate is gone and pickId is always the snippet path. */
   private async handleSnippetPickerSelection(snippet: import('../snippets/snippet-model').Snippet): Promise<void> {
-    if (snippet.kind === 'json' && snippet.validationError !== null) {
-      new Notice(this.plugin.i18n.t('inlineRunner.snippetCannotBeUsed', { path: snippet.path, error: snippet.validationError }));
-      return;
-    }
-
-    const pickId = (snippet.kind === 'md' || snippet.kind === 'md-template') ? snippet.path : (snippet.id ?? snippet.name);
-    this.runner.pickSnippet(pickId);
+    this.runner.pickSnippet(snippet.path);
 
     if (snippet.kind === 'md') {
       // Phase 59 INLINE-FIX-04: capture baseline BEFORE completeSnippet so the
@@ -1038,110 +955,45 @@ export class InlineRunnerModal {
   }
 
   /**
-   * Phase 59 INLINE-FIX-05 — Load snippet and dispatch fill-in modal (parity with sidebar).
+   * Phase 59 INLINE-FIX-05 — Resolve snippet and dispatch fill-in modal.
    *
-   * Reverses Phase 54 D6: instead of rendering an in-panel form via the old fill-in method,
-   * this now instantiates the stacked SnippetFillInModal using the shared snippet-fill flow.
-   * The modal mounts to document.body (via Obsidian Modal); the inline container stays
-   * visible underneath (gated by isFillModalOpen in handleActiveLeafChange).
+   * Phase 2 (JSON-removal): all snippet-ID resolution (direct full-path,
+   * extensionless root probe, unique-subdirectory fallback) is owned by
+   * `SnippetService.resolveSnippet`, which returns a discriminated
+   * `SnippetResolution` (`found | legacy-json | missing`). This method only
+   * orchestrates on that result and delegates presentation to
+   * `render-snippet-fill.ts`. No path-shape branching, `${id}.json`/`${id}.md`
+   * probe loop, `app.vault.getFiles().filter(...)` subdirectory scan, or
+   * JSON-kind validation gate remains in the view.
    */
   private async handleSnippetFill(snippetId: string, questionZone: HTMLElement): Promise<void> {
-    const isPhase51FullPath = isFullSnippetPath(snippetId);
-    const root = this.plugin.settings.snippetFolderPath;
-    // WR-03: avoid double-prefixing when snippetId is already an absolute vault path
-    const absPath = snippetId.startsWith(root + '/')
-      ? snippetId
-      : isPhase51FullPath
-        ? `${root}/${snippetId}`
-        : null; // determined below via extension trial
+    const t = this.plugin.i18n.t.bind(this.plugin.i18n);
+    const resolution = await this.plugin.snippetService.resolveSnippet(snippetId);
 
-    let snippet = null as Awaited<ReturnType<typeof this.plugin.snippetService.load>>;
-    // Try .json then .md when snippetId lacks extension (picker basename case).
-    if (absPath !== null) {
-      snippet = await this.plugin.snippetService.load(absPath);
-    } else {
-      snippet = await this.plugin.snippetService.load(`${root}/${snippetId}.json`);
-      if (snippet === null) {
-        snippet = await this.plugin.snippetService.load(`${root}/${snippetId}.md`);
-      }
-    }
-
-    // Phase 59 INLINE-FIX-05: fallback scan for JSON snippets in subdirectories.
-    // When a snippet was selected from a picker in a subdirectory, pickId is a
-    // basename, so the direct path misses the subdirectory. Scan vault files
-    // under the snippet root for a matching basename.
-    if (snippet === null && !isPhase51FullPath) {
-      // Try .json then .md in subdirectories.
-      for (const ext of ['.json', '.md']) {
-        const targetBasename = `${snippetId}${ext}`;
-        const candidates = this.app.vault.getFiles().filter((f) => {
-          if (!f.path.startsWith(root + '/')) return false;
-          const parts = f.path.split('/');
-          return parts[parts.length - 1]! === targetBasename;
-        });
-        if (candidates.length === 1) {
-          snippet = await this.plugin.snippetService.load(candidates[0]!.path);
-          if (snippet !== null) break;
-        }
-      }
-    }
-
-    if (snippet === null) {
+    if (resolution.status === 'missing') {
       renderSnippetFillNotFound(questionZone, snippetId);
       return;
     }
 
-    if (snippet.kind === 'json' && snippet.validationError !== null) {
-      new Notice(this.plugin.i18n.t('inlineRunner.snippetCannotBeUsed', { path: snippet.path, error: snippet.validationError }));
+    if (resolution.status === 'legacy-json') {
+      renderSnippetFillUnsupportedFormat(questionZone, resolution.path, t);
       this.runner.stepBack();
       this.render();
       return;
     }
 
+    const snippet = resolution.snippet;
     // Capture accumulator baseline before any runner mutation, for separator-applied delta.
     const beforeText = this.extractAccumulatedText(this.runner.getState());
 
     if (snippet.kind === 'md') {
-      if (isPhase51FullPath) {
-        this.runner.completeSnippet(snippet.content);
-        await this.appendDeltaFromAccumulator(beforeText);
-        this.render();
-        return;
-      }
-      // Legacy path — MD snippet via non-full-path id; treat as not-found.
-      renderSnippetFillNotFound(questionZone, snippetId);
-      return;
-    }
-
-    if (snippet.kind === 'md-template') {
-      if (snippet.placeholders.length === 0) {
-        this.runner.completeSnippet(snippet.template);
-        await this.appendDeltaFromAccumulator(beforeText);
-        this.render();
-        return;
-      }
-      // md-template with placeholders — open the stacked fill-in modal.
-      const modal = new SnippetFillInModal(this.app, snippet, this.plugin.i18n.t.bind(this.plugin.i18n));
-      this.fillModal = modal;
-      this.isFillModalOpen = true;
-      modal.open();
-      let rendered: string | null;
-      try {
-        rendered = await modal.result;
-      } finally {
-        this.isFillModalOpen = false;
-        this.fillModal = null;
-      }
-      if (rendered !== null) {
-        this.runner.completeSnippet(rendered);
-      } else {
-        this.runner.completeSnippet('');
-      }
+      this.runner.completeSnippet(snippet.content);
       await this.appendDeltaFromAccumulator(beforeText);
       this.render();
       return;
     }
 
+    // md-template
     if (snippet.placeholders.length === 0) {
       this.runner.completeSnippet(snippet.template);
       await this.appendDeltaFromAccumulator(beforeText);
@@ -1149,9 +1001,8 @@ export class InlineRunnerModal {
       return;
     }
 
-    // JSON with placeholders — open the stacked fill-in modal (parity with sidebar).
-    // Phase 54 D6 is reversed: the in-panel fill-in form is gone.
-    const modal = new SnippetFillInModal(this.app, snippet, this.plugin.i18n.t.bind(this.plugin.i18n));
+    // md-template with placeholders — open the stacked fill-in modal.
+    const modal = new SnippetFillInModal(this.app, snippet, t);
     this.fillModal = modal;
     this.isFillModalOpen = true;
     modal.open();

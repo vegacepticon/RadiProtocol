@@ -33,8 +33,6 @@ type SnippetPickerHostClass = typeof CSS_CLASS.STP_INLINE_HOST;
 export interface SnippetPickerCopy {
   /** Snippet at the picked path could not be loaded. */
   notFound(relativePath: string): string;
-  /** JSON snippet loaded but carries a non-null validationError. */
-  validationError(snippetPath: string, validationMessage: string): string;
 }
 
 export interface SnippetPickerRenderOptions extends RunnerFooterHost {
@@ -108,10 +106,6 @@ export function renderSnippetPicker(
 
         if (snippet === null) {
           presentAsyncError(copy.notFound(result.relativePath));
-          return;
-        }
-        if (snippet.kind === 'json' && snippet.validationError !== null) {
-          presentAsyncError(copy.validationError(snippet.path, snippet.validationError));
           return;
         }
         await options.onSnippetReady(snippet);
