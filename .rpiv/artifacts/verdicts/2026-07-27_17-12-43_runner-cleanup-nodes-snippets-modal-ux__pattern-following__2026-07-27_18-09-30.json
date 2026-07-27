@@ -1,0 +1,10 @@
+{
+  "dimension": "pattern-following",
+  "pass": true,
+  "score": 96,
+  "severity": "none",
+  "graded_at": "2026-07-27T18:09:30+0300",
+  "artifact": ".rpiv/artifacts/plans/2026-07-27_17-12-43_runner-cleanup-nodes-snippets-modal-ux.md",
+  "findings": [],
+  "feedback": "The plan consistently follows local factory, service, runner-render, CSS, i18n, and test-suite conventions."
+}

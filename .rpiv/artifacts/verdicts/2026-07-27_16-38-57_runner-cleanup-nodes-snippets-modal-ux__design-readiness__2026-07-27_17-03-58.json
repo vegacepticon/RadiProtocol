@@ -1,0 +1,13 @@
+{
+  "dimension": "design-readiness",
+  "pass": true,
+  "score": 87,
+  "severity": "low",
+  "graded_at": "2026-07-27T17:03:58+0300",
+  "artifact": ".rpiv/artifacts/slices/2026-07-27_16-38-57_runner-cleanup-nodes-snippets-modal-ux.md",
+  "findings": [
+    { "detail": "Slice 4 cites the nodeUid pattern at src/views/protocol-editor-view.ts:293-295, but nodeUid() is actually defined at :347-349 (verified by grep). The footing is real and the design pass will find it via the named symbol, but the seeded line range is off by ~54 lines and would not resolve if read literally.", "where": "## Slice 4: Default a Start node into newly created protocols" },
+    { "detail": "Slice 1 scope names 'the cleanup in close()' for detaching the mouseup/selectionchange listeners, but Draws on seeds no close()-method line range for that detach block (the listener-wiring seed at :233-239 and the footer-render seed at :446-473 do not cover the close() detach). Same file and mentioned in scope so reachable, but the footing list is mildly under-seeded.", "where": "## Slice 1: Remove create-snippet-from-selection footer button" }
+  ],
+  "feedback": "PASS with two cosmetic citation nits: Slice 4 nodeUid seed line range should be corrected to src/views/protocol-editor-view.ts:347-349; Slice 1 Draws on should add the close()-detach line range for the selection listeners. Neither blocks a single design-slice pass."
+}

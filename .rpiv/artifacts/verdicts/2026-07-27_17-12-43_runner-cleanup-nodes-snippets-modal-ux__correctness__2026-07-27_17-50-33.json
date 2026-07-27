@@ -1,0 +1,30 @@
+{
+  "dimension": "correctness",
+  "pass": false,
+  "score": 68,
+  "severity": "high",
+  "graded_at": "2026-07-27T17:50:33+0300",
+  "artifact": ".rpiv/artifacts/plans/2026-07-27_17-12-43_runner-cleanup-nodes-snippets-modal-ux.md",
+  "findings": [
+    {
+      "detail": "Phase 2 only gives unsupported-format guidance to references explicitly ending in .json, but current legacy Text block references may be extensionless: src/__tests__/fixtures/snippet-block.canvas stores radiprotocol_snippetId as \"snip-liver-001\", and src/views/inline-runner-modal.ts:1059-1087 currently probes .json first for such IDs. The planned .md-only resolution would send an extensionless JSON-backed reference to generic not-found, contradicting c2-r1.",
+      "where": "## Phase 2: Remove JSON snippet code support and rewrite README"
+    },
+    {
+      "detail": "The goal says \"I want to remove the ‘Text block’ node type\", but Phase 3 keeps text-block in the graph model, parser, runner, editor, picker, styles, locales, and tests and removes it only from creation menus. That is deprecation with compatibility, not removal of the node type requested by the goal.",
+      "where": "## Phase 3: Deprecate new Text block creation and preserve legacy compatibility"
+    }
+  ],
+  "risk_rulings": [
+    { "id": "c1-r1", "pass": true },
+    { "id": "c2-r1", "pass": false },
+    { "id": "c2-r2", "pass": true },
+    { "id": "c2-r3", "pass": true },
+    { "id": "c3-r1", "pass": true },
+    { "id": "c4-r1", "pass": true },
+    { "id": "c4-r2", "pass": true },
+    { "id": "c5-r1", "pass": true },
+    { "id": "c5-r2", "pass": true }
+  ],
+  "feedback": "In Phase 2, detect extensionless legacy JSON-backed snippetIds at the root and unique subdirectory fallback and show unsupported guidance before generic MD not-found; add regression coverage. In Phase 3, reconcile the goal's explicit Text block removal by either removing the kind end-to-end or documenting a genuinely approved compatibility exception rather than presenting creation-menu deprecation as removal."
+}

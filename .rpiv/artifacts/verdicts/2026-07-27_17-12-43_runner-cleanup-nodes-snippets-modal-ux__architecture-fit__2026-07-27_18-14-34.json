@@ -1,0 +1,22 @@
+{
+  "dimension": "architecture-fit",
+  "pass": false,
+  "score": 84,
+  "severity": "medium",
+  "graded_at": "2026-07-27T18:14:34+0300",
+  "artifact": ".rpiv/artifacts/plans/2026-07-27_17-12-43_runner-cleanup-nodes-snippets-modal-ux.md",
+  "findings": [
+    {
+      "detail": "Phase 2 keeps legacy snippet-ID probing and unique-subdirectory vault scans in inline-runner-modal.ts, while ambiguously grouping render-snippet-fill.ts into resolution; this bypasses SnippetService's root/path-safety boundary and conflicts with the render layer's presentation-only responsibility.",
+      "where": "## Phase 2: Remove JSON snippet code support and rewrite README"
+    }
+  ],
+  "finding_rulings": [
+    {
+      "where": "## Phase 2: Remove JSON snippet code support and rewrite README",
+      "ruling": "upheld",
+      "evidence": "The Phase 2 bullet still assigns .md and legacy-.json resolution collectively to inline-runner-modal.ts and render-snippet-fill.ts; src/views/inline-runner-modal.ts:1048-1087 currently performs extension probing and app.vault.getFiles scanning, src/snippets/snippet-service.ts:56-72 owns root validation, and .rpiv/guidance/src/runner/render/architecture.md defines render functions as pure DOM projections."
+    }
+  ],
+  "feedback": "Revise Phase 2 so SnippetService owns all root-checked .md and legacy-.json resolution, including direct, extensionless, and unique-subdirectory lookup, and returns a discriminated found, legacy-json, or missing result. Limit inline-runner-modal.ts to orchestration and render-snippet-fill.ts to localized presentation; add service resolver tests plus view/render tests for each outcome."
+}

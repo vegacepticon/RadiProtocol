@@ -1,0 +1,60 @@
+{
+  "dimension": "correctness",
+  "pass": false,
+  "score": 70,
+  "severity": "medium",
+  "graded_at": "2026-07-27T17:35:57+0300",
+  "artifact": ".rpiv/artifacts/plans/2026-07-27_17-12-43_runner-cleanup-nodes-snippets-modal-ux.md",
+  "findings": [
+    {
+      "detail": "Phase 3 claims no residual Text block labels, but its locale edit removes only the two protocolEditor text-block keys. Removing the planned consumers also leaves nodePicker.textBlock, protocolEditor.contentLabel, and protocolEditor.textSeparatorLabel dead in both locale files, and the planned grep does not match those keys.",
+      "where": ".rpiv/artifacts/plans/2026-07-27_17-12-43_runner-cleanup-nodes-snippets-modal-ux.md:132"
+    },
+    {
+      "detail": "The proposed Start node at world position (0,0) will not open at canvas center under the current viewport restoration: src/views/protocol-editor-view.ts:1962-1966 restores a missing viewport to scroll offsets equal to the world origin, placing world (0,0) at the viewport's top-left. The manual center claim is therefore false as written.",
+      "where": ".rpiv/artifacts/plans/2026-07-27_17-12-43_runner-cleanup-nodes-snippets-modal-ux.md:167"
+    },
+    {
+      "detail": "The verification text refers to a src/main.ts createEmptyProtocolDocument call site, but the only live caller is src/protocol/protocol-document-store.ts:95; src/main.ts has no such call.",
+      "where": ".rpiv/artifacts/plans/2026-07-27_17-12-43_runner-cleanup-nodes-snippets-modal-ux.md:165"
+    },
+    {
+      "detail": "The goal says, “I want to remove the ‘Text block’ node type and have the ‘Answer’ node perform the same function,” but Phase 3 leaves both READMEs claiming Text block support and instructing users to create Text block nodes; those statements become false after the planned model and editor removal.",
+      "where": "## Phase 3: Remove the Text block node type and preserve Answer pass-through"
+    }
+  ],
+  "risk_rulings": [
+    { "id": "c1-r1", "pass": true },
+    { "id": "c2-r1", "pass": true },
+    { "id": "c2-r2", "pass": true },
+    { "id": "c2-r3", "pass": true },
+    { "id": "c3-r1", "pass": false },
+    { "id": "c4-r1", "pass": true },
+    { "id": "c4-r2", "pass": true },
+    { "id": "c5-r1", "pass": true },
+    { "id": "c5-r2", "pass": true }
+  ],
+  "finding_rulings": [
+    {
+      "where": ".rpiv/artifacts/plans/2026-07-27_17-12-43_runner-cleanup-nodes-snippets-modal-ux.md:132",
+      "ruling": "upheld",
+      "evidence": "src/i18n/locales/en.json:55,71,257 and src/i18n/locales/ru.json:55,71,257 define the three keys; their only production consumers are the Text block branches planned for removal in src/views/protocol-editor-view.ts:2356-2358 and src/views/node-picker-modal.ts:26,40."
+    },
+    {
+      "where": ".rpiv/artifacts/plans/2026-07-27_17-12-43_runner-cleanup-nodes-snippets-modal-ux.md:167",
+      "ruling": "upheld",
+      "evidence": "src/views/protocol-editor-view.ts:239-244 maps world (0,0) to the surface origin, while src/views/protocol-editor-view.ts:1962-1966 scrolls a missing viewport to that same origin, so the node begins at viewport position (0,0), not centered."
+    },
+    {
+      "where": ".rpiv/artifacts/plans/2026-07-27_17-12-43_runner-cleanup-nodes-snippets-modal-ux.md:165",
+      "ruling": "upheld",
+      "evidence": "Repository search finds createEmptyProtocolDocument only at its definition in src/protocol/protocol-document.ts:108 and its sole caller in src/protocol/protocol-document-store.ts:95; src/main.ts contains no occurrence."
+    },
+    {
+      "where": "c3-r1",
+      "ruling": "upheld",
+      "evidence": "The Phase 3 removal surface omits dead locale keys at en.json/ru.json:55,71,257 and stale user documentation at README.md:16,58 and README.ru.md:16,58, so the claimed exhaustive Text block removal is not addressed."
+    }
+  ],
+  "feedback": "In Phase 3, add removal of the three dead locale keys and update both README Text block claims, then broaden the residual grep beyond src. In Phase 4, either center the initial viewport/node or change the criterion to visibility, and delete the false src/main.ts call-site assertion."
+}
