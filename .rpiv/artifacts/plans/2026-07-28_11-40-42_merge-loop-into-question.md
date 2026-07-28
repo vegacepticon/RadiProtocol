@@ -151,12 +151,12 @@ import type { RPNode } from '../../graph/graph-model';
 ### Success Criteria:
 
 #### Automated Verification:
-- [ ] `node-label` test suite passes: `npx vitest run src/__tests__/graph/node-label.test.ts`
-- [ ] No `case 'loop'` in node-label.ts: `grep -n "case 'loop'" src/graph/node-label.ts` returns no matches
-- [ ] No prefix-helper exports: `grep -nE "export function (isLabeledEdge|isExitEdge|stripExitPrefix)" src/graph/node-label.ts` returns no matches
-- [ ] No `headerText` in node-label.ts: `grep -n "headerText" src/graph/node-label.ts` returns no matches
-- [ ] No `'loop'` union member in RPNodeKind: `grep -nE "^\s*\|\s*'loop'\s*;" src/graph/graph-model.ts` returns no matches (intentional comment/JSDoc references to the legacy `'loop'` kind are allowed)
-- [ ] Repo-wide `npm run check` is deferred to Slice 9 — intermediate slices intentionally leave downstream consumer imports dangling until each consumer slice rewires them
+- [x] `node-label` test suite passes: `npx vitest run src/__tests__/graph/node-label.test.ts`
+- [x] No `case 'loop'` in node-label.ts: `grep -n "case 'loop'" src/graph/node-label.ts` returns no matches
+- [x] No prefix-helper exports: `grep -nE "export function (isLabeledEdge|isExitEdge|stripExitPrefix)" src/graph/node-label.ts` returns no matches
+- [x] No `headerText` in node-label.ts: `grep -n "headerText" src/graph/node-label.ts` returns no matches
+- [x] No `'loop'` union member in RPNodeKind: `grep -nE "^\s*\|\s*'loop'\s*;" src/graph/graph-model.ts` returns no matches (intentional comment/JSDoc references to the legacy `'loop'` kind are allowed)
+- [x] Repo-wide `npm run check` is deferred to Slice 9 — intermediate slices intentionally leave downstream consumer imports dangling until each consumer slice rewires them
 
 #### Manual Verification:
 - [ ] `QuestionNode.loop` and `RPEdge.isLoopExit` are optional (`?:`) — callers that omit them still type-check
@@ -352,14 +352,14 @@ In the legacy-key test, recast `n4` as a Question with `radiprotocol_questionTex
 ### Success Criteria:
 
 #### Automated Verification:
-- [ ] Parser test suite passes: `npx vitest run src/__tests__/protocol-document-parser.test.ts`
-- [ ] No `case 'loop'` production arm in parser: `grep -nE "case 'loop':" src/protocol/protocol-document-parser.ts` — any match must be `case 'loop-start':` or `case 'loop-end':` only
-- [ ] No `LoopNode` import in parser: `grep -n "LoopNode" src/protocol/protocol-document-parser.ts` returns no matches
-- [ ] No `'loop'` literal in VALID_KINDS: `grep -nE "^\s*'loop'," src/protocol/protocol-document-parser.ts` returns no matches
-- [ ] `getOptionalBoolean` defined: `grep -n "function getOptionalBoolean" src/protocol/protocol-document-parser.ts` returns a match
-- [ ] `isLoopExit` copied in edge reconstruction: `grep -n "isLoopExit" src/protocol/protocol-document-parser.ts` returns a match
-- [ ] `isLoopExit` present on ProtocolEdgeRecord: `grep -n "isLoopExit" src/protocol/protocol-document.ts` returns a match
-- [ ] Repo-wide `npm run check` deferred to Slice 9
+- [x] Parser test suite passes: `npx vitest run src/__tests__/protocol-document-parser.test.ts`
+- [x] No `case 'loop'` production arm in parser: `grep -nE "case 'loop':" src/protocol/protocol-document-parser.ts` — any match must be `case 'loop-start':` or `case 'loop-end':` only
+- [x] No `LoopNode` import in parser: `grep -n "LoopNode" src/protocol/protocol-document-parser.ts` returns no matches
+- [x] No `'loop'` literal in VALID_KINDS: `grep -nE "^\s*'loop'," src/protocol/protocol-document-parser.ts` returns no matches
+- [x] `getOptionalBoolean` defined: `grep -n "function getOptionalBoolean" src/protocol/protocol-document-parser.ts` returns a match
+- [x] `isLoopExit` copied in edge reconstruction: `grep -n "isLoopExit" src/protocol/protocol-document-parser.ts` returns a match
+- [x] `isLoopExit` present on ProtocolEdgeRecord: `grep -n "isLoopExit" src/protocol/protocol-document.ts` returns a match
+- [x] Repo-wide `npm run check` deferred to Slice 9
 
 #### Manual Verification:
 - [ ] `getOptionalBoolean` preserves `true`, `false`, and `undefined` (non-boolean → undefined); no truthiness coercion
@@ -841,12 +841,12 @@ describe('ProtocolDocumentStore — migration on read', () => {
 ### Success Criteria:
 
 #### Automated Verification:
-- [ ] Migration + store + direct inline-open test suites pass: `npx vitest run src/__tests__/protocol-document-migration.test.ts src/__tests__/protocol-document-store.test.ts src/__tests__/views/inline-runner-modal.test.ts`
-- [ ] Direct inline execution crosses the migration seam before raw parsing: `grep -n "protocolDocumentStore.read" src/views/inline-runner-modal.ts` returns a match
-- [ ] Migration module is pure: `grep -n "from 'obsidian'" src/protocol/protocol-document-migration.ts` returns no matches
-- [ ] `migrateProtocolDocument` exported: `grep -n "export function migrateProtocolDocument" src/protocol/protocol-document-migration.ts` returns a match
-- [ ] Store read() calls migration: `grep -n "migrateProtocolDocument" src/protocol/protocol-document-store.ts` returns a match
-- [ ] Repo-wide `npm run check` deferred to Slice 9
+- [x] Migration + store + direct inline-open test suites pass: `npx vitest run src/__tests__/protocol-document-migration.test.ts src/__tests__/protocol-document-store.test.ts src/__tests__/views/inline-runner-modal.test.ts`
+- [x] Direct inline execution crosses the migration seam before raw parsing: `grep -n "protocolDocumentStore.read" src/views/inline-runner-modal.ts` returns a match
+- [x] Migration module is pure: `grep -n "from 'obsidian'" src/protocol/protocol-document-migration.ts` returns no matches
+- [x] `migrateProtocolDocument` exported: `grep -n "export function migrateProtocolDocument" src/protocol/protocol-document-migration.ts` returns a match
+- [x] Store read() calls migration: `grep -n "migrateProtocolDocument" src/protocol/protocol-document-store.ts` returns a match
+- [x] Repo-wide `npm run check` deferred to Slice 9
 
 #### Manual Verification:
 - [ ] Idempotency: no legacy `kind === 'loop'` nodes → `{ changed: false }`, same reference, no write
@@ -1134,15 +1134,15 @@ Remove the same two prefix-specific keys.
 ### Success Criteria:
 
 #### Automated Verification:
-- [ ] Validator tests pass: `npx vitest run src/__tests__/graph-validator.test.ts`
-- [ ] No prefix-helper imports in validator: `grep -nE "isLabeledEdge|isExitEdge|stripExitPrefix" src/graph/graph-validator.ts` returns no matches
-- [ ] No `kind === 'loop'` in validator: `grep -n "kind === 'loop'" src/graph/graph-validator.ts` returns no matches
-- [ ] Validator loop pass keys on looped questions: `grep -n "node.kind !== 'question' || !node.loop" src/graph/graph-validator.ts` returns a match
-- [ ] No `LoopNode` import in canvas-parser helper: `grep -n "LoopNode" src/__tests__/helpers/canvas-parser.ts` returns no matches
-- [ ] No `'loop'` in canvas-parser validKinds: `grep -nE "'loop'," src/__tests__/helpers/canvas-parser.ts` returns no matches
-- [ ] No `loopNoExitWithLegacy` / `loopExitNoLabel` in either locale: `grep -rn "loopNoExitWithLegacy\|loopExitNoLabel" src/i18n/locales/` returns no matches
-- [ ] No bare `radiprotocol_nodeType: "loop"` in fixtures: `grep -rnE "radiprotocol_nodeType\":\s*\"loop\"" src/__tests__/fixtures/` returns no matches
-- [ ] Repo-wide `npm run check` deferred to Slice 9
+- [x] Validator tests pass: `npx vitest run src/__tests__/graph-validator.test.ts`
+- [x] No prefix-helper imports in validator: `grep -nE "isLabeledEdge|isExitEdge|stripExitPrefix" src/graph/graph-validator.ts` returns no matches
+- [x] No `kind === 'loop'` in validator: `grep -n "kind === 'loop'" src/graph/graph-validator.ts` returns no matches
+- [x] Validator loop pass keys on looped questions: `grep -n "node.kind !== 'question' || !node.loop" src/graph/graph-validator.ts` returns a match
+- [x] No `LoopNode` import in canvas-parser helper: `grep -n "LoopNode" src/__tests__/helpers/canvas-parser.ts` returns no matches
+- [x] No `'loop'` in canvas-parser validKinds: `grep -nE "'loop'," src/__tests__/helpers/canvas-parser.ts` returns no matches
+- [x] No `loopNoExitWithLegacy` / `loopExitNoLabel` in either locale: `grep -rn "loopNoExitWithLegacy\|loopExitNoLabel" src/i18n/locales/` returns no matches
+- [x] No bare `radiprotocol_nodeType: "loop"` in fixtures: `grep -rnE "radiprotocol_nodeType\":\s*\"loop\"" src/__tests__/fixtures/` returns no matches
+- [x] Repo-wide `npm run check` deferred to Slice 9
 
 #### Manual Verification:
 - [ ] Dead-end check skips looped questions (`node.kind === 'question' && !node.loop`)
@@ -1303,15 +1303,15 @@ In the file-bound suite, replace each `['n-loop', 'n-end', '+exit']` with `['n-l
 ### Success Criteria:
 
 #### Automated Verification:
-- [ ] Runner loop test suites pass: `npx vitest run src/__tests__/runner/protocol-runner-loop-picker.test.ts src/__tests__/runner/protocol-runner-loop-body-file-bound-snippet.test.ts src/__tests__/runner/protocol-runner-snippet-autoinsert.test.ts`
-- [ ] No `isExitEdge` in runner: `grep -n "isExitEdge" src/runner/protocol-runner.ts` returns no matches
-- [ ] No `case 'loop'` arm: `grep -nE "case 'loop':" src/runner/protocol-runner.ts` returns no matches (only loop-start/loop-end)
-- [ ] `node.loop === true` present: `grep -n "node.loop === true" src/runner/protocol-runner.ts` returns a match
-- [ ] No `LoopNode`/`headerText`/`stripExitPrefix` in the three test files: `grep -rnE "LoopNode|headerText|stripExitPrefix" src/__tests__/runner/protocol-runner-loop-picker.test.ts src/__tests__/runner/protocol-runner-loop-body-file-bound-snippet.test.ts src/__tests__/runner/protocol-runner-snippet-autoinsert.test.ts` returns no matches
-- [ ] No `'+` prefix literals in the two snippet tests: `grep -rnE "'\+" src/__tests__/runner/protocol-runner-loop-body-file-bound-snippet.test.ts src/__tests__/runner/protocol-runner-snippet-autoinsert.test.ts` returns no matches
-- [ ] Exit tuples carry the 4th element: `grep -nE "'exit', true|'выход', true" src/__tests__/runner/protocol-runner-loop-body-file-bound-snippet.test.ts src/__tests__/runner/protocol-runner-snippet-autoinsert.test.ts` returns matches
-- [ ] redo round-trip test present: `grep -n "runner.redo()" src/__tests__/runner/protocol-runner-loop-picker.test.ts` returns a match
-- [ ] Repo-wide `npm run check` deferred to Slice 9
+- [x] Runner loop test suites pass: `npx vitest run src/__tests__/runner/protocol-runner-loop-picker.test.ts src/__tests__/runner/protocol-runner-loop-body-file-bound-snippet.test.ts src/__tests__/runner/protocol-runner-snippet-autoinsert.test.ts`
+- [x] No `isExitEdge` in runner: `grep -n "isExitEdge" src/runner/protocol-runner.ts` returns no matches
+- [x] No `case 'loop'` arm: `grep -nE "case 'loop':" src/runner/protocol-runner.ts` returns no matches (only loop-start/loop-end)
+- [x] `node.loop === true` present: `grep -n "node.loop === true" src/runner/protocol-runner.ts` returns a match
+- [x] No `LoopNode`/`headerText`/`stripExitPrefix` in the three test files: `grep -rnE "LoopNode|headerText|stripExitPrefix" src/__tests__/runner/protocol-runner-loop-picker.test.ts src/__tests__/runner/protocol-runner-loop-body-file-bound-snippet.test.ts src/__tests__/runner/protocol-runner-snippet-autoinsert.test.ts` returns no matches
+- [x] No `'+` prefix literals in the two snippet tests: `grep -rnE "'\+" src/__tests__/runner/protocol-runner-loop-body-file-bound-snippet.test.ts src/__tests__/runner/protocol-runner-snippet-autoinsert.test.ts` returns no matches
+- [x] Exit tuples carry the 4th element: `grep -nE "'exit', true|'выход', true" src/__tests__/runner/protocol-runner-loop-body-file-bound-snippet.test.ts src/__tests__/runner/protocol-runner-snippet-autoinsert.test.ts` returns matches
+- [x] redo round-trip test present: `grep -n "runner.redo()" src/__tests__/runner/protocol-runner-loop-picker.test.ts` returns a match
+- [x] Repo-wide `npm run check` deferred to Slice 9
 
 #### Manual Verification:
 - [ ] Looped question halts at AWAITING_LOOP_PICK (first entry pushes frame; B1 re-entry increments iteration); ordinary question halts at AT_NODE
@@ -1410,13 +1410,13 @@ Add the ordinary-Question negative control:
 ### Success Criteria:
 
 #### Automated Verification:
-- [ ] Render test suites pass: `npx vitest run src/__tests__/runner/render-loop-picker.test.ts src/__tests__/runner/render-question.test.ts`
-- [ ] No prefix-helper imports: `grep -nE "isExitEdge|stripExitPrefix" src/runner/render/render-loop-picker.ts` returns no matches
-- [ ] Looped-question guard: `grep -n "node.kind !== 'question' || !node.loop" src/runner/render/render-loop-picker.ts` returns a match
-- [ ] `questionText` header: `grep -n "node.questionText" src/runner/render/render-loop-picker.ts` returns a match
-- [ ] No `headerText` in render tests: `grep -n "headerText" src/__tests__/runner/render-loop-picker.test.ts src/__tests__/runner/render-question.test.ts` returns no matches
-- [ ] Ordinary-question rejection test present: `grep -n "no loop toggle" src/__tests__/runner/render-loop-picker.test.ts` returns a match
-- [ ] Repo-wide `npm run check` deferred to Slice 9
+- [x] Render test suites pass: `npx vitest run src/__tests__/runner/render-loop-picker.test.ts src/__tests__/runner/render-question.test.ts`
+- [x] No prefix-helper imports: `grep -nE "isExitEdge|stripExitPrefix" src/runner/render/render-loop-picker.ts` returns no matches
+- [x] Looped-question guard: `grep -n "node.kind !== 'question' || !node.loop" src/runner/render/render-loop-picker.ts` returns a match
+- [x] `questionText` header: `grep -n "node.questionText" src/runner/render/render-loop-picker.ts` returns a match
+- [x] No `headerText` in render tests: `grep -n "headerText" src/__tests__/runner/render-loop-picker.test.ts src/__tests__/runner/render-question.test.ts` returns no matches
+- [x] Ordinary-question rejection test present: `grep -n "no loop toggle" src/__tests__/runner/render-loop-picker.test.ts` returns a match
+- [x] Repo-wide `npm run check` deferred to Slice 9
 
 #### Manual Verification:
 - [ ] Guard accepts a looped question and rejects an ordinary question / missing node
@@ -1615,14 +1615,14 @@ Delete the synchronized standalone-Loop keys and keep `loopExitLabel`.
 ### Success Criteria:
 
 #### Automated Verification:
-- [ ] Editor helper + keyboard tests pass: `npx vitest run src/__tests__/protocol-editor-helpers.test.ts src/__tests__/views/protocol-editor-keyboard.test.ts`
-- [ ] No `isProtocolEditorLoopExitLabel` in editor: `grep -n "isProtocolEditorLoopExitLabel" src/views/protocol-editor-view.ts` returns no matches
-- [ ] No `case 'loop':` arm in openEditModal: `grep -nE "case 'loop':" src/views/protocol-editor-view.ts` returns no matches (only loop-start/loop-end)
-- [ ] Loop toggle + badge present: `grep -n "addLoopToggle\|loop-badge" src/views/protocol-editor-view.ts` returns matches
-- [ ] No `nodeKindToken('loop')` in helper test: `grep -n "nodeKindToken('loop')" src/__tests__/protocol-editor-helpers.test.ts` returns no matches
-- [ ] No `'loop'` in helper-test editable-kinds arrays: `grep -nE "'loop'" src/__tests__/protocol-editor-helpers.test.ts` returns no matches
-- [ ] No stale `+-prefix exit` comment in loop-support.css: `grep -ni "+-prefix exit" src/styles/loop-support.css` returns no matches
-- [ ] Repo-wide `npm run check` deferred to Slice 9
+- [x] Editor helper + keyboard tests pass: `npx vitest run src/__tests__/protocol-editor-helpers.test.ts src/__tests__/views/protocol-editor-keyboard.test.ts`
+- [x] No `isProtocolEditorLoopExitLabel` in editor: `grep -n "isProtocolEditorLoopExitLabel" src/views/protocol-editor-view.ts` returns no matches
+- [x] No `case 'loop':` arm in openEditModal: `grep -nE "case 'loop':" src/views/protocol-editor-view.ts` returns no matches (only loop-start/loop-end)
+- [x] Loop toggle + badge present: `grep -n "addLoopToggle\|loop-badge" src/views/protocol-editor-view.ts` returns matches
+- [x] No `nodeKindToken('loop')` in helper test: `grep -n "nodeKindToken('loop')" src/__tests__/protocol-editor-helpers.test.ts` returns no matches
+- [x] No `'loop'` in helper-test editable-kinds arrays: `grep -nE "'loop'" src/__tests__/protocol-editor-helpers.test.ts` returns no matches
+- [x] No stale `+-prefix exit` comment in loop-support.css: `grep -ni "+-prefix exit" src/styles/loop-support.css` returns no matches
+- [x] Repo-wide `npm run check` deferred to Slice 9
 
 #### Manual Verification:
 - [ ] Loop removed from the creation grid; looped questions via Question edit-modal toggle; canvas badge on looped questions
@@ -1730,14 +1730,14 @@ Delete `nodePicker.loop` from both locales.
 ### Success Criteria:
 
 #### Automated Verification:
-- [ ] Node-picker + runner-commands tests pass: `npx vitest run src/__tests__/node-picker-modal.test.ts src/__tests__/runner-commands.test.ts`
-- [ ] No `LoopNode` import in node-picker: `grep -n "LoopNode" src/views/node-picker-modal.ts` returns no matches
-- [ ] No `'loop'` in StartableNodeKind/KIND_LABELS/KIND_ORDER: `grep -nE "'loop'" src/views/node-picker-modal.ts` returns no matches
-- [ ] No `headerText` in node-picker: `grep -n "headerText" src/views/node-picker-modal.ts` returns no matches
-- [ ] No stale standalone-loop JSDoc: `grep -niE "loop node|→ loop" src/views/node-picker-modal.ts` returns no matches (loop-start/loop-end legacy refs allowed)
-- [ ] No `nodePicker.loop` in locales: `grep -rn "loop" src/i18n/locales/en.json src/i18n/locales/ru.json` — no `nodePicker.loop` entry remains
-- [ ] No `LoopNode`/`headerText` in node-picker test: `grep -nE "LoopNode|headerText" src/__tests__/node-picker-modal.test.ts` returns no matches
-- [ ] Repo-wide `npm run check` deferred to Slice 9
+- [x] Node-picker + runner-commands tests pass: `npx vitest run src/__tests__/node-picker-modal.test.ts src/__tests__/runner-commands.test.ts`
+- [x] No `LoopNode` import in node-picker: `grep -n "LoopNode" src/views/node-picker-modal.ts` returns no matches
+- [x] No `'loop'` in StartableNodeKind/KIND_LABELS/KIND_ORDER: `grep -nE "'loop'" src/views/node-picker-modal.ts` returns no matches
+- [x] No `headerText` in node-picker: `grep -n "headerText" src/views/node-picker-modal.ts` returns no matches
+- [x] No stale standalone-loop JSDoc: `grep -niE "loop node|→ loop" src/views/node-picker-modal.ts` returns no matches (loop-start/loop-end legacy refs allowed)
+- [x] No `nodePicker.loop` in locales: `grep -rn "loop" src/i18n/locales/en.json src/i18n/locales/ru.json` — no `nodePicker.loop` entry remains
+- [x] No `LoopNode`/`headerText` in node-picker test: `grep -nE "LoopNode|headerText" src/__tests__/node-picker-modal.test.ts` returns no matches
+- [x] Repo-wide `npm run check` deferred to Slice 9
 
 #### Manual Verification:
 - [ ] Looped questions appear as `question` options; standalone Loop option removed
@@ -1818,18 +1818,18 @@ Replace both `['n-loop', 'n-end', '+exit']` tuples with `['n-loop', 'n-end', 'ex
 ### Success Criteria:
 
 #### Automated Verification:
-- [ ] The two cross-cutting view tests pass: `npx vitest run src/__tests__/views/inline-runner-modal-output-toolbar.test.ts src/__tests__/views/inline-runner-modal-loop-body-file-bound.test.ts`
-- [ ] No `FakeLoopNode`/`kind: 'loop'`/`'+exit'` in either view test: `grep -rnE "FakeLoopNode|kind: 'loop'|'\+exit'" src/__tests__/views/inline-runner-modal-output-toolbar.test.ts src/__tests__/views/inline-runner-modal-loop-body-file-bound.test.ts` returns no matches
-- [ ] 4-tuple builder + isLoopExit present in the loop-body test: `grep -n "isLoopExit" src/__tests__/views/inline-runner-modal-loop-body-file-bound.test.ts` returns matches
-- [ ] `runner-state.ts` has no `headerText` / "loop node" / "unified loop node" reference: `grep -nE "headerText|loop node|unified loop node" src/runner/runner-state.ts` returns no matches
-- [ ] **Exhaustive sweep audit (load-bearing)** across `src/`:
+- [x] The two cross-cutting view tests pass: `npx vitest run src/__tests__/views/inline-runner-modal-output-toolbar.test.ts src/__tests__/views/inline-runner-modal-loop-body-file-bound.test.ts`
+- [x] No `FakeLoopNode`/`kind: 'loop'`/`'+exit'` in either view test: `grep -rnE "FakeLoopNode|kind: 'loop'|'\+exit'" src/__tests__/views/inline-runner-modal-output-toolbar.test.ts src/__tests__/views/inline-runner-modal-loop-body-file-bound.test.ts` returns no matches
+- [x] 4-tuple builder + isLoopExit present in the loop-body test: `grep -n "isLoopExit" src/__tests__/views/inline-runner-modal-loop-body-file-bound.test.ts` returns matches
+- [x] `runner-state.ts` has no `headerText` / "loop node" / "unified loop node" reference: `grep -nE "headerText|loop node|unified loop node" src/runner/runner-state.ts` returns no matches
+- [x] **Exhaustive sweep audit (load-bearing)** across `src/`:
   - FORBIDDEN (no matches): `grep -rn "isExitEdge\|isLabeledEdge\|stripExitPrefix" src/`; `grep -rn "FakeLoopNode" src/`
   - `grep -rnE "case 'loop':" src/` — any match must be `case 'loop-start':` or `case 'loop-end':` only
   - `grep -rn "kind === 'loop'" src/` returns only `src/protocol/protocol-document-migration.ts` (the legacy discriminator)
   - `grep -rn "\bLoopNode\b" src/` returns only historical JSDoc in `src/graph/graph-model.ts` (no type imports/constructions/FakeLoopNode; `legacyLoopNodes` excluded by word boundary)
   - `grep -rn "headerText" src/` returns only: the migration module, migration tests, the parser legacy-`'loop'`-rejection fixture, and historical JSDoc in `graph-model.ts` — no canonical runtime `headerText` read/write
   - `'loop-start'`/`'loop-end'` legacy literals + `loop-start.canvas`/`loop-body.canvas` fixtures + test node IDs named `'loop'` are INTENTIONAL and allowed
-- [ ] **Project baseline**: `npm run check` passes (build + lint + tests + planning + consistency + agent-docs)
+- [x] **Project baseline**: `npm run check` passes (build + lint + tests + planning + consistency + agent-docs)
 
 #### Manual Verification:
 - [ ] output-toolbar `awaiting-loop-pick` case renders against a looped-question graph; toolbar-absence assertions unchanged
