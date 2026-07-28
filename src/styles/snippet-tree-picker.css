@@ -226,34 +226,59 @@
   box-sizing: border-box;
 }
 
-/* Slice 3 — Pin insert-snippet modal near the top + stabilize body height so the
-   search-result rebuild (removeBody + bare .rp-stp-list on host) doesn't recenter
-   the modal on every keystroke. The insert host previously had only width CSS. */
+/* Slice 3 — Pin insert-snippet modal near the top + expand downward to fill the
+   viewport with equal top/bottom margins, and let the scrollable list span the
+   full modal height instead of a fixed 320px/440px cap. Grow only as needed
+   (height auto, capped by max-height); flex-fill so the list scrolls within. */
 .rp-insert-snippet-modal {
   /* Opt out of .modal-container's align-items: center; anchor to top padding. */
   align-self: flex-start;
   margin-top: var(--size-4-6);
-  /* Cap below viewport height and provide vertical overflow as the final
-     short-viewport safety net so the modal clamps and scrolls without recentering. */
-  max-height: calc(100vh - var(--size-4-12));
+  /* Cap below viewport height reserving a bottom margin equal to the top
+     (var(--size-4-6) on each side). overflow-y is the short-viewport safety net
+     so the modal clamps and scrolls without recentering. */
+  max-height: calc(100vh - 2 * var(--size-4-6));
   overflow-y: auto;
 }
 
-.rp-insert-snippet-picker-host .rp-stp-root > .rp-stp-body {
-  /* Normal viewports reach 480px; short viewports reserve space for modal/search
-     chrome and shrink before the modal cap. min-height: 0 allows flex shrinking. */
-  height: min(480px, calc(100vh - 10rem));
+/* Flex-fill chain: modal-content -> host -> root -> body/list. When the list
+   exceeds the modal cap, the modal clamps to max-height and the list flex-grows
+   to fill it and scrolls within; when the list is short, the modal stays compact
+   (height auto, content-sized) so small folders don't get a tall empty modal. */
+.rp-insert-snippet-modal .modal-content {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
   min-height: 0;
 }
 
-.rp-insert-snippet-picker-host .rp-stp-root > .rp-stp-list {
-  /* Bare search-result list recreated on host by renderSearchResults().
-     Direct-child bare list: viewport-derived height capped at 440px, reserving
-     the additional search-row space and allowing it to shrink. The flexed inner
-     drill-view list is untouched. min-height: 0 allows flex shrinking. */
-  height: min(440px, calc(100vh - 12.5rem));
-  max-height: min(440px, calc(100vh - 12.5rem));
+.rp-insert-snippet-picker-host {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
   min-height: 0;
+}
+
+.rp-insert-snippet-picker-host .rp-stp-root {
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+.rp-insert-snippet-picker-host .rp-stp-root > .rp-stp-body {
+  /* No fixed height — body grows with content up to the modal cap. min-height: 0
+     lets the inner list scroll instead of the body. */
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+.rp-insert-snippet-picker-host .rp-stp-list {
+  /* Override the generic 320px max-height cap (see .rp-stp-list above) for both
+     the flexed inner drill-view list and the bare search-result list recreated
+     on the host by renderSearchResults(). The list flex-fills its flex parent and
+     scrolls within, so the scrollbar spans the full available modal height. */
+  flex: 1 1 auto;
+  min-height: 0;
+  max-height: none;
 }
 
 /* Phase 51 Plan 03 — Node Editor inline mount host (consumed by editor-panel-view.ts). */
@@ -318,6 +343,32 @@
 
 .rp-stp-row-highlighted .rp-stp-row-title {
   font-weight: var(--font-semibold);
+}
+
+/* Insert-snippet modal only — strengthen the keyboard-selected highlight to a
+   high-contrast accent fill with on-accent text so the active row is unmistakable
+   during arrow-key navigation. Scoped to the insert host so other SnippetTreePicker
+   consumers (protocol-editor picker, etc.) keep their existing highlight. The base
+   1px transparent border geometry is preserved (no border-width change -> no shift). */
+.rp-insert-snippet-picker-host .rp-stp-row-highlighted {
+  background: var(--interactive-accent);
+  border-color: var(--interactive-accent);
+  color: var(--text-on-accent);
+  box-shadow: inset 2px 0 0 var(--text-on-accent);
+}
+
+.rp-insert-snippet-picker-host .rp-stp-row-highlighted .rp-stp-row-title {
+  font-weight: var(--font-semibold);
+  color: var(--text-on-accent);
+}
+
+.rp-insert-snippet-picker-host .rp-stp-row-highlighted .rp-stp-row-glyph {
+  opacity: 1;
+  color: var(--text-on-accent);
+}
+
+.rp-insert-snippet-picker-host .rp-stp-row-highlighted .rp-stp-result-path {
+  color: var(--text-on-accent);
 }
 
 .rp-stp-sr-only {
