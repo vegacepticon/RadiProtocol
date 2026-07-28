@@ -13,3 +13,6 @@ src/styles.css
 # OS files
 .DS_Store
 Thumbs.db
+
+# Inline agent guidance (canonical guidance lives in .rpiv/guidance/ shadow tree)
+CLAUDE.md
