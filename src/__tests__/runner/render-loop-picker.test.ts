@@ -61,7 +61,6 @@ function node(id: string, kind: RPNode['kind'], extra: Partial<RPNode> = {}): RP
     y: 0,
     width: 100,
     height: 100,
-    ...(kind === 'loop' ? { headerText: '' } : {}),
     ...(kind === 'answer' ? { answerText: id } : {}),
     ...(kind === 'question' ? { questionText: id } : {}),
     ...(kind === 'text-block' ? { content: id } : {}),
@@ -73,7 +72,7 @@ function node(id: string, kind: RPNode['kind'], extra: Partial<RPNode> = {}): RP
 
 function graph(edges: RPEdge[]): ProtocolGraph {
   const nodes = new Map<string, RPNode>();
-  nodes.set('loop', node('loop', 'loop', { headerText: 'Repeat?' }));
+  nodes.set('loop', node('loop', 'question', { questionText: 'Repeat?', loop: true }));
   nodes.set('body', node('body', 'answer', { answerText: 'Body answer', displayLabel: 'Body label' }));
   nodes.set('exit', node('exit', 'text-block', { content: 'Done' }));
   return {
@@ -199,7 +198,7 @@ describe('shared loop picker renderer', () => {
     const textZone = new MockEl('text');
     const actionZone = new MockEl('actions');
     const bodyEdge = { id: 'e-body', fromNodeId: 'loop', toNodeId: 'body' };
-    const exitEdge = { id: 'e-exit', fromNodeId: 'loop', toNodeId: 'exit', label: '+ finish' };
+    const exitEdge = { id: 'e-exit', fromNodeId: 'loop', toNodeId: 'exit', label: 'finish', isLoopExit: true };
     const onChooseLoopBranch = vi.fn();
 
     const rendered = renderLoopPicker(asHtml(textZone), asHtml(actionZone), graph([bodyEdge, exitEdge]), {
@@ -250,6 +249,61 @@ describe('shared loop picker renderer', () => {
     expect(renderLoopPicker(asHtml(textZone), asHtml(actionZone), null, state, host)).toBe(false);
     expect(renderLoopPicker(asHtml(textZone), asHtml(actionZone), graph([]), state, host)).toBe(false);
     expect(renderError).toHaveBeenNthCalledWith(1, ['Internal error: graph not loaded.']);
-    expect(renderError).toHaveBeenNthCalledWith(2, ['Loop node "missing" not found in graph.']);
+    expect(renderError).toHaveBeenNthCalledWith(2, ['Looped question "missing" not found in graph.']);
+  });
+
+  it('returns false when the node is an ordinary question (no loop toggle)', () => {
+    const textZone = new MockEl('text');
+    const actionZone = new MockEl('actions');
+    const renderError = vi.fn();
+    const graphOrdinary: ProtocolGraph = {
+      ...graph([]),
+      nodes: new Map<string, RPNode>([
+        ['loop', node('loop', 'question', { questionText: 'Ordinary?' })],
+        ['body', node('body', 'answer', { answerText: 'Body answer', displayLabel: 'Body label' })],
+        ['exit', node('exit', 'text-block', { content: 'Done' })],
+      ]),
+    };
+    const state = { status: 'awaiting-loop-pick' as const, nodeId: 'loop', accumulatedText: '', canStepBack: false, canRedo: false, undoStackSize: 0 };
+    const rendered = renderLoopPicker(asHtml(textZone), asHtml(actionZone), graphOrdinary, state, { bindClick: vi.fn(), renderError, onChooseLoopBranch: vi.fn() });
+    expect(rendered).toBe(false);
+    expect(renderError).toHaveBeenCalledWith(['Looped question "loop" not found in graph.']);
+  });
+
+  it('an unlabeled exit edge renders empty visible text but a target-derived aria-label', () => {
+    const textZone = new MockEl('text');
+    const actionZone = new MockEl('actions');
+    const unlabeledExit = { id: 'e-exit', fromNodeId: 'loop', toNodeId: 'exit', isLoopExit: true };
+    const onChooseLoopBranch = vi.fn();
+    renderLoopPicker(asHtml(textZone), asHtml(actionZone), graph([unlabeledExit]), {
+      status: 'awaiting-loop-pick', nodeId: 'loop', accumulatedText: '', canStepBack: false, canRedo: false, undoStackSize: 0,
+    }, {
+      bindClick: (el, handler) => { (el as unknown as MockEl).clickHandler = handler; },
+      renderError: vi.fn(),
+      onChooseLoopBranch,
+    });
+    const exitBtn = findByClass(actionZone, 'rp-loop-exit-btn')[0]!;
+    expect(exitBtn.text).toBe('');
+    // target 'exit' is a text-block with content 'Done' → nodeLabel slices to 'Done'
+    expect(exitBtn.attrs.get('aria-label')).toBe('Done');
+  });
+
+  it('a whitespace-only exit label renders verbatim visible text but a target-derived aria-label', () => {
+    const textZone = new MockEl('text');
+    const actionZone = new MockEl('actions');
+    const whitespaceExit = { id: 'e-exit', fromNodeId: 'loop', toNodeId: 'exit', label: '   ', isLoopExit: true };
+    const onChooseLoopBranch = vi.fn();
+    renderLoopPicker(asHtml(textZone), asHtml(actionZone), graph([whitespaceExit]), {
+      status: 'awaiting-loop-pick', nodeId: 'loop', accumulatedText: '', canStepBack: false, canRedo: false, undoStackSize: 0,
+    }, {
+      bindClick: (el, handler) => { (el as unknown as MockEl).clickHandler = handler; },
+      renderError: vi.fn(),
+      onChooseLoopBranch,
+    });
+    const exitBtn = findByClass(actionZone, 'rp-loop-exit-btn')[0]!;
+    // Verbatim whitespace preserved as visible text
+    expect(exitBtn.text).toBe('   ');
+    // Trimmed-empty caption is treated as unlabeled → target-derived aria-label
+    expect(exitBtn.attrs.get('aria-label')).toBe('Done');
   });
 });

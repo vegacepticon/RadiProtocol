@@ -146,6 +146,17 @@ export class InlineRunnerModal {
 
     let content: string;
     try {
+      // Every execution path must cross the store migration seam before parsing.
+      // read() persists legacy standalone loops into canonical looped Questions;
+      // the raw read below then observes that canonical on-disk document.
+      const canonicalDoc = await this.plugin.protocolDocumentStore.read(protocolPath);
+      if (canonicalDoc === null) {
+        const reason = this.plugin.i18n.t('inlineRunner.couldNotReadProtocol', { path: protocolPath });
+        console.warn('[RadiProtocol] InlineRunnerModal.open() failed:', reason);
+        new Notice(reason);
+        this.close();
+        return;
+      }
       content = await this.app.vault.read(file);
     } catch {
       const reason = this.plugin.i18n.t('inlineRunner.couldNotReadProtocol', { path: protocolPath });

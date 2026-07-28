@@ -61,8 +61,10 @@
 }
 
 /* Phase 70: Loop-exit picker visual hint (LOOP-EXIT-01) ————————————————— */
-/* D-01/D-03: solid `--color-green` background marks the '+'-prefix exit
- *   button as the «finish/выход» control, distinct from body-branch buttons.
+/* D-01/D-03: solid `--color-green` background marks the exit button (an
+ *   isLoopExit edge) as the «finish/выход» control, distinct from body-branch
+ *   buttons. The former `+`-prefix convention was replaced by the explicit
+ *   edge.isLoopExit flag.
  * D-08: selector `.rp-loop-exit-btn` covers inline runner mode — DOM is
  *   identical; Phase 60 inline padding override is orthogonal. */
 .rp-loop-exit-btn.rp-loop-exit-btn {

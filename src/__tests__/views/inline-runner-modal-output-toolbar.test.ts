@@ -39,17 +39,16 @@ function makeTargetNote(): TFile {
   return new (TFile as any)('notes/target.md');
 }
 
-interface FakeQuestionNode { id: string; kind: 'question'; questionText: string }
-interface FakeLoopNode { id: string; kind: 'loop'; headerText: string }
+interface FakeQuestionNode { id: string; kind: 'question'; questionText: string; loop?: boolean }
 
 function makeFakeGraph(includeQuestion: boolean, includeLoop: boolean): {
-  nodes: Map<string, FakeQuestionNode | FakeLoopNode>;
+  nodes: Map<string, FakeQuestionNode>;
   adjacency: Map<string, string[]>;
   edges: Array<{ fromNodeId: string; toNodeId: string; label: string }>;
 } {
-  const nodes = new Map<string, FakeQuestionNode | FakeLoopNode>();
+  const nodes = new Map<string, FakeQuestionNode>();
   if (includeQuestion) nodes.set('Q1', { id: 'Q1', kind: 'question', questionText: 'sample?' });
-  if (includeLoop) nodes.set('L1', { id: 'L1', kind: 'loop', headerText: '' });
+  if (includeLoop) nodes.set('L1', { id: 'L1', kind: 'question', questionText: '', loop: true });
   return { nodes, adjacency: new Map(), edges: [] };
 }
 

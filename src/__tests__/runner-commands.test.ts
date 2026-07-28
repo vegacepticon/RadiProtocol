@@ -27,30 +27,32 @@ describe('Runner commands (RUN-10, UI-04)', () => {
     expect(errors.length).toBeGreaterThan(0);
   });
 
-  it('LOOP-06 (D-20): buildNodeOptions returns a loop option for a mixed-kind graph', async () => {
-    // Phase 45 strengthens the Phase 4/RUN-10 smoke test: import buildNodeOptions
-    // and verify the 4-kind union actually includes 'loop' on a real mixed graph.
+  it('LOOP-06 (D-20): buildNodeOptions returns a question option for a looped question', async () => {
+    // Post loop→question merge: a looped question appears as a question option
+    // (not a standalone loop option).
     const { buildNodeOptions } = await import('../views/node-picker-modal');
 
-    const loopNode = {
+    const loopedQ = {
       id: 'loop-1',
-      kind: 'loop' as const,
-      headerText: 'Lesion loop',
+      kind: 'question' as const,
+      questionText: 'Lesion loop',
+      loop: true,
       x: 0, y: 0, width: 0, height: 0,
     };
     const graph = {
       canvasFilePath: 'test.canvas',
-      nodes: new Map<string, typeof loopNode>([[loopNode.id, loopNode]]),
+      nodes: new Map<string, typeof loopedQ>([[loopedQ.id, loopedQ]]),
       edges: [],
       adjacency: new Map<string, string[]>(),
       reverseAdjacency: new Map<string, string[]>(),
-      startNodeId: loopNode.id,
+      startNodeId: loopedQ.id,
     };
     const opts = buildNodeOptions(graph as unknown as import('../graph/graph-model').ProtocolGraph);
-    const loopOpt = opts.find((o: { kind: string }) => o.kind === 'loop');
-    expect(loopOpt).toBeDefined();
-    expect(loopOpt?.id).toBe('loop-1');
-    expect(loopOpt?.label).toBe('Lesion loop');
+    const qOpt = opts.find((o: { kind: string }) => o.kind === 'question');
+    expect(qOpt).toBeDefined();
+    expect(qOpt?.id).toBe('loop-1');
+    expect(qOpt?.label).toBe('Lesion loop');
+    expect(opts.map((o: { kind: string }) => o.kind)).not.toContain('loop');
   });
 
   it('NFR-06 (Pitfall 10): start-from-node command id has no plugin prefix', () => {

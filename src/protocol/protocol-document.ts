@@ -80,7 +80,7 @@ export interface ProtocolNodeRecord {
   /**
    * Typed node fields. Keys are camelCase without prefix:
    * - questionText, answerText, displayLabel, content, separator,
-   *   headerText, subfolderPath, snippetLabel, snippetSeparator, snippetPath.
+   *   loop, subfolderPath, snippetLabel, snippetSeparator, snippetPath.
    *
    * Parser validates field presence/absence per node kind.
    */
@@ -99,6 +99,13 @@ export interface ProtocolEdgeRecord {
   toNodeId: string;
   /** Optional edge label (shown on connector in visual editor and runner). */
   label?: string;
+  /**
+   * Loop-exit flag. When `true`, traversing this edge pops the current loop frame.
+   * Absent or `false` = body branch. Replaces the former `+`-prefix label
+   * convention. The one-time migration sets this flag on legacy `+`-prefixed
+   * outgoing edges of `kind: 'loop'` nodes (now migrated to looped questions).
+   */
+  isLoopExit?: boolean;
 }
 
 /**

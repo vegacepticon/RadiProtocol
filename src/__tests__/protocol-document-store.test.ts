@@ -148,6 +148,103 @@ describe('ProtocolDocumentStore — read', () => {
   });
 });
 
+describe('ProtocolDocumentStore — migration on read', () => {
+  function legacyLoopDoc(): ProtocolDocumentV1 {
+    return {
+      ...VALID_DOC,
+      id: 'legacy-1',
+      title: 'Legacy Loop Protocol',
+      nodes: [
+        { id: 'n-start', kind: 'start', x: 0, y: 0, width: 200, height: 80, fields: {} },
+        { id: 'n-loop', kind: 'loop' as never, x: 0, y: 100, width: 250, height: 60, fields: { headerText: 'Repeat?' } },
+        { id: 'n-next', kind: 'question', x: 0, y: 200, width: 250, height: 60, fields: { questionText: 'Done?' } },
+      ],
+      edges: [
+        { id: 'e1', fromNodeId: 'n-start', toNodeId: 'n-loop' },
+        { id: 'e2', fromNodeId: 'n-loop', toNodeId: 'n-next', label: '+Done' },
+        { id: 'e3', fromNodeId: 'n-loop', toNodeId: 'n-start', label: 'Body' },
+      ],
+    } as ProtocolDocumentV1;
+  }
+
+  it('first read of a legacy loop document migrates + persists (write called once)', async () => {
+    const { vault, files } = makeVault({
+      files: { 'protocols/legacy.rp.json': JSON.stringify(legacyLoopDoc()) },
+      folders: ['protocols'],
+    });
+    const store = new ProtocolDocumentStore(makeApp(vault) as never);
+    const result = await store.read('protocols/legacy.rp.json');
+    expect(result).not.toBeNull();
+    expect(vault.adapter.write).toHaveBeenCalledTimes(1);
+    const persisted = JSON.parse(files['protocols/legacy.rp.json']!) as ProtocolDocumentV1;
+    expect(persisted.nodes.find(n => n.id === 'n-loop')!.kind).toBe('question');
+    expect(persisted.nodes.find(n => n.id === 'n-loop')!.fields['loop']).toBe(true);
+    expect(persisted.nodes.find(n => n.id === 'n-loop')!.fields['questionText']).toBe('Repeat?');
+    expect(persisted.nodes.find(n => n.id === 'n-loop')!.fields['headerText']).toBeUndefined();
+    expect(persisted.edges.find(e => e.id === 'e2')!.label).toBe('Done');
+    expect(persisted.edges.find(e => e.id === 'e2')!.isLoopExit).toBe(true);
+    expect(persisted.edges.find(e => e.id === 'e3')!.isLoopExit).toBeUndefined();
+    expect(result!.nodes.find(n => n.id === 'n-loop')!.kind).toBe('question');
+  });
+
+  it('second read does not write (idempotent)', async () => {
+    const { vault } = makeVault({
+      files: { 'protocols/legacy.rp.json': JSON.stringify(legacyLoopDoc()) },
+      folders: ['protocols'],
+    });
+    const store = new ProtocolDocumentStore(makeApp(vault) as never);
+    await store.read('protocols/legacy.rp.json');
+    expect(vault.adapter.write).toHaveBeenCalledTimes(1);
+    await store.read('protocols/legacy.rp.json');
+    expect(vault.adapter.write).toHaveBeenCalledTimes(1);
+  });
+
+  it('invalid schema does not write', async () => {
+    const { vault } = makeVault({ files: { 'protocols/bad.rp.json': JSON.stringify({ schema: 'wrong', version: 1 }) } });
+    const store = new ProtocolDocumentStore(makeApp(vault) as never);
+    const result = await store.read('protocols/bad.rp.json');
+    expect(result).toBeNull();
+    expect(vault.adapter.write).not.toHaveBeenCalled();
+  });
+
+  it('adapter read failure does not write', async () => {
+    const { vault } = makeVault({ files: { 'protocols/x.rp.json': JSON.stringify(legacyLoopDoc()) } });
+    vault.adapter.read.mockRejectedValueOnce(new Error('disk error'));
+    const store = new ProtocolDocumentStore(makeApp(vault) as never);
+    const result = await store.read('protocols/x.rp.json');
+    expect(result).toBeNull();
+    expect(vault.adapter.write).not.toHaveBeenCalled();
+  });
+
+  it('migration write failure returns null', async () => {
+    const { vault } = makeVault({
+      files: { 'protocols/legacy.rp.json': JSON.stringify(legacyLoopDoc()) },
+      folders: ['protocols'],
+    });
+    vault.adapter.write.mockRejectedValueOnce(new Error('write error'));
+    const store = new ProtocolDocumentStore(makeApp(vault) as never);
+    const result = await store.read('protocols/legacy.rp.json');
+    expect(result).toBeNull();
+  });
+
+  it('update on a legacy document receives the migrated doc and writes twice', async () => {
+    const { vault, files } = makeVault({
+      files: { 'protocols/legacy.rp.json': JSON.stringify(legacyLoopDoc()) },
+      folders: ['protocols'],
+    });
+    const store = new ProtocolDocumentStore(makeApp(vault) as never);
+    const result = await store.update('protocols/legacy.rp.json', (doc) => {
+      expect(doc!.nodes.find(n => n.id === 'n-loop')!.kind).toBe('question');
+      return { ...doc!, title: 'Edited' };
+    });
+    expect(result.title).toBe('Edited');
+    expect(vault.adapter.write).toHaveBeenCalledTimes(2);
+    const persisted = JSON.parse(files['protocols/legacy.rp.json']!) as ProtocolDocumentV1;
+    expect(persisted.title).toBe('Edited');
+    expect(persisted.nodes.find(n => n.id === 'n-loop')!.kind).toBe('question');
+  });
+});
+
 describe('ProtocolDocumentStore — write', () => {
   it('writes valid document to disk', async () => {
     const { vault, files } = makeVault();

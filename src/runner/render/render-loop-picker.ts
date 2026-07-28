@@ -1,7 +1,9 @@
 // runner/render/render-loop-picker.ts
 // Phase 87 — 2-zone render: textZone (loop header text) + actionZone (body/exit buttons).
+// Post loop→question merge: the picker renders for a looped Question, classifies exits
+// via the explicit edge.isLoopExit flag, and uses verbatim exit labels.
 import type { ProtocolGraph, RPEdge } from '../../graph/graph-model';
-import { isExitEdge, nodeLabel, stripExitPrefix } from '../../graph/node-label';
+import { nodeLabel } from '../../graph/node-label';
 import type { RunnerState } from '../runner-state';
 import { createButton } from '../../utils/dom-helpers';
 
@@ -26,15 +28,15 @@ export function renderLoopPicker(
   }
 
   const node = graph.nodes.get(state.nodeId);
-  if (node === undefined || node.kind !== 'loop') {
-    host.renderError([`Loop node "${state.nodeId}" not found in graph.`]);
+  if (node === undefined || node.kind !== 'question' || !node.loop) {
+    host.renderError([`Looped question "${state.nodeId}" not found in graph.`]);
     return false;
   }
 
-  // RUN-01: render headerText above picker when present.
-  if (node.headerText !== '') {
+  // Render the question text above the picker when non-empty.
+  if (node.questionText !== '') {
     textZone.createEl('p', {
-      text: node.headerText,
+      text: node.questionText,
       cls: 'rp-loop-header-text',
     });
   }
@@ -43,20 +45,19 @@ export function renderLoopPicker(
   const outgoing = graph.edges.filter(e => e.fromNodeId === state.nodeId);
   const list = actionZone.createDiv({ cls: 'rp-loop-picker-list rp-stack-md' });
   for (const edge of outgoing) {
-    // Phase 50.1 EDGE-03 — "+"-prefix convention:
-    //   * "+"-prefixed edge → caption = stripExitPrefix(label), class = rp-loop-exit-btn.
-    //   * non-"+" edge → caption = nodeLabel(target) fallback to target id, class = rp-loop-body-btn.
-    const exit = isExitEdge(edge);
-    let caption: string;
-    if (exit) {
-      caption = stripExitPrefix(edge.label ?? '');
-    } else {
-      const target = graph.nodes.get(edge.toNodeId);
-      caption = target !== undefined ? nodeLabel(target) : edge.toNodeId;
-    }
+    // Exit edges are identified by edge.isLoopExit === true (explicit metadata,
+    // replacing the former `+`-prefix convention).
+    //   * exit edge → caption = edge.label ?? '' (verbatim), class = rp-loop-exit-btn.
+    //   * body edge → caption = nodeLabel(target) fallback to target id, class = rp-loop-body-btn.
+    const exit = edge.isLoopExit === true;
+    const target = graph.nodes.get(edge.toNodeId);
+    const targetCaption = target !== undefined ? nodeLabel(target) : edge.toNodeId;
+    const accessibleTargetCaption = targetCaption.trim() !== '' ? targetCaption : edge.toNodeId;
+    const caption = exit ? edge.label ?? '' : targetCaption;
     const btn = createButton(list, {
       cls: exit ? 'rp-loop-exit-btn' : 'rp-loop-body-btn',
       text: caption,
+      attr: caption.trim() === '' ? { 'aria-label': accessibleTargetCaption } : undefined,
     });
     host.bindClick(btn, () => {
       void host.onChooseLoopBranch(edge, exit);

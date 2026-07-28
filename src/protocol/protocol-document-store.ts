@@ -12,6 +12,7 @@ import {
   isProtocolDocumentV1,
   type ProtocolDocumentV1,
 } from './protocol-document';
+import { migrateProtocolDocument } from './protocol-document-migration';
 
 export const PROTOCOL_FILE_EXTENSION = 'rp.json' as const;
 
@@ -42,7 +43,17 @@ export class ProtocolDocumentStore {
         console.warn(`[RadiProtocol] ProtocolDocumentStore.read: invalid schema in ${protocolPath}`);
         return null;
       }
-      return parsed;
+      // One-time lossless migration of legacy `kind: 'loop'` nodes → looped
+      // questions and `+`-prefix exit labels → `isLoopExit`. Persist the migrated
+      // document before returning so the inline runner's later raw vault re-read
+      // sees the canonical form. Idempotent — a document with no legacy loop
+      // nodes triggers no write. Migration/persistence failure → return null
+      // (load-failed UX), matching the existing read() contract.
+      const { doc: migrated, changed } = migrateProtocolDocument(parsed);
+      if (changed) {
+        await this.write(protocolPath, migrated);
+      }
+      return migrated;
     } catch (err) {
       console.error(`[RadiProtocol] ProtocolDocumentStore.read failed for ${protocolPath}:`, err);
       return null;

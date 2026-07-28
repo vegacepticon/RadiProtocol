@@ -13,8 +13,7 @@ import type {
   TextBlockNode,
   LoopStartNode,
   LoopEndNode,
-  SnippetNode,  // Phase 29
-  LoopNode,     // Phase 43 D-05 — unified loop kind (LOOP-01, LOOP-02)
+  SnippetNode,
 } from '../../graph/graph-model';
 import { defaultT, type Translator } from '../../i18n';
 
@@ -39,6 +38,7 @@ interface RawCanvasEdge {
   fromNode: string;
   toNode: string;
   label?: string;
+  [key: string]: unknown;
 }
 
 interface RawCanvasData {
@@ -114,6 +114,7 @@ export class CanvasParser {
         fromNodeId: rawEdge.fromNode,
         toNodeId: rawEdge.toNode,
         label: rawEdge.label,
+        isLoopExit: rawEdge['radiprotocol_isLoopExit'] === true ? true : undefined,
       });
 
       const fromAdj = adjacency.get(rawEdge.fromNode);
@@ -163,8 +164,7 @@ export class CanvasParser {
 
     const validKinds: RPNodeKind[] = [
       'start', 'question', 'answer',
-      'text-block', 'loop-start', 'loop-end', 'snippet',  // Phase 29
-      'loop',  // Phase 43 D-05 — unified loop (LOOP-01, LOOP-02)
+      'text-block', 'loop-start', 'loop-end', 'snippet',
     ];
 
     // Phase 46 CLEAN-02 — legacy free-text-input canvases are rejected at parse-time.
@@ -199,10 +199,12 @@ export class CanvasParser {
         return node;
       }
       case 'question': {
+        const loopRaw = props['radiprotocol_loop'];
         const node: QuestionNode = {
           ...base,
           kind: 'question',
           questionText: getString(props, 'radiprotocol_questionText', raw.text ?? ''),
+          loop: typeof loopRaw === 'boolean' ? loopRaw : undefined,
         };
         return node;
       }
@@ -280,17 +282,6 @@ export class CanvasParser {
           radiprotocol_snippetPath: (typeof rawSnippetPath === 'string' && rawSnippetPath !== '')
             ? rawSnippetPath
             : undefined,
-        };
-        return node;
-      }
-      case 'loop': {
-        // Phase 43 D-05 — unified loop node (LOOP-01, LOOP-02, LOOP-03).
-        // headerText normalises to '' when radiprotocol_headerText is missing/undefined
-        // (symmetric with TextBlockNode.content, NOT SnippetNode.subfolderPath?: string | undefined).
-        const node: LoopNode = {
-          ...base,
-          kind: 'loop',
-          headerText: getString(props, 'radiprotocol_headerText', ''),
         };
         return node;
       }

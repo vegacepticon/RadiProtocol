@@ -279,11 +279,11 @@ const t = (key: string, _params?: Record<string, string>): string => {
     'protocolEditor.nodeKind.question': 'Question',
     'protocolEditor.nodeKind.answer': 'Answer',
     'protocolEditor.nodeKind.text-block': 'Text block',
-    'protocolEditor.nodeKind.loop': 'Loop',
     'protocolEditor.nodeKind.snippet': 'Snippet',
     'protocolEditor.questionTextLabel': 'Question text',
     'protocolEditor.answerTextLabel': 'Answer text',
-    'protocolEditor.headerTextLabel': 'Header text',
+    'protocolEditor.loopToggleLabel': 'Loop',
+    'protocolEditor.loopBadgeAriaLabel': 'Loop question',
     'protocolEditor.contentLabel': 'Content',
     'protocolEditor.snippetSeparatorLabel': 'Separator',
     'protocolEditor.noNodes': 'No nodes',
@@ -881,12 +881,12 @@ describe('ProtocolEditorView: node-kind creation picker omits text-block (Phase 
     return documentBody;
   }
 
-  it('openNodeKindPickerAtWorldPoint offers start/question/answer/loop/snippet and NOT text-block', () => {
+  it('openNodeKindPickerAtWorldPoint offers start/question/answer/snippet and NOT text-block', () => {
     const { view } = createTestView();
     const documentBody = openPickerDocument();
     (view as any).openNodeKindPickerAtWorldPoint(0, 0);
     const kinds = nodeKindsInPicker(documentBody);
-    expect(kinds).toEqual(['start', 'question', 'answer', 'loop', 'snippet']);
+    expect(kinds).toEqual(['start', 'question', 'answer', 'snippet']);
     expect(kinds).not.toContain('text-block');
   });
 
@@ -895,7 +895,149 @@ describe('ProtocolEditorView: node-kind creation picker omits text-block (Phase 
     const documentBody = openPickerDocument();
     (view as any).openNodeKindPickerAndConnectAtWorldPoint('node-1', 0, 0);
     const kinds = nodeKindsInPicker(documentBody);
-    expect(kinds).toEqual(['start', 'question', 'answer', 'loop', 'snippet']);
+    expect(kinds).toEqual(['start', 'question', 'answer', 'snippet']);
     expect(kinds).not.toContain('text-block');
+  });
+});
+
+describe('ProtocolEditorView: loop toggle authoring + badge', () => {
+  let savedWindow: unknown;
+  let savedRAF: unknown;
+  let savedDocument: unknown;
+  beforeEach(() => {
+    savedWindow = (globalThis as any).window;
+    savedRAF = (globalThis as any).requestAnimationFrame;
+    savedDocument = (globalThis as any).document;
+    (globalThis as any).window = globalThis;
+    (globalThis as any).requestAnimationFrame = (cb: FrameRequestCallback) => { cb(0); return 0; };
+  });
+  afterEach(() => {
+    (globalThis as any).window = savedWindow;
+    (globalThis as any).requestAnimationFrame = savedRAF;
+    (globalThis as any).document = savedDocument;
+  });
+
+  function createLoopableView(): { view: ProtocolEditorView; surfaceEl: MockEl; documentBody: MockEl; updateSpy: ReturnType<typeof vi.fn> } {
+    const documentBody = makeEl('body');
+    (globalThis as any).document = { body: documentBody, activeElement: null };
+
+    const holder: { view: ProtocolEditorView | null } = { view: null };
+    const updateSpy = vi.fn(async (_path: string, mutator: (doc: ProtocolDocumentV1) => ProtocolDocumentV1): Promise<ProtocolDocumentV1> => {
+      const current = (holder.view as any).doc as ProtocolDocumentV1;
+      const updated = mutator(current);
+      (holder.view as any).doc = updated;
+      return updated;
+    });
+
+    const mockPlugin = {
+      i18n: { t },
+      settings: { snippetFolderPath: '.radiprotocol/snippets' },
+      protocolDocumentStore: { update: updateSpy },
+    } as any;
+
+    const leaf = {} as any;
+    const view = new ProtocolEditorView(leaf, mockPlugin);
+    holder.view = view;
+
+    const surfaceEl = makeEl('div');
+    const svgEl = makeEl('svg');
+    const viewportEl = makeEl('div');
+    const rootEl = makeEl('div');
+    (view as any).surfaceEl = surfaceEl;
+    (view as any).svgEl = svgEl;
+    (view as any).viewportEl = viewportEl;
+    (view as any).rootEl = rootEl;
+    (view as any).protocolPath = 'test.rp.json';
+    (view as any).zoom = 1;
+    (view as any).loadProtocol = vi.fn(async () => {});
+
+    const doc: ProtocolDocumentV1 = {
+      schema: 'radiprotocol.protocol',
+      version: 1,
+      id: 'test-doc',
+      title: 'Test Protocol',
+      createdAt: '2025-01-01T00:00:00Z',
+      updatedAt: '2025-01-01T00:00:00Z',
+      nodes: [
+        { id: 'node-q', kind: 'question', x: 100, y: 100, width: 200, height: 80, text: 'Where?', fields: { questionText: 'Where?' } },
+      ],
+      edges: [],
+    };
+    (view as any).doc = doc;
+
+    return { view, surfaceEl, documentBody, updateSpy };
+  }
+
+  function findLoopCheckbox(root: MockEl): MockEl | undefined {
+    const checkboxes = findAllByTag(root, 'input').filter((i) => i._attrs['type'] === 'checkbox');
+    return checkboxes.find((c) => {
+      const label = c.parent;
+      const span = label?.children.find((ch) => ch.tagName === 'SPAN');
+      return span?._text === 'Loop';
+    });
+  }
+
+  function findButtonByText(root: MockEl, text: string): MockEl | undefined {
+    return findAllByTag(root, 'button').find((b) => b._text === text);
+  }
+
+  it('persisting the loop toggle writes fields.loop === true to the node record', async () => {
+    const { view, documentBody, updateSpy } = createLoopableView();
+    (view as any).openEditModal((view as any).doc.nodes[0]);
+
+    const loopCheckbox = findLoopCheckbox(documentBody);
+    expect(loopCheckbox).toBeDefined();
+    expect(loopCheckbox!._attrs['type']).toBe('checkbox');
+    // Initial state: loop absent → checkbox unchecked.
+    expect((loopCheckbox as any).checked).toBe(false);
+
+    (loopCheckbox as any).checked = true;
+
+    const saveBtn = findButtonByText(documentBody, 'Save');
+    expect(saveBtn).toBeDefined();
+    const handlers = saveBtn!._listeners.get('click') ?? [];
+    expect(handlers.length).toBe(1);
+    for (const handler of handlers) await handler({});
+
+    expect(updateSpy).toHaveBeenCalledTimes(1);
+    const persisted = (view as any).doc as ProtocolDocumentV1;
+    expect(persisted.nodes[0]!.fields['loop']).toBe(true);
+    expect(persisted.nodes[0]!.fields['questionText']).toBe('Where?');
+  });
+
+  it('leaving the loop toggle unchecked omits fields.loop from the persisted record', async () => {
+    const { view, documentBody, updateSpy } = createLoopableView();
+    (view as any).openEditModal((view as any).doc.nodes[0]);
+
+    const loopCheckbox = findLoopCheckbox(documentBody);
+    expect(loopCheckbox).toBeDefined();
+    expect((loopCheckbox as any).checked).toBe(false);
+    // Leave unchecked.
+
+    const saveBtn = findButtonByText(documentBody, 'Save');
+    const handlers = saveBtn!._listeners.get('click') ?? [];
+    for (const handler of handlers) await handler({});
+
+    expect(updateSpy).toHaveBeenCalledTimes(1);
+    const persisted = (view as any).doc as ProtocolDocumentV1;
+    expect(persisted.nodes[0]!.fields['loop']).toBeUndefined();
+  });
+
+  it('renderDocument renders a loop badge with aria-label on a looped question', () => {
+    const { view, surfaceEl } = createLoopableView();
+    (view as any).doc.nodes[0].fields['loop'] = true;
+    (view as any).renderDocument();
+
+    const badges = findAllByClass(surfaceEl, 'rp-protocol-editor-node-loop-badge');
+    expect(badges.length).toBe(1);
+    expect(badges[0]!._attrs['aria-label']).toBe('Loop question');
+  });
+
+  it('renderDocument omits the loop badge on an ordinary question', () => {
+    const { view, surfaceEl } = createLoopableView();
+    (view as any).renderDocument();
+
+    const badges = findAllByClass(surfaceEl, 'rp-protocol-editor-node-loop-badge');
+    expect(badges.length).toBe(0);
   });
 });

@@ -4,7 +4,7 @@
 // See `docs/ARCHITECTURE-NOTES.md#snippet-node-binding-and-picker`.
 
 import type { ProtocolGraph, RPNode } from './graph-model';
-import { nodeLabel as sharedNodeLabel, isLabeledEdge, isExitEdge, stripExitPrefix } from './node-label';
+import { nodeLabel as sharedNodeLabel } from './node-label';
 import { defaultT, type Translator } from '../i18n';
 
 /**
@@ -95,13 +95,15 @@ export class GraphValidator {
     }
 
     // Check 4: Unintentional cycles — three-color DFS
-    // Phase 43 D-09 — A cycle is unintentional if it does NOT pass through a unified loop node.
+    // Phase 43 D-09 — A cycle is unintentional if it does NOT pass through a looped question.
     const cycleErrors = this.detectUnintentionalCycles(graph, startNodeId);
     errors.push(...cycleErrors);
 
-    // Check 5: Dead-end questions — question nodes with no outgoing edges
+    // Check 5: Dead-end questions — question nodes with no outgoing edges.
+    // A looped question (loop === true) is handled by the loop exit/body pass
+    // below; it must NOT also receive the generic dead-end error.
     for (const [id, node] of graph.nodes) {
-      if (node.kind === 'question') {
+      if (node.kind === 'question' && !node.loop) {
         const outgoing = graph.adjacency.get(id);
         if (!outgoing || outgoing.length === 0) {
           errors.push(this.t('graphValidator.deadEndQuestion', { questionText: node.questionText || id }));
@@ -109,47 +111,18 @@ export class GraphValidator {
       }
     }
 
-    // Check (LOOP-04): each unified loop node under Phase 50.1 EDGE-03 / beta.7 multi-exit UX:
-    //  (D-04) 0 "+"-edges AND 0 non-"+" labeled edges → "no exit" with a "+"-prefix hint
-    //  (D-05) 0 "+"-edges AND ≥1 non-"+" labeled edges → legacy hint with {edgeIds}
-    //  (D-08) iterate "+"-edges, stripExitPrefix(label) === '' → per-offending-edge error
-    //  (D-07) 0 non-"+" outgoing edges → no body
-    // Multiple "+"-prefixed exit edges are valid: one loop picker may offer several distinct
-    // exit branches. Error-check ordering: D-04/D-05 → D-08 → D-07. Multiple errors per loop node
-    // accumulate for host error panels. `isExitEdge` and `stripExitPrefix` live in
-    // `src/graph/node-label.ts` (Phase 50.1 D-09/D-10). `isLabeledEdge` is still used below
-    // to detect the legacy "labeled but non-'+' prefix" case (D-05 branch).
+    // Loop exit/body invariants for looped questions (loop === true).
+    // Exit edges are identified by edge.isLoopExit === true (explicit metadata,
+    // replacing the former `+`-prefix convention). Multiple exits are valid.
     for (const [id, node] of graph.nodes) {
-      if (node.kind !== 'loop') continue;
+      if (node.kind !== 'question' || !node.loop) continue;
       const outgoing = graph.edges.filter(e => e.fromNodeId === id);
-      const exitEdges = outgoing.filter(e => isExitEdge(e));
-      const legacyLabeledEdges = outgoing.filter(e => !isExitEdge(e) && isLabeledEdge(e));
-      const bodyEdges = outgoing.filter(e => !isExitEdge(e));
+      const exitEdges = outgoing.filter(e => e.isLoopExit === true);
+      const bodyEdges = outgoing.filter(e => !e.isLoopExit);
       const label = this.nodeLabel(node);
-
-      // D-04 / D-05 — zero "+"-edges
-      // Phase 84 I18N-02: localized via injected translator (graphValidator.loopNoExit / loopNoExitWithLegacy).
       if (exitEdges.length === 0) {
-        if (legacyLabeledEdges.length === 0) {
-          // D-04: clean zero-exit — no labeled edges at all
-          errors.push(this.t('graphValidator.loopNoExit', { label }));
-        } else {
-          // D-05: legacy hint — list the labeled non-"+" candidates
-          const edgeIds = legacyLabeledEdges.map(e => e.id).join(', ');
-          errors.push(this.t('graphValidator.loopNoExitWithLegacy', { label, ids: edgeIds }));
-        }
+        errors.push(this.t('graphValidator.loopNoExit', { label }));
       }
-
-      // D-08 — per-offending-edge, "+"-edge with empty caption post-strip
-      // Phase 84 I18N-02: localized via injected translator (graphValidator.loopExitNoLabel).
-      for (const edge of exitEdges) {
-        if (stripExitPrefix(edge.label ?? '').length === 0) {
-          errors.push(this.t('graphValidator.loopExitNoLabel', { label, edgeId: edge.id }));
-        }
-      }
-
-      // D-07 — zero non-"+" outgoing edges (no body)
-      // Phase 84 I18N-02: localized via injected translator (graphValidator.loopNoBody).
       if (bodyEdges.length === 0) {
         errors.push(this.t('graphValidator.loopNoBody', { label }));
       }
@@ -216,7 +189,7 @@ export class GraphValidator {
    * Three-color DFS cycle detection.
    * Colors: white (unvisited) | gray (in current DFS path) | black (fully processed)
    * A back-edge (gray → gray) indicates a cycle.
-   * Phase 43 D-09 — Cycles that pass through a unified loop node are intentional and NOT reported as errors.
+   * Phase 43 D-09 — Cycles that pass through a looped question are intentional and NOT reported as errors.
    */
   private detectUnintentionalCycles(graph: ProtocolGraph, startNodeId: string): string[] {
     const errors: string[] = [];
@@ -236,15 +209,15 @@ export class GraphValidator {
         const neighborColor = color.get(neighborId);
 
         if (neighborColor === 'gray') {
-          // Back-edge found — determine if this cycle passes through a unified loop node (Phase 43 D-09)
+          // Back-edge found — determine if this cycle passes through a looped question (Phase 43 D-09)
           const cycleStart = pathStack.indexOf(neighborId);
           const cycleNodes = pathStack.slice(cycleStart);
 
-          // Phase 43 D-09 — an intentional cycle now passes through a unified loop node
+          // Phase 43 D-09 — an intentional cycle now passes through a looped question
           // (previously through loop-end). Variable name updated accordingly.
           const passesViaLoopNode = cycleNodes.some(id => {
             const n = graph.nodes.get(id);
-            return n?.kind === 'loop';
+            return n?.kind === 'question' && n.loop === true;
           });
 
           if (!passesViaLoopNode) {

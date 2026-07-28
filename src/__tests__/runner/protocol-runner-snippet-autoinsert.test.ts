@@ -28,7 +28,6 @@ import type {
   SnippetNode,
   TextBlockNode,
   StartNode,
-  LoopNode,
 } from '../../graph/graph-model';
 
 // ── Graph factory helpers ────────────────────────────────────────────────
@@ -61,19 +60,20 @@ function makeSnippet(id: string, partial: Partial<SnippetNode> = {}): SnippetNod
   } as SnippetNode;
 }
 
-function makeLoop(id: string, headerText = 'Цикл'): LoopNode {
-  return { kind: 'loop', id, headerText, x: 0, y: 0, width: 150, height: 80 };
+function makeLoopedQuestion(id: string, questionText = 'Цикл'): QuestionNode {
+  return { kind: 'question', id, questionText, loop: true, x: 0, y: 0, width: 150, height: 80 };
 }
 
 /** Build a minimal ProtocolGraph from a list of nodes + ordered edges. */
-function buildGraph(nodes: RPNode[], edgeList: Array<[string, string, string?]>, startNodeId: string): ProtocolGraph {
+function buildGraph(nodes: RPNode[], edgeList: Array<[string, string, string?, boolean?]>, startNodeId: string): ProtocolGraph {
   const nodeMap = new Map<string, RPNode>();
   for (const n of nodes) nodeMap.set(n.id, n);
-  const edges: RPEdge[] = edgeList.map(([from, to, label], i) => ({
+  const edges: RPEdge[] = edgeList.map(([from, to, label, isLoopExit], i) => ({
     id: `e-${i}`,
     fromNodeId: from,
     toNodeId: to,
     ...(label !== undefined ? { label } : {}),
+    ...(isLoopExit === true ? { isLoopExit: true } : {}),
   }));
   const adjacency = new Map<string, string[]>();
   const reverseAdjacency = new Map<string, string[]>();
@@ -412,7 +412,7 @@ describe('Phase 51 Plan 06 — ProtocolRunner D-13/D-14/D-15 auto-insert dispatc
     const graph = buildGraph(
       [
         makeStart('n-start'),
-        makeLoop('loop'),
+        makeLoopedQuestion('loop'),
         makeQuestion('q1'),
         makeSnippet('sn', { radiprotocol_snippetPath: 'abdomen/ct.md' }),
         makeTextBlock('end', 'exit text'),
@@ -420,7 +420,7 @@ describe('Phase 51 Plan 06 — ProtocolRunner D-13/D-14/D-15 auto-insert dispatc
       [
         ['n-start', 'loop'],
         ['loop', 'q1'],                  // body (no "+" label)
-        ['loop', 'end', '+выход'],       // exit
+        ['loop', 'end', 'выход', true],       // exit
         ['q1', 'sn'],
         ['sn', 'loop'],                  // back-edge
       ],

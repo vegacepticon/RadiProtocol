@@ -41,7 +41,7 @@ import type {
   RPNode,
   RPEdge,
   StartNode,
-  LoopNode,
+  QuestionNode,
   SnippetNode,
   TextBlockNode,
 } from '../../graph/graph-model';
@@ -52,8 +52,8 @@ function makeStart(id = 'n-start'): StartNode {
   return { kind: 'start', id, x: 0, y: 0, width: 50, height: 50 };
 }
 
-function makeLoop(id: string, headerText = 'iter'): LoopNode {
-  return { kind: 'loop', id, headerText, x: 0, y: 0, width: 100, height: 40 };
+function makeLoopedQuestion(id: string, questionText = 'iter'): QuestionNode {
+  return { kind: 'question', id, questionText, loop: true, x: 0, y: 0, width: 100, height: 40 };
 }
 
 function makeSnippet(id: string, partial: Partial<SnippetNode> = {}): SnippetNode {
@@ -66,16 +66,17 @@ function makeTextBlock(id: string, content = 'tail'): TextBlockNode {
 
 function buildGraph(
   nodes: RPNode[],
-  edgeList: Array<[string, string, string?]>,
+  edgeList: Array<[string, string, string?, boolean?]>,
   startNodeId: string,
 ): ProtocolGraph {
   const nodeMap = new Map<string, RPNode>();
   for (const n of nodes) nodeMap.set(n.id, n);
-  const edges: RPEdge[] = edgeList.map(([from, to, label], i) => ({
+  const edges: RPEdge[] = edgeList.map(([from, to, label, isLoopExit], i) => ({
     id: `e-${i}`,
     fromNodeId: from,
     toNodeId: to,
     ...(label !== undefined ? { label } : {}),
+    ...(isLoopExit === true ? { isLoopExit: true } : {}),
   }));
   const adjacency = new Map<string, string[]>();
   const reverseAdjacency = new Map<string, string[]>();
@@ -157,14 +158,14 @@ describe('Phase 67 D-14 / D-18 Test Layer #3 — InlineRunnerModal loop-body →
     const graph = buildGraph(
       [
         makeStart('n-start'),
-        makeLoop('n-loop', 'iter'),
+        makeLoopedQuestion('n-loop', 'iter'),
         makeSnippet('sn', { radiprotocol_snippetPath: path, snippetLabel: 'Abd CT' }),
         makeTextBlock('n-end', 'done'),
       ],
       [
         ['n-start', 'n-loop'],            // e-0
         ['n-loop', 'sn', 'body'],          // e-1 — body edge → file-bound snippet
-        ['n-loop', 'n-end', '+exit'],      // e-2 — exit edge
+        ['n-loop', 'n-end', 'exit', true],      // e-2 — exit edge
         ['sn', 'n-loop'],                  // e-3 — back-edge for loop semantics
       ],
       'n-start',
@@ -201,14 +202,14 @@ describe('Phase 67 D-14 / D-18 Test Layer #3 — InlineRunnerModal loop-body →
     const graph = buildGraph(
       [
         makeStart('n-start'),
-        makeLoop('n-loop', 'iter'),
+        makeLoopedQuestion('n-loop', 'iter'),
         makeSnippet('sn', { subfolderPath: 'Findings/Chest' }),  // directory-bound
         makeTextBlock('n-end', 'done'),
       ],
       [
         ['n-start', 'n-loop'],
         ['n-loop', 'sn', 'body'],
-        ['n-loop', 'n-end', '+exit'],
+        ['n-loop', 'n-end', 'exit', true],
         ['sn', 'n-loop'],
       ],
       'n-start',

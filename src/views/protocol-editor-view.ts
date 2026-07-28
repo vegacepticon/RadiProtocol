@@ -249,11 +249,10 @@ const NODE_KIND_DEFAULTS: Record<string, NodeKindDefault> = {
   question: { kind: 'question', fields: { questionText: '' }, color: 'rgba(33, 150, 243, 0.24)' },
   answer: { kind: 'answer', fields: { answerText: '' }, color: 'rgba(255, 193, 7, 0.28)' },
   'text-block': { kind: 'text-block', fields: { content: '' }, color: 'rgba(255, 235, 59, 0.24)' },
-  loop: { kind: 'loop', fields: { headerText: '' }, color: 'rgba(233, 30, 99, 0.24)' },
   snippet: { kind: 'snippet', fields: {}, color: 'rgba(156, 39, 176, 0.24)' },
 };
 
-const EDITABLE_NODE_KINDS: RPNodeKind[] = ['start', 'question', 'answer', 'loop', 'snippet'];
+const EDITABLE_NODE_KINDS: RPNodeKind[] = ['start', 'question', 'answer', 'snippet'];
 
 /** CSS/attribute token for a node kind — always raw "untyped", never i18n. */
 export function nodeKindToken(kind: RPNodeKind | null): string {
@@ -270,18 +269,13 @@ export function fieldsForProtocolEditorNodeKind(kind: RPNodeKind | null): Record
   return { ...(NODE_KIND_DEFAULTS[kind]?.fields ?? {}) };
 }
 
-export function normalizeProtocolEditorEdgeLabel(label: string, isLoopExit: boolean): string | undefined {
-  const withoutPrefix = label.trim().replace(/^\+\s*/, '').trim();
-  if (isLoopExit && withoutPrefix !== '') return `+${withoutPrefix}`;
-  return withoutPrefix === '' ? undefined : withoutPrefix;
+export function normalizeProtocolEditorEdgeLabel(label: string): string | undefined {
+  const trimmed = label.trim();
+  return trimmed === '' ? undefined : trimmed;
 }
 
 export function displayProtocolEditorEdgeLabel(label: string | undefined): string {
-  return (label ?? '').trim().replace(/^\+\s*/, '').trim();
-}
-
-export function isProtocolEditorLoopExitLabel(label: string | undefined): boolean {
-  return (label ?? '').trim().startsWith('+');
+  return (label ?? '').trim();
 }
 
 export function nodeTitle(node: ProtocolNodeRecord, t: Translator = defaultT): string {
@@ -324,12 +318,9 @@ export function shouldDisplayProtocolEditorEdgeLabel(
     const effectiveLabel = deriveProtocolEditorEdgeLabel(toNode, edge.label);
     return effectiveLabel !== undefined && effectiveLabel.trim() !== '';
   }
-  // Phase 50.1 EDGE-03 FIX: loop exit edges carry a user-authored "+"-prefixed label
-  // that must be preserved regardless of the target node kind. A loop exit typically
-  // points to a question/answer/text-block (not another loop node), so requiring
-  // toNode.kind === 'loop' was stripping the label on save, making the edge unlabeled
-  // and breaking the runner's exit-edge dispatch.
-  if (fromNode?.kind === 'loop' && isProtocolEditorLoopExitLabel(edge.label)) {
+  // A looped-question exit edge carries a user-authored label that must be preserved
+  // regardless of the target node kind (the runner dispatches via edge.isLoopExit).
+  if (fromNode?.kind === 'question' && fromNode.fields['loop'] === true && edge.isLoopExit === true) {
     return true;
   }
   return false;
@@ -956,6 +947,11 @@ export class ProtocolEditorView extends ItemView {
     const displayTitle = nodeTitle(node, this.plugin.i18n.t.bind(this.plugin.i18n));
     if (displayTitle !== (node.kind ?? this.plugin.i18n.t('protocolEditor.untyped'))) {
       nodeEl.createDiv({ cls: 'rp-protocol-editor-node-title', text: displayTitle });
+    }
+    if (node.kind === 'question' && node.fields['loop'] === true) {
+      const badge = nodeEl.createDiv({ cls: 'rp-protocol-editor-node-loop-badge' });
+      setIcon(badge, 'repeat');
+      badge.setAttr('aria-label', this.plugin.i18n.t('protocolEditor.loopBadgeAriaLabel'));
     }
     const resizeHandle = nodeEl.createDiv({ cls: 'rp-protocol-editor-resize-handle' });
     resizeHandle.setAttr('aria-label', this.plugin.i18n.t('protocolEditor.resizeNodeLabel'));
@@ -2049,10 +2045,10 @@ export class ProtocolEditorView extends ItemView {
     const exitLabel = exitField.createEl('label');
     const exitCheckbox = exitLabel.createEl('input', { attr: { type: 'checkbox' } }) as HTMLInputElement;
     exitLabel.appendText(` ${t('protocolEditor.loopExitLabel')}`);
-    exitCheckbox.checked = isProtocolEditorLoopExitLabel(edge.label);
+    exitCheckbox.checked = edge.isLoopExit === true;
     const syncExitVisibility = () => {
       const fromNode = nodes.find((node) => node.id === fromSelect.value);
-      const isLoopSource = fromNode?.kind === 'loop';
+      const isLoopSource = fromNode?.kind === 'question' && fromNode.fields['loop'] === true;
       exitField.style.display = isLoopSource ? '' : 'none';
       if (!isLoopSource) exitCheckbox.checked = false;
     };
@@ -2077,10 +2073,11 @@ export class ProtocolEditorView extends ItemView {
       if (duplicate) { new Notice(t('protocolEditor.duplicateEdgeRejected')); return; }
       const selectedSource = nodes.find((node) => node.id === nextFrom);
       const selectedTarget = nodes.find((node) => node.id === nextTo);
-      const typedLabel = normalizeProtocolEditorEdgeLabel(labelInput.value, exitCheckbox.checked);
+      const typedLabel = normalizeProtocolEditorEdgeLabel(labelInput.value);
       const defaultLabel = defaultProtocolEditorEdgeLabelForTarget(selectedTarget);
+      const nextIsLoopExit = exitCheckbox.checked ? true : undefined;
       const shouldDisplayLabel = shouldDisplayProtocolEditorEdgeLabel(
-        { ...edge, fromNodeId: nextFrom, toNodeId: nextTo, label: typedLabel ?? defaultLabel },
+        { ...edge, fromNodeId: nextFrom, toNodeId: nextTo, label: typedLabel ?? defaultLabel, isLoopExit: nextIsLoopExit },
         selectedSource,
         selectedTarget,
       );
@@ -2089,7 +2086,7 @@ export class ProtocolEditorView extends ItemView {
         const updated = await this.plugin.protocolDocumentStore.update(this.protocolPath!, (existing) => {
           if (existing === null) protocolMissingFileError();
           const nodes = existing.nodes.map((candidate) => {
-            if (candidate.id !== nextTo || candidate.kind !== 'snippet' || typedLabel === undefined || isProtocolEditorLoopExitLabel(typedLabel)) {
+            if (candidate.id !== nextTo || candidate.kind !== 'snippet' || typedLabel === undefined || nextIsLoopExit === true) {
               return candidate;
             }
             return {
@@ -2102,7 +2099,7 @@ export class ProtocolEditorView extends ItemView {
             };
           });
           const edges = existing.edges.map((candidate) => candidate.id === edge.id
-            ? { ...candidate, fromNodeId: nextFrom, toNodeId: nextTo, label: nextLabel }
+            ? { ...candidate, fromNodeId: nextFrom, toNodeId: nextTo, label: nextLabel, isLoopExit: nextIsLoopExit }
             : candidate);
           return { ...existing, nodes, edges, viewport: this.currentViewportState(), updatedAt: new Date().toISOString() };
         });
@@ -2167,7 +2164,7 @@ export class ProtocolEditorView extends ItemView {
       if (multiline) {
         const input = field.createEl('textarea') as HTMLTextAreaElement;
         input.value = initialValue;
-        // Multiline node-body fields (questionText/answerText/content/headerText)
+        // Multiline node-body fields (questionText/answerText/content)
         // intentionally preserve an empty string. Empty answerText is a valid
         // skip-like answer, not an instruction to fall back to stale node.text.
         textControls.push({ key, value: () => input.value });
@@ -2186,6 +2183,15 @@ export class ProtocolEditorView extends ItemView {
       input.checked = node.fields['startPointEnabled'] === true;
       label.createSpan({ text: t('protocolEditor.startPointEnabledLabel') });
       textControls.push({ key: 'startPointEnabled', value: () => input.checked ? true : undefined });
+    };
+
+    const addLoopToggle = (nodeRecord: ProtocolNodeRecord) => {
+      const field = body.createDiv({ cls: 'rp-protocol-editor-modal-field rp-protocol-editor-checkbox-field' });
+      const label = field.createEl('label');
+      const input = label.createEl('input', { attr: { type: 'checkbox' } }) as HTMLInputElement;
+      input.checked = nodeRecord.fields['loop'] === true;
+      label.createSpan({ text: t('protocolEditor.loopToggleLabel') });
+      textControls.push({ key: 'loop', value: () => input.checked ? true : undefined });
     };
 
     const addSeparator = (key: string, label: string, value: unknown) => {
@@ -2347,6 +2353,7 @@ export class ProtocolEditorView extends ItemView {
     switch (node.kind) {
       case 'question':
         addInput('questionText', t('protocolEditor.questionTextLabel'), node.fields['questionText'] ?? node.text, true);
+        addLoopToggle(node);
         break;
       case 'answer':
         addInput('displayLabel', t('protocolEditor.answerButtonLabelLabel'), node.fields['displayLabel']);
@@ -2356,9 +2363,6 @@ export class ProtocolEditorView extends ItemView {
       case 'text-block':
         addInput('content', t('protocolEditor.contentLabel'), node.fields['content'] ?? node.text, true);
         addSeparator('separator', t('protocolEditor.textSeparatorLabel'), node.fields['separator']);
-        break;
-      case 'loop':
-        addInput('headerText', t('protocolEditor.headerTextLabel'), node.fields['headerText'] ?? node.text, true);
         break;
       case 'snippet':
         addSnippetTargetPicker(node.fields['subfolderPath'], node.fields['snippetPath']);
@@ -2413,11 +2417,9 @@ export class ProtocolEditorView extends ItemView {
           ? 'answerText'
           : titleKind === 'text-block'
             ? 'content'
-            : titleKind === 'loop'
-              ? 'headerText'
-              : titleKind === 'snippet'
-                ? 'snippetLabel'
-                : null;
+            : titleKind === 'snippet'
+              ? 'snippetLabel'
+              : null;
       if (titleKey !== null && typeof nextFields[titleKey] === 'string') {
         updatedNode.text = nextFields[titleKey] as string;
       }

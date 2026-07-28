@@ -1,11 +1,9 @@
 // graph/graph-model.ts
 // Pure TypeScript types — zero Obsidian API imports (NFR-01, PARSE-06)
 
-// Phase 43 D-01: unified 'loop' kind добавлен; 'loop-start' / 'loop-end' сохраняются
-// как legacy parseable kinds до Phase 44 (runtime stub) и последующих фаз.
-// D-CL-05 вариант (b): сохраняем имена LoopStartNode / LoopEndNode с @deprecated JSDoc —
-// downstream (editor-panel-view, protocol-runner, validator migration-error) могут продолжать
-// ссылаться на них во время парсинга legacy-канвасов; validator выдаёт MIGRATE-01 поверх этих узлов.
+// The standalone 'loop' kind was merged into 'question' via QuestionNode.loop
+// (loop toggle). 'loop-start' / 'loop-end' remain as legacy parseable kinds
+// (validator emits MIGRATE-01); LoopStartNode / LoopEndNode keep @deprecated JSDoc.
 export type RPNodeKind =
   | 'start'
   | 'question'
@@ -13,8 +11,7 @@ export type RPNodeKind =
   | 'text-block'
   | 'loop-start'      // @deprecated Phase 43 D-03 — legacy parseable for migration-error (D-07)
   | 'loop-end'        // @deprecated Phase 43 D-03 — legacy parseable for migration-error (D-07)
-  | 'snippet'         // Phase 29
-  | 'loop';           // Phase 43 D-01 — unified loop kind (see v1.7 LOOP-01, LOOP-02)
+  | 'snippet';
 
 export interface RPNodeBase {
   id: string;
@@ -35,6 +32,15 @@ export interface StartNode extends RPNodeBase {
 export interface QuestionNode extends RPNodeBase {
   kind: 'question';
   questionText: string;
+  /**
+   * Loop toggle. When `true`, this question behaves as a loop node: the runner
+   * halts at a branch picker over its outgoing edges, supports nested re-entry,
+   * and pops the loop frame on an `isLoopExit` edge. Absent or `false` = ordinary
+   * question that halts at `at-node` awaiting `chooseAnswer`. Migrated from the
+   * removed standalone `LoopNode` (legacy `headerText` → `questionText`,
+   * `kind: 'loop'` → `kind: 'question'` + `loop: true`).
+   */
+  loop?: boolean;
 }
 
 export interface AnswerNode extends RPNodeBase {
@@ -49,17 +55,6 @@ export interface TextBlockNode extends RPNodeBase {
   content: string;
   snippetId?: string;
   radiprotocol_separator?: 'newline' | 'space';
-}
-
-/**
- * Phase 43 D-02 — unified loop node (LOOP-01, LOOP-02).
- * Замена пары LoopStartNode/LoopEndNode. headerText — текст заголовка над picker'ом,
- * рендерится runtime в Phase 44. Отсутствие / undefined в canvas JSON нормализуется
- * парсером в пустую строку (D-05).
- */
-export interface LoopNode extends RPNodeBase {
-  kind: 'loop';
-  headerText: string;
 }
 
 /**
@@ -98,11 +93,11 @@ export interface SnippetNode extends RPNodeBase {
 
 /**
  * One frame on the loop context stack.
- * Pushed when the runner enters a unified loop node (Phase 43 D-04).
+ * Pushed when the runner enters a looped question (Phase 43 D-04).
  * Contains only primitives — shallow array copy is sufficient for snapshots (LOOP-05).
  */
 export interface LoopContext {
-  /** Phase 43 D-04 — ID of the unified loop node that opened this frame.
+  /** Phase 43 D-04 — ID of the looped question that opened this frame.
    *  Renamed from loopStartId (v1.0..v1.6). */
   loopNodeId: string;
   /** 1-based iteration counter (starts at 1 on first entry) */
@@ -119,14 +114,20 @@ export type RPNode =
   | TextBlockNode
   | LoopStartNode     // @deprecated — legacy, см. interface JSDoc
   | LoopEndNode       // @deprecated — legacy, см. interface JSDoc
-  | SnippetNode       // Phase 29
-  | LoopNode;         // Phase 43 D-02 — unified loop (LOOP-01, LOOP-02)
+  | SnippetNode;      // Phase 29
 
 export interface RPEdge {
   id: string;
   fromNodeId: string;
   toNodeId: string;
   label?: string;
+  /**
+   * Loop-exit flag. When `true`, traversing this edge pops the current loop frame
+   * (runner, validator, and picker classify it as an exit). Absent or `false` =
+   * body branch. Replaces the former `+`-prefix label convention; the one-time
+   * migration strips the `+` prefix from legacy exit labels and sets this flag.
+   */
+  isLoopExit?: boolean;
 }
 
 export interface ProtocolGraph {

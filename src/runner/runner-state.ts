@@ -43,13 +43,13 @@ export interface AwaitingSnippetPickState {
 }
 
 /**
- * Phase 44 (RUN-01): runner paused at a unified loop node, presenting a picker
- * over all outgoing edges (body branches + «выход»). Transitions back to
+ * Phase 44 (RUN-01): runner paused at a looped question, presenting a picker
+ * over all outgoing edges (body branches + exit). Transitions back to
  * 'at-node' via chooseLoopBranch(edgeId).
  */
 export interface AwaitingLoopPickState {
   status: typeof RUNNER_STATUS.AWAITING_LOOP_PICK;
-  nodeId: string;                 // loop node id — host looks up headerText from graph
+  nodeId: string;                 // looped question id — host looks up questionText from graph
   accumulatedText: string;
   canStepBack: boolean;
   /** true when redoStack is non-empty — a forward action can be re-applied after undo. */
@@ -103,8 +103,9 @@ export interface RedoEntry {
 }
 
 /**
- * An unrecoverable error occurred (unknown node, iteration cap exceeded, loop node
- * reached in Phase 2). The runner cannot continue — caller should surface message to user.
+ * An unrecoverable error occurred (unknown node, iteration cap exceeded, or
+ * unexpected legacy loop-start/loop-end node). The runner cannot continue —
+ * caller should surface message to user.
  */
 export interface ErrorState {
   status: typeof RUNNER_STATUS.ERROR;

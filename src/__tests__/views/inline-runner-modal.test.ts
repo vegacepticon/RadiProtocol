@@ -529,3 +529,103 @@ describe('InlineRunnerModal — snippet picker resize CSS regression', () => {
   });
 });
 
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Phase 43 merge — direct inline-open migration seam.
+// The inline runner must cross ProtocolDocumentStore.read() (the migration seam)
+// BEFORE its own raw vault read + parse, so a legacy `kind: 'loop'` document
+// selected for direct execution is canonicalized to a looped Question before the
+// parser sees it (the parser rejects the legacy 'loop' kind post-merge).
+describe('InlineRunnerModal — migration seam before direct inline raw read', () => {
+  function stubOpenGlobals(): void {
+    const body = makeEl('body');
+    (body as any).createDiv = (opts?: { cls?: string; text?: string }) => {
+      const el = makeEl('div');
+      if (opts?.cls) el.addClass(opts.cls);
+      if (opts?.text !== undefined) el.setText(opts.text);
+      // InlineRunnerLayoutManager.getContainerSize() reads bounding rect.
+      (el as any).getBoundingClientRect = () => ({ width: 420, height: 320, top: 0, left: 0, right: 420, bottom: 320 });
+      // InlineRunnerModal.close() removes the container from the DOM.
+      (el as any).remove = () => {};
+      return el;
+    };
+    (body as any).appendChild = () => {};
+    vi.stubGlobal('document', {
+      body,
+      documentElement: { clientWidth: 1024, clientHeight: 768 },
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+      querySelectorAll: () => [] as MockEl[],
+    });
+    vi.stubGlobal('window', {
+      innerWidth: 1024,
+      innerHeight: 768,
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+      setTimeout: (cb: () => void, ms?: number) => setTimeout(cb, ms),
+      clearTimeout: (id: ReturnType<typeof setTimeout>) => clearTimeout(id),
+    });
+    vi.stubGlobal('ResizeObserver', class { observe(): void {} disconnect(): void {} unobserve(): void {} });
+  }
+
+  it('migrates a legacy protocol before the direct inline raw read and parse', async () => {
+    stubOpenGlobals();
+    try {
+      const targetNote = makeTargetNote();
+      const plugin = makeBasePlugin();
+      // Layout manager reads these during applyInitialLayout().
+      (plugin as any).getInlineRunnerPosition = () => null;
+      (plugin as any).saveInlineRunnerPosition = vi.fn();
+      const app = makeBaseApp(plugin, { vaultContent: '' });
+      // Keep the target note open + active so handleActiveLeafChange() does not close() mid-open().
+      (app.workspace.getActiveFile as ReturnType<typeof vi.fn>).mockReturnValue(targetNote);
+      (app.workspace.iterateAllLeaves as ReturnType<typeof vi.fn>).mockImplementation((cb: (leaf: unknown) => void) => {
+        cb({ view: { file: targetNote } });
+      });
+      const file = new (TFile as any)('test.canvas');
+      (app.vault.getAbstractFileByPath as ReturnType<typeof vi.fn>).mockReturnValue(file);
+
+      const legacy = JSON.stringify({
+        schema: 'radiprotocol.protocol', version: 1, id: 'legacy', title: 'Legacy',
+        createdAt: '2026-01-01T00:00:00.000Z', updatedAt: '2026-01-01T00:00:00.000Z',
+        nodes: [{ id: 'loop', kind: 'loop', x: 0, y: 0, width: 200, height: 60, fields: { headerText: 'Repeat?' } }],
+        edges: [],
+      });
+      const canonical = JSON.stringify({
+        schema: 'radiprotocol.protocol', version: 1, id: 'legacy', title: 'Legacy',
+        createdAt: '2026-01-01T00:00:00.000Z', updatedAt: '2026-01-02T00:00:00.000Z',
+        nodes: [{ id: 'loop', kind: 'question', x: 0, y: 0, width: 200, height: 60, fields: { questionText: 'Repeat?', loop: true } }],
+        edges: [],
+      });
+      let persisted = legacy;
+      (plugin as any).protocolDocumentStore = {
+        read: vi.fn(async () => {
+          persisted = canonical;
+          return JSON.parse(canonical);
+        }),
+      };
+      (app.vault.read as ReturnType<typeof vi.fn>).mockImplementation(async () => persisted);
+      const parse = vi.fn((content: string) => {
+        expect(content).toBe(canonical);
+        expect(content).not.toContain('"kind":"loop"');
+        return {
+          success: true as const,
+          graph: {
+            canvasFilePath: 'test.canvas',
+            nodes: new Map([['loop', { id: 'loop', kind: 'question', questionText: 'Repeat?', loop: true, x: 0, y: 0, width: 200, height: 60 }]]),
+            edges: [], adjacency: new Map([['loop', []]]), reverseAdjacency: new Map([['loop', []]]), startNodeId: 'loop',
+          },
+        };
+      });
+      (plugin as any).protocolDocumentParser = { parse };
+
+      const modal = new InlineRunnerModal(app as any, plugin as any, 'test.canvas', targetNote);
+      await modal.open();
+
+      expect((plugin as any).protocolDocumentStore.read).toHaveBeenCalledWith('test.canvas');
+      expect(parse).toHaveBeenCalledOnce();
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+});

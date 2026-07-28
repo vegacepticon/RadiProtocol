@@ -1,6 +1,5 @@
 import { describe, it, expect } from 'vitest';
 import { ProtocolRunner } from '../../runner/protocol-runner';
-import { stripExitPrefix } from '../../graph/node-label';
 import type { ProtocolGraph, RPNode } from '../../graph/graph-model';
 import { unifiedLoopLabeledBodyGraph, unifiedLoopLongBodyGraph, unifiedLoopNestedGraph, unifiedLoopValidGraph } from '../fixtures/protocol-document-fixtures';
 
@@ -154,27 +153,26 @@ describe('ProtocolRunner loop picker (RUN-01..RUN-05)', () => {
     expect(state.status).toBe('complete');
   });
 
-  // Phase 50.1 D-10 regression guards — the runtime dispatch MUST be
-  // "+"-prefix-based (isExitEdge = label.trim().startsWith('+')), NOT a literal
-  // compare against «выход» and NOT the Phase 49 alias-to-isLabeledEdge. These
-  // tests construct an inline graph whose exit edge reads "+готово" and verify
-  // (a) the "+"-prefixed edge pops the frame / advances, (b) an unlabeled body
-  // edge re-enters the picker without popping. If someone reverts the predicate
-  // to a literal «выход» compare or re-aliases isExitEdge = isLabeledEdge, both
-  // tests fail.
+  // Loop-dispatch regression guards — the runtime dispatch MUST key on the
+  // explicit edge.isLoopExit flag, NOT a literal compare against «выход» and NOT
+  // a label-prefix predicate. These tests construct an inline graph whose exit
+  // edge carries isLoopExit: true and verify (a) the exit edge pops the frame /
+  // advances, (b) an unlabeled body edge re-enters the picker without popping.
+  // If someone reverts the predicate to a literal «выход» compare or a label
+  // prefix check, both tests fail.
   function makeLoopGraph(): ProtocolGraph {
     return {
       canvasFilePath: 'test:phase-49-d05.canvas',
       nodes: new Map<string, RPNode>([
         ['n-start', { id: 'n-start', kind: 'start', x: 0, y: 0, width: 200, height: 60 }],
-        ['n-loop',  { id: 'n-loop',  kind: 'loop',  x: 0, y: 120, width: 200, height: 60, headerText: 'Loop' }],
+        ['n-loop',  { id: 'n-loop',  kind: 'question',  x: 0, y: 120, width: 200, height: 60, questionText: 'Loop', loop: true }],
         ['n-body',  { id: 'n-body',  kind: 'text-block', x: 260, y: 120, width: 200, height: 60, content: 'Body' }],
         ['n-end',   { id: 'n-end',   kind: 'text-block', x: 0, y: 240, width: 200, height: 60, content: 'End' }],
       ]),
       edges: [
         { id: 'e1', fromNodeId: 'n-start', toNodeId: 'n-loop' },
         { id: 'e2', fromNodeId: 'n-loop',  toNodeId: 'n-body' },                    // unlabeled body
-        { id: 'e3', fromNodeId: 'n-loop',  toNodeId: 'n-end',  label: '+готово' },  // Phase 50.1 D-10 "+"-prefix exit
+        { id: 'e3', fromNodeId: 'n-loop',  toNodeId: 'n-end',  label: 'готово', isLoopExit: true },  // explicit exit flag
         { id: 'e4', fromNodeId: 'n-body',  toNodeId: 'n-loop' },                    // body → back-edge
       ],
       adjacency: new Map<string, string[]>([
@@ -193,17 +191,17 @@ describe('ProtocolRunner loop picker (RUN-01..RUN-05)', () => {
     };
   }
 
-  it('Phase 50.1 D-10: "+"-prefixed edge ("+готово") pops the loop frame via isExitEdge', () => {
-    // Regression guard — if someone reverts isExitEdge to the Phase 49 alias
-    // (= isLabeledEdge) OR re-introduces a literal `'выход'` compare, this test
-    // fails: under Phase 50.1 only "+"-prefixed labels are exits, and "+готово"
-    // must still pop the loop frame.
+  it('isLoopExit edge ("готово") pops the loop frame', () => {
+    // Regression guard — if someone reverts the exit predicate to a label-prefix
+    // check OR re-introduces a literal `'выход'` compare, this test fails: only
+    // edges with isLoopExit === true are exits, and the "готово" edge must still
+    // pop the loop frame.
     const runner = new ProtocolRunner();
     runner.start(makeLoopGraph());
     // Runner reaches n-loop → awaiting-loop-pick
     expect(runner.getState().status).toBe('awaiting-loop-pick');
-    // Choose the labeled exit edge — frame must pop + complete at n-end
-    runner.chooseLoopBranch('e3');
+    // Choose the exit edge — frame must pop + complete at n-end
+    runner.chooseLoopBranch('e3'); // isLoopExit exit → complete
     expect(runner.getState().status).toBe('complete');
   });
 
@@ -217,34 +215,23 @@ describe('ProtocolRunner loop picker (RUN-01..RUN-05)', () => {
     expect(runner.getState().status).toBe('awaiting-loop-pick');
   });
 
-  it('Phase 50.1 D-09/D-11: exit-button caption strips the "+" prefix (stripExitPrefix wiring)', () => {
-    // Loop-picker caption expression changed from (edge.label ?? '').trim() to
-    // stripExitPrefix(edge.label ?? ''). This test asserts the pure-module
-    // wiring — the DOM-level rendering is covered by Phase 50.1 Plan 05 UAT.
-    expect(stripExitPrefix('+готово')).toBe('готово');
-    expect(stripExitPrefix('+ готово')).toBe('готово');
-    expect(stripExitPrefix('+\u00a0готово')).toBe('готово');
-    expect(stripExitPrefix('+')).toBe('');
-  });
-
-  it('Phase 50.1 D-14: labeled body edge (Phase 50 synced) coexists with "+"-exit — Runner dispatches both correctly', () => {
+  it('isLoopExit exit coexists with a labeled body edge — Runner dispatches both correctly', () => {
     // Fixture: n-loop has two outgoing edges:
-    //  - "+выход" exit
-    //  - unprefixed label (Phase 50 reconciler-synced displayLabel of target Answer node)
-    // Under Phase 49 the labeled body edge was misclassified as a second exit and
-    // validation failed. Under Phase 50.1 the body edge has no "+" prefix so
-    // isExitEdge(bodyEdge) = false; the picker renders one exit + one body button.
+    //  - isLoopExit exit
+    //  - labeled body edge (Phase 50 reconciler-synced displayLabel of target Answer node)
+    // The body edge is NOT marked isLoopExit, so the runner classifies it as a body;
+    // the picker renders one exit + one body button.
     const graph = unifiedLoopLabeledBodyGraph();
     const runner = new ProtocolRunner();
     runner.start(graph);
     // Reach the loop picker
     expect(runner.getState().status).toBe('awaiting-loop-pick');
-    // Identify edges defensively — the fixture assigns e3 as the "+"-exit and e2
+    // Identify edges defensively — the fixture assigns e3 as the isLoopExit exit and e2
     // as the labeled body per Plan 04 SUMMARY; this test reads them from the graph
     // to survive fixture renumbering.
     const loopOut = graph.edges.filter(e => e.fromNodeId === 'n-loop');
-    const exitEdge = loopOut.find(e => e.label?.trim().startsWith('+'));
-    const bodyEdge = loopOut.find(e => e.label === undefined || !e.label.trim().startsWith('+'));
+    const exitEdge = loopOut.find(e => e.isLoopExit === true);
+    const bodyEdge = loopOut.find(e => !e.isLoopExit);
     expect(exitEdge).toBeDefined();
     expect(bodyEdge).toBeDefined();
     if (exitEdge === undefined || bodyEdge === undefined) return;
@@ -262,22 +249,22 @@ describe('ProtocolRunner loop picker (RUN-01..RUN-05)', () => {
     expect(runner2.getState().status).toBe('complete');
   });
 
-  it('RUN-QUICK-EXIT: answer inside loop body wired to the same target as the "+" exit edge pops the frame and completes', () => {
-    // Graph: start → loop → (body: answer 'n-a1' → n-end) / (exit: '+done' → n-end)
+  it('RUN-QUICK-EXIT: answer inside loop body wired to the same target as an isLoopExit exit edge pops the frame and completes', () => {
+    // Graph: start → loop → (body: answer 'n-a1' → n-end) / (exit: isLoopExit 'done' → n-end)
     // Choosing body branch auto-advances through n-a1 (pass-through), quick-exit pops frame,
     // and runner completes at n-end instead of returning to loop picker.
     const graph: ProtocolGraph = {
       canvasFilePath: 'test:quick-exit.canvas',
       nodes: new Map<string, RPNode>([
         ['n-start', { id: 'n-start', kind: 'start', x: 0, y: 0, width: 100, height: 60 }],
-        ['n-loop',  { id: 'n-loop',  kind: 'loop',  x: 0, y: 100, width: 100, height: 60, headerText: 'Loop' }],
+        ['n-loop',  { id: 'n-loop',  kind: 'question',  x: 0, y: 100, width: 100, height: 60, questionText: 'Loop', loop: true }],
         ['n-a1',    { id: 'n-a1',    kind: 'answer', x: 100, y: 100, width: 100, height: 60, answerText: 'Quick' }],
         ['n-end',   { id: 'n-end',   kind: 'text-block', x: 0, y: 200, width: 100, height: 60, content: 'Done' }],
       ]),
       edges: [
         { id: 'e1', fromNodeId: 'n-start', toNodeId: 'n-loop' },
         { id: 'e2', fromNodeId: 'n-loop',  toNodeId: 'n-a1' },
-        { id: 'e3', fromNodeId: 'n-loop',  toNodeId: 'n-end',  label: '+done' },
+        { id: 'e3', fromNodeId: 'n-loop',  toNodeId: 'n-end',  label: 'done', isLoopExit: true },
         { id: 'e4', fromNodeId: 'n-a1',    toNodeId: 'n-end' },
       ],
       adjacency: new Map<string, string[]>([
@@ -308,12 +295,12 @@ describe('ProtocolRunner loop picker (RUN-01..RUN-05)', () => {
     expect(state.finalText).toContain('Done');
   });
 
-  it('RUN-MULTI-EXIT: loop picker supports multiple distinct "+" exit branches', () => {
+  it('RUN-MULTI-EXIT: loop picker supports multiple distinct isLoopExit exit branches', () => {
     const graph: ProtocolGraph = {
       canvasFilePath: 'test:multi-exit.canvas',
       nodes: new Map<string, RPNode>([
         ['n-start', { id: 'n-start', kind: 'start', x: 0, y: 0, width: 100, height: 60 }],
-        ['n-loop',  { id: 'n-loop',  kind: 'loop',  x: 0, y: 100, width: 100, height: 60, headerText: 'Loop' }],
+        ['n-loop',  { id: 'n-loop',  kind: 'question',  x: 0, y: 100, width: 100, height: 60, questionText: 'Loop', loop: true }],
         ['n-body',  { id: 'n-body',  kind: 'text-block', x: 120, y: 100, width: 100, height: 60, content: 'Body' }],
         ['n-end-a', { id: 'n-end-a', kind: 'text-block', x: 0, y: 200, width: 100, height: 60, content: 'Exit A' }],
         ['n-end-b', { id: 'n-end-b', kind: 'text-block', x: 120, y: 200, width: 100, height: 60, content: 'Exit B' }],
@@ -321,8 +308,8 @@ describe('ProtocolRunner loop picker (RUN-01..RUN-05)', () => {
       edges: [
         { id: 'e1', fromNodeId: 'n-start', toNodeId: 'n-loop' },
         { id: 'e2', fromNodeId: 'n-loop', toNodeId: 'n-body' },
-        { id: 'e3', fromNodeId: 'n-loop', toNodeId: 'n-end-a', label: '+primary' },
-        { id: 'e4', fromNodeId: 'n-loop', toNodeId: 'n-end-b', label: '+secondary' },
+        { id: 'e3', fromNodeId: 'n-loop', toNodeId: 'n-end-a', label: 'primary', isLoopExit: true },
+        { id: 'e4', fromNodeId: 'n-loop', toNodeId: 'n-end-b', label: 'secondary', isLoopExit: true },
         { id: 'e5', fromNodeId: 'n-body', toNodeId: 'n-loop' },
       ],
       adjacency: new Map<string, string[]>([
@@ -357,6 +344,21 @@ describe('ProtocolRunner loop picker (RUN-01..RUN-05)', () => {
     expect(stateB.status).toBe('complete');
     if (stateB.status !== 'complete') return;
     expect(stateB.finalText).toContain('Exit B');
+  });
+
+  it('stepBack then redo restores AWAITING_LOOP_PICK and the loop stack on a looped question', () => {
+    const runner = new ProtocolRunner();
+    runner.start(makeLoopGraph());
+    expect(runner.getState().status).toBe('awaiting-loop-pick');
+    const before = runner.getSerializableState();
+    expect(before?.loopContextStack.length).toBe(1);
+    runner.stepBack();
+    runner.redo();
+    const after = runner.getState();
+    expect(after.status).toBe('awaiting-loop-pick');
+    const afterSer = runner.getSerializableState();
+    expect(afterSer?.loopContextStack.length).toBe(1);
+    expect(afterSer?.loopContextStack[0]?.iteration).toBe(before?.loopContextStack[0]?.iteration);
   });
 });
 
@@ -399,11 +401,11 @@ describe('Phase 66 D-13 — scripted loop-boundary scenarios for stepBack', () =
     expect(serialized.loopContextStack[0]?.iteration).toBe(2);
   });
 
-  // D-13 Scenario 2 — Back through +exit edge
-  it('D-13 Scenario 2: back through +exit edge restores awaiting-loop-pick with frame restored', async () => {
+  // D-13 Scenario 2 — Back through isLoopExit exit edge
+  it('D-13 Scenario 2: back through isLoopExit exit edge restores awaiting-loop-pick with frame restored', async () => {
     const runner = new ProtocolRunner();
     runner.start(unifiedLoopValidGraph());
-    runner.chooseLoopBranch('e3'); // +exit → complete
+    runner.chooseLoopBranch('e3'); // isLoopExit exit → complete
     expect(runner.getState().status).toBe('complete');
     // Back restores the loop picker with the popped frame back on the stack
     await backOnce(runner);
@@ -427,7 +429,7 @@ describe('Phase 66 D-13 — scripted loop-boundary scenarios for stepBack', () =
       canvasFilePath: 'test:dead-end-loop.canvas',
       nodes: new Map<string, RPNode>([
         ['n-start', { id: 'n-start', kind: 'start', x: 0, y: 0, width: 100, height: 60 }],
-        ['n-loop', { id: 'n-loop', kind: 'loop', x: 0, y: 100, width: 100, height: 60, headerText: 'Loop' }],
+        ['n-loop', { id: 'n-loop', kind: 'question', x: 0, y: 100, width: 100, height: 60, questionText: 'Loop', loop: true }],
         ['n-dead', { id: 'n-dead', kind: 'text-block', x: 0, y: 200, width: 100, height: 60, content: 'dead' }],
       ]),
       edges: [
@@ -625,14 +627,14 @@ describe('ProtocolRunner RUNFIX-01 — manual edits survive loop transitions', (
       canvasFilePath: 'test:start-from-loop.canvas',
       nodes: new Map<string, RPNode>([
         ['n-start', { id: 'n-start', kind: 'start', x: 0, y: 0, width: 200, height: 60 }],
-        ['n-loop', { id: 'n-loop', kind: 'loop', x: 0, y: 120, width: 200, height: 60, headerText: 'Loop' }],
+        ['n-loop', { id: 'n-loop', kind: 'question', x: 0, y: 120, width: 200, height: 60, questionText: 'Loop', loop: true }],
         ['n-body', { id: 'n-body', kind: 'text-block', x: 260, y: 120, width: 200, height: 60, content: 'Body' }],
         ['n-end', { id: 'n-end', kind: 'text-block', x: 0, y: 240, width: 200, height: 60, content: 'End' }],
       ]),
       edges: [
         { id: 'e1', fromNodeId: 'n-start', toNodeId: 'n-loop' },
         { id: 'e2', fromNodeId: 'n-loop', toNodeId: 'n-body' },
-        { id: 'e3', fromNodeId: 'n-loop', toNodeId: 'n-end', label: '+exit' },
+        { id: 'e3', fromNodeId: 'n-loop', toNodeId: 'n-end', label: 'exit', isLoopExit: true },
       ],
       adjacency: new Map<string, string[]>([
         ['n-start', ['n-loop']],
@@ -666,19 +668,19 @@ describe('ProtocolRunner RUNFIX-01 — manual edits survive loop transitions', (
     expect(state.canStepBack).toBe(false);
   });
 
-  it('v1.17.3: back after a non-plus answer branch exits a loop through the loop exit target without loop-node-not-found errors', async () => {
+  it('v1.17.3: back after a non-isLoopExit body branch exits a loop through the loop exit target without loop-node-not-found errors', async () => {
     const graph: ProtocolGraph = {
       canvasFilePath: 'test:loop-answer-quick-exit.canvas',
       nodes: new Map<string, RPNode>([
         ['start', { id: 'start', kind: 'start', x: 0, y: 0, width: 200, height: 60 }],
-        ['loop', { id: 'loop', kind: 'loop', x: 0, y: 100, width: 200, height: 80, headerText: 'Loop' }],
+        ['loop', { id: 'loop', kind: 'question', x: 0, y: 100, width: 200, height: 80, questionText: 'Loop', loop: true }],
         ['answer', { id: 'answer', kind: 'answer', x: 260, y: 100, width: 200, height: 80, answerText: 'Answer' }],
         ['after', { id: 'after', kind: 'question', x: 520, y: 100, width: 200, height: 80, questionText: 'After loop' }],
       ]),
       edges: [
         { id: 'e-start', fromNodeId: 'start', toNodeId: 'loop' },
         { id: 'e-body', fromNodeId: 'loop', toNodeId: 'answer', label: 'body' },
-        { id: 'e-exit', fromNodeId: 'loop', toNodeId: 'after', label: '+exit' },
+        { id: 'e-exit', fromNodeId: 'loop', toNodeId: 'after', label: 'exit', isLoopExit: true },
         { id: 'e-answer-exit', fromNodeId: 'answer', toNodeId: 'after' },
       ],
       adjacency: new Map<string, string[]>([

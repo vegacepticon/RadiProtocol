@@ -6,7 +6,6 @@ import {
   defaultProtocolEditorEdgeLabelForTarget,
   displayProtocolEditorEdgeLabel,
   fieldsForProtocolEditorNodeKind,
-  isProtocolEditorLoopExitLabel,
   nodeKindToken,
   nodeTitle,
   normalizeProtocolEditorEdgeLabel,
@@ -62,23 +61,23 @@ describe('protocol editor helper functions', () => {
     };
     const loopNodeA: ProtocolNodeRecord = {
       id: 'loop-a',
-      kind: 'loop',
+      kind: 'question',
       x: 0,
       y: 0,
       width: 160,
       height: 80,
       text: 'Loop A',
-      fields: {},
+      fields: { loop: true },
     };
     const loopNodeB: ProtocolNodeRecord = {
       id: 'loop-b',
-      kind: 'loop',
+      kind: 'question',
       x: 0,
       y: 0,
       width: 160,
       height: 80,
       text: 'Loop B',
-      fields: {},
+      fields: { loop: true },
     };
     const textNode: ProtocolNodeRecord = {
       id: 'text',
@@ -98,18 +97,12 @@ describe('protocol editor helper functions', () => {
       ], 'e1')).toEqual([{ id: 'e2', fromNodeId: 'b', toNodeId: 'c' }]);
     });
 
-    it('normalizes loop exit labels with a leading plus', () => {
-      expect(normalizeProtocolEditorEdgeLabel(' Exit ', true)).toBe('+Exit');
-      expect(normalizeProtocolEditorEdgeLabel('+ Exit ', true)).toBe('+Exit');
-      expect(normalizeProtocolEditorEdgeLabel('   ', true)).toBeUndefined();
-      expect(displayProtocolEditorEdgeLabel('+ Exit')).toBe('Exit');
-      expect(isProtocolEditorLoopExitLabel('+ Exit')).toBe(true);
-      expect(isProtocolEditorLoopExitLabel('Body')).toBe(false);
-    });
-
-    it('removes leading plus when loop exit is disabled', () => {
-      expect(normalizeProtocolEditorEdgeLabel('+ Exit ', false)).toBe('Exit');
-      expect(normalizeProtocolEditorEdgeLabel('   ', false)).toBeUndefined();
+    it('normalizes edge labels by trimming only (exit flag is carried separately)', () => {
+      expect(normalizeProtocolEditorEdgeLabel(' Exit ')).toBe('Exit');
+      expect(normalizeProtocolEditorEdgeLabel('+ Exit ')).toBe('+ Exit');
+      expect(normalizeProtocolEditorEdgeLabel('   ')).toBeUndefined();
+      expect(displayProtocolEditorEdgeLabel('+ Exit')).toBe('+ Exit');
+      expect(displayProtocolEditorEdgeLabel('  Exit  ')).toBe('Exit');
     });
 
     it('derives edge labels only from answer and snippet button labels', () => {
@@ -217,32 +210,32 @@ describe('protocol editor helper functions', () => {
         textNode,
         loopNodeA,
       )).toBe(false);
-      // Loop-to-loop exit edge: preserved
+      // Looped-question exit edge: preserved (isLoopExit flag, verbatim label)
       expect(shouldDisplayProtocolEditorEdgeLabel(
-        { id: 'e4', fromNodeId: 'loop-a', toNodeId: 'loop-b', label: '+Exit' },
+        { id: 'e4', fromNodeId: 'loop-a', toNodeId: 'loop-b', label: 'Exit', isLoopExit: true },
         loopNodeA,
         loopNodeB,
       )).toBe(true);
-      // Loop-to-loop body edge (no "+" prefix): not displayed
+      // Looped-question body edge (not marked isLoopExit): not displayed
       expect(shouldDisplayProtocolEditorEdgeLabel(
         { id: 'e5', fromNodeId: 'loop-a', toNodeId: 'loop-b', label: 'Body' },
         loopNodeA,
         loopNodeB,
       )).toBe(false);
-      // Phase 50.1 EDGE-03 FIX: loop exit edge to a non-loop node (question/answer/text-block)
-      // must still be displayed. The runner dispatches on the "+" prefix regardless of target kind.
+      // Looped-question exit edge to a non-loop node (question/answer/text-block)
+      // must still be displayed. The runner dispatches on edge.isLoopExit regardless of target kind.
       expect(shouldDisplayProtocolEditorEdgeLabel(
-        { id: 'e6', fromNodeId: 'loop-a', toNodeId: 'question-1', label: '+Выход' },
+        { id: 'e6', fromNodeId: 'loop-a', toNodeId: 'question-1', label: 'Выход', isLoopExit: true },
         loopNodeA,
         { id: 'question-1', kind: 'question', x: 0, y: 0, width: 160, height: 80, text: '', fields: { questionText: 'Q' } },
       )).toBe(true);
       expect(shouldDisplayProtocolEditorEdgeLabel(
-        { id: 'e7', fromNodeId: 'loop-a', toNodeId: 'answer-1', label: '+Да' },
+        { id: 'e7', fromNodeId: 'loop-a', toNodeId: 'answer-1', label: 'Да', isLoopExit: true },
         loopNodeA,
         answerNode,
       )).toBe(true);
       expect(shouldDisplayProtocolEditorEdgeLabel(
-        { id: 'e8', fromNodeId: 'loop-a', toNodeId: 'text-1', label: '+Завершить' },
+        { id: 'e8', fromNodeId: 'loop-a', toNodeId: 'text-1', label: 'Завершить', isLoopExit: true },
         loopNodeA,
         textNode,
       )).toBe(true);
@@ -368,7 +361,7 @@ describe('protocol editor helper functions', () => {
   });
 
   describe('nodeTitle for all editable node kinds (keyboard aria-label regression #56)', () => {
-    const kinds: Array<ProtocolNodeRecord['kind']> = ['start', 'question', 'answer', 'text-block', 'loop', 'snippet'];
+    const kinds: Array<ProtocolNodeRecord['kind']> = ['start', 'question', 'answer', 'text-block', 'snippet'];
 
     it('returns node.text when present for every editable kind', () => {
       for (const kind of kinds) {
@@ -429,7 +422,7 @@ describe('protocol editor helper functions', () => {
   describe('nodeKindToken — raw "untyped" for CSS/attribute paths (Phase 44)', () => {
     it('returns the kind string when kind is non-null', () => {
       expect(nodeKindToken('question')).toBe('question');
-      expect(nodeKindToken('loop')).toBe('loop');
+      expect(nodeKindToken('loop-start')).toBe('loop-start');
     });
 
     it('returns raw "untyped" when kind is null — never i18n', () => {
@@ -437,7 +430,7 @@ describe('protocol editor helper functions', () => {
     });
 
     it('returns a non-empty string for every editable node kind', () => {
-      const editableKinds: Array<ProtocolNodeRecord['kind']> = ['start', 'question', 'answer', 'text-block', 'loop', 'snippet'];
+      const editableKinds: Array<ProtocolNodeRecord['kind']> = ['start', 'question', 'answer', 'text-block', 'snippet'];
       for (const kind of editableKinds) {
         expect(nodeKindToken(kind).length, `kind=${kind}`).toBeGreaterThan(0);
       }

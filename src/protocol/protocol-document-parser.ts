@@ -12,7 +12,6 @@ import type {
   QuestionNode,
   AnswerNode,
   TextBlockNode,
-  LoopNode,
   LoopStartNode,
   LoopEndNode,
   SnippetNode,
@@ -30,7 +29,6 @@ const VALID_KINDS: RPNodeKind[] = [
   'answer',
   'text-block',
   'snippet',
-  'loop',
   'loop-start',
   'loop-end',
 ];
@@ -54,6 +52,18 @@ function getOptionalString(obj: Record<string, unknown>, key: string, legacyKey?
 function getSeparator(obj: Record<string, unknown>, key: string, legacyKey?: string): 'newline' | 'space' | undefined {
   const v = getCompatValue(obj, key, legacyKey);
   return v === 'newline' || v === 'space' ? v : undefined;
+}
+
+/**
+ * Optional boolean with three distinct outcomes: `true`, `false`, and `undefined`
+ * (absent or non-boolean input). Truthiness coercion is forbidden — it would
+ * collapse explicit `false` into absence. `getCompatValue` tests `!== undefined`,
+ * so an explicit `false` value suppresses the legacy-key fallback, matching the
+ * semantics of `getOptionalString` / `getSeparator`.
+ */
+function getOptionalBoolean(obj: Record<string, unknown>, key: string, legacyKey?: string): boolean | undefined {
+  const v = getCompatValue(obj, key, legacyKey);
+  return typeof v === 'boolean' ? v : undefined;
 }
 
 export class ProtocolDocumentParser {
@@ -121,6 +131,7 @@ export class ProtocolDocumentParser {
         fromNodeId: rawEdge.fromNodeId,
         toNodeId: rawEdge.toNodeId,
         label: typeof rawEdge.label === 'string' ? rawEdge.label : undefined,
+        isLoopExit: rawEdge.isLoopExit === true ? true : undefined,
       });
 
       const fromAdj = adjacency.get(rawEdge.fromNodeId);
@@ -194,6 +205,7 @@ export class ProtocolDocumentParser {
           ...base,
           kind: 'question',
           questionText: getString(fields, 'questionText', raw.text ?? '', 'radiprotocol_questionText'),
+          loop: getOptionalBoolean(fields, 'loop', 'radiprotocol_loop'),
         };
         return node;
       }
@@ -225,14 +237,6 @@ export class ProtocolDocumentParser {
           snippetLabel: getOptionalString(fields, 'snippetLabel', 'radiprotocol_snippetLabel'),
           radiprotocol_snippetSeparator: getSeparator(fields, 'snippetSeparator', 'radiprotocol_snippetSeparator'),
           radiprotocol_snippetPath: getOptionalString(fields, 'snippetPath', 'radiprotocol_snippetPath'),
-        };
-        return node;
-      }
-      case 'loop': {
-        const node: LoopNode = {
-          ...base,
-          kind: 'loop',
-          headerText: getString(fields, 'headerText', '', 'radiprotocol_headerText'),
         };
         return node;
       }

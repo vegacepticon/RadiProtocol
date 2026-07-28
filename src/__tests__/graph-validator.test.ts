@@ -198,212 +198,142 @@ describe('GraphValidator — snippet node (Phase 29, D-12)', () => {
 // ─────────────────────────────────────────────────────────────────────────────
 describe('GraphValidator — Phase 43: unified loop + migration (LOOP-04, MIGRATE-01)', () => {
 
-  // ── LOOP-04 happy path (Phase 50.1 EDGE-03) ─────────────────────────────────
+  // ── Loop exit/body invariants for looped Questions (post loop→question merge) ─
   // Phase 84 I18N-02: defaultT (English) is in effect for these zero-arg validators;
   // assertions match the English forms of the validator messages.
-  it('unified-loop-valid.canvas passes LOOP-04 checks (no +-prefix/body errors under Phase 50.1 convention)', () => {
-    // Fixture (post-Plan-04): one loop node with one "+exit" edge and one unlabeled body edge.
+  it('unified-loop-valid.canvas passes loop checks (looped question + isLoopExit exit + body)', () => {
     const graph = parseFixture('unified-loop-valid.canvas');
-    const validator = new GraphValidator();
-    const errors = validator.validate(graph);
+    const errors = new GraphValidator().validate(graph);
     expect(errors.some(e => e.includes('has no exit'))).toBe(false);
-    expect(errors.some(e => e.includes('multiple "+" edges'))).toBe(false);   // D-06 wording
-    expect(errors.some(e => e.includes('has no body'))).toBe(false);           // D-07 fragment
-    expect(errors.some(e => e.includes('has no caption'))).toBe(false);        // D-08 fragment
+    expect(errors.some(e => e.includes('has no body'))).toBe(false);
     expect(errors.some(e => e.includes('deprecated loop-start/loop-end'))).toBe(false);
   });
 
-  // ── LOOP-04 D-04 — zero "+"-edges, no other labeled edges ───────────────────
-  it('unified-loop-missing-exit.canvas flags D-04 (zero "+"-edges, no other labeled edges)', () => {
+  it('unified-loop-missing-exit.canvas flags loopNoExit (no isLoopExit edge)', () => {
     const graph = parseFixture('unified-loop-missing-exit.canvas');
-    const validator = new GraphValidator();
-    const errors = validator.validate(graph);
-    const d04 = errors.find(e => e.includes('has no exit. Mark exactly one outgoing edge with a "+" prefix'));
-    expect(d04).toBeDefined();
-    if (d04 === undefined) return;
-    expect(d04).toContain('"Lesion loop"');
-    expect(d04).toContain('the text after "+" becomes the exit-button caption');
+    const errors = new GraphValidator().validate(graph);
+    const noExit = errors.find(e => e.includes('has no exit'));
+    expect(noExit).toBeDefined();
+    expect(noExit).toContain('"Lesion loop"');
+    expect(noExit).toContain('Mark one outgoing edge as a loop exit');
   });
 
-  // ── LOOP-04 D-05 — zero "+"-edges, ≥1 legacy labeled edge ───────────────────
-  it('unified-loop-legacy-vyhod.canvas flags D-05 (zero "+"-edges, ≥1 legacy labeled edge)', () => {
-    const graph = parseFixture('unified-loop-legacy-vyhod.canvas');
-    const validator = new GraphValidator();
-    const errors = validator.validate(graph);
-    const d05 = errors.find(e => e.includes('has no exit edge with a "+" prefix'));
-    expect(d05).toBeDefined();
-    if (d05 === undefined) return;
-    expect(d05).toContain('"Lesion loop"');
-    expect(d05).toContain('Add "+" to one of the labeled edges');
-    expect(d05).toContain('the text after "+" becomes the exit-button caption');
-    // {edgeIds} — fixture from Plan 04 has edge id e3 on the legacy-exit edge.
-    expect(d05).toMatch(/\(e3\)|\(e3, /);
-  });
-
-  // ── LOOP-04 beta.7 — ≥2 "+"-edges are allowed ───────────────────────────────
-  it('unified-loop-duplicate-exit.canvas validates multiple "+" exit edges', () => {
-    const graph = parseFixture('unified-loop-duplicate-exit.canvas');
-    const validator = new GraphValidator();
-    const errors = validator.validate(graph);
-    expect(errors.some(e => e.includes('has multiple "+" edges'))).toBe(false);
-    expect(errors.some(e => e.includes('has no exit'))).toBe(false);
-    expect(errors.some(e => e.includes('has no caption'))).toBe(false);
-  });
-
-  // ── LOOP-04 D-07 — zero non-"+" outgoing edges ──────────────────────────────
-  it('unified-loop-no-body.canvas flags D-07 (zero non-"+" outgoing edges)', () => {
+  it('unified-loop-no-body.canvas flags loopNoBody (only an isLoopExit edge, no body)', () => {
     const graph = parseFixture('unified-loop-no-body.canvas');
-    const validator = new GraphValidator();
-    const errors = validator.validate(graph);
-    const d07 = errors.find(e => e.includes('has no body — add an outgoing edge without a "+" prefix'));
-    expect(d07).toBeDefined();
-    if (d07 === undefined) return;
-    expect(d07).toContain('"Lesion loop"');
+    const errors = new GraphValidator().validate(graph);
+    const noBody = errors.find(e => e.includes('has no body'));
+    expect(noBody).toBeDefined();
+    expect(noBody).toContain('"Lesion loop"');
   });
 
-  // ── LOOP-04 D-08 — per-offending-edge, empty caption post-strip ─────────────
-  it('unified-loop-empty-plus.canvas flags D-08 (per-offending-edge, empty caption post-strip)', () => {
-    const graph = parseFixture('unified-loop-empty-plus.canvas');
-    const validator = new GraphValidator();
-    const errors = validator.validate(graph);
-    const d08 = errors.find(e => e.includes('has no caption — add text after "+"'));
-    expect(d08).toBeDefined();
-    if (d08 === undefined) return;
-    expect(d08).toContain('"Lesion loop"');
-    expect(d08).toMatch(/"\+" edge \w+ has no caption/);
-  });
-
-  // ── LOOP-04 Phase 49↔50 conflict regression: labeled body edge + "+"-exit ───
-  it('unified-loop-labeled-body.canvas VALIDATES — labeled body edge + "+"-exit coexist (Phase 49↔50 conflict resolved)', () => {
-    // Fixture: loop node with one "+exit" exit AND a body edge pointing to an Answer node
-    // that carries displayLabel — Phase 50 reconciler legitimately labels the body edge.
-    // Under Phase 49 this broke validation (body edge counted as a second exit). Under
-    // Phase 50.1 the body edge has no "+" prefix so it is a body, not an exit.
-    const graph = parseFixture('unified-loop-labeled-body.canvas');
-    const validator = new GraphValidator();
-    const errors = validator.validate(graph);
-    // No LOOP-04 errors:
+  it('unified-loop-duplicate-exit.canvas validates multiple isLoopExit edges', () => {
+    const graph = parseFixture('unified-loop-duplicate-exit.canvas');
+    const errors = new GraphValidator().validate(graph);
     expect(errors.some(e => e.includes('has no exit'))).toBe(false);
-    expect(errors.some(e => e.includes('multiple "+" edges'))).toBe(false);
     expect(errors.some(e => e.includes('has no body'))).toBe(false);
-    expect(errors.some(e => e.includes('has no caption'))).toBe(false);
   });
 
-  // ── LOOP-04 — stray non-"+" body label is accepted under Phase 50.1 ─────────
-  it('unified-loop-stray-body-label.canvas VALIDATES under 50.1 — non-"+" body label is allowed', () => {
-    // Plan 04 migration: e3 → "+exit" (legit exit); e2 labeled body edge preserved.
-    // Under Phase 50.1 labeled body edges are legal (body = any edge without "+"), so this fixture
-    // now validates cleanly rather than firing Phase 49 D-02.
+  it('unified-loop-labeled-body.canvas VALIDATES — labeled body edge + isLoopExit exit coexist', () => {
+    const graph = parseFixture('unified-loop-labeled-body.canvas');
+    const errors = new GraphValidator().validate(graph);
+    expect(errors.some(e => e.includes('has no exit'))).toBe(false);
+    expect(errors.some(e => e.includes('has no body'))).toBe(false);
+  });
+
+  it('unified-loop-stray-body-label.canvas VALIDATES — non-exit body label is allowed', () => {
     const graph = parseFixture('unified-loop-stray-body-label.canvas');
-    const validator = new GraphValidator();
-    const errors = validator.validate(graph);
-    expect(errors.some(e => e.includes('multiple "+" edges'))).toBe(false);
+    const errors = new GraphValidator().validate(graph);
+    expect(errors.some(e => e.includes('has no exit'))).toBe(false);
+    expect(errors.some(e => e.includes('has no body'))).toBe(false);
+  });
+
+  it('unified-loop-empty-plus.canvas VALIDATES — isLoopExit edge with empty label is allowed (loopExitNoLabel removed)', () => {
+    const graph = parseFixture('unified-loop-empty-plus.canvas');
+    const errors = new GraphValidator().validate(graph);
+    expect(errors.some(e => e.includes('has no caption'))).toBe(false);
+    expect(errors.some(e => e.includes('has no exit'))).toBe(false);
+  });
+
+  it('unified-loop-legacy-vyhod.canvas flags loopNoExit (labeled body edge, no isLoopExit)', () => {
+    const graph = parseFixture('unified-loop-legacy-vyhod.canvas');
+    const errors = new GraphValidator().validate(graph);
+    expect(errors.some(e => e.includes('has no exit'))).toBe(true);
   });
 
   // ── MIGRATE-01 (D-07) — legacy loop-body.canvas ─────────────────────────────
   // Phase 84 I18N-02: defaultT (English) is in effect for these zero-arg validators.
   it('legacy loop-body.canvas returns migration-error with required literals (MIGRATE-01, D-07)', () => {
     const graph = parseFixture('loop-body.canvas');
-    const validator = new GraphValidator();
-    const errors = validator.validate(graph);
-    // There must be exactly one consolidated migration message containing the required tokens.
+    const errors = new GraphValidator().validate(graph);
     const migrationErr = errors.find(e =>
       e.includes('loop-start') &&
       e.includes('loop-end') &&
-      e.includes('loop') &&
-      e.includes('«exit»'),
+      e.includes('Loop toggle'),
     );
     expect(migrationErr).toBeDefined();
     if (migrationErr === undefined) return;
-    // English wording: "deprecated loop-start/loop-end nodes".
     expect(migrationErr).toMatch(/deprecated/);
   });
 
   // ── MIGRATE-01 (D-07) — legacy loop-start.canvas ────────────────────────────
   it('legacy loop-start.canvas returns migration-error with required literals (MIGRATE-01, D-07)', () => {
     const graph = parseFixture('loop-start.canvas');
-    const validator = new GraphValidator();
-    const errors = validator.validate(graph);
+    const errors = new GraphValidator().validate(graph);
     const migrationErr = errors.find(e =>
       e.includes('loop-start') &&
       e.includes('loop-end') &&
-      e.includes('loop') &&
-      e.includes('«exit»'),
+      e.includes('Loop toggle'),
     );
     expect(migrationErr).toBeDefined();
   });
 
-  // ── D-CL-02 order: migration check runs BEFORE LOOP-04 (early-return) ───────
-  it('legacy canvas with 0 outgoing edges gives migration-error, NOT LOOP-04 exit error (D-CL-02 order, Phase 49)', () => {
-    // loop-start.canvas contains loop-start without a continue-edge. Without the early-return
-    // in Migration Check, LOOP-04 would emit D-01 "has no exit" on top.
-    // Correct ordering (D-CL-02): the migration check runs first and returns.
+  // ── D-CL-02 order: migration check runs BEFORE loop invariants (early-return) ─
+  it('legacy canvas with 0 outgoing edges gives migration-error, NOT loopNoExit error (D-CL-02 order)', () => {
     const graph = parseFixture('loop-start.canvas');
-    const validator = new GraphValidator();
-    const errors = validator.validate(graph);
-    // Migration-error present:
+    const errors = new GraphValidator().validate(graph);
     expect(errors.some(e => e.includes('deprecated'))).toBe(true);
-    // NO Phase 49 D-01 / Phase 50.1 D-04 "has no exit" error:
     expect(errors.some(e => e.includes('has no exit'))).toBe(false);
-    // The old Phase 43 D-08.1 message «has no edge "exit"» is no longer emitted by the
-    // validator (purity guarantee from the Phase 49 rewrite — literal removed from LOOP-04 block):
     expect(errors.some(e => e.includes('has no edge'))).toBe(false);
-    // Phase 50.1 guard: no D-06 «multiple "+" edges» wording leaks into a legacy-migration canvas.
-    expect(errors.some(e => e.includes('multiple "+" edges'))).toBe(false);
   });
 
-  // ── D-09: cycle through unified loop node is NOT flagged as unintentional ───
-  it('cycle through unified loop node is NOT flagged as unintentional (D-09)', () => {
-    // unified-loop-valid.canvas содержит cycle n-loop → n-q1 → n-a1 → n-loop,
-    // проходящий через loop-узел — detectUnintentionalCycles теперь маркирует
-    // это как намеренный цикл (kind === 'loop').
+  // ── D-09: cycle through a looped question is NOT flagged as unintentional ─────
+  it('cycle through a looped question is NOT flagged as unintentional (D-09)', () => {
     const graph = parseFixture('unified-loop-valid.canvas');
-    const validator = new GraphValidator();
-    const errors = validator.validate(graph);
-    // Не должно быть cycle-error'а:
+    const errors = new GraphValidator().validate(graph);
     expect(errors.some(e => e.toLowerCase().includes('unintentional cycle'))).toBe(false);
   });
 
-  // ── D-09 negative control: cycle WITHOUT loop node IS flagged ───────────────
-  it('cycle WITHOUT loop node is still flagged as unintentional (D-09 negative control)', () => {
-    // Существующий cycle.canvas fixture — cycle из не-loop узлов → должен flag'аться.
+  // ── D-09 negative control: cycle WITHOUT a looped question IS flagged ────────
+  it('cycle WITHOUT a looped question is still flagged (D-09 negative control)', () => {
     const graph = parseFixture('cycle.canvas');
-    const validator = new GraphValidator();
-    const errors = validator.validate(graph);
+    const errors = new GraphValidator().validate(graph);
     expect(errors.some(e => e.toLowerCase().includes('unintentional cycle'))).toBe(true);
-    // Сообщение обновлено на «loop node» (не «loop-end node»):
-    expect(errors.some(e => e.includes('loop node'))).toBe(true);
-    expect(errors.some(e => e.includes('loop-end node'))).toBe(false);
+    expect(errors.some(e => e.includes('loop question'))).toBe(true);
+    expect(errors.some(e => e.includes('loop node'))).toBe(false);
   });
 
-  // ── Regression: loop node with zero outgoing edges (skipped RUN-08 runtime test) ─
-  // The skipped runner test checked that a loop-start with no continue edge causes an
-  // error at runtime. At the validator level, a unified loop node with zero outgoing
-  // edges must flag both "has no exit" (D-04) and "has no body" (D-07).
-  it('unified loop with zero outgoing edges flags both D-04 and D-07 errors (RUN-08 regression)', () => {
+  // ── Regression: looped question with zero outgoing edges ────────────────────
+  it('looped question with zero outgoing edges flags loopNoExit + loopNoBody (not deadEndQuestion)', () => {
     const json = JSON.stringify({
       nodes: [
         { id: 'n-start', type: 'text', text: 'Start', x: 0, y: 0, width: 100, height: 60,
           radiprotocol_nodeType: 'start' },
         { id: 'n-loop', type: 'text', text: 'Empty loop', x: 200, y: 0, width: 100, height: 60,
-          radiprotocol_nodeType: 'loop', radiprotocol_headerText: 'Empty loop' },
+          radiprotocol_nodeType: 'question', radiprotocol_questionText: 'Empty loop', radiprotocol_loop: true },
       ],
-      edges: [
-        { id: 'e1', fromNode: 'n-start', toNode: 'n-loop' },
-      ],
+      edges: [ { id: 'e1', fromNode: 'n-start', toNode: 'n-loop' } ],
     });
-    const parser = new CanvasParser();
-    const result = parser.parse(json, 'loop-zero-edges.canvas');
+    const result = new CanvasParser().parse(json, 'loop-zero-edges.canvas');
     expect(result.success).toBe(true);
     if (!result.success) return;
-    const validator = new GraphValidator();
-    const errors = validator.validate(result.graph);
-    // D-04: has no exit
+    const errors = new GraphValidator().validate(result.graph);
     expect(errors.some(e => e.includes('has no exit'))).toBe(true);
-    // D-07: has no body
     expect(errors.some(e => e.includes('has no body'))).toBe(true);
+    expect(errors.some(e => e.includes('has no outgoing branches'))).toBe(false);
   });
 });
+
+
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Phase 51 — D-04 snippet missing-file check (PICKER-01)

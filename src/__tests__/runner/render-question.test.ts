@@ -65,7 +65,6 @@ function baseNode(id: string, kind: RPNode['kind'], extra: Partial<RPNode> = {})
     ...(kind === 'question' ? { questionText: 'Pick one' } : {}),
     ...(kind === 'answer' ? { answerText: 'Answer text' } : {}),
     ...(kind === 'text-block' ? { content: 'Text' } : {}),
-    ...(kind === 'loop' ? { headerText: '' } : {}),
     ...(kind === 'loop-start' ? { loopLabel: 'Loop', exitLabel: 'Exit' } : {}),
     ...(kind === 'loop-end' ? { loopStartId: 'loop' } : {}),
     ...extra,

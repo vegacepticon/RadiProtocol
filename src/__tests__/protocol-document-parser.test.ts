@@ -141,8 +141,8 @@ describe('ProtocolDocumentParser — node types', () => {
         radiprotocol_snippetSeparator: 'newline',
       },
     }, {
-      id: 'n4', kind: 'loop',
-      fields: { radiprotocol_headerText: 'Legacy loop' },
+      id: 'n4', kind: 'question',
+      fields: { radiprotocol_questionText: 'Legacy question?', radiprotocol_loop: true },
     }]);
     const result = parser.parse(JSON.stringify(doc), 'test.rp.json');
     expect(result.success).toBe(true);
@@ -155,7 +155,8 @@ describe('ProtocolDocumentParser — node types', () => {
       expect((result.graph.nodes.get('n3') as any).radiprotocol_snippetPath).toBe('legacy/file.json');
       expect((result.graph.nodes.get('n3') as any).snippetLabel).toBe('Legacy snippet');
       expect((result.graph.nodes.get('n3') as any).radiprotocol_snippetSeparator).toBe('newline');
-      expect((result.graph.nodes.get('n4') as any).headerText).toBe('Legacy loop');
+      expect((result.graph.nodes.get('n4') as any).questionText).toBe('Legacy question?');
+      expect((result.graph.nodes.get('n4') as any).loop).toBe(true);
     }
   });
 
@@ -172,18 +173,43 @@ describe('ProtocolDocumentParser — node types', () => {
     }
   });
 
-  it('parses unified loop node', () => {
+  it('parses a looped question with loop: true', () => {
     const doc = docWithNodes([{
-      id: 'n1', kind: 'loop',
-      fields: { headerText: 'Repeat for each slice' },
+      id: 'n1', kind: 'question',
+      fields: { questionText: 'Repeat for each slice?', loop: true },
     }]);
     const result = parser.parse(JSON.stringify(doc), 'test.rp.json');
     expect(result.success).toBe(true);
     if (result.success) {
       const node = result.graph.nodes.get('n1');
-      expect(node!.kind).toBe('loop');
-      expect((node as any).headerText).toBe('Repeat for each slice');
+      expect(node!.kind).toBe('question');
+      expect((node as any).questionText).toBe('Repeat for each slice?');
+      expect((node as any).loop).toBe(true);
     }
+  });
+
+  it('preserves loop flag three states: true, false, absent (non-boolean → undefined)', () => {
+    const doc = docWithNodes([
+      { id: 'n1', kind: 'question', fields: { questionText: 'Q1', loop: true } },
+      { id: 'n2', kind: 'question', fields: { questionText: 'Q2', loop: false } },
+      { id: 'n3', kind: 'question', fields: { questionText: 'Q3' } },
+      { id: 'n4', kind: 'question', fields: { questionText: 'Q4', loop: 'true' } },
+    ]);
+    const result = parser.parse(JSON.stringify(doc), 'test.rp.json');
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect((result.graph.nodes.get('n1') as any).loop).toBe(true);
+      expect((result.graph.nodes.get('n2') as any).loop).toBe(false);
+      expect((result.graph.nodes.get('n3') as any).loop).toBeUndefined();
+      expect((result.graph.nodes.get('n4') as any).loop).toBeUndefined();
+    }
+  });
+
+  it('rejects legacy "loop" kind (migration is the sole bridge)', () => {
+    const doc = docWithNodes([{ id: 'n1', kind: 'loop' as never, fields: { headerText: 'Legacy loop' } }]);
+    const result = parser.parse(JSON.stringify(doc), 'test.rp.json');
+    expect(result.success).toBe(false);
+    expect((result as { error: string }).error).toContain('loop');
   });
 
   it('parses snippet node with subfolderPath', () => {
@@ -269,6 +295,25 @@ describe('ProtocolDocumentParser — edges and adjacency', () => {
     expect(result.success).toBe(true);
     if (result.success) {
       expect(result.graph.edges[0]!.label).toBe('Yes');
+    }
+  });
+
+  it('preserves edge isLoopExit flag', () => {
+    const doc = validDoc({
+      nodes: [
+        { id: 'n-start', kind: 'start', x: 0, y: 0, width: 250, height: 60, fields: {} },
+        { id: 'n-q', kind: 'question', x: 0, y: 100, width: 250, height: 60, fields: { questionText: 'Q?', loop: true } },
+      ],
+      edges: [
+        { id: 'e1', fromNodeId: 'n-q', toNodeId: 'n-start', label: 'Done', isLoopExit: true },
+        { id: 'e2', fromNodeId: 'n-q', toNodeId: 'n-start', label: 'Body' },
+      ],
+    });
+    const result = parser.parse(JSON.stringify(doc), 'test.rp.json');
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.graph.edges[0]!.isLoopExit).toBe(true);
+      expect(result.graph.edges[1]!.isLoopExit).toBeUndefined();
     }
   });
 

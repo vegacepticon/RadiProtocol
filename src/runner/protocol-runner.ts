@@ -3,7 +3,6 @@
 import type { ProtocolGraph, LoopContext } from '../graph/graph-model';
 import type { RunnerState, UndoEntry, RedoEntry } from './runner-state';
 import { TextAccumulator } from './text-accumulator';
-import { isExitEdge } from '../graph/node-label';
 import { RUNNER_STATUS } from '../constants/runner-states';
 import { defaultT, type Translator } from '../i18n';
 
@@ -228,17 +227,17 @@ export class ProtocolRunner {
 
   /**
    * Phase 44 (RUN-01, RUN-03): user picks a branch at the loop picker.
-   * Valid only in 'awaiting-loop-pick'. Dispatches by edge label:
-   *   - "+"-prefixed edge → pop the current loop frame, advance along the selected exit edge
-   *   - other    → walk the body branch (B1 re-entry guard inside case 'loop'
-   *                handles the iteration increment on return to picker)
+   * Valid only in 'awaiting-loop-pick'. Dispatches by edge metadata:
+   *   - edge.isLoopExit === true → pop the current loop frame, advance along the selected exit edge
+   *   - other    → walk the body branch (B1 re-entry guard inside the looped-question
+   *                case handles the iteration increment on return to picker)
    *
    * edgeId is the stable identifier per locked decision (planner D-02): labels
    * can duplicate and targetNodeIds can collide when two body branches point to
    * the same node. Only edgeId is unambiguous.
    *
-   * Phase 50.1 update: dispatch predicate is `isExitEdge` = `label.trim().startsWith('+')`
-   * (D-10). The dispatch call site is unchanged; only the predicate semantics shifted.
+   * Post loop→question merge: the exit predicate is the explicit `edge.isLoopExit`
+   * flag, replacing the former `+`-prefix label convention.
    */
   chooseLoopBranch(edgeId: string): void {
     if (this.runnerStatus !== RUNNER_STATUS.AWAITING_LOOP_PICK) return;
@@ -247,7 +246,7 @@ export class ProtocolRunner {
     const edge = this.graph.edges.find(e => e.id === edgeId);
     if (edge === undefined || edge.fromNodeId !== this.currentNodeId) {
       this.transitionToError(
-        `Loop picker edge '${edgeId}' not found or does not originate at current loop node.`,
+        `Loop picker edge '${edgeId}' not found or does not originate at current looped question.`,
       );
       return;
     }
@@ -262,15 +261,15 @@ export class ProtocolRunner {
       restoreStatus: RUNNER_STATUS.AWAITING_LOOP_PICK,
     });
 
-    if (isExitEdge(edge)) {
-      // RUN-03: pop frame (top-of-stack, nested-safe). Beta.7 allows several
-      // "+"-prefixed outgoing edges; the selected edge is the concrete exit branch.
+    if (edge.isLoopExit === true) {
+      // RUN-03: pop frame (top-of-stack, nested-safe). Multiple isLoopExit edges
+      // are allowed; the selected edge is the concrete exit branch.
       this.loopContextStack.pop();
     }
     // Body branch: DO NOT increment iteration here. The B1 re-entry guard inside
-    // case 'loop' is the sole site that increments iteration (fires on back-edge
-    // re-entry AND on inner-exit landing on outer). This keeps the semantic
-    // "iteration = number of times user has seen the picker for this loop node":
+    // case 'question' (loop === true) is the sole site that increments iteration
+    // (fires on back-edge re-entry AND on inner-exit landing on outer). This keeps
+    // the semantic "iteration = number of times user has seen the picker for this looped question":
     //   - First loop-entry:         iteration = 1 (halts at picker)
     //   - Pick body → walk → return: B1 increments to 2 (2nd picker view)
     //   - Pick body again → return:  B1 increments to 3 (3rd picker view)
@@ -559,7 +558,7 @@ export class ProtocolRunner {
     runnerStatus: typeof RUNNER_STATUS.AT_NODE | typeof RUNNER_STATUS.AWAITING_SNIPPET_PICK | typeof RUNNER_STATUS.AWAITING_SNIPPET_FILL | typeof RUNNER_STATUS.AWAITING_LOOP_PICK;
     currentNodeId: string;
     accumulatedText: string;
-    undoStack: Array<{ nodeId: string; textSnapshot: string; loopContextStack: Array<{ loopNodeId: string; iteration: number; textBeforeLoop: string }>; returnToBranchList?: boolean }>;
+    undoStack: Array<{ nodeId: string; textSnapshot: string; loopContextStack: Array<{ loopNodeId: string; iteration: number; textBeforeLoop: string }>; returnToBranchList?: boolean; restoreStatus?: RunnerState['status'] }>;
     loopContextStack: Array<{ loopNodeId: string; iteration: number; textBeforeLoop: string }>;
     snippetId: string | null;
     snippetNodeId: string | null;
@@ -582,6 +581,7 @@ export class ProtocolRunner {
         textSnapshot: e.textSnapshot,
         loopContextStack: e.loopContextStack.map(f => ({ ...f })),
         returnToBranchList: e.returnToBranchList,
+        restoreStatus: e.restoreStatus,
       })),
       loopContextStack: this.loopContextStack.map(f => ({ ...f })),
       snippetId: this.snippetId,
@@ -617,7 +617,7 @@ export class ProtocolRunner {
     runnerStatus: typeof RUNNER_STATUS.AT_NODE | typeof RUNNER_STATUS.AWAITING_SNIPPET_PICK | typeof RUNNER_STATUS.AWAITING_SNIPPET_FILL | typeof RUNNER_STATUS.AWAITING_LOOP_PICK;
     currentNodeId: string;
     accumulatedText: string;
-    undoStack: Array<{ nodeId: string; textSnapshot: string; loopContextStack: Array<{ loopNodeId: string; iteration: number; textBeforeLoop: string }>; returnToBranchList?: boolean }>;
+    undoStack: Array<{ nodeId: string; textSnapshot: string; loopContextStack: Array<{ loopNodeId: string; iteration: number; textBeforeLoop: string }>; returnToBranchList?: boolean; restoreStatus?: RunnerState['status'] }>;
     loopContextStack: Array<{ loopNodeId: string; iteration: number; textBeforeLoop: string }>;
     snippetId: string | null;
     snippetNodeId: string | null;
@@ -631,6 +631,7 @@ export class ProtocolRunner {
       textSnapshot: e.textSnapshot,
       loopContextStack: e.loopContextStack.map(f => ({ ...f })),
       returnToBranchList: e.returnToBranchList,
+      restoreStatus: e.restoreStatus,
     }));
     this.loopContextStack = session.loopContextStack.map(f => ({ ...f }));
     this.snippetId = session.snippetId;
@@ -724,7 +725,35 @@ export class ProtocolRunner {
           break;
         }
         case 'question': {
-          // Default Question behaviour — halt at at-node.
+          if (node.loop === true) {
+            // B1 re-entry guard — looped question re-entry via a body back-edge
+            // or an inner-exit landing on the outer looped question. The top
+            // frame already exists — increment iteration in-place and halt at
+            // the picker WITHOUT pushing a second frame or a second undo entry.
+            const top = this.loopContextStack[this.loopContextStack.length - 1];
+            if (top !== undefined && top.loopNodeId === cursor) {
+              top.iteration += 1;
+              this.currentNodeId = cursor;
+              this.runnerStatus = RUNNER_STATUS.AWAITING_LOOP_PICK;
+              return;
+            }
+            // First-entry path — push undo snapshot + new frame + halt.
+            this.undoStack.push({
+              nodeId: cursor,
+              textSnapshot: this.accumulator.snapshot(),
+              loopContextStack: this.loopContextStack.map(f => ({ ...f })),
+              restoreStatus: RUNNER_STATUS.AWAITING_LOOP_PICK,
+            });
+            this.loopContextStack.push({
+              loopNodeId: cursor,
+              iteration: 1,
+              textBeforeLoop: this.accumulator.snapshot(),
+            });
+            this.currentNodeId = cursor;
+            this.runnerStatus = RUNNER_STATUS.AWAITING_LOOP_PICK;
+            return;
+          }
+          // Ordinary question — halt at at-node.
           // Phase 56 D-02: Phase 51 D-13 auto-insert block removed per CONTEXT D-02
           // (explicit exception to CLAUDE.md never-remove rule — this is the phase mandate).
           // File-bound Snippet dispatch now flows through the host click handler →
@@ -740,14 +769,14 @@ export class ProtocolRunner {
           const next = this.firstNeighbour(cursor);
 
           // Quick-exit from loop body: if an answer node inside a loop body is wired
-          // directly to the same target as any of the loop's '+' exit edges, pop the loop frame
+          // directly to the same target as any of the loop's isLoopExit edges, pop the loop frame
           // so the runner continues past the loop instead of returning to the picker
           // when the branch eventually hits a dead-end.
           if (this.graph !== null && this.loopContextStack.length > 0 && next !== undefined) {
             const topLoop = this.loopContextStack[this.loopContextStack.length - 1];
             if (topLoop !== undefined) {
               const exitsToNext = this.graph.edges.some(
-                e => e.fromNodeId === topLoop.loopNodeId && isExitEdge(e) && e.toNodeId === next
+                e => e.fromNodeId === topLoop.loopNodeId && e.isLoopExit === true && e.toNodeId === next
               );
               if (exitsToNext) {
                 this.loopContextStack.pop();
@@ -758,51 +787,6 @@ export class ProtocolRunner {
           if (this.advanceOrReturnToLoop(next) === 'halted') return;
           cursor = next!;
           break;
-        }
-        // Phase 44 (RUN-01) — unified loop runtime: halt at picker.
-        case 'loop': {
-          // B1 re-entry guard — check top-of-stack BEFORE pushing a new frame.
-          // If the top frame's loopNodeId === cursor, this call is a re-entry via a body
-          // back-edge (e.g. n-a1 → n-loop in unified-loop-valid.canvas) OR an inner exit
-          // that lands on the outer loop node (e.g. e5: n-inner → n-outer in
-          // unified-loop-nested.canvas). In both cases the frame already exists — increment
-          // iteration in-place and halt at the picker WITHOUT pushing a second frame and
-          // WITHOUT pushing a second undo entry (preserves RUN-02 iteration semantics and
-          // RUN-04 single-outer-frame invariant).
-          const top = this.loopContextStack[this.loopContextStack.length - 1];
-          if (top !== undefined && top.loopNodeId === cursor) {
-            top.iteration += 1;
-            this.currentNodeId = cursor;
-            this.runnerStatus = RUNNER_STATUS.AWAITING_LOOP_PICK;
-            return;
-          }
-
-          // First-entry path — push undo snapshot + new frame + halt.
-          // Undo-before-mutate (Pitfall 1) with B2 previousCursor threading:
-          //   - If previousCursor !== null we came here via auto-advance from a real predecessor;
-          //     push undo with nodeId=previousCursor so step-back restores that predecessor.
-          //   - If previousCursor === null we entered advanceThrough directly at the loop node
-          //     (e.g. start() on a graph whose start-edge points straight at a loop, or any other
-          //     zero-auto-advance path). Push undo with nodeId=cursor so canStepBack=true. Step-back
-          //     will restore currentNodeId=loopNode + empty loopContextStack; re-running advanceThrough
-          //     from the loop node will fall through here again and re-halt at the picker. This is
-          //     a logical no-op from the user's perspective (the button clicks but nothing visible
-          //     changes) — acceptable because (a) consistent canStepBack behaviour in the union type,
-          //     (b) keeps the UI "Step back" button enabled symmetrically, (c) no data loss.
-          this.undoStack.push({
-            nodeId: cursor,
-            textSnapshot: this.accumulator.snapshot(),
-            loopContextStack: this.loopContextStack.map(f => ({ ...f })),
-            restoreStatus: RUNNER_STATUS.AWAITING_LOOP_PICK,
-          });
-          this.loopContextStack.push({
-            loopNodeId: cursor,
-            iteration: 1,
-            textBeforeLoop: this.accumulator.snapshot(),
-          });
-          this.currentNodeId = cursor;
-          this.runnerStatus = RUNNER_STATUS.AWAITING_LOOP_PICK;
-          return;
         }
         case 'loop-start':
         case 'loop-end': {
@@ -857,8 +841,8 @@ export class ProtocolRunner {
    *
    * Iteration semantic: dead-end bodies and back-edge bodies BOTH count as one
    * new iteration per return to the picker. Back-edge bodies hit B1 re-entry
-   * guard inside case 'loop' (different code path); this helper is ONLY for the
-   * true-dead-end case (node with zero outgoing edges).
+   * guard inside case 'question' (loop === true) (different code path); this
+   * helper is ONLY for the true-dead-end case (node with zero outgoing edges).
    */
   private advanceOrReturnToLoop(next: string | undefined): 'continue' | 'halted' {
     if (next !== undefined) return 'continue';
@@ -868,8 +852,8 @@ export class ProtocolRunner {
         // Dead-end body (no outgoing edge) returning to the owning picker counts as a new
         // iteration, same as a back-edge body would (via B1 re-entry guard). This keeps the
         // semantic consistent: EVERY return to a picker from a body pass increments iteration
-        // exactly once. Note that back-edge bodies reach the loop node via cursor = next! →
-        // case 'loop' → B1 guard, which is a different code path and NOT this helper.
+        // exactly once. Note that back-edge bodies reach the looped question via cursor = next! →
+        // case 'question' (loop === true) → B1 guard, which is a different code path and NOT this helper.
         frame.iteration += 1;
         this.currentNodeId = frame.loopNodeId;
         this.runnerStatus = RUNNER_STATUS.AWAITING_LOOP_PICK;

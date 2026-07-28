@@ -1,12 +1,12 @@
 // views/node-picker-modal.ts
 // Implements the "Start from specific node" picker (RUN-10 / D-06)
 import { App, SuggestModal } from 'obsidian';
-import type { ProtocolGraph, QuestionNode, TextBlockNode, SnippetNode, LoopNode, RPNodeKind } from '../graph/graph-model';
+import type { ProtocolGraph, QuestionNode, TextBlockNode, SnippetNode, RPNodeKind } from '../graph/graph-model';
 import type { ProtocolNodeRecord } from '../protocol/protocol-document';
 import type RadiProtocolPlugin from '../main';
 import { defaultT, type Translator } from '../i18n';
 
-type StartableNodeKind = Extract<RPNodeKind, 'start' | 'question' | 'answer' | 'text-block' | 'snippet' | 'loop'>;
+type StartableNodeKind = Extract<RPNodeKind, 'start' | 'question' | 'answer' | 'text-block' | 'snippet'>;
 
 export interface NodeOption {
   id: string;
@@ -25,7 +25,6 @@ export const KIND_LABEL_KEYS: Record<NodeOption['kind'], string> = {
   'answer': 'nodePicker.answer',
   'text-block': 'nodePicker.textBlock',
   'snippet': 'nodePicker.snippet',
-  'loop': 'nodePicker.loop',
 };
 
 /**
@@ -39,13 +38,12 @@ export const KIND_LABELS: Record<NodeOption['kind'], string> = {
   'answer': defaultT('nodePicker.answer'),
   'text-block': defaultT('nodePicker.textBlock'),
   'snippet': defaultT('nodePicker.snippet'),
-  'loop': defaultT('nodePicker.loop'),
 };
 
 /**
  * Phase 45 (LOOP-06, D-08): sort key for kind-group ordering in buildNodeOptions.
- * Order: question (most common start) → loop (common for repeating blocks) →
- * text-block → snippet. Within each group options sort alphabetically by label.
+ * Order: start → question → answer → text-block → snippet. Within each
+ * group options sort alphabetically by label.
  *
  * Phase 45 WR-02 fix: keyed as Record<NodeOption['kind'], number> so TypeScript
  * enforces exhaustiveness the same way KIND_LABELS does. Adding a new kind to
@@ -57,18 +55,16 @@ const KIND_ORDER: Record<NodeOption['kind'], number> = {
   'start':      0,
   'question':   1,
   'answer':     2,
-  'loop':       3,
-  'text-block': 4,
-  'snippet':    5,
+  'text-block': 3,
+  'snippet':    4,
 };
 
 /**
  * Build a sorted list of NodeOption values from a ProtocolGraph.
- * Includes question, text-block, snippet, and loop nodes (Phase 45 LOOP-06, D-06).
+ * Includes start, question, answer, text-block, and snippet nodes (Phase 45 LOOP-06, D-06).
+ * Looped questions appear as ordinary question options via the Question branch.
  *
  * Excluded by design (D-06 — deliberate deviation from ROADMAP SC #3):
- *   - answer (renders as button under question, not a self-starting point)
- *   - start (implicit entry node, not author-picked)
  *   - loop-start, loop-end (legacy parseable kinds — validator rejects canvases
  *     containing them via MIGRATE-01; they must not appear as picker options)
  *
@@ -107,9 +103,6 @@ export function buildNodeOptions(graph: ProtocolGraph, t: Translator = defaultT)
     } else if (node.kind === 'snippet') {
       const s = node as SnippetNode;
       options.push({ id, label: s.snippetLabel || s.subfolderPath || t('nodePicker.rootSnippets'), kind: 'snippet' });
-    } else if (node.kind === 'loop') {
-      const l = node as LoopNode;
-      options.push({ id, label: l.headerText || id, kind: 'loop' });
     }
   }
 
@@ -135,7 +128,6 @@ export function buildStartableProtocolNodeOptions(
       stringField(node, 'questionText') ??
       stringField(node, 'answerText') ??
       stringField(node, 'content') ??
-      stringField(node, 'headerText') ??
       node.text ??
       (node.kind === 'snippet' ? t('nodePicker.rootSnippets') : node.id);
     options.push({ id: node.id, label, kind: node.kind });
@@ -144,8 +136,8 @@ export function buildStartableProtocolNodeOptions(
 }
 
 /**
- * SuggestModal that presents question and text-block nodes for the
- * "Start from specific node" command (RUN-10 / D-06).
+ * SuggestModal that presents start, question, answer, text-block, and snippet
+ * nodes for the "Start from specific node" command (RUN-10 / D-06).
  *
  * Usage:
  *   const options = buildNodeOptions(graph);

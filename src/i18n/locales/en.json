@@ -53,7 +53,6 @@
     "questionTextLabel": "Question text",
     "answerTextLabel": "Answer text",
     "contentLabel": "Content",
-    "headerTextLabel": "Header text",
     "snippetSeparatorLabel": "How to separate this snippet from previous text",
     "noEditableFields": "No editable content fields for this node kind.",
     "resizeNodeLabel": "Resize node",
@@ -95,18 +94,18 @@
       "question": "Question",
       "answer": "Answer",
       "text-block": "Text block",
-      "loop": "Loop",
       "snippet": "Snippet"
     },
     "defaultNodeText": {
       "question": "New question",
       "answer": "New answer",
       "text-block": "New text block",
-      "loop": "New loop",
       "snippet": "Snippet"
     },
     "close": "Close",
-    "untyped": "untyped"
+    "untyped": "untyped",
+    "loopToggleLabel": "Loop",
+    "loopBadgeAriaLabel": "Loop question"
   },
   "donate": {
     "invitation": "Thank you for your support! If RadiProtocol saves you time, any donation is appreciated.",
@@ -255,9 +254,8 @@
     "answer": "Answer",
     "textBlock": "Text",
     "snippet": "Snippet",
-    "loop": "Loop",
     "rootSnippets": "(snippets root)",
-    "searchPlaceholder": "Search nodes by label\u2026"
+    "searchPlaceholder": "Search nodes by label…"
   },
   "snippetChip": {
     "separator": "Separator"
@@ -284,17 +282,15 @@
     "missingNodeId": "Protocol node is missing string id"
   },
   "graphValidator": {
-    "legacyLoopNodes": "Canvas contains deprecated loop-start/loop-end nodes: {ids}. Rebuild the loop with a unified loop node: an «exit» label on one of the outgoing edges marks the exit branch; the rest form the loop body.",
-    "loopNoExit": "Loop node \"{label}\" has no exit. Mark exactly one outgoing edge with a \"+\" prefix — the text after \"+\" becomes the exit-button caption.",
-    "loopNoExitWithLegacy": "Loop node \"{label}\" has no exit edge with a \"+\" prefix. Add \"+\" to one of the labeled edges ({ids}) — the text after \"+\" becomes the exit-button caption.",
-    "loopExitNoLabel": "Loop node \"{label}\": \"+\" edge {edgeId} has no caption — add text after \"+\".",
-    "loopNoBody": "Loop node \"{label}\" has no body — add an outgoing edge without a \"+\" prefix.",
+    "legacyLoopNodes": "Canvas contains deprecated loop-start/loop-end nodes: {ids}. Rebuild the loop as a Question with the Loop toggle enabled, then mark an outgoing edge with \"This edge exits the loop\"; the remaining outgoing edges form the loop body.",
+    "loopNoExit": "Loop question \"{label}\" has no exit. Mark one outgoing edge as a loop exit (\"This edge exits the loop\").",
+    "loopNoBody": "Loop question \"{label}\" has no body — add an outgoing edge that is not marked as a loop exit.",
     "snippetFileMissing": "Snippet node \"{label}\" references a missing file \"{relPath}\" — file not found in {folder}. Check the path or restore the file.",
     "noStartNode": "No start node found. Add a node with radiprotocol_nodeType = \"start\".",
     "multipleStartNodes": "Multiple start nodes found ({count}). Only one start node is allowed.",
     "unreachableNodes": "{count} unreachable node(s) found: {nodeList}. Connect these nodes to the protocol or remove them.",
     "deadEndQuestion": "Question \"{questionText}\" has no outgoing branches. Add at least one answer or snippet node connected from this question.",
-    "unintentionalCycle": "Unintentional cycle detected: {cycleLabel}. Cycles must pass through a loop node. Remove the back-edge or route the cycle through a loop node."
+    "unintentionalCycle": "Unintentional cycle detected: {cycleLabel}. Cycles must pass through a loop question. Remove the back-edge or enable the loop toggle on a question in the cycle."
   },
   "protocolRunner": {
     "legacyLoopRuntime": "Encountered a deprecated loop-start/loop-end node. The canvas should have been rejected by the validator; if you see this message, this is a bug — please contact the plugin author.",

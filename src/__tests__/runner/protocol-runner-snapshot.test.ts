@@ -321,4 +321,45 @@ describe('snapshot — awaiting-loop-pick (RUN-06)', () => {
     expect(restoredSerialized.loopContextStack[0]?.iteration).toBe(2);
     expect(restoredSerialized.loopContextStack[0]?.loopNodeId).toBe('n-loop');
   });
+
+  it('SESSION-RT: restored session stepBack re-enters awaiting-loop-pick (restoreStatus survives JSON round-trip)', () => {
+    const graph = unifiedLoopValidGraph();
+    const runner = new ProtocolRunner();
+    runner.start(graph);
+    // start() → first loop-entry pushes UndoEntry{restoreStatus:'awaiting-loop-pick'} at n-loop
+    expect(runner.getState().status).toBe('awaiting-loop-pick');
+    // chooseLoopBranch body pushes a second UndoEntry{restoreStatus:'awaiting-loop-pick'}, advances to n-q1
+    runner.chooseLoopBranch('e2');
+    const state = runner.getState();
+    expect(state.status).toBe('at-node');
+    if (state.status !== 'at-node') return;
+    expect(state.currentNodeId).toBe('n-q1');
+
+    // Persist via getSerializableState and round-trip through JSON (host persistence boundary).
+    // Cast as `typeof saved` to catch type drift in the serialized shape (snapshot-suite convention).
+    const saved = runner.getSerializableState();
+    expect(saved).not.toBeNull();
+    if (saved === null) return;
+    // restoreStatus MUST survive the round-trip — this is the regression.
+    expect(saved.undoStack[saved.undoStack.length - 1]?.restoreStatus).toBe('awaiting-loop-pick');
+    const json = JSON.stringify(saved);
+    const deserialized = JSON.parse(json) as typeof saved;
+
+    const restored = new ProtocolRunner();
+    restored.setGraph(graph);
+    restored.restoreFrom(deserialized);
+    let rState = restored.getState();
+    expect(rState.status).toBe('at-node');
+    if (rState.status !== 'at-node') return;
+    expect(rState.currentNodeId).toBe('n-q1');
+    expect(rState.canStepBack).toBe(true);
+
+    // stepBack on the restored session re-enters the loop picker (NOT at-node) —
+    // proves restoreStatus was preserved through the serialization seam.
+    restored.stepBack();
+    rState = restored.getState();
+    expect(rState.status).toBe('awaiting-loop-pick');
+    if (rState.status !== 'awaiting-loop-pick') return;
+    expect(rState.nodeId).toBe('n-loop');
+  });
 });
