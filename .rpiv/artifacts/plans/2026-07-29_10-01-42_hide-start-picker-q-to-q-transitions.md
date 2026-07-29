@@ -397,8 +397,8 @@ describe('ProtocolRunner — direct Question transition', () => {
 ### Success Criteria:
 
 #### Automated Verification:
-- [ ] Focused runner transition tests pass: `npx vitest run src/__tests__/runner/protocol-runner-question-branch.test.ts`
-- [ ] Existing runner tests remain green: `npx vitest run src/__tests__/runner/protocol-runner.test.ts src/__tests__/runner/protocol-runner-loop-picker.test.ts src/__tests__/runner/protocol-runner-redo.test.ts`
+- [x] Focused runner transition tests pass: `npx vitest run src/__tests__/runner/protocol-runner-question-branch.test.ts`
+- [x] Existing runner tests remain green: `npx vitest run src/__tests__/runner/protocol-runner.test.ts src/__tests__/runner/protocol-runner-loop-picker.test.ts src/__tests__/runner/protocol-runner-redo.test.ts`
 
 #### Manual Verification:
 - [ ] Review the public runner action to confirm every validation branch precedes redo clearing and undo mutation.
@@ -621,8 +621,8 @@ describe('InlineRunnerModal — direct Question transition host', () => {
 ### Success Criteria:
 
 #### Automated Verification:
-- [ ] Renderer and host integration tests pass: `npx vitest run src/__tests__/runner/render-question.test.ts src/__tests__/views/inline-runner-modal.test.ts`
-- [ ] Stylelint accepts the transition selectors: `npx stylelint "src/styles/inline-runner.css"`
+- [x] Renderer and host integration tests pass: `npx vitest run src/__tests__/runner/render-question.test.ts src/__tests__/views/inline-runner-modal.test.ts`
+- [x] Stylelint accepts the transition selectors: `npx stylelint "src/styles/inline-runner.css"`
 
 #### Manual Verification:
 - [ ] In an inline run with mixed branches, Answer buttons appear first, distinct transition buttons second, and Snippet buttons last.
@@ -944,8 +944,8 @@ describe('ProtocolEditorView: ordinary Question edge labels', () => {
 ### Success Criteria:
 
 #### Automated Verification:
-- [ ] Editor helper and view regression tests pass: `npx vitest run src/__tests__/protocol-editor-helpers.test.ts src/__tests__/views/protocol-editor-keyboard.test.ts`
-- [ ] Complete project gate passes: `npm run check`
+- [x] Editor helper and view regression tests pass: `npx vitest run src/__tests__/protocol-editor-helpers.test.ts src/__tests__/views/protocol-editor-keyboard.test.ts`
+- [x] Complete project gate passes: `npm run check`
 
 #### Manual Verification:
 - [ ] With a Start present, both empty-canvas and connected-node pickers omit Start; after deleting it, both immediately show Start.
