@@ -39,6 +39,7 @@ interface MockEl {
   focus: (opts?: { preventScroll?: boolean }) => void;
   select: () => void;
   toggleAttribute: (name: string, force?: boolean) => void;
+  appendText: (text: string) => void;
 }
 
 function makeEl(tag = 'div'): MockEl {
@@ -138,6 +139,7 @@ function makeEl(tag = 'div'): MockEl {
     },
     focus: vi.fn(),
     select: vi.fn(),
+    appendText(text: string): void { el._text += text; },
     toggleAttribute(name: string, force?: boolean): void {
       const enabled = force ?? !attrs[name];
       if (enabled) attrs[name] = '';
@@ -188,6 +190,19 @@ function dispatchKeyDown(el: MockEl, key: string, target?: MockEl): void {
   for (const handler of handlers) {
     handler({ key, target: target ?? el, preventDefault: () => {}, stopPropagation: () => {} });
   }
+}
+
+function nodeKindsInPicker(root: MockEl): string[] {
+  const kinds: string[] = [];
+  const stack: MockEl[] = [root];
+  while (stack.length > 0) {
+    const cur = stack.pop()!;
+    const k = cur.getAttribute('data-node-kind');
+    if (k !== null) kinds.push(k);
+    // Push children in reverse so document order is preserved.
+    for (let i = cur.children.length - 1; i >= 0; i--) stack.push(cur.children[i]!);
+  }
+  return kinds;
 }
 
 // ── Mock dom-helpers ───────────────────────────────────────────────────────
@@ -315,6 +330,13 @@ const t = (key: string, _params?: Record<string, string>): string => {
     'protocolEditor.useGlobalSeparator': 'Use global',
     'settings.newline': 'Newline',
     'settings.space': 'Space',
+    'protocolEditor.edgeLabelHelp': 'Shown beside the edge',
+    'protocolEditor.loopExitLabel': 'Loop exit',
+    'protocolEditor.deleteEdgeLabel': 'Delete edge',
+    'protocolEditor.edgeSaved': 'Edge saved',
+    'protocolEditor.deleteNodeConfirm': 'Delete this node?',
+    'protocolEditor.confirmDelete': 'Confirm delete',
+    'protocolEditor.nodeDeleted': 'Node deleted',
   };
   return map[key] ?? key;
 };
@@ -862,19 +884,6 @@ describe('openEditModal — snippet target picker lifecycle', () => {
 });
 
 describe('ProtocolEditorView: node-kind creation picker omits text-block (Phase 3)', () => {
-  function nodeKindsInPicker(root: MockEl): string[] {
-    const kinds: string[] = [];
-    const stack: MockEl[] = [root];
-    while (stack.length > 0) {
-      const cur = stack.pop()!;
-      const k = cur.getAttribute('data-node-kind');
-      if (k !== null) kinds.push(k);
-      // Push children in reverse so document order is preserved.
-      for (let i = cur.children.length - 1; i >= 0; i--) stack.push(cur.children[i]!);
-    }
-    return kinds;
-  }
-
   function openPickerDocument(): MockEl {
     const documentBody = makeEl('body');
     (globalThis as any).document = { body: documentBody, activeElement: null };
@@ -897,6 +906,21 @@ describe('ProtocolEditorView: node-kind creation picker omits text-block (Phase 
     const kinds = nodeKindsInPicker(documentBody);
     expect(kinds).toEqual(['start', 'question', 'answer', 'snippet']);
     expect(kinds).not.toContain('text-block');
+  });
+
+  it('both pickers hide Start when the current document already has one', () => {
+    const { view } = createTestView();
+    (view as any).doc.nodes.unshift({
+      id: 'start', kind: 'start', x: 0, y: 0, width: 200, height: 80, fields: {},
+    });
+    const documentBody = openPickerDocument();
+
+    (view as any).openNodeKindPickerAtWorldPoint(0, 0);
+    expect(nodeKindsInPicker(documentBody)).toEqual(['question', 'answer', 'snippet']);
+
+    documentBody.empty();
+    (view as any).openNodeKindPickerAndConnectAtWorldPoint('node-1', 0, 0);
+    expect(nodeKindsInPicker(documentBody)).toEqual(['question', 'answer', 'snippet']);
   });
 });
 
@@ -1039,5 +1063,186 @@ describe('ProtocolEditorView: loop toggle authoring + badge', () => {
 
     const badges = findAllByClass(surfaceEl, 'rp-protocol-editor-node-loop-badge');
     expect(badges.length).toBe(0);
+  });
+});
+
+describe('ProtocolEditorView: node deletion state synchronization', () => {
+  it('uses the successful Start deletion result before the asynchronous reload finishes', async () => {
+    const savedWindow = (globalThis as any).window;
+    const savedHTMLElement = (globalThis as any).HTMLElement;
+    const savedDocument = (globalThis as any).document;
+    const documentBody = makeEl('body');
+    (globalThis as any).document = { body: documentBody, activeElement: null };
+    (globalThis as any).window = {
+      requestAnimationFrame: (callback: () => void) => { callback(); return 0; },
+      setTimeout: (callback: () => void) => { callback(); return 0; },
+    };
+    (globalThis as any).HTMLElement = class HTMLElement {};
+    try {
+      const startNode: ProtocolNodeRecord = {
+        id: 'start', kind: 'start', x: 0, y: 0, width: 200, height: 80, fields: {},
+      };
+      let stored: ProtocolDocumentV1 = {
+        schema: 'radiprotocol.protocol', version: 1, id: 'delete-start', title: 'Delete Start',
+        createdAt: '2026-01-01T00:00:00Z', updatedAt: '2026-01-01T00:00:00Z',
+        nodes: [startNode], edges: [],
+      };
+      const update = vi.fn(async (_path: string, mutator: (doc: ProtocolDocumentV1) => ProtocolDocumentV1) => {
+        stored = mutator(stored);
+        return stored;
+      });
+      const view = new ProtocolEditorView({} as any, {
+        i18n: { t }, settings: { snippetFolderPath: '.radiprotocol/snippets' },
+        protocolDocumentStore: { update },
+      } as any);
+      (view as any).protocolPath = 'delete-start.rp.json';
+      (view as any).doc = stored;
+      (view as any).viewportEl = makeEl('div');
+      (view as any).zoom = 1;
+      (view as any).loadProtocol = vi.fn(() => new Promise<void>(() => {}));
+
+      (view as any).openEditModal(startNode);
+      const deleteBtn = findAllByTag(documentBody, 'button').find(button => button._text === 'Delete')!;
+      for (const handler of deleteBtn._listeners.get('click') ?? []) handler({ target: deleteBtn });
+      const confirmBtn = findAllByTag(documentBody, 'button').find(button => button._text === 'Confirm delete')!;
+      for (const handler of confirmBtn._listeners.get('click') ?? []) await handler({ target: confirmBtn });
+
+      expect((view as any).doc.nodes).toEqual([]);
+      expect((view as any).loadProtocol).toHaveBeenCalledWith('delete-start.rp.json');
+
+      (view as any).openNodeKindPickerAtWorldPoint(0, 0);
+      expect(nodeKindsInPicker(documentBody)).toEqual(['start', 'question', 'answer', 'snippet']);
+      documentBody.empty();
+      (view as any).openNodeKindPickerAndConnectAtWorldPoint('start', 0, 0);
+      expect(nodeKindsInPicker(documentBody)).toEqual(['start', 'question', 'answer', 'snippet']);
+    } finally {
+      (globalThis as any).window = savedWindow;
+      (globalThis as any).HTMLElement = savedHTMLElement;
+      (globalThis as any).document = savedDocument;
+    }
+  });
+
+  it('does not apply a stale deletion result after another protocol loads', async () => {
+    const savedWindow = (globalThis as any).window;
+    const savedHTMLElement = (globalThis as any).HTMLElement;
+    const savedDocument = (globalThis as any).document;
+    const documentBody = makeEl('body');
+    (globalThis as any).document = { body: documentBody, activeElement: null };
+    (globalThis as any).window = {
+      requestAnimationFrame: (callback: () => void) => { callback(); return 0; },
+      setTimeout: (callback: () => void) => { callback(); return 0; },
+    };
+    (globalThis as any).HTMLElement = class HTMLElement {};
+    try {
+      const startNode: ProtocolNodeRecord = {
+        id: 'start', kind: 'start', x: 0, y: 0, width: 200, height: 80, fields: {},
+      };
+      const deletingDoc: ProtocolDocumentV1 = {
+        schema: 'radiprotocol.protocol', version: 1, id: 'deleting', title: 'Deleting',
+        createdAt: '2026-01-01T00:00:00Z', updatedAt: '2026-01-01T00:00:00Z',
+        nodes: [startNode], edges: [],
+      };
+      const activeDoc: ProtocolDocumentV1 = {
+        ...deletingDoc,
+        id: 'active',
+        title: 'Active',
+        nodes: [{
+          id: 'active-question', kind: 'question', x: 0, y: 0, width: 200, height: 80,
+          fields: { questionText: 'Active' },
+        }],
+      };
+      const holder: { view: ProtocolEditorView | null } = { view: null };
+      const update = vi.fn(async (_path: string, mutator: (doc: ProtocolDocumentV1) => ProtocolDocumentV1) => {
+        const deleted = mutator(deletingDoc);
+        (holder.view as any).protocolPath = 'active.rp.json';
+        (holder.view as any).doc = activeDoc;
+        (holder.view as any).loadGeneration += 1;
+        return deleted;
+      });
+      const view = new ProtocolEditorView({} as any, {
+        i18n: { t }, settings: { snippetFolderPath: '.radiprotocol/snippets' },
+        protocolDocumentStore: { update },
+      } as any);
+      holder.view = view;
+      (view as any).protocolPath = 'deleting.rp.json';
+      (view as any).doc = deletingDoc;
+      (view as any).viewportEl = makeEl('div');
+      (view as any).zoom = 1;
+      (view as any).loadProtocol = vi.fn(async () => {});
+
+      (view as any).openEditModal(startNode);
+      const deleteBtn = findAllByTag(documentBody, 'button').find(button => button._text === 'Delete')!;
+      for (const handler of deleteBtn._listeners.get('click') ?? []) handler({ target: deleteBtn });
+      const confirmBtn = findAllByTag(documentBody, 'button').find(button => button._text === 'Confirm delete')!;
+      for (const handler of confirmBtn._listeners.get('click') ?? []) await handler({ target: confirmBtn });
+
+      expect((view as any).protocolPath).toBe('active.rp.json');
+      expect((view as any).doc).toBe(activeDoc);
+      expect((view as any).loadProtocol).not.toHaveBeenCalled();
+    } finally {
+      (globalThis as any).window = savedWindow;
+      (globalThis as any).HTMLElement = savedHTMLElement;
+      (globalThis as any).document = savedDocument;
+    }
+  });
+});
+
+describe('ProtocolEditorView: ordinary Question edge labels', () => {
+  it('preserves a typed Q-to-Q label through save and reopen', async () => {
+    const savedDocument = (globalThis as any).document;
+    const savedWindow = (globalThis as any).window;
+    const savedHTMLElement = (globalThis as any).HTMLElement;
+    const documentBody = makeEl('body');
+    (globalThis as any).document = { body: documentBody, activeElement: null };
+    (globalThis as any).window = {
+      requestAnimationFrame: (callback: () => void) => { callback(); return 0; },
+    };
+    (globalThis as any).HTMLElement = class HTMLElement {};
+    try {
+      const source: ProtocolNodeRecord = {
+        id: 'q-source', kind: 'question', x: 0, y: 0, width: 200, height: 80,
+        text: 'Source', fields: { questionText: 'Source' },
+      };
+      const target: ProtocolNodeRecord = {
+        id: 'q-target', kind: 'question', x: 300, y: 0, width: 200, height: 80,
+        text: 'Target', fields: { questionText: 'Target' },
+      };
+      let stored: ProtocolDocumentV1 = {
+        schema: 'radiprotocol.protocol', version: 1, id: 'q-label', title: 'Q label',
+        createdAt: '2026-01-01T00:00:00Z', updatedAt: '2026-01-01T00:00:00Z',
+        nodes: [source, target],
+        edges: [{ id: 'q-edge', fromNodeId: source.id, toNodeId: target.id }],
+      };
+      const update = vi.fn(async (_path: string, mutator: (doc: ProtocolDocumentV1) => ProtocolDocumentV1) => {
+        stored = mutator(stored);
+        return stored;
+      });
+      const view = new ProtocolEditorView({} as any, {
+        i18n: { t }, settings: { snippetFolderPath: '.radiprotocol/snippets' },
+        protocolDocumentStore: { update },
+      } as any);
+      (view as any).protocolPath = 'q-label.rp.json';
+      (view as any).doc = stored;
+      (view as any).viewportEl = makeEl('div');
+      (view as any).zoom = 1;
+      (view as any).loadProtocol = vi.fn(async () => { (view as any).doc = stored; });
+
+      (view as any).openEdgeModal(stored.edges[0]);
+      const labelInput = findAllByTag(documentBody, 'input').find(input => input._attrs['type'] === 'text')!;
+      labelInput.value = '  Follow up  ';
+      const saveBtn = findAllByTag(documentBody, 'button').find(button => button._text === 'Save')!;
+      for (const handler of saveBtn._listeners.get('click') ?? []) await handler({ target: saveBtn });
+
+      expect(stored.edges[0]?.label).toBe('Follow up');
+      expect((view as any).doc.edges[0]?.label).toBe('Follow up');
+
+      (view as any).openEdgeModal((view as any).doc.edges[0]);
+      const reopenedInput = findAllByTag(documentBody, 'input').find(input => input._attrs['type'] === 'text')!;
+      expect(reopenedInput.value).toBe('Follow up');
+    } finally {
+      (globalThis as any).document = savedDocument;
+      (globalThis as any).window = savedWindow;
+      (globalThis as any).HTMLElement = savedHTMLElement;
+    }
   });
 });

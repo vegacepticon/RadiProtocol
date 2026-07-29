@@ -323,6 +323,15 @@ export function shouldDisplayProtocolEditorEdgeLabel(
   if (fromNode?.kind === 'question' && fromNode.fields['loop'] === true && edge.isLoopExit === true) {
     return true;
   }
+  // Ordinary Question-to-Question edges may carry authored transition captions.
+  // Looped-question body labels remain hidden; loop exits are handled above.
+  if (
+    fromNode?.kind === 'question' &&
+    fromNode.fields['loop'] !== true &&
+    toNode?.kind === 'question'
+  ) {
+    return edge.label !== undefined && edge.label.trim() !== '';
+  }
   return false;
 }
 
@@ -757,7 +766,11 @@ export class ProtocolEditorView extends ItemView {
 
     const body = modal.createDiv({ cls: 'rp-protocol-editor-modal-body' });
     const grid = body.createDiv({ cls: 'rp-protocol-editor-node-kind-grid' });
-    for (const kind of EDITABLE_NODE_KINDS) {
+    const hasStart = this.doc.nodes.some(node => node.kind === 'start');
+    const availableKinds = hasStart
+      ? EDITABLE_NODE_KINDS.filter(kind => kind !== 'start')
+      : EDITABLE_NODE_KINDS;
+    for (const kind of availableKinds) {
       const btn = grid.createEl('button', {
         cls: 'rp-protocol-editor-node-kind-choice',
         text: t(`protocolEditor.nodeKind.${kind}`),
@@ -807,7 +820,11 @@ export class ProtocolEditorView extends ItemView {
 
     const body = modal.createDiv({ cls: 'rp-protocol-editor-modal-body' });
     const grid = body.createDiv({ cls: 'rp-protocol-editor-node-kind-grid' });
-    for (const kind of EDITABLE_NODE_KINDS) {
+    const hasStart = this.doc.nodes.some(node => node.kind === 'start');
+    const availableKinds = hasStart
+      ? EDITABLE_NODE_KINDS.filter(kind => kind !== 'start')
+      : EDITABLE_NODE_KINDS;
+    for (const kind of availableKinds) {
       const btn = grid.createEl('button', {
         cls: 'rp-protocol-editor-node-kind-choice',
         text: t(`protocolEditor.nodeKind.${kind}`),
@@ -2465,15 +2482,22 @@ export class ProtocolEditorView extends ItemView {
       });
       confirmBtn.addEventListener('click', async () => {
         try {
-        await this.plugin.protocolDocumentStore.update(this.protocolPath!, (existing) => {
+        const protocolPath = this.protocolPath!;
+        const generation = this.loadGeneration;
+        const updated = await this.plugin.protocolDocumentStore.update(protocolPath, (existing) => {
           if (existing === null) protocolMissingFileError();
           const nodes = existing.nodes.filter((n) => n.id !== node.id);
           const edges = existing.edges.filter((e) => e.fromNodeId !== node.id && e.toNodeId !== node.id);
           return { ...existing, nodes, edges, viewport: this.currentViewportState(), updatedAt: new Date().toISOString() };
         });
+        if (this.protocolPath !== protocolPath || this.loadGeneration !== generation) {
+          closeModal();
+          return;
+        }
+        this.doc = updated;
         closeModal();
         new Notice(t('protocolEditor.nodeDeleted'));
-        void this.loadProtocol(this.protocolPath!);
+        void this.loadProtocol(protocolPath);
       } catch (err) {
           new Notice(t('protocolEditor.deleteFailed', { error: String(err) }));
         }

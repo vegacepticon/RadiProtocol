@@ -27,6 +27,7 @@ vi.mock('../../views/snippet-fill-in-modal', async () => {
 import { InlineRunnerModal } from '../../views/inline-runner-modal';
 import { TFile } from 'obsidian';
 import { makeBaseApp, makeBasePlugin } from '../runner/runner-renderer-host-fixtures';
+import type { ProtocolGraph, RPNode } from '../../graph/graph-model';
 
 // ───── Helpers ─────
 
@@ -627,5 +628,57 @@ describe('InlineRunnerModal — migration seam before direct inline raw read', (
     } finally {
       vi.unstubAllGlobals();
     }
+  });
+});
+
+describe('InlineRunnerModal — direct Question transition host', () => {
+  it('delegates the concrete edge ID, rerenders, and never modifies the note', () => {
+    const { modal, app } = setupModal({ vaultContent: 'Existing note' });
+    const graph: ProtocolGraph = {
+      canvasFilePath: 'question-transition.rp.json',
+      nodes: new Map<string, RPNode>([
+        ['start', { id: 'start', kind: 'start', x: 0, y: 0, width: 100, height: 60 }],
+        ['q-source', { id: 'q-source', kind: 'question', questionText: 'Source?', x: 0, y: 60, width: 100, height: 60 }],
+        ['q-target', { id: 'q-target', kind: 'question', questionText: 'Target?', x: 0, y: 120, width: 100, height: 60 }],
+      ]),
+      edges: [
+        { id: 'e-start', fromNodeId: 'start', toNodeId: 'q-source' },
+        { id: 'e-transition', fromNodeId: 'q-source', toNodeId: 'q-target', label: 'Continue' },
+      ],
+      adjacency: new Map([
+        ['start', ['q-source']],
+        ['q-source', ['q-target']],
+      ]),
+      reverseAdjacency: new Map([
+        ['q-source', ['start']],
+        ['q-target', ['q-source']],
+      ]),
+      startNodeId: 'start',
+    };
+    const content = makeEl('div');
+    const actions = makeEl('div');
+    (modal as any).contentEl = content;
+    (modal as any).actionsEl = actions;
+    (modal as any).footerBtnRowEl = makeEl('div');
+    (modal as any).containerEl = makeEl('div');
+    (modal as any).graph = graph;
+    (modal as any).runner.start(graph);
+    const chooseSpy = vi.spyOn((modal as any).runner, 'chooseQuestionBranch');
+    const renderSpy = vi.spyOn(modal as any, 'render');
+
+    (modal as any).render();
+    const transitionButtons = actions.querySelectorAll('.rp-question-transition-btn');
+    expect(transitionButtons).toHaveLength(1);
+
+    transitionButtons[0]!.dispatchEvent({ type: 'click' });
+
+    expect(chooseSpy).toHaveBeenCalledWith('e-transition');
+    expect(renderSpy).toHaveBeenCalledTimes(2);
+    expect((modal as any).runner.getState()).toMatchObject({
+      status: 'at-node',
+      currentNodeId: 'q-target',
+      accumulatedText: '',
+    });
+    expect(app.vault.modify).not.toHaveBeenCalled();
   });
 });

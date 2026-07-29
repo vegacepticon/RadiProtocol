@@ -79,6 +79,26 @@ describe('protocol editor helper functions', () => {
       text: 'Loop B',
       fields: { loop: true },
     };
+    const questionNodeA: ProtocolNodeRecord = {
+      id: 'question-a',
+      kind: 'question',
+      x: 0,
+      y: 0,
+      width: 160,
+      height: 80,
+      text: 'Question A',
+      fields: { questionText: 'Question A' },
+    };
+    const questionNodeB: ProtocolNodeRecord = {
+      id: 'question-b',
+      kind: 'question',
+      x: 0,
+      y: 0,
+      width: 160,
+      height: 80,
+      text: 'Question B',
+      fields: { questionText: 'Question B' },
+    };
     const textNode: ProtocolNodeRecord = {
       id: 'text',
       kind: 'text-block',
@@ -239,6 +259,22 @@ describe('protocol editor helper functions', () => {
         loopNodeA,
         textNode,
       )).toBe(true);
+      // Ordinary Question-to-Question edges display only when a nonblank label is authored.
+      expect(shouldDisplayProtocolEditorEdgeLabel(
+        { id: 'q-to-q', fromNodeId: 'question-a', toNodeId: 'question-b', label: 'Follow up' },
+        questionNodeA,
+        questionNodeB,
+      )).toBe(true);
+      expect(shouldDisplayProtocolEditorEdgeLabel(
+        { id: 'q-to-loop', fromNodeId: 'question-a', toNodeId: 'loop-a', label: 'Repeat' },
+        questionNodeA,
+        loopNodeA,
+      )).toBe(true);
+      expect(shouldDisplayProtocolEditorEdgeLabel(
+        { id: 'q-to-q-empty', fromNodeId: 'question-a', toNodeId: 'question-b', label: '   ' },
+        questionNodeA,
+        questionNodeB,
+      )).toBe(false);
     });
 
     function routeRankCoordinates(d: string, direction: 'LR' | 'TB'): number[] {

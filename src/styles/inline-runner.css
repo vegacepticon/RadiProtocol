@@ -148,6 +148,7 @@
 
 /* Phase 88: Button lists inside actions */
 .rp-inline-runner-actions .rp-answer-list,
+.rp-inline-runner-actions .rp-question-transition-list,
 .rp-inline-runner-actions .rp-snippet-branch-list,
 .rp-inline-runner-actions .rp-loop-picker-list {
   display: flex;
@@ -170,6 +171,7 @@
 
 /* Phase 88: Unified action button selectors — only in .rp-inline-runner-actions now */
 .rp-inline-runner-actions .rp-answer-btn,
+.rp-inline-runner-actions .rp-question-transition-btn,
 .rp-inline-runner-actions .rp-snippet-branch-btn,
 .rp-inline-runner-actions .rp-loop-body-btn,
 .rp-inline-runner-actions .rp-loop-exit-btn {
@@ -184,6 +186,16 @@
   max-width: 100%;
   box-sizing: border-box;
   text-align: left;
+}
+
+/* Direct Question transitions are navigation, not report-producing Answers. */
+.rp-inline-runner-actions .rp-question-transition-list {
+  margin-top: var(--size-4-3);
+}
+
+.rp-inline-runner-actions .rp-question-transition-btn {
+  border-left: 3px solid var(--interactive-accent);
+  background: var(--background-secondary);
 }
 
 /* Phase 88: Footer — close btn + Back/Skip */

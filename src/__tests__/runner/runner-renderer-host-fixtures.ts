@@ -37,6 +37,7 @@ export interface MockEl {
   querySelector: (sel: string) => MockEl | null;
   querySelectorAll: (sel: string) => MockEl[];
   prepend: (el: MockEl) => void;
+  setCssProps: (props: Record<string, string>) => void;
 }
 
 export function makeEl(tag = 'div'): MockEl {
@@ -110,6 +111,9 @@ export function makeEl(tag = 'div'): MockEl {
     querySelector(sel: string): MockEl | null { return walk(el as unknown as MockEl, sel)[0] ?? null; },
     querySelectorAll(sel: string): MockEl[] { return walk(el as unknown as MockEl, sel); },
     prepend(child: MockEl): void { children.unshift(child); child.parent = el as unknown as MockEl; },
+    setCssProps(props: Record<string, string>): void {
+      for (const [k, v] of Object.entries(props)) (style as Record<string, string>)[k] = v;
+    },
     style,
   } as unknown as MockEl;
 

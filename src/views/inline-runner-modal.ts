@@ -467,6 +467,10 @@ export class InlineRunnerModal {
             bindClick: (el, handler) => el.addEventListener('click', handler),
             renderError: (messages) => this.renderError(this.contentEl!, messages),
             onChooseAnswer: (answerNode) => this.handleAnswerClick(answerNode),
+            onChooseQuestionBranch: (edge) => {
+              this.runner.chooseQuestionBranch(edge.id);
+              this.render();
+            },
             onChooseSnippetBranch: (snippetNode, isFileBound) => {
               if (isFileBound) {
                 const snippetPath = snippetNode.radiprotocol_snippetPath as string;

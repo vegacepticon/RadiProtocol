@@ -81,11 +81,18 @@ function makeGraph(current: RPNode = baseNode('q', 'question')): ProtocolGraph {
   nodes.set('s-dir', baseNode('s-dir', 'snippet', {
     snippetLabel: 'Folder label',
   }));
+  nodes.set('q-labeled', baseNode('q-labeled', 'question', { questionText: 'Labeled target' }));
+  nodes.set('q-fallback', baseNode('q-fallback', 'question', { questionText: 'Fallback question' }));
+  nodes.set('q-id', baseNode('q-id', 'question', { questionText: '   ' }));
   return {
     canvasFilePath: 'test.canvas',
     nodes,
-    edges: [],
-    adjacency: new Map([[current.id, ['a1', 's-file', 's-dir']]]),
+    edges: [
+      { id: 'e-fallback', fromNodeId: current.id, toNodeId: 'q-fallback' },
+      { id: 'e-labeled', fromNodeId: current.id, toNodeId: 'q-labeled', label: 'Direct label' },
+      { id: 'e-id', fromNodeId: current.id, toNodeId: 'q-id', label: '   ' },
+    ],
+    adjacency: new Map([[current.id, ['a1', 'q-labeled', 's-file', 's-dir', 'q-fallback', 'q-id']]]),
     reverseAdjacency: new Map(),
     startNodeId: current.id,
   };
@@ -97,6 +104,7 @@ describe('shared question branch renderer', () => {
     const actionZone = new MockEl('actions');
     const onChooseAnswer = vi.fn();
     const onChooseSnippetBranch = vi.fn();
+    const onChooseQuestionBranch = vi.fn();
 
     const result = renderQuestionAtNode(asHtml(textZone), asHtml(actionZone), makeGraph(), {
       status: 'at-node',
@@ -112,21 +120,40 @@ describe('shared question branch renderer', () => {
       renderError: vi.fn(),
       onChooseAnswer,
       onChooseSnippetBranch,
+      onChooseQuestionBranch,
     });
 
     expect(result).toBe('rendered');
     expect(findByClass(textZone, 'rp-question-text')[0]?.text).toBe('Pick one');
+    expect(actionZone.children.map(child => child.cls)).toEqual([
+      'rp-answer-list rp-stack',
+      'rp-question-transition-list',
+      'rp-snippet-branch-list',
+    ]);
     expect(findByClass(actionZone, 'rp-answer-btn')[0]?.text).toBe('Shown answer');
+    expect(findByClass(actionZone, 'rp-question-transition-btn').map(btn => btn.text)).toEqual([
+      'Fallback question',
+      'Direct label',
+      'q-id',
+    ]);
     expect(findByClass(actionZone, 'rp-snippet-branch-btn').map(btn => btn.text)).toEqual([
       '📄 report',
       '📁 Folder label',
     ]);
 
     findByClass(actionZone, 'rp-answer-btn')[0]!.clickHandler?.({} as MouseEvent);
+    for (const btn of findByClass(actionZone, 'rp-question-transition-btn')) {
+      btn.clickHandler?.({} as MouseEvent);
+    }
     findByClass(actionZone, 'rp-snippet-branch-btn')[0]!.clickHandler?.({} as MouseEvent);
     findByClass(actionZone, 'rp-snippet-branch-btn')[1]!.clickHandler?.({} as MouseEvent);
 
     expect(onChooseAnswer.mock.calls[0]?.[0].id).toBe('a1');
+    expect(onChooseQuestionBranch.mock.calls.map(call => call[0].id)).toEqual([
+      'e-fallback',
+      'e-labeled',
+      'e-id',
+    ]);
     expect(onChooseSnippetBranch.mock.calls[0]?.[0].id).toBe('s-file');
     expect(onChooseSnippetBranch.mock.calls[0]?.[1]).toBe(true);
     expect(onChooseSnippetBranch.mock.calls[1]?.[0].id).toBe('s-dir');
@@ -142,6 +169,7 @@ describe('shared question branch renderer', () => {
       renderError,
       onChooseAnswer: vi.fn(),
       onChooseSnippetBranch: vi.fn(),
+      onChooseQuestionBranch: vi.fn(),
     };
     const state = {
       status: 'at-node' as const,

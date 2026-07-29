@@ -22,6 +22,7 @@ interface ProtocolRunnerOptions {
  * Public API (D-01):
  *   start(graph)              — begin a session
  *   chooseAnswer(answerId)    — user selects a preset-text answer
+ *   chooseQuestionBranch(edgeId) — user selects a direct Question-to-Question edge
  *   stepBack()                — undo last user action
  *   completeSnippet(text)     — Phase 5 submits rendered snippet text
  *   getState()                — read-only snapshot of current state (D-02)
@@ -223,6 +224,56 @@ export class ProtocolRunner {
     this.currentNodeId = snippetNodeId;
     this.snippetNodeId = snippetNodeId;
     this.runnerStatus = RUNNER_STATUS.AWAITING_SNIPPET_PICK;
+  }
+
+  /**
+   * User selects a direct edge from the current ordinary Question to another
+   * Question. The edge ID is the stable selection identity because captions
+   * and targets are not guaranteed to be unique.
+   *
+   * Validation completes before history mutation. A successful transition
+   * preserves accumulated text, clears redo, captures one undo snapshot, and
+   * delegates target-state selection to advanceThrough().
+   */
+  chooseQuestionBranch(edgeId: string): void {
+    if (this.runnerStatus !== RUNNER_STATUS.AT_NODE) return;
+    if (this.graph === null || this.currentNodeId === null) return;
+
+    const currentNode = this.graph.nodes.get(this.currentNodeId);
+    if (currentNode === undefined || currentNode.kind !== 'question' || currentNode.loop === true) {
+      this.transitionToError(
+        `chooseQuestionBranch called when current node '${this.currentNodeId}' is not an ordinary question.`,
+      );
+      return;
+    }
+
+    const edge = this.graph.edges.find(candidate => candidate.id === edgeId);
+    if (edge === undefined || edge.fromNodeId !== this.currentNodeId) {
+      this.transitionToError(
+        `Question transition edge '${edgeId}' not found or does not originate at current question '${this.currentNodeId}'.`,
+      );
+      return;
+    }
+
+    const targetNode = this.graph.nodes.get(edge.toNodeId);
+    if (targetNode === undefined || targetNode.kind !== 'question') {
+      this.transitionToError(
+        `Question transition edge '${edgeId}' does not target a question node.`,
+      );
+      return;
+    }
+
+    this.redoStack = [];
+    this.undoStack.push({
+      nodeId: this.currentNodeId,
+      textSnapshot: this.accumulator.snapshot(),
+      loopContextStack: this.loopContextStack.map(frame => ({ ...frame })),
+    });
+
+    // A direct transition is one user action. If its target is looped, the
+    // action snapshot above replaces advanceThrough's automatic loop-entry
+    // snapshot so one Back returns directly to the source Question.
+    this.advanceThrough(edge.toNodeId, true);
   }
 
   /**
@@ -673,7 +724,7 @@ export class ProtocolRunner {
    * IMPORTANT: This method NEVER pushes UndoEntry (Pitfall 1 / D-03).
    * The iteration counter guards against infinite cycles (RUN-09 / D-08).
    */
-  private advanceThrough(nodeId: string): void {
+  private advanceThrough(nodeId: string, suppressLoopEntryUndo = false): void {
     let cursor = nodeId;
     // steps counter resets on each advanceThrough entry (RUN-07 context: per-call cycle guard,
     // NOT per-loop cap). W4 — long-body integration test in Plan 02b Task 2 exercises a loop
@@ -737,13 +788,16 @@ export class ProtocolRunner {
               this.runnerStatus = RUNNER_STATUS.AWAITING_LOOP_PICK;
               return;
             }
-            // First-entry path — push undo snapshot + new frame + halt.
-            this.undoStack.push({
-              nodeId: cursor,
-              textSnapshot: this.accumulator.snapshot(),
-              loopContextStack: this.loopContextStack.map(f => ({ ...f })),
-              restoreStatus: RUNNER_STATUS.AWAITING_LOOP_PICK,
-            });
+            // First-entry path — push an undo snapshot unless the caller already
+            // captured the loop entry as part of the same user action.
+            if (!suppressLoopEntryUndo) {
+              this.undoStack.push({
+                nodeId: cursor,
+                textSnapshot: this.accumulator.snapshot(),
+                loopContextStack: this.loopContextStack.map(f => ({ ...f })),
+                restoreStatus: RUNNER_STATUS.AWAITING_LOOP_PICK,
+              });
+            }
             this.loopContextStack.push({
               loopNodeId: cursor,
               iteration: 1,

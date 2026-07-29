@@ -1,8 +1,9 @@
 // runner/render/render-question.ts
 // Phase 87 — 2-zone render: textZone (question text, choices text, errors) + actionZone (answer/snippet buttons).
-import type { AnswerNode, ProtocolGraph, SnippetNode } from '../../graph/graph-model';
+import type { AnswerNode, ProtocolGraph, RPEdge, SnippetNode } from '../../graph/graph-model';
 import type { RunnerState } from '../runner-state';
 import { isFileBoundSnippetNode, snippetBranchLabel } from '../snippet-label';
+import { nodeLabel } from '../../graph/node-label';
 import { createButton } from '../../utils/dom-helpers';
 
 type AtNodeState = Extract<RunnerState, { status: 'at-node' }>;
@@ -14,6 +15,7 @@ export interface QuestionBranchHost {
   renderError(messages: string[]): void;
   onChooseAnswer(answerNode: AnswerNode): void | Promise<void>;
   onChooseSnippetBranch(snippetNode: SnippetNode, isFileBound: boolean): void | Promise<void>;
+  onChooseQuestionBranch(edge: RPEdge): void | Promise<void>;
 }
 
 export function renderQuestionAtNode(
@@ -63,6 +65,36 @@ export function renderQuestionAtNode(
       });
       host.bindClick(btn, () => {
         void host.onChooseAnswer(answerNode);
+      });
+    }
+  }
+
+  // Direct Question transitions are edge-sensitive: preserve persisted edge
+  // order, caption, and identity rather than reducing them to adjacency IDs.
+  const questionEdges = graph.edges.filter((edge) => {
+    if (edge.fromNodeId !== state.currentNodeId) return false;
+    return graph.nodes.get(edge.toNodeId)?.kind === 'question';
+  });
+
+  if (questionEdges.length > 0) {
+    const transitionList = actionZone.createDiv({ cls: 'rp-question-transition-list' });
+    if (answerNeighbors.length === 0) {
+      transitionList.setCssProps({ 'margin-top': 'var(--size-4-3)' });
+    }
+    for (const edge of questionEdges) {
+      const target = graph.nodes.get(edge.toNodeId);
+      const fallbackCaption = target !== undefined
+        ? nodeLabel(target).trim() || edge.toNodeId
+        : edge.toNodeId;
+      const caption = edge.label !== undefined && edge.label.trim() !== ''
+        ? edge.label
+        : fallbackCaption;
+      const btn = createButton(transitionList, {
+        cls: 'rp-question-transition-btn',
+        text: caption,
+      });
+      host.bindClick(btn, () => {
+        void host.onChooseQuestionBranch(edge);
       });
     }
   }
