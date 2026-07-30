@@ -6,9 +6,10 @@
 // 120ms-debounced redraw when files change under settings.snippetFolderPath
 // (D-18 prefix filter). The chip editor extracted in Plan 02 is reached via
 // the modal, not directly.
-import { ItemView, Modal, Notice, WorkspaceLeaf, setIcon, type EventRef } from 'obsidian';
+import { ItemView, Modal, Notice, WorkspaceLeaf, type EventRef } from 'obsidian';
 import type RadiProtocolPlugin from '../main';
 import type { Snippet } from '../snippets/snippet-model';
+import type { SnippetSearchResult } from '../snippets/snippet-service';
 import { SnippetEditorModal } from './snippet-editor-modal';
 import { ConfirmModal } from './confirm-modal';
 import { SnippetTreePicker } from './snippet-tree-picker';
@@ -19,12 +20,25 @@ import { basenameNoExt } from './snippet-manager/tree-renderer';
 
 export const SNIPPET_MANAGER_VIEW_TYPE = 'radiprotocol-snippet-manager';
 
+interface SnippetManagerModel {
+  folderTree: TreeNodeFolder;
+  snippets: TreeNodeFile[];
+  selectedFolderPath: string;
+  searchResults: SnippetSearchResult[];
+}
+
 function dirname(path: string): string {
   const i = path.lastIndexOf('/');
   return i > 0 ? path.slice(0, i) : '';
 }
 
-function toSnippetRelativePath(vaultPath: string, snippetRoot: string): string {
+/**
+ * Extension-preserving snippet-root-relative path used as a protocol-reference
+ * mapping key. Unlike the `toSnippetRelativePath` exported by snippet-service.ts
+ * (which strips `.md`), this keeps the extension so folder and file paths map
+ * 1:1 to their protocol-reference form.
+ */
+function toProtocolRelativePath(vaultPath: string, snippetRoot: string): string {
   if (vaultPath === snippetRoot) return '';
   const prefix = `${snippetRoot}/`;
   return vaultPath.startsWith(prefix) ? vaultPath.slice(prefix.length) : vaultPath;
@@ -37,10 +51,35 @@ export class SnippetManagerView extends ItemView {
   private plugin: RadiProtocolPlugin;
 
   // DOM refs rebuilt on every render
-  private treeRootEl!: HTMLElement;
+  private folderRootEl!: HTMLElement;
+  private snippetRootEl!: HTMLElement;
 
-  // Tree model cache
-  private treeData: TreeNode[] = [];
+  // Tree model cache — folders-only left pane + flat snippet list for the
+  // currently selected folder (right pane).
+  private folderTreeData!: TreeNodeFolder;
+  private snippetData: TreeNodeFile[] = [];
+
+  // View-local selected folder. Resets to snippetFolderPath on every onOpen()
+  // and is never persisted (discover decision: always start at root).
+  // `selectedFolderPath` is the committed visible selection (only assigned
+  // under the generation guard via commitModel); `requestedFolderPath` tracks
+  // the latest requested target so a watcher refresh during navigation does
+  // not supersede it.
+  private selectedFolderPath: string;
+  private requestedFolderPath: string;
+
+  // One invalidation generation owned by this view. Navigation, search,
+  // mutations, and watcher refreshes increment it; post-await commits require
+  // both `mounted` and generation equality so stale work is rejected.
+  private searchGeneration = 0;
+  private mounted = false;
+
+  // Always-visible global search state. `searchQuery`/`searchResults` are
+  // transient and discarded on close; `searchTimer` debounces input at 120ms.
+  private searchWrapEl!: HTMLElement;
+  private searchQuery = '';
+  private searchTimer: number | null = null;
+  private searchResults: SnippetSearchResult[] = [];
 
   // Track which file path (if any) is currently being edited in a modal, so
   // renderTree can highlight the row (data-editing=true). Cleared on close.
@@ -56,6 +95,8 @@ export class SnippetManagerView extends ItemView {
   constructor(leaf: WorkspaceLeaf, plugin: RadiProtocolPlugin) {
     super(leaf);
     this.plugin = plugin;
+    this.selectedFolderPath = plugin.settings.snippetFolderPath;
+    this.requestedFolderPath = plugin.settings.snippetFolderPath;
   }
 
   getViewType(): string { return SNIPPET_MANAGER_VIEW_TYPE; }
@@ -69,47 +110,33 @@ export class SnippetManagerView extends ItemView {
     const { contentEl } = this;
     contentEl.empty();
     contentEl.addClass('radi-snippet-tree-root');
+    this.selectedFolderPath = this.plugin.settings.snippetFolderPath;
+    this.requestedFolderPath = this.selectedFolderPath;
+    this.mounted = true;
 
-    // Header strip with global "+ New" button
-    const header = contentEl.createDiv({ cls: 'radi-snippet-tree-header' });
-    const newBtn = header.createEl('button', { cls: 'mod-cta radi-snippet-tree-new-btn', attr: { 'aria-label': this.plugin.i18n.t('snippetManager.newButtonAria') } });
-    const newIcon = newBtn.createSpan({ cls: 'radi-snippet-tree-new-icon' });
-    setIcon(newIcon, 'plus');
-    newBtn.createSpan({ text: this.plugin.i18n.t('snippetManager.newButton') });
-    this.registerDomEvent(newBtn, 'click', () => {
-      void this.openCreateModal(this.plugin.settings.snippetFolderPath);
+    this.searchWrapEl = contentEl.createDiv({ cls: 'radi-snippet-manager-search' });
+    const searchInput = this.searchWrapEl.createEl('input', {
+      cls: 'radi-snippet-manager-search-input',
+      attr: { type: 'text', 'aria-label': this.plugin.i18n.t('snippetManager.searchPlaceholder') },
     });
+    searchInput.placeholder = this.plugin.i18n.t('snippetManager.searchPlaceholder');
+    this.registerDomEvent(searchInput, 'input', () => this.onSearchInput(searchInput.value));
 
-    // Phase 37: Header "Create folder" button (CLEAN-03)
-    const folderBtn = header.createEl('button', { cls: 'radi-snippet-tree-new-btn', attr: { 'aria-label': this.plugin.i18n.t('snippetManager.folderButtonAria') } });
-    const folderIcon = folderBtn.createSpan({ cls: 'radi-snippet-tree-new-icon' });
-    setIcon(folderIcon, 'folder-plus');
-    folderBtn.createSpan({ text: this.plugin.i18n.t('snippetManager.folderButton') });
-    this.registerDomEvent(folderBtn, 'click', () => {
-      void this.handleCreateSubfolder(this.plugin.settings.snippetFolderPath);
-    });
+    const layout = contentEl.createDiv({ cls: 'radi-snippet-manager-layout' });
+    this.folderRootEl = layout.createDiv({ cls: 'radi-snippet-manager-folders' });
+    this.folderRootEl.setAttr('role', 'tree');
+    this.folderRootEl.setAttr('aria-label', this.plugin.i18n.t('snippetManager.folderPaneAria'));
+    this.snippetRootEl = layout.createDiv({ cls: 'radi-snippet-manager-snippets' });
+    this.snippetRootEl.setAttr('role', 'list');
+    this.snippetRootEl.setAttr('aria-label', this.plugin.i18n.t('snippetManager.snippetPaneAria'));
 
-    // Collapse all directories button
-    const collapseBtn = header.createEl('button', { cls: 'radi-snippet-tree-new-btn' });
-    const collapseIcon = collapseBtn.createSpan({ cls: 'radi-snippet-tree-new-icon' });
-    setIcon(collapseIcon, 'chevrons-down-up');
-    collapseBtn.setAttr('aria-label', this.plugin.i18n.t('snippetManager.collapseAll'));
-    collapseBtn.createSpan({ text: this.plugin.i18n.t('snippetManager.collapseAll') });
-    this.registerDomEvent(collapseBtn, 'click', async () => {
-      this.plugin.settings.snippetTreeExpandedPaths.length = 0;
-      await this.plugin.saveSettings();
-      await this.rebuildTreeModel();
-      this.renderTree();
-    });
-
-    // Tree container
-    this.treeRootEl = contentEl.createDiv({ cls: 'radi-snippet-tree-body' });
-
-    // Phase 82 SPLIT-01 — delegate tree rendering to SnippetManagerTreeRenderer.
     this.treeRenderer = new SnippetManagerTreeRenderer({
-      container: this.treeRootEl,
+      folderContainer: this.folderRootEl,
+      snippetContainer: this.snippetRootEl,
       plugin: this.plugin,
       callbacks: {
+        selectFolder: (path) => this.selectFolder(path),
+        toggleFolder: (path) => this.toggleFolder(path),
         openEditModal: (path) => this.openEditModal(path),
         openCreateModal: (folderPath) => this.openCreateModal(folderPath),
         handleCreateSubfolder: (path) => this.handleCreateSubfolder(path),
@@ -117,15 +144,21 @@ export class SnippetManagerView extends ItemView {
         handleDeleteFolder: (path, name) => this.handleDeleteFolder(path, name),
         openMovePicker: (node) => this.openMovePicker(node),
         performMove: (srcPath, srcKind, dstFolder) => this.performMove(srcPath, srcKind, dstFolder),
-        rebuildTreeModel: () => this.rebuildTreeModel(),
-        saveSettings: () => this.plugin.saveSettings(),
-        rewriteExpandState: (oldPath, newPath) => this.rewriteExpandState(oldPath, newPath),
+        refresh: async () => {
+          await this.refresh();
+        },
+        completeFolderRename: (oldPath, newPath) =>
+          this.completeFolderRename(oldPath, newPath),
       },
     });
 
-    // Initial render
-    await this.rebuildTreeModel();
-    this.renderTree();
+    this.registerDomEvent(layout, 'contextmenu', (event) => {
+      event.preventDefault();
+      this.treeRenderer.openRootContextMenu(event as MouseEvent);
+    });
+
+    await this.refresh();
+    if (!this.mounted) return;
 
     // Vault watchers (SYNC-01..03 + D-18)
     this.registerEvent(
@@ -143,13 +176,20 @@ export class SnippetManagerView extends ItemView {
         if (this.shouldHandle(file.path) || this.shouldHandle(oldPath)) this.scheduleRedraw();
       }) as EventRef,
     );
+    this.registerEvent(
+      this.app.vault.on('modify', (file) => {
+        if (this.shouldHandle(file.path)) this.scheduleRedraw();
+      }) as EventRef,
+    );
   }
 
   async onClose(): Promise<void> {
-    if (this.redrawTimer !== null) {
-      window.clearTimeout(this.redrawTimer);
-      this.redrawTimer = null;
-    }
+    this.mounted = false;
+    this.searchGeneration++;
+    this.searchQuery = '';
+    this.searchResults = [];
+    if (this.redrawTimer !== null) { window.clearTimeout(this.redrawTimer); this.redrawTimer = null; }
+    if (this.searchTimer !== null) { window.clearTimeout(this.searchTimer); this.searchTimer = null; }
     this.contentEl.empty();
     // Vault event refs auto-detach via registerEvent; nothing else to release.
   }
@@ -164,57 +204,177 @@ export class SnippetManagerView extends ItemView {
 
   private scheduleRedraw(): void {
     if (this.redrawTimer !== null) window.clearTimeout(this.redrawTimer);
-    this.redrawTimer = window.setTimeout(async () => {
+    this.redrawTimer = window.setTimeout(() => {
       this.redrawTimer = null;
-      try {
-        await this.rebuildTreeModel();
-        this.renderTree();
-      } catch (e) {
-        new Notice(this.plugin.i18n.t('snippetManager.redrawError'));
-        console.error('[RadiProtocol] snippet tree redraw failed', e);
-      }
+      void this.refresh();
     }, 120);
   }
 
   // -------------------------------------------------------------------------
-  // Tree model build (recursive listFolder walk with D-04 sort)
+  // Global search — debounced input + generation/lifecycle-guarded refresh
   // -------------------------------------------------------------------------
-  private async rebuildTreeModel(): Promise<void> {
-    const root = this.plugin.settings.snippetFolderPath;
-    this.treeData = await this.buildTreeChildren(root);
+  private onSearchInput(value: string): void {
+    this.searchQuery = value;
+    this.searchGeneration++;
+    if (this.searchTimer !== null) window.clearTimeout(this.searchTimer);
+    this.searchTimer = window.setTimeout(() => {
+      this.searchTimer = null;
+      void this.refresh();
+    }, 120) as unknown as number;
   }
 
-  private async buildTreeChildren(folderPath: string): Promise<TreeNode[]> {
+  private async refresh(
+    selectedFolderPath: string = this.requestedFolderPath,
+  ): Promise<boolean> {
+    if (!this.mounted) return false;
+    this.requestedFolderPath = selectedFolderPath;
+    const query = this.searchQuery.trim();
+    const generation = ++this.searchGeneration;
+    this.searchWrapEl.addClass('is-scanning');
+    try {
+      const nextModel = await this.loadModel(selectedFolderPath, query);
+      if (!this.ownsRefresh(generation)) return false;
+      await this.pruneStaleExpandedPaths(nextModel.folderTree);
+      if (!this.ownsRefresh(generation)) return false;
+      this.commitModel(nextModel);
+      this.renderTree();
+      return true;
+    } catch (e) {
+      if (!this.ownsRefresh(generation)) return false;
+      new Notice(this.plugin.i18n.t('snippetManager.redrawError'));
+      console.error('[RadiProtocol] snippet manager refresh failed', e);
+      return false;
+    } finally {
+      if (this.ownsRefresh(generation)) this.searchWrapEl.removeClass('is-scanning');
+    }
+  }
+
+  private ownsRefresh(generation: number): boolean {
+    return this.mounted && generation === this.searchGeneration;
+  }
+
+  private async loadModel(
+    selectedFolderPath: string,
+    query: string,
+  ): Promise<SnippetManagerModel> {
+    const folderTree = await this.loadFolderTree();
+    const reconciledFolderPath = this.resolveSelectedFolder(folderTree, selectedFolderPath);
+    const snippets = await this.loadSnippetData(reconciledFolderPath);
+    const searchResults = query === ''
+      ? []
+      : await this.plugin.snippetService.searchSnippets(query);
+    return { folderTree, snippets, selectedFolderPath: reconciledFolderPath, searchResults };
+  }
+
+  private commitModel(model: SnippetManagerModel): void {
+    this.folderTreeData = model.folderTree;
+    this.snippetData = model.snippets;
+    this.selectedFolderPath = model.selectedFolderPath;
+    this.requestedFolderPath = model.selectedFolderPath;
+    this.searchResults = model.searchResults;
+  }
+
+  private async loadFolderTree(): Promise<TreeNodeFolder> {
+    const root = this.plugin.settings.snippetFolderPath;
+    return {
+      kind: 'folder',
+      path: root,
+      name: root.slice(root.lastIndexOf('/') + 1) || root,
+      isRoot: true,
+      children: await this.buildFolderChildren(root),
+    };
+  }
+
+  // -------------------------------------------------------------------------
+  // Tree model build (folders-only left pane + selected folder's snippets)
+  // -------------------------------------------------------------------------
+  private async buildFolderChildren(folderPath: string): Promise<TreeNodeFolder[]> {
     let listing: { folders: string[]; snippets: Snippet[] };
     try {
       listing = await this.plugin.snippetService.listFolder(folderPath);
     } catch {
       return [];
     }
-
-    const folderNodes: TreeNodeFolder[] = [];
-    for (const folderName of listing.folders) {
-      const childPath = folderPath + '/' + folderName;
-      const children = await this.buildTreeChildren(childPath);
-      folderNodes.push({
+    const folders: TreeNodeFolder[] = [];
+    for (const name of listing.folders) {
+      const path = `${folderPath}/${name}`;
+      folders.push({
         kind: 'folder',
-        path: childPath,
-        name: folderName,
-        children,
+        path,
+        name,
+        isRoot: false,
+        children: await this.buildFolderChildren(path),
       });
     }
-    folderNodes.sort((a, b) => a.name.localeCompare(b.name));
+    return folders.sort((a, b) => a.name.localeCompare(b.name));
+  }
 
-    const fileNodes: TreeNodeFile[] = listing.snippets.map((s) => ({
-      kind: 'file',
-      path: s.path,
-      name: s.name || basenameNoExt(s.path),
-      snippetKind: s.kind,
-    }));
-    fileNodes.sort((a, b) => a.name.localeCompare(b.name));
+  private async loadSnippetData(folderPath: string): Promise<TreeNodeFile[]> {
+    let snippets: Snippet[] = [];
+    try {
+      snippets = (await this.plugin.snippetService.listFolder(folderPath)).snippets;
+    } catch {
+      // Keep the selected folder navigable and render an empty right pane.
+    }
+    return snippets
+      .map((snippet) => ({
+        kind: 'file' as const,
+        path: snippet.path,
+        name: snippet.name || basenameNoExt(snippet.path),
+        snippetKind: snippet.kind,
+      }))
+      .sort((a, b) => a.name.localeCompare(b.name));
+  }
 
-    // D-04: folders first, then files
-    return [...folderNodes, ...fileNodes];
+  private async selectFolder(path: string): Promise<void> {
+    await this.refresh(path);
+  }
+
+  private async toggleFolder(path: string): Promise<void> {
+    const generation = this.searchGeneration;
+    const list = this.plugin.settings.snippetTreeExpandedPaths;
+    const index = list.indexOf(path);
+    if (index >= 0) list.splice(index, 1);
+    else list.push(path);
+    await this.plugin.saveSettings();
+    if (!this.ownsRefresh(generation)) return;
+    this.renderTree();
+  }
+
+  private resolveSelectedFolder(folderTree: TreeNodeFolder, selectedFolderPath: string): string {
+    const root = this.plugin.settings.snippetFolderPath;
+    const findFolder = (node: TreeNodeFolder, target: string): boolean => {
+      if (node.path === target) return true;
+      return node.children.some((child) => findFolder(child, target));
+    };
+    let path = selectedFolderPath;
+    while (path !== root && !findFolder(folderTree, path)) {
+      const slash = path.lastIndexOf('/');
+      if (slash <= root.length) return root;
+      path = path.slice(0, slash);
+    }
+    return path;
+  }
+
+  private async pruneStaleExpandedPaths(
+    folderTree: TreeNodeFolder = this.folderTreeData,
+  ): Promise<void> {
+    const expanded = this.plugin.settings.snippetTreeExpandedPaths;
+    if (expanded.length === 0) return;
+    const valid = new Set<string>();
+    const collect = (node: TreeNodeFolder): void => {
+      valid.add(node.path);
+      for (const child of node.children) collect(child);
+    };
+    collect(folderTree);
+    let mutated = false;
+    for (let i = expanded.length - 1; i >= 0; i--) {
+      if (!valid.has(expanded[i]!)) {
+        expanded.splice(i, 1);
+        mutated = true;
+      }
+    }
+    if (mutated) await this.plugin.saveSettings();
   }
 
   // -------------------------------------------------------------------------
@@ -222,18 +382,28 @@ export class SnippetManagerView extends ItemView {
   // -------------------------------------------------------------------------
   private renderTree(): void {
     this.treeRenderer.setCurrentlyEditingPath(this.currentlyEditingPath);
-    this.treeRenderer.render(this.treeData);
+    this.treeRenderer.render({
+      folderTree: this.folderTreeData,
+      snippets: this.snippetData,
+      selectedFolderPath: this.selectedFolderPath,
+      searchResults: this.searchQuery.trim() === '' ? undefined : this.searchResults,
+      searchQuery: this.searchQuery,
+    });
   }
 
   // -------------------------------------------------------------------------
   // Modal wiring — create / edit snippet
   // -------------------------------------------------------------------------
   private async openEditModal(path: string): Promise<void> {
+    // Capture ownership before the async load: a close or superseding refresh
+    // during the read must not let a stale completion render, mutate edit
+    // state, emit a notice, or open a modal into a detached pane.
+    const generation = this.searchGeneration;
     const snippet = await this.plugin.snippetService.load(path);
+    if (!this.ownsRefresh(generation)) return;
     if (snippet === null) {
       new Notice(this.plugin.i18n.t('snippetManager.notFound'));
-      await this.rebuildTreeModel();
-      this.renderTree();
+      await this.refresh();
       return;
     }
     this.currentlyEditingPath = path;
@@ -247,10 +417,11 @@ export class SnippetManagerView extends ItemView {
     const result = await modal.result;
     this.currentlyEditingPath = null;
     if (result.saved) {
-      await this.rebuildTreeModel();
-      this.renderTree();
-    } else {
-      // Cancelled — just drop the editing highlight
+      await this.refresh();
+    } else if (this.mounted) {
+      // Clear the editing highlight even if a watcher refresh superseded the
+      // initiating generation while the modal was open; renderTree() is a
+      // synchronous DOM update of current model state, not a model commit.
       this.renderTree();
     }
   }
@@ -262,10 +433,7 @@ export class SnippetManagerView extends ItemView {
     });
     modal.open();
     const result = await modal.result;
-    if (result.saved) {
-      await this.rebuildTreeModel();
-      this.renderTree();
-    }
+    if (result.saved) await this.refresh();
   }
 
   // -------------------------------------------------------------------------
@@ -311,8 +479,7 @@ export class SnippetManagerView extends ItemView {
       if (!expanded.includes(parentPath)) expanded.push(parentPath);
       if (!expanded.includes(newPath)) expanded.push(newPath);
       await this.plugin.saveSettings();
-      await this.rebuildTreeModel();
-      this.renderTree();
+      await this.refresh();
     } catch (e) {
       const error = (e as Error)?.message ?? t('snippetManager.unknownError');
       new Notice(t('snippetManager.createFolderError', { error }));
@@ -334,8 +501,7 @@ export class SnippetManagerView extends ItemView {
     try {
       await this.plugin.snippetService.delete(path);
       new Notice(t('snippetManager.deletedNotice'));
-      await this.rebuildTreeModel();
-      this.renderTree();
+      await this.refresh();
     } catch (e) {
       const error = (e as Error)?.message ?? t('snippetManager.unknownError');
       new Notice(t('snippetManager.deleteError', { error }));
@@ -384,16 +550,7 @@ export class SnippetManagerView extends ItemView {
     try {
       await this.plugin.snippetService.deleteFolder(path);
       new Notice(t('snippetManager.folderDeletedNotice'));
-      // Drop the folder path from expanded state so the cached tree does not
-      // try to re-expand a now-missing node on next render.
-      const expanded = this.plugin.settings.snippetTreeExpandedPaths;
-      const idx = expanded.indexOf(path);
-      if (idx >= 0) {
-        expanded.splice(idx, 1);
-        await this.plugin.saveSettings();
-      }
-      await this.rebuildTreeModel();
-      this.renderTree();
+      await this.refresh();
     } catch (e) {
       const error = (e as Error)?.message ?? t('snippetManager.unknownError');
       new Notice(t('snippetManager.deleteFolderError', { error }));
@@ -508,42 +665,76 @@ export class SnippetManagerView extends ItemView {
   ): Promise<void> {
     const t = this.plugin.i18n.t.bind(this.plugin.i18n);
     if (srcKind === 'file') {
-      // No-op: already in the target folder.
       if (dirname(srcPath) === dstFolder) return;
       const newPath = await this.plugin.snippetService.moveSnippet(srcPath, dstFolder);
-      const snippetRoot = this.plugin.settings.snippetFolderPath;
-      const protocolMapping = new Map<string, string>([
-        [toSnippetRelativePath(srcPath, snippetRoot), toSnippetRelativePath(newPath, snippetRoot)],
-      ]);
-      const protocolResult = await rewriteProtocolSnippetRefs(this.app, protocolMapping);
-      new Notice(t('snippetManager.movedFileNotice', {
-        protocolCount: String(protocolResult.updated.length),
-      }));
-      await this.rebuildTreeModel();
-      this.renderTree();
+      await this.refresh();
+      const protocolResult = await this.syncProtocolRefs(srcPath, newPath);
+      if (protocolResult !== null) {
+        new Notice(t('snippetManager.movedFileNotice', {
+          protocolCount: String(protocolResult.updated),
+        }));
+      }
       return;
     }
-
-    // Folder branch — self/descendant guard BEFORE any I/O.
-    if (srcPath === dstFolder || dstFolder.startsWith(srcPath + '/')) {
+    if (srcPath === dstFolder || dstFolder.startsWith(`${srcPath}/`)) {
       throw new Error(t('snippetManager.cannotMoveIntoSelf'));
     }
-    const oldPath = srcPath;
-    const newPath = await this.plugin.snippetService.moveFolder(oldPath, dstFolder);
+    const newPath = await this.plugin.snippetService.moveFolder(srcPath, dstFolder);
+    await this.refreshAfterFolderPathChange(srcPath, newPath);
+    const protocolResult = await this.syncProtocolRefs(srcPath, newPath);
+    if (protocolResult !== null) {
+      new Notice(t('snippetManager.movedFolderNotice', {
+        protocolCount: String(protocolResult.updated),
+      }));
+    }
+  }
+
+  private async refreshAfterFolderPathChange(oldPath: string, newPath: string): Promise<void> {
+    const selectedFolderPath = this.rewriteSelectedPath(
+      this.selectedFolderPath,
+      oldPath,
+      newPath,
+    );
+    // Commit the requested selection synchronously after storage succeeds so a
+    // later refresh failure cannot pair a successful mutation with an obsolete
+    // requested folder path. The guarded refresh below commits the visible model.
+    this.requestedFolderPath = selectedFolderPath;
+    try {
+      await this.rewriteExpandState(oldPath, newPath);
+    } catch (e) {
+      if (this.mounted) new Notice(this.plugin.i18n.t('snippetManager.redrawError'));
+      console.error('[RadiProtocol] snippet manager path reconciliation failed', e);
+    }
+    await this.refresh(selectedFolderPath);
+  }
+
+  private async completeFolderRename(
+    oldPath: string,
+    newPath: string,
+  ): Promise<{ updated: number; skipped: number } | null> {
+    await this.refreshAfterFolderPathChange(oldPath, newPath);
+    return this.syncProtocolRefs(oldPath, newPath);
+  }
+
+  private async syncProtocolRefs(
+    oldPath: string,
+    newPath: string,
+  ): Promise<{ updated: number; skipped: number } | null> {
+    const t = this.plugin.i18n.t.bind(this.plugin.i18n);
     const snippetRoot = this.plugin.settings.snippetFolderPath;
-    const protocolMapping = new Map<string, string>([
-      [toSnippetRelativePath(oldPath, snippetRoot), toSnippetRelativePath(newPath, snippetRoot)],
-    ]);
-    const protocolResult = await rewriteProtocolSnippetRefs(this.app, protocolMapping);
-
-    // D-07: expand-state prefix rewrite.
-    await this.rewriteExpandState(oldPath, newPath);
-
-    new Notice(t('snippetManager.movedFolderNotice', {
-      protocolCount: String(protocolResult.updated.length),
-    }));
-    await this.rebuildTreeModel();
-    this.renderTree();
+    const mapping = new Map<string, string>([[
+      toProtocolRelativePath(oldPath, snippetRoot),
+      toProtocolRelativePath(newPath, snippetRoot),
+    ]]);
+    try {
+      const result = await rewriteProtocolSnippetRefs(this.app, mapping);
+      return { updated: result.updated.length, skipped: result.skipped.length };
+    } catch (e) {
+      const error = (e as Error)?.message ?? t('snippetManager.unknownError');
+      new Notice(t('snippetManager.referenceSyncWarning', { error }));
+      console.error('[RadiProtocol] snippet manager protocol-reference sync failed', e);
+      return null;
+    }
   }
 
   // -------------------------------------------------------------------------
@@ -561,11 +752,27 @@ export class SnippetManagerView extends ItemView {
       if (entry === oldPath) {
         expanded[i] = newPath;
         mutated = true;
-      } else if (entry.startsWith(oldPath + '/')) {
-        expanded[i] = newPath + entry.slice(oldPath.length);
+      } else if (entry.startsWith(`${oldPath}/`)) {
+        expanded[i] = `${newPath}${entry.slice(oldPath.length)}`;
         mutated = true;
       }
     }
     if (mutated) await this.plugin.saveSettings();
+  }
+
+  /**
+   * Prefix-rewrite a selected folder path after a rename/move. Returns the
+   * rewritten path; the caller commits it through the guarded refresh.
+   */
+  private rewriteSelectedPath(
+    selectedFolderPath: string,
+    oldPath: string,
+    newPath: string,
+  ): string {
+    if (selectedFolderPath === oldPath) return newPath;
+    if (selectedFolderPath.startsWith(`${oldPath}/`)) {
+      return `${newPath}${selectedFolderPath.slice(oldPath.length)}`;
+    }
+    return selectedFolderPath;
   }
 }

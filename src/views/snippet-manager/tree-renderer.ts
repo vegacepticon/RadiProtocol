@@ -1,12 +1,15 @@
 // views/snippet-manager/tree-renderer.ts
 // Phase 82 SPLIT-01 — extracted tree rendering, DnD, and inline rename from
 // SnippetManagerView so the original god-file shrinks by ≥30%.
+//
+// Phase two-pane: the renderer now renders SUPPLIED models (a folders-only
+// tree for the left pane and a flat snippet list for the right pane) instead
+// of rebuilding them itself. Folder selection is separated from chevron
+// expansion; the synthetic root is rendered specially (non-draggable,
+// non-renamable, drop-capable); right-pane snippet rows are name-only.
 
 import { Menu, Notice, setIcon } from 'obsidian';
 import type RadiProtocolPlugin from '../../main';
-import type { Snippet } from '../../snippets/snippet-model';
-import { rewriteProtocolSnippetRefs } from '../../snippets/protocol-ref-sync';
-import { toSnippetRelativePath } from '../../snippets/snippet-service';
 import { createButton } from '../../utils/dom-helpers';
 
 // Phase 34 Plan 02: HTML5 DnD custom MIME types.
@@ -14,13 +17,14 @@ const MIME_FILE = 'application/x-radi-snippet-file';
 const MIME_FOLDER = 'application/x-radi-snippet-folder';
 
 // ---------------------------------------------------------------------------
-// Internal tree model (mirrors snippet-manager-view.ts)
+// Supplied tree model (built by the view)
 // ---------------------------------------------------------------------------
 export interface TreeNodeFolder {
   kind: 'folder';
   path: string;
   name: string;
-  children: TreeNode[];
+  isRoot: boolean;
+  children: TreeNodeFolder[];
 }
 export interface TreeNodeFile {
   kind: 'file';
@@ -41,15 +45,13 @@ export function basenameNoExt(path: string): string {
   return dot > 0 ? base.slice(0, dot) : base;
 }
 
-function iconForNode(node: TreeNode, expanded: boolean): string {
-  if (node.kind === 'folder') return expanded ? 'folder-open' : 'folder';
-  return 'file-text';
-}
-
 // ---------------------------------------------------------------------------
 // Callback interface — SnippetManagerView implements these
 // ---------------------------------------------------------------------------
+
 export interface TreeRendererCallbacks {
+  selectFolder(path: string): Promise<void>;
+  toggleFolder(path: string): Promise<void>;
   openEditModal(path: string): Promise<void>;
   openCreateModal(folderPath: string): Promise<void>;
   handleCreateSubfolder(path: string): Promise<void>;
@@ -57,16 +59,19 @@ export interface TreeRendererCallbacks {
   handleDeleteFolder(path: string, name: string): Promise<void>;
   openMovePicker(node: TreeNode): Promise<void>;
   performMove(srcPath: string, srcKind: 'file' | 'folder', dstFolder: string): Promise<void>;
-  rebuildTreeModel(): Promise<void>;
-  saveSettings(): Promise<void>;
-  rewriteExpandState(oldPath: string, newPath: string): Promise<void>;
+  refresh(): Promise<void>;
+  completeFolderRename(
+    oldPath: string,
+    newPath: string,
+  ): Promise<{ updated: number; skipped: number } | null>;
 }
 
 // ---------------------------------------------------------------------------
 // SnippetManagerTreeRenderer
 // ---------------------------------------------------------------------------
 export class SnippetManagerTreeRenderer {
-  private readonly container: HTMLElement;
+  private readonly folderContainer: HTMLElement;
+  private readonly snippetContainer: HTMLElement;
   private readonly plugin: RadiProtocolPlugin;
   private readonly callbacks: TreeRendererCallbacks;
 
@@ -74,13 +79,16 @@ export class SnippetManagerTreeRenderer {
   private currentlyEditingPath: string | null = null;
   private currentlyRenamingPath: string | null = null;
   private rowLabelEls: Map<string, HTMLElement> = new Map();
+  private selectedFolderPath = '';
 
   constructor(options: {
-    container: HTMLElement;
+    folderContainer: HTMLElement;
+    snippetContainer: HTMLElement;
     plugin: RadiProtocolPlugin;
     callbacks: TreeRendererCallbacks;
   }) {
-    this.container = options.container;
+    this.folderContainer = options.folderContainer;
+    this.snippetContainer = options.snippetContainer;
     this.plugin = options.plugin;
     this.callbacks = options.callbacks;
   }
@@ -101,100 +109,85 @@ export class SnippetManagerTreeRenderer {
 
   // ——— Render entry ———
 
-  render(treeData: TreeNode[]): void {
-    this.container.empty();
+  render(options: {
+    folderTree: TreeNodeFolder;
+    snippets: TreeNodeFile[];
+    selectedFolderPath: string;
+    searchResults?: import('../../snippets/snippet-service').SnippetSearchResult[];
+    searchQuery?: string;
+  }): void {
+    this.folderContainer.empty();
+    this.snippetContainer.empty();
     this.rowLabelEls.clear();
-
-    if (treeData.length === 0) {
-      this.renderEmptyState(this.container);
+    this.selectedFolderPath = options.selectedFolderPath;
+    this.renderNode(this.folderContainer, options.folderTree, 0);
+    if (
+      options.searchResults !== undefined &&
+      options.searchQuery !== undefined &&
+      options.searchQuery.trim() !== ''
+    ) {
+      this.renderSearchResults(options.searchResults);
       return;
     }
+    if (options.snippets.length === 0) {
+      this.snippetContainer.createDiv({
+        cls: 'radi-snippet-list-empty',
+        text: this.plugin.i18n.t('snippetManager.emptyFolderPlaceholder'),
+      });
+      return;
+    }
+    for (const snippet of options.snippets) this.renderNode(this.snippetContainer, snippet, 0);
+  }
 
-    for (const node of treeData) {
-      this.renderNode(this.container, node, 0);
+  private renderSearchResults(
+    results: import('../../snippets/snippet-service').SnippetSearchResult[],
+  ): void {
+    if (results.length === 0) {
+      this.snippetContainer.createDiv({
+        cls: 'radi-snippet-list-empty',
+        text: this.plugin.i18n.t('snippetManager.noSearchResults'),
+      });
+      return;
+    }
+    const root = this.plugin.settings.snippetFolderPath;
+    for (const { snippet, folderPath } of results) {
+      const node: TreeNodeFile = {
+        kind: 'file',
+        path: snippet.path,
+        name: snippet.name,
+        snippetKind: snippet.kind,
+      };
+      this.renderNode(this.snippetContainer, node, 0);
+      const row = this.snippetContainer.children[
+        this.snippetContainer.children.length - 1
+      ] as HTMLElement;
+      row.addClass('radi-snippet-search-result');
+      const rel = folderPath === root ? '' : folderPath.slice(root.length + 1);
+      row.createSpan({ cls: 'radi-snippet-search-path', text: rel === '' ? '/' : rel });
     }
   }
 
-  // ——— Empty state ———
+  // ——— Root empty-area context menu ———
 
-  private renderEmptyState(container: HTMLElement): void {
+  public openRootContextMenu(ev: MouseEvent): void {
     const t = this.plugin.i18n.t.bind(this.plugin.i18n);
-    const wrap = container.createDiv({ cls: 'radi-snippet-tree-empty-state' });
-    wrap.createEl('h3', { text: t('snippetManager.emptyStateTitle') });
-    wrap.createEl('p', {
-      text: t('snippetManager.emptyStateBody'),
-    });
-    const ghost = createButton(wrap, {
-      cls: 'mod-cta',
-      text: t('snippetManager.emptyStateButton'),
-    });
-    ghost.addEventListener('click', () => {
-      void this.callbacks.openCreateModal(this.plugin.settings.snippetFolderPath);
-    });
+    const root = this.plugin.settings.snippetFolderPath;
+    const menu = new Menu();
+    menu.addItem((item) => item
+      .setTitle(t('snippetManager.ctxCreateSnippetHere'))
+      .setIcon('plus')
+      .onClick(() => { void this.callbacks.openCreateModal(root); }));
+    menu.addItem((item) => item
+      .setTitle(t('snippetManager.ctxCreateSubfolder'))
+      .setIcon('folder-plus')
+      .onClick(() => { void this.callbacks.handleCreateSubfolder(root); }));
+    menu.showAtMouseEvent(ev);
   }
 
   // ——— Expand state ———
 
-  private isExpanded(path: string): boolean {
-    return this.plugin.settings.snippetTreeExpandedPaths.includes(path);
-  }
-
-  private async toggleExpand(path: string): Promise<void> {
-    const list = this.plugin.settings.snippetTreeExpandedPaths;
-    const idx = list.indexOf(path);
-    if (idx >= 0) {
-      list.splice(idx, 1);
-    } else {
-      list.push(path);
-    }
-    await this.callbacks.saveSettings();
-    await this.callbacks.rebuildTreeModel();
-    this.render(await this.getTreeData());
-  }
-
-  // Helper: read current tree data from the view's model.  Because the view
-  // owns rebuildTreeModel, we ask it to rebuild then pull the data back.
-  // In practice the view calls render(treeData) immediately after rebuild,
-  // so this is only used internally after toggleExpand.
-  private async getTreeData(): Promise<TreeNode[]> {
-    await this.callbacks.rebuildTreeModel();
-    // The view's treeData is private; we rely on the view calling render()
-    // with fresh data.  For toggleExpand we rebuild here ourselves.
-    // Rebuild from root:
-    const root = this.plugin.settings.snippetFolderPath;
-    return this.buildTreeChildren(root);
-  }
-
-  private async buildTreeChildren(folderPath: string): Promise<TreeNode[]> {
-    let listing: { folders: string[]; snippets: Snippet[] };
-    try {
-      listing = await this.plugin.snippetService.listFolder(folderPath);
-    } catch {
-      return [];
-    }
-
-    const folderNodes: TreeNodeFolder[] = [];
-    for (const folderName of listing.folders) {
-      const childPath = folderPath + '/' + folderName;
-      const children = await this.buildTreeChildren(childPath);
-      folderNodes.push({
-        kind: 'folder',
-        path: childPath,
-        name: folderName,
-        children,
-      });
-    }
-    folderNodes.sort((a, b) => a.name.localeCompare(b.name));
-
-    const fileNodes: TreeNodeFile[] = listing.snippets.map((s) => ({
-      kind: 'file',
-      path: s.path,
-      name: s.name || basenameNoExt(s.path),
-      snippetKind: s.kind,
-    }));
-    fileNodes.sort((a, b) => a.name.localeCompare(b.name));
-
-    return [...folderNodes, ...fileNodes];
+  private isExpanded(node: TreeNodeFolder): boolean {
+    return node.isRoot || this.plugin.settings.snippetTreeExpandedPaths.includes(node.path);
   }
 
   // ——— Node render ———
@@ -204,105 +197,102 @@ export class SnippetManagerTreeRenderer {
     row.setAttribute('data-path', node.path);
     row.setAttribute('data-kind', node.kind);
     row.setAttribute('tabindex', '0');
-    if (node.kind === 'file' && this.currentlyEditingPath === node.path) {
-      row.setAttribute('data-editing', 'true');
-    }
-
-    const indent = row.createSpan({ cls: 'radi-snippet-tree-indent rp-snippet-tree-indent-inline' });
-    indent.style.width = `${depth * 16}px`;
-
-    const expanded = node.kind === 'folder' ? this.isExpanded(node.path) : false;
-
     if (node.kind === 'folder') {
-      const chev = row.createSpan({ cls: 'radi-snippet-tree-chevron' });
-      setIcon(chev, expanded ? 'chevron-down' : 'chevron-right');
+      row.setAttribute('role', 'treeitem');
+      row.setAttribute('aria-selected', String(node.path === this.selectedFolderPath));
+      if (node.path === this.selectedFolderPath) row.addClass('is-selected');
+      const indent = row.createSpan({ cls: 'radi-snippet-tree-indent rp-snippet-tree-indent-inline' });
+      indent.style.width = `${depth * 16}px`;
+      const expanded = this.isExpanded(node);
+      const chevron = row.createSpan({ cls: 'radi-snippet-tree-chevron' });
+      setIcon(chevron, expanded ? 'chevron-down' : 'chevron-right');
+      if (!node.isRoot) {
+        chevron.addEventListener('click', (event) => {
+          event.preventDefault();
+          event.stopPropagation();
+          void this.callbacks.toggleFolder(node.path);
+        });
+      }
+      const icon = row.createSpan({ cls: 'radi-snippet-tree-icon' });
+      setIcon(icon, expanded ? 'folder-open' : 'folder');
     } else {
-      row.createSpan({ cls: 'radi-snippet-tree-chevron-spacer rp-snippet-tree-spacer' });
+      row.setAttribute('role', 'listitem');
+      if (this.currentlyEditingPath === node.path) row.setAttribute('data-editing', 'true');
+      // Right-pane snippet rows are name-only — no file icon, just a small
+      // leading indent so the label aligns with the folder-pane rows.
+      const snippetIndent = row.createSpan({ cls: 'radi-snippet-tree-indent rp-snippet-tree-indent-inline' });
+      snippetIndent.style.width = `${0}px`;
     }
-
-    const iconEl = row.createSpan({ cls: 'radi-snippet-tree-icon' });
-    setIcon(iconEl, iconForNode(node, expanded));
 
     const labelEl = row.createSpan({ cls: 'radi-snippet-tree-label', text: node.name });
     this.rowLabelEls.set(node.path, labelEl);
 
-    if (node.kind === 'folder') {
+    if (node.kind === 'folder' && !node.isRoot) {
       const actions = row.createSpan({ cls: 'radi-snippet-tree-actions' });
-      const ariaLabel = this.plugin.i18n.t('snippetManager.createInThisFolder');
       const addBtn = createButton(actions, {
         cls: 'radi-snippet-tree-add-btn',
-        attr: { 'aria-label': ariaLabel },
+        attr: { 'aria-label': this.plugin.i18n.t('snippetManager.createInThisFolder') },
       });
       setIcon(addBtn, 'plus');
-      addBtn.addEventListener('click', (ev) => {
-        ev.stopPropagation();
+      addBtn.addEventListener('click', (event) => {
+        event.stopPropagation();
         void this.callbacks.openCreateModal(node.path);
       });
     }
 
-    // Row click
-    row.addEventListener('click', (ev) => {
-      const target = ev.target as HTMLElement | null;
+    row.addEventListener('click', (event) => {
+      const target = event.target as HTMLElement | null;
       if (target !== null && target.closest('button') !== null && target !== row) return;
-      if (node.kind === 'file') {
-        void this.callbacks.openEditModal(node.path);
-      } else {
-        void this.toggleExpand(node.path);
-      }
+      if (node.kind === 'file') void this.callbacks.openEditModal(node.path);
+      else void this.callbacks.selectFolder(node.path);
     });
 
-    // Context menu
-    row.addEventListener('contextmenu', (ev) => {
-      ev.preventDefault();
-      ev.stopPropagation();
-      this.openContextMenu(ev as MouseEvent, node);
+    row.addEventListener('contextmenu', (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      if (node.kind === 'folder' && node.isRoot) this.openRootContextMenu(event as MouseEvent);
+      else this.openContextMenu(event as MouseEvent, node);
     });
 
-    // DnD lifecycle
-    row.setAttribute('draggable', 'true');
-    row.addEventListener('dragstart', (ev) => {
-      this.handleDragStart(row, node, ev as DragEvent);
-    });
-    row.addEventListener('dragover', (ev) => {
-      this.handleDragOver(row, node, ev as DragEvent);
-    });
-    row.addEventListener('dragleave', (ev) => {
-      this.handleDragLeave(row, ev as DragEvent);
-    });
-    row.addEventListener('drop', (ev) => {
-      void this.handleDrop(node, row, ev as DragEvent);
-    });
-    row.addEventListener('dragend', () => {
-      this.handleDragEnd(row);
-    });
-
-    // F2 inline rename
-    row.addEventListener('keydown', (ev) => {
-      const ke = ev as KeyboardEvent;
-      if (ke.key === 'Enter' || ke.key === ' ') {
-        ke.preventDefault();
+    row.addEventListener('keydown', (event) => {
+      const keyEvent = event as KeyboardEvent;
+      if (keyEvent.key === 'Enter' || keyEvent.key === ' ') {
+        keyEvent.preventDefault();
         if (node.kind === 'file') {
           void this.callbacks.openEditModal(node.path);
         } else {
-          void this.toggleExpand(node.path);
+          void this.callbacks.selectFolder(node.path);
+          if (!node.isRoot) void this.callbacks.toggleFolder(node.path);
         }
-      } else if (ke.key === 'F2') {
-        ke.preventDefault();
+      } else if (keyEvent.key === 'F2' && !(node.kind === 'folder' && node.isRoot)) {
+        keyEvent.preventDefault();
         this.startInlineRename(node, labelEl);
       }
     });
 
-    // Children (folders only, when expanded)
-    if (node.kind === 'folder' && expanded) {
-      if (node.children.length === 0) {
+    if (!(node.kind === 'folder' && node.isRoot)) {
+      row.setAttribute('draggable', 'true');
+      row.addEventListener('dragstart', (event) =>
+        this.handleDragStart(row, node, event as DragEvent));
+      row.addEventListener('dragend', () => this.handleDragEnd(row));
+    }
+    row.addEventListener('dragover', (event) => this.handleDragOver(row, node, event as DragEvent));
+    row.addEventListener('dragleave', (event) => this.handleDragLeave(row, event as DragEvent));
+    row.addEventListener('drop', (event) => {
+      void this.handleDrop(node, row, event as DragEvent);
+    });
+
+    if (node.kind === 'folder' && this.isExpanded(node)) {
+      if (node.children.length === 0 && !node.isRoot) {
         const empty = container.createDiv({ cls: 'radi-snippet-tree-row radi-snippet-tree-empty-placeholder' });
         const emptyIndent = empty.createSpan({ cls: 'radi-snippet-tree-indent rp-snippet-tree-indent-inline' });
         emptyIndent.style.width = `${(depth + 1) * 16}px`;
-        empty.createSpan({ text: this.plugin.i18n.t('snippetManager.emptyFolderPlaceholder'), cls: 'radi-snippet-tree-empty-label' });
+        empty.createSpan({
+          text: this.plugin.i18n.t('snippetManager.emptyFolderPlaceholder'),
+          cls: 'radi-snippet-tree-empty-label',
+        });
       } else {
-        for (const child of node.children) {
-          this.renderNode(container, child, depth + 1);
-        }
+        for (const child of node.children) this.renderNode(container, child, depth + 1);
       }
     }
   }
@@ -566,24 +556,21 @@ export class SnippetManagerTreeRenderer {
     try {
       if (node.kind === 'file') {
         await this.plugin.snippetService.renameSnippet(node.path, newValue);
+        cleanup();
+        await this.callbacks.refresh();
         new Notice(t('snippetManager.snippetRenamedNotice'));
-      } else {
-        const oldPath = node.path;
-        const newPath = await this.plugin.snippetService.renameFolder(oldPath, newValue);
-        const snippetRoot = this.plugin.settings.snippetFolderPath;
-        const mapping = new Map<string, string>([
-          [toSnippetRelativePath(oldPath, snippetRoot), toSnippetRelativePath(newPath, snippetRoot)],
-        ]);
-        const result = await rewriteProtocolSnippetRefs(this.plugin.app, mapping);
-        await this.callbacks.rewriteExpandState(oldPath, newPath);
+        return;
+      }
+      const oldPath = node.path;
+      const newPath = await this.plugin.snippetService.renameFolder(oldPath, newValue);
+      cleanup();
+      const result = await this.callbacks.completeFolderRename(oldPath, newPath);
+      if (result !== null) {
         new Notice(t('snippetManager.folderRenamedNotice', {
-          updated: String(result.updated.length),
-          skipped: String(result.skipped.length),
+          updated: String(result.updated),
+          skipped: String(result.skipped),
         }));
       }
-      cleanup();
-      await this.callbacks.rebuildTreeModel();
-      this.render(await this.getTreeData());
     } catch (e) {
       const error = (e as Error)?.message ?? t('snippetManager.unknownError');
       new Notice(t('snippetManager.renameError', { error }));

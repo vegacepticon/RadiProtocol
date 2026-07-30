@@ -110,7 +110,7 @@ function mdTemplateFile(name: string, body: string, placeholders: MdTemplateSnip
 // ---------------------------------------------------------------------------
 
 describe('SnippetService API surface (Phase 32 D-03)', () => {
-  it('exposes listFolder / load / save / delete / exists / resolveSnippet', () => {
+  it('exposes listFolder / load / save / delete / exists / searchSnippets / resolveSnippet', () => {
     const { vault } = makeVault();
     const svc = new SnippetService(makeSnippetServiceApp(vault) as never, settings);
     expect(typeof svc.listFolder).toBe('function');
@@ -118,6 +118,7 @@ describe('SnippetService API surface (Phase 32 D-03)', () => {
     expect(typeof svc.save).toBe('function');
     expect(typeof svc.delete).toBe('function');
     expect(typeof svc.exists).toBe('function');
+    expect(typeof svc.searchSnippets).toBe('function');
     expect(typeof svc.resolveSnippet).toBe('function');
   });
 
@@ -925,5 +926,139 @@ describe('resolveSnippet (Phase 2 JSON-removal)', () => {
     if (resolution.status === 'found') {
       expect(resolution.snippet.path).toBe(mdPath);
     }
+  });
+});
+
+// ---------------------------------------------------------------------------
+// searchSnippets — Phase: Service-owned global search
+// ---------------------------------------------------------------------------
+
+describe('searchSnippets — global parsed Markdown search', () => {
+  it('matches snippet names and sorts matches by display name then path', async () => {
+    const { vault } = makeVault({
+      files: {
+        [`${ROOT}/zebra-report.md`]: 'body',
+        [`${ROOT}/alpha-report.md`]: 'body',
+        [`${ROOT}/ignore.md`]: 'body',
+      },
+      folders: [ROOT],
+    });
+    const svc = new SnippetService(makeSnippetServiceApp(vault) as never, settings);
+
+    const matches = await svc.searchSnippets('REPORT');
+
+    expect(matches.map(({ snippet }) => snippet.name)).toEqual(['alpha-report', 'zebra-report']);
+    expect(matches.every(({ folderPath }) => folderPath === ROOT)).toBe(true);
+  });
+
+  it('matches plain content and template body but not template frontmatter metadata', async () => {
+    const plainPath = `${ROOT}/plain.md`;
+    const templatePath = `${ROOT}/template.md`;
+    const metadataOnlyPath = `${ROOT}/metadata.md`;
+    const metadataOnly = serializeMarkdownTemplate({
+      kind: 'md-template',
+      path: metadataOnlyPath,
+      name: 'metadata',
+      template: 'ordinary body',
+      placeholders: [],
+      validationError: null,
+      description: 'frontmatter-secret',
+    });
+    const { vault } = makeVault({
+      files: {
+        [plainPath]: 'Contains Needle Plain.',
+        [templatePath]: mdTemplateFile('template', 'Contains needle template.', []),
+        [metadataOnlyPath]: metadataOnly,
+      },
+      folders: [ROOT],
+    });
+    const svc = new SnippetService(makeSnippetServiceApp(vault) as never, settings);
+
+    const bodyMatches = await svc.searchSnippets('needle');
+    const metadataMatches = await svc.searchSnippets('frontmatter-secret');
+
+    expect(bodyMatches.map(({ snippet }) => snippet.path)).toEqual([plainPath, templatePath]);
+    expect(metadataMatches).toEqual([]);
+  });
+
+  it('promotes every nested snippet under a matching real folder', async () => {
+    const { vault } = makeVault({
+      files: {
+        [`${ROOT}/Chest/direct.md`]: 'ordinary',
+        [`${ROOT}/Chest/CT/nested.md`]: 'ordinary',
+        [`${ROOT}/Abdomen/other.md`]: 'ordinary',
+      },
+      folders: [ROOT, `${ROOT}/Chest`, `${ROOT}/Chest/CT`, `${ROOT}/Abdomen`],
+    });
+    const svc = new SnippetService(makeSnippetServiceApp(vault) as never, settings);
+
+    const matches = await svc.searchSnippets('chest');
+
+    expect(matches.map(({ snippet }) => snippet.path)).toEqual([
+      `${ROOT}/Chest/direct.md`,
+      `${ROOT}/Chest/CT/nested.md`,
+    ]);
+  });
+
+  it('does not treat the configured root basename as a folder-name match', async () => {
+    const { vault } = makeVault({
+      files: { [`${ROOT}/ordinary.md`]: 'ordinary body' },
+      folders: [ROOT],
+    });
+    const svc = new SnippetService(makeSnippetServiceApp(vault) as never, settings);
+
+    await expect(svc.searchSnippets('snippets')).resolves.toEqual([]);
+  });
+
+  it('skips failed parses, unreadable Markdown, legacy JSON, and non-Markdown files without aborting', async () => {
+    const readablePath = `${ROOT}/readable.md`;
+    const unreadablePath = `${ROOT}/unreadable.md`;
+    const failedParsePath = `${ROOT}/failed-parse.md`;
+    const failedParse = [
+      '---',
+      'name: failed-parse',
+      'placeholders:',
+      '  - id: choice',
+      '    label: Choice',
+      '    type: choice',
+      '---',
+      'needle',
+    ].join('\n');
+    const { vault } = makeVault({
+      files: {
+        [readablePath]: 'needle',
+        [unreadablePath]: 'needle',
+        [failedParsePath]: failedParse,
+        [`${ROOT}/legacy.json`]: '{"content":"needle"}',
+        [`${ROOT}/notes.txt`]: 'needle',
+      },
+      folders: [ROOT],
+    });
+    const originalRead = vault.adapter.read;
+    vault.adapter.read = vi.fn(async (path: string) => {
+      if (path === unreadablePath) throw new Error('EACCES');
+      return originalRead(path);
+    }) as typeof originalRead;
+    const throwingTranslator = ((key: string): string => {
+      if (key === 'snippetModel.invalidChoiceError') throw new Error('parse failed');
+      return key;
+    }) as never;
+    const svc = new SnippetService(
+      makeSnippetServiceApp(vault) as never,
+      settings,
+      throwingTranslator,
+    );
+
+    const matches = await svc.searchSnippets('needle');
+
+    expect(matches.map(({ snippet }) => snippet.path)).toEqual([readablePath]);
+  });
+
+  it('returns no matches for an empty or whitespace-only query without reading folders', async () => {
+    const { vault } = makeVault({ folders: [ROOT] });
+    const svc = new SnippetService(makeSnippetServiceApp(vault) as never, settings);
+
+    await expect(svc.searchSnippets('   ')).resolves.toEqual([]);
+    expect(vault.adapter.list).not.toHaveBeenCalled();
   });
 });

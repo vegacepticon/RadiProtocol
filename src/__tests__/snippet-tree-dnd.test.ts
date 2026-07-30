@@ -119,6 +119,12 @@ function makeEl(tag = 'div'): MockEl {
 }
 
 // --- vi.mock('obsidian', ...) — capture Menu items for introspection -----
+let noticeMessages: string[] = [];
+
+async function flushAsync(): Promise<void> {
+  await new Promise((resolve) => setTimeout(resolve, 0));
+}
+
 interface CapturedMenuItem { title: string; icon?: string; cb: () => void }
 let _lastMenuItems: CapturedMenuItem[] = [];
 
@@ -146,7 +152,7 @@ vi.mock('obsidian', () => {
   class WorkspaceLeaf {}
   class Notice {
     message: string;
-    constructor(msg: string) { this.message = msg; }
+    constructor(msg: string) { this.message = msg; noticeMessages.push(msg); }
   }
   const setIcon = vi.fn((_el: unknown, _icon: string) => {});
   class Menu {
@@ -293,6 +299,33 @@ function makePlugin(opts: {
   moveFolderImpl?: (oldPath: string, newParent: string) => Promise<string>;
 } = {}): { plugin: any; service: MockService } {
   const listings = opts.listings ?? { '.radiprotocol/snippets': { folders: [], snippets: [] } };
+  const relocateFolder = (oldPath: string, newPath: string): void => {
+    const oldParent = oldPath.slice(0, oldPath.lastIndexOf('/'));
+    const oldName = oldPath.slice(oldPath.lastIndexOf('/') + 1);
+    const newParent = newPath.slice(0, newPath.lastIndexOf('/'));
+    const newName = newPath.slice(newPath.lastIndexOf('/') + 1);
+    if (listings[oldParent] !== undefined) {
+      listings[oldParent]!.folders = listings[oldParent]!.folders.filter((name) => name !== oldName);
+    }
+    const destination = listings[newParent] ?? { folders: [], snippets: [] };
+    listings[newParent] = destination;
+    if (!destination.folders.includes(newName)) destination.folders.push(newName);
+    const moved = Object.keys(listings)
+      .filter((p) => p === oldPath || p.startsWith(`${oldPath}/`))
+      .sort((a, b) => a.length - b.length)
+      .map((p) => [p, `${newPath}${p.slice(oldPath.length)}`] as const);
+    for (const [p, target] of moved) {
+      const listing = listings[p]!;
+      listings[target] = {
+        folders: [...listing.folders],
+        snippets: listing.snippets.map((snippet) => ({
+          ...snippet,
+          path: `${newPath}${snippet.path.slice(oldPath.length)}`,
+        })),
+      };
+    }
+    for (const [p] of moved) delete listings[p];
+  };
   const service: MockService = {
     listFolder: vi.fn((p: string) => Promise.resolve(listings[p] ?? { folders: [], snippets: [] })),
     load: vi.fn(() => Promise.resolve(null)),
@@ -302,12 +335,23 @@ function makePlugin(opts: {
     listFolderDescendants: vi.fn().mockResolvedValue({ files: [], folders: [], total: 0 }),
     listAllFolders: vi.fn().mockResolvedValue(opts.allFolders ?? ['.radiprotocol/snippets']),
     moveSnippet: vi.fn(opts.moveSnippetImpl ?? (async (oldPath: string, newFolder: string) => {
+      const oldParent = oldPath.slice(0, oldPath.lastIndexOf('/'));
       const base = oldPath.slice(oldPath.lastIndexOf('/') + 1);
+      const source = listings[oldParent];
+      const snippet = source?.snippets.find((candidate) => candidate.path === oldPath);
+      if (source !== undefined) {
+        source.snippets = source.snippets.filter((candidate) => candidate.path !== oldPath);
+      }
+      const destination = listings[newFolder] ?? { folders: [], snippets: [] };
+      listings[newFolder] = destination;
+      if (snippet !== undefined) destination.snippets.push({ ...snippet, path: `${newFolder}/${base}` });
       return `${newFolder}/${base}`;
     })),
     moveFolder: vi.fn(opts.moveFolderImpl ?? (async (oldPath: string, newParent: string) => {
       const base = oldPath.slice(oldPath.lastIndexOf('/') + 1);
-      return `${newParent}/${base}`;
+      const newPath = `${newParent}/${base}`;
+      relocateFolder(oldPath, newPath);
+      return newPath;
     })),
   };
   const plugin = {
@@ -373,11 +417,23 @@ function makeDragEvent(type: string, dataTransfer: MockDataTransfer): any {
   };
 }
 
-// Find the row MockEl for a given node path inside treeRootEl.children.
+// Find the row MockEl for a given node path across both panes.
 function findRow(view: any, path: string): MockEl | null {
-  const tree = (view as any).treeRootEl as MockEl;
-  for (const child of tree.children) {
-    if (child._attrs['data-path'] === path) return child;
+  const roots = [
+    (view as any).folderRootEl as MockEl,
+    (view as any).snippetRootEl as MockEl,
+  ];
+  const walk = (nodes: MockEl[]): MockEl | null => {
+    for (const child of nodes) {
+      if (child._attrs['data-path'] === path) return child;
+      const nested = walk(child.children);
+      if (nested !== null) return nested;
+    }
+    return null;
+  };
+  for (const root of roots) {
+    const match = walk(root.children);
+    if (match !== null) return match;
   }
   return null;
 }
@@ -394,6 +450,7 @@ describe('SnippetManagerView — drag-and-drop (Phase 34 Plan 02)', () => {
   beforeEach(() => {
     rewriteProtocolSnippetRefsSpy.mockClear();
     _lastMenuItems = [];
+    noticeMessages = [];
   });
 
   function makeTreeView(): { plugin: any; service: MockService; view: SnippetManagerView } {
@@ -495,8 +552,7 @@ describe('SnippetManagerView — drag-and-drop (Phase 34 Plan 02)', () => {
       const ev = makeDragEvent('drop', dt);
       fire(targetRow!, ev);
       // drop handler is async — wait for microtasks
-      await Promise.resolve();
-      await Promise.resolve();
+      await flushAsync();
       expect(service.moveSnippet).toHaveBeenCalledWith(`${root}/note.md`, `${root}/b`);
       expect(service.moveFolder).not.toHaveBeenCalled();
       expect(rewriteProtocolSnippetRefsSpy).toHaveBeenCalledTimes(1);
@@ -511,9 +567,7 @@ describe('SnippetManagerView — drag-and-drop (Phase 34 Plan 02)', () => {
       const dt = makeDataTransfer({ [MIME_FOLDER]: `${root}/a` });
       const ev = makeDragEvent('drop', dt);
       fire(targetRow!, ev);
-      await Promise.resolve();
-      await Promise.resolve();
-      await Promise.resolve();
+      await flushAsync();
       expect(service.moveFolder).toHaveBeenCalledWith(`${root}/a`, `${root}/b`);
       expect(rewriteProtocolSnippetRefsSpy).toHaveBeenCalledTimes(1);
       expect(rewriteProtocolSnippetRefsSpy).toHaveBeenCalledTimes(1);
@@ -526,8 +580,7 @@ describe('SnippetManagerView — drag-and-drop (Phase 34 Plan 02)', () => {
       const dt = makeDataTransfer({ [MIME_FOLDER]: `${root}/a` });
       const ev = makeDragEvent('drop', dt);
       fire(row!, ev);
-      await Promise.resolve();
-      await Promise.resolve();
+      await flushAsync();
       expect(service.moveFolder).not.toHaveBeenCalled();
       expect(rewriteProtocolSnippetRefsSpy).not.toHaveBeenCalled();
     });
@@ -540,8 +593,7 @@ describe('SnippetManagerView — drag-and-drop (Phase 34 Plan 02)', () => {
       const dt = makeDataTransfer({ [MIME_FOLDER]: `${root}/a` });
       const ev = makeDragEvent('drop', dt);
       fire(descRow!, ev);
-      await Promise.resolve();
-      await Promise.resolve();
+      await flushAsync();
       expect(service.moveFolder).not.toHaveBeenCalled();
       expect(rewriteProtocolSnippetRefsSpy).not.toHaveBeenCalled();
     });
@@ -549,14 +601,20 @@ describe('SnippetManagerView — drag-and-drop (Phase 34 Plan 02)', () => {
     it('drop on file-row redirects to parent folder', async () => {
       const { service, view } = makeTreeView();
       await view.onOpen();
+      // Select folder `a` first so its direct snippet `leaf.md` renders in the
+      // right pane; the drag source `note.md` lives under root, but its path is
+      // carried by the dataTransfer MIME payload, so the source row need not be
+      // visible for the drop to resolve.
+      const folderRowA = findRow(view, `${root}/a`)!;
+      folderRowA.dispatchEvent({ type: 'click', target: folderRowA });
+      await flushAsync();
       // Drag root/note.md onto root/a/leaf.md → target should be dirname(leaf) = root/a
       const fileRow = findRow(view, `${root}/a/leaf.md`);
       expect(fileRow).not.toBeNull();
       const dt = makeDataTransfer({ [MIME_FILE]: `${root}/note.md` });
       const ev = makeDragEvent('drop', dt);
       fire(fileRow!, ev);
-      await Promise.resolve();
-      await Promise.resolve();
+      await flushAsync();
       expect(service.moveSnippet).toHaveBeenCalledWith(`${root}/note.md`, `${root}/a`);
     });
   });
@@ -572,6 +630,7 @@ describe('SnippetManagerView — drag-and-drop (Phase 34 Plan 02)', () => {
       modalInstances.length = 0;
       pickerInstances.length = 0;
       pickerUnmountSpy.mockClear();
+      noticeMessages = [];
     });
 
     // Phase 51 Plan 04 D-07 helper — invoke the latest SnippetTreePicker's onSelect with
@@ -589,9 +648,7 @@ describe('SnippetManagerView — drag-and-drop (Phase 34 Plan 02)', () => {
           : absPath;
       opts.onSelect({ kind: 'folder', relativePath: rel });
       // handleSelect is async — flush microtasks
-      await Promise.resolve();
-      await Promise.resolve();
-      await Promise.resolve();
+      await flushAsync();
     }
 
     it('file branch: selecting folder in picker calls moveSnippet; rewriteCanvasRefs and rewriteProtocolSnippetRefs called', async () => {
@@ -689,10 +746,11 @@ describe('SnippetManagerView — drag-and-drop (Phase 34 Plan 02)', () => {
     it('folder branch: expand-state paths are prefix-rewritten after folder move', async () => {
       const { plugin } = makePlugin({
         listings: {
-          [root]: { folders: ['a', 'b'], snippets: [] },
+          [root]: { folders: ['a', 'b', 'other'], snippets: [] },
           [`${root}/a`]: { folders: ['sub'], snippets: [] },
           [`${root}/a/sub`]: { folders: [], snippets: [] },
           [`${root}/b`]: { folders: [], snippets: [] },
+          [`${root}/other`]: { folders: [], snippets: [] },
         },
         expanded: [`${root}/a`, `${root}/a/sub`, `${root}/other`],
         allFolders: [root, `${root}/a`, `${root}/a/sub`, `${root}/b`, `${root}/other`],
@@ -716,5 +774,87 @@ describe('SnippetManagerView — drag-and-drop (Phase 34 Plan 02)', () => {
       // Settings persisted
       expect(plugin.saveSettings).toHaveBeenCalled();
     });
+  });
+
+  it('file move keeps refreshed storage state when protocol-reference sync rejects', async () => {
+    const { service, view } = makeTreeView();
+    const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    rewriteProtocolSnippetRefsSpy.mockRejectedValueOnce(new Error('sync exploded'));
+    await view.onOpen();
+    await (view as any).performMove(`${root}/note.md`, 'file', `${root}/b`);
+    expect(service.moveSnippet).toHaveBeenCalledWith(`${root}/note.md`, `${root}/b`);
+    expect((view as any).snippetData.map((node: { path: string }) => node.path))
+      .not.toContain(`${root}/note.md`);
+    await (view as any).selectFolder(`${root}/b`);
+    expect((view as any).snippetData.map((node: { path: string }) => node.path))
+      .toContain(`${root}/b/note.md`);
+    expect(noticeMessages.some((message) => message.includes('saved, but protocol references'))).toBe(true);
+    expect(noticeMessages.some((message) => message.startsWith('Failed to move'))).toBe(false);
+    expect(consoleSpy).toHaveBeenCalledWith(
+      '[RadiProtocol] snippet manager protocol-reference sync failed',
+      expect.any(Error),
+    );
+    consoleSpy.mockRestore();
+  });
+
+  it('folder move keeps reconciled UI state when protocol-reference sync rejects', async () => {
+    const { plugin, view } = makeTreeView();
+    const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    rewriteProtocolSnippetRefsSpy.mockRejectedValueOnce(new Error('sync exploded'));
+    await view.onOpen();
+    await (view as any).selectFolder(`${root}/a/sub`);
+    await (view as any).performMove(`${root}/a`, 'folder', `${root}/b`);
+    expect((view as any).selectedFolderPath).toBe(`${root}/b/a/sub`);
+    expect(plugin.settings.snippetTreeExpandedPaths).toContain(`${root}/b/a`);
+    expect(plugin.settings.snippetTreeExpandedPaths).toContain(`${root}/b/a/sub`);
+    expect(plugin.settings.snippetTreeExpandedPaths).not.toContain(`${root}/a`);
+    expect(noticeMessages.some((message) => message.includes('saved, but protocol references'))).toBe(true);
+    expect(noticeMessages.some((message) => message.startsWith('Failed to move'))).toBe(false);
+    expect(consoleSpy).toHaveBeenCalledWith(
+      '[RadiProtocol] snippet manager protocol-reference sync failed',
+      expect.any(Error),
+    );
+    consoleSpy.mockRestore();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Phase 3: mutation reconciliation — selected/expanded path rewrite on move
+// ---------------------------------------------------------------------------
+describe('SnippetManagerView — mutation reconciliation (Phase 3)', () => {
+  const root = '.radiprotocol/snippets';
+
+  beforeEach(() => {
+    rewriteProtocolSnippetRefsSpy.mockClear();
+    _lastMenuItems = [];
+    noticeMessages = [];
+  });
+
+  it('folder move prefix-rewrites the selected path and expanded descendants', async () => {
+    const { plugin } = makePlugin({
+      listings: {
+        [root]: { folders: ['a', 'b', 'other'], snippets: [] },
+        [`${root}/a`]: { folders: ['sub'], snippets: [] },
+        [`${root}/a/sub`]: { folders: [], snippets: [] },
+        [`${root}/b`]: { folders: [], snippets: [] },
+        [`${root}/other`]: { folders: [], snippets: [] },
+      },
+      expanded: [`${root}/a`, `${root}/a/sub`, `${root}/other`],
+      allFolders: [root, `${root}/a`, `${root}/a/sub`, `${root}/b`, `${root}/other`],
+    });
+    const view = makeView(plugin);
+    await view.onOpen();
+    await (view as any).selectFolder(`${root}/a/sub`);
+
+    const node = { kind: 'folder' as const, path: `${root}/a`, name: 'a', isRoot: false, children: [] };
+    await (view as any).performMove(node.path, node.kind, `${root}/b`);
+
+    expect((view as any).selectedFolderPath).toBe(`${root}/b/a/sub`);
+    const expanded: string[] = plugin.settings.snippetTreeExpandedPaths;
+    expect(expanded).toContain(`${root}/b/a`);
+    expect(expanded).toContain(`${root}/b/a/sub`);
+    expect(expanded).not.toContain(`${root}/a`);
+    expect(expanded).not.toContain(`${root}/a/sub`);
+    expect(expanded).toContain(`${root}/other`);
   });
 });

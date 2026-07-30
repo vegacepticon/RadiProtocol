@@ -19,6 +19,16 @@ export type SnippetResolution =
   | { status: 'missing' };
 
 /**
+ * Phase search: a single global search hit. `snippet` is the parsed Markdown
+ * snippet; `folderPath` is the vault-relative folder that directly contains
+ * it (used by the manager to render a secondary path label under flat results).
+ */
+export interface SnippetSearchResult {
+  snippet: Snippet;
+  folderPath: string;
+}
+
+/**
  * Phase 34 (D-03): Build a canvas-ref mapping key from a vault-relative path.
  * - Strips `snippetRoot + '/'` prefix if present
  * - Strips trailing `.md` (case-insensitive), once
@@ -153,6 +163,56 @@ export class SnippetService {
     snippets.sort((a, b) => a.name.localeCompare(b.name));
 
     return { folders, snippets };
+  }
+
+  /**
+   * Global recursive snippet search. Composes `listFolder()` so the path
+   * gate, lowercase `.md` filtering, parsing, sorting, and unreadable-file
+   * policy all apply. Matches snippet names, parsed bodies (`content` for
+   * plain Markdown, frontmatter-free `template` for Markdown templates), and
+   * real descendant folder names. A matching real folder promotes every
+   * snippet beneath it at any depth; the synthetic configured root basename
+   * is excluded so searching for the root name does not return the library.
+   * Failed parses, unreadable Markdown, legacy JSON, and non-Markdown files
+   * are skipped without aborting the scan. Empty/whitespace query → no reads.
+   */
+  async searchSnippets(query: string): Promise<SnippetSearchResult[]> {
+    const normalizedQuery = query.trim().toLowerCase();
+    if (normalizedQuery === '') return [];
+
+    const root = this.assertInsideRoot(this.settings.snippetFolderPath);
+    if (root === null) return [];
+
+    const results: SnippetSearchResult[] = [];
+    const walk = async (folderPath: string, ancestorFolderMatched: boolean): Promise<void> => {
+      const listing = await this.listFolder(folderPath);
+      const folderName = folderPath.slice(folderPath.lastIndexOf('/') + 1);
+      const currentFolderMatched =
+        ancestorFolderMatched ||
+        (folderPath !== root && folderName.toLowerCase().includes(normalizedQuery));
+
+      for (const snippet of listing.snippets) {
+        const body = snippet.kind === 'md-template' ? snippet.template : snippet.content;
+        if (
+          currentFolderMatched ||
+          snippet.name.toLowerCase().includes(normalizedQuery) ||
+          body.toLowerCase().includes(normalizedQuery)
+        ) {
+          results.push({ snippet, folderPath });
+        }
+      }
+
+      for (const folderName of listing.folders) {
+        await walk(`${folderPath}/${folderName}`, currentFolderMatched);
+      }
+    };
+
+    await walk(root, false);
+    return results.sort(
+      (a, b) =>
+        a.snippet.name.localeCompare(b.snippet.name) ||
+        a.snippet.path.localeCompare(b.snippet.path),
+    );
   }
 
   /**

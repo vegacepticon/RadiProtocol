@@ -183,10 +183,6 @@
     "goToRoot": "Перейти к корню"
   },
   "snippetManager": {
-    "newButton": "Новый",
-    "folderButton": "Папка",
-    "newButtonAria": "Создать новый сниппет",
-    "folderButtonAria": "Создать папку",
     "redrawError": "Не удалось обновить список сниппетов. Подробности в консоли.",
     "notFound": "Сниппет не найден.",
     "subfolderNameLabel": "Имя подпапки",
@@ -216,9 +212,9 @@
     "moveSelfError": "Нельзя переместить папку в саму себя.",
     "moveSelfDescendantError": "Нельзя переместить в подпапку самого себя.",
     "invalidTargetError": "Эта папка недоступна как цель перемещения.",
-    "movedFolderNotice": "Папка перемещена. Обновлено {canvasCount} канвас(ов), {protocolCount} протокол(ов).",
+    "movedFolderNotice": "Папка перемещена. Обновлено {protocolCount} протокол(ов).",
     "cannotMoveIntoSelf": "Нельзя переместить папку внутрь самой себя.",
-    "movedFileNotice": "Сниппет перемещён. Обновлено {canvasCount} канвас(ов), {protocolCount} протокол(ов).",
+    "movedFileNotice": "Сниппет перемещён. Обновлено {protocolCount} протокол(ов).",
     "emptyStateTitle": "Библиотека сниппетов пуста",
     "emptyStateBody": "Создайте первый сниппет, чтобы вставлять фрагменты текста при прохождении протоколов.",
     "emptyStateButton": "+ Новый сниппет",
@@ -232,9 +228,13 @@
     "ctxCreateSubfolder": "Создать подпапку",
     "ctxDeleteFolder": "Удалить папку",
     "snippetRenamedNotice": "Сниппет переименован.",
-    "folderRenamedNotice": "Папка переименована. Обновлено канвасов: {updated}, пропущено: {skipped}.",
+    "folderRenamedNotice": "Папка переименована. Обновлено ссылок в протоколах: {updated}, пропущено: {skipped}.",
     "renameError": "Не удалось переименовать: {error}",
-    "collapseAll": "Свернуть всё"
+    "searchPlaceholder": "Поиск сниппетов…",
+    "noSearchResults": "Совпадений не найдено.",
+    "folderPaneAria": "Папки сниппетов",
+    "snippetPaneAria": "Сниппеты",
+    "referenceSyncWarning": "Изменение сниппетов сохранено, но не удалось синхронизировать ссылки в протоколах: {error}"
   },
   "startFromNode": {
     "noStartPoints": "В этом протоколе нет узлов, включённых для команды «старт с узла». Сначала включи чекбокс в настройках узла."

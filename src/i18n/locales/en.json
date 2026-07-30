@@ -183,10 +183,6 @@
     "goToRoot": "Go to root"
   },
   "snippetManager": {
-    "newButton": "New",
-    "folderButton": "Folder",
-    "newButtonAria": "Create new snippet",
-    "folderButtonAria": "Create folder",
     "redrawError": "Failed to refresh the snippet list. See console for details.",
     "notFound": "Snippet not found.",
     "subfolderNameLabel": "Subfolder name",
@@ -216,9 +212,9 @@
     "moveSelfError": "Cannot move a folder into itself.",
     "moveSelfDescendantError": "Cannot move into a subfolder of itself.",
     "invalidTargetError": "This folder is not available as a move target.",
-    "movedFolderNotice": "Folder moved. Updated {canvasCount} canvas(s), {protocolCount} protocol(s).",
+    "movedFolderNotice": "Folder moved. Updated {protocolCount} protocol(s).",
     "cannotMoveIntoSelf": "Cannot move folder into itself.",
-    "movedFileNotice": "Snippet moved. Updated {canvasCount} canvas(s), {protocolCount} protocol(s).",
+    "movedFileNotice": "Snippet moved. Updated {protocolCount} protocol(s).",
     "emptyStateTitle": "Snippet library is empty",
     "emptyStateBody": "Create your first snippet to insert text fragments while running protocols.",
     "emptyStateButton": "+ New snippet",
@@ -232,9 +228,13 @@
     "ctxCreateSubfolder": "Create subfolder",
     "ctxDeleteFolder": "Delete folder",
     "snippetRenamedNotice": "Snippet renamed.",
-    "folderRenamedNotice": "Folder renamed. Canvases updated: {updated}, skipped: {skipped}.",
+    "folderRenamedNotice": "Folder renamed. Protocol references updated: {updated}, skipped: {skipped}.",
     "renameError": "Failed to rename: {error}",
-    "collapseAll": "Collapse all"
+    "searchPlaceholder": "Search snippets…",
+    "noSearchResults": "No matching snippets found.",
+    "folderPaneAria": "Snippet folders",
+    "snippetPaneAria": "Snippets",
+    "referenceSyncWarning": "The snippet change was saved, but protocol references could not be synchronized: {error}"
   },
   "startFromNode": {
     "noStartPoints": "This protocol has no nodes enabled for “start from node”. Enable the checkbox in node settings first."

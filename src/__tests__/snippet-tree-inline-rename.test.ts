@@ -136,6 +136,12 @@ function makeEl(tag = 'div'): MockEl {
 }
 
 // --- vi.mock('obsidian', ...) --------------------------------------------
+let noticeMessages: string[] = [];
+
+async function flushAsync(): Promise<void> {
+  await new Promise((resolve) => setTimeout(resolve, 0));
+}
+
 vi.mock('obsidian', () => {
   class ItemView {
     leaf: unknown;
@@ -160,7 +166,7 @@ vi.mock('obsidian', () => {
   class WorkspaceLeaf {}
   class Notice {
     message: string;
-    constructor(msg: string) { this.message = msg; }
+    constructor(msg: string) { this.message = msg; noticeMessages.push(msg); }
   }
   const setIcon = vi.fn((_el: unknown, _icon: string) => {});
   interface CapturedMenuItem { title: string; icon?: string; cb: () => void }
@@ -255,6 +261,30 @@ function makePlugin(opts: {
   renameFolderImpl?: (oldPath: string, newBasename: string) => Promise<string>;
 } = {}): { plugin: any; service: MockService } {
   const listings = opts.listings ?? { '.radiprotocol/snippets': { folders: [], snippets: [] } };
+  const renameFolderInListings = (oldPath: string, newPath: string): void => {
+    const parent = oldPath.slice(0, oldPath.lastIndexOf('/'));
+    const oldName = oldPath.slice(oldPath.lastIndexOf('/') + 1);
+    const newName = newPath.slice(newPath.lastIndexOf('/') + 1);
+    if (listings[parent] !== undefined) {
+      listings[parent]!.folders = listings[parent]!.folders
+        .map((name) => name === oldName ? newName : name);
+    }
+    const moved = Object.keys(listings)
+      .filter((p) => p === oldPath || p.startsWith(`${oldPath}/`))
+      .sort((a, b) => a.length - b.length)
+      .map((p) => [p, `${newPath}${p.slice(oldPath.length)}`] as const);
+    for (const [p, target] of moved) {
+      const listing = listings[p]!;
+      listings[target] = {
+        folders: [...listing.folders],
+        snippets: listing.snippets.map((snippet) => ({
+          ...snippet,
+          path: `${newPath}${snippet.path.slice(oldPath.length)}`,
+        })),
+      };
+    }
+    for (const [p] of moved) delete listings[p];
+  };
   const service: MockService = {
     listFolder: vi.fn((p: string) => Promise.resolve(listings[p] ?? { folders: [], snippets: [] })),
     load: vi.fn(() => Promise.resolve(null)),
@@ -272,7 +302,9 @@ function makePlugin(opts: {
     })),
     renameFolder: vi.fn(opts.renameFolderImpl ?? (async (oldPath: string, newBase: string) => {
       const parent = oldPath.slice(0, oldPath.lastIndexOf('/'));
-      return `${parent}/${newBase}`;
+      const newPath = `${parent}/${newBase}`;
+      renameFolderInListings(oldPath, newPath);
+      return newPath;
     })),
   };
   const plugin = {
@@ -296,16 +328,23 @@ function makeView(plugin: any): SnippetManagerView {
 }
 
 function findRow(view: any, path: string): MockEl | null {
-  const tree = (view as any).treeRootEl as MockEl;
-  function walk(nodes: MockEl[]): MockEl | null {
+  const roots = [
+    (view as any).folderRootEl as MockEl,
+    (view as any).snippetRootEl as MockEl,
+  ];
+  const walk = (nodes: MockEl[]): MockEl | null => {
     for (const child of nodes) {
       if (child._attrs['data-path'] === path) return child;
-      const hit = walk(child.children);
-      if (hit !== null) return hit;
+      const nested = walk(child.children);
+      if (nested !== null) return nested;
     }
     return null;
+  };
+  for (const root of roots) {
+    const match = walk(root.children);
+    if (match !== null) return match;
   }
-  return walk(tree.children);
+  return null;
 }
 
 function findLabelInRow(row: MockEl): MockEl | null {
@@ -347,6 +386,7 @@ describe('SnippetManagerView — F2 inline rename (Phase 34 Plan 03)', () => {
   beforeEach(() => {
     rewriteProtocolSnippetRefsSpy.mockClear();
     lastMenuItems = [];
+    noticeMessages = [];
   });
 
   function makeTreeView(): { plugin: any; service: MockService; view: SnippetManagerView } {
@@ -418,8 +458,7 @@ describe('SnippetManagerView — F2 inline rename (Phase 34 Plan 03)', () => {
       const input = findInputInRow(row!)!;
       input.value = 'renamed';
       fire(input, makeKeyEvent('keydown', 'Enter'));
-      await Promise.resolve();
-      await Promise.resolve();
+      await flushAsync();
       expect(service.renameSnippet).toHaveBeenCalledWith(`${root}/note.md`, 'renamed');
       expect(rewriteProtocolSnippetRefsSpy).not.toHaveBeenCalled();
     });
@@ -432,9 +471,7 @@ describe('SnippetManagerView — F2 inline rename (Phase 34 Plan 03)', () => {
       const input = findInputInRow(row!)!;
       input.value = 'renamed';
       fire(input, makeKeyEvent('keydown', 'Enter'));
-      await Promise.resolve();
-      await Promise.resolve();
-      await Promise.resolve();
+      await flushAsync();
       expect(service.renameFolder).toHaveBeenCalledWith(`${root}/a`, 'renamed');
       expect(rewriteProtocolSnippetRefsSpy).toHaveBeenCalledTimes(1);
       const mapping = rewriteProtocolSnippetRefsSpy.mock.calls[0]![1] as Map<string, string>;
@@ -453,8 +490,7 @@ describe('SnippetManagerView — F2 inline rename (Phase 34 Plan 03)', () => {
       fire(input, makeKeyEvent('keydown', 'Enter'));
       // Synthesize a blur AFTER Enter — should not re-trigger
       fire(input, { type: 'blur' });
-      await Promise.resolve();
-      await Promise.resolve();
+      await flushAsync();
       expect(service.renameSnippet).toHaveBeenCalledTimes(1);
     });
 
@@ -475,17 +511,18 @@ describe('SnippetManagerView — F2 inline rename (Phase 34 Plan 03)', () => {
       expect(findInputInRow(row!)).toBe(input);
     });
 
-    it('folder rename: expand-state paths are prefix-rewritten', async () => {
+    it('folder rename: selected path and expand-state paths are prefix-rewritten', async () => {
       const { plugin, view } = makeTreeView();
       await view.onOpen();
+      await (view as any).selectFolder(`${root}/a/sub`);
       const row = findRow(view, `${root}/a`);
       fire(row!, makeKeyEvent('keydown', 'F2'));
       const input = findInputInRow(row!)!;
       input.value = 'renamed';
       fire(input, makeKeyEvent('keydown', 'Enter'));
-      await Promise.resolve();
-      await Promise.resolve();
-      await Promise.resolve();
+      await flushAsync();
+
+      expect((view as any).selectedFolderPath).toBe(`${root}/renamed/sub`);
       const expanded: string[] = plugin.settings.snippetTreeExpandedPaths;
       expect(expanded).toContain(`${root}/renamed`);
       expect(expanded).toContain(`${root}/renamed/sub`);
@@ -506,7 +543,7 @@ describe('SnippetManagerView — F2 inline rename (Phase 34 Plan 03)', () => {
       fire(input, makeKeyEvent('keydown', 'Escape'));
       // Subsequent blur must not re-trigger either
       fire(input, { type: 'blur' });
-      await Promise.resolve();
+      await flushAsync();
       expect(service.renameSnippet).not.toHaveBeenCalled();
     });
 
@@ -518,7 +555,7 @@ describe('SnippetManagerView — F2 inline rename (Phase 34 Plan 03)', () => {
       const input = findInputInRow(row!)!;
       input.value = '   ';
       fire(input, { type: 'blur' });
-      await Promise.resolve();
+      await flushAsync();
       expect(service.renameSnippet).not.toHaveBeenCalled();
     });
 
@@ -530,7 +567,7 @@ describe('SnippetManagerView — F2 inline rename (Phase 34 Plan 03)', () => {
       const input = findInputInRow(row!)!;
       // value already 'note' (basename without ext)
       fire(input, { type: 'blur' });
-      await Promise.resolve();
+      await flushAsync();
       expect(service.renameSnippet).not.toHaveBeenCalled();
     });
   });
@@ -558,18 +595,19 @@ describe('SnippetManagerView — F2 inline rename (Phase 34 Plan 03)', () => {
       expect(ke.defaultPrevented).toBe(true);
     });
 
-    it('Enter on a folder row toggles expand (collapses expanded folder)', async () => {
+    it('Enter on a folder row selects it and preserves keyboard expand/collapse', async () => {
       const { plugin, view } = makeTreeView();
       await view.onOpen();
       expect(plugin.settings.snippetTreeExpandedPaths).toContain(`${root}/a`);
       const row = findRow(view, `${root}/a`);
       expect(row).not.toBeNull();
       fire(row!, makeKeyEvent('keydown', 'Enter'));
-      await Promise.resolve();
+      await flushAsync();
       expect(plugin.settings.snippetTreeExpandedPaths).not.toContain(`${root}/a`);
+      expect((view as any).selectedFolderPath).toBe(`${root}/a`);
     });
 
-    it('Space on a folder row toggles expand and prevents default', async () => {
+    it('Space on a folder row selects it, toggles expansion, and prevents default', async () => {
       const { plugin, view } = makeTreeView();
       await view.onOpen();
       expect(plugin.settings.snippetTreeExpandedPaths).toContain(`${root}/a`);
@@ -577,8 +615,9 @@ describe('SnippetManagerView — F2 inline rename (Phase 34 Plan 03)', () => {
       expect(row).not.toBeNull();
       const ke = makeKeyEvent('keydown', ' ');
       fire(row!, ke);
-      await Promise.resolve();
+      await flushAsync();
       expect(plugin.settings.snippetTreeExpandedPaths).not.toContain(`${root}/a`);
+      expect((view as any).selectedFolderPath).toBe(`${root}/a`);
       expect(ke.defaultPrevented).toBe(true);
     });
 
@@ -601,5 +640,31 @@ describe('SnippetManagerView — F2 inline rename (Phase 34 Plan 03)', () => {
       fire(row!, makeKeyEvent('keydown', 'F2'));
       expect(findInputInRow(row!)).not.toBeNull();
     });
+  });
+
+  it('folder rename keeps reconciled UI state when protocol-reference sync rejects', async () => {
+    const { plugin, view } = makeTreeView();
+    const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    rewriteProtocolSnippetRefsSpy.mockRejectedValueOnce(new Error('sync exploded'));
+    await view.onOpen();
+    await (view as any).selectFolder(`${root}/a/sub`);
+    const cleanup = vi.fn();
+    await (view as any).treeRenderer.commitInlineRename(
+      { kind: 'folder', path: `${root}/a`, name: 'a', isRoot: false, children: [] },
+      'renamed',
+      cleanup,
+    );
+    expect(cleanup).toHaveBeenCalledTimes(1);
+    expect((view as any).selectedFolderPath).toBe(`${root}/renamed/sub`);
+    expect(plugin.settings.snippetTreeExpandedPaths).toContain(`${root}/renamed`);
+    expect(plugin.settings.snippetTreeExpandedPaths).toContain(`${root}/renamed/sub`);
+    expect(plugin.settings.snippetTreeExpandedPaths).not.toContain(`${root}/a`);
+    expect(noticeMessages.some((message) => message.includes('saved, but protocol references'))).toBe(true);
+    expect(noticeMessages.some((message) => message.startsWith('Failed to rename'))).toBe(false);
+    expect(consoleSpy).toHaveBeenCalledWith(
+      '[RadiProtocol] snippet manager protocol-reference sync failed',
+      expect.any(Error),
+    );
+    consoleSpy.mockRestore();
   });
 });

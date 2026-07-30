@@ -12,6 +12,7 @@ interface MockEl {
   tagName: string;
   children: MockEl[];
   _text: string;
+  value: string;
   classList: Set<string>;
   _attrs: Record<string, string>;
   _listeners: Map<string, Array<(ev: unknown) => void>>;
@@ -28,7 +29,7 @@ interface MockEl {
   setAttr: (name: string, value: string) => void;
   getAttribute: (k: string) => string | null;
   addEventListener: (t: string, h: (e: unknown) => void) => void;
-  dispatchEvent: (e: { type: string }) => void;
+  dispatchEvent: (e: { type: string; target?: unknown }) => void;
   closest: (s: string) => MockEl | null;
   querySelector: (s: string) => MockEl | null;
   querySelectorAll: (s: string) => MockEl[];
@@ -45,6 +46,7 @@ function makeEl(tag = 'div'): MockEl {
     tagName: tag.toUpperCase(),
     children,
     _text: '',
+    value: '',
     classList: classSet,
     _attrs: attrs,
     _listeners: listeners,
@@ -72,7 +74,7 @@ function makeEl(tag = 'div'): MockEl {
       a.push(h);
       listeners.set(t, a);
     },
-    dispatchEvent(e: { type: string }): void {
+    dispatchEvent(e: { type: string; target?: unknown }): void {
       const a = listeners.get(e.type) ?? [];
       for (const h of a) h(e);
     },
@@ -182,6 +184,7 @@ function makePlugin(): any {
     },
     snippetService: {
       listFolder: vi.fn().mockResolvedValue({ folders: [], snippets: [] }),
+      searchSnippets: vi.fn().mockResolvedValue([]),
     },
     saveSettings: vi.fn().mockResolvedValue(undefined),
     i18n: new I18nService('en'),
@@ -215,8 +218,9 @@ describe('SnippetManagerView — vault watcher', () => {
     expect(capturedHandlers['create']).toBeDefined();
     expect(capturedHandlers['delete']).toBeDefined();
     expect(capturedHandlers['rename']).toBeDefined();
-    // Three registerEvent calls were recorded
-    expect((view as any)._registeredEvents.length).toBeGreaterThanOrEqual(3);
+    expect(capturedHandlers['modify']).toBeDefined();
+    // Four registerEvent calls were recorded (create/delete/rename/modify)
+    expect((view as any)._registeredEvents.length).toBeGreaterThanOrEqual(4);
 
     // Clear the first rebuild call from onOpen()
     plugin.snippetService.listFolder.mockClear();
@@ -258,8 +262,8 @@ describe('SnippetManagerView — vault watcher', () => {
     const plugin = makePlugin();
     const view = makeView(plugin);
     await view.onOpen();
-    // registerEvent count ≥ 3
-    expect((view as any)._registeredEvents.length).toBeGreaterThanOrEqual(3);
+    // registerEvent count ≥ 4 (create/delete/rename/modify)
+    expect((view as any)._registeredEvents.length).toBeGreaterThanOrEqual(4);
 
     // Schedule a redraw then close before the timer fires
     plugin.snippetService.listFolder.mockClear();
@@ -282,5 +286,27 @@ describe('SnippetManagerView — vault watcher', () => {
     );
     expect(src).not.toContain('offref');
     expect(src).toContain('registerEvent');
+  });
+
+  it('MODIFY: modify under root reruns active search after debounce', async () => {
+    vi.useFakeTimers();
+    const plugin = makePlugin();
+    plugin.snippetService.searchSnippets = vi.fn().mockResolvedValue([]);
+    const view = makeView(plugin);
+    await view.onOpen();
+    expect(capturedHandlers['modify']).toBeDefined();
+    // Find the search input inside the always-visible search wrapper.
+    const content = (view as any).contentEl as MockEl;
+    const searchWrap = content.children.find((c: MockEl) => c.classList.has('radi-snippet-manager-search'))!;
+    const searchInput = searchWrap.children.find((c: MockEl) => c.tagName === 'INPUT')!;
+    searchInput.value = 'ct';
+    searchInput.dispatchEvent({ type: 'input', target: searchInput });
+    vi.advanceTimersByTime(200);
+    await vi.runAllTimersAsync();
+    plugin.snippetService.searchSnippets.mockClear();
+    capturedHandlers['modify']!({ path: '.radiprotocol/snippets/changed.md' });
+    vi.advanceTimersByTime(200);
+    await vi.runAllTimersAsync();
+    expect(plugin.snippetService.searchSnippets).toHaveBeenCalledWith('ct');
   });
 });
