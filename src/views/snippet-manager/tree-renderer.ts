@@ -58,6 +58,7 @@ export interface TreeRendererCallbacks {
   handleDeleteSnippet(path: string, name: string): Promise<void>;
   handleDeleteFolder(path: string, name: string): Promise<void>;
   openMovePicker(node: TreeNode): Promise<void>;
+  duplicateSnippet(path: string): Promise<void>;
   performMove(srcPath: string, srcKind: 'file' | 'folder', dstFolder: string): Promise<void>;
   refresh(): Promise<void>;
   completeFolderRename(
@@ -334,6 +335,12 @@ export class SnippetManagerTreeRenderer {
           .setTitle(t('snippetManager.ctxMove'))
           .setIcon('folder-input')
           .onClick(() => { void this.callbacks.openMovePicker(node); }),
+      );
+      menu.addItem((item) =>
+        item
+          .setTitle(t('snippetEditor.duplicate'))
+          .setIcon('copy')
+          .onClick(() => { void this.callbacks.duplicateSnippet(node.path); }),
       );
       menu.addSeparator();
       menu.addItem((item) =>

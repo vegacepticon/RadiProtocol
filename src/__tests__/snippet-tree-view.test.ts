@@ -278,6 +278,7 @@ interface MockService {
   createFolder: ReturnType<typeof vi.fn>;
   listFolderDescendants: ReturnType<typeof vi.fn>;
   searchSnippets: ReturnType<typeof vi.fn>;
+  duplicateSnippet: ReturnType<typeof vi.fn>;
 }
 
 function makeSnippet(kind: 'md-template' | 'md', p: string, name: string): Snippet {
@@ -311,6 +312,7 @@ function makePlugin(opts: {
       .fn()
       .mockResolvedValue(opts.descendants ?? { files: [], folders: [], total: 0 }),
     searchSnippets: vi.fn().mockResolvedValue([]),
+    duplicateSnippet: vi.fn((sp: string) => Promise.resolve(sp.replace(/\.md$/, '-copy.md'))),
   };
   const plugin = {
     app: { vault: { on: vi.fn((_ev: string) => ({ ref: _ev })) } },
@@ -589,6 +591,66 @@ describe('SnippetManagerView — tree rendering and interactions', () => {
     // And the rendered tree should not include it either
     const rows = walkRows((view as any).contentEl as MockEl);
     expect(rows.find((r) => r._attrs['data-path'] === `${root}/x.md`)).toBeUndefined();
+  });
+  it('DUPLICATE-CTX: file context menu offers Duplicate after Move and before Delete; invoking it calls the service and refreshes', async () => {
+    const root = '.radiprotocol/snippets';
+    const snippetPath = `${root}/gone.md`;
+    const { plugin, service } = makePlugin({
+      listings: {
+        [root]: { folders: [], snippets: [makeSnippet('md-template', snippetPath, 'gone')] },
+      },
+    });
+    const view = makeView(plugin);
+    await view.onOpen();
+    const fileRow = rowsIn((view as any).snippetRootEl as MockEl)
+      .find((row) => row._attrs['data-path'] === snippetPath)!;
+    fileRow.dispatchEvent({
+      type: 'contextmenu',
+      target: fileRow,
+      preventDefault: vi.fn(),
+      stopPropagation: vi.fn(),
+    });
+    const titles = lastMenuItems.map((item) => item.title);
+    // Edit → Rename → Move → Duplicate → (separator) → Delete
+    const moveIdx = titles.indexOf('Move to…');
+    const dupIdx = titles.indexOf('Duplicate snippet');
+    const deleteIdx = titles.indexOf('Delete');
+    expect(dupIdx).toBeGreaterThanOrEqual(0);
+    expect(moveIdx).toBeGreaterThanOrEqual(0);
+    expect(deleteIdx).toBeGreaterThanOrEqual(0);
+    expect(moveIdx).toBeLessThan(dupIdx);
+    expect(dupIdx).toBeLessThan(deleteIdx);
+    // Invoke the Duplicate menu item.
+    const dupItem = lastMenuItems[dupIdx]!;
+    dupItem.cb();
+    await flushAsync();
+    expect(service.duplicateSnippet).toHaveBeenCalledWith(snippetPath);
+  });
+
+  it('DUPLICATE-CTX: service failure surfaces the localized duplicateError Notice', async () => {
+    const root = '.radiprotocol/snippets';
+    const snippetPath = `${root}/gone.md`;
+    const { plugin, service } = makePlugin({
+      listings: {
+        [root]: { folders: [], snippets: [makeSnippet('md-template', snippetPath, 'gone')] },
+      },
+    });
+    service.duplicateSnippet = vi.fn().mockRejectedValue(new Error('boom'));
+    const view = makeView(plugin);
+    await view.onOpen();
+    const fileRow = rowsIn((view as any).snippetRootEl as MockEl)
+      .find((row) => row._attrs['data-path'] === snippetPath)!;
+    fileRow.dispatchEvent({
+      type: 'contextmenu',
+      target: fileRow,
+      preventDefault: vi.fn(),
+      stopPropagation: vi.fn(),
+    });
+    const dupItem = lastMenuItems.find((item) => item.title === 'Duplicate snippet')!;
+    dupItem.cb();
+    await flushAsync();
+    expect(service.duplicateSnippet).toHaveBeenCalledWith(snippetPath);
+    expect(noticeMessages.some((m) => m.includes('Failed to duplicate snippet'))).toBe(true);
   });
 
   it('MODAL-04: global "+ Новый" opens create modal pre-filled to snippetFolderPath (root)', async () => {

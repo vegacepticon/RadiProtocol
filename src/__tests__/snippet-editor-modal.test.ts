@@ -424,12 +424,12 @@ describe('SnippetEditorModal', () => {
     confirmModalNextResult = 'cancel';
   });
 
-  it('MODAL-01: create mode sets «Новый сниппет» title and renders type toggle', async () => {
+  it('MODAL-01: create mode sets «Новый сниппет» title and does NOT render a Type row', async () => {
     const { plugin } = makeMockPlugin();
-     
+
     const modal = new SnippetEditorModal(
-      {} as any,  
-      plugin as any,  
+      {} as any,
+      plugin as any,
       { mode: 'create', initialFolder: '.radiprotocol/snippets' },
     );
     await modal.onOpen();
@@ -441,11 +441,19 @@ describe('SnippetEditorModal', () => {
       (el) => el.tagName === 'BUTTON' && el.getAttribute('role') === 'radio',
     );
     expect(toggleBtns.length).toBe(0);
+    // The redundant Type row is removed in both modes (D-07): no static label.
     const typeLabel = findEl(
       modal.contentEl as unknown as MockEl,
       (el) => el.tagName === 'SPAN' && el._text === 'Markdown template',
     );
-    expect(typeLabel).not.toBeNull();
+    expect(typeLabel).toBeNull();
+    // Action row contains only Cancel + Create (Duplicate moved to tree menu).
+    const actionBtns = findAll(
+      modal.contentEl as unknown as MockEl,
+      (el) => el.tagName === 'BUTTON' && el._text !== '',
+    ).filter((el) => el.parent?.classList.has('modal-button-container'));
+    expect(actionBtns.map((el) => el._text)).toEqual(['Cancel', 'Create']);
+    expect(actionBtns.some((el) => el._text === 'Duplicate snippet')).toBe(false);
   });
 
   it('MODAL-02: edit mode sets «Редактирование: {name}» title and pre-fills name input', async () => {
@@ -466,7 +474,7 @@ describe('SnippetEditorModal', () => {
     expect(input!.value).toBe('sample');
   });
 
-  it('MODAL-03: edit mode does NOT render the JSON/MD radio toggle (type locked)', async () => {
+  it('MODAL-03: edit mode does NOT render the JSON/MD radio toggle or a Type row', async () => {
     const { plugin } = makeMockPlugin();
     const snippet = sampleJsonSnippet();
     const modal = new SnippetEditorModal({} as never, plugin as never, {
@@ -480,13 +488,19 @@ describe('SnippetEditorModal', () => {
       (el) => el.tagName === 'BUTTON' && el.getAttribute('role') === 'radio',
     );
     expect(toggleBtns.length).toBe(0);
-    // But a static type label still appears
+    // D-07: the static Type row is removed in edit mode too.
     const staticLabel = findEl(
       modal.contentEl as unknown as MockEl,
       (el) => el.classList.has('radi-snippet-editor-type-static'),
     );
-    expect(staticLabel).not.toBeNull();
-    expect(staticLabel!._text).toBe('Markdown');
+    expect(staticLabel).toBeNull();
+    // Action row contains only Cancel + Save (Duplicate moved to tree menu).
+    const actionBtns = findAll(
+      modal.contentEl as unknown as MockEl,
+      (el) => el.tagName === 'BUTTON' && el._text !== '',
+    ).filter((el) => el.parent?.classList.has('modal-button-container'));
+    expect(actionBtns.map((el) => el._text)).toEqual(['Cancel', 'Save']);
+    expect(actionBtns.some((el) => el._text === 'Duplicate snippet')).toBe(false);
   });
 
   it('MODAL-04: create mode seeds the «Папка» picker to initialFolder', async () => {
@@ -562,12 +576,12 @@ describe('SnippetEditorModal', () => {
       initialFolder: '.radiprotocol/snippets',
     });
     await modal.onOpen();
-    // No type toggle buttons exist — only the static label "Markdown Template"
+    // D-07: no Type row — the static "Markdown template" label is gone.
     const staticLabel = findEl(
       modal.contentEl as unknown as MockEl,
       (el) => el.tagName === 'SPAN' && el._text === 'Markdown template',
     );
-    expect(staticLabel).not.toBeNull();
+    expect(staticLabel).toBeNull();
     // No radio buttons for JSON/MD type switching
     const radioBtns = findAll(
       modal.contentEl as unknown as MockEl,

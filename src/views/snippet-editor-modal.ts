@@ -27,7 +27,7 @@ import { FolderSuggest } from './folder-suggest';
 
 type SnippetEditorResult =
   | { saved: true; snippet: Snippet; movedFrom: string | null }
-  | { saved: false; duplicatedTo?: string };
+  | { saved: false };
 
 interface SnippetEditorOptions {
   mode: 'create' | 'edit';
@@ -44,7 +44,6 @@ interface SnippetEditorOptions {
     listFolderDescendants(root: string): Promise<{ folders: string[] }>;
     moveSnippet(oldPath: string, newFolder: string): Promise<string>;
     renameSnippet(oldPath: string, newBasename: string): Promise<string>;
-    duplicateSnippet(path: string): Promise<string>;
   };
   /** Hide the folder picker when the caller manages moves separately. */
   disableFolderPicker?: boolean;
@@ -176,29 +175,16 @@ export class SnippetEditorModal extends Modal {
       }));
     }
 
-    // Type: always "Markdown Template" for create; static label for edit
-    if (this.options.mode === 'create') {
-      const typeRow = contentEl.createDiv({ cls: 'radi-snippet-editor-row' });
-      typeRow.createEl('label', { text: this.plugin.i18n.t('snippetEditor.type') });
-      typeRow.createEl('span', {
-        text: 'Markdown template',
-        cls: 'radi-snippet-editor-type-static',
-      });
-    } else {
-      // Edit mode: static type label (kind locked)
-      const typeRow = contentEl.createDiv({ cls: 'radi-snippet-editor-row' });
-      typeRow.createEl('label', { text: this.plugin.i18n.t('snippetEditor.type') });
-      typeRow.createEl('span', {
-        text: 'Markdown',
-        cls: 'radi-snippet-editor-type-static',
-      });
-    }
+    // Internal scroll body: holds Folder, Name, validation banner, and the
+    // editor content region. Save error and the action bar stay outside so
+    // they remain visible while the form scrolls.
+    const scrollBody = contentEl.createDiv({ cls: 'radi-snippet-editor-scroll-body' });
 
-    // Folder input (after type row, before name)
-    await this.renderFolderDropdown(contentEl);
+    // Folder input
+    await this.renderFolderDropdown(scrollBody);
 
     // Name input
-    this.renderNameInput(contentEl);
+    this.renderNameInput(scrollBody);
 
     // Phase 52 D-04: render validation banner BEFORE content region so the user
     // sees it immediately. Banner is rendered above the chip editor; the form
@@ -207,7 +193,7 @@ export class SnippetEditorModal extends Modal {
     if (this.draftKind === 'md-template') {
       const vErr = (this.draft as MdTemplateSnippet).validationError;
       if (vErr !== null) {
-        this.renderValidationBanner(contentEl, vErr);
+        this.renderValidationBanner(scrollBody, vErr);
       }
     }
 
@@ -215,14 +201,14 @@ export class SnippetEditorModal extends Modal {
     // Phase 33 gap-fix: no separate content label above — the chip editor
     // has its own Template/Placeholders sections, and Markdown mode uses a
     // single textarea whose placeholder text is self-explanatory.
-    this.contentRegionEl = contentEl.createDiv({ cls: 'radi-snippet-editor-content' });
+    this.contentRegionEl = scrollBody.createDiv({ cls: 'radi-snippet-editor-content' });
     this.renderContentRegion();
 
-    // Save-error placeholder
+    // Save-error placeholder (outside the scroll body so save failures stay visible)
     this.saveErrorEl = contentEl.createDiv({ cls: 'radi-snippet-editor-save-error rp-snippet-editor-save-error' });
     this.saveErrorEl.toggleClass('rp-snippet-banner-hidden', true);
 
-    // Button row
+    // Button row (outside the scroll body so Cancel/Save stay pinned)
     this.renderButtonRow(contentEl);
 
     // Phase 52 D-04: lock the form when the snippet is unusable. Save is
@@ -280,7 +266,6 @@ export class SnippetEditorModal extends Modal {
     listFolderDescendants(root: string): Promise<{ folders: string[] }>;
     moveSnippet(oldPath: string, newFolder: string): Promise<string>;
     renameSnippet(oldPath: string, newBasename: string): Promise<string>;
-    duplicateSnippet(path: string): Promise<string>;
   } {
     return this.options.snippetServiceOverride ?? this.plugin.snippetService;
   }
@@ -443,15 +428,6 @@ export class SnippetEditorModal extends Modal {
     cancelBtn.setAttribute('type', 'button');
     cancelBtn.addEventListener('click', () => {
       void this.handleCancel();
-    });
-
-    const duplicateBtn = createButton(row, {
-      text: this.plugin.i18n.t('snippetEditor.duplicate'),
-    });
-    duplicateBtn.setAttribute('aria-label', this.plugin.i18n.t('snippetEditor.duplicateTitle'));
-    duplicateBtn.setAttribute('type', 'button');
-    duplicateBtn.addEventListener('click', () => {
-      void this.handleDuplicate();
     });
 
     const saveBtn = createButton(row, {
@@ -635,17 +611,6 @@ export class SnippetEditorModal extends Modal {
     }
     this.safeResolve({ saved: false });
     super.close();
-  }
-
-  private async handleDuplicate(): Promise<void> {
-    if (this.options.mode !== 'edit' || !this.options.snippet) return;
-    try {
-      const newPath = await this.snippetService().duplicateSnippet(this.options.snippet.path);
-      this.safeResolve({ saved: false, duplicatedTo: newPath });
-      super.close();
-    } catch (err) {
-      new Notice(this.plugin.i18n.t('snippetEditor.duplicateError', { error: String(err) }));
-    }
   }
 
   /**

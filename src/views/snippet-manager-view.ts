@@ -141,6 +141,7 @@ export class SnippetManagerView extends ItemView {
         handleDeleteSnippet: (path, name) => this.handleDeleteSnippet(path, name),
         handleDeleteFolder: (path, name) => this.handleDeleteFolder(path, name),
         openMovePicker: (node) => this.openMovePicker(node),
+        duplicateSnippet: (path) => this.duplicateSnippet(path),
         performMove: (srcPath, srcKind, dstFolder) => this.performMove(srcPath, srcKind, dstFolder),
         refresh: async () => {
           await this.refresh();
@@ -432,6 +433,24 @@ export class SnippetManagerView extends ItemView {
     modal.open();
     const result = await modal.result;
     if (result.saved) await this.refresh();
+  }
+
+  // -------------------------------------------------------------------------
+  // Duplicate — reached from the file-row context menu. The renderer only
+  // invokes the callback; this view owns the service call, localized failure
+  // notice, and the generation-guarded refresh so the selected-folder / active
+  // search model reloads after success.
+  // -------------------------------------------------------------------------
+  private async duplicateSnippet(path: string): Promise<void> {
+    const t = this.plugin.i18n.t.bind(this.plugin.i18n);
+    try {
+      await this.plugin.snippetService.duplicateSnippet(path);
+      await this.refresh();
+    } catch (e) {
+      const error = (e as Error)?.message ?? t('snippetManager.unknownError');
+      new Notice(t('snippetEditor.duplicateError', { error }));
+      console.error('[RadiProtocol] duplicate snippet failed', e);
+    }
   }
 
   // -------------------------------------------------------------------------

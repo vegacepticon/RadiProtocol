@@ -386,6 +386,11 @@
 
 /* --- SnippetEditorModal (Plan 03 consumer) --------------------------- */
 .radi-snippet-editor-modal {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: hidden;
   padding: var(--size-4-3);
 }
 
@@ -401,14 +406,40 @@
   width: 100%;
 }
 
+/* Internal scroll body: owns vertical overflow so Folder/Name/banner/editor
+   scroll while the action bar stays pinned. */
+.radi-snippet-editor-scroll-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
 .radi-snippet-editor-modal .modal-button-container {
+  flex: 0 0 auto;
   margin-top: var(--size-4-3);
   padding-top: var(--size-4-2);
   border-top: 1px solid var(--background-modifier-border);
+  background: var(--background-primary);
   display: flex;
   flex-direction: row;
   justify-content: flex-end;
   gap: var(--size-4-1);
+}
+
+/* Two-column editor: Template (~60%) | Placeholders (~40%). Zero-floor
+   tracks keep nested controls from forcing the columns wider than intended. */
+.radi-snippet-editor-content {
+  display: grid;
+  grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
+  gap: var(--size-4-3);
+  align-items: start;
+  min-width: 0;
+}
+
+/* Plain-Markdown branch: a single textarea spans both tracks. */
+.radi-snippet-editor-md-textarea {
+  grid-column: 1 / -1;
 }
 
 /* Phase 36: fix spacing between type label and value (CLEAN-02) */
@@ -525,6 +556,19 @@
 .rp-snippet-editor-modal {
   max-width: 920px;
   width: min(920px, calc(100vw - 48px));
+  max-height: calc(100vh - 48px);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  container-type: inline-size;
+}
+
+/* Narrow modal (split panes, narrow Obsidian windows): collapse the
+   two-column editor into a single stacked column below ~640px. */
+@container (max-width: 640px) {
+  .radi-snippet-editor-content {
+    grid-template-columns: minmax(0, 1fr);
+  }
 }
 
 .rp-snippet-editor-save-error {
