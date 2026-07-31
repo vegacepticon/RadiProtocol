@@ -1325,7 +1325,7 @@ describe('Keyboard navigation (Phase 4)', () => {
     const input = findFirst(container, (el) => el.classList.has('rp-stp-search-input'))!;
     triggerKeydown(input, 'ArrowDown');
 
-    const status = findFirst(container, (el) => el.classList.has('rp-stp-sr-only'));
+    const status = findFirst(container, (el) => el.classList.has('rp-sr-only'));
     expect(status?.textContent).toBe('Highlighted: abdomen');
   });
 

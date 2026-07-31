@@ -23,9 +23,20 @@
   overflow: hidden;
   background-color: var(--background-secondary);
   background-image:
-    linear-gradient(var(--background-modifier-border) 1px, transparent 1px),
-    linear-gradient(90deg, var(--background-modifier-border) 1px, transparent 1px);
-  background-size: calc(24px * var(--rp-protocol-editor-zoom, 1)) calc(24px * var(--rp-protocol-editor-zoom, 1));
+    radial-gradient(
+      circle at center,
+      color-mix(in srgb, var(--background-modifier-border) 25%, transparent) 2px,
+      transparent 2px
+    ),
+    radial-gradient(
+      circle at center,
+      color-mix(in srgb, var(--background-modifier-border) 25%, transparent) 1px,
+      transparent 1px
+    );
+  background-position: 0 0, 0 0;
+  background-size:
+    calc(120px * var(--rp-protocol-editor-zoom, 1)) calc(120px * var(--rp-protocol-editor-zoom, 1)),
+    calc(24px * var(--rp-protocol-editor-zoom, 1)) calc(24px * var(--rp-protocol-editor-zoom, 1));
   cursor: grab;
 }
 

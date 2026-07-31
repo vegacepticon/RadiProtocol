@@ -120,6 +120,17 @@ export class SnippetManagerTreeRenderer {
     this.snippetContainer.empty();
     this.rowLabelEls.clear();
     this.selectedFolderPath = options.selectedFolderPath;
+    // Recreate visually-hidden accessible headings as the first child of each
+    // pane on every render — the renderer owns pane contents (see empty() above),
+    // so a one-time heading in onOpen() would not survive the initial refresh.
+    this.folderContainer.createEl('h2', {
+      cls: 'rp-sr-only',
+      text: this.plugin.i18n.t('snippetManager.folderPaneAria'),
+    });
+    this.snippetContainer.createEl('h2', {
+      cls: 'rp-sr-only',
+      text: this.plugin.i18n.t('snippetManager.snippetPaneAria'),
+    });
     this.renderNode(this.folderContainer, options.folderTree, 0);
     if (
       options.searchResults !== undefined &&

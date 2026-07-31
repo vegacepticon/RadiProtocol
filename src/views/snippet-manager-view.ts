@@ -125,10 +125,8 @@ export class SnippetManagerView extends ItemView {
     const layout = contentEl.createDiv({ cls: 'radi-snippet-manager-layout' });
     this.folderRootEl = layout.createDiv({ cls: 'radi-snippet-manager-folders' });
     this.folderRootEl.setAttr('role', 'tree');
-    this.folderRootEl.setAttr('aria-label', this.plugin.i18n.t('snippetManager.folderPaneAria'));
     this.snippetRootEl = layout.createDiv({ cls: 'radi-snippet-manager-snippets' });
     this.snippetRootEl.setAttr('role', 'list');
-    this.snippetRootEl.setAttr('aria-label', this.plugin.i18n.t('snippetManager.snippetPaneAria'));
 
     this.treeRenderer = new SnippetManagerTreeRenderer({
       folderContainer: this.folderRootEl,

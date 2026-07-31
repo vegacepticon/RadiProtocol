@@ -2,6 +2,12 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { ProtocolEditorView } from '../../views/protocol-editor-view';
 import type { ProtocolDocumentV1, ProtocolNodeRecord } from '../../protocol/protocol-document';
 
+// Hoisted so the hoisted obsidian mock factory can write captured Menu items.
+const menuCapture = vi.hoisted(() => ({
+  items: [] as Array<{ title: string; cb: () => void }>,
+  event: null as unknown,
+}));
+
 // ── Traversable MockEl with closest / querySelector / style.setProperty ──────
 
 interface MockEl {
@@ -252,6 +258,22 @@ vi.mock('obsidian', () => ({
   WorkspaceLeaf: class {},
   Notice: class { constructor() {} },
   setIcon: () => {},
+  Menu: class {
+    items: Array<{ title: string; cb: () => void }> = [];
+    addItem(cb: (item: { setTitle: (t: string) => any; setIcon: (i: string) => any; onClick: (c: () => void) => any }) => void): this {
+      const state: { title: string; cb: () => void } = { title: '', cb: () => {} };
+      const api = {
+        setTitle: (t: string) => { state.title = t; return api; },
+        setIcon: (_i: string) => api,
+        onClick: (c: () => void) => { state.cb = c; return api; },
+      };
+      cb(api);
+      this.items.push(state);
+      menuCapture.items = this.items;
+      return this;
+    }
+    showAtMouseEvent(ev: unknown): void { menuCapture.event = ev; }
+  },
   App: class {},
   TFile: class { path = ''; extension = ''; basename = ''; constructor(p = '') { this.path = p; } },
 }));;
@@ -306,6 +328,7 @@ const t = (key: string, _params?: Record<string, string>): string => {
     'protocolEditor.startPointEnabledLabel': 'Start point',
     'selfCheck.title': 'Self-check',
     'protocolEditor.toggleMinimap': 'Minimap',
+    'protocolEditor.autoLayout': 'Auto layout',
     'protocolEditor.autoLayoutVertical': 'Vertical layout',
     'protocolEditor.autoLayoutHorizontal': 'Horizontal layout',
     'protocolEditor.noEditableFields': 'No editable fields',
@@ -597,15 +620,32 @@ describe('ProtocolEditorView: floating action button aria-labels', () => {
     expect(minimapBtn._attrs['aria-label']).toBe('Minimap');
   });
 
-  it('auto-layout floating buttons have localized aria-labels', () => {
-    const { rootEl } = createShellView();
+  it('auto-layout floating button opens a Menu with TB/LR items', () => {
+    const { view, rootEl } = createShellView();
     const workspace = rootEl.children.find((c: MockEl) => c.classList.has('rp-protocol-editor-workspace'))!;
     const floatingActions = workspace.children.find((c: MockEl) => c.classList.has('rp-protocol-editor-floating-actions'))!;
     const buttons = floatingActions.children.filter((c: MockEl) => c.tagName === 'BUTTON');
-    const verticalBtn = buttons.find((b: MockEl) => b._attrs['aria-label'] === 'Vertical layout')!;
-    expect(verticalBtn._attrs['aria-label']).toBe('Vertical layout');
-    const horizontalBtn = buttons.find((b: MockEl) => b._attrs['aria-label'] === 'Horizontal layout')!;
-    expect(horizontalBtn._attrs['aria-label']).toBe('Horizontal layout');
+    // Exactly one consolidated auto-layout trigger; neither direction is its own button.
+    const layoutBtn = buttons.find((b: MockEl) => b._attrs['aria-label'] === 'Auto layout')!;
+    expect(layoutBtn._attrs['aria-label']).toBe('Auto layout');
+    // Exactly one consolidated auto-layout trigger; neither direction is its own button.
+    expect(buttons.filter((b: MockEl) => b._attrs['aria-label'] === 'Auto layout')).toHaveLength(1);
+    expect(buttons.filter((b: MockEl) => b._attrs['aria-label'] === 'Vertical layout' || b._attrs['aria-label'] === 'Horizontal layout')).toHaveLength(0);
+    // Clicking it opens a Menu positioned at the click event with two items.
+    menuCapture.items = [];
+    menuCapture.event = null;
+    const clickEvent = { preventDefault: () => {}, stopPropagation: () => {} };
+    const handlers = layoutBtn._listeners.get('click') ?? [];
+    for (const handler of handlers) handler(clickEvent);
+    expect(menuCapture.event).toBe(clickEvent);
+    expect(menuCapture.items).toHaveLength(2);
+    expect(menuCapture.items.map((i) => i.title)).toEqual(['Vertical layout', 'Horizontal layout']);
+    // Item callbacks preserve the existing TB/LR mapping into autoLayoutNodes.
+    const spy = vi.spyOn(view as any, 'autoLayoutNodes');
+    menuCapture.items[0]!.cb();
+    menuCapture.items[1]!.cb();
+    expect(spy).toHaveBeenNthCalledWith(1, 'TB');
+    expect(spy).toHaveBeenNthCalledWith(2, 'LR');
   });
 
   it('minimap element has localized aria-label', () => {

@@ -1,4 +1,4 @@
-import { ItemView, Notice, TFile, WorkspaceLeaf, setIcon } from 'obsidian';
+import { ItemView, Menu, Notice, TFile, WorkspaceLeaf, setIcon } from 'obsidian';
 import type RadiProtocolPlugin from '../main';
 import type { ProtocolDocumentV1, ProtocolEdgeRecord, ProtocolNodeRecord } from '../protocol/protocol-document';
 import type { RPNodeKind } from '../graph/graph-model';
@@ -609,25 +609,26 @@ export class ProtocolEditorView extends ItemView {
     setIcon(minimapToggleBtn, 'map');
     minimapToggleBtn.addEventListener('click', () => this.toggleMinimap());
 
-    const autoLayoutVerticalBtn = floatingActions.createEl('button', {
+    const autoLayoutBtn = floatingActions.createEl('button', {
       cls: 'rp-protocol-editor-floating-action',
       attr: {
         type: 'button',
-        'aria-label': this.plugin.i18n.t('protocolEditor.autoLayoutVertical'),
+        'aria-label': this.plugin.i18n.t('protocolEditor.autoLayout'),
       },
     });
-    setIcon(autoLayoutVerticalBtn, 'layout');
-    autoLayoutVerticalBtn.addEventListener('click', () => this.autoLayoutNodes('TB'));
-
-    const autoLayoutHorizontalBtn = floatingActions.createEl('button', {
-      cls: 'rp-protocol-editor-floating-action',
-      attr: {
-        type: 'button',
-        'aria-label': this.plugin.i18n.t('protocolEditor.autoLayoutHorizontal'),
-      },
+    setIcon(autoLayoutBtn, 'layout');
+    autoLayoutBtn.addEventListener('click', (event: MouseEvent) => {
+      const menu = new Menu();
+      menu.addItem((item) => item
+        .setTitle(this.plugin.i18n.t('protocolEditor.autoLayoutVertical'))
+        .setIcon('arrow-down')
+        .onClick(() => this.autoLayoutNodes('TB')));
+      menu.addItem((item) => item
+        .setTitle(this.plugin.i18n.t('protocolEditor.autoLayoutHorizontal'))
+        .setIcon('arrow-right')
+        .onClick(() => this.autoLayoutNodes('LR')));
+      menu.showAtMouseEvent(event);
     });
-    setIcon(autoLayoutHorizontalBtn, 'layout');
-    autoLayoutHorizontalBtn.addEventListener('click', () => this.autoLayoutNodes('LR'));
 
     workspace.createDiv({
       cls: 'rp-protocol-editor-canvas-title',

@@ -382,6 +382,18 @@ describe('SnippetManagerView — tree rendering and interactions', () => {
     const content = (view as any).contentEl as MockEl;
     expect(content.children.some((child) => child.classList.has('radi-snippet-tree-header'))).toBe(false);
     expect(content.children.some((child) => child.classList.has('radi-snippet-manager-layout'))).toBe(true);
+    // Pane roots carry no hover-tooltip aria-label; screen-reader names come from
+    // visually-hidden <h2> headings recreated as the first child of each pane.
+    const folderRoot = (view as any).folderRootEl as MockEl;
+    const snippetRoot = (view as any).snippetRootEl as MockEl;
+    expect(folderRoot._attrs['aria-label']).toBeUndefined();
+    expect(snippetRoot._attrs['aria-label']).toBeUndefined();
+    expect(folderRoot.children[0]!.tagName).toBe('H2');
+    expect(folderRoot.children[0]!.classList.has('rp-sr-only')).toBe(true);
+    expect(folderRoot.children[0]!._text).toBe(plugin.i18n.t('snippetManager.folderPaneAria'));
+    expect(snippetRoot.children[0]!.tagName).toBe('H2');
+    expect(snippetRoot.children[0]!.classList.has('rp-sr-only')).toBe(true);
+    expect(snippetRoot.children[0]!._text).toBe(plugin.i18n.t('snippetManager.snippetPaneAria'));
   });
 
   it('TREE-03: clicking a folder selects it without changing expansion and refreshes direct snippets', async () => {
@@ -668,11 +680,17 @@ describe('SnippetManagerView — global search (Phase 4)', () => {
     expect(service.searchSnippets).toHaveBeenCalledWith('ct');
     expect(walkRows((view as any).snippetRootEl as MockEl).map((row) => row._attrs['data-path']))
       .toEqual([`${root}/Chest/ct.md`]);
+    // Headings survive the search-result redraw.
+    expect(((view as any).folderRootEl as MockEl).children[0]!.tagName).toBe('H2');
+    expect(((view as any).snippetRootEl as MockEl).children[0]!.tagName).toBe('H2');
     searchInput.value = '';
     searchInput.dispatchEvent({ type: 'input', target: searchInput });
     await new Promise((resolve) => setTimeout(resolve, 180));
     expect(walkRows((view as any).snippetRootEl as MockEl).map((row) => row._attrs['data-path']))
       .toEqual([`${root}/root.md`]);
+    // Headings survive the restore-to-folder redraw as well.
+    expect(((view as any).folderRootEl as MockEl).children[0]!.tagName).toBe('H2');
+    expect(((view as any).snippetRootEl as MockEl).children[0]!.tagName).toBe('H2');
   });
 
   it('SEARCH: stale completion does not overwrite newer results', async () => {

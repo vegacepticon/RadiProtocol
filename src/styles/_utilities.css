@@ -23,4 +23,15 @@
   gap: var(--size-2-2); /* 6px */
 }
 
+/* Visually-hidden but screen-reader-accessible. Used for accessible names that
+ * must not produce a visible hover tooltip (e.g. pane region labels). */
+.rp-sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
 

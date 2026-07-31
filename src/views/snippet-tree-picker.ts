@@ -162,7 +162,7 @@ export class SnippetTreePicker {
     // announcements of the highlighted row title. Lives inside .rp-stp-search so
     // removeBody() (which keeps .rp-stp-search) preserves it across re-renders.
     const statusSpan = searchWrap.createEl('span', {
-      cls: 'rp-stp-sr-only',
+      cls: 'rp-sr-only',
       attr: { 'aria-live': 'polite', role: 'status' },
     });
     this.highlightStatusEl = statusSpan;
