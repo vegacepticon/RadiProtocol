@@ -4,6 +4,7 @@ import type { AnswerNode, ProtocolGraph, RPEdge, SnippetNode } from '../../graph
 import type { RunnerState } from '../runner-state';
 import { isFileBoundSnippetNode, snippetBranchLabel } from '../snippet-label';
 import { nodeLabel } from '../../graph/node-label';
+import { orderedOutgoingEdges } from '../../graph/edge-order';
 import { createButton } from '../../utils/dom-helpers';
 
 type AtNodeState = Extract<RunnerState, { status: 'at-node' }>;
@@ -16,6 +17,48 @@ export interface QuestionBranchHost {
   onChooseAnswer(answerNode: AnswerNode): void | Promise<void>;
   onChooseSnippetBranch(snippetNode: SnippetNode, isFileBound: boolean): void | Promise<void>;
   onChooseQuestionBranch(edge: RPEdge): void | Promise<void>;
+}
+
+// Shared per-kind button construction for both the grouped fallback and the
+// interleaved authored-order path so the CSS class, caption source, and
+// callback payload are byte-for-byte identical — only the container/iteration
+// order differs between the two render paths.
+function appendAnswerButton(parent: HTMLElement, answerNode: AnswerNode, host: QuestionBranchHost): void {
+  const btn = createButton(parent, {
+    cls: 'rp-answer-btn',
+    text: answerNode.displayLabel ?? answerNode.answerText,
+  });
+  host.bindClick(btn, () => {
+    void host.onChooseAnswer(answerNode);
+  });
+}
+
+function appendQuestionTransitionButton(parent: HTMLElement, edge: RPEdge, graph: ProtocolGraph, host: QuestionBranchHost): void {
+  const target = graph.nodes.get(edge.toNodeId);
+  const fallbackCaption = target !== undefined
+    ? nodeLabel(target).trim() || edge.toNodeId
+    : edge.toNodeId;
+  const caption = edge.label !== undefined && edge.label.trim() !== ''
+    ? edge.label
+    : fallbackCaption;
+  const btn = createButton(parent, {
+    cls: 'rp-question-transition-btn',
+    text: caption,
+  });
+  host.bindClick(btn, () => {
+    void host.onChooseQuestionBranch(edge);
+  });
+}
+
+function appendSnippetBranchButton(parent: HTMLElement, snippetNode: SnippetNode, host: QuestionBranchHost): void {
+  const isFileBound = isFileBoundSnippetNode(snippetNode);
+  const btn = createButton(parent, {
+    cls: 'rp-snippet-branch-btn',
+    text: snippetBranchLabel(snippetNode),
+  });
+  host.bindClick(btn, () => {
+    void host.onChooseSnippetBranch(snippetNode, isFileBound);
+  });
 }
 
 export function renderQuestionAtNode(
@@ -44,6 +87,33 @@ export function renderQuestionAtNode(
     cls: 'rp-question-text',
   });
 
+  // Authored display order: when the question carries an `optionOrder`, render
+  // its outgoing options as a single interleaved stack in that order (answers,
+  // question transitions, snippet branches interleaved). Per-kind button
+  // construction is byte-for-byte identical to the grouped fallback below via
+  // the shared append*Button helpers — only the container/iteration order
+  // changes. When `optionOrder` is absent, the grouped edges-array fallback runs
+  // unchanged (backward compatible).
+  if (node.optionOrder !== undefined) {
+    const orderedEdges = orderedOutgoingEdges(graph, state.currentNodeId);
+    if (orderedEdges.length > 0) {
+      const optionList = actionZone.createDiv({ cls: 'rp-option-list rp-stack' });
+      optionList.setCssProps({ 'margin-top': 'var(--size-4-3)' });
+      for (const edge of orderedEdges) {
+        const target = graph.nodes.get(edge.toNodeId);
+        if (target === undefined) continue;
+        if (target.kind === 'answer') {
+          appendAnswerButton(optionList, target, host);
+        } else if (target.kind === 'question') {
+          appendQuestionTransitionButton(optionList, edge, graph, host);
+        } else if (target.kind === 'snippet') {
+          appendSnippetBranchButton(optionList, target, host);
+        }
+      }
+    }
+    return 'rendered';
+  }
+
   // Phase 31: partition outgoing neighbors into answer + snippet branches.
   const neighborIds = graph.adjacency.get(state.currentNodeId) ?? [];
   const answerNeighbors: AnswerNode[] = [];
@@ -59,13 +129,7 @@ export function renderQuestionAtNode(
     const answerList = actionZone.createDiv({ cls: 'rp-answer-list rp-stack' });
     answerList.setCssProps({ 'margin-top': 'var(--size-4-3)' });
     for (const answerNode of answerNeighbors) {
-      const btn = createButton(answerList, {
-        cls: 'rp-answer-btn',
-        text: answerNode.displayLabel ?? answerNode.answerText,
-      });
-      host.bindClick(btn, () => {
-        void host.onChooseAnswer(answerNode);
-      });
+      appendAnswerButton(answerList, answerNode, host);
     }
   }
 
@@ -82,20 +146,7 @@ export function renderQuestionAtNode(
       transitionList.setCssProps({ 'margin-top': 'var(--size-4-3)' });
     }
     for (const edge of questionEdges) {
-      const target = graph.nodes.get(edge.toNodeId);
-      const fallbackCaption = target !== undefined
-        ? nodeLabel(target).trim() || edge.toNodeId
-        : edge.toNodeId;
-      const caption = edge.label !== undefined && edge.label.trim() !== ''
-        ? edge.label
-        : fallbackCaption;
-      const btn = createButton(transitionList, {
-        cls: 'rp-question-transition-btn',
-        text: caption,
-      });
-      host.bindClick(btn, () => {
-        void host.onChooseQuestionBranch(edge);
-      });
+      appendQuestionTransitionButton(transitionList, edge, graph, host);
     }
   }
 
@@ -106,14 +157,7 @@ export function renderQuestionAtNode(
       snippetList.setCssProps({ 'margin-top': 'var(--size-4-3)' });
     }
     for (const snippetNode of snippetNeighbors) {
-      const isFileBound = isFileBoundSnippetNode(snippetNode);
-      const btn = createButton(snippetList, {
-        cls: 'rp-snippet-branch-btn',
-        text: snippetBranchLabel(snippetNode),
-      });
-      host.bindClick(btn, () => {
-        void host.onChooseSnippetBranch(snippetNode, isFileBound);
-      });
+      appendSnippetBranchButton(snippetList, snippetNode, host);
     }
   }
 

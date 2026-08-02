@@ -160,6 +160,57 @@ describe('shared question branch renderer', () => {
     expect(onChooseSnippetBranch.mock.calls[1]?.[1]).toBe(false);
   });
 
+  it('renders an interleaved single stack in authored optionOrder (per-kind buttons preserved)', () => {
+    const textZone = new MockEl('text');
+    const actionZone = new MockEl('actions');
+    const onChooseAnswer = vi.fn();
+    const onChooseSnippetBranch = vi.fn();
+    const onChooseQuestionBranch = vi.fn();
+
+    const q = baseNode('q', 'question', { questionText: 'Pick one', optionOrder: ['e-snippet', 'e-a1', 'e-q2'] });
+    const nodes = new Map<string, RPNode>();
+    nodes.set('q', q);
+    nodes.set('a1', baseNode('a1', 'answer', { answerText: 'Raw answer', displayLabel: 'Shown answer' }));
+    nodes.set('s-file', baseNode('s-file', 'snippet', { radiprotocol_snippetPath: 'Chest/report.json' }));
+    nodes.set('q2', baseNode('q2', 'question', { questionText: 'Next question' }));
+    const graph: ProtocolGraph = {
+      canvasFilePath: 'test.canvas',
+      nodes,
+      edges: [
+        { id: 'e-a1', fromNodeId: 'q', toNodeId: 'a1' },
+        { id: 'e-q2', fromNodeId: 'q', toNodeId: 'q2', label: 'Go to q2' },
+        { id: 'e-snippet', fromNodeId: 'q', toNodeId: 's-file' },
+      ],
+      adjacency: new Map([['q', ['a1', 'q2', 's-file']]]),
+      reverseAdjacency: new Map(),
+      startNodeId: 'q',
+    };
+
+    const result = renderQuestionAtNode(asHtml(textZone), asHtml(actionZone), graph, {
+      status: 'at-node', currentNodeId: 'q', accumulatedText: '', canStepBack: true, canRedo: false, undoStackSize: 0,
+    }, {
+      bindClick: (el, handler) => { (el as unknown as MockEl).clickHandler = handler; },
+      renderError: vi.fn(),
+      onChooseAnswer,
+      onChooseSnippetBranch,
+      onChooseQuestionBranch,
+    });
+
+    expect(result).toBe('rendered');
+    expect(actionZone.children.map((c) => c.cls)).toEqual(['rp-option-list rp-stack']);
+    const buttons = actionZone.children[0]!.children;
+    expect(buttons.map((b) => b.cls)).toEqual(['rp-snippet-branch-btn', 'rp-answer-btn', 'rp-question-transition-btn']);
+    expect(buttons.map((b) => b.text)).toEqual(['📄 report', 'Shown answer', 'Go to q2']);
+
+    buttons[0]!.clickHandler?.({} as MouseEvent);
+    buttons[1]!.clickHandler?.({} as MouseEvent);
+    buttons[2]!.clickHandler?.({} as MouseEvent);
+    expect(onChooseSnippetBranch.mock.calls[0]?.[0].id).toBe('s-file');
+    expect(onChooseSnippetBranch.mock.calls[0]?.[1]).toBe(true);
+    expect(onChooseAnswer.mock.calls[0]?.[0].id).toBe('a1');
+    expect(onChooseQuestionBranch.mock.calls[0]?.[0].id).toBe('e-q2');
+  });
+
   it('returns error/not-question for host-specific chrome handling', () => {
     const textZone = new MockEl('text');
     const actionZone = new MockEl('actions');

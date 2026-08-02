@@ -4,6 +4,7 @@
 // via the explicit edge.isLoopExit flag, and uses verbatim exit labels.
 import type { ProtocolGraph, RPEdge } from '../../graph/graph-model';
 import { nodeLabel } from '../../graph/node-label';
+import { orderedOutgoingEdges } from '../../graph/edge-order';
 import type { RunnerState } from '../runner-state';
 import { createButton } from '../../utils/dom-helpers';
 
@@ -42,7 +43,9 @@ export function renderLoopPicker(
   }
 
   // RUN-01: one button per outgoing edge (Pitfall 4 — filter edges, not adjacency).
-  const outgoing = graph.edges.filter(e => e.fromNodeId === state.nodeId);
+  // Authored `optionOrder` (when present) determines the picker button order;
+  // absent → edges-array order (fallback).
+  const outgoing = orderedOutgoingEdges(graph, state.nodeId);
   const list = actionZone.createDiv({ cls: 'rp-loop-picker-list rp-stack-md' });
   for (const edge of outgoing) {
     // Exit edges are identified by edge.isLoopExit === true (explicit metadata,

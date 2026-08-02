@@ -3,6 +3,7 @@ import type RadiProtocolPlugin from '../main';
 import type { ProtocolDocumentV1, ProtocolEdgeRecord, ProtocolNodeRecord } from '../protocol/protocol-document';
 import type { RPNodeKind } from '../graph/graph-model';
 import { SnippetTreePicker, type SnippetTreePickerResult } from './snippet-tree-picker';
+import { mountOptionOrderChips, type OptionOrderChipItem } from './option-order-chip-editor';
 import { defaultT, type Translator } from '../i18n';
 import dagre from 'dagre';
 
@@ -341,6 +342,85 @@ function deriveProtocolEditorEdgeLabel(
 ): string | undefined {
   if (currentLabel !== undefined && currentLabel.trim() !== '') return currentLabel;
   return defaultProtocolEditorEdgeLabelForTarget(targetNode);
+}
+
+function optionOrderChipLabel(
+  edge: ProtocolEdgeRecord,
+  targetNode: ProtocolNodeRecord | undefined,
+): string {
+  // Authored non-blank edge label wins for all kinds; answer/snippet targets get
+  // their default label via deriveProtocolEditorEdgeLabel. Question/text-block/
+  // loop targets fall back to kind-aware on-disk fields mirroring `nodeLabel`
+  // (node-label.ts) so chip captions match the runner's per-kind captions.
+  // Labels are user-authored — never wrapped in t().
+  const derived = deriveProtocolEditorEdgeLabel(targetNode, edge.label);
+  if (derived !== undefined && derived.trim() !== '') return derived;
+  if (targetNode === undefined) return edge.toNodeId;
+  const kind = targetNode.kind;
+  if (kind === 'question') {
+    const qt = targetNode.fields['questionText'];
+    if (typeof qt === 'string' && qt.trim() !== '') return qt;
+  } else if (kind === 'text-block') {
+    const content = targetNode.fields['content'];
+    if (typeof content === 'string' && content.trim() !== '') return content.slice(0, 30);
+  } else if (kind === 'loop-start') {
+    const ll = targetNode.fields['loopLabel'];
+    if (typeof ll === 'string' && ll.trim() !== '') return ll;
+  }
+  if (typeof targetNode.text === 'string' && targetNode.text.trim() !== '') return targetNode.text;
+  return targetNode.id;
+}
+
+// Order on-disk outgoing-edge items by the question's `fields.optionOrder`.
+// Mirrors `orderedOutgoingEdges` (src/graph/edge-order.ts) but operates on a
+// generic `{ id }` item list (the editor works with on-disk records, not the
+// runtime ProtocolGraph). Listed ids emit in order (stale + duplicates dropped);
+// unlisted items append at the end in original order; absent `optionOrder`
+// returns items unchanged (fallback). Stale ids are dropped here so the chip
+// list shows only currently-outgoing edges (FR-3/FR-9); the on-disk field is
+// rebuilt from the chip draft on save.
+function orderItemsByOptionOrder<T extends { id: string }>(items: T[], optionOrder: string[] | undefined): T[] {
+  if (optionOrder === undefined) return items;
+  const byId = new Map<string, T>();
+  for (const item of items) byId.set(item.id, item);
+  const ordered: T[] = [];
+  const seen = new Set<string>();
+  for (const id of optionOrder) {
+    if (typeof id !== 'string') continue;
+    const item = byId.get(id);
+    if (item === undefined || seen.has(id)) continue;
+    seen.add(id);
+    ordered.push(item);
+  }
+  for (const item of items) {
+    if (seen.has(item.id)) continue;
+    seen.add(item.id);
+    ordered.push(item);
+  }
+  return ordered;
+}
+
+// FR-6: when a new outgoing edge is appended to a question that already has an
+// authored `fields.optionOrder`, append the new edge id to the end of that list
+// inside the same `protocolDocumentStore.update` mutator that appends the edge
+// (atomic — one WriteMutex-protected write). No-op when the source is not a
+// question or has no array optionOrder. Returns a new nodes array; the source
+// node is shallow-copied with an updated `fields` object so unrelated metadata
+// is preserved by the `{ ...n.fields }` spread. Exported for unit testing.
+export function appendEdgeIdToOptionOrder(
+  nodes: ProtocolNodeRecord[],
+  sourceNodeId: string,
+  edgeId: string,
+): ProtocolNodeRecord[] {
+  return nodes.map((n) => {
+    if (n.id !== sourceNodeId || n.kind !== 'question') return n;
+    const existingOrder = n.fields['optionOrder'];
+    if (!Array.isArray(existingOrder)) return n;
+    return {
+      ...n,
+      fields: { ...n.fields, optionOrder: [...existingOrder, edgeId] },
+    };
+  });
 }
 
 /* Phase 4D/4E — generate unique IDs */
@@ -879,16 +959,11 @@ export class ProtocolEditorView extends ItemView {
         toNodeId: newNode.id,
         label: shouldDisplay ? defaultLabel : undefined,
       };
-      const edges = canCreateProtocolEditorEdge(existing.edges, fromNodeId, newNode.id) === 'ok'
-        ? [...existing.edges, newEdge]
-        : existing.edges;
-      return {
-        ...existing,
-        nodes: [...existing.nodes, newNode],
-        edges,
-        viewport: this.currentViewportState(),
-        updatedAt: new Date().toISOString(),
-      };
+      const edgeAdded = canCreateProtocolEditorEdge(existing.edges, fromNodeId, newNode.id) === 'ok';
+      const edges = edgeAdded ? [...existing.edges, newEdge] : existing.edges;
+      const baseNodes = [...existing.nodes, newNode];
+      const nodes = edgeAdded ? appendEdgeIdToOptionOrder(baseNodes, fromNodeId, newEdge.id) : baseNodes;
+      return { ...existing, nodes, edges, viewport: this.currentViewportState(), updatedAt: new Date().toISOString() };
     }).then((updated) => {
       try {
         if (this.protocolPath !== protocolPath || this.loadGeneration !== generation) {
@@ -1474,7 +1549,8 @@ export class ProtocolEditorView extends ItemView {
         if (existing === null) protocolMissingFileError();
         const currentDecision = canCreateProtocolEditorEdge(existing.edges, state.fromNodeId, toNodeId);
         if (currentDecision !== 'ok') return existing;
-        return { ...existing, edges: [...existing.edges, newEdge], viewport: this.currentViewportState(), updatedAt: new Date().toISOString() };
+        const nodes = appendEdgeIdToOptionOrder(existing.nodes, state.fromNodeId, newEdge.id);
+        return { ...existing, nodes, edges: [...existing.edges, newEdge], viewport: this.currentViewportState(), updatedAt: new Date().toISOString() };
       });
       new Notice(this.plugin.i18n.t('protocolEditor.edgeCreated'));
       await this.loadProtocol(this.protocolPath);
@@ -2150,11 +2226,14 @@ export class ProtocolEditorView extends ItemView {
     header.createEl('h3', { text: t('protocolEditor.editNode') });
     const closeBtn = header.createEl('button', { cls: 'rp-protocol-editor-modal-close', text: '✕', attr: { 'aria-label': t('protocolEditor.close') } });
     let closeActiveSnippetTargetPicker: (() => void) | null = null;
+    let optionOrderChipHandle: { destroy(): void } | null = null;
     const closeModal = () => {
       if (closeActiveSnippetTargetPicker !== null) {
         closeActiveSnippetTargetPicker();
         closeActiveSnippetTargetPicker = null;
       }
+      optionOrderChipHandle?.destroy();
+      optionOrderChipHandle = null;
       modalEl.remove();
       this.restoreEditorFocus();
     };
@@ -2173,7 +2252,7 @@ export class ProtocolEditorView extends ItemView {
 
     const body = modal.createDiv({ cls: 'rp-protocol-editor-modal-body' });
 
-    const textControls: Array<{ key: string; value: () => string | boolean | undefined }> = [];
+    const textControls: Array<{ key: string; value: () => string | boolean | string[] | undefined }> = [];
     const firstEditableField: Array<HTMLInputElement | HTMLTextAreaElement> = [];
     const addInput = (key: string, label: string, value: unknown, multiline = false) => {
       const field = body.createDiv({ cls: 'rp-protocol-editor-modal-field' });
@@ -2210,6 +2289,42 @@ export class ProtocolEditorView extends ItemView {
       input.checked = nodeRecord.fields['loop'] === true;
       label.createSpan({ text: t('protocolEditor.loopToggleLabel') });
       textControls.push({ key: 'loop', value: () => input.checked ? true : undefined });
+    };
+
+    const addOptionOrderChips = (nodeRecord: ProtocolNodeRecord) => {
+      const outgoing = (this.doc?.edges ?? []).filter((e) => e.fromNodeId === nodeRecord.id);
+      const nodeById = new Map((this.doc?.nodes ?? []).map((n) => [n.id, n] as [string, ProtocolNodeRecord]));
+      const items: OptionOrderChipItem[] = outgoing.map((e) => ({
+        id: e.id,
+        label: optionOrderChipLabel(e, nodeById.get(e.toNodeId)),
+      }));
+      const optionOrderRaw = nodeRecord.fields['optionOrder'];
+      const originalOptionOrder = Array.isArray(optionOrderRaw)
+        ? optionOrderRaw.filter((v): v is string => typeof v === 'string')
+        : undefined;
+      const originallyPresent = originalOptionOrder !== undefined;
+      const draft = orderItemsByOptionOrder(items, originalOptionOrder);
+      // FR-5/FR-9/backward-compat: persist only when the user reordered (modified)
+      // OR the question already had an optionOrder — so saving a legacy question
+      // without reordering does NOT activate the interleaved renderer (existing
+      // protocols keep their grouped rendering) and does NOT scrub the field.
+      // When the user reorders, preserve any original stale ids (edges since
+      // deleted/reassigned) appended after the reordered live ids — stale ids are
+      // filtered at render, never cleaned on write (FR-9).
+      let modified = false;
+      const container = body.createDiv({ cls: 'rp-option-order-chip-host' });
+      optionOrderChipHandle = mountOptionOrderChips(container, draft, () => { modified = true; }, { t });
+      textControls.push({
+        key: 'optionOrder',
+        value: () => {
+          if (!modified && !originallyPresent) return undefined;     // legacy save, no reorder → omit (fallback preserved)
+          if (!modified) return originalOptionOrder;                 // originally present, untouched → preserve verbatim (incl. stale ids)
+          const draftIds = draft.map((i) => i.id);
+          const liveIds = new Set(draftIds);
+          const stale = (originalOptionOrder ?? []).filter((id) => !liveIds.has(id));
+          return [...draftIds, ...stale];                            // reordered: live ids + preserved stale
+        },
+      });
     };
 
     const addSeparator = (key: string, label: string, value: unknown) => {
@@ -2372,6 +2487,7 @@ export class ProtocolEditorView extends ItemView {
       case 'question':
         addInput('questionText', t('protocolEditor.questionTextLabel'), node.fields['questionText'] ?? node.text, true);
         addLoopToggle(node);
+        addOptionOrderChips(node);
         break;
       case 'answer':
         addInput('displayLabel', t('protocolEditor.answerButtonLabelLabel'), node.fields['displayLabel']);

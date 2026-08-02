@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { ProtocolEditorView } from '../../views/protocol-editor-view';
+import { ProtocolEditorView, appendEdgeIdToOptionOrder } from '../../views/protocol-editor-view';
 import type { ProtocolDocumentV1, ProtocolNodeRecord } from '../../protocol/protocol-document';
 
 // Hoisted so the hoisted obsidian mock factory can write captured Menu items.
@@ -35,7 +35,13 @@ interface MockEl {
   hasClass: (cls: string) => boolean;
   setAttribute: (k: string, v: string) => void;
   getAttribute: (k: string) => string | null;
+  textContent: string;
+  dataset: Record<string, string>;
+  getAttr: (name: string) => string | null;
+  querySelectorAll: (selector: string) => MockEl[];
+  contains: (node: Node | null) => boolean;
   addEventListener: (type: string, handler: (ev: unknown) => void) => void;
+  removeEventListener: (type: string, handler: (ev: unknown) => void) => void;
   toggleClass: (cls: string, force?: boolean) => void;
   closest: (selector: string) => MockEl | null;
   querySelector: (sel: string) => MockEl | null;
@@ -110,10 +116,29 @@ function makeEl(tag = 'div'): MockEl {
     hasClass(cls: string): boolean { return classList.has(cls); },
     setAttribute(k: string, v: string): void { attrs[k] = v; },
     getAttribute(k: string): string | null { return attrs[k] ?? null; },
+    get textContent(): string { return el._text; },
+    set textContent(value: string) { el._text = value; },
+    dataset: {} as Record<string, string>,
+    getAttr(name: string): string | null { return attrs[name] ?? null; },
+    querySelectorAll(selector: string): MockEl[] {
+      const want = selector.startsWith('.') ? selector.slice(1) : selector;
+      const out: MockEl[] = [];
+      const visit = (e: MockEl): void => {
+        if (e.classList.has(want)) out.push(e);
+        for (const c of e.children) visit(c);
+      };
+      for (const c of children) visit(c);
+      return out;
+    },
+    contains(_node: Node | null): boolean { return false; },
     addEventListener(type: string, handler: (ev: unknown) => void): void {
       const arr = listeners.get(type) ?? [];
       arr.push(handler);
       listeners.set(type, arr);
+    },
+    removeEventListener(type: string, handler: (ev: unknown) => void): void {
+      const arr = listeners.get(type);
+      if (arr) listeners.set(type, arr.filter((h) => h !== handler));
     },
     toggleClass(cls: string, force?: boolean): void {
       if (force === true) classList.add(cls);
@@ -1284,5 +1309,125 @@ describe('ProtocolEditorView: ordinary Question edge labels', () => {
       (globalThis as any).window = savedWindow;
       (globalThis as any).HTMLElement = savedHTMLElement;
     }
+  });
+});
+
+describe('ProtocolEditorView: optionOrder FR-6 append + FR-5 drag-persist', () => {
+  let savedWindow: unknown;
+  let savedRAF: unknown;
+  let savedDocument: unknown;
+  beforeEach(() => {
+    savedWindow = (globalThis as any).window;
+    savedRAF = (globalThis as any).requestAnimationFrame;
+    savedDocument = (globalThis as any).document;
+    (globalThis as any).window = globalThis;
+    (globalThis as any).requestAnimationFrame = (cb: FrameRequestCallback) => { cb(0); return 0; };
+  });
+  afterEach(() => {
+    (globalThis as any).window = savedWindow;
+    (globalThis as any).requestAnimationFrame = savedRAF;
+    (globalThis as any).document = savedDocument;
+  });
+
+  function createOptionOrderView(): { view: ProtocolEditorView; documentBody: MockEl; updateSpy: ReturnType<typeof vi.fn> } {
+    const documentBody = makeEl('body');
+    (globalThis as any).document = { body: documentBody, activeElement: null };
+    const holder: { view: ProtocolEditorView | null } = { view: null };
+    const updateSpy = vi.fn(async (_path: string, mutator: (doc: ProtocolDocumentV1) => ProtocolDocumentV1): Promise<ProtocolDocumentV1> => {
+      const current = (holder.view as any).doc as ProtocolDocumentV1;
+      const updated = mutator(current);
+      (holder.view as any).doc = updated;
+      return updated;
+    });
+    const mockPlugin = { i18n: { t }, settings: { snippetFolderPath: '.radiprotocol/snippets' }, protocolDocumentStore: { update: updateSpy } } as any;
+    const view = new ProtocolEditorView({} as any, mockPlugin);
+    holder.view = view;
+    (view as any).surfaceEl = makeEl('div');
+    (view as any).svgEl = makeEl('svg');
+    (view as any).viewportEl = makeEl('div');
+    (view as any).rootEl = makeEl('div');
+    (view as any).protocolPath = 'test.rp.json';
+    (view as any).zoom = 1;
+    (view as any).loadProtocol = vi.fn(async () => {});
+    (view as any).restoreEditorFocus = vi.fn();
+    const doc: ProtocolDocumentV1 = {
+      schema: 'radiprotocol.protocol', version: 1, id: 'test-doc', title: 'Test',
+      createdAt: '2025-01-01T00:00:00Z', updatedAt: '2025-01-01T00:00:00Z',
+      nodes: [
+        { id: 'node-q', kind: 'question', x: 100, y: 100, width: 200, height: 80, text: 'Pick', fields: { questionText: 'Pick', optionOrder: ['e-a'] } },
+        { id: 'node-a', kind: 'answer', x: 300, y: 100, width: 200, height: 80, text: 'A', fields: { answerText: 'A' } },
+      ],
+      edges: [{ id: 'e-a', fromNodeId: 'node-q', toNodeId: 'node-a' }],
+    };
+    (view as any).doc = doc;
+    return { view, documentBody, updateSpy };
+  }
+
+  it('FR-6: appendEdgeIdToOptionOrder appends to a question optionOrder; no-op otherwise; immutable', () => {
+    const nodes: ProtocolNodeRecord[] = [
+      { id: 'q1', kind: 'question', x: 0, y: 0, width: 1, height: 1, fields: { questionText: 'Q', optionOrder: ['e1'] } },
+      { id: 'a1', kind: 'answer', x: 0, y: 0, width: 1, height: 1, fields: { answerText: 'A' } },
+    ];
+    const updated = appendEdgeIdToOptionOrder(nodes, 'q1', 'e2');
+    expect(updated[0]!.fields['optionOrder']).toEqual(['e1', 'e2']);
+    expect(appendEdgeIdToOptionOrder(nodes, 'a1', 'e2')[0]!.fields['optionOrder']).toEqual(['e1']);
+    const noOrder: ProtocolNodeRecord[] = [{ id: 'q2', kind: 'question', x: 0, y: 0, width: 1, height: 1, fields: { questionText: 'Q2' } }];
+    expect(appendEdgeIdToOptionOrder(noOrder, 'q2', 'e3')[0]!.fields['optionOrder']).toBeUndefined();
+    expect(updated).not.toBe(nodes);
+    expect(updated[0]).not.toBe(nodes[0]);
+    expect(nodes[0]!.fields['optionOrder']).toEqual(['e1']);
+  });
+
+  it('FR-6: addNodeAndConnectAtWorldPoint appends the new edge id to an ordered question', async () => {
+    const { view } = createOptionOrderView();
+    (view as any).applyCreatedProtocolDocument = vi.fn((updated: ProtocolDocumentV1, id: string) => updated.nodes.find((n) => n.id === id) ?? null);
+    (view as any).openEditModal = vi.fn();
+    (view as any).addNodeAndConnectAtWorldPoint('node-q', 'answer', 200, 200);
+    await new Promise((r) => setTimeout(r, 0));
+    const doc = (view as any).doc as ProtocolDocumentV1;
+    const newEdge = doc.edges.find((e) => e.fromNodeId === 'node-q' && e.toNodeId !== 'node-a');
+    expect(newEdge).toBeDefined();
+    expect(doc.nodes.find((n) => n.id === 'node-q')!.fields['optionOrder']).toEqual(['e-a', newEdge!.id]);
+  });
+
+  it('FR-6: finishConnectionDrag appends the new edge id to an ordered question', async () => {
+    const { view } = createOptionOrderView();
+    (view as any).doc.nodes.push({ id: 'node-a2', kind: 'answer', x: 0, y: 0, width: 1, height: 1, fields: { answerText: 'A2' } });
+    (view as any).connectionDragState = { fromNodeId: 'node-q', previewPath: makeEl('path') };
+    const portEl = makeEl('div');
+    portEl.setAttr('data-node-id', 'node-a2');
+    (view as any).findInputPortAt = vi.fn(() => portEl);
+    (view as any).finishConnectionDrag({ clientX: 0, clientY: 0 } as MouseEvent);
+    await new Promise((r) => setTimeout(r, 0));
+    const doc = (view as any).doc as ProtocolDocumentV1;
+    const newEdge = doc.edges.find((e) => e.fromNodeId === 'node-q' && e.toNodeId === 'node-a2');
+    expect(newEdge).toBeDefined();
+    expect(doc.nodes.find((n) => n.id === 'node-q')!.fields['optionOrder']).toEqual(['e-a', newEdge!.id]);
+  });
+
+  it('FR-5: dragging a chip and saving rewrites optionOrder; reopening shows the same order', async () => {
+    const { view, documentBody } = createOptionOrderView();
+    (view as any).doc.nodes.push({ id: 'node-a2', kind: 'answer', x: 300, y: 200, width: 200, height: 80, text: 'A2', fields: { answerText: 'A2' } });
+    (view as any).doc.edges.push({ id: 'e-b', fromNodeId: 'node-q', toNodeId: 'node-a2' });
+    (view as any).doc.nodes.find((n: ProtocolNodeRecord) => n.id === 'node-q').fields['optionOrder'] = ['e-a', 'e-b'];
+
+    (view as any).openEditModal((view as any).doc.nodes.find((n: ProtocolNodeRecord) => n.id === 'node-q'));
+    let chips = documentBody.querySelectorAll('.rp-option-order-chip');
+    expect(chips.length).toBe(2);
+    // DOM order is [e-a (idx 0), e-b (idx 1)]. Drag e-a onto e-b: from=0 → to=1 → [e-b, e-a].
+    const dt = { store: {} as Record<string, string>, setData(k: string, v: string) { this.store[k] = v; }, getData(k: string) { return this.store[k] ?? ''; } };
+    for (const h of chips[0]!._listeners.get('dragstart') ?? []) h({ dataTransfer: dt, preventDefault() {} });
+    for (const h of chips[1]!._listeners.get('drop') ?? []) h({ dataTransfer: dt, preventDefault() {}, relatedTarget: null });
+
+    const saveBtn = findAllByTag(documentBody, 'button').find((b) => b._text === 'Save')!;
+    for (const handler of saveBtn._listeners.get('click') ?? []) await handler({});
+
+    const persisted = (view as any).doc as ProtocolDocumentV1;
+    expect(persisted.nodes.find((n) => n.id === 'node-q')!.fields['optionOrder']).toEqual(['e-b', 'e-a']);
+
+    // Reopen: chips in DOM order reflect the persisted optionOrder (e-b→A2, e-a→A).
+    (view as any).openEditModal((view as any).doc.nodes.find((n: ProtocolNodeRecord) => n.id === 'node-q'));
+    chips = documentBody.querySelectorAll('.rp-option-order-chip');
+    expect(chips.map((c) => c.querySelector('.rp-option-order-chip-label')?._text)).toEqual(['A2', 'A']);
   });
 });

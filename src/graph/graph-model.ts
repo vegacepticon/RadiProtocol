@@ -41,6 +41,19 @@ export interface QuestionNode extends RPNodeBase {
    * `kind: 'loop'` → `kind: 'question'` + `loop: true`).
    */
   loop?: boolean;
+  /**
+   * Author-configured display order for this question's outgoing selection
+   * options — an explicit list of outgoing edge ids in the order the options
+   * should be presented (interleaving answer / question-transition /
+   * snippet-branch kinds). Absent or `undefined` = no explicit order → the
+   * Runner falls back to its default grouped edges-array rendering (backward
+   * compatible). Stale ids (deleted/reassigned/non-outgoing edges) and
+   * duplicates are silently ignored by downstream consumers; unlisted current
+   * outgoing edges are appended at the end. An empty array `[]` is distinct
+   * from `undefined` — it yields all current outgoing edges in default order,
+   * ungrouped.
+   */
+  optionOrder?: string[];
 }
 
 export interface AnswerNode extends RPNodeBase {

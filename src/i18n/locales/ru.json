@@ -105,7 +105,10 @@
     "close": "Закрыть",
     "untyped": "без типа",
     "loopToggleLabel": "Цикл",
-    "loopBadgeAriaLabel": "Циклический вопрос"
+    "loopBadgeAriaLabel": "Циклический вопрос",
+    "optionOrderLabel": "Порядок отображения",
+    "optionOrderHelp": "Перетащите чипы, чтобы изменить порядок вариантов этого вопроса в Runner.",
+    "optionOrderDragAria": "Перетащите, чтобы переупорядочить {label}"
   },
   "donate": {
     "invitation": "Спасибо за поддержку! Если RadiProtocol экономит вам время — буду рад любому переводу.",

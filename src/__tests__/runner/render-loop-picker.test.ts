@@ -288,6 +288,36 @@ describe('shared loop picker renderer', () => {
     expect(exitBtn.attrs.get('aria-label')).toBe('Done');
   });
 
+  it('renders body/exit buttons in authored optionOrder when present', () => {
+    const textZone = new MockEl('text');
+    const actionZone = new MockEl('actions');
+    const bodyEdge = { id: 'e-body', fromNodeId: 'loop', toNodeId: 'body' };
+    const exitEdge = { id: 'e-exit', fromNodeId: 'loop', toNodeId: 'exit', label: 'finish', isLoopExit: true };
+    const onChooseLoopBranch = vi.fn();
+
+    // Authored order: exit first, then body (reverse of edges-array order).
+    const orderedGraph: ProtocolGraph = {
+      ...graph([bodyEdge, exitEdge]),
+      nodes: new Map<string, RPNode>([
+        ['loop', node('loop', 'question', { questionText: 'Repeat?', loop: true, optionOrder: ['e-exit', 'e-body'] })],
+        ['body', node('body', 'answer', { answerText: 'Body answer', displayLabel: 'Body label' })],
+        ['exit', node('exit', 'text-block', { content: 'Done' })],
+      ]),
+    };
+
+    renderLoopPicker(asHtml(textZone), asHtml(actionZone), orderedGraph, {
+      status: 'awaiting-loop-pick', nodeId: 'loop', accumulatedText: '', canStepBack: true, canRedo: false, undoStackSize: 0,
+    }, {
+      bindClick: (el, handler) => { (el as unknown as MockEl).clickHandler = handler; },
+      renderError: vi.fn(),
+      onChooseLoopBranch,
+    });
+
+    const list = findByClass(actionZone, 'rp-loop-picker-list')[0]!;
+    expect(list.children.map((b) => b.cls)).toEqual(['rp-loop-exit-btn', 'rp-loop-body-btn']);
+    expect(list.children.map((b) => b.text)).toEqual(['finish', 'Body label']);
+  });
+
   it('a whitespace-only exit label renders verbatim visible text but a target-derived aria-label', () => {
     const textZone = new MockEl('text');
     const actionZone = new MockEl('actions');

@@ -66,6 +66,25 @@ function getOptionalBoolean(obj: Record<string, unknown>, key: string, legacyKey
   return typeof v === 'boolean' ? v : undefined;
 }
 
+/**
+ * Optional string array with three distinct outcomes: a verbatim `string[]`
+ * (including `[]` and arrays containing unknown/deleted ids — preservation is
+ * at the document level), and `undefined` (absent, or non-array, or an array
+ * containing any non-string element). Whole-field type reading: a single
+ * non-string element collapses the entire field to `undefined`, mirroring
+ * `getOptionalBoolean`'s non-boolean → undefined behaviour. Stale-id
+ * filtering is deferred to a post-parse projection over the completed graph
+ * (the two-pass parser is edge-id-blind at extraction time).
+ */
+function getOptionalStringArray(obj: Record<string, unknown>, key: string, legacyKey?: string): string[] | undefined {
+  const v = getCompatValue(obj, key, legacyKey);
+  if (!Array.isArray(v)) return undefined;
+  for (const item of v) {
+    if (typeof item !== 'string') return undefined;
+  }
+  return v;
+}
+
 export class ProtocolDocumentParser {
   private readonly t: Translator;
 
@@ -206,6 +225,7 @@ export class ProtocolDocumentParser {
           kind: 'question',
           questionText: getString(fields, 'questionText', raw.text ?? '', 'radiprotocol_questionText'),
           loop: getOptionalBoolean(fields, 'loop', 'radiprotocol_loop'),
+          optionOrder: getOptionalStringArray(fields, 'optionOrder'),
         };
         return node;
       }

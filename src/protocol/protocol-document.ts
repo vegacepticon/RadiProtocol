@@ -35,7 +35,12 @@ export interface ProtocolDocumentV1 {
   updatedAt: string;
   /** All protocol nodes. Order is not semantically significant. */
   nodes: ProtocolNodeRecord[];
-  /** All protocol edges. Order is not semantically significant. */
+  /**
+   * All protocol edges. Order is not semantically significant for traversal;
+   * however, a question node's `fields.optionOrder` may reference edge ids to
+   * express a display order for that question's outgoing selection options
+   * (see ProtocolNodeRecord.fields.optionOrder).
+   */
   edges: ProtocolEdgeRecord[];
   /** Whether final runner self-check checklist is enabled. */
   selfCheckEnabled?: boolean;
@@ -80,7 +85,7 @@ export interface ProtocolNodeRecord {
   /**
    * Typed node fields. Keys are camelCase without prefix:
    * - questionText, answerText, displayLabel, content, separator,
-   *   loop, subfolderPath, snippetLabel, snippetSeparator, snippetPath.
+   *   loop, optionOrder, subfolderPath, snippetLabel, snippetSeparator, snippetPath.
    *
    * Parser validates field presence/absence per node kind.
    */

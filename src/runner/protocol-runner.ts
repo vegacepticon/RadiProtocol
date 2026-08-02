@@ -1,6 +1,7 @@
 // runner/protocol-runner.ts
 // Pure module — zero Obsidian API imports (NFR-01)
 import type { ProtocolGraph, LoopContext } from '../graph/graph-model';
+import { orderedOutgoingEdges } from '../graph/edge-order';
 import type { RunnerState, UndoEntry, RedoEntry } from './runner-state';
 import { TextAccumulator } from './text-accumulator';
 import { RUNNER_STATUS } from '../constants/runner-states';
@@ -143,12 +144,25 @@ export class ProtocolRunner {
     const currentNode = this.graph.nodes.get(this.currentNodeId);
     if (currentNode === undefined || currentNode.kind !== 'question') return;
 
-    // D-08 / D-09: first ANSWER-kind neighbor in adjacency order; snippets ignored.
-    const neighborIds = this.graph.adjacency.get(this.currentNodeId) ?? [];
+    // FR-8 / D-08 / D-09: select the first answer-kind option. When the question
+    // carries an authored `optionOrder`, resolve its outgoing edges in display
+    // order and pick the first whose target is an answer; stale ids yield no
+    // target and are skipped silently. If `optionOrder` is absent OR yields no
+    // answer edge, fall back to today's adjacency-order scan.
     let skipTargetId: string | undefined;
-    for (const nid of neighborIds) {
-      const n = this.graph.nodes.get(nid);
-      if (n !== undefined && n.kind === 'answer') { skipTargetId = nid; break; }
+    if (currentNode.optionOrder !== undefined) {
+      const orderedEdges = orderedOutgoingEdges(this.graph, this.currentNodeId);
+      for (const edge of orderedEdges) {
+        const target = this.graph.nodes.get(edge.toNodeId);
+        if (target !== undefined && target.kind === 'answer') { skipTargetId = edge.toNodeId; break; }
+      }
+    }
+    if (skipTargetId === undefined) {
+      const neighborIds = this.graph.adjacency.get(this.currentNodeId) ?? [];
+      for (const nid of neighborIds) {
+        const n = this.graph.nodes.get(nid);
+        if (n !== undefined && n.kind === 'answer') { skipTargetId = nid; break; }
+      }
     }
     if (skipTargetId === undefined) return;  // no answer neighbor — UI hides the button, this is defence in depth
 

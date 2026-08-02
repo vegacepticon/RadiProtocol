@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { ProtocolRunner } from '../../runner/protocol-runner';
-import type { ProtocolGraph, RPNode } from '../../graph/graph-model';
+import type { ProtocolGraph, RPNode, RPEdge } from '../../graph/graph-model';
 
 /**
  * Phase 53 Plan 01 — ProtocolRunner.skip() specs (D-07..D-11).
@@ -287,5 +287,125 @@ describe('ProtocolRunner.skip() — Phase 53 D-07..D-11', () => {
     if (state.status !== 'at-node') return;
     expect(state.currentNodeId).toBe(preSkipNodeId);
     expect(state.accumulatedText).toBe(preSkipAccum);
+  });
+});
+
+describe('ProtocolRunner.skip() — optionOrder (FR-8/FR-9)', () => {
+  function makeOrderedQuestionGraph(opts: {
+    optionOrder: string[];
+    edges: Array<{ id: string; toNodeId: string; toKind: 'answer' | 'snippet' | 'text-block' }>;
+    answerDownstream?: Record<string, string>;
+  }): ProtocolGraph {
+    const nodes = new Map<string, RPNode>();
+    const adjacency = new Map<string, string[]>();
+    const reverseAdjacency = new Map<string, string[]>();
+    const edges: RPEdge[] = [];
+
+    nodes.set('n-start', { id: 'n-start', kind: 'start', x: 0, y: 0, width: 200, height: 60 });
+    nodes.set('q1', {
+      id: 'q1', kind: 'question',
+      x: 0, y: 120, width: 200, height: 60,
+      questionText: 'Q?',
+      optionOrder: opts.optionOrder,
+    } as RPNode);
+    adjacency.set('n-start', ['q1']);
+
+    const qNeighbors: string[] = [];
+    for (const e of opts.edges) {
+      if (e.toKind === 'answer') {
+        nodes.set(e.toNodeId, { id: e.toNodeId, kind: 'answer', x: 260, y: 0, width: 200, height: 60, answerText: `A:${e.toNodeId}` } as RPNode);
+      } else if (e.toKind === 'snippet') {
+        nodes.set(e.toNodeId, { id: e.toNodeId, kind: 'snippet', x: 260, y: 0, width: 200, height: 60, subfolderPath: 'sub' } as RPNode);
+      } else {
+        nodes.set(e.toNodeId, { id: e.toNodeId, kind: 'text-block', x: 260, y: 0, width: 200, height: 60, content: `T:${e.toNodeId}` } as RPNode);
+      }
+      edges.push({ id: e.id, fromNodeId: 'q1', toNodeId: e.toNodeId });
+      qNeighbors.push(e.toNodeId);
+    }
+    adjacency.set('q1', qNeighbors);
+
+    for (const [answerId, content] of Object.entries(opts.answerDownstream ?? {})) {
+      const tbId = `tb-${answerId}`;
+      nodes.set(tbId, { id: tbId, kind: 'text-block', x: 520, y: 0, width: 200, height: 60, content } as RPNode);
+      adjacency.set(answerId, [tbId]);
+      adjacency.set(tbId, []);
+    }
+    for (const nid of qNeighbors) {
+      if (!adjacency.has(nid)) adjacency.set(nid, []);
+    }
+
+    return {
+      canvasFilePath: 'test:option-order-skip.canvas',
+      nodes, edges, adjacency, reverseAdjacency,
+      startNodeId: 'n-start',
+    };
+  }
+
+  it('FR-8: optionOrder present → skip picks the first answer in authored order (not adjacency order)', () => {
+    const runner = new ProtocolRunner();
+    // Adjacency order: [a1, a2, s0]. Authored order: [s0, a2, a1].
+    // First answer in authored order = a2 (adjacency-first would be a1).
+    const graph = makeOrderedQuestionGraph({
+      optionOrder: ['e-snippet', 'e-a2', 'e-a1'],
+      edges: [
+        { id: 'e-a1', toNodeId: 'a1', toKind: 'answer' },
+        { id: 'e-a2', toNodeId: 'a2', toKind: 'answer' },
+        { id: 'e-snippet', toNodeId: 's0', toKind: 'snippet' },
+      ],
+      answerDownstream: { a1: 'DS1', a2: 'DS2' },
+    });
+    runner.start(graph);
+    let state = runner.getState();
+    expect(state.status).toBe('at-node');
+    if (state.status !== 'at-node') return;
+    expect(state.currentNodeId).toBe('q1');
+
+    runner.skip();
+
+    state = runner.getState();
+    let finalText = '';
+    if (state.status === 'complete') finalText = state.finalText;
+    else if (state.status === 'at-node') finalText = state.accumulatedText;
+    expect(finalText).toContain('DS2');
+    expect(finalText).not.toContain('DS1');
+    expect(finalText).not.toContain('A:a1');
+    expect(finalText).not.toContain('A:a2');
+  });
+
+  it('FR-9: stale id in optionOrder → skipped silently, first real answer picked', () => {
+    const runner = new ProtocolRunner();
+    const graph = makeOrderedQuestionGraph({
+      optionOrder: ['e-stale', 'e-a1'],
+      edges: [
+        { id: 'e-a1', toNodeId: 'a1', toKind: 'answer' },
+      ],
+      answerDownstream: { a1: 'DS1' },
+    });
+    runner.start(graph);
+    runner.skip();
+    const state = runner.getState();
+    const finalText = state.status === 'complete' ? state.finalText : '';
+    expect(finalText).toContain('DS1');
+  });
+
+  it('FR-8 fallback: optionOrder present but no answer edges → skip no-op', () => {
+    const runner = new ProtocolRunner();
+    const graph = makeOrderedQuestionGraph({
+      optionOrder: ['e-snippet'],
+      edges: [
+        { id: 'e-snippet', toNodeId: 's0', toKind: 'snippet' },
+      ],
+    });
+    runner.start(graph);
+    const stateBefore = runner.getState();
+    const undoBefore = runner.getSerializableState()?.undoStack.length ?? 0;
+    runner.skip();
+    const stateAfter = runner.getState();
+    expect(stateAfter.status).toBe('at-node');
+    if (stateAfter.status === 'at-node') {
+      expect(stateAfter.currentNodeId).toBe('q1');
+      expect(stateAfter.accumulatedText).toBe(stateBefore.status === 'at-node' ? stateBefore.accumulatedText : '');
+    }
+    expect(runner.getSerializableState()?.undoStack.length ?? 0).toBe(undoBefore);
   });
 });

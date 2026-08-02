@@ -253,6 +253,83 @@ describe('ProtocolDocumentParser — node types', () => {
   });
 });
 
+describe('ProtocolDocumentParser — optionOrder', () => {
+  function docWithQuestion(fields: Record<string, unknown>): ProtocolDocumentV1 {
+    return validDoc({
+      nodes: [
+        { id: 'n-start', kind: 'start', x: 0, y: 0, width: 250, height: 60, fields: {} },
+        { id: 'n-q', kind: 'question', x: 0, y: 0, width: 250, height: 60, fields },
+      ],
+    });
+  }
+
+  it('absent optionOrder → undefined', () => {
+    const result = parser.parse(JSON.stringify(docWithQuestion({ questionText: 'Q?' })), 'test.rp.json');
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect((result.graph.nodes.get('n-q') as any).optionOrder).toBeUndefined();
+    }
+  });
+
+  it('valid string[] → verbatim (unknown ids preserved for round-trip)', () => {
+    const result = parser.parse(JSON.stringify(docWithQuestion({
+      questionText: 'Q?', optionOrder: ['e1', 'e2', 'e-stale'],
+    })), 'test.rp.json');
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect((result.graph.nodes.get('n-q') as any).optionOrder).toEqual(['e1', 'e2', 'e-stale']);
+    }
+  });
+
+  it('empty array [] → [] (distinct from undefined)', () => {
+    const result = parser.parse(JSON.stringify(docWithQuestion({
+      questionText: 'Q?', optionOrder: [],
+    })), 'test.rp.json');
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect((result.graph.nodes.get('n-q') as any).optionOrder).toEqual([]);
+    }
+  });
+
+  it('non-array values → undefined (42, "e1,e2", null, object)', () => {
+    const cases: Array<Record<string, unknown>> = [
+      { questionText: 'Q?', optionOrder: 42 },
+      { questionText: 'Q?', optionOrder: 'e1,e2' },
+      { questionText: 'Q?', optionOrder: null },
+      { questionText: 'Q?', optionOrder: { e1: true } },
+    ];
+    for (const fields of cases) {
+      const result = parser.parse(JSON.stringify(docWithQuestion(fields)), 'test.rp.json');
+      expect(result.success).toBe(true);
+      if (result.success) {
+        expect((result.graph.nodes.get('n-q') as any).optionOrder).toBeUndefined();
+      }
+    }
+  });
+
+  it('array with a non-string element → undefined (whole-field type violation)', () => {
+    const result = parser.parse(JSON.stringify(docWithQuestion({
+      questionText: 'Q?', optionOrder: ['e1', 42, 'e3'],
+    })), 'test.rp.json');
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect((result.graph.nodes.get('n-q') as any).optionOrder).toBeUndefined();
+    }
+  });
+
+  it('coexists with loop toggle', () => {
+    const result = parser.parse(JSON.stringify(docWithQuestion({
+      questionText: 'Q?', loop: true, optionOrder: ['e1', 'e2'],
+    })), 'test.rp.json');
+    expect(result.success).toBe(true);
+    if (result.success) {
+      const node = result.graph.nodes.get('n-q') as any;
+      expect(node.loop).toBe(true);
+      expect(node.optionOrder).toEqual(['e1', 'e2']);
+    }
+  });
+});
+
 describe('ProtocolDocumentParser — edges and adjacency', () => {
   function docWithEdge(
     from: string,

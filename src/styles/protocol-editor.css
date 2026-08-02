@@ -885,3 +885,60 @@
   color: var(--text-muted);
   opacity: 0.7;
 }
+
+/* FR optionOrder — draggable display-order chip list in the Question node modal. */
+.rp-option-order-field {
+  margin-top: var(--size-4-2);
+}
+
+.rp-option-order-help {
+  color: var(--text-muted);
+  font-size: var(--font-ui-smaller);
+  margin-bottom: var(--size-4-2);
+}
+
+.rp-option-order-chip-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--size-4-1);
+}
+
+.rp-option-order-chip {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: var(--size-4-1);
+  padding: 0 var(--size-4-1);
+  border-left: 4px solid var(--background-modifier-border);
+  border-radius: var(--radius-s);
+  min-height: 32px;
+}
+
+.rp-option-order-chip.drag-over {
+  background: var(--background-modifier-hover);
+  outline: 1px dashed var(--interactive-accent);
+}
+
+.rp-option-order-chip-handle {
+  cursor: grab;
+  width: 24px;
+  flex: 0 0 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: var(--font-text-size);
+  color: var(--text-muted);
+  user-select: none;
+}
+
+.rp-option-order-chip-handle:active {
+  cursor: grabbing;
+}
+
+.rp-option-order-chip-label {
+  flex: 1 1 auto;
+  font-size: var(--font-text-size);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

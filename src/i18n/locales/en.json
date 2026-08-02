@@ -105,7 +105,10 @@
     "close": "Close",
     "untyped": "untyped",
     "loopToggleLabel": "Loop",
-    "loopBadgeAriaLabel": "Loop question"
+    "loopBadgeAriaLabel": "Loop question",
+    "optionOrderLabel": "Display order",
+    "optionOrderHelp": "Drag chips to reorder this question's options as they appear in the Runner.",
+    "optionOrderDragAria": "Drag to reorder {label}"
   },
   "donate": {
     "invitation": "Thank you for your support! If RadiProtocol saves you time, any donation is appreciated.",
