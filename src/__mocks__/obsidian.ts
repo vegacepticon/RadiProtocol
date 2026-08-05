@@ -377,3 +377,17 @@ export class TFolder {
     this.children = children;
   }
 }
+
+/** Mock requestUrl — tests inject a vi.fn() via RegistryClient options (D2).
+ *  This default stub returns a 503 so a client constructed without the DI
+ *  option fails safe (catalog unavailable) rather than crashing. Type-check
+ *  resolves `obsidian` to the real obsidian.d.ts; this export is runtime-only. */
+export function requestUrl(_request: unknown): Promise<{
+  status: number;
+  text: string;
+  json: unknown;
+  arrayBuffer: ArrayBuffer;
+  headers: Record<string, string>;
+}> {
+  return Promise.resolve({ status: 503, text: '', json: {}, arrayBuffer: new ArrayBuffer(0), headers: {} });
+}

@@ -5,6 +5,12 @@ import { ProtocolDocumentParser } from './protocol/protocol-document-parser';
 import { ProtocolDocumentStore } from './protocol/protocol-document-store';
 import { SnippetManagerView, SNIPPET_MANAGER_VIEW_TYPE } from './views/snippet-manager-view';
 import { SnippetService } from './snippets/snippet-service';
+// Phase 6 (library): forward-declared type so LibraryView type-checks standalone;
+// the field is initialized in Phase 9.
+import { LibraryView, LIBRARY_VIEW_TYPE } from './views/library-view';
+import { RegistryClient, DEFAULT_REGISTRY_URL } from './library/registry-client';
+import { LibraryService } from './library/library-service';
+import type { InstalledRecord } from './library/library-model';
 import { WriteMutex } from './utils/write-mutex';
 import { I18nService } from './i18n';
 import { normalizeProtocolFolderPath, resolveProtocolDocumentFiles } from './protocol/protocol-file-resolver';
@@ -22,6 +28,7 @@ import {
   protocolDocumentId,
   type ProtocolEditorPickerSuggestion,
   type ProtocolPickerSuggestion,
+  type LibraryPickerContext,
 } from './views/protocol-picker-modal';
 
 
@@ -31,6 +38,9 @@ export default class RadiProtocolPlugin extends Plugin {
   protocolDocumentParser!: ProtocolDocumentParser;
   protocolDocumentStore!: ProtocolDocumentStore;
   snippetService!: SnippetService;
+  registryClient!: RegistryClient;
+  // Forward-declared in Phase 6 so LibraryView type-checks; initialized in Phase 9.
+  libraryService!: LibraryService;
   private readonly insertMutex = new WriteMutex();
   private pickerModal: SuggestModal<ProtocolPickerSuggestion | ProtocolEditorPickerSuggestion> | null = null;
   // Phase 85 INLINE-MULTI-01: registry of open inline runners keyed by `${protocolPath}#${notePath}`.
@@ -58,6 +68,24 @@ export default class RadiProtocolPlugin extends Plugin {
     // its error messages and validatePlaceholders output follow the active locale.
     this.snippetService = new SnippetService(this.app, this.settings, this.i18n.t.bind(this.i18n));
 
+    // Slice 9 — community library services (wired here; consumed by Slices 6-8 views).
+    // libraryRegistryUrl is the advanced override (empty/undefined → DEFAULT_REGISTRY_URL
+    // → "catalog unavailable" when the bundled default is also empty).
+    this.registryClient = new RegistryClient({ baseUrl: this.settings.libraryRegistryUrl || DEFAULT_REGISTRY_URL });
+    // Step 5 C11: normalize both roots so installer paths match resolver-enumerated
+    // paths (trailing slashes/backslashes would otherwise mismatch). There is no
+    // snippet-specific normalizer — the shared normalizeProtocolFolderPath is used
+    // for both roots.
+    const librarySettings = {
+      protocolFolderPath: normalizeProtocolFolderPath(this.settings.protocolFolderPath),
+      snippetFolderPath: normalizeProtocolFolderPath(this.settings.snippetFolderPath),
+    };
+    this.libraryService = new LibraryService(this.app, librarySettings, this.registryClient, { t: this.i18n.t.bind(this.i18n) });
+    // Recovery on load: finalize any in-flight installs (never throws — rolls back
+    // journals without a commit marker, commits valid ones). Runs before views are
+    // registered so no user action can race a recovering install.
+    await this.libraryService.recoverInterruptedInstalls();
+
     // Commands — IDs intentionally omit plugin name prefix (NFR-06)
 
     // Register ProtocolEditorView ItemView (.rp.json visual editor)
@@ -71,6 +99,16 @@ export default class RadiProtocolPlugin extends Plugin {
       id: 'open-snippet-manager',
       name: 'Open snippet manager',
       callback: () => { void this.activateSnippetManagerView(); },
+    });
+
+    // Slice 9 — Register LibraryView ItemView (community library, D4 first-class view)
+    this.registerView(LIBRARY_VIEW_TYPE, (leaf) => new LibraryView(leaf, this));
+
+    // Command: open-community-library (NFR-06: no plugin name prefix)
+    this.addCommand({
+      id: 'open-community-library',
+      name: 'Open community library',
+      callback: () => { void this.activateLibraryView(); },
     });
 
     // Command: open-protocol-editor — prompts for a .rp.json target, then opens the independent visual editor.
@@ -187,6 +225,7 @@ export default class RadiProtocolPlugin extends Plugin {
     }
 
     const protocolFiles = resolveProtocolDocumentFiles(this.app.vault, folderPath);
+    const libraryContext = await this.buildLibraryPickerContext(folderPath);
     const modal = new ProtocolEditorPickerModal(
       this.app,
       protocolFiles,
@@ -199,6 +238,7 @@ export default class RadiProtocolPlugin extends Plugin {
         this.pickerModal = null;
         void this.createAndOpenProtocol(folderPath, title);
       },
+      libraryContext,
     );
     this.pickerModal = modal;
     modal.open();
@@ -226,6 +266,43 @@ export default class RadiProtocolPlugin extends Plugin {
     void workspace.revealLeaf(leaf);
   }
 
+  /** Slice 9 — activate the community library view (get-or-create leaf, modeled
+   *  after activateSnippetManagerView). */
+  async activateLibraryView(): Promise<void> {
+    const { workspace } = this.app;
+    const existing = workspace.getLeavesOfType(LIBRARY_VIEW_TYPE)[0];
+    const leaf = existing ?? workspace.getLeaf(false);
+    if (leaf === null) return;
+    if (existing === undefined) {
+      await leaf.setViewState({ type: LIBRARY_VIEW_TYPE, active: true });
+    }
+    void workspace.revealLeaf(leaf);
+  }
+
+  /** Step 5 C12 — recreate the registry client + library service after the
+   *  advanced libraryRegistryUrl setting changes, so the override takes effect
+   *  without a plugin reload. libraryService.installer/recordStore/cacheStore are
+   *  preserved (they own no URL-dependent state); only the URL-bound client is
+   *  replaced. The LibraryView picks up the new service on its next refresh. */
+  async rebuildLibraryServices(): Promise<void> {
+    this.registryClient = new RegistryClient({ baseUrl: this.settings.libraryRegistryUrl || DEFAULT_REGISTRY_URL });
+    this.libraryService = new LibraryService(this.app, {
+      protocolFolderPath: normalizeProtocolFolderPath(this.settings.protocolFolderPath),
+      snippetFolderPath: normalizeProtocolFolderPath(this.settings.snippetFolderPath),
+    }, this.registryClient, { t: this.i18n.t.bind(this.i18n) });
+  }
+
+  /** Slice 9 — build the library-managed indicator context for protocol pickers.
+   *  Best-effort: a listInstalled() failure yields an empty record list (no badge),
+   *  never a throw. protocolRoot is the vault-relative protocol folder the picker
+   *  is enumerating. */
+  private async buildLibraryPickerContext(protocolRoot: string): Promise<LibraryPickerContext> {
+    let installedRecords: InstalledRecord[] = [];
+    try { installedRecords = await this.libraryService.listInstalled(); }
+    catch { installedRecords = []; }
+    return { protocolRoot, installedRecords };
+  }
+
   /**
    * Start the inline runner from a selected start-enabled node in a .rp.json protocol.
    *
@@ -244,7 +321,7 @@ export default class RadiProtocolPlugin extends Plugin {
       return;
     }
 
-    const folderPath = this.settings.protocolFolderPath.trim();
+    const folderPath = normalizeProtocolFolderPath(this.settings.protocolFolderPath);
     if (folderPath === '') {
       new Notice(this.i18n.t('protocolEditor.setProtocolFolderFirst'));
       return;
@@ -256,10 +333,17 @@ export default class RadiProtocolPlugin extends Plugin {
       return;
     }
 
-    this.pickerModal = new ProtocolPickerSuggestModal(this.app, protocolFiles, (item) => {
-      this.pickerModal = null;
-      void this.openProtocolStartNodePicker(item.file, activeFile);
-    });
+    const libraryContext = await this.buildLibraryPickerContext(folderPath);
+    this.pickerModal = new ProtocolPickerSuggestModal(
+      this.app,
+      protocolFiles,
+      (item) => {
+        this.pickerModal = null;
+        void this.openProtocolStartNodePicker(item.file, activeFile);
+      },
+      libraryContext,
+      this.i18n.t.bind(this.i18n),
+    );
     this.pickerModal.open();
   }
 
@@ -359,7 +443,7 @@ export default class RadiProtocolPlugin extends Plugin {
     }
 
     // Protocol folder enumeration
-    const folderPath = this.settings.protocolFolderPath.trim();
+    const folderPath = normalizeProtocolFolderPath(this.settings.protocolFolderPath);
     if (folderPath === '') {
       new Notice(this.i18n.t('command.setProtocolFolder'));
       return;
@@ -375,11 +459,19 @@ export default class RadiProtocolPlugin extends Plugin {
       return;
     }
 
+    const libraryContext = await this.buildLibraryPickerContext(folderPath);
+
     // Protocol picker via SuggestModal
-    this.pickerModal = new ProtocolPickerSuggestModal(this.app, protocolFiles, (item) => {
-      this.pickerModal = null;
-      void this.openInlineRunner(item.file, activeFile);
-    });
+    this.pickerModal = new ProtocolPickerSuggestModal(
+      this.app,
+      protocolFiles,
+      (item) => {
+        this.pickerModal = null;
+        void this.openInlineRunner(item.file, activeFile);
+      },
+      libraryContext,
+      this.i18n.t.bind(this.i18n),
+    );
 
     this.pickerModal.open();
   }

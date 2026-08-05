@@ -80,7 +80,7 @@ describe('Settings folder autocomplete (SETTINGS-01)', () => {
   it('attaches folder suggesters to Protocol and Snippet fields only', () => {
     const { textComponents, suggesters } = renderSettings();
 
-    expect(textComponents).toHaveLength(2);
+    expect(textComponents).toHaveLength(3);
     expect(suggesters).toHaveLength(2);
     expect(suggesters.map((suggester: { textInputEl: unknown }) => suggester.textInputEl)).toEqual([
       textComponents[0]!.inputEl,

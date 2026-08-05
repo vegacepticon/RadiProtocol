@@ -1,0 +1,328 @@
+/* src/styles/library.css — Step 5 C9 plan-local */
+/* Community library view + modals + read-only integration surface.
+   Namespace: radi-library-* (view/modals), radi-snippet-tree-library-badge,
+   rp-protocol-editor-library-banner, is-library-managed. */
+
+/* Root layout — the LibraryView content container. */
+.radi-library-root {
+  display: flex;
+  flex-direction: column;
+  gap: var(--size-4-2); /* 16px */
+  padding: var(--size-4-2);
+  height: 100%;
+  overflow-y: auto;
+}
+
+/* Header — title + refresh row. */
+.radi-library-header {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--size-4-1); /* 8px */
+}
+
+.radi-library-header h2 {
+  margin: 0;
+  font-size: var(--font-ui-medium);
+  font-weight: var(--font-semibold);
+}
+
+.radi-library-refresh {
+  flex-shrink: 0;
+}
+
+/* Search + category filter row. */
+.radi-library-search {
+  display: flex;
+  flex-direction: row;
+  gap: var(--size-4-1); /* 8px */
+}
+
+.radi-library-search-input {
+  flex: 1;
+  min-width: 0;
+}
+
+.radi-library-filter {
+  flex-shrink: 0;
+  max-width: 40%;
+}
+
+/* Catalog-unavailable banner (role=status / aria-live=polite). */
+.radi-library-banner {
+  padding: var(--size-4-1) var(--size-4-2);
+  background: var(--background-secondary);
+  border: 1px solid var(--background-modifier-border);
+  border-radius: var(--radius-s);
+  color: var(--text-muted);
+  font-size: var(--font-smaller);
+}
+
+.radi-library-banner.is-hidden {
+  display: none;
+}
+
+/* Catalog/installed list container. */
+.radi-library-section h3 {
+  margin: 0 0 var(--size-4-1);
+  font-size: var(--font-ui-small);
+  font-weight: var(--font-semibold);
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.radi-library-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--size-2-1); /* 4px */
+}
+
+.radi-library-empty {
+  color: var(--text-muted);
+  font-size: var(--font-smaller);
+  margin: var(--size-4-1) 0;
+}
+
+/* Catalog entry row — keyboard-focusable (tabindex=0), WCAG 2.2 AA. */
+.radi-library-entry {
+  display: flex;
+  flex-direction: column;
+  gap: var(--size-2-1); /* 4px */
+  padding: var(--size-4-1) var(--size-4-2);
+  border: 1px solid var(--background-modifier-border);
+  border-radius: var(--radius-s);
+  background: var(--background-primary);
+}
+
+.radi-library-entry.is-clickable {
+  cursor: pointer;
+}
+
+.radi-library-entry.is-clickable:hover,
+.radi-library-entry.is-clickable:focus-visible {
+  background: var(--background-secondary);
+  outline: none;
+  border-color: var(--interactive-accent);
+}
+
+.radi-library-entry-title {
+  font-weight: var(--font-semibold);
+}
+
+.radi-library-entry-meta {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  gap: var(--size-4-1); /* 8px */
+  font-size: var(--font-smaller);
+  color: var(--text-muted);
+}
+
+.radi-library-entry-categories {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  gap: var(--size-2-1); /* 4px */
+  font-size: var(--font-smaller);
+}
+
+.radi-library-entry-categories-label {
+  color: var(--text-muted);
+}
+
+.radi-library-entry-categories-value {
+  color: var(--text-normal);
+}
+
+.radi-library-entry-summary {
+  font-size: var(--font-smaller);
+  color: var(--text-muted);
+}
+
+/* Installed row. */
+.radi-library-installed {
+  display: flex;
+  flex-direction: column;
+  gap: var(--size-2-1); /* 4px */
+  padding: var(--size-4-1) var(--size-4-2);
+  border: 1px solid var(--background-modifier-border);
+  border-radius: var(--radius-s);
+  background: var(--background-primary);
+}
+
+.radi-library-installed-title {
+  font-weight: var(--font-semibold);
+}
+
+.radi-library-installed-meta {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  gap: var(--size-4-1); /* 8px */
+  font-size: var(--font-smaller);
+  color: var(--text-muted);
+}
+
+/* Integrity-verified indicator (D11) — never an authenticity claim. */
+.radi-library-integrity-badge {
+  display: inline-flex;
+  flex-direction: row;
+  align-items: center;
+  gap: var(--size-2-1); /* 4px */
+  align-self: flex-start;
+  padding: 2px var(--size-4-1);
+  border: 1px solid var(--color-green);
+  border-radius: var(--radius-s);
+  color: var(--color-green);
+  font-size: var(--font-smaller);
+}
+
+.radi-library-integrity-icon::before {
+  content: '✓';
+}
+
+/* ARIA progressbar (install-progress modal — Slice 7). */
+.radi-library-progress {
+  display: flex;
+  flex-direction: column;
+  gap: var(--size-4-1); /* 8px */
+}
+
+.radi-library-progress-track {
+  height: 8px;
+  border-radius: var(--radius-s);
+  background: var(--background-modifier-border);
+  overflow: hidden;
+}
+
+.radi-library-progress-fill {
+  height: 100%;
+  width: 0%;
+  background: var(--interactive-accent);
+  transition: width 200ms ease;
+}
+
+.radi-library-progress-status {
+  font-size: var(--font-smaller);
+  color: var(--text-muted);
+}
+
+.radi-library-progress-actions {
+  display: flex;
+  flex-direction: row;
+  justify-content: flex-end;
+  margin-top: var(--size-4-2);
+}
+
+/* Item-detail modal (Slice 7). */
+.radi-library-detail {
+  /* modal-level layout handled by Obsidian; content rules below */
+}
+
+.radi-library-detail-title {
+  margin: 0 0 var(--size-4-1);
+}
+
+.radi-library-detail-meta {
+  display: flex;
+  flex-direction: column;
+  gap: var(--size-2-1); /* 4px */
+  font-size: var(--font-smaller);
+  color: var(--text-muted);
+  margin-bottom: var(--size-4-2);
+}
+
+.radi-library-detail-description,
+.radi-library-detail-summary {
+  margin: var(--size-4-1) 0;
+}
+
+.radi-library-detail-files {
+  display: flex;
+  flex-direction: column;
+  gap: var(--size-2-1); /* 4px */
+  margin: var(--size-4-1) 0;
+}
+
+.radi-library-detail-file {
+  display: flex;
+  flex-direction: row;
+  justify-content: space-between;
+  gap: var(--size-4-1); /* 8px */
+  font-size: var(--font-smaller);
+}
+
+.radi-library-detail-file-name {
+  font-family: var(--font-monospace);
+}
+
+.radi-library-detail-file-hash {
+  color: var(--text-muted);
+  font-family: var(--font-monospace);
+}
+
+.radi-library-detail-integrity {
+  font-size: var(--font-smaller);
+  color: var(--text-muted);
+  border-left: 3px solid var(--background-modifier-border);
+  padding-left: var(--size-4-1);
+}
+
+.radi-library-detail-actions {
+  display: flex;
+  flex-direction: row;
+  justify-content: flex-end;
+  gap: var(--size-4-1); /* 8px */
+  margin-top: var(--size-4-2);
+}
+
+/* Installed-package indicator badge (Slice 8 — pickers, editor banner). */
+.radi-library-managed-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 1px var(--size-4-1);
+  border: 1px solid var(--background-modifier-border);
+  border-radius: var(--radius-s);
+  background: var(--background-secondary);
+  color: var(--text-muted);
+  font-size: var(--font-smaller);
+}
+
+/* Managed-node read-only row tint (Slice 8 — snippet tree). */
+.is-library-managed {
+  opacity: 0.85;
+}
+
+/* Protocol editor read-only banner (Slice 8). */
+.rp-protocol-editor-library-banner {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: var(--size-4-1); /* 8px */
+  padding: var(--size-4-1) var(--size-4-2);
+  background: var(--background-secondary);
+  border: 1px solid var(--background-modifier-border);
+  border-radius: var(--radius-s);
+  color: var(--text-muted);
+  font-size: var(--font-smaller);
+}
+
+/* Snippet tree managed badge (Slice 8). */
+.radi-snippet-tree-library-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 1px var(--size-4-1);
+  border: 1px solid var(--background-modifier-border);
+  border-radius: var(--radius-s);
+  background: var(--background-secondary);
+  color: var(--text-muted);
+  font-size: var(--font-smaller);
+}
+
+/* Drop-into-library forbidden cue (Slice 8). */
+.radi-snippet-tree-drop-forbidden {
+  cursor: not-allowed;
+  opacity: 0.5;
+}

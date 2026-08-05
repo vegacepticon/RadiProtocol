@@ -30,6 +30,10 @@ export interface RadiProtocolSettings {
   inlineRunnerPosition?: InlineRunnerLayout | null;
   /** Phase 84 (I18N-01): UI language. Default 'en' for new installs; existing installs without this key default to 'ru' for backward compat. */
   locale: 'en' | 'ru';
+  /** Slice 9 — community library registry endpoint override (advanced).
+   *  Empty/undefined → bundled DEFAULT_REGISTRY_URL (empty → "catalog unavailable").
+   *  Non-https/invalid URLs are normalized to '' by the registry client. */
+  libraryRegistryUrl?: string;
 }
 
 export const DEFAULT_SETTINGS: RadiProtocolSettings = {
@@ -39,6 +43,7 @@ export const DEFAULT_SETTINGS: RadiProtocolSettings = {
   textSeparator: 'newline',
   inlineRunnerPosition: null,
   locale: 'en',
+  libraryRegistryUrl: '',
 };
 
 export class RadiProtocolSettingsTab extends PluginSettingTab {
@@ -114,6 +119,25 @@ export class RadiProtocolSettingsTab extends PluginSettingTab {
           .onChange(async (value) => {
             this.plugin.settings.snippetFolderPath = value.trim() || 'Snippets';
             await this.plugin.saveSettings();
+          });
+      });
+
+    // Group — Advanced (Slice 9 — community library)
+    new Setting(containerEl).setName(this.plugin.i18n.t('settings.advancedHeading')).setHeading();
+
+    new Setting(containerEl)
+      .setName(this.plugin.i18n.t('settings.libraryRegistryUrl'))
+      .setDesc(this.plugin.i18n.t('settings.libraryRegistryUrlDesc'))
+      .addText(text => {
+        text
+          .setPlaceholder(this.plugin.i18n.t('settings.libraryRegistryUrlPlaceholder'))
+          .setValue(this.plugin.settings.libraryRegistryUrl ?? '')
+          .onChange(async (value) => {
+            this.plugin.settings.libraryRegistryUrl = value.trim();
+            await this.plugin.saveSettings();
+            // Step 5 C12: recreate the registry client + library service so the
+            // override takes effect immediately (baseUrl is captured at construction).
+            await this.plugin.rebuildLibraryServices();
           });
       });
 

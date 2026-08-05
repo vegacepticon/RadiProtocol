@@ -92,6 +92,26 @@ try {
   warn(`Knip advisory skipped or reported issues: ${error.message}`);
 }
 
+console.log('\n▸ Check 7: en/ru i18n key parity');
+const enLocale = readJson('src/i18n/locales/en.json');
+const ruLocale = readJson('src/i18n/locales/ru.json');
+function flatKeys(obj, prefix = '') {
+  const keys = [];
+  for (const [k, v] of Object.entries(obj)) {
+    const path = prefix === '' ? k : `${prefix}.${k}`;
+    if (v !== null && typeof v === 'object' && !Array.isArray(v)) keys.push(...flatKeys(v, path));
+    else keys.push(path);
+  }
+  return keys;
+}
+const enKeys = new Set(flatKeys(enLocale));
+const ruKeys = new Set(flatKeys(ruLocale));
+const missingInRu = [...enKeys].filter((k) => !ruKeys.has(k));
+const missingInEn = [...ruKeys].filter((k) => !enKeys.has(k));
+if (missingInRu.length > 0) fail(`en.json keys missing from ru.json: ${missingInRu.join(', ')}`);
+if (missingInEn.length > 0) fail(`ru.json keys missing from en.json: ${missingInEn.join(', ')}`);
+if (missingInRu.length === 0 && missingInEn.length === 0) info(`OK: en/ru i18n key sets match (${enKeys.size} keys)`);
+
 console.log('\n═══════════════════════════════════════════════');
 if (errors.length > 0) {
   console.log(`❌ FAILED: ${errors.length} error(s), ${warnings.length} warning(s)`);

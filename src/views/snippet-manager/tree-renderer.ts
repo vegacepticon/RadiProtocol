@@ -11,6 +11,9 @@
 import { Menu, Notice, setIcon } from 'obsidian';
 import type RadiProtocolPlugin from '../../main';
 import { createButton } from '../../utils/dom-helpers';
+// Slice 8 — library-managed read-only rendering.
+import { isLibraryManagedPath, findInstalledRecordForPath } from '../../library/library-paths';
+import type { InstalledRecord } from '../../library/library-model';
 
 // Phase 34 Plan 02: HTML5 DnD custom MIME types.
 const MIME_FILE = 'application/x-radi-snippet-file';
@@ -81,6 +84,8 @@ export class SnippetManagerTreeRenderer {
   private currentlyRenamingPath: string | null = null;
   private rowLabelEls: Map<string, HTMLElement> = new Map();
   private selectedFolderPath = '';
+  // Slice 8 — installed records for the library-managed indicator badge.
+  private installedRecords: readonly InstalledRecord[] = [];
 
   constructor(options: {
     folderContainer: HTMLElement;
@@ -116,11 +121,13 @@ export class SnippetManagerTreeRenderer {
     selectedFolderPath: string;
     searchResults?: import('../../snippets/snippet-service').SnippetSearchResult[];
     searchQuery?: string;
+    installedRecords?: readonly InstalledRecord[];
   }): void {
     this.folderContainer.empty();
     this.snippetContainer.empty();
     this.rowLabelEls.clear();
     this.selectedFolderPath = options.selectedFolderPath;
+    this.installedRecords = options.installedRecords ?? [];
     // Recreate visually-hidden accessible headings as the first child of each
     // pane on every render — the renderer owns pane contents (see empty() above),
     // so a one-time heading in onOpen() would not survive the initial refresh.
@@ -239,7 +246,21 @@ export class SnippetManagerTreeRenderer {
     const labelEl = row.createSpan({ cls: 'radi-snippet-tree-label', text: node.name });
     this.rowLabelEls.set(node.path, labelEl);
 
-    if (node.kind === 'folder' && !node.isRoot) {
+    // Slice 8 — library-managed nodes get an installed-package badge and are
+    // rendered read-only (no add-button, suppressed edit/rename/drag, drop-into
+    // library forbidden). The badge label is the managed indicator + the owning
+    // packageId @ releaseVersion when an installed record is found.
+    const snippetRoot = this.plugin.settings.snippetFolderPath;
+    const managed = isLibraryManagedPath(node.path, snippetRoot);
+    if (managed) {
+      const record = findInstalledRecordForPath(this.installedRecords, node.path);
+      const badge = row.createSpan({ cls: 'radi-snippet-tree-library-badge' });
+      const badgeLabel = this.plugin.i18n.t('library.managedBadge');
+      badge.setText(record !== null ? `${badgeLabel} · ${record.packageId} @ ${record.releaseVersion}` : badgeLabel);
+      row.addClass('is-library-managed');
+    }
+
+    if (node.kind === 'folder' && !node.isRoot && !managed) {
       const actions = row.createSpan({ cls: 'radi-snippet-tree-actions' });
       const addBtn = createButton(actions, {
         cls: 'radi-snippet-tree-add-btn',
@@ -255,13 +276,18 @@ export class SnippetManagerTreeRenderer {
     row.addEventListener('click', (event) => {
       const target = event.target as HTMLElement | null;
       if (target !== null && target.closest('button') !== null && target !== row) return;
-      if (node.kind === 'file') void this.callbacks.openEditModal(node.path);
-      else void this.callbacks.selectFolder(node.path);
+      if (node.kind === 'file') {
+        if (managed) { new Notice(this.plugin.i18n.t('library.readOnlyNotice')); return; }
+        void this.callbacks.openEditModal(node.path);
+      } else {
+        void this.callbacks.selectFolder(node.path);
+      }
     });
 
     row.addEventListener('contextmenu', (event) => {
       event.preventDefault();
       event.stopPropagation();
+      if (managed) { new Notice(this.plugin.i18n.t('library.readOnlyNotice')); return; }
       if (node.kind === 'folder' && node.isRoot) this.openRootContextMenu(event as MouseEvent);
       else this.openContextMenu(event as MouseEvent, node);
     });
@@ -271,18 +297,19 @@ export class SnippetManagerTreeRenderer {
       if (keyEvent.key === 'Enter' || keyEvent.key === ' ') {
         keyEvent.preventDefault();
         if (node.kind === 'file') {
+          if (managed) { new Notice(this.plugin.i18n.t('library.readOnlyNotice')); return; }
           void this.callbacks.openEditModal(node.path);
         } else {
           void this.callbacks.selectFolder(node.path);
           if (!node.isRoot) void this.callbacks.toggleFolder(node.path);
         }
-      } else if (keyEvent.key === 'F2' && !(node.kind === 'folder' && node.isRoot)) {
+      } else if (keyEvent.key === 'F2' && !(node.kind === 'folder' && node.isRoot) && !managed) {
         keyEvent.preventDefault();
         this.startInlineRename(node, labelEl);
       }
     });
 
-    if (!(node.kind === 'folder' && node.isRoot)) {
+    if (!(node.kind === 'folder' && node.isRoot) && !managed) {
       row.setAttribute('draggable', 'true');
       row.addEventListener('dragstart', (event) =>
         this.handleDragStart(row, node, event as DragEvent));
@@ -434,6 +461,12 @@ export class SnippetManagerTreeRenderer {
     const src = this.readDragSource(ev);
     if (src === null) return;
     const target = this.computeDropTarget(node);
+    // Slice 8 — drop-into-library is forbidden: a library-managed target never
+    // accepts a drop (no preventDefault, so no drop event fires).
+    if (isLibraryManagedPath(target, this.plugin.settings.snippetFolderPath)) {
+      row.addClass('radi-snippet-tree-drop-forbidden');
+      return;
+    }
     const forbidden = this.isDropForbidden(src.path, src.kind, target);
     if (forbidden) {
       row.addClass('radi-snippet-tree-drop-forbidden');

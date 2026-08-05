@@ -37,6 +37,8 @@ const CSS_FILES = [
   'inline-runner',
   'protocol-editor',
   'donate-section',
+  // Phase 6 (library): community library view + modals + read-only integration surface.
+  'library',
 ];
 
 /**

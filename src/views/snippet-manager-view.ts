@@ -17,6 +17,11 @@ import { rewriteProtocolSnippetRefs } from '../snippets/protocol-ref-sync';
 import { SnippetManagerTreeRenderer } from './snippet-manager/tree-renderer';
 import type { TreeNode, TreeNodeFolder, TreeNodeFile } from './snippet-manager/tree-renderer';
 import { basenameNoExt } from './snippet-manager/tree-renderer';
+// Slice 8 — library-managed snippets render read-only with an installed-package
+// indicator. this.plugin.libraryService is wired in Slice 9 (forward reference,
+// consistent with Slices 6-7).
+import { isLibraryManagedPath } from '../library/library-paths';
+import type { InstalledRecord } from '../library/library-model';
 
 export const SNIPPET_MANAGER_VIEW_TYPE = 'radiprotocol-snippet-manager';
 
@@ -25,6 +30,7 @@ interface SnippetManagerModel {
   snippets: TreeNodeFile[];
   selectedFolderPath: string;
   searchResults: SnippetSearchResult[];
+  installedRecords: InstalledRecord[];
 }
 
 function dirname(path: string): string {
@@ -67,6 +73,9 @@ export class SnippetManagerView extends ItemView {
   // not supersede it.
   private selectedFolderPath: string;
   private requestedFolderPath: string;
+
+  // Slice 8 — installed records for the library-managed read-only indicator.
+  private installedRecords: InstalledRecord[] = [];
 
   // One invalidation generation owned by this view. Navigation, search,
   // mutations, and watcher refreshes increment it; post-await commits require
@@ -201,6 +210,13 @@ export class SnippetManagerView extends ItemView {
     return filePath === root || filePath.startsWith(root + '/');
   }
 
+  /** Slice 8 — true when the path lives under the managed library subtree of the
+   *  snippet folder. Used by the defense-in-depth guards at the top of every
+   *  mutating callback (the renderer already suppresses; this view is the backstop). */
+  private isLibraryManagedSnippetPath(path: string): boolean {
+    return isLibraryManagedPath(path, this.plugin.settings.snippetFolderPath);
+  }
+
   private scheduleRedraw(): void {
     if (this.redrawTimer !== null) window.clearTimeout(this.redrawTimer);
     this.redrawTimer = window.setTimeout(() => {
@@ -262,7 +278,12 @@ export class SnippetManagerView extends ItemView {
     const searchResults = query === ''
       ? []
       : await this.plugin.snippetService.searchSnippets(query);
-    return { folderTree, snippets, selectedFolderPath: reconciledFolderPath, searchResults };
+    // Slice 8 — fetch installed records best-effort as part of the model so a
+    // stale refresh cannot overwrite them independently of the generation guard.
+    let installedRecords: InstalledRecord[] = [];
+    try { installedRecords = await this.plugin.libraryService.listInstalled(); }
+    catch { installedRecords = []; }
+    return { folderTree, snippets, selectedFolderPath: reconciledFolderPath, searchResults, installedRecords };
   }
 
   private commitModel(model: SnippetManagerModel): void {
@@ -271,6 +292,7 @@ export class SnippetManagerView extends ItemView {
     this.selectedFolderPath = model.selectedFolderPath;
     this.requestedFolderPath = model.selectedFolderPath;
     this.searchResults = model.searchResults;
+    this.installedRecords = model.installedRecords;
   }
 
   private async loadFolderTree(): Promise<TreeNodeFolder> {
@@ -387,6 +409,7 @@ export class SnippetManagerView extends ItemView {
       selectedFolderPath: this.selectedFolderPath,
       searchResults: this.searchQuery.trim() === '' ? undefined : this.searchResults,
       searchQuery: this.searchQuery,
+      installedRecords: this.installedRecords,
     });
   }
 
@@ -394,6 +417,7 @@ export class SnippetManagerView extends ItemView {
   // Modal wiring — create / edit snippet
   // -------------------------------------------------------------------------
   private async openEditModal(path: string): Promise<void> {
+    if (this.isLibraryManagedSnippetPath(path)) { new Notice(this.plugin.i18n.t('library.readOnlyNotice')); return; }
     // Capture ownership before the async load: a close or superseding refresh
     // during the read must not let a stale completion render, mutate edit
     // state, emit a notice, or open a modal into a detached pane.
@@ -426,6 +450,7 @@ export class SnippetManagerView extends ItemView {
   }
 
   private async openCreateModal(folderPath: string): Promise<void> {
+    if (this.isLibraryManagedSnippetPath(folderPath)) { new Notice(this.plugin.i18n.t('library.readOnlyNotice')); return; }
     const modal = new SnippetEditorModal(this.app, this.plugin, {
       mode: 'create',
       initialFolder: folderPath,
@@ -443,6 +468,7 @@ export class SnippetManagerView extends ItemView {
   // -------------------------------------------------------------------------
   private async duplicateSnippet(path: string): Promise<void> {
     const t = this.plugin.i18n.t.bind(this.plugin.i18n);
+    if (this.isLibraryManagedSnippetPath(path)) { new Notice(this.plugin.i18n.t('library.readOnlyNotice')); return; }
     try {
       await this.plugin.snippetService.duplicateSnippet(path);
       await this.refresh();
@@ -458,6 +484,7 @@ export class SnippetManagerView extends ItemView {
   // -------------------------------------------------------------------------
   private async handleCreateSubfolder(parentPath: string): Promise<void> {
     const t = this.plugin.i18n.t.bind(this.plugin.i18n);
+    if (this.isLibraryManagedSnippetPath(parentPath)) { new Notice(this.plugin.i18n.t('library.readOnlyNotice')); return; }
     // Build a small form body with a text input for the subfolder name.
     const body = document.createElement('div');
     body.addClass('radi-snippet-subfolder-form');
@@ -505,6 +532,7 @@ export class SnippetManagerView extends ItemView {
 
   private async handleDeleteSnippet(path: string, name: string): Promise<void> {
     const t = this.plugin.i18n.t.bind(this.plugin.i18n);
+    if (this.isLibraryManagedSnippetPath(path)) { new Notice(this.plugin.i18n.t('library.readOnlyNotice')); return; }
     const modal = new ConfirmModal(this.app, {
       title: t('snippetManager.deleteSnippetTitle'),
       body: t('snippetManager.deleteSnippetBody', { name }),
@@ -527,6 +555,7 @@ export class SnippetManagerView extends ItemView {
 
   private async handleDeleteFolder(path: string, name: string): Promise<void> {
     const t = this.plugin.i18n.t.bind(this.plugin.i18n);
+    if (this.isLibraryManagedSnippetPath(path)) { new Notice(this.plugin.i18n.t('library.readOnlyNotice')); return; }
     const descendants = await this.plugin.snippetService.listFolderDescendants(path);
     const total = descendants.total;
 
@@ -579,6 +608,7 @@ export class SnippetManagerView extends ItemView {
   // -------------------------------------------------------------------------
   private async openMovePicker(node: TreeNode): Promise<void> {
     const t = this.plugin.i18n.t.bind(this.plugin.i18n);
+    if (this.isLibraryManagedSnippetPath(node.path)) { new Notice(this.plugin.i18n.t('library.readOnlyNotice')); return; }
     let allFolders: string[];
     try {
       allFolders = await this.plugin.snippetService.listAllFolders();
@@ -681,6 +711,10 @@ export class SnippetManagerView extends ItemView {
     dstFolder: string,
   ): Promise<void> {
     const t = this.plugin.i18n.t.bind(this.plugin.i18n);
+    if (this.isLibraryManagedSnippetPath(srcPath) || this.isLibraryManagedSnippetPath(dstFolder)) {
+      new Notice(t('library.readOnlyNotice'));
+      return;
+    }
     if (srcKind === 'file') {
       if (dirname(srcPath) === dstFolder) return;
       const newPath = await this.plugin.snippetService.moveSnippet(srcPath, dstFolder);

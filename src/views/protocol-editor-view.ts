@@ -1,4 +1,6 @@
 import { ItemView, Menu, Notice, TFile, WorkspaceLeaf, setIcon } from 'obsidian';
+// Slice 8 — library-managed protocols are read-only.
+import { isLibraryManagedPath } from '../library/library-paths';
 import type RadiProtocolPlugin from '../main';
 import type { ProtocolDocumentV1, ProtocolEdgeRecord, ProtocolNodeRecord } from '../protocol/protocol-document';
 import type { RPNodeKind } from '../graph/graph-model';
@@ -586,6 +588,9 @@ export function protocolEditorEdgeRoute(
 export class ProtocolEditorView extends ItemView {
   private readonly plugin: RadiProtocolPlugin;
   private protocolPath: string | null = null;
+  // Slice 8 — true when the loaded protocol lives under the managed library
+  // subtree; every mutating entry point is guarded via isLibraryReadOnly().
+  private libraryReadOnly = false;
   private doc: ProtocolDocumentV1 | null = null;
   private rootEl: HTMLElement | null = null;
   private viewportEl: HTMLElement | null = null;
@@ -630,6 +635,7 @@ export class ProtocolEditorView extends ItemView {
     this.minimapWorldBounds = null;
     this.doc = null;
     this.protocolPath = null;
+    this.libraryReadOnly = false;
     this.panState = null;
     this.connectionDragState = null;
     this.nodeElementById.clear();
@@ -653,11 +659,23 @@ export class ProtocolEditorView extends ItemView {
 
     this.loadGeneration++;
     this.protocolPath = file.path;
+    this.libraryReadOnly = isLibraryManagedPath(file.path, this.plugin.settings.protocolFolderPath);
     this.doc = doc;
     this.layoutDirection = protocolEditorLayoutDirectionFromDocument(doc);
     this.zoom = clampProtocolEditorZoom(doc.viewport?.zoom ?? 1);
     this.renderShell();
     this.renderDocument();
+  }
+
+  /** Slice 8 — library-managed protocols are read-only. Returns true (and shows
+   *  a Notice) when the loaded protocol lives under the managed library subtree,
+   *  so every mutating entry point can early-return with a single guard. */
+  private isLibraryReadOnly(): boolean {
+    if (this.libraryReadOnly) {
+      new Notice(this.plugin.i18n.t('library.readOnlyNotice'));
+      return true;
+    }
+    return false;
   }
 
   private renderShell(): void {
@@ -714,6 +732,13 @@ export class ProtocolEditorView extends ItemView {
       cls: 'rp-protocol-editor-canvas-title',
       text: this.doc?.title ?? this.plugin.i18n.t('protocolEditor.emptyTitle'),
     });
+    // Slice 8 — read-only banner for library-managed protocols. The banner
+    // conveys the state; drag/resize gestures stay silent (no Notice noise).
+    if (this.libraryReadOnly) {
+      const banner = workspace.createDiv({ cls: 'rp-protocol-editor-library-banner' });
+      banner.createEl('span', { cls: 'radi-library-managed-badge', text: this.plugin.i18n.t('library.managedBadge') });
+      banner.createEl('span', { text: this.plugin.i18n.t('library.readOnlyBanner') });
+    }
     this.viewportEl = workspace.createDiv({ cls: 'rp-protocol-editor-viewport' });
     this.viewportEl.setAttr('data-zoom', String(this.zoom));
     this.viewportEl.setAttr('data-layout-direction', this.layoutDirection);
@@ -790,6 +815,7 @@ export class ProtocolEditorView extends ItemView {
       options.onCreateAbandoned?.();
       return;
     }
+    if (this.isLibraryReadOnly()) { options.onCreateAbandoned?.(); return; }
 
     const newNode = this.createProtocolEditorNode(kind, x, y);
     const protocolPath = this.protocolPath;
@@ -821,6 +847,7 @@ export class ProtocolEditorView extends ItemView {
 
   private openNodeKindPickerAtWorldPoint(x: number, y: number): void {
     if (this.doc === null || this.protocolPath === null) return;
+    if (this.isLibraryReadOnly()) return;
     const t = this.plugin.i18n.t.bind(this.plugin.i18n);
     const modalEl = document.body.createDiv({ cls: 'rp-protocol-editor-modal-backdrop' });
     const modal = modalEl.createDiv({ cls: 'rp-protocol-editor-modal rp-protocol-editor-node-kind-modal' });
@@ -875,6 +902,7 @@ export class ProtocolEditorView extends ItemView {
 
   private openNodeKindPickerAndConnectAtWorldPoint(fromNodeId: string, x: number, y: number): void {
     if (this.doc === null || this.protocolPath === null) return;
+    if (this.isLibraryReadOnly()) return;
     const t = this.plugin.i18n.t.bind(this.plugin.i18n);
     const modalEl = document.body.createDiv({ cls: 'rp-protocol-editor-modal-backdrop' });
     const modal = modalEl.createDiv({ cls: 'rp-protocol-editor-modal rp-protocol-editor-node-kind-modal' });
@@ -938,6 +966,7 @@ export class ProtocolEditorView extends ItemView {
       options.onCreateAbandoned?.();
       return;
     }
+    if (this.isLibraryReadOnly()) { options.onCreateAbandoned?.(); return; }
 
     const newNode = this.createProtocolEditorNode(kind, x, y);
     const protocolPath = this.protocolPath;
@@ -1370,6 +1399,7 @@ export class ProtocolEditorView extends ItemView {
 
   private async deleteEdge(edgeId: string): Promise<void> {
     if (this.protocolPath === null) return;
+    if (this.isLibraryReadOnly()) return;
     try {
       await this.plugin.protocolDocumentStore.update(this.protocolPath, (existing) => {
         if (existing === null) protocolMissingFileError();
@@ -1443,6 +1473,10 @@ export class ProtocolEditorView extends ItemView {
   private bindConnectionDrag(outputPort: HTMLElement, node: ProtocolNodeRecord): void {
     outputPort.addEventListener('mousedown', (e: MouseEvent) => {
       if (e.button !== 0 || this.svgEl === null) return;
+      // Slice 8 — silent gesture-start guard: a managed protocol must never
+      // begin a connection gesture (finishConnectionDrag would reject it, but
+      // the visible gesture-start is cosmetic noise).
+      if (this.libraryReadOnly) return;
       e.preventDefault();
       e.stopPropagation();
 
@@ -1505,6 +1539,7 @@ export class ProtocolEditorView extends ItemView {
     this.connectionDragState = null;
     state?.previewPath.remove();
     if (state === null || this.doc === null || this.protocolPath === null) return;
+    if (this.isLibraryReadOnly()) return;
 
     const inputPort = this.findInputPortAt(ev.clientX, ev.clientY);
     const toNodeId = inputPort?.getAttr('data-node-id');
@@ -1576,6 +1611,7 @@ export class ProtocolEditorView extends ItemView {
 
     const closeModal = () => backdrop.remove();
     const persist = async () => {
+      if (this.isLibraryReadOnly()) return;
       const items = values.map(value => value.trim()).filter(value => value.length > 0);
       await this.plugin.protocolDocumentStore.update(this.protocolPath!, (existing) => {
         if (existing === null) protocolMissingFileError();
@@ -1641,6 +1677,8 @@ export class ProtocolEditorView extends ItemView {
     nodeEl.addEventListener('mousedown', (e: MouseEvent) => {
       if (e.button !== 0) return;
       if ((e.target as HTMLElement).closest('.rp-protocol-editor-port') !== null) return;
+      // Slice 8 — silent gesture-start guard: managed nodes never visibly move.
+      if (this.libraryReadOnly) return;
       e.preventDefault();
       e.stopPropagation();
 
@@ -1701,6 +1739,8 @@ export class ProtocolEditorView extends ItemView {
   private bindResize(handleEl: HTMLElement, nodeEl: HTMLElement, node: ProtocolNodeRecord): void {
     handleEl.addEventListener('mousedown', (e: MouseEvent) => {
       if (e.button !== 0) return;
+      // Slice 8 — silent gesture-start guard: managed nodes never visibly resize.
+      if (this.libraryReadOnly) return;
       e.preventDefault();
       e.stopPropagation();
 
@@ -1761,6 +1801,7 @@ export class ProtocolEditorView extends ItemView {
     const generation = this.loadGeneration;
     const isStaleSave = () => this.loadGeneration !== generation;
     if (protocolPath === null) return;
+    if (this.isLibraryReadOnly()) return;
 
     const geometry = {
       id: node.id,
@@ -1880,6 +1921,7 @@ export class ProtocolEditorView extends ItemView {
 
   private autoLayoutNodes(direction: ProtocolEditorLayoutDirection): void {
     if (this.doc === null || this.protocolPath === null) return;
+    if (this.isLibraryReadOnly()) return;
     const nodes = this.doc.nodes;
     const edges = this.doc.edges;
     if (nodes.length === 0) return;
@@ -2086,6 +2128,7 @@ export class ProtocolEditorView extends ItemView {
 
   private async persistViewportState(): Promise<void> {
     if (this.protocolPath === null || this.doc === null) return;
+    if (this.isLibraryReadOnly()) return;
     this.clearPendingViewportSave();
     const viewport = this.currentViewportState();
     try {
@@ -2176,6 +2219,7 @@ export class ProtocolEditorView extends ItemView {
         selectedTarget,
       );
       const nextLabel = shouldDisplayLabel ? typedLabel ?? defaultLabel : undefined;
+      if (this.isLibraryReadOnly()) return;
       try {
         const updated = await this.plugin.protocolDocumentStore.update(this.protocolPath!, (existing) => {
           if (existing === null) protocolMissingFileError();
@@ -2558,6 +2602,7 @@ export class ProtocolEditorView extends ItemView {
         updatedNode.text = nextFields[titleKey] as string;
       }
 
+      if (this.isLibraryReadOnly()) return;
       try {
         await this.plugin.protocolDocumentStore.update(this.protocolPath!, (existing) => {
           if (existing === null) protocolMissingFileError();
@@ -2598,6 +2643,7 @@ export class ProtocolEditorView extends ItemView {
         text: t('protocolEditor.confirmDelete'),
       });
       confirmBtn.addEventListener('click', async () => {
+        if (this.isLibraryReadOnly()) return;
         try {
         const protocolPath = this.protocolPath!;
         const generation = this.loadGeneration;
