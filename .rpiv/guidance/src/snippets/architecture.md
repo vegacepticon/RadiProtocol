@@ -8,7 +8,7 @@ Snippet data model (2 variants: Markdown, Markdown Template), Obsidian vault CRU
 ## Dependencies
 - **i18n**: `Translator` + `defaultT` · **utils/write-mutex**: per-file-path serialization · **utils/vault-utils**: `ensureFolderPath`
 - **protocol/protocol-document**: `isProtocolDocumentV1`, type (ref-sync cross-subsystem boundary)
-- **obsidian** (service + ref-sync): `App`, `TFile`, `Vault`, `FileManager` · **settings**: `RadiProtocolSettings` (`snippetFolderPath`)
+- **obsidian** (service + ref-sync, type-only): `App`, `TFile`, `Vault`, `FileManager` · **settings**: `RadiProtocolSettings` (`snippetFolderPath`)
 
 ## Consumers
 - **main.ts**: constructs `SnippetService` with `(app, settings, i18n.t.bind)`
@@ -69,7 +69,7 @@ function hasTemplateFrontmatter(text: string): boolean {
 }
 // .md without frontmatter → kind 'md' (raw content). With → parseMarkdownTemplate().
 ```
-Parser is a **deliberately limited subset** — top-level `key: value`, indented `placeholders`/`options` list. Not general YAML; unsupported lines ignored. Serializer guarantees a final newline.
+Parser is a **deliberately limited subset** — top-level `key: value`, indented `placeholders`/`options` list (hand-rolled, no YAML library). Not general YAML; unsupported lines ignored. Serializer guarantees a final newline (`escapeYamlScalar`).
 
 ## Path-Safety Guard (assertInsideRoot)
 
@@ -96,6 +96,7 @@ export async function rewriteProtocolSnippetRefs(app, mapping: Map<string,string
 - **Pure model layer** (`snippet-model.ts`, `md-template.ts`): zero Obsidian imports, unit-testable. **Service layer** (`snippet-service.ts`): `import type { App }` — type-only, injected.
 - **Path-as-identity**: `path` is sole source of truth. **Trash, not delete**: `delete()`/`deleteFolder()` use `fileManager.trashFile()`.
 - **Move and ref-sync are NOT one transaction**: ref-sync is invoked by the orchestrating caller after a move; a mid-sync failure leaves references partially rewritten. **Cross-subsystem boundary**: `protocol-ref-sync.ts` is the only `snippets/` file importing from `../protocol/`.
+- `library/` reuses these model/service patterns (cross-referenced comments to `snippet-service`).
 
 <important if="you are adding a new snippet variant">
 ## Adding a New Snippet Kind

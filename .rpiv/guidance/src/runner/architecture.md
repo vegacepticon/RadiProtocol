@@ -6,7 +6,8 @@ Pure protocol-traversal state machine + output text accumulation. Core (`protoco
 ## Dependencies
 - **graph/graph-model**: `ProtocolGraph`, `LoopContext`, node types
 - **graph/node-label**: `isExitEdge`, `nodeLabel`, `stripExitPrefix`
-- **constants/runner-states**: `RUNNER_STATUS` const · **constants/css-classes**: `CSS_CLASS` (render only)
+- **graph/edge-order**: `orderedOutgoingEdges`
+- **constants/runner-states**: `RUNNER_STATUS` const → **constants/css-classes**: `CSS_CLASS` (render only)
 - **i18n**: `defaultT`, `Translator` (injected, not imported at module scope)
 
 ## Consumers
@@ -28,6 +29,7 @@ export type RunnerState = IdleState | AtNodeState | AwaitingSnippetPickState
   | AwaitingLoopPickState | AwaitingSnippetFillState | CompleteState | ErrorState;
 // getState() is the ONLY public read — internal fields are private.
 // Each state interface carries ONLY the data that status needs (no currentNodeId on IdleState).
+// States expose booleans (canStepBack/canRedo/undoStackSize), never the stacks themselves.
 // Exhaustiveness: default branch assigns status to `never`.
 ```
 
@@ -38,14 +40,16 @@ Every user-driven forward action follows this exact sequence:
 ```typescript
 chooseAnswer(id: string): void {
   if (this.runnerStatus !== RUNNER_STATUS.AT_NODE) return;     // 1. Guard
-  this.redoStack = [];                                          // 2. Clear redo
-  this.undoStack.push({                                         // 3. Snapshot BEFORE mutation
+  if (this.graph === null || this.currentNodeId === null) return;
+  // 2. Validate against graph; on failure transitionToError
+  this.redoStack = [];                                          // 3. Clear redo
+  this.undoStack.push({                                         // 4. Snapshot BEFORE mutation
     nodeId: this.currentNodeId,
     textSnapshot: this.accumulator.snapshot(),
     loopContextStack: this.loopContextStack.map(f => ({ ...f })), // deep copy!
     restoreStatus: RUNNER_STATUS.AT_NODE,                        // optional: non-default undo target
   });
-  // 4. Mutate state…  5. advanceThrough() or set status
+  // 5. Mutate state…  6. advanceThrough() or set status
 }
 ```
 
@@ -79,9 +83,9 @@ interface LoopContext { loopNodeId: string; iteration: number; textBeforeLoop: s
 
 ## Cursor-Based Traversal (Per-Call Step Cap)
 
-`advanceThrough(initialNodeId)` uses an iterative cursor + `maxSteps` counter that **resets on every call** (not a cumulative limit). Exceeding the cap → `transitionToError('Possible graph cycle')`. Auto-advances: start, text-block, answer. Halts: question, loop, snippet (file-bound → fill; directory/unbound → picker). Terminal error: legacy loop-start/loop-end.
+`advanceThrough(initialNodeId)` uses an iterative cursor + `maxSteps` counter (default 50) that **resets on every call** (not a cumulative limit). Exceeding the cap → `transitionToError('Possible graph cycle')`. Auto-advances: start, text-block, answer. Halts: question, loop, snippet (file-bound → fill; directory/unbound → picker). Terminal error: legacy loop-start/loop-end.
 
-**Ordered adjacency**: `adjacency.get(id)?.[0]` is the "first outgoing edge"; scan in order for first-semantic-match. Use stable **edge IDs** for loop-branch selection (labels/targets can collide).
+**Ordered adjacency**: use `orderedOutgoingEdges` (or `adjacency.get(id)?.[0]` as "first outgoing edge"); scan in order for first-semantic-match. Use stable **edge IDs** for loop-branch selection (labels/targets can collide).
 
 ## Serialization (4 Resumable States) + Manual-Edit Ordering
 
@@ -94,6 +98,7 @@ restoreFrom(snapshot): void                       // requires setGraph() first; 
 
 ## Architectural Boundaries
 - **Pure core, Obsidian-aware shell**: `protocol-runner`, `runner-state`, `text-accumulator`, `snippet-label` have zero Obsidian imports.
+- **No events**: results communicated only via read-only `getState()` snapshots + serialization pair.
 - **Runner never imports views**: documented exception is `render-snippet-picker.ts` → `SnippetTreePicker`.
 - **Error is terminal**: `transitionToError(msg)` sets status + localized message. Recovery requires `start()` or `restoreFrom()`.
 

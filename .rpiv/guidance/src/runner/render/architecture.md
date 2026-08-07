@@ -7,7 +7,7 @@ Maps each `RunnerState` variant to DOM output. Each render function is a pure pr
 - **runner/runner-state**: `RunnerState` union — each render narrows via `Extract`
 - **runner/snippet-label**: `isFileBoundSnippetNode`, `snippetBranchLabel`
 - **graph/graph-model**: `ProtocolGraph`, `RPEdge`, node types (read-only)
-- **graph/node-label**: `isExitEdge`, `nodeLabel`, `stripExitPrefix`
+- **graph/node-label**: `isExitEdge`, `nodeLabel`, `stripExitPrefix` · **graph/edge-order**: `orderedOutgoingEdges`
 - **utils/dom-helpers**: `createButton` · **constants/css-classes**: `CSS_CLASS`
 - **i18n** (type only): `Translator` — optional, defaults to identity
 - **obsidian**: `setIcon` (footer only), `App` type (snippet-picker only)
@@ -22,7 +22,7 @@ src/runner/render/
 ├── render-complete.ts         # Completion heading → HTMLElement
 ├── render-error.ts            # Error title + <ul> → void
 ├── render-footer.ts           # Shared Back/Redo/Skip icon row → void
-├── render-loop-picker.ts     # Loop branch buttons (exit + body) → boolean
+├── render-loop-picker.ts      # Loop branch buttons (exit + body) → boolean
 ├── render-question.ts         # Question text + answer/snippet buttons → 'rendered'|'not-question'|'error'
 ├── render-snippet-fill.ts     # Loading/not-found/unsupported placeholders → void
 └── render-snippet-picker.ts   # Snippet tree browser → SnippetTreePicker (async-adjacent)
@@ -68,15 +68,16 @@ Guarantees type-safe status-specific field access without casts. Host's `switch 
 ## Graph Traversal Chosen by Semantics
 
 ```typescript
+// Edges — when labels/identity matter (loop branches):
+const outgoing = orderedOutgoingEdges(graph, state.nodeId);
+// partition into exits (isExitEdge) vs body; stripExitPrefix for exit captions
+
 // Adjacency — when only target-node kinds matter (question buttons):
 for (const neighborId of graph.adjacency.get(nodeId) ?? []) {
   const n = graph.nodes.get(neighborId);
   if (n?.kind === 'answer') answers.push(n);
   else if (n?.kind === 'snippet') snippets.push(n);  // tolerate stale adjacency
 }
-// Edges — when labels/identity matter (loop branches):
-const outgoing = graph.edges.filter(e => e.fromNodeId === state.nodeId);
-// partition into exits (isExitEdge) vs body; stripExitPrefix for exit captions
 ```
 
 ## Async-Guarded Picker + Double-Click Footer

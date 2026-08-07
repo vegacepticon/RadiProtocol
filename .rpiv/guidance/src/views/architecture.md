@@ -1,11 +1,11 @@
 # Views Layer Architecture
 
 ## Responsibility
-Obsidian UI surface — Modal subclasses, ItemView panels, suggest modals, standalone DOM components, and the inline runner overlay. All Obsidian API coupling lives here. Views delegate all business logic to domain services and never contain domain logic themselves.
+Obsidian UI surface — Modal subclasses, ItemView panels, suggest modals, standalone DOM components, and the inline runner overlay (plain class). All Obsidian API coupling lives here. Views delegate all business logic to domain services and never contain domain logic themselves.
 
 ## Dependencies
-- **All lower layers**: protocol, runner, runner/render, graph, snippets, utils, constants, i18n
-- **obsidian**: `Modal`, `ItemView`, `SuggestModal`, `AbstractInputSuggest`, `App`, `Notice`, `setIcon`, `Menu`, `TFile`, `WorkspaceLeaf`
+- **All lower layers**: protocol, runner, runner/render, graph, snippets, library (`library-paths`, `LibraryService`), utils, constants, settings, i18n
+- **obsidian**: `Modal`, `ItemView`, `SuggestModal`, `AbstractInputSuggest`, `App`, `Notice`, `setIcon`, `Menu`, `TFile`, `WorkspaceLeaf`, `EventRef`
 - **main.ts**: type-only `import type RadiProtocolPlugin` (prevents circular deps) · **dagre**: auto-layout for `ProtocolEditorView` only
 
 ## Consumers
@@ -15,10 +15,11 @@ Obsidian UI surface — Modal subclasses, ItemView panels, suggest modals, stand
 ```
 src/views/
 ├── confirm-modal.ts, node-picker-modal.ts, protocol-picker-modal.ts, insert-snippet-modal.ts, folder-suggest.ts  # Modals & pickers (Promise-based)
-├── inline-runner-modal.ts, inline-runner-layout.ts     # Inline runner (non-Modal plain class)
+├── inline-runner-modal.ts, inline-runner-layout.ts     # Inline runner (non-Modal plain class) + layout math
 ├── protocol-editor-view.ts                             # Canvas editor (ItemView + dagre auto-layout)
-├── snippet-editor-modal.ts, snippet-fill-in-modal.ts, snippet-chip-editor.ts  # Snippet editor modals + chip editor
+├── snippet-editor-modal.ts, snippet-fill-in-modal.ts, snippet-chip-editor.ts, option-order-chip-editor.ts  # Editor modals + chip widgets
 ├── snippet-manager-view.ts, snippet-tree-picker.ts     # Snippet manager (ItemView + reusable picker)
+├── library-view.ts, library-item-detail-modal.ts, library-install-progress-modal.ts  # Community library (ItemView + modals)
 └── snippet-manager/tree-renderer.ts                    # Extracted DnD + inline-rename
 ```
 
@@ -47,7 +48,7 @@ close(): void {
 // runUnsavedGuard uses three-button ConfirmModal (Save/Discard/Cancel); Discard → safeResolve + super.close(), Cancel → keep open, failed Save → leave open
 ```
 
-## Obsidian ItemView (Registered Events + 120ms Debounce)
+## Obsidian ItemView (Registered Events + Async-Generation Guard)
 
 ```typescript
 async onOpen(): Promise<void> {
@@ -62,6 +63,7 @@ private scheduleRedraw(): void {
     this.redrawTimer = null; await this.rebuildModel(); this.renderTree(); // model first, one redraw
   }, 120);                                                  // coalesce rapid vault events
 }
+// Stale post-await work rejected via a generation counter + mounted flag (owns(generation)).
 ```
 
 ## State-Machine Render Dispatch + Tracked-Listener Cleanup
@@ -89,13 +91,14 @@ this.loadGeneration++; const gen = this.loadGeneration; const path = this.curren
 const updated = await store.update(path, mutator);
 if (this.currentPath !== path || this.loadGeneration !== gen) return; // don't apply stale completion
 // I18N: Plugin views use this.plugin.i18n.t.bind(this.plugin.i18n); standalone modals accept t?: Translator defaulting to defaultT; user-authored content is NEVER wrapped in t().
-// Legacy exception: SnippetManagerView.getDisplayText() is hardcoded (not localized).
+// Services accessed off the plugin instance (this.plugin.libraryService, this.plugin.snippetService).
 ```
 
 ## Architectural Boundaries
-- **Views never contain domain logic** — persistence through `SnippetService`, `ProtocolDocumentStore`, `rewriteProtocolSnippetRefs`; rendering through `renderMdTemplateSnippet`.
+- **Views never contain domain logic** — persistence through `SnippetService`, `ProtocolDocumentStore`, `LibraryService`, `rewriteProtocolSnippetRefs`; rendering through `renderMdTemplateSnippet`.
 - **Type-only import from main.ts** — `import type RadiProtocolPlugin` prevents circular deps. **One cross-layer exception**: `runner/render/render-snippet-picker.ts` imports `SnippetTreePicker` from views — documented.
-- **CSS namespaces** `rp-inline-runner-*` / `rp-protocol-editor-*` / `radi-snippet-*` / `rp-stp-*`. **Safe DOM**: `textContent`/`createEl({text})` — never `innerHTML` for user/validation content; pair custom interactive elements with role/tabindex/aria-label + Enter/Space activation.
+- **CSS namespaces** `rp-inline-runner-*` / `rp-protocol-editor-*` / `radi-snippet-*` / `rp-stp-*` / `radi-library-*`. **Safe DOM**: `textContent`/`createEl({text})` — never `innerHTML` for user/validation content; pair custom interactive elements with role/tabindex/aria-label + Enter/Space activation.
+- **LibraryView guards**: install flow reads `isLibraryReadOnly`; installed-indicator lookups reuse pure `findInstalledRecordForPath`.
 
 <important if="you are adding a new Modal dialog">
 ## Adding a Promise-Based Modal
@@ -114,8 +117,8 @@ if (this.currentPath !== path || this.loadGeneration !== gen) return; // don't a
 3. Implement `getViewType()`, `getDisplayText()` (localized), `getIcon()`
 4. `onOpen()`: build shell, `rebuildModel()` then `renderTree()`
 5. Vault watchers via `registerEvent()` + `shouldHandle()` slash-boundary prefix filter
-6. `scheduleRedraw()` with 120ms debounce (clear timer in `onClose`)
-7. Register in `main.ts` `onload()` via `addLeafView()`
+6. `scheduleRedraw()` with 120ms debounce; guard stale post-await work with generation/mounted flags (clear timer in `onClose`)
+7. Register in `main.ts` `onload()` via `addLeafView()` (get-or-create leaf + `setViewState` + `revealLeaf`), wire an `addCommand` (NFR-06: omit plugin-name prefix)
 </important>
 
 <important if="you are adding a standalone DOM component">

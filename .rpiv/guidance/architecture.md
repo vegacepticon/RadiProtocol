@@ -7,6 +7,7 @@
 - `src/runner/` — Pure traversal state machine + render sub-modules
 - `src/graph/` — Directed-graph types, never-throw validator, label utilities
 - `src/snippets/` — Snippet data model (md + md-template), vault CRUD, cross-protocol ref-sync
+- `src/library/` — Community-library cluster: registry client, transactional installer, typed stores
 - `src/views/` — Obsidian ItemViews, Modals, reusable DOM widgets
 - `src/i18n/` — Translator service (en/ru)
 - `src/utils/` — DOM helpers, vault utils, write mutex
@@ -16,14 +17,14 @@
 - `src/__tests__/` — Test suites mirroring source structure
 
 ## Architecture
-Feature-grouped modular Obsidian plugin. TypeScript + esbuild + Vitest. Domain logic in `protocol/`, `runner/`, `graph/`, `snippets/`; UI in `views/`. Dependency direction: `views/` → all lower layers; lower layers never import from `views/` (one documented exception: `runner/render/render-snippet-picker.ts` imports `SnippetTreePicker`).
+Feature-grouped modular Obsidian plugin. TypeScript + esbuild + Vitest. Domain logic in `protocol/`, `runner/`, `graph/`, `snippets/`, `library/`; UI in `views/`. Dependency direction: `views/` → all lower layers; lower layers never import from `views/` (one documented exception: `runner/render/render-snippet-picker.ts` imports `SnippetTreePicker`).
 
 ```
-views/  → [protocol/ runner/ graph/ snippets/ utils/ i18n/ constants/]
+views/  → [protocol/ runner/ graph/ snippets/ library/ utils/ i18n/ constants/]
               ↑ (no reverse dependency)
 ```
 
-Pure-vs-Obsidian split per layer (NFR-01): `graph/` (all pure), `protocol/` document+parser (pure), `protocol/` store+resolver (Obsidian), `runner/` core (pure), `runner/render/` (Obsidian DOM), `snippets/` model+template-parser (pure), `snippets/` service+ref-sync (Obsidian). Pure modules receive Obsidian capabilities via constructor injection (`GraphValidator` probe, `Translator` default).
+Pure-vs-Obsidian split per layer (NFR-01): `graph/` (all pure), `protocol/` document+parser (pure), `protocol/` store+resolver (Obsidian), `runner/` core (pure), `runner/render/` (Obsidian DOM), `snippets/` model+template-parser (pure), `snippets/` service+ref-sync (Obsidian), `library/` models+paths+integrity (pure), `library/` client+service+installer+stores (Obsidian). Pure modules receive Obsidian capabilities via constructor injection (`GraphValidator` probe, `Translator` default, `requestUrl`).
 
 ## Commands
 | Command | What it does |
@@ -36,7 +37,7 @@ Pure-vs-Obsidian split per layer (NFR-01): `graph/` (all pure), `protocol/` docu
 | `npm run knip` | Dead file detection |
 
 ## Business Context
-Radiology documentation aid — the radiologist remains responsible for clinical judgment. No backend/auth/cloud; plugin-local only. Inline-only runner (no sidebar/RunnerView — ADR-0001). Git tags numeric (no v-prefix); releases via `npm version X.Y.Z`. Snippets use Markdown templates with YAML front-matter (JSON snippets removed — commit `b895736`; legacy `.json` files left on disk but never listed/inserted).
+Radiology documentation aid — the radiologist remains responsible for clinical judgment. No backend/auth/cloud; plugin-local only. Inline-only runner (no sidebar/RunnerView — ADR-0001). Git tags numeric (no v-prefix); releases via `npm version X.Y.Z`. Snippets use Markdown templates with YAML front-matter (JSON snippets removed — commit `b895736`; legacy `.json` files left on disk but never listed/inserted). **Community library**: registry URL is user-configured (empty default); the wire client + transactional install path are current, but a hosted registry backend is future/deferred; packages are integrity-verified (SHA-256) but NOT authenticity-verified.
 
 <important if="you are adding a new feature that touches multiple layers">
 ## Adding a Cross-Layer Feature
@@ -46,6 +47,7 @@ Radiology documentation aid — the radiologist remains responsible for clinical
 4. **Wire runner state** in `runner/protocol-runner.ts` + `runner/runner-state.ts` — see `.rpiv/guidance/src/runner/architecture.md`
 5. **Render the new state** in `runner/render/` — see `.rpiv/guidance/src/runner/render/architecture.md`
 6. **Add UI components** in `views/` — see `.rpiv/guidance/src/views/architecture.md`
+7. **For community-library features**, follow the model → paths → store → journal → service layering in `.rpiv/guidance/src/library/architecture.md`
 </important>
 
 <important if="you are writing or modifying tests">
@@ -53,7 +55,7 @@ Radiology documentation aid — the radiologist remains responsible for clinical
 - Obsidian-dependent services: `makeVault()` + `makeApp()` mock factory (see `__tests__/protocol-document-store.test.ts`)
 - Render layer: `MockEl` class + `vi.fn()` host spies (see `__tests__/runner/render-question.test.ts`)
 - Runner tests: `new ProtocolRunner()` (no args), inline graphs with `new Map<string, RPNode>()`
-- Fixtures in `__tests__/fixtures/` (`.canvas` for graph scenarios)
+- Fixtures in `__tests__/fixtures/` (`.canvas` for graph scenarios); `__tests__/library/` mirrors the library cluster
 - Naming: `describe('Module — feature')`, `it('describes specific behavior')`
 </important>
 

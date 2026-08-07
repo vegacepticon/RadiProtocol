@@ -15,6 +15,7 @@ On-disk document model for `.rp.json` protocol files: versioned schema, pure par
 - **views/inline-runner-modal**: read → parse → validate → start
 - **views/node-picker-modal**: reads `ProtocolNodeRecord` for start-point choices
 - **snippets/protocol-ref-sync**: rewrites `fields.snippetPath` / `fields.subfolderPath`
+- **library/library-model**: `PackageManifest` composes a `ProtocolDocumentV1` as a value
 
 ## Module Structure
 ```
@@ -96,6 +97,7 @@ export function resolveProtocolDocumentFiles(vault, configuredPath): TFile[]
 - **NO `Result<T>` in stores**: stores return `null` for missing/invalid.
 - **NO unqueued vault writes**: all writes through `WriteMutex.runExclusive()`.
 - **Factory never imports views**: editor visual defaults are duplicated with a cross-reference comment.
+- **Composability, not inheritance**: `library/library-model.ts` wraps `ProtocolDocumentV1` as a value, never extends it.
 
 <important if="you are adding a new field to an existing node kind">
 ## Adding a New Field to a Node Kind
