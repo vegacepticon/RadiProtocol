@@ -9,7 +9,7 @@
 // owns the transaction boundary under the single global installMutex (D7).
 import type { App } from 'obsidian';
 import { WriteMutex } from '../utils/write-mutex';
-import { slugifyPackageId } from './library-paths';
+import { slugifyPackageId, packageNamespaceSegment } from './library-paths';
 import {
   isInstalledRecord, LibraryStoreError, type InstalledRecord,
 } from './library-model';
@@ -17,9 +17,11 @@ import { readJsonFile, writeJsonFile, safeErrorMessage } from './library-json-io
 
 const INSTALLED_DIR = '.radiprotocol/library/installed';
 
-/** Vault-relative path of the per-release record file (D15). */
-export function installedRecordPath(packageId: string, version: string): string {
-  return `${INSTALLED_DIR}/${slugifyPackageId(packageId)}/${slugifyPackageId(version)}.json`;
+/** Vault-relative path of the per-release record file (D15). `pkgSegment` is the
+ *  precomputed `packageNamespaceSegment(packageId)` (slug + shortHash); `versionSlug`
+ *  is `slugifyPackageId(version)`. */
+export function installedRecordPath(pkgSegment: string, versionSlug: string): string {
+  return `${INSTALLED_DIR}/${pkgSegment}/${versionSlug}.json`;
 }
 
 export class InstalledRecordStore {
@@ -34,7 +36,9 @@ export class InstalledRecordStore {
    *  LibraryStoreError('malformed') (D15 marker identity — the file at slot
    *  (packageId, version) must carry matching identity fields). */
   async read(packageId: string, version: string): Promise<InstalledRecord | null> {
-    const path = installedRecordPath(packageId, version);
+    const pkgSegment = await packageNamespaceSegment(packageId);
+    const versionSlug = slugifyPackageId(version);
+    const path = installedRecordPath(pkgSegment, versionSlug);
     const record = await readJsonFile(this.app.vault, path, isInstalledRecord, 'installed record');
     if (record === null) return null;
     if (record.packageId !== packageId || record.releaseVersion !== version) {
@@ -98,14 +102,18 @@ export class InstalledRecordStore {
    *  the installer under the global installMutex, D7/D15). Pretty JSON + trailing
    *  newline, mutex-protected, parent folder ensured. */
   async write(record: InstalledRecord): Promise<void> {
-    const path = installedRecordPath(record.packageId, record.releaseVersion);
+    const pkgSegment = await packageNamespaceSegment(record.packageId);
+    const versionSlug = slugifyPackageId(record.releaseVersion);
+    const path = installedRecordPath(pkgSegment, versionSlug);
     const parentDir = path.slice(0, path.lastIndexOf('/'));
     await writeJsonFile(this.app.vault, this.mutex, path, parentDir, record);
   }
 
   /** Delete one installed-release record file (uninstall). Missing file is a no-op. */
   async delete(packageId: string, version: string): Promise<void> {
-    const path = installedRecordPath(packageId, version);
+    const pkgSegment = await packageNamespaceSegment(packageId);
+    const versionSlug = slugifyPackageId(version);
+    const path = installedRecordPath(pkgSegment, versionSlug);
     const exists = await this.app.vault.adapter.exists(path);
     if (exists) await this.app.vault.adapter.remove(path);
   }

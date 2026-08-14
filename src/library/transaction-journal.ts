@@ -17,7 +17,7 @@
 
 import type { App } from 'obsidian';
 import { WriteMutex } from '../utils/write-mutex';
-import { slugifyPackageId } from './library-paths';
+import { slugifyPackageId, packageNamespaceSegment } from './library-paths';
 import { readJsonFile, writeJsonFile, safeErrorMessage } from './library-json-io';
 import { LibraryStoreError } from './library-model';
 
@@ -64,9 +64,11 @@ export function isTransactionJournal(value: unknown): value is TransactionJourna
   });
 }
 
-/** Vault-relative journal file path for an in-flight (packageId, version). */
-export function transactionJournalPath(packageId: string, version: string): string {
-  return `${TRANSACTIONS_DIR}/${slugifyPackageId(packageId)}@${slugifyPackageId(version)}.json`;
+/** Vault-relative journal file path for an in-flight (packageId, version).
+ *  `pkgSegment` is the precomputed `packageNamespaceSegment(packageId)`;
+ *  `versionSlug` is `slugifyPackageId(version)`. */
+export function transactionJournalPath(pkgSegment: string, versionSlug: string): string {
+  return `${TRANSACTIONS_DIR}/${pkgSegment}@${versionSlug}.json`;
 }
 
 /** Typed wrapper around the journal file. The installer calls these under the
@@ -79,23 +81,33 @@ export class TransactionJournalIO {
   /** Read a journal for (packageId, version). Missing → null (no in-flight tx).
    *  Malformed → throws LibraryStoreError (D3). */
   async read(packageId: string, version: string): Promise<TransactionJournal | null> {
-    return readJsonFile(this.app.vault, transactionJournalPath(packageId, version), isTransactionJournal, 'transaction journal');
+    const pkgSegment = await packageNamespaceSegment(packageId);
+    const versionSlug = slugifyPackageId(version);
+    return readJsonFile(this.app.vault, transactionJournalPath(pkgSegment, versionSlug), isTransactionJournal, 'transaction journal');
   }
 
   /** Write the journal BEFORE any final-path write (D7). Caller holds the global
    *  installMutex; `mutex` is that same lock passed through to writeJsonFile. */
   async write(journal: TransactionJournal, mutex: WriteMutex): Promise<void> {
-    const path = transactionJournalPath(journal.packageId, journal.releaseVersion);
+    const pkgSegment = await packageNamespaceSegment(journal.packageId);
+    const versionSlug = slugifyPackageId(journal.releaseVersion);
+    const path = transactionJournalPath(pkgSegment, versionSlug);
     const parentDir = path.slice(0, path.lastIndexOf('/'));
     await writeJsonFile(this.app.vault, mutex, path, parentDir, journal);
   }
 
   /** Remove the journal file (after successful commit OR after rollback). Missing = no-op. */
   async remove(packageId: string, version: string): Promise<void> {
-    const path = transactionJournalPath(packageId, version);
+    const pkgSegment = await packageNamespaceSegment(packageId);
+    const versionSlug = slugifyPackageId(version);
+    const path = transactionJournalPath(pkgSegment, versionSlug);
     if (await this.app.vault.adapter.exists(path)) {
       await this.app.vault.adapter.remove(path);
+      return;
     }
+    // Legacy slug-only journal path (pre-migration interrupt). Best-effort cleanup.
+    const legacyPath = `${TRANSACTIONS_DIR}/${slugifyPackageId(packageId)}@${versionSlug}.json`;
+    if (await this.app.vault.adapter.exists(legacyPath)) await this.app.vault.adapter.remove(legacyPath);
   }
 
   /** List all in-flight transaction journals (for recovery on load). Recursively

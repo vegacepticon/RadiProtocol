@@ -8,6 +8,7 @@ import { SnippetService } from './snippets/snippet-service';
 // Phase 6 (library): forward-declared type so LibraryView type-checks standalone;
 // the field is initialized in Phase 9.
 import { LibraryView, LIBRARY_VIEW_TYPE } from './views/library-view';
+import { LibraryExportModal } from './views/library-export-modal';
 import { RegistryClient, DEFAULT_REGISTRY_URL } from './library/registry-client';
 import { LibraryService } from './library/library-service';
 import type { InstalledRecord } from './library/library-model';
@@ -109,6 +110,13 @@ export default class RadiProtocolPlugin extends Plugin {
       id: 'open-community-library',
       name: 'Open community library',
       callback: () => { void this.activateLibraryView(); },
+    });
+
+    // Slice 6 — Export a local protocol as a library package (FR-6/D9).
+    this.addCommand({
+      id: 'export-protocol-as-library-package',
+      name: 'Export protocol as library package',
+      callback: () => { void this.handleExportProtocolPackage(); },
     });
 
     // Command: open-protocol-editor — prompts for a .rp.json target, then opens the independent visual editor.
@@ -423,6 +431,32 @@ export default class RadiProtocolPlugin extends Plugin {
     if (result.saved) {
       new Notice(this.i18n.t('snippetEditor.createdNotice'));
     }
+  }
+
+  /** Slice 6 — pick a source protocol, then open the export modal. */
+  private async handleExportProtocolPackage(): Promise<void> {
+    const folderPath = normalizeProtocolFolderPath(this.settings.protocolFolderPath);
+    if (folderPath === '') {
+      new Notice(this.i18n.t('protocolEditor.setProtocolFolderFirst'));
+      return;
+    }
+    const protocolFiles = resolveProtocolDocumentFiles(this.app.vault, folderPath);
+    if (protocolFiles.length === 0) {
+      new Notice(this.i18n.t('command.noProtocolFiles', { folderPath }));
+      return;
+    }
+    const libraryContext = await this.buildLibraryPickerContext(folderPath);
+    this.pickerModal = new ProtocolPickerSuggestModal(
+      this.app,
+      protocolFiles,
+      (item) => {
+        this.pickerModal = null;
+        new LibraryExportModal(this.app, this, item.file.path).open();
+      },
+      libraryContext,
+      this.i18n.t.bind(this.i18n),
+    );
+    this.pickerModal.open();
   }
 
   /**

@@ -8,6 +8,7 @@
 import type { SnippetNode } from '../graph/graph-model';
 import type { InstalledRecord } from './library-model';
 import { slugifyLabel } from '../snippets/snippet-model';
+import { sha256String } from './integrity';
 
 /** Managed subfolder name under both the protocol and snippet roots. */
 export const LIBRARY_SUBROOT = 'library';
@@ -37,38 +38,55 @@ export function validPackageSlug(id: string): string | null {
   return slug === '' ? null : slug;
 }
 
+/** 12 hex = 48 bits of collision space — far beyond any vault's package count.
+ *  Matches the display shortHash length (src/views/library-item-detail-modal.ts:159). */
+const NAMESPACE_HASH_LENGTH = 12;
+
+/** `slugifyPackageId(rawPackageId) + '-' + firstNHex(sha256String(rawPackageId))`. The
+ *  hash is over the RAW packageId (hashing the slug would re-collapse colliding ids).
+ *  Path-safe (slug is [a-z0-9-]; hex suffix is [0-9a-f]); passes assertNoTraversal.
+ *  Async because sha256String uses Web Crypto. Callers compute ONCE and thread the
+ *  resulting string through the synchronous derivation helpers (D1 — no helper newly
+ *  becomes async). The version slug needs no hash (immutable release tag). */
+export async function packageNamespaceSegment(packageId: string): Promise<string> {
+  const slug = slugifyPackageId(packageId);
+  const hash = await sha256String(packageId);
+  return `${slug}-${hash.slice(0, NAMESPACE_HASH_LENGTH)}`;
+}
+
 /**
  * Vault-relative namespace root for a package's installed protocols.
- * `${protocolRoot}/library/<packageIdSlug>/<versionSlug>`.
+ * `${protocolRoot}/library/<pkgSegment>/<versionSlug>`. Callers precompute both.
  */
-export function libraryProtocolNamespace(protocolRoot: string, packageId: string, version: string): string {
-  const seg = `${LIBRARY_SUBROOT}/${slugifyPackageId(packageId)}/${slugifyPackageId(version)}`;
+export function libraryProtocolNamespace(protocolRoot: string, pkgSegment: string, versionSlug: string): string {
+  const seg = `${LIBRARY_SUBROOT}/${pkgSegment}/${versionSlug}`;
   return protocolRoot === '' ? seg : `${protocolRoot}/${seg}`;
 }
 
 /**
  * Vault-relative namespace root for a package's installed snippets.
- * `${snippetRoot}/library/<packageIdSlug>/<versionSlug>`.
+ * `${snippetRoot}/library/<pkgSegment>/<versionSlug>`. Callers precompute both.
  */
-export function librarySnippetNamespace(snippetRoot: string, packageId: string, version: string): string {
-  const seg = `${LIBRARY_SUBROOT}/${slugifyPackageId(packageId)}/${slugifyPackageId(version)}`;
+export function librarySnippetNamespace(snippetRoot: string, pkgSegment: string, versionSlug: string): string {
+  const seg = `${LIBRARY_SUBROOT}/${pkgSegment}/${versionSlug}`;
   return snippetRoot === '' ? seg : `${snippetRoot}/${seg}`;
 }
 
 /**
  * Vault-relative path of the installed protocol file inside its namespace.
- * Filename is `<packageIdSlug>.rp.json` for determinism.
+ * Filename is `<pkgSegment>.rp.json` for determinism (moves in lockstep with
+ * the segment). Callers precompute both.
  */
-export function libraryProtocolFilePath(protocolRoot: string, packageId: string, version: string): string {
-  return `${libraryProtocolNamespace(protocolRoot, packageId, version)}/${slugifyPackageId(packageId)}.rp.json`;
+export function libraryProtocolFilePath(protocolRoot: string, pkgSegment: string, versionSlug: string): string {
+  return `${libraryProtocolNamespace(protocolRoot, pkgSegment, versionSlug)}/${pkgSegment}.rp.json`;
 }
 
 /**
  * Vault-relative path of an installed snippet file inside its namespace.
- * `relPath` is the package-relative, extension-preserving path.
+ * `relPath` is the package-relative, extension-preserving path. Callers precompute both.
  */
-export function librarySnippetFilePath(snippetRoot: string, packageId: string, version: string, relPath: string): string {
-  return `${librarySnippetNamespace(snippetRoot, packageId, version)}/${relPath}`;
+export function librarySnippetFilePath(snippetRoot: string, pkgSegment: string, versionSlug: string, relPath: string): string {
+  return `${librarySnippetNamespace(snippetRoot, pkgSegment, versionSlug)}/${relPath}`;
 }
 
 /**
@@ -150,11 +168,11 @@ export function rewriteSnippetRef(current: string, mapping: Map<string, string>)
  * or when a reference is traversal-unsafe.
  */
 export function buildReferenceMapping(
-  packageId: string,
-  version: string,
+  pkgSegment: string,
+  versionSlug: string,
   snippetNodes: readonly SnippetNode[],
 ): { mapping: Map<string, string> } | { error: string } {
-  const namespaceRel = `${LIBRARY_SUBROOT}/${slugifyPackageId(packageId)}/${slugifyPackageId(version)}`;
+  const namespaceRel = `${LIBRARY_SUBROOT}/${pkgSegment}/${versionSlug}`;
   const mapping = new Map<string, string>();
   for (const node of snippetNodes) {
     const snippetPath = node.radiprotocol_snippetPath;

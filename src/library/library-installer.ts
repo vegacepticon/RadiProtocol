@@ -16,13 +16,13 @@ import type { App } from 'obsidian';
 import { WriteMutex } from '../utils/write-mutex';
 import { ensureFolderPath } from '../utils/vault-utils';
 import { defaultT, type Translator } from '../i18n';
-import type { ProtocolDocumentV1 } from '../protocol/protocol-document';
+import { isProtocolDocumentV1, type ProtocolDocumentV1 } from '../protocol/protocol-document';
 import { ProtocolDocumentParser } from '../protocol/protocol-document-parser';
 import { GraphValidator } from '../graph/graph-validator';
 import {
-  assertNoTraversal, buildReferenceMapping, libraryProtocolFilePath,
-  libraryProtocolNamespace, librarySnippetFilePath, librarySnippetNamespace,
-  rewriteSnippetRef, validPackageSlug,
+  LIBRARY_SUBROOT, assertNoTraversal, buildReferenceMapping, findInstalledRecordForPath,
+  libraryProtocolFilePath, librarySnippetFilePath, librarySnippetNamespace,
+  packageNamespaceSegment, rewriteSnippetRef, slugifyPackageId, validPackageSlug,
 } from './library-paths';
 import { sha256String, verifyIntegrity } from './integrity';
 import { writeJsonFile, safeErrorMessage } from './library-json-io';
@@ -35,6 +35,7 @@ import {
   type JournalEntry, type TransactionJournal,
 } from './transaction-journal';
 import { installedRecordPath } from './installed-record-store';
+import { planRecordMigration } from './library-migration';
 
 /** Single global install lock (D7 — one fixed synthetic key for every
  *  transaction, strictly serializing installs; avoids the ensureFolderPath
@@ -58,6 +59,16 @@ export type UninstallResult =
 export interface RecoveryReport {
   committed: Array<{ packageId: string; releaseVersion: string }>;
   rolledBack: Array<{ packageId: string; releaseVersion: string }>;
+  /** Namespace folders cleaned by the FR-4 destination-folder orphan scan
+   *  (journal-less interrupt leftovers with no valid marker). */
+  orphansCleaned: Array<{ namespace: string }>;
+}
+
+/** Result of the one-time slug→slug+hash migration (FR-2). Never throws. */
+export interface MigrationReport {
+  migrated: Array<{ packageId: string; releaseVersion: string }>;
+  skipped: Array<{ packageId: string; releaseVersion: string }>;
+  failed: Array<{ packageId: string; releaseVersion: string; reason: string }>;
 }
 
 export interface LibraryInstallerSettings {
@@ -70,6 +81,10 @@ export interface LibraryInstallerOptions {
   journalIO?: TransactionJournalIO;
   /** Injectable translator (defaults to defaultT for pure-test sites). */
   t?: Translator;
+  /** Injectable lister for collision detection in the install preflight (D4).
+   *  Read-only — the installer never writes to the record store. Undefined in
+   *  pure-test sites → collision detection degrades to dirty-slot messaging. */
+  listInstalled?: () => Promise<InstalledRecord[]>;
 }
 
 export class LibraryInstaller {
@@ -77,12 +92,14 @@ export class LibraryInstaller {
   private readonly settings: LibraryInstallerSettings;
   private readonly t: Translator;
   private readonly journalIO: TransactionJournalIO;
+  private readonly listInstalled?: () => Promise<InstalledRecord[]>;
 
   constructor(app: App, settings: LibraryInstallerSettings, options: LibraryInstallerOptions = {}) {
     this.app = app;
     this.settings = settings;
     this.t = options.t ?? defaultT;
     this.journalIO = options.journalIO ?? new TransactionJournalIO(app);
+    this.listInstalled = options.listInstalled;
   }
 
   /**
@@ -151,7 +168,7 @@ export class LibraryInstaller {
       try {
         journals = await this.journalIO.listAll();
       } catch {
-        return { committed: [], rolledBack: [] };
+        return { committed: [], rolledBack: [], orphansCleaned: [] };
       }
       const committed: RecoveryReport['committed'] = [];
       const rolledBack: RecoveryReport['rolledBack'] = [];
@@ -172,7 +189,83 @@ export class LibraryInstaller {
           // one journal's recovery must not abort the others — continue
         }
       }
-      return { committed, rolledBack };
+      // Second phase (FR-4): scan destination folders for journal-less orphans.
+      const orphansCleaned: RecoveryReport['orphansCleaned'] = [];
+      try {
+        const records = this.listInstalled ? await this.listInstalled() : [];
+        const orphanNamespaces = await this.findOrphanedNamespaces(records);
+        for (const ns of orphanNamespaces) {
+          if (await this.cleanOrphanedNamespace(ns)) orphansCleaned.push({ namespace: ns });
+        }
+      } catch {
+        // best-effort — a scan failure must not abort recovery (committed/rolledBack stand)
+      }
+      return { committed, rolledBack, orphansCleaned };
+    });
+  }
+
+  /** One-time slug-only → slug+hash migration of installed records (FR-2). Runs
+   *  under the global installMutex (D7), per-record try/catch continue, marker
+   *  rewrite LAST. Uses the existing transaction journal for interrupt atomicity:
+   *  an interrupted migration leaves a journal at the new slot — recoverInterrupted
+   *  (next load) rolls back the partial new files before this re-runs. Idempotent
+   *  (D2 — path-shape discriminator skips already-migrated records). Never throws. */
+  async migrateInstalledRecords(): Promise<MigrationReport> {
+    return installMutex.runExclusive(INSTALL_LOCK_KEY, async () => {
+      if (!this.listInstalled) return { migrated: [], skipped: [], failed: [] };
+      let records: InstalledRecord[];
+      try { records = await this.listInstalled(); }
+      catch { return { migrated: [], skipped: [], failed: [] }; }
+      const migrated: MigrationReport['migrated'] = [];
+      const skipped: MigrationReport['skipped'] = [];
+      const failed: MigrationReport['failed'] = [];
+      for (const record of records) {
+        try {
+          const pkgSegment = await packageNamespaceSegment(record.packageId);
+          const versionSlug = slugifyPackageId(record.releaseVersion);
+          let raw: string;
+          try { raw = await this.app.vault.adapter.read(record.protocolPath); }
+          catch { skipped.push({ packageId: record.packageId, releaseVersion: record.releaseVersion }); continue; }
+          const protocolDoc: unknown = JSON.parse(raw);
+          if (!isProtocolDocumentV1(protocolDoc)) { failed.push({ packageId: record.packageId, releaseVersion: record.releaseVersion, reason: 'protocol file is not a valid ProtocolDocumentV1' }); continue; }
+          const result = planRecordMigration(record, protocolDoc, pkgSegment, versionSlug, this.settings.protocolFolderPath, this.settings.snippetFolderPath);
+          if ('error' in result) { failed.push({ packageId: record.packageId, releaseVersion: record.releaseVersion, reason: result.error }); continue; }
+          if (!result.changed) { skipped.push({ packageId: record.packageId, releaseVersion: record.releaseVersion }); continue; }
+          const plan = result.plan;
+          // Migration journal (new paths, marker LAST) — for interrupt recovery.
+          const entries: JournalEntry[] = [
+            ...plan.snippetMoves.map((m) => ({ path: m.newPath, kind: 'owned' as const })),
+            { path: plan.newProtocolPath, kind: 'owned' as const },
+            { path: plan.newMarkerPath, kind: 'marker' as const },
+          ];
+          await this.journalIO.write({
+            schema: TRANSACTIONS_SCHEMA, version: TRANSACTIONS_VERSION,
+            packageId: record.packageId, releaseVersion: record.releaseVersion,
+            startedAt: new Date().toISOString(), entries,
+          }, installMutex);
+          for (const move of plan.snippetMoves) {
+            const content = await this.app.vault.adapter.read(move.oldPath);
+            await ensureFolderPath(this.app.vault, parentDirOf(move.newPath));
+            await this.app.vault.adapter.write(move.newPath, content);
+          }
+          await writeJsonFile(this.app.vault, installMutex, plan.newProtocolPath, parentDirOf(plan.newProtocolPath), plan.rewrittenDoc);
+          // C5: recompute the record's protocolSha256 to match the MIGRATED on-disk doc
+          // (the rewrite changed the snippet refs → the old installed hash no longer matches).
+          plan.record.protocolSha256 = await sha256String(JSON.stringify(plan.rewrittenDoc, null, 2) + '\n');
+          // New marker LAST (commit signal).
+          await writeJsonFile(this.app.vault, installMutex, plan.newMarkerPath, parentDirOf(plan.newMarkerPath), plan.record);
+          // Remove old files (legacy protocol + snippets + marker).
+          await this.removeOwnedPaths(
+            [plan.oldProtocolPath, ...plan.snippetMoves.map((m) => m.oldPath), plan.oldMarkerPath],
+            plan.oldMarkerPath, parentDirOf(plan.oldProtocolPath), plan.oldSnippetNamespace,
+          );
+          try { await this.journalIO.remove(record.packageId, record.releaseVersion); } catch { /* best-effort */ }
+          migrated.push({ packageId: record.packageId, releaseVersion: record.releaseVersion });
+        } catch (e) {
+          failed.push({ packageId: record.packageId, releaseVersion: record.releaseVersion, reason: safeErrorMessage(e) });
+        }
+      }
+      return { migrated, skipped, failed };
     });
   }
 
@@ -188,26 +281,32 @@ export class LibraryInstaller {
     if (validPackageSlug(packageId) === null) return { error: `invalid package id "${packageId}": slugifies to empty` };
     if (validPackageSlug(version) === null) return { error: `invalid release version "${version}": slugifies to empty` };
 
-    // 1b. Collision preflight — already installed (valid+identity marker) OR a
-    // dirty destination (leftover final paths from an unrecovered interrupt). ANY
-    // existing final path without a valid marker = dirty slot — refuse to clobber
-    // (run recovery or uninstall first). This guards against overwriting user
-    // content or a prior failed install's leftover staged files.
+    // Collision-resistant namespace segment (slug + shortHash of the RAW packageId),
+    // computed ONCE and threaded through every synchronous derivation helper (D1).
+    const pkgSegment = await packageNamespaceSegment(packageId);
+    const versionSlug = slugifyPackageId(version);
+
+    // 1b. Occupied-destination preflight — already installed (valid+identity
+    // marker) OR a foreign package owning the slot (collision) OR leftover final
+    // paths with no valid marker (dirty slot). A collision names BOTH packageIds
+    // (FR-3); a dirty slot is an unrecovered interrupt (run recovery first). ANY
+    // existing final path without a valid marker = dirty slot — refuse to clobber.
     if (await this.readMarker(packageId, version) !== null) {
       return { error: `package ${packageId}@${version} is already installed` };
     }
-    const destProtocolPath = libraryProtocolFilePath(protocolRoot, packageId, version);
-    if (await this.app.vault.adapter.exists(destProtocolPath)) {
-      return { error: `destination occupied (prior incomplete install) — run recovery first: ${destProtocolPath}` };
-    }
-    if (await this.app.vault.adapter.exists(installedRecordPath(packageId, version))) {
-      return { error: `destination occupied (prior incomplete install) — run recovery first: ${installedRecordPath(packageId, version)}` };
-    }
-    for (const f of manifest.snippetFiles) {
-      const p = librarySnippetFilePath(snippetRoot, packageId, version, f.relPath);
-      if (await this.app.vault.adapter.exists(p)) {
-        return { error: `destination occupied (prior incomplete install) — run recovery first: ${p}` };
+    const records = this.listInstalled ? await this.listInstalled() : [];
+    const occupiedDestPaths = [
+      libraryProtocolFilePath(protocolRoot, pkgSegment, versionSlug),
+      installedRecordPath(pkgSegment, versionSlug),
+      ...manifest.snippetFiles.map((f) => librarySnippetFilePath(snippetRoot, pkgSegment, versionSlug, f.relPath)),
+    ];
+    for (const destPath of occupiedDestPaths) {
+      if (!(await this.app.vault.adapter.exists(destPath))) continue;
+      const c = await this.classifyOccupiedPath(destPath, packageId, records);
+      if (c.collision) {
+        return { error: this.t('library.collisionError', { incoming: packageId, existing: c.existing }) };
       }
+      return { error: this.t('library.dirtySlotError', { packageId, version, path: destPath }) };
     }
 
     // 1c. Manifest/content closure + .md-only + safe paths.
@@ -238,13 +337,13 @@ export class LibraryInstaller {
 
     // 1f. Parser success (deep node validation — never throws).
     const parser = new ProtocolDocumentParser(this.t);
-    const protocolPath = libraryProtocolFilePath(protocolRoot, packageId, version);
+    const protocolPath = libraryProtocolFilePath(protocolRoot, pkgSegment, versionSlug);
     const parsed = parser.parse(protocolJson, protocolPath);
     if (!parsed.success) return { error: `protocol document failed to parse: ${parsed.error}` };
 
     // 1g. Build reference mapping from the parsed snippet nodes (extension-preserving).
     const snippetNodes = [...parsed.graph.nodes.values()].filter((n) => n.kind === 'snippet');
-    const mappingResult = buildReferenceMapping(packageId, version, snippetNodes);
+    const mappingResult = buildReferenceMapping(pkgSegment, versionSlug, snippetNodes);
     if ('error' in mappingResult) return { error: mappingResult.error };
     const mapping = mappingResult.mapping;
 
@@ -297,7 +396,7 @@ export class LibraryInstaller {
     const reparsed = parser.parseDocument(rewrittenDoc, protocolPath);
     if (!reparsed.success) return { error: `rewritten protocol document failed to parse: ${reparsed.error}` };
     const plannedFinalPaths = new Set(
-      manifest.snippetFiles.map((f) => librarySnippetFilePath(snippetRoot, packageId, version, f.relPath)),
+      manifest.snippetFiles.map((f) => librarySnippetFilePath(snippetRoot, pkgSegment, versionSlug, f.relPath)),
     );
     const validator = new GraphValidator({
       snippetFileProbe: (abs) => plannedFinalPaths.has(abs),
@@ -309,12 +408,12 @@ export class LibraryInstaller {
 
     // Compute the plan: journal entries (owned snippets+protocol, marker LAST),
     // the ordered snippet writes, and the per-release commit-marker record.
-    const markerPath = installedRecordPath(packageId, version);
-    const snippetNamespace = librarySnippetNamespace(snippetRoot, packageId, version);
+    const markerPath = installedRecordPath(pkgSegment, versionSlug);
+    const snippetNamespace = librarySnippetNamespace(snippetRoot, pkgSegment, versionSlug);
     const entries: JournalEntry[] = [];
     const snippetWrites: Array<{ path: string; content: string }> = [];
     for (const f of manifest.snippetFiles) {
-      const path = librarySnippetFilePath(snippetRoot, packageId, version, f.relPath);
+      const path = librarySnippetFilePath(snippetRoot, pkgSegment, versionSlug, f.relPath);
       entries.push({ path, kind: 'owned' });
       snippetWrites.push({ path, content: contentMap.get(f.relPath)! });
     }
@@ -349,14 +448,39 @@ export class LibraryInstaller {
   /** Read the marker for (packageId, version). Missing/malformed/identity-mismatch
    *  → null (treated as not-installed during install preflight). */
   private async readMarker(packageId: string, version: string): Promise<InstalledRecord | null> {
+    const pkgSegment = await packageNamespaceSegment(packageId);
+    const versionSlug = slugifyPackageId(version);
     try {
-      const raw = await this.app.vault.adapter.read(installedRecordPath(packageId, version));
+      const raw = await this.app.vault.adapter.read(installedRecordPath(pkgSegment, versionSlug));
       const parsed: unknown = JSON.parse(raw);
       if (isInstalledRecord(parsed) && parsed.packageId === packageId && parsed.releaseVersion === version) return parsed;
       return null;
     } catch {
       return null;
     }
+  }
+
+  /** Classify an occupied destination path as a collision (a different package
+   *  owns it) or a dirty slot (leftover files, no owner). `findInstalledRecordForPath`
+   *  matches protocol/snippet paths against installed records; the marker path is
+   *  not matched by it, so a raw read detects a foreign marker at the slot. */
+  private async classifyOccupiedPath(
+    path: string, incomingPackageId: string, records: InstalledRecord[],
+  ): Promise<{ collision: true; existing: string } | { collision: false }> {
+    const owner = findInstalledRecordForPath(records, path);
+    if (owner !== null && owner.packageId !== incomingPackageId) {
+      return { collision: true, existing: owner.packageId };
+    }
+    if (owner === null) {
+      try {
+        const raw = await this.app.vault.adapter.read(path);
+        const parsed: unknown = JSON.parse(raw);
+        if (isInstalledRecord(parsed) && parsed.packageId !== incomingPackageId) {
+          return { collision: true, existing: parsed.packageId };
+        }
+      } catch { /* not a valid record — dirty slot */ }
+    }
+    return { collision: false };
   }
 
   /** True if the marker at `path` is a valid InstalledRecord with matching
@@ -383,7 +507,9 @@ export class LibraryInstaller {
     return installMutex.runExclusive(INSTALL_LOCK_KEY, async () => {
       const record = await this.readMarker(packageId, version);
       if (record === null) return { status: 'not-installed', packageId, releaseVersion: version };
-      const markerPath = installedRecordPath(packageId, version);
+      const pkgSegment = await packageNamespaceSegment(packageId);
+      const versionSlug = slugifyPackageId(version);
+      const markerPath = installedRecordPath(pkgSegment, versionSlug);
       const protoNs = parentDirOf(record.protocolPath);
       const snipNs = record.snippetNamespace;
       const paths = [record.protocolPath, markerPath];
@@ -485,9 +611,13 @@ export class LibraryInstaller {
    *  (Step 5 C4: never discard the only recovery record while final files may
    *  remain). */
   private async rollbackTransaction(journal: TransactionJournal): Promise<void> {
-    const markerPath = installedRecordPath(journal.packageId, journal.releaseVersion);
-    const protoNs = libraryProtocolNamespace(this.settings.protocolFolderPath, journal.packageId, journal.releaseVersion);
-    const snipNs = librarySnippetNamespace(this.settings.snippetFolderPath, journal.packageId, journal.releaseVersion);
+    const markerEntry = journal.entries.find((e) => e.kind === 'marker');
+    const markerPath = markerEntry?.path ?? '';
+    const ownedEntries = journal.entries.filter((e) => e.kind === 'owned');
+    const protocolEntry = ownedEntries.find((e) => e.path.endsWith('.rp.json'));
+    const snippetEntries = ownedEntries.filter((e) => !e.path.endsWith('.rp.json'));
+    const protoNs = protocolEntry ? parentDirOf(protocolEntry.path) : '';
+    const snipNs = commonNamespacePrefix(snippetEntries.map((e) => e.path));
     const allRemoved = await this.removeOwnedPaths(journal.entries.map((e) => e.path), markerPath, protoNs, snipNs);
     if (!allRemoved) return; // preserve the journal — recovery-on-load will retry
     try {
@@ -496,6 +626,80 @@ export class LibraryInstaller {
       // best-effort
     }
   }
+
+  /** Discover namespace folders under ${root}/library/ that are NOT owned by any
+   *  valid installed record (FR-4). A namespace folder is <root>/library/<pkgSegment>/<versionSlug>. */
+  private async findOrphanedNamespaces(records: InstalledRecord[]): Promise<string[]> {
+    const orphans: string[] = [];
+    for (const root of [this.settings.protocolFolderPath, this.settings.snippetFolderPath]) {
+      if (root === '') continue;
+      const libraryFolder = `${root}/${LIBRARY_SUBROOT}`;
+      if (!(await this.app.vault.adapter.exists(libraryFolder))) continue;
+      const pkgFolders = await this.listChildrenFolders(libraryFolder);
+      for (const pkgFolder of pkgFolders) {
+        const versionFolders = await this.listChildrenFolders(pkgFolder);
+        for (const versionFolder of versionFolders) {
+          const files = await this.listFilesRecursive(versionFolder);
+          if (files.length === 0) continue;
+          const owned = files.some((f) => findInstalledRecordForPath(records, f) !== null);
+          if (!owned) orphans.push(versionFolder);
+        }
+      }
+    }
+    return orphans;
+  }
+
+  /** Delete an orphaned namespace folder's files, guarded by the marker-file-exists
+   *  safety check (D6). Returns true if cleaned, false if skipped (marker present). */
+  private async cleanOrphanedNamespace(namespace: string): Promise<boolean> {
+    const parts = namespace.split('/');
+    const versionSlug = parts[parts.length - 1]!;
+    const pkgSegment = parts[parts.length - 2]!;
+    // D6 safety: skip if the marker .json is present at the installed slot — a
+    // present-but-corrupt marker means a valid package might own this namespace.
+    const markerSlot = installedRecordPath(pkgSegment, versionSlug);
+    try {
+      if (await this.app.vault.adapter.exists(markerSlot)) return false;
+    } catch { return false; }
+    const files = await this.listFilesRecursive(namespace);
+    await this.removeOwnedPaths(files, '', namespace, namespace);
+    return true;
+  }
+
+  private async listChildrenFolders(dir: string): Promise<string[]> {
+    try { return (await this.app.vault.adapter.list(dir)).folders; }
+    catch { return []; }
+  }
+
+  private async listFilesRecursive(dir: string): Promise<string[]> {
+    const out: string[] = [];
+    const queue: string[] = [dir];
+    while (queue.length > 0) {
+      const current = queue.shift()!;
+      let listing: { files: string[]; folders: string[] };
+      try { listing = await this.app.vault.adapter.list(current); }
+      catch { continue; }
+      out.push(...listing.files);
+      queue.push(...listing.folders);
+    }
+    return out;
+  }
+}
+
+/** Longest '/'-boundary path prefix that contains every path (the common namespace
+ *  of a set of journal snippet entries). Returns '' for an empty set or when no
+ *  common ancestor exists. A namespace is always a directory, so the seed is the
+ *  parent of the first path (not the file path itself). */
+function commonNamespacePrefix(paths: string[]): string {
+  if (paths.length === 0) return '';
+  let prefix = parentDirOf(paths[0]!);
+  for (const p of paths) {
+    while (prefix !== '' && p !== prefix && !p.startsWith(prefix + '/')) {
+      prefix = parentDirOf(prefix);
+    }
+    if (prefix === '') break;
+  }
+  return prefix;
 }
 
 /** Install plan produced by planInstall on successful in-memory validation. */

@@ -11,6 +11,10 @@ import {
 } from '../../library/library-model';
 import type { ReleaseFetchResult } from '../../library/registry-model';
 import { installedRecordPath } from '../../library/installed-record-store';
+import { packageNamespaceSegment, slugifyPackageId } from '../../library/library-paths';
+import { createEmptyProtocolDocument } from '../../protocol/protocol-document';
+import { sha256String } from '../../library/integrity';
+import { isReleaseResponse } from '../../library/registry-model';
 
 function listPath(files: Record<string, string>, dirPath: string): { files: string[]; folders: string[] } {
   const prefix = dirPath === '' ? '' : dirPath + '/';
@@ -43,6 +47,10 @@ function makeVault(opts: { files?: Record<string, string> } = {}) {
 }
 const makeApp = (vault: ReturnType<typeof makeVault>['vault']) => ({ vault } as unknown);
 
+async function recPath(packageId: string, version: string): Promise<string> {
+  return installedRecordPath(await packageNamespaceSegment(packageId), slugifyPackageId(version));
+}
+
 const SETTINGS = { protocolFolderPath: 'Protocols', snippetFolderPath: 'Snippets' };
 
 function entry(packageId: string, title: string, cats: string[] = []): CatalogEntry {
@@ -71,7 +79,8 @@ function makeService(opts: {
   const installer = {
     install: vi.fn(async (_b: ReleaseBundle): Promise<InstallResult> => opts.installResult ?? { status: 'ok', packageId: 'chest-ct', releaseVersion: '1.0.0' }),
     uninstall: vi.fn(async (_p: string, _v: string): Promise<UninstallResult> => opts.uninstallResult ?? { status: 'ok', packageId: 'chest-ct', releaseVersion: '1.0.0' }),
-    recoverInterrupted: vi.fn(async (): Promise<RecoveryReport> => opts.recovery ?? { committed: [], rolledBack: [] }),
+    recoverInterrupted: vi.fn(async (): Promise<RecoveryReport> => opts.recovery ?? { committed: [], rolledBack: [], orphansCleaned: [] }),
+    migrateInstalledRecords: vi.fn(async () => ({ migrated: [], skipped: [], failed: [] })),
   } as unknown as LibraryInstaller;
   const service = new LibraryService(app as never, SETTINGS, registryClient, { installer, cacheStore, recordStore });
   return { service, registryClient, installer, cacheStore, recordStore };
@@ -186,7 +195,8 @@ describe('LibraryService — uninstall / listInstalled / recovery', () => {
       snippetNamespace: 'Snippets/library/chest-ct/1-0-0',
       snippetFiles: [], protocolSha256: 'a'.repeat(64),
     };
-    const files: Record<string, string> = { [installedRecordPath('chest-ct', '1.0.0')]: JSON.stringify(record, null, 2) + '\n' };
+    const rp = await recPath('chest-ct', '1.0.0');
+    const files: Record<string, string> = { [rp]: JSON.stringify(record, null, 2) + '\n' };
     const { service, recordStore } = makeService({ files });
     const spy = vi.spyOn(recordStore, 'list');
     const r = await service.listInstalled();
@@ -210,16 +220,91 @@ describe('LibraryService — uninstall / listInstalled / recovery', () => {
       snippetNamespace: 'Snippets/library/chest-ct/1-0-0',
       snippetFiles: [], protocolSha256: 'a'.repeat(64),
     };
-    const files: Record<string, string> = { [installedRecordPath('chest-ct', '1.0.0')]: JSON.stringify(record, null, 2) + '\n' };
+    const rp = await recPath('chest-ct', '1.0.0');
+    const files: Record<string, string> = { [rp]: JSON.stringify(record, null, 2) + '\n' };
     const { service } = makeService({ files });
     expect((await service.getInstalledRecord('chest-ct', '1.0.0'))?.packageId).toBe('chest-ct');
     expect(await service.getInstalledRecord('chest-ct', '9.9.9')).toBe(null);
   });
 
   it('delegates recoverInterruptedInstalls to installer.recoverInterrupted', async () => {
-    const { service, installer } = makeService({ recovery: { committed: [{ packageId: 'a', releaseVersion: '1' }], rolledBack: [] } });
+    const { service, installer } = makeService({ recovery: { committed: [{ packageId: 'a', releaseVersion: '1' }], rolledBack: [], orphansCleaned: [] } });
     const r = await service.recoverInterruptedInstalls();
     expect(r.committed).toHaveLength(1);
     expect(installer.recoverInterrupted).toHaveBeenCalled();
+  });
+});
+
+describe('LibraryService — buildLocalPackage / writePackageExport', () => {
+  it('assembles a SOURCE bundle with correct hashes + un-rewritten refs', async () => {
+    const protocolDoc = createEmptyProtocolDocument('id-1', 'Chest CT', new Date('2026-01-01T00:00:00Z'));
+    const startId = protocolDoc.nodes[0]!.id;
+    protocolDoc.nodes.push({ id: 'snip-1', kind: 'snippet', x: 0, y: 0, width: 100, height: 100, fields: { snippetPath: 'lung.md' } });
+    protocolDoc.edges.push({ id: 'e1', fromNodeId: startId, toNodeId: 'snip-1' });
+    const protoJson = JSON.stringify(protocolDoc, null, 2) + '\n';
+    const snippetContent = '# Lung content\n';
+    const files: Record<string, string> = { 'Protocols/chest-ct.rp.json': protoJson, 'Snippets/lung.md': snippetContent };
+    const { service } = makeService({ files });
+    const result = await service.buildLocalPackage('Protocols/chest-ct.rp.json', { packageId: 'chest-ct', releaseVersion: '1.0.0', author: { displayName: 'Roman' } });
+    expect(result.status).toBe('ok');
+    if (result.status !== 'ok') return;
+    expect(result.bundle.manifest.protocolSha256).toBe(await sha256String(protoJson));
+    expect(result.bundle.manifest.protocolDoc.nodes.find((n) => n.id === 'snip-1')!.fields['snippetPath']).toBe('lung.md');
+    expect(result.bundle.snippetContents).toEqual([{ relPath: 'lung.md', content: snippetContent }]);
+    expect(result.bundle.manifest.snippetFiles[0]!.sha256).toBe(await sha256String(snippetContent));
+    expect(isReleaseResponse(result.bundle)).toBe(true);
+  });
+
+  it('FR-7: sets collisionWith when a same-slug package is already installed', async () => {
+    const protocolDoc = createEmptyProtocolDocument('id-1', 'Chest CT', new Date('2026-01-01T00:00:00Z'));
+    const startId = protocolDoc.nodes[0]!.id;
+    protocolDoc.nodes.push({ id: 'snip-1', kind: 'snippet', x: 0, y: 0, width: 100, height: 100, fields: { snippetPath: 'lung.md' } });
+    protocolDoc.edges.push({ id: 'e1', fromNodeId: startId, toNodeId: 'snip-1' });
+    const protoJson = JSON.stringify(protocolDoc, null, 2) + '\n';
+    const existingRecord = {
+      schema: INSTALLED_RECORD_SCHEMA, version: INSTALLED_RECORD_VERSION,
+      packageId: 'chest.ct', releaseVersion: '1.0.0', installedAt: '2026-01-01T00:00:00Z',
+      protocolPath: 'Protocols/library/chest-ct/1-0-0/chest-ct.rp.json',
+      snippetNamespace: 'Snippets/library/chest-ct/1-0-0',
+      snippetFiles: [], protocolSha256: 'a'.repeat(64),
+    };
+    const seg = await packageNamespaceSegment('chest.ct');
+    const vSlug = slugifyPackageId('1.0.0');
+    const files: Record<string, string> = {
+      'Protocols/chest-ct.rp.json': protoJson,
+      'Snippets/lung.md': '# Lung\n',
+      [installedRecordPath(seg, vSlug)]: JSON.stringify(existingRecord, null, 2) + '\n',
+    };
+    const { service } = makeService({ files });
+    const result = await service.buildLocalPackage('Protocols/chest-ct.rp.json', { packageId: 'chest-ct', releaseVersion: '1.0.0' });
+    expect(result.status).toBe('ok');
+    if (result.status === 'ok') expect(result.collisionWith).toBe('chest.ct');
+  });
+
+  it('fails on a subfolderPath-only node whose subfolder has no .md files (subfolder closure)', async () => {
+    const protocolDoc = createEmptyProtocolDocument('id-1', 'Chest CT', new Date('2026-01-01T00:00:00Z'));
+    const startId = protocolDoc.nodes[0]!.id;
+    protocolDoc.nodes.push({ id: 'snip-1', kind: 'snippet', x: 0, y: 0, width: 100, height: 100, fields: { subfolderPath: 'empty-folder' } });
+    protocolDoc.edges.push({ id: 'e1', fromNodeId: startId, toNodeId: 'snip-1' });
+    const files: Record<string, string> = { 'Protocols/chest-ct.rp.json': JSON.stringify(protocolDoc, null, 2) + '\n' };
+    const { service } = makeService({ files });
+    const result = await service.buildLocalPackage('Protocols/chest-ct.rp.json', { packageId: 'chest-ct', releaseVersion: '1.0.0' });
+    expect(result.status).toBe('failed');
+    if (result.status === 'failed') expect(result.reason).toContain('no .md files');
+  });
+
+  it('writePackageExport writes a single JSON that passes isReleaseResponse', async () => {
+    const protocolDoc = createEmptyProtocolDocument('id-1', 'Chest CT', new Date('2026-01-01T00:00:00Z'));
+    const startId = protocolDoc.nodes[0]!.id;
+    protocolDoc.nodes.push({ id: 'snip-1', kind: 'snippet', x: 0, y: 0, width: 100, height: 100, fields: { snippetPath: 'lung.md' } });
+    protocolDoc.edges.push({ id: 'e1', fromNodeId: startId, toNodeId: 'snip-1' });
+    const files: Record<string, string> = { 'Protocols/chest-ct.rp.json': JSON.stringify(protocolDoc, null, 2) + '\n', 'Snippets/lung.md': '# Lung\n' };
+    const { service } = makeService({ files });
+    const build = await service.buildLocalPackage('Protocols/chest-ct.rp.json', { packageId: 'chest-ct', releaseVersion: '1.0.0' });
+    if (build.status !== 'ok') throw new Error('build failed');
+    await service.writePackageExport(build.bundle, 'Exports/chest-ct-1.0.0.json');
+    const vault = (service as unknown as { app: { vault: { adapter: { read: (p: string) => Promise<string> } } } }).app.vault;
+    const written = await vault.adapter.read('Exports/chest-ct-1.0.0.json');
+    expect(isReleaseResponse(JSON.parse(written))).toBe(true);
   });
 });

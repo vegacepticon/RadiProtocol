@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import {
-  slugifyPackageId, validPackageSlug,
+  slugifyPackageId, validPackageSlug, packageNamespaceSegment,
   libraryProtocolNamespace, librarySnippetNamespace,
   libraryProtocolFilePath, librarySnippetFilePath,
   isLibraryManagedPath, assertNoTraversal, assertInsideLibraryRoot,
@@ -41,18 +41,46 @@ describe('library-paths — validPackageSlug', () => {
   });
 });
 
+describe('library-paths — packageNamespaceSegment', () => {
+  it('produces slug + 12-hex suffix', async () => {
+    const seg = await packageNamespaceSegment('Chest CT');
+    expect(seg).toMatch(/^chest-ct-[0-9a-f]{12}$/);
+  });
+  it('hashes the RAW id — colliding-slug ids produce DISTINCT segments', async () => {
+    const a = await packageNamespaceSegment('chest.ct');
+    const b = await packageNamespaceSegment('chest-ct');
+    expect(a).not.toBe(b);
+    expect(a.startsWith('chest-ct-')).toBe(true);
+    expect(b.startsWith('chest-ct-')).toBe(true);
+  });
+  it('preserves cyrillic in the slug portion', async () => {
+    const seg = await packageNamespaceSegment('Грудная КТ');
+    expect(seg).toMatch(/^грудная-кт-[0-9a-f]{12}$/);
+  });
+  it('is deterministic for the same raw id', async () => {
+    expect(await packageNamespaceSegment('chest-ct')).toBe(await packageNamespaceSegment('chest-ct'));
+  });
+  it('produces a path-safe segment (passes assertNoTraversal)', async () => {
+    const seg = await packageNamespaceSegment('Chest CT');
+    expect(assertNoTraversal(seg)).toBe(seg);
+  });
+});
+
 describe('library-paths — namespace derivation', () => {
   it('protocol namespace under root', () => {
-    expect(libraryProtocolNamespace('Protocols', 'chest-ct', '1.0.0')).toBe('Protocols/library/chest-ct/1-0-0');
+    expect(libraryProtocolNamespace('Protocols', 'chest-ct-a1b2', '1-0-0')).toBe('Protocols/library/chest-ct-a1b2/1-0-0');
   });
   it('snippet namespace under root', () => {
-    expect(librarySnippetNamespace('Snippets', 'chest-ct', '1.0.0')).toBe('Snippets/library/chest-ct/1-0-0');
+    expect(librarySnippetNamespace('Snippets', 'chest-ct-a1b2', '1-0-0')).toBe('Snippets/library/chest-ct-a1b2/1-0-0');
   });
-  it('protocol file path ends with <slug>.rp.json', () => {
-    expect(libraryProtocolFilePath('Protocols', 'chest-ct', '1.0.0')).toBe('Protocols/library/chest-ct/1-0-0/chest-ct.rp.json');
+  it('protocol file path ends with <segment>.rp.json', () => {
+    expect(libraryProtocolFilePath('Protocols', 'chest-ct-a1b2', '1-0-0')).toBe('Protocols/library/chest-ct-a1b2/1-0-0/chest-ct-a1b2.rp.json');
   });
   it('snippet file path preserves relPath extension', () => {
-    expect(librarySnippetFilePath('Snippets', 'chest-ct', '1.0.0', 'folder/lung.md')).toBe('Snippets/library/chest-ct/1-0-0/folder/lung.md');
+    expect(librarySnippetFilePath('Snippets', 'chest-ct-a1b2', '1-0-0', 'folder/lung.md')).toBe('Snippets/library/chest-ct-a1b2/1-0-0/folder/lung.md');
+  });
+  it('empty root produces a root-relative namespace', () => {
+    expect(libraryProtocolNamespace('', 'chest-ct-a1b2', '1-0-0')).toBe('library/chest-ct-a1b2/1-0-0');
   });
 });
 
@@ -116,24 +144,24 @@ describe('library-paths — rewriteSnippetRef', () => {
 describe('library-paths — buildReferenceMapping', () => {
   it('maps file-bound snippetPath (extension-preserving)', () => {
     const nodes = [snippetNode('n1', { snippetPath: 'folder/lung.md' })];
-    const r = buildReferenceMapping('chest-ct', '1.0.0', nodes);
+    const r = buildReferenceMapping('chest-ct-a1b2', '1-0-0', nodes);
     expect('mapping' in r).toBe(true);
-    if ('mapping' in r) expect(r.mapping.get('folder/lung.md')).toBe('library/chest-ct/1-0-0/folder/lung.md');
+    if ('mapping' in r) expect(r.mapping.get('folder/lung.md')).toBe('library/chest-ct-a1b2/1-0-0/folder/lung.md');
   });
   it('maps subfolderPath', () => {
     const nodes = [snippetNode('n1', { subfolderPath: 'folder' })];
-    const r = buildReferenceMapping('chest-ct', '1.0.0', nodes);
-    if ('mapping' in r) expect(r.mapping.get('folder')).toBe('library/chest-ct/1-0-0/folder');
+    const r = buildReferenceMapping('chest-ct-a1b2', '1-0-0', nodes);
+    if ('mapping' in r) expect(r.mapping.get('folder')).toBe('library/chest-ct-a1b2/1-0-0/folder');
   });
   it('errors on root-bound node (neither field set)', () => {
     const nodes = [snippetNode('n1', {})];
-    const r = buildReferenceMapping('chest-ct', '1.0.0', nodes);
+    const r = buildReferenceMapping('chest-ct-a1b2', '1-0-0', nodes);
     expect('error' in r).toBe(true);
     if ('error' in r) expect(r.error).toContain('root-bound');
   });
   it('errors on traversal snippetPath', () => {
     const nodes = [snippetNode('n1', { snippetPath: '../escape.md' })];
-    const r = buildReferenceMapping('chest-ct', '1.0.0', nodes);
+    const r = buildReferenceMapping('chest-ct-a1b2', '1-0-0', nodes);
     expect('error' in r).toBe(true);
   });
 });

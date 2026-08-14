@@ -42,6 +42,7 @@ import type { CatalogEntry, InstalledRecord } from '../library/library-model';
 import type { CatalogListResult } from '../library/library-service';
 import { LibraryItemDetailModal } from './library-item-detail-modal';
 import { LibraryInstallProgressModal } from './library-install-progress-modal';
+import { ConfirmModal } from './confirm-modal';
 
 export const LIBRARY_VIEW_TYPE = 'radiprotocol-library';
 
@@ -409,6 +410,14 @@ export class LibraryView extends ItemView {
     const badge = row.createDiv({ cls: 'radi-library-integrity-badge' });
     badge.createEl('span', { cls: 'radi-library-integrity-icon', attr: { 'aria-hidden': 'true' } });
     badge.createEl('span', { cls: 'radi-library-integrity-text', text: t('library.integrityVerified') });
+
+    // FR-8: Uninstall button (wires the existing LibraryService.uninstall).
+    const uninstallBtn = row.createEl('button', {
+      cls: 'radi-library-uninstall-btn',
+      attr: { 'aria-label': t('library.uninstallLabel') },
+    });
+    uninstallBtn.setText(t('library.uninstallLabel'));
+    uninstallBtn.addEventListener('click', () => { void this.handleUninstall(record); });
   }
 
   private async openDetail(entry: CatalogEntry): Promise<void> {
@@ -430,6 +439,33 @@ export class LibraryView extends ItemView {
     // it (Slice 6 single-refresh contract). If the user dismissed the modal
     // mid-install, the install continues under installMutex and the watcher
     // still fires on the eventual marker write.
+  }
+
+  /** FR-8: uninstall an installed package — ConfirmModal → facade (status check,
+   *  not try/catch — the facade never throws) → Notice → explicit refresh (the
+   *  installer deletes the marker via adapter.remove on a dotfolder file, which
+   *  does not reliably fire vault.on('delete')). Mirrors handleDeleteSnippet. */
+  private async handleUninstall(record: InstalledRecord): Promise<void> {
+    const t = this.plugin.i18n.t.bind(this.plugin.i18n);
+    const modal = new ConfirmModal(this.app, {
+      title: t('library.uninstallTitle'),
+      body: t('library.uninstallBody', { packageId: record.packageId, version: record.releaseVersion }),
+      confirmLabel: t('library.uninstallConfirm'),
+      cancelLabel: t('library.cancel'),
+      destructive: true,
+    });
+    modal.open();
+    const result = await modal.result;
+    if (result !== 'confirm') return;
+    const uninstallResult = await this.plugin.libraryService.uninstall(record.packageId, record.releaseVersion);
+    if (uninstallResult.status === 'ok') {
+      new Notice(t('library.uninstalledNotice', { packageId: record.packageId }));
+    } else if (uninstallResult.status === 'not-installed') {
+      new Notice(t('library.notInstalledNotice', { packageId: record.packageId }));
+    } else {
+      new Notice(t('library.uninstallError', { reason: uninstallResult.reason }));
+    }
+    await this.refresh();
   }
 }
 

@@ -8,7 +8,7 @@
 
 import type { App } from 'obsidian';
 import { defaultT, type Translator } from '../i18n';
-import type { CatalogEntry, CatalogFetchResult, InstalledRecord, PackageManifest } from './library-model';
+import { PACKAGE_MANIFEST_SCHEMA, PACKAGE_MANIFEST_VERSION, type CatalogEntry, type CatalogFetchResult, type InstalledRecord, type PackageManifest, type PackageSnippetFile, type ReleaseBundle } from './library-model';
 import { RegistryClient } from './registry-client';
 import { LibraryCacheStore } from './library-cache-store';
 import { InstalledRecordStore } from './installed-record-store';
@@ -16,7 +16,12 @@ import {
   LibraryInstaller,
   type InstallResult, type LibraryInstallerSettings, type RecoveryReport, type UninstallResult,
 } from './library-installer';
-import { safeErrorMessage } from './library-json-io';
+import { safeErrorMessage, writeJsonFile } from './library-json-io';
+import { ProtocolDocumentParser } from '../protocol/protocol-document-parser';
+import { isProtocolDocumentV1, type ProtocolDocumentV1 } from '../protocol/protocol-document';
+import { sha256String } from './integrity';
+import { assertNoTraversal, slugifyPackageId, validPackageSlug } from './library-paths';
+import { WriteMutex } from '../utils/write-mutex';
 
 /** Query for catalog filtering. */
 export interface CatalogQuery {
@@ -53,6 +58,18 @@ export type ReleaseManifestResult =
 
 export type LibraryServiceSettings = LibraryInstallerSettings;
 
+/** Metadata for building a local package (FR-5). */
+export interface PackageBuildMeta {
+  packageId: string;
+  releaseVersion: string;
+  author?: { displayName: string };
+}
+/** Result of building a local package. Never throws. `collisionWith` (FR-7) is set when a
+ *  package with the same slug is already installed (DATA, not an i18n string — the modal i18n's it). */
+export type BuildResult =
+  | { status: 'ok'; bundle: ReleaseBundle; collisionWith?: string }
+  | { status: 'failed'; reason: string };
+
 export interface LibraryServiceOptions {
   t?: Translator;
   installer?: LibraryInstaller;
@@ -64,6 +81,8 @@ export class LibraryService {
   private readonly app: App;
   private readonly registryClient: RegistryClient;
   private readonly t: Translator;
+  private readonly settings: LibraryServiceSettings;
+  private readonly exportMutex = new WriteMutex();
   /** The transactional installer (public for main.ts recovery-on-load wiring). */
   readonly installer: LibraryInstaller;
   private readonly cacheStore: LibraryCacheStore;
@@ -77,11 +96,15 @@ export class LibraryService {
     options: LibraryServiceOptions = {},
   ) {
     this.app = app;
+    this.settings = settings;
     this.registryClient = registryClient;
     this.t = options.t ?? defaultT;
-    this.installer = options.installer ?? new LibraryInstaller(app, settings, { t: this.t });
     this.cacheStore = options.cacheStore ?? new LibraryCacheStore(app);
     this.recordStore = options.recordStore ?? new InstalledRecordStore(app);
+    this.installer = options.installer ?? new LibraryInstaller(app, settings, {
+      t: this.t,
+      listInstalled: () => this.recordStore.list(),
+    });
   }
 
   /** List the catalog with optional filtering. Fetches from the registry; on
@@ -186,12 +209,121 @@ export class LibraryService {
     }
   }
 
+  /** Build a local package (FR-5): assemble a SOURCE (un-rewritten) ReleaseBundle from a
+   *  protocol doc + its referenced snippets, with source SHA-256 hashes. Never throws. */
+  async buildLocalPackage(protocolPath: string, meta: PackageBuildMeta): Promise<BuildResult> {
+    try {
+      if (validPackageSlug(meta.packageId) === null) return { status: 'failed', reason: `invalid package id "${meta.packageId}": slugifies to empty` };
+      if (validPackageSlug(meta.releaseVersion) === null) return { status: 'failed', reason: `invalid release version "${meta.releaseVersion}": slugifies to empty` };
+      const snippetRoot = this.settings.snippetFolderPath;
+      let raw: string;
+      try { raw = await this.app.vault.adapter.read(protocolPath); }
+      catch { return { status: 'failed', reason: `could not read protocol file: ${protocolPath}` }; }
+      let doc: unknown;
+      try { doc = JSON.parse(raw); }
+      catch { return { status: 'failed', reason: 'protocol file is not valid JSON' }; }
+      if (!isProtocolDocumentV1(doc)) return { status: 'failed', reason: 'protocol file is not a valid ProtocolDocumentV1' };
+      const parser = new ProtocolDocumentParser(this.t);
+      const parsed = parser.parse(raw, protocolPath);
+      if (!parsed.success) return { status: 'failed', reason: `protocol document failed to parse: ${parsed.error}` };
+      const snippetNodes = [...parsed.graph.nodes.values()].filter((n) => n.kind === 'snippet');
+      const seenRel = new Set<string>();
+      const snippetFiles: PackageSnippetFile[] = [];
+      const snippetContents: Array<{ relPath: string; content: string }> = [];
+      const rootPrefix = snippetRoot === '' ? '' : snippetRoot + '/';
+      for (const node of snippetNodes) {
+        const sp = node.radiprotocol_snippetPath;
+        const sfp = node.subfolderPath;
+        if (typeof sp === 'string' && sp !== '') {
+          if (!sp.endsWith('.md')) return { status: 'failed', reason: `snippet file "${sp}" is not .md` };
+          if (assertNoTraversal(sp) === null) return { status: 'failed', reason: `snippet file "${sp}" has an unsafe path` };
+          if (!seenRel.has(sp)) {
+            let content: string;
+            try { content = await this.app.vault.adapter.read(`${rootPrefix}${sp}`); }
+            catch { return { status: 'failed', reason: `snippet file not found: ${sp}` }; }
+            seenRel.add(sp);
+            snippetFiles.push({ relPath: sp, sha256: await sha256String(content) });
+            snippetContents.push({ relPath: sp, content });
+          }
+        } else if (typeof sfp === 'string' && sfp !== '') {
+          if (assertNoTraversal(sfp) === null) return { status: 'failed', reason: `subfolder path "${sfp}" is unsafe` };
+          let files: string[];
+          try { files = await this.listFilesRecursive(`${rootPrefix}${sfp}`); }
+          catch { return { status: 'failed', reason: `subfolder not found: ${sfp}` }; }
+          const mdFiles = files.filter((f) => f.endsWith('.md'));
+          if (mdFiles.length === 0) return { status: 'failed', reason: `snippet node "${node.id}" references subfolder "${sfp}" but it has no .md files` };
+          for (const f of mdFiles) {
+            const relPath = snippetRoot === '' ? f : f.slice(`${snippetRoot}/`.length);
+            if (seenRel.has(relPath)) continue;
+            let content: string;
+            try { content = await this.app.vault.adapter.read(f); }
+            catch { return { status: 'failed', reason: `snippet file not found: ${relPath}` }; }
+            seenRel.add(relPath);
+            snippetFiles.push({ relPath, sha256: await sha256String(content) });
+            snippetContents.push({ relPath, content });
+          }
+        } else {
+          return { status: 'failed', reason: `snippet node "${node.id}" is root-bound (no snippetPath or subfolderPath)` };
+        }
+      }
+      const protocolSha256 = await sha256String(JSON.stringify(doc, null, 2) + '\n');
+      const manifest: PackageManifest = {
+        schema: PACKAGE_MANIFEST_SCHEMA, version: PACKAGE_MANIFEST_VERSION,
+        packageId: meta.packageId, releaseVersion: meta.releaseVersion,
+        protocolDoc: doc as ProtocolDocumentV1, protocolSha256, snippetFiles,
+        catalogEntryId: meta.packageId, publishedAt: new Date().toISOString(), author: meta.author,
+      };
+      let collisionWith: string | undefined;
+      try {
+        const records = await this.listInstalled();
+        const builderSlug = slugifyPackageId(meta.packageId);
+        const colliding = records.find((r) => slugifyPackageId(r.packageId) === builderSlug && r.packageId !== meta.packageId);
+        if (colliding) collisionWith = colliding.packageId;
+      } catch { /* best-effort */ }
+      return { status: 'ok', bundle: { manifest, snippetContents }, collisionWith };
+    } catch (e) {
+      return { status: 'failed', reason: safeErrorMessage(e) };
+    }
+  }
+
+  /** Write a package bundle as a single JSON file (FR-6/D3) — round-trips through `isReleaseResponse`. */
+  async writePackageExport(bundle: ReleaseBundle, destPath: string): Promise<void> {
+    const parentDir = destPath.slice(0, destPath.lastIndexOf('/'));
+    await writeJsonFile(this.app.vault, this.exportMutex, destPath, parentDir, bundle);
+  }
+
+  private async listFilesRecursive(dir: string): Promise<string[]> {
+    const out: string[] = [];
+    const queue: string[] = [dir];
+    while (queue.length > 0) {
+      const current = queue.shift()!;
+      let listing: { files: string[]; folders: string[] };
+      try { listing = await this.app.vault.adapter.list(current); }
+      catch { continue; }
+      out.push(...listing.files);
+      queue.push(...listing.folders);
+    }
+    return out;
+  }
+
   /** Recovery on load: finalize any in-flight installs. Never throws. */
   async recoverInterruptedInstalls(): Promise<RecoveryReport> {
     try {
-      return await this.installer.recoverInterrupted();
+      const report = await this.installer.recoverInterrupted();
+      // One-time slug→slug+hash migration AFTER recovery (in-flight legacy journals
+      // are committed/rolled back first), still under the installMutex. Idempotent;
+      // a failure is logged but does not surface as a recovery failure.
+      try {
+        const migration = await this.installer.migrateInstalledRecords();
+        if (migration.failed.length > 0) {
+          console.warn('[RadiProtocol] library migration completed with failures', migration.failed);
+        }
+      } catch (e) {
+        console.warn('[RadiProtocol] library migration failed — will retry on next load', e);
+      }
+      return report;
     } catch {
-      return { committed: [], rolledBack: [] };
+      return { committed: [], rolledBack: [], orphansCleaned: [] };
     }
   }
 
