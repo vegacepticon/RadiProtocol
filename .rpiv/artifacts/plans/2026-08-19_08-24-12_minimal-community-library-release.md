@@ -499,9 +499,9 @@ Define and implement the service-level readiness contract and deterministic barr
 ### Success Criteria:
 
 #### Automated Verification:
-- [ ] Focused service tests pass: `npx vitest run src/__tests__/library/library-service.test.ts`
-- [ ] Phase-owned TypeScript files lint cleanly: `npx eslint src/library/library-service.ts src/__tests__/library/library-service.test.ts --max-warnings 0`
-- [ ] Read-only type checking passes after the service contract change: `npx tsc -noEmit -skipLibCheck`
+- [x] Focused service tests pass: `npx vitest run src/__tests__/library/library-service.test.ts`
+- [x] Phase-owned TypeScript files lint cleanly: `npx eslint src/library/library-service.ts src/__tests__/library/library-service.test.ts --max-warnings 0`
+- [x] Read-only type checking passes after the service contract change: `npx tsc -noEmit -skipLibCheck`
 
 #### Manual Verification:
 - [ ] Review the result branches and confirm `timed-out` exists only beneath top-level committed `status: 'ok'`; `src/library/library-installer.ts` remains unchanged.
@@ -814,10 +814,10 @@ describe('LibraryInstallProgressModal — completion and readiness', () => {
 ### Success Criteria:
 
 #### Automated Verification:
-- [ ] Focused modal and LibraryView wiring tests pass: `npx vitest run src/__tests__/views/library-install-progress-modal.test.ts src/__tests__/views/library-view-uninstall.test.ts`
-- [ ] Phase-owned TypeScript files lint cleanly: `npx eslint src/views/library-install-progress-modal.ts src/views/library-view.ts src/__tests__/views/library-install-progress-modal.test.ts src/__tests__/views/library-view-uninstall.test.ts --max-warnings 0`
-- [ ] Locale files parse, expose the pending key, and describe an empty registry URL as unavailable: `node -e "const fs=require('fs'); const checks=[['src/i18n/locales/en.json','catalog unavailable'],['src/i18n/locales/ru.json','каталог оставался недоступным']]; for (const [p,fragment] of checks) { const j=JSON.parse(fs.readFileSync(p,'utf8')); if (typeof j.library.installIndexPending !== 'string' || !j.settings.libraryRegistryUrlDesc.includes(fragment)) process.exit(1); }"`
-- [ ] Read-only type checking passes with the modal consuming Phase 1: `npx tsc -noEmit -skipLibCheck`
+- [x] Focused modal and LibraryView wiring tests pass: `npx vitest run src/__tests__/views/library-install-progress-modal.test.ts src/__tests__/views/library-view-uninstall.test.ts`
+- [x] Phase-owned TypeScript files lint cleanly: `npx eslint src/views/library-install-progress-modal.ts src/views/library-view.ts src/__tests__/views/library-install-progress-modal.test.ts src/__tests__/views/library-view-uninstall.test.ts --max-warnings 0`
+- [x] Locale files parse, expose the pending key, and describe an empty registry URL as unavailable: `node -e "const fs=require('fs'); const checks=[['src/i18n/locales/en.json','catalog unavailable'],['src/i18n/locales/ru.json','каталог оставался недоступным']]; for (const [p,fragment] of checks) { const j=JSON.parse(fs.readFileSync(p,'utf8')); if (typeof j.library.installIndexPending !== 'string' || !j.settings.libraryRegistryUrlDesc.includes(fragment)) process.exit(1); }"`
+- [x] Read-only type checking passes with the modal consuming Phase 1: `npx tsc -noEmit -skipLibCheck`
 
 #### Manual Verification:
 - [ ] Dismiss the progress modal while its service promise is pending; confirm no closed-modal DOM update occurs and the Library view refreshes after committed completion.
@@ -936,9 +936,9 @@ Make managed-root changes rebuild the captured library stack after persistence a
 ### Success Criteria:
 
 #### Automated Verification:
-- [ ] Focused settings tests pass: `npx vitest run src/__tests__/settings-tab.test.ts`
-- [ ] Phase-owned TypeScript files lint cleanly: `npx eslint src/settings.ts src/__tests__/settings-tab.test.ts --max-warnings 0`
-- [ ] Read-only type checking passes after callback changes: `npx tsc -noEmit -skipLibCheck`
+- [x] Focused settings tests pass: `npx vitest run src/__tests__/settings-tab.test.ts`
+- [x] Phase-owned TypeScript files lint cleanly: `npx eslint src/settings.ts src/__tests__/settings-tab.test.ts --max-warnings 0`
+- [x] Read-only type checking passes after callback changes: `npx tsc -noEmit -skipLibCheck`
 
 #### Manual Verification:
 - [ ] In one Obsidian session, change Protocol folder and Snippet folder, then install a package; confirm its protocol and snippets land under the newly configured normalized roots without reloading the plugin.
@@ -1014,8 +1014,8 @@ Document Community Library setup and use in both languages and lock the repeatab
 ### Success Criteria:
 
 #### Automated Verification:
-- [ ] Both README files contain the explicit endpoint, literal command, readiness, managed namespace, and trust-boundary facts: `node -e "const fs=require('fs'); const checks={ 'README.md':['HTTPS','Open community library','SHA-256','Installed','library/<package>/<version>/'], 'README.ru.md':['HTTPS','Open community library','SHA-256','Установленные','library/<package>/<version>/'] }; for (const [p,terms] of Object.entries(checks)) { const s=fs.readFileSync(p,'utf8'); for (const t of terms) if (!s.includes(t)) { console.error(p+' missing '+t); process.exit(1); } }"`
-- [ ] README patches have no whitespace errors: `git diff --check -- README.md README.ru.md`
+- [x] Both README files contain the explicit endpoint, literal command, readiness, managed namespace, and trust-boundary facts: `node -e "const fs=require('fs'); const checks={ 'README.md':['HTTPS','Open community library','SHA-256','Installed','library/<package>/<version>/'], 'README.ru.md':['HTTPS','Open community library','SHA-256','Установленные','library/<package>/<version>/'] }; for (const [p,terms] of Object.entries(checks)) { const s=fs.readFileSync(p,'utf8'); for (const t of terms) if (!s.includes(t)) { console.error(p+' missing '+t); process.exit(1); } }"`
+- [x] README patches have no whitespace errors: `git diff --check -- README.md README.ru.md`
 
 #### Manual Verification:
 - [ ] With registry URL empty, invalid, and non-HTTPS, open **Open community library**; confirm an explicit unavailable state and no crash or fallback endpoint. Repeat with a valid cached snapshot and with no cache; cached entries appear only in the former case.
@@ -1036,7 +1036,7 @@ Document Community Library setup and use in both languages and lock the repeatab
 ## Final Whole-Plan Verification
 
 #### Automated Verification:
-- [ ] Canonical repository acceptance passes after all phases: `npm run check`
+- [x] Canonical repository acceptance passes after all phases: `npm run check`
 
 #### Manual Verification:
 - [ ] Complete every Phase 1-4 manual criterion in a real Obsidian vault and record unrelated baseline failures separately; release only with the canonical gate green.
