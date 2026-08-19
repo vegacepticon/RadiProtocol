@@ -1,9 +1,0 @@
-{
-  "dimension": "structure",
-  "pass": true,
-  "score": 100,
-  "severity": "none",
-  "artifact": ".rpiv/artifacts/slices/2026-07-26_16-13-35_snippet-create-from-selection-and-insert-modal-ux.md",
-  "findings": [],
-  "feedback": ""
-}

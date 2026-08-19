@@ -1,9 +1,0 @@
-{
-  "dimension": "structure",
-  "pass": true,
-  "score": 100,
-  "severity": "none",
-  "artifact": ".rpiv/artifacts/slices/2026-07-27_16-38-57_runner-cleanup-nodes-snippets-modal-ux.md",
-  "findings": [],
-  "feedback": ""
-}
