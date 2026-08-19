@@ -19,7 +19,7 @@
     "snippetFolderPathPlaceholder": "Snippets",
     "advancedHeading": "Advanced",
     "libraryRegistryUrl": "Library registry URL",
-    "libraryRegistryUrlDesc": "Override the community library registry endpoint. Leave empty to use the bundled default; an invalid or non-https URL falls back to 'catalog unavailable'.",
+    "libraryRegistryUrlDesc": "Override the community library registry endpoint. Leave empty to keep the catalog unavailable; invalid or non-https URLs are also unavailable.",
     "libraryRegistryUrlPlaceholder": "https://registry.example.com",
     "donateHeading": "Support development",
     "showWalletAddresses": "Show wallet addresses"
@@ -375,6 +375,7 @@
     "installProgressLabel": "Installing {packageId} {version}",
     "installInstalling": "Installing…",
     "installComplete": "Installed successfully.",
+    "installIndexPending": "Installed, but Obsidian has not indexed the protocol yet. It may appear in the picker shortly: {path}",
     "installFailed": "Install failed: {reason}",
     "managedBadge": "Library",
     "readOnlyBanner": "Library package — read-only",

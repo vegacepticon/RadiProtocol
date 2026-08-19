@@ -4,6 +4,7 @@ import { PluginSettingTab, Setting, Notice } from 'obsidian';
 import type RadiProtocolPlugin from './main';
 import { FolderSuggest } from './views/folder-suggest';
 import { DONATE_WALLETS } from './donate/wallets';
+import { normalizeProtocolFolderPath } from './protocol/protocol-file-resolver';
 
 /** Phase 67 (D-05): renamed from InlineRunnerPosition; width/height optional for back-compat (D-06).
  *  Existing on-disk records have only {left, top}; missing width/height fall back to
@@ -103,8 +104,11 @@ export class RadiProtocolSettingsTab extends PluginSettingTab {
           .setPlaceholder(this.plugin.i18n.t('settings.protocolFolderPlaceholder'))
           .setValue(this.plugin.settings.protocolFolderPath)
           .onChange(async (value) => {
-            this.plugin.settings.protocolFolderPath = value.trim();
+            this.plugin.settings.protocolFolderPath = normalizeProtocolFolderPath(value);
             await this.plugin.saveSettings();
+            // LibraryService and LibraryInstaller capture managed roots at
+            // construction, so rebuild only after the new value is persisted.
+            await this.plugin.rebuildLibraryServices();
           });
       });
 
@@ -117,8 +121,9 @@ export class RadiProtocolSettingsTab extends PluginSettingTab {
           .setPlaceholder(this.plugin.i18n.t('settings.snippetFolderPathPlaceholder'))
           .setValue(this.plugin.settings.snippetFolderPath)
           .onChange(async (value) => {
-            this.plugin.settings.snippetFolderPath = value.trim() || 'Snippets';
+            this.plugin.settings.snippetFolderPath = normalizeProtocolFolderPath(value) || 'Snippets';
             await this.plugin.saveSettings();
+            await this.plugin.rebuildLibraryServices();
           });
       });
 

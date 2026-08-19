@@ -432,13 +432,10 @@ export class LibraryView extends ItemView {
   private async openInstall(packageId: string, version: string): Promise<void> {
     const modal = new LibraryInstallProgressModal(this.app, this.plugin, packageId, version);
     modal.open();
-    await modal.result;
-    // No explicit refresh — the Slice 6 vault watcher fires on the per-release
-    // marker write (under .radiprotocol/library/installed/) and schedules a
-    // single 120ms-debounced refresh. An explicit refresh here would duplicate
-    // it (Slice 6 single-refresh contract). If the user dismissed the modal
-    // mid-install, the install continues under installMutex and the watcher
-    // still fires on the eventual marker write.
+    const result = await modal.completion;
+    // Adapter events remain useful invalidation hints, but are not the success
+    // signal. Completion settles even when the modal was dismissed mid-install.
+    if (result.status === 'ok') await this.refresh();
   }
 
   /** FR-8: uninstall an installed package — ConfirmModal → facade (status check,

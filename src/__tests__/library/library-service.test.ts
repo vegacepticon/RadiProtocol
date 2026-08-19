@@ -1,5 +1,8 @@
 import { describe, it, expect, vi } from 'vitest';
-import { LibraryService } from '../../library/library-service';
+import { TFile } from 'obsidian';
+import {
+  LibraryService, type LibraryServiceOptions, type LibraryServiceSettings,
+} from '../../library/library-service';
 import type { RegistryClient } from '../../library/registry-client';
 import type { LibraryInstaller, InstallResult, UninstallResult, RecoveryReport } from '../../library/library-installer';
 import { LibraryCacheStore } from '../../library/library-cache-store';
@@ -11,7 +14,9 @@ import {
 } from '../../library/library-model';
 import type { ReleaseFetchResult } from '../../library/registry-model';
 import { installedRecordPath } from '../../library/installed-record-store';
-import { packageNamespaceSegment, slugifyPackageId } from '../../library/library-paths';
+import {
+  libraryProtocolFilePath, packageNamespaceSegment, slugifyPackageId,
+} from '../../library/library-paths';
 import { createEmptyProtocolDocument } from '../../protocol/protocol-document';
 import { sha256String } from '../../library/integrity';
 import { isReleaseResponse } from '../../library/registry-model';
@@ -31,7 +36,10 @@ function listPath(files: Record<string, string>, dirPath: string): { files: stri
   return { files: out, folders: [...folders] };
 }
 
-function makeVault(opts: { files?: Record<string, string> } = {}) {
+function makeVault(opts: {
+  files?: Record<string, string>;
+  indexedPaths?: ReadonlySet<string>;
+} = {}) {
   const files: Record<string, string> = { ...(opts.files ?? {}) };
   const vault = {
     adapter: {
@@ -42,6 +50,10 @@ function makeVault(opts: { files?: Record<string, string> } = {}) {
       remove: vi.fn(async (p: string) => { delete files[p]; }),
     },
     createFolder: vi.fn(async (_p: string) => { /* no-op */ }),
+    getAbstractFileByPath: vi.fn((p: string) => {
+      if (opts.indexedPaths !== undefined && !opts.indexedPaths.has(p)) return null;
+      return Object.assign(new TFile(), { path: p });
+    }),
   };
   return { vault, files };
 }
@@ -49,6 +61,14 @@ const makeApp = (vault: ReturnType<typeof makeVault>['vault']) => ({ vault } as 
 
 async function recPath(packageId: string, version: string): Promise<string> {
   return installedRecordPath(await packageNamespaceSegment(packageId), slugifyPackageId(version));
+}
+
+async function protocolPath(packageId: string, version: string): Promise<string> {
+  return libraryProtocolFilePath(
+    SETTINGS.protocolFolderPath,
+    await packageNamespaceSegment(packageId),
+    slugifyPackageId(version),
+  );
 }
 
 const SETTINGS = { protocolFolderPath: 'Protocols', snippetFolderPath: 'Snippets' };
@@ -67,8 +87,11 @@ function makeService(opts: {
   uninstallResult?: UninstallResult;
   recovery?: RecoveryReport;
   files?: Record<string, string>;
+  indexedPaths?: ReadonlySet<string>;
+  readiness?: LibraryServiceOptions['readiness'];
+  settings?: LibraryServiceSettings;
 } = {}) {
-  const { vault } = makeVault({ files: opts.files });
+  const { vault } = makeVault({ files: opts.files, indexedPaths: opts.indexedPaths });
   const app = makeApp(vault);
   const registryClient = {
     fetchCatalog: vi.fn(async () => opts.fetchCatalog ?? { status: 'unavailable', reason: 'no endpoint', cachedSnapshot: null }),
@@ -82,8 +105,10 @@ function makeService(opts: {
     recoverInterrupted: vi.fn(async (): Promise<RecoveryReport> => opts.recovery ?? { committed: [], rolledBack: [], orphansCleaned: [] }),
     migrateInstalledRecords: vi.fn(async () => ({ migrated: [], skipped: [], failed: [] })),
   } as unknown as LibraryInstaller;
-  const service = new LibraryService(app as never, SETTINGS, registryClient, { installer, cacheStore, recordStore });
-  return { service, registryClient, installer, cacheStore, recordStore };
+  const service = new LibraryService(app as never, opts.settings ?? SETTINGS, registryClient, {
+    installer, cacheStore, recordStore, readiness: opts.readiness,
+  });
+  return { service, registryClient, installer, cacheStore, recordStore, vault };
 }
 
 describe('LibraryService — listCatalog', () => {
@@ -155,21 +180,125 @@ describe('LibraryService — listCatalog', () => {
 });
 
 describe('LibraryService — install', () => {
-  it('fetches the release and delegates to installer.install', async () => {
-    const bundle = { manifest: { packageId: 'chest-ct', releaseVersion: '1.0.0' }, snippetContents: [] } as unknown as ReleaseBundle;
-    const { service, registryClient, installer } = makeService({ fetchRelease: { status: 'ok', bundle } });
-    const r = await service.install('chest-ct', '1.0.0');
-    expect(r.status).toBe('ok');
-    expect(registryClient.fetchRelease).toHaveBeenCalledWith('chest-ct', '1.0.0');
-    expect(installer.install).toHaveBeenCalledWith(bundle);
+  it('rejects an empty protocol root before fetch, mutation, or readiness polling', async () => {
+    const { service, registryClient, installer, vault } = makeService({
+      settings: { ...SETTINGS, protocolFolderPath: '' },
+    });
+
+    const result = await service.install('chest-ct', '1.0.0');
+
+    expect(result).toEqual({
+      status: 'failed', packageId: 'chest-ct', releaseVersion: '1.0.0',
+      reason: 'protocol folder is not configured',
+    });
+    expect(registryClient.fetchRelease).not.toHaveBeenCalled();
+    expect(installer.install).not.toHaveBeenCalled();
+    expect(vault.getAbstractFileByPath).not.toHaveBeenCalled();
   });
 
-  it('returns failed on not-found without calling installer', async () => {
-    const { service, installer } = makeService({ fetchRelease: { status: 'not-found', reason: 'no such release' } });
+  it('fetches, installs, and reports an immediately indexed protocol as ready', async () => {
+    const bundle = { manifest: { packageId: 'chest-ct', releaseVersion: '1.0.0' }, snippetContents: [] } as unknown as ReleaseBundle;
+    const { service, registryClient, installer, vault } = makeService({ fetchRelease: { status: 'ok', bundle } });
+    const expectedPath = await protocolPath('chest-ct', '1.0.0');
+    const result = await service.install('chest-ct', '1.0.0');
+    expect(result.status).toBe('ok');
+    if (result.status === 'ok') {
+      expect(result.readiness).toEqual({ status: 'ready', protocolPath: expectedPath });
+    }
+    expect(registryClient.fetchRelease).toHaveBeenCalledWith('chest-ct', '1.0.0');
+    expect(installer.install).toHaveBeenCalledWith(bundle);
+    expect(vault.getAbstractFileByPath).toHaveBeenCalledWith(expectedPath);
+  });
+
+  it('polls at 100 ms until the protocol becomes indexed', async () => {
+    const bundle = { manifest: { packageId: 'chest-ct', releaseVersion: '1.0.0' }, snippetContents: [] } as unknown as ReleaseBundle;
+    let nowMs = 0;
+    const sleep = vi.fn(async (ms: number) => { nowMs += ms; });
+    const { service, vault } = makeService({
+      fetchRelease: { status: 'ok', bundle },
+      readiness: { now: () => nowMs, sleep },
+    });
+    const expectedPath = await protocolPath('chest-ct', '1.0.0');
+    const indexedFile = Object.assign(new TFile(), { path: expectedPath });
+    vault.getAbstractFileByPath
+      .mockReturnValueOnce(null)
+      .mockReturnValueOnce(null)
+      .mockReturnValue(indexedFile);
+
+    const result = await service.install('chest-ct', '1.0.0');
+
+    expect(result.status).toBe('ok');
+    if (result.status === 'ok') expect(result.readiness.status).toBe('ready');
+    expect(sleep.mock.calls).toEqual([[100], [100]]);
+    expect(vault.getAbstractFileByPath).toHaveBeenCalledTimes(3);
+  });
+
+  it('keeps a committed install ok when indexing times out after 5 seconds', async () => {
+    const bundle = { manifest: { packageId: 'chest-ct', releaseVersion: '1.0.0' }, snippetContents: [] } as unknown as ReleaseBundle;
+    let nowMs = 0;
+    const sleep = vi.fn(async (ms: number) => { nowMs += ms; });
+    const { service, vault } = makeService({
+      fetchRelease: { status: 'ok', bundle },
+      indexedPaths: new Set<string>(),
+      readiness: { now: () => nowMs, sleep },
+    });
+    const expectedPath = await protocolPath('chest-ct', '1.0.0');
+
+    const result = await service.install('chest-ct', '1.0.0');
+
+    expect(result).toEqual({
+      status: 'ok', packageId: 'chest-ct', releaseVersion: '1.0.0',
+      readiness: { status: 'timed-out', protocolPath: expectedPath, timeoutMs: 5_000 },
+    });
+    expect(sleep).toHaveBeenCalledTimes(50);
+    expect(vault.getAbstractFileByPath).toHaveBeenCalledTimes(51);
+  });
+
+  it('logs the final probe error once while preserving timeout-as-success', async () => {
+    const bundle = { manifest: { packageId: 'chest-ct', releaseVersion: '1.0.0' }, snippetContents: [] } as unknown as ReleaseBundle;
+    let nowMs = 0;
+    const sleep = vi.fn(async (ms: number) => { nowMs += ms; });
+    const { service, vault } = makeService({
+      fetchRelease: { status: 'ok', bundle },
+      readiness: { now: () => nowMs, sleep },
+    });
+    const probeError = new Error('vault index unavailable');
+    vault.getAbstractFileByPath.mockImplementation(() => { throw probeError; });
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+
+    try {
+      const result = await service.install('chest-ct', '1.0.0');
+      expect(result.status).toBe('ok');
+      if (result.status === 'ok') expect(result.readiness.status).toBe('timed-out');
+      expect(warn).toHaveBeenCalledTimes(1);
+      expect(warn).toHaveBeenCalledWith(
+        expect.stringContaining('library protocol readiness check failed'),
+        probeError,
+      );
+    } finally {
+      warn.mockRestore();
+    }
+  });
+
+  it('returns installer failure without starting readiness polling', async () => {
+    const bundle = { manifest: { packageId: 'chest-ct', releaseVersion: '1.0.0' }, snippetContents: [] } as unknown as ReleaseBundle;
+    const installResult: InstallResult = {
+      status: 'failed', packageId: 'chest-ct', releaseVersion: '1.0.0', reason: 'commit failed',
+    };
+    const { service, vault } = makeService({
+      fetchRelease: { status: 'ok', bundle }, installResult,
+    });
+    await expect(service.install('chest-ct', '1.0.0')).resolves.toEqual(installResult);
+    expect(vault.getAbstractFileByPath).not.toHaveBeenCalled();
+  });
+
+  it('returns failed on not-found without installing or polling', async () => {
+    const { service, installer, vault } = makeService({ fetchRelease: { status: 'not-found', reason: 'no such release' } });
     const r = await service.install('chest-ct', '9.9.9');
     expect(r.status).toBe('failed');
     if (r.status === 'failed') expect(r.reason).toContain('no such release');
     expect(installer.install).not.toHaveBeenCalled();
+    expect(vault.getAbstractFileByPath).not.toHaveBeenCalled();
   });
 
   it('returns failed on unavailable', async () => {

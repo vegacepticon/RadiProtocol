@@ -31,3 +31,22 @@ describe('library-view — uninstall UI wiring guard', () => {
     }
   });
 });
+
+describe('library-view — install completion wiring guard', () => {
+  it('awaits operation completion then refreshes exactly once for committed success', () => {
+    const start = viewSrc.indexOf('private async openInstall');
+    const end = viewSrc.indexOf('/** FR-8:', start);
+    const body = viewSrc.slice(start, end);
+
+    expect(body).toContain('await modal.completion');
+    expect(body).toContain("result.status === 'ok'");
+    expect(body.match(/await this\.refresh\(\)/g)).toHaveLength(1);
+    expect(body.indexOf('await modal.completion')).toBeLessThan(body.indexOf('await this.refresh()'));
+    expect(body).not.toContain('await modal.result');
+  });
+
+  it('keeps the en/ru indexing-pending key in parity', () => {
+    expect(enSrc).toContain('"installIndexPending"');
+    expect(ruSrc).toContain('"installIndexPending"');
+  });
+});

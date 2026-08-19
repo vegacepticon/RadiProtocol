@@ -49,6 +49,20 @@ RadiProtocol is a documentation aid. The radiologist remains responsible for cli
 4. Choose the preferred text separator for accumulated report text: newline or space.
 5. Select the interface language if needed.
 
+### Community library
+
+RadiProtocol does not ship with a registry endpoint. To use the Community library, open RadiProtocol settings and enter an explicitly configured **HTTPS** endpoint in **Advanced → Library registry URL**. An empty, invalid, or non-HTTPS value leaves the catalog unavailable instead of falling back to another service.
+
+1. Run **Open community library** from the command palette.
+2. Browse, search, or filter the catalog, then open a package to review its protocol title and snippet paths with their SHA-256 hashes.
+3. Choose **Install**. RadiProtocol downloads the full release again, verifies its hashes and protocol graph, and commits snippets, protocol, then the Installed marker.
+4. Wait for the progress dialog to report success. The package appears under **Installed**, and its protocol becomes available in the normal protocol pickers once Obsidian indexes the new file.
+5. If the dialog reports that indexing is still pending, the package is already committed; do not reinstall it. It may appear in the picker shortly. You can refresh the Community library view to confirm the Installed record.
+
+Installed package files live under a managed `library/<package>/<version>/` namespace inside the configured protocol and snippet folders. They are read-only in RadiProtocol; use **Uninstall** from the Installed section to remove only package-owned files.
+
+> **Trust boundary.** SHA-256 verifies that downloaded contents match the release manifest. It does **not** authenticate the publisher or prove who created the package.
+
 ## Creating a protocol
 
 1. Run **Open protocol editor**.

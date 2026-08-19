@@ -19,7 +19,7 @@
     "snippetFolderPathPlaceholder": "Snippets",
     "advancedHeading": "Дополнительно",
     "libraryRegistryUrl": "URL реестра библиотеки",
-    "libraryRegistryUrlDesc": "Переопределение адреса реестра библиотеки сообщества. Оставьте пустым для использования значения по умолчанию; недействительный или не-https URL приводит к состоянию «каталог недоступен».",
+    "libraryRegistryUrlDesc": "Переопределение адреса реестра библиотеки сообщества. Оставьте пустым, чтобы каталог оставался недоступным; некорректные и не-https URL также недоступны.",
     "libraryRegistryUrlPlaceholder": "https://registry.example.com",
     "donateHeading": "Помочь разработке",
     "showWalletAddresses": "Показать адреса кошельков"
@@ -375,6 +375,7 @@
     "installProgressLabel": "Установка {packageId} {version}",
     "installInstalling": "Установка…",
     "installComplete": "Установка завершена.",
+    "installIndexPending": "Пакет установлен, но Obsidian ещё не проиндексировал протокол. Он может вскоре появиться в списке выбора: {path}",
     "installFailed": "Ошибка установки: {reason}",
     "managedBadge": "Библиотека",
     "readOnlyBanner": "Пакет библиотеки — только чтение",

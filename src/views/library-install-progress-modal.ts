@@ -6,32 +6,36 @@
 // install() does NOT emit per-stage events (Slices 4-5 locked — reopening the
 // load-bearing installer is out of scope), so the progressbar is indeterminate
 // during 'installing' (aria-valuenow omitted per ARIA spec) and finalizes to
-// 100% on 'complete' / 0% on 'failed' — no fake stage transitions. Closing
-// during 'installing' resolves { done: false }; the install continues in the
-// background under installMutex and the LibraryView watcher refreshes on the
-// per-release marker write.
+// 100% on 'complete' / 'indexing-pending' / 0% on 'failed' — no fake stage
+// transitions. Closing during 'installing' resolves { done: false }; the
+// install continues in the background under installMutex, while LibraryView
+// awaits completion and refreshes deterministically.
 
 import { App, Modal } from 'obsidian';
 import type RadiProtocolPlugin from '../main';
-import type { InstallResult } from '../library/library-installer';
+import type { LibraryInstallResult } from '../library/library-service';
 
 export type LibraryInstallProgressResult =
-  | { done: true; result: InstallResult }
+  | { done: true; result: LibraryInstallResult }
   | { done: false };
 
-type InstallProgressState = 'installing' | 'complete' | 'failed';
+type InstallProgressState = 'installing' | 'complete' | 'indexing-pending' | 'failed';
 
 export class LibraryInstallProgressModal extends Modal {
   readonly result: Promise<LibraryInstallProgressResult>;
+  /** Settles after install plus Vault-index readiness, even if the modal was dismissed. */
+  readonly completion: Promise<LibraryInstallResult>;
   private resolve!: (value: LibraryInstallProgressResult) => void;
+  private resolveCompletion!: (value: LibraryInstallResult) => void;
   private resolved = false;
+  private completionResolved = false;
 
   private readonly plugin: RadiProtocolPlugin;
   private readonly packageId: string;
   private readonly version: string;
 
   private state: InstallProgressState = 'installing';
-  private installResult: InstallResult | null = null;
+  private installResult: LibraryInstallResult | null = null;
 
   private progressEl!: HTMLElement;
   private fillEl!: HTMLElement;
@@ -44,6 +48,7 @@ export class LibraryInstallProgressModal extends Modal {
     this.packageId = packageId;
     this.version = version;
     this.result = new Promise<LibraryInstallProgressResult>((res) => { this.resolve = res; });
+    this.completion = new Promise<LibraryInstallResult>((res) => { this.resolveCompletion = res; });
   }
 
   async onOpen(): Promise<void> {
@@ -56,7 +61,8 @@ export class LibraryInstallProgressModal extends Modal {
 
     // ARIA progressbar (D4 a11y). Indeterminate during 'installing' —
     // aria-valuenow is OMITTED at creation (per ARIA spec, absent valuenow =
-    // indeterminate); setProgress sets it to 100 on complete / 0 on failed.
+    // indeterminate); setProgress sets it to 100 on complete/indexing-pending
+    // or 0 on failed.
     this.progressEl = contentEl.createDiv({
       cls: 'radi-library-progress',
       attr: {
@@ -87,7 +93,9 @@ export class LibraryInstallProgressModal extends Modal {
   onClose(): void {
     if (!this.resolved) {
       this.safeResolve(
-        this.state === 'installing' ? { done: false } : { done: true, result: this.installResult as InstallResult },
+        this.state === 'installing'
+          ? { done: false }
+          : { done: true, result: this.installResult as LibraryInstallResult },
       );
     }
     this.contentEl.empty();
@@ -97,12 +105,24 @@ export class LibraryInstallProgressModal extends Modal {
     if (!this.resolved) { this.resolved = true; this.resolve(value); }
   }
 
+  private safeResolveCompletion(value: LibraryInstallResult): void {
+    if (!this.completionResolved) {
+      this.completionResolved = true;
+      this.resolveCompletion(value);
+    }
+  }
+
   private async runInstall(): Promise<void> {
     const result = await this.plugin.libraryService.install(this.packageId, this.version);
-    if (this.resolved) return; // modal closed mid-install; install continues
     this.installResult = result;
-    this.state = result.status === 'ok' ? 'complete' : 'failed';
-    this.setProgress(this.state === 'complete' ? 100 : 0);
+    this.safeResolveCompletion(result);
+    if (this.resolved) return; // closed UI stays untouched; completion still settles
+    this.state = result.status === 'failed'
+      ? 'failed'
+      : result.readiness.status === 'ready'
+        ? 'complete'
+        : 'indexing-pending';
+    this.setProgress(this.state === 'failed' ? 0 : 100);
     this.renderState();
     this.closeBtn.disabled = false;
   }
@@ -124,6 +144,15 @@ export class LibraryInstallProgressModal extends Modal {
         this.statusEl.setText(t('library.installComplete'));
         this.progressEl.setAttribute('aria-label', t('library.installComplete'));
         break;
+      case 'indexing-pending': {
+        const protocolPath = this.installResult?.status === 'ok'
+          ? this.installResult.readiness.protocolPath
+          : '';
+        const message = t('library.installIndexPending', { path: protocolPath });
+        this.statusEl.setText(message);
+        this.progressEl.setAttribute('aria-label', message);
+        break;
+      }
       case 'failed': {
         const reason = this.installResult !== null && this.installResult.status === 'failed' ? this.installResult.reason : '';
         this.statusEl.setText(t('library.installFailed', { reason }));

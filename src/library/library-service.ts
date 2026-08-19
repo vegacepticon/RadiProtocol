@@ -6,7 +6,7 @@
 // this layer never imports views. Modeled after SnippetService
 // (src/snippets/snippet-service.ts) — Obsidian-touching via injected stores.
 
-import type { App } from 'obsidian';
+import { TFile, type App } from 'obsidian';
 import { defaultT, type Translator } from '../i18n';
 import { PACKAGE_MANIFEST_SCHEMA, PACKAGE_MANIFEST_VERSION, type CatalogEntry, type CatalogFetchResult, type InstalledRecord, type PackageManifest, type PackageSnippetFile, type ReleaseBundle } from './library-model';
 import { RegistryClient } from './registry-client';
@@ -20,7 +20,10 @@ import { safeErrorMessage, writeJsonFile } from './library-json-io';
 import { ProtocolDocumentParser } from '../protocol/protocol-document-parser';
 import { isProtocolDocumentV1, type ProtocolDocumentV1 } from '../protocol/protocol-document';
 import { sha256String } from './integrity';
-import { assertNoTraversal, slugifyPackageId, validPackageSlug } from './library-paths';
+import {
+  assertNoTraversal, libraryProtocolFilePath, packageNamespaceSegment,
+  slugifyPackageId, validPackageSlug,
+} from './library-paths';
 import { WriteMutex } from '../utils/write-mutex';
 
 /** Query for catalog filtering. */
@@ -56,6 +59,18 @@ export type ReleaseManifestResult =
   | { status: 'not-found'; reason: string }
   | { status: 'unavailable'; reason: string };
 
+/** Vault-index readiness after a transaction has committed successfully. */
+export type InstallReadiness =
+  | { status: 'ready'; protocolPath: string }
+  | { status: 'timed-out'; protocolPath: string; timeoutMs: number };
+
+/** Service-level install result. The installer remains authoritative for commit
+ * truth; readiness only describes whether Obsidian indexed the committed
+ * protocol within the bounded wait. */
+export type LibraryInstallResult =
+  | (Extract<InstallResult, { status: 'ok' }> & { readiness: InstallReadiness })
+  | Extract<InstallResult, { status: 'failed' }>;
+
 export type LibraryServiceSettings = LibraryInstallerSettings;
 
 /** Metadata for building a local package (FR-5). */
@@ -75,7 +90,15 @@ export interface LibraryServiceOptions {
   installer?: LibraryInstaller;
   cacheStore?: LibraryCacheStore;
   recordStore?: InstalledRecordStore;
+  /** Test seam only; production bounds remain fixed at 5 seconds / 100 ms. */
+  readiness?: {
+    now?: () => number;
+    sleep?: (ms: number) => Promise<void>;
+  };
 }
+
+const INSTALL_READINESS_TIMEOUT_MS = 5_000;
+const INSTALL_READINESS_POLL_INTERVAL_MS = 100;
 
 export class LibraryService {
   private readonly app: App;
@@ -83,6 +106,8 @@ export class LibraryService {
   private readonly t: Translator;
   private readonly settings: LibraryServiceSettings;
   private readonly exportMutex = new WriteMutex();
+  private readonly readinessNow: () => number;
+  private readonly readinessSleep: (ms: number) => Promise<void>;
   /** The transactional installer (public for main.ts recovery-on-load wiring). */
   readonly installer: LibraryInstaller;
   private readonly cacheStore: LibraryCacheStore;
@@ -105,6 +130,10 @@ export class LibraryService {
       t: this.t,
       listInstalled: () => this.recordStore.list(),
     });
+    this.readinessNow = options.readiness?.now ?? (() => globalThis.performance.now());
+    this.readinessSleep = options.readiness?.sleep ?? ((ms) => new Promise((resolve) => {
+      globalThis.setTimeout(resolve, ms);
+    }));
   }
 
   /** List the catalog with optional filtering. Fetches from the registry; on
@@ -145,19 +174,87 @@ export class LibraryService {
     return { entries: filterEntries(entries, query), available, reason, fetchedAt, cacheError };
   }
 
-  /** Install a release by (packageId, version): fetch the release bundle from the
-   *  registry, then run the transactional installer. Never throws. */
-  async install(packageId: string, version: string): Promise<InstallResult> {
+  /** Fetch, transactionally install, then wait for the committed protocol to
+   * become an indexed TFile. Never throws. A readiness timeout remains an ok
+   * install because the marker-last transaction has already committed. */
+  async install(packageId: string, version: string): Promise<LibraryInstallResult> {
     try {
+      if (this.settings.protocolFolderPath === '') {
+        return {
+          status: 'failed', packageId, releaseVersion: version,
+          reason: 'protocol folder is not configured',
+        };
+      }
+
       const release = await this.registryClient.fetchRelease(packageId, version);
       if (release.status !== 'ok') {
         const reason = release.status === 'not-found' ? release.reason : `release unavailable: ${release.reason}`;
         return { status: 'failed', packageId, releaseVersion: version, reason };
       }
-      return await this.installer.install(release.bundle);
+
+      // Derive the expected indexed path before mutation. If Web Crypto/path
+      // derivation fails, no install has started and returning failed is truthful.
+      const pkgSegment = await packageNamespaceSegment(release.bundle.manifest.packageId);
+      const versionSlug = slugifyPackageId(release.bundle.manifest.releaseVersion);
+      const protocolPath = libraryProtocolFilePath(this.settings.protocolFolderPath, pkgSegment, versionSlug);
+
+      const installResult = await this.installer.install(release.bundle);
+      if (installResult.status === 'failed') return installResult;
+
+      const readiness = await this.waitForProtocolReadiness(protocolPath);
+      return { ...installResult, readiness };
     } catch (e) {
       return { status: 'failed', packageId, releaseVersion: version, reason: `install failed: ${safeErrorMessage(e)}` };
     }
+  }
+
+  private async waitForProtocolReadiness(protocolPath: string): Promise<InstallReadiness> {
+    let lastError: unknown;
+    try {
+      const startedAt = this.readinessNow();
+      let scheduledWaitMs = 0;
+      while (true) {
+        let indexed: unknown = null;
+        try {
+          indexed = this.app.vault.getAbstractFileByPath(protocolPath);
+        } catch (e) {
+          // Keep polling because a later Vault lookup may recover.
+          lastError = e;
+        }
+        if (indexed instanceof TFile) return { status: 'ready', protocolPath };
+
+        const elapsedByClock = Math.max(0, this.readinessNow() - startedAt);
+        const elapsedMs = Math.max(elapsedByClock, scheduledWaitMs);
+        if (elapsedMs >= INSTALL_READINESS_TIMEOUT_MS) {
+          this.warnReadinessError(protocolPath, lastError);
+          return {
+            status: 'timed-out', protocolPath,
+            timeoutMs: INSTALL_READINESS_TIMEOUT_MS,
+          };
+        }
+
+        const delayMs = Math.min(
+          INSTALL_READINESS_POLL_INTERVAL_MS,
+          INSTALL_READINESS_TIMEOUT_MS - elapsedMs,
+        );
+        await this.readinessSleep(delayMs);
+        scheduledWaitMs += delayMs;
+      }
+    } catch (e) {
+      this.warnReadinessError(protocolPath, e);
+      return {
+        status: 'timed-out', protocolPath,
+        timeoutMs: INSTALL_READINESS_TIMEOUT_MS,
+      };
+    }
+  }
+
+  private warnReadinessError(protocolPath: string, error: unknown): void {
+    if (error === undefined) return;
+    console.warn(
+      `[RadiProtocol] library protocol readiness check failed for ${protocolPath}`,
+      error,
+    );
   }
 
   /** Uninstall a release by (packageId, version). Never throws. */

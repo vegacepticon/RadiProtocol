@@ -31,8 +31,17 @@ function makePlugin(settings: Partial<RadiProtocolSettings> = {}) {
   return {
     settings: { ...DEFAULT_SETTINGS, ...settings },
     saveSettingsCalls: 0,
+    rebuildLibraryServicesCalls: 0,
+    lifecycle: [] as string[],
     async saveSettings() {
       this.saveSettingsCalls += 1;
+      this.lifecycle.push('save:start');
+      await Promise.resolve();
+      this.lifecycle.push('save:end');
+    },
+    async rebuildLibraryServices() {
+      this.rebuildLibraryServicesCalls += 1;
+      this.lifecycle.push('rebuild');
     },
     i18n: {
       t: (key: string, _params?: Record<string, string>, fallback?: string) => fallback ?? key,
@@ -40,6 +49,12 @@ function makePlugin(settings: Partial<RadiProtocolSettings> = {}) {
       getLocale: () => 'en' as const,
     },
   };
+}
+
+async function flushAsyncChanges(): Promise<void> {
+  await Promise.resolve();
+  await Promise.resolve();
+  await Promise.resolve();
 }
 
 function makeApp() {
@@ -95,26 +110,38 @@ describe('Settings folder autocomplete (SETTINGS-01)', () => {
     });
     const [protocolText, snippetText] = textComponents;
 
-    protocolText!.inputEl.value = ' Protocols/CT ';
+    protocolText!.inputEl.value = ' /Protocols\\CT/ ';
     protocolText!.inputEl.dispatchEvent({ type: 'input', bubbles: true });
+    await flushAsyncChanges();
     snippetText!.inputEl.value = '';
     snippetText!.inputEl.dispatchEvent({ type: 'input', bubbles: true });
-    await Promise.resolve();
+    await flushAsyncChanges();
 
     expect(plugin.settings.protocolFolderPath).toBe('Protocols/CT');
     expect(plugin.settings.snippetFolderPath).toBe('Snippets');
     expect(plugin.saveSettingsCalls).toBe(2);
+    expect(plugin.rebuildLibraryServicesCalls).toBe(2);
+    expect(plugin.lifecycle).toEqual([
+      'save:start', 'save:end', 'rebuild',
+      'save:start', 'save:end', 'rebuild',
+    ]);
   });
 
   it('selecting suggestions reaches the same save-on-change pathway as typing', async () => {
     const { plugin, suggesters } = renderSettings();
 
-    suggesters[0]!.selectSuggestion('Protocols/MR', {} as KeyboardEvent);
-    suggesters[1]!.selectSuggestion('.radiprotocol/snippets/CT', {} as KeyboardEvent);
-    await Promise.resolve();
+    suggesters[0]!.selectSuggestion('/Protocols\\MR/', {} as KeyboardEvent);
+    await flushAsyncChanges();
+    suggesters[1]!.selectSuggestion('.radiprotocol\\snippets\\CT/', {} as KeyboardEvent);
+    await flushAsyncChanges();
 
     expect(plugin.settings.protocolFolderPath).toBe('Protocols/MR');
     expect(plugin.settings.snippetFolderPath).toBe('.radiprotocol/snippets/CT');
     expect(plugin.saveSettingsCalls).toBe(2);
+    expect(plugin.rebuildLibraryServicesCalls).toBe(2);
+    expect(plugin.lifecycle).toEqual([
+      'save:start', 'save:end', 'rebuild',
+      'save:start', 'save:end', 'rebuild',
+    ]);
   });
 });
