@@ -1,115 +1,98 @@
 # Runner Render Sub-Layer Architecture
 
 ## Responsibility
-Maps each `RunnerState` variant to DOM output. Each render function is a pure projection: receives data (state, graph) + a host interface (for behavior), creates DOM, and delegates all event binding and state mutation to the host. Sole production consumer is `InlineRunnerModal`.
+State-specific DOM projections between the pure runner and `InlineRunnerModal`. Render functions receive narrowed state/data and host callbacks; the host owns runner mutation, vault I/O, lifecycle, localization injection, and rerendering.
 
 ## Dependencies
-- **runner/runner-state**: `RunnerState` union — each render narrows via `Extract`
-- **runner/snippet-label**: `isFileBoundSnippetNode`, `snippetBranchLabel`
-- **graph/graph-model**: `ProtocolGraph`, `RPEdge`, node types (read-only)
-- **graph/node-label**: `isExitEdge`, `nodeLabel`, `stripExitPrefix` · **graph/edge-order**: `orderedOutgoingEdges`
-- **utils/dom-helpers**: `createButton` · **constants/css-classes**: `CSS_CLASS`
-- **i18n** (type only): `Translator` — optional, defaults to identity
-- **obsidian**: `setIcon` (footer only), `App` type (snippet-picker only)
-- **views/snippet-tree-picker**: `SnippetTreePicker` (snippet-picker only — documented cross-layer exception)
+- **`runner/` and `graph/`**: state variants, node labels, ordered edges, and semantic edge metadata.
+- **`utils/dom-helpers` and `constants/css-classes`**: shared DOM/button vocabulary.
+- **Obsidian**: `setIcon` in the footer and the picker’s injected app boundary.
+- **`views/SnippetTreePicker`**: one documented picker adapter exception.
 
 ## Consumers
-- **views/inline-runner-modal.ts**: sole production consumer — calls all 7 render functions
+`InlineRunnerModal` is the direct production host for all renderers; the shared footer is currently used by the snippet picker adapter.
 
 ## Module Structure
 ```
-src/runner/render/
-├── render-complete.ts         # Completion heading → HTMLElement
-├── render-error.ts            # Error title + <ul> → void
-├── render-footer.ts           # Shared Back/Redo/Skip icon row → void
-├── render-loop-picker.ts      # Loop branch buttons (exit + body) → boolean
-├── render-question.ts         # Question text + answer/snippet buttons → 'rendered'|'not-question'|'error'
-├── render-snippet-fill.ts     # Loading/not-found/unsupported placeholders → void
-└── render-snippet-picker.ts   # Snippet tree browser → SnippetTreePicker (async-adjacent)
+render-question.ts + render-loop-picker.ts  # two-zone branch modes
+render-snippet-picker.ts                    # async picker adapter
+render-snippet-fill.ts                      # one-zone snippet messages
+render-complete.ts + render-error.ts        # terminal fragments
+render-footer.ts                             # Back/Redo/Skip controls
 ```
 
-## Host-Dependency-Injection (Render Never Owns Behavior)
-
+## Host-Injected Projection Boundary
 ```typescript
-export interface QuestionBranchHost {
-  bindClick(el: HTMLElement, handler: (ev: MouseEvent) => void): void;
+type AtNode = Extract<RunnerState, { status: 'at-node' }>;
+
+interface QuestionHost {
+  bindClick(el: HTMLElement, handler: (event: MouseEvent) => void): void;
   renderError(messages: string[]): void;
-  onChooseAnswer(answerNode: AnswerNode): void | Promise<void>;
-  onChooseSnippetBranch(snippetNode: SnippetNode, isFileBound: boolean): void;
+  onChooseAnswer(node: AnswerNode): void | Promise<void>;
+  onChooseQuestion(edge: RPEdge): void;
 }
-export function renderQuestionAtNode(
-  textZone: HTMLElement, actionZone: HTMLElement, graph: ProtocolGraph | null,
-  state: AtNodeState, host: QuestionBranchHost,
-): 'rendered' | 'not-question' | 'error'
-```
-- **Never** call `addEventListener` — use `host.bindClick()`. **Never** call `ProtocolRunner` methods — host callbacks. **Never** access `this` — standalone functions. **Graph is read-only**.
 
-## Two-Zone vs One-Zone Signatures
-
-```typescript
-// 2-zone: text + actions occupy separate layout regions (question, loop picker)
-renderQuestionAtNode(textZone, actionZone, graph, state, host)
-renderLoopPicker(textZone, actionZone, graph, state, host)
-// 1-zone: self-contained panel, heading, footer, or loading state
-renderCompleteHeading(zone): HTMLElement
-renderErrorList(zone, messages, options?): void   // does NOT clear — host clears + wraps
-renderRunnerFooter(zone, options, host): void
-```
-Terminal snippet-fill messages DO clear (`zone.empty()`); two-zone states must be added to the host's action-layout list.
-
-## State Narrowing via Extract
-
-```typescript
-type AtNodeState = Extract<RunnerState, { status: 'at-node' }>;
-type AwaitingLoopPickState = Extract<RunnerState, { status: 'awaiting-loop-pick' }>;
-```
-Guarantees type-safe status-specific field access without casts. Host's `switch (state.status)` keeps a `default: never` exhaustiveness check.
-
-## Graph Traversal Chosen by Semantics
-
-```typescript
-// Edges — when labels/identity matter (loop branches):
-const outgoing = orderedOutgoingEdges(graph, state.nodeId);
-// partition into exits (isExitEdge) vs body; stripExitPrefix for exit captions
-
-// Adjacency — when only target-node kinds matter (question buttons):
-for (const neighborId of graph.adjacency.get(nodeId) ?? []) {
-  const n = graph.nodes.get(neighborId);
-  if (n?.kind === 'answer') answers.push(n);
-  else if (n?.kind === 'snippet') snippets.push(n);  // tolerate stale adjacency
+function renderQuestion(
+  textZone: HTMLElement, actionZone: HTMLElement,
+  graph: ProtocolGraph | null, state: AtNode, host: QuestionHost,
+): 'rendered' | 'not-question' | 'error' {
+  const node = graph?.nodes.get(state.nodeId);
+  if (node === undefined) { host.renderError(['Missing node']); return 'error'; }
+  if (node.kind !== 'question') return 'not-question';
+  // Create text/buttons; delegate every click through host callbacks.
+  return 'rendered';
 }
 ```
+Renderers never call `ProtocolRunner`, never use `this`, and never bind raw listeners directly. Return values describe only what the host needs.
 
-## Async-Guarded Picker + Double-Click Footer
+## Semantic Edges and Zone Contracts
+```typescript
+const edges = orderedOutgoingEdges(graph, state.nodeId);
+for (const edge of edges) {
+  const isExit = edge.isLoopExit === true;
+  const target = graph.nodes.get(edge.toNodeId);
+  const caption = isExit ? edge.label ?? '' : target ? nodeLabel(target) : edge.toNodeId;
+  const button = createButton(actionZone, { text: caption });
+  if (caption.trim() === '') button.setAttr('aria-label', edge.toNodeId);
+  host.bindClick(button, () => host.onChooseLoopBranch(edge));
+}
+```
+Use edges when labels, edge IDs, ordering, or exit metadata matter; use adjacency only when grouping by target kind is sufficient. Questions and loop pickers use two zones; completion/error/fill/picker fragments use one zone with deliberate clearing ownership.
 
+## Async and Reentrancy Guards
 ```typescript
 const capturedNodeId = state.nodeId;
-const snippet = await snippetService.load(absPath);
-if (options.getCurrentNodeId() !== capturedNodeId) return;  // stale-state guard
-if (options.isStillMounted?.() === false) return;            // detached-DOM guard
+const snippet = await snippetService.load(relativePath);
+if (host.getCurrentNodeId() !== capturedNodeId) return;
+if (host.isStillMounted?.() === false) return;
+if (snippet === null) return host.renderAsyncError('Snippet not found');
+await host.onSnippetReady(snippet);
 
-// Footer double-click guard:
-host.bindClick(backBtn, () => { backBtn.disabled = true; options.onBack(); }); // disable BEFORE handler
-// Skip does NOT need the guard — idempotent. Runner stepBack adds a 2nd-layer microtask guard.
+host.bindClick(backButton, () => {
+  backButton.disabled = true; // before host mutation
+  host.onBack();
+});
 ```
-`renderSnippetPicker` returns the mounted `SnippetTreePicker` instance — host owns its unmount on state departure / Back / teardown.
+Capture state identity before awaits, reject detached results, and return the mounted picker so the host can unmount it. Back/Redo are synchronously disabled; the runner adds its own same-microtask Back guard.
 
 ## Architectural Boundaries
-- **Render layer never imports `ProtocolRunner`** — all mutation flows through host callbacks.
-- **Only `render-snippet-picker.ts` imports from `views/`** — `SnippetTreePicker` is the documented cross-layer exception.
-- **Only `render-footer.ts` + `render-snippet-picker.ts` import `obsidian`** — all other render modules are pure DOM.
+- Only `render-footer.ts` has a runtime Obsidian utility import; other renderers are DOM/pure adapters.
+- `render-snippet-picker.ts` may construct `views/SnippetTreePicker`; no other renderer imports `views/`.
+- Dynamic text uses text nodes/`createButton`, not `innerHTML`; icon-only controls require localized `aria-label` values.
+- Two-zone renderers do not clear the host’s zones; terminal fill messages may replace their own zone.
 
-<important if="you are adding a new render mode to the runner">
-## Adding a New Render Mode
-1. Create `src/runner/render/render-<state>.ts`
-2. Define Host interface (`bindClick`, `renderError`, action callbacks)
-3. Narrow state: `type NarrowState = Extract<RunnerState, { status: 'your-state' }>`
-4. Pick signature: 1-zone `(zone, state, host)` or 2-zone `(textZone, actionZone, graph, state, host)`
-5. Pick return: `void`, `boolean`, or discriminated `'rendered' | 'not-<kind>' | 'error'`
-6. Guard null graph / wrong node kind; delegate errors to `host.renderError`
-7. Use `createButton` + `CSS_CLASS`; `aria-label` for icon-only controls (not `title`)
-8. If async: capture state identity before `await`; re-check after; guard detached-DOM
-9. If non-idempotent clicks: synchronous `disabled = true` before host handler
-10. Wire `case` in `views/inline-runner-modal.ts` (preserve `never` exhaustiveness)
-11. Test with `MockEl` class + `vi.fn()` host spies in `__tests__/runner/render-<state>.test.ts`
+<important if="you are adding a new runner render mode">
+## Adding a Render Mode
+1. Add/update the runner state first; see `.rpiv/guidance/src/runner/architecture.md`.
+2. Create `render-<state>.ts` with an `Extract` state alias and narrow host interface.
+3. Choose one- or two-zone ownership and a minimal return contract.
+4. Use semantic edges/adjacency appropriately, safe text DOM, localized labels, and async/click guards.
+5. Wire an exhaustive host switch and two-zone layout membership if needed.
+6. Add MockEl renderer tests plus host integration for transitions and lifecycle.
+</important>
+
+<important if="you are writing or modifying tests for the render layer">
+- Use the smallest `MockEl`/`FakeNode` needed and `vi.fn()` host spies; do not mount real Obsidian UI.
+- Assert classes, order, captions, ARIA, callback payload identity, return contracts, and wrong-node/error paths.
+- Picker tests must cover successful, missing, stale-node, detached-DOM, and unmount behavior.
 </important>

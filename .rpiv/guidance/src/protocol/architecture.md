@@ -1,116 +1,108 @@
 # Protocol Layer Architecture
 
 ## Responsibility
-On-disk document model for `.rp.json` protocol files: versioned schema, pure parser (V1 JSON → runtime `ProtocolGraph`), Obsidian vault CRUD store, path resolution. Document + parser are pure TypeScript (zero Obsidian imports, NFR-01). Only store + resolver touch the vault.
+`src/protocol/` is the boundary between canonical `.rp.json` documents and runtime `ProtocolGraph` values. The document model, parser, and migration are pure; the store and resolver are the Obsidian vault shell.
 
 ## Dependencies
-- **graph/graph-model**: `ProtocolGraph`, `RPNode`, `ParseResult`, `RPNodeKind`
-- **i18n**: `Translator` (injected, English `defaultT` fallback)
-- **utils/write-mutex**: per-file-path write serialization · **utils/vault-utils**: `ensureFolderPath`
-- **obsidian** (store + resolver only): `TFile`, `TFolder`, `App`, `Vault`
+- **`graph/`**: runtime node kinds, graph result types, and topology.
+- **`i18n/Translator`**: injected parser diagnostics.
+- **`utils/WriteMutex` and vault helpers**: serialized writes and parent-folder creation.
+- **Obsidian**: `App`, `Vault`, `TFile`, and `TFolder` only in store/resolver modules.
 
 ## Consumers
-- **main.ts**: constructs + wires parser, store, resolver
-- **views/protocol-editor-view**: holds `ProtocolDocumentV1`, mutates node/edge records via `store.update()`
-- **views/inline-runner-modal**: read → parse → validate → start
-- **views/node-picker-modal**: reads `ProtocolNodeRecord` for start-point choices
-- **snippets/protocol-ref-sync**: rewrites `fields.snippetPath` / `fields.subfolderPath`
-- **library/library-model**: `PackageManifest` composes a `ProtocolDocumentV1` as a value
+`main.ts` wires the store/parser/resolver; views edit or execute documents; snippets rewrite references; library packages compose a document value and revalidate installed copies.
 
 ## Module Structure
 ```
-src/protocol/
-├── protocol-document.ts         # Versioned schema (ProtocolDocumentV1, *Record), factory, type guard
-├── protocol-document-parser.ts  # Pure parser: V1 JSON → ProtocolGraph (never throws)
-├── protocol-document-store.ts   # Vault CRUD + WriteMutex (Obsidian-coupled)
-└── protocol-file-resolver.ts    # Path normalization + recursive file walker (dual-strategy)
+protocol-document.ts          # V1 schema, factory, shallow envelope guard
+protocol-document-parser.ts   # pure JSON/record → ProtocolGraph parser
+protocol-document-migration.ts# pure, idempotent legacy-loop conversion
+protocol-document-store.ts    # vault CRUD, migration persistence, mutex
+protocol-file-resolver.ts     # normalized recursive .rp.json enumeration
 ```
 
-## Versioned Document Schema (Sentinel Fields)
-
+## Versioned Envelope and Shallow Guard
 ```typescript
 export const PROTOCOL_SCHEMA = 'radiprotocol.protocol' as const;
 export const PROTOCOL_VERSION = 1 as const;
-
-export interface ProtocolDocumentV1 {
-  schema: typeof PROTOCOL_SCHEMA;     // exact-string sentinel
-  version: typeof PROTOCOL_VERSION;    // exact-integer sentinel
+interface ProtocolDocumentV1 {
+  schema: typeof PROTOCOL_SCHEMA; version: typeof PROTOCOL_VERSION;
   id: string; title: string; createdAt: string; updatedAt: string;
-  nodes: ProtocolNodeRecord[]; edges: ProtocolEdgeRecord[];  // order-insensitive
-  // optional: viewport, layoutDirection, selfCheckEnabled, selfCheckItems
+  nodes: ProtocolNodeRecord[]; edges: ProtocolEdgeRecord[];
 }
-
-export interface ProtocolNodeRecord {
-  id: string;
-  kind: RPNodeKind | null;            // null = untyped authoring intermediate, skipped by parser
-  fields: Record<string, unknown>;   // per-kind extraction happens in parser
-  x: number; y: number; width: number; height: number; color?: string; text?: string;
+function isProtocolDocumentV1(value: unknown): value is ProtocolDocumentV1 {
+  // Envelope/arrays only; node semantics are downstream.
+  return isRecord(value) && value.schema === PROTOCOL_SCHEMA
+    && value.version === PROTOCOL_VERSION && typeof value.id === 'string'
+    && Array.isArray(value.nodes) && Array.isArray(value.edges);
 }
 ```
+The factory seeds a Start record and duplicates editor defaults intentionally; protocol code must not import `views/`.
 
-`isProtocolDocumentV1()` is a **shallow envelope guard** — checks schema + version sentinels + top-level field types only. Does NOT validate node IDs, kinds, field semantics, or edge references. `createEmptyProtocolDocument(id, title, now?, rootId?)` — injectable clock + ID seams; seeds one Start node with inlined editor defaults (no `views/` import).
-
-## Pure Parser with ParseResult (Never Throws)
-
+## Pure Parse and Migration Boundary
 ```typescript
-export class ProtocolDocumentParser {
+class ProtocolDocumentParser {
   constructor(private readonly t: Translator = defaultT) {}
-  parse(jsonString: string, filePath: string): ParseResult { /* never throws */ }
+  parse(raw: string, filePath: string): ParseResult {
+    let value: unknown;
+    try { value = JSON.parse(raw); }
+    catch { return { success: false, error: this.t('protocol.parseFailed') }; }
+    if (!isProtocolDocumentV1(value)) return { success: false, error: this.t('protocol.invalidDocument') };
+    return this.parseDocument(value, filePath); // skip untyped; collect recognized errors
+  }
 }
-// parseNode() returns: RPNode (valid) | null (skip untyped) | { parseError } (reject)
-// All node errors collected, joined by "; ", returned at once.
-// Legacy compat: getString(fields, 'questionText', fallback, 'radiprotocol_questionText')
-//   — modern camelCase key wins; radiprotocol_* legacy key is one-way bridge.
+const { document, changed } = migrateProtocolDocument(value, now);
+// Store persists changed legacy records before parsing.
 ```
+The source catches JSON decoding only. Because the envelope guard is shallow, malformed nested array elements can still throw inside `parseDocument()`; do not promise total protection for arbitrary nested input. Modern field keys win over `radiprotocol_*` compatibility keys by checking `!== undefined`. Standalone loop records and prefixed exit labels are converted only by the pure migration; `loop-start`/`loop-end` remain parseable so validation can report migration-required data.
 
-Parser drops dangling edges (endpoints that didn't survive node parsing) and skips untyped nodes silently — semantic validation is downstream.
-
-## Vault Store (CRUD + WriteMutex) — Atomicity Caveat
-
+## Vault Store and Atomicity Boundary
 ```typescript
-export class ProtocolDocumentStore {
-  async read(path): Promise<ProtocolDocumentV1 | null>   // null = missing/invalid, never throws
-  async write(path, doc): Promise<void>                   // mutex + ensure parent + trailing newline
-  async update(path, mutator: (doc | null) => ProtocolDocumentV1): Promise<ProtocolDocumentV1>
-  async create(folder, title, id): Promise<{ file: TFile; doc: ProtocolDocumentV1 }>
-  async list(folder): Promise<TFile[]>                    // recursive walk, dual-strategy
-  async delete(path): Promise<void>                      // fileManager.trashFile (soft delete)
+async write(path: string, document: ProtocolDocumentV1): Promise<void> {
+  await this.mutex.runExclusive(path, async () => {
+    await ensureFolderPath(this.app.vault, parentOf(path));
+    await this.app.vault.adapter.write(path, JSON.stringify(document, null, 2) + '\n');
+  });
+}
+async update(path: string, mutate: Mutator): Promise<ProtocolDocumentV1> {
+  const next = mutate(await this.read(path)); // read is outside write lock
+  await this.write(path, next);
+  return next;
 }
 ```
+`read()` returns `null` for missing, malformed, or migration-persistence failure; writes propagate errors. `update()` bundles a caller’s document mutation into one write, but is not an atomic read-modify-write across concurrent callers.
 
-- `write()` uses `JSON.stringify(doc, null, 2) + '\n'` — pretty-printed, trailing newline for clean diffs.
-- `create()` sanitizes title (`/`, \` → `-`) to prevent path injection.
-- **KNOWN LIMITATION**: `update()` is NOT atomic. It calls unlocked `read()` then separately locked `write()`. Two concurrent `update()` calls on the same path can both read the same old document and overwrite each other. Per-path writes are serialized; the full read-modify-write cycle is not. For true atomicity, acquire the path lock around all three operations using unlocked internal helpers.
-
-## File Resolver (Normalize-Then-Walk)
-
+## Normalize-Then-Walk Resolution
 ```typescript
-export function normalizeProtocolFolderPath(input: string): string  // trim, \→/, strip leading/trailing /
-export function resolveProtocolDocumentFiles(vault, configuredPath): TFile[]
-// empty normalized folder → [] (disabled). store.list('') → scans whole vault.
-// TFolder.children walk (fast) with vault.getFiles() + 'folder/' prefix fallback (test compat)
-// matches by full '.rp.json' suffix (endsWith), NOT TFile.extension
+function resolveProtocolDocumentFiles(vault: Vault, configured: string): TFile[] {
+  const root = normalizeProtocolFolderPath(configured);
+  if (root === '') return []; // empty setting disables selection
+  const folder = vault.getAbstractFileByPath(root);
+  return folder instanceof TFolder
+    ? walk(folder).filter(file => file.path.endsWith('.rp.json'))
+    : vault.getFiles().filter(file => file.path.startsWith(root + '/')
+        && file.path.endsWith('.rp.json'));
+}
 ```
+The resolver normalizes separators and edge slashes, prefers a folder-child walk, and falls back to the vault index. It enumerates files only; parsing, migration, and graph validation happen later.
 
 ## Architectural Boundaries
-- **NO Obsidian imports in document + parser**: pure TypeScript, unit-testable without stubs.
-- **NO `Result<T>` in stores**: stores return `null` for missing/invalid.
-- **NO unqueued vault writes**: all writes through `WriteMutex.runExclusive()`.
-- **Factory never imports views**: editor visual defaults are duplicated with a cross-reference comment.
-- **Composability, not inheritance**: `library/library-model.ts` wraps `ProtocolDocumentV1` as a value, never extends it.
+- Do not import Obsidian into the document, parser, or migration modules.
+- Do not put graph semantics in the shallow envelope guard.
+- Store deletes use Obsidian trash; all vault writes go through a keyed mutex.
+- `ProtocolDocumentV1` is composed as a value by library manifests, never extended.
 
-<important if="you are adding a new field to an existing node kind">
-## Adding a New Field to a Node Kind
-1. Add the field (with `?` for optionality) to the interface in `graph-model.ts`
-2. In `protocol-document-parser.ts` `parseNode()` switch, add extraction: `getString(fields, 'newField', fallback, 'radiprotocol_newField')`
-3. If the field references another resource (snippet path), add it to `protocol-ref-sync.ts` rewrite targets
-4. Do NOT bump `PROTOCOL_VERSION` — adding optional fields is backward-compatible
+<important if="you are adding a protocol field or node capability">
+## Adding a Protocol Field
+1. Choose document-level state versus `node.fields` and add the typed runtime property if needed.
+2. Extract the canonical key in the parser; preserve explicit `false`, empty arrays, and empty strings.
+3. Add a compatibility alias only for a real legacy document and use migration for structural rewrites.
+4. Update graph validation, runner/render/view consumers, reference sync, locales, and tests as applicable.
+5. Do not bump version for a genuinely optional backward-compatible field.
 </important>
 
 <important if="you are writing or modifying tests for the protocol layer">
-## Testing Conventions
-- Pure modules (document, parser): construct directly, no mocking
-- Store tests: `makeVault()` + `makeApp()` mock factory (see `__tests__/protocol-document-store.test.ts`); mock vault is in-memory `Record<string, string>`, `vi.fn()` on every method
-- Verify both return values AND side effects on mock files
-- Parser tests cover success paths AND error collection (multiple errors joined by `;`)
+- Test document/parser/migration directly with typed builders and deterministic clocks.
+- Store tests use `makeVault()`/`makeApp()` and assert both returned values and persisted bytes/call counts.
+- Cover canonical-first compatibility, collected parse errors, dangling-edge filtering, migration idempotence, resolver suffix/path behavior, and the known update race contract.
 </important>

@@ -1,123 +1,100 @@
 # Snippets Layer Architecture
 
 ## Responsibility
-Snippet data model (2 variants: Markdown, Markdown Template), Obsidian vault CRUD service, cross-protocol reference syncing, YAML front-matter parsing. Model (`snippet-model.ts`) + template parser (`md-template.ts`) are pure TypeScript (zero Obsidian imports). Service (`snippet-service.ts`) + ref-sync (`protocol-ref-sync.ts`) handle all vault I/O.
-
-**JSON snippets are fully removed** (commit `b895736`). Never parsed/listed/loaded/saved. `legacy-json` exists only as an unsupported-format resolution status — legacy `.json` files left on disk are not insertable. Do NOT add JSON back to the `Snippet` union.
+`src/snippets/` contains the Markdown snippet domain plus vault CRUD and cross-protocol reference reconciliation. `snippet-model.ts` and `md-template.ts` are pure; `snippet-service.ts` and `protocol-ref-sync.ts` own vault effects.
 
 ## Dependencies
-- **i18n**: `Translator` + `defaultT` · **utils/write-mutex**: per-file-path serialization · **utils/vault-utils**: `ensureFolderPath`
-- **protocol/protocol-document**: `isProtocolDocumentV1`, type (ref-sync cross-subsystem boundary)
-- **obsidian** (service + ref-sync, type-only): `App`, `TFile`, `Vault`, `FileManager` · **settings**: `RadiProtocolSettings` (`snippetFolderPath`)
+- **`i18n/Translator`**: injected validation and UI copy.
+- **`protocol/`**: V1 envelope guard/types for reference synchronization.
+- **`utils/WriteMutex` and vault helpers**: serialized writes and folder creation.
+- **Obsidian**: injected `App`, `Vault`, `TFile`, and `FileManager` at the effectful boundary.
 
 ## Consumers
-- **main.ts**: constructs `SnippetService` with `(app, settings, i18n.t.bind)`
-- **views/snippet-manager-view**: orchestrates CRUD, triggers ref-sync on moves
-- **views/snippet-tree-picker**: picker modal for inline runner + editor · **views/inline-runner-modal**: async snippet loading for fill-in
-- **runner/render/render-snippet-picker**: snippet selection UI (type imports)
+`main.ts` constructs the service; snippet manager/editor/pickers and the inline runner consume it. Library package paths reuse pure slug/path behavior. Reference sync is invoked by snippet-manager orchestration after moves.
 
 ## Module Structure
 ```
-src/snippets/
-├── snippet-model.ts        # Pure types + validation + rendering (zero Obsidian imports)
-├── snippet-service.ts      # Vault CRUD service (App + Settings + i18n injected)
-├── protocol-ref-sync.ts    # Cross-protocol snippet reference rewriter (vault-wide)
-└── md-template.ts          # YAML front-matter parser/serializer (zero Obsidian imports)
+snippet-model.ts  # tagged variants, validation, literal template rendering
+md-template.ts    # strict front-matter parser/serializer
+snippet-service.ts# rooted vault CRUD, search, resolution, moves
+protocol-ref-sync.ts # best-effort .rp.json reference rewrite
 ```
 
-## Discriminated Union with `kind` Tag
-
+## Tagged Variants and Path Identity
 ```typescript
 export type Snippet = MdSnippet | MdTemplateSnippet;
-
-export interface MdSnippet {
-  readonly kind: 'md';
-  path: string;                   // vault-relative .md path — SOLE source of identity
-  name: string;                   // display metadata, NOT identity
-  content: string;                // raw Markdown, inserted verbatim
+interface MdSnippet {
+  readonly kind: 'md'; readonly path: string; // sole identity
+  readonly name: string; readonly content: string;
 }
-
-export interface MdTemplateSnippet {
-  readonly kind: 'md-template';
-  path: string;                   // identity
-  name: string;
-  template: string;               // body with {{id}} placeholders
-  placeholders: SnippetPlaceholder[];
-  validationError: string | null; // always present — null = valid. NOT string | undefined
-  lang?: string; version?: number;
+interface MdTemplateSnippet {
+  readonly kind: 'md-template'; readonly path: string;
+  readonly template: string; readonly placeholders: SnippetPlaceholder[];
+  readonly validationError: string | null;
 }
 ```
+Never key or rewrite by display name/front-matter ID. JSON files remain on disk only as an unsupported `legacy-json` resolution result; they are not a `Snippet` variant.
 
-`path` is the sole source of identity. `validationError: string | null` forces every call-site to acknowledge it. Placeholder `type` is restricted to `'free-text' | 'choice'` (choice requires ≥1 option).
-
-## ES6-Compatible Template Rendering
-
+## Strict Markdown Template Codec
 ```typescript
-export function renderMdTemplateSnippet(template, placeholders, values): string {
-  let out = template;
-  for (const p of placeholders) out = out.split('{{' + p.id + '}}').join(values[p.id] ?? ''); // NOT replaceAll() (ES6)
-  return out;
+function isTemplate(text: string): boolean {
+  return text.startsWith('---\n') && text.indexOf('\n---\n', 4) > 0;
+}
+
+function render(template: string, placeholders: Placeholder[], values: Record<string, string>): string {
+  let output = template;
+  for (const placeholder of placeholders) {
+    // ES6-compatible literal replacement; missing values become empty.
+    output = output.split(`{{${placeholder.id}}}`).join(values[placeholder.id] ?? '');
+  }
+  return output;
 }
 ```
-Missing declared values become `''`; undeclared body tokens → `validateBodyTokens` error. Validation precedence: definition errors before body-token errors (`??`).
+The parser intentionally supports a small YAML-like subset, requires delimiters at byte zero with LF newlines, preserves raw Markdown for plain files, and returns validation errors as data. Choice values are joined by the fill UI before rendering.
 
-## Markdown Front-Matter (Strict Classification)
-
+## Rooted Vault Mutation
 ```typescript
-function hasTemplateFrontmatter(text: string): boolean {
-  return text.startsWith('---\n') && text.indexOf('\n---\n', 4) > 0; // LF delimiters, byte-zero start
+const safe = assertInsideRoot(inputPath);
+if (safe === null) return; // reads: null/empty; mutations: throw
+
+await mutex.runExclusive(safe, async () => {
+  await ensureFolderPath(vault, parentOf(safe));
+  const data = snippet.kind === 'md'
+    ? snippet.content
+    : serializeMarkdownTemplate(snippet);
+  await vault.adapter.write(safe, data);
+});
+```
+The root gate rejects absolute/traversal/sibling-prefix escapes before any adapter call. Mutations check collisions and throw; deletes use `trashFile`; browsing/loading favors safe empty/null results.
+
+## Best-Effort Reference Reconciliation
+```typescript
+const result = { updated: [] as string[], skipped: [] as Array<{path: string; reason: string}> };
+for (const file of app.vault.getFiles().filter(f => f.path.endsWith('.rp.json'))) {
+  // Rewrite only snippet fields, exact match first, then longest slash-boundary prefix.
+  // Skip unchanged documents and record one-file failures without aborting the pass.
 }
-// .md without frontmatter → kind 'md' (raw content). With → parseMarkdownTemplate().
+return result;
 ```
-Parser is a **deliberately limited subset** — top-level `key: value`, indented `placeholders`/`options` list (hand-rolled, no YAML library). Not general YAML; unsupported lines ignored. Serializer guarantees a final newline (`escapeYamlScalar`).
-
-## Path-Safety Guard (assertInsideRoot)
-
-```typescript
-private assertInsideRoot(path: string): string | null {
-  // rejects absolute + explicit ./..; requires root + '/' boundary prefix; returns normalized | null
-}
-// Every public method calls this FIRST: read/list → silent null/empty; save/create/rename/move → throws
-```
-
-Extension-based CRUD routing: `listFolder`/`load`/`save` branch on `kind` (`.md` with front-matter → template parse/serialize; `.md` without → raw content; `.json` → never listed/loaded, only `resolveSnippet` → `legacy-json` status). `resolveSnippet()` returns discriminated `{ found } | { legacy-json } | { missing }` — prefers Markdown for extensionless refs; accepts a basename subfolder match only when exactly unique (ambiguity = missing).
-
-## Cross-Document Reference Rewriting
-
-```typescript
-export async function rewriteProtocolSnippetRefs(app, mapping: Map<string,string>)
-  : Promise<{ updated: string[]; skipped: Array<{path, reason}> }>
-```
-- Best-effort: one file's failure recorded in `skipped`, does NOT abort the loop. No-op early return on empty mapping; unchanged files NOT written (avoids mtime churn).
-- Per-file `WriteMutex`; scans only `.rp.json`; validates V1 envelope; touches only `kind === 'snippet'` nodes; rewrites `fields.snippetPath` + `fields.subfolderPath`.
-- Exact-match first, then longest `/`-bounded prefix (`startsWith(key + '/')` — never bare `startsWith(key)`).
+Move/rename and reference sync are separate operations: a successful move may leave partial or skipped protocol rewrites. The synchronizer uses its own per-protocol mutex and writes canonical pretty JSON with a trailing newline.
 
 ## Architectural Boundaries
-- **Pure model layer** (`snippet-model.ts`, `md-template.ts`): zero Obsidian imports, unit-testable. **Service layer** (`snippet-service.ts`): `import type { App }` — type-only, injected.
-- **Path-as-identity**: `path` is sole source of truth. **Trash, not delete**: `delete()`/`deleteFolder()` use `fileManager.trashFile()`.
-- **Move and ref-sync are NOT one transaction**: ref-sync is invoked by the orchestrating caller after a move; a mid-sync failure leaves references partially rewritten. **Cross-subsystem boundary**: `protocol-ref-sync.ts` is the only `snippets/` file importing from `../protocol/`.
-- `library/` reuses these model/service patterns (cross-referenced comments to `snippet-service`).
+- Keep pure model/codec code free of Obsidian imports and vault state.
+- Preserve `.md` extension-bearing protocol references; do not revive JSON insertion.
+- Only `protocol-ref-sync.ts` crosses from snippets into protocol documents.
+- Library installation is a separate journaled transaction and deliberately bypasses ordinary snippet CRUD during commit.
 
-<important if="you are adding a new snippet variant">
-## Adding a New Snippet Kind
-1. Define the interface in `snippet-model.ts` (`readonly kind`, `path`, `validationError: string | null` if validated)
-2. Add to `Snippet` union type
-3. Add Markdown detection/parsing + deterministic serialization in `md-template.ts`
-4. Add extension routing in `snippet-service.ts` `listFolder`/`load`/`save`/`duplicateSnippet`
-5. Add validation in `validatePlaceholders` if applicable
-6. Update every `switch(snippet.kind)` in views + consumers
-7. Update `protocol-ref-sync.ts` if the kind has path references
-8. Keep the format Markdown-based — do NOT revive legacy JSON loading
+<important if="you are adding a new snippet variant or placeholder capability">
+## Adding a Snippet Capability
+1. Extend the tagged model and every exhaustive consumer branch.
+2. Add deterministic Markdown detection/parsing/serialization and validation.
+3. Update service listing/loading/saving/duplication/resolution and picker/editor/fill flows.
+4. Preserve root containment and path identity; update reference sync/library allowlists if paths change.
+5. Add pure model/codec, vault, UI, runner, and package tests; keep JSON legacy-only.
 </important>
 
 <important if="you are writing or modifying tests for the snippets layer">
-## Testing Conventions
-- Pure modules (`snippet-model.ts`, `md-template.ts`): construct directly, no mocking
-- Service tests: `makeVault()` + `makeApp()` mock factory, `vi.fn()` on vault methods
-- Assert unsafe paths cause **zero** vault I/O (mock not called)
-- Assert valid templates use `validationError: null`; invalid return a string
-- Assert raw Markdown remains byte-for-byte unchanged
-- Ref-sync tests: mock `app.vault.getFiles()` to return `.rp.json` files; verify exact, boundary-prefix, and longest-prefix rewrites; assert unchanged docs are NOT written
-- Template rendering: use `split().join()` — never `replaceAll()` (ES6 compat)
-- Use canonical `path` in fixtures, not display names
+- Construct model/codec directly; use `makeVault()`/`makeApp()` for service tests.
+- Assert unsafe paths cause zero vault I/O, raw Markdown is byte-preserved, and valid/invalid templates carry `null`/string validation errors.
+- Ref-sync tests cover exact, boundary-prefix, longest-prefix, unchanged/no-write, malformed-file isolation, and partial failure behavior.
 </important>

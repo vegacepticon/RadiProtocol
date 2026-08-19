@@ -1,123 +1,104 @@
 # Library Layer Architecture
 
 ## Responsibility
-Community-library feature cluster: catalog discovery (registry fetch + cache), transactional install/uninstall of protocol+snippet packages, and recovery-on-load. A thin `LibraryService` facade over a registry client, typed stores, and a transactional installer. Self-contained — mirrors the model/service + pure/Obsidian split used across the plugin.
+Community-library bounded context: registry discovery/cache, package export, integrity/path validation, transactional install/uninstall, installed ownership, migration, and startup recovery.
 
 ## Dependencies
-- **protocol/protocol-document**: `ProtocolDocumentV1` — `PackageManifest` wraps it as a value (never extends)
-- **graph/graph-model**, **snippets/snippet-model** (library-paths types) · **utils/write-mutex**, **utils/vault-utils**
-- **settings**: `RadiProtocolSettings` (registry URL, library root)
-- **obsidian** (type-only): `App`, `Vault` (service/installer/stores)
-- **registry transport**: `requestUrl` (injected; production default is an esbuild-external import) — never touches vault
+- **`protocol/`, `graph/`, `snippets/`**: composed document values, graph validation, and Markdown path/model rules.
+- **Obsidian**: injected `App`/`Vault` and `requestUrl` transport at effectful boundaries.
+- **`utils/WriteMutex`**: the single install lock and typed-store write serialization.
+- **Web Crypto**: SHA-256 byte verification; this is integrity only.
 
 ## Consumers
-- **main.ts**: constructs `LibraryService`, runs `recoverInterruptedInstalls()` before view registration; `rebuildLibraryServices()`
-- **views/library-view**: `listCatalog`, `listInstalled` · **views/library-item-detail-modal**: `getReleaseManifest` · **views/library-install-progress-modal**: `install`
-- **views/snippet-manager-view**, **views/protocol-picker-modal**: `listInstalled` + pure `findInstalledRecordForPath` for installed-indicator lookups
+`main.ts` constructs and recovers the service before views register. Library, protocol-picker, protocol-editor, and snippet-manager views consume the facade or pure ownership helpers, never the registry client directly.
 
 ## Module Structure
 ```
-src/library/
-├── library-model.ts, registry-model.ts     # Pure models: PackageManifest, CatalogEntry, InstalledRecord, wire types
-├── library-paths.ts, integrity.ts          # Pure path-safety/namespace derivation + SHA-256 verification
-├── registry-client.ts                      # Network client — injected requestUrl, never throws
-├── library-json-io.ts                      # Shared readJsonFile/writeJsonFile + safeErrorMessage
-├── library-cache-store.ts, installed-record-store.ts  # Typed stores (catalog snapshot, per-release markers)
-├── transaction-journal.ts, library-installer.ts      # Atomic install journal + stage→verify→commit→rollback
-└── library-service.ts                      # Facade: listCatalog/install/uninstall/listInstalled/recoverInterruptedInstalls
+library-model.ts + registry-model.ts     # stored/wire shapes and guards
+library-paths.ts + integrity.ts           # pure namespaces, paths, hashes
+library-json-io.ts + *-store.ts           # typed vault persistence
+registry-client.ts + library-service.ts   # transport and view-facing facade
+transaction-journal.ts + library-installer.ts # commit/recovery boundary
 ```
 
-## Model Split: Schema Sentinels + Shape Guards
-
+## Versioned Models and Shape Guards
 ```typescript
-export const SCHEMA = 'radiprotocol.package' as const;   // *_SCHEMA / *_VERSION sentinels throughout
-export function isPackageManifest(v: unknown): v is PackageManifest {
-  // sentinel + structural + element guards — type predicate used everywhere
-}
-// PackageManifest wraps ProtocolDocumentV1 as a value; wire types live in registry-model.ts, distinct from stored models.
-```
-Result-union types are suffixed `Result`/`FetchResult` and carry a `status` discriminant; guards prefixed `is`. **Service never imports views**; dependencies injected via `options` (`??` defaults).
-
-## Registry Client Boundary (Never Throws)
-
-```typescript
-if (this.isUnavailable()) return { status: 'unavailable', reason: '...', /* null fields */ };
-try {
-  const res = await this.requestUrl({ url, method: 'GET', throw: false });
-  if (res.status < 200 || res.status >= 300) return { status: 'unavailable', reason: `status ${res.status}` };
-  // 404 → 'not-found'; malformed → guard check → 'unavailable'
-} catch (e) { return { status: 'unavailable', reason: `... ${safeErrorMessage(e)}` }; }
-```
-**Boundary contract (D2/D6)**: every fetch returns explicit `ok | not-found | unavailable`, never throws; https-only validation. All URL composition stays inside the `try`.
-
-## Typed JSON Store + Shared IO (D3)
-
-```typescript
-export async function readJsonFile<T>(vault, path, guard, label): Promise<T | null> {
-  if (!(await vault.adapter.exists(path))) return null;          // missing = empty state
-  // malformed JSON/schema → throw LibraryStoreError ('malformed'), never silent reset
-}
-export async function writeJsonFile(vault, mutex, path, parentDir, value): Promise<void> {
-  await mutex.runExclusive(path, async () => { await ensureFolderPath(vault, parentDir); /* pretty + '\n' */ });
+const PACKAGE_SCHEMA = 'radiprotocol.package' as const;
+const PACKAGE_VERSION = 1 as const;
+function isPackageManifest(value: unknown): value is PackageManifest {
+  return isRecord(value) && value.schema === PACKAGE_SCHEMA
+    && value.version === PACKAGE_VERSION && isProtocolDocumentV1(value.protocol)
+    && Array.isArray(value.snippetFiles) && value.snippetFiles.every(isSnippetFile);
 }
 ```
-One file per record → no shared index → no read-modify-write atomicity needed. **D15 per-file isolation**: `list()` skips corrupt/schema-bad records; `read()` throws on a malformed single — documented asymmetry. **D3**: malformed file throws `LibraryStoreError`; missing file is null/empty.
+Persisted and wire models use sentinel fields plus `is*` guards. `PackageManifest` composes `ProtocolDocumentV1` as a value; it does not extend or alter the protocol envelope.
 
-## Transaction Journal (Marker-Last Commit, D7/D15)
-
+## Explicit Result Boundaries
 ```typescript
-entries.push({ path, kind: 'owned' });                  // owned final paths
-entries.push({ path: markerPath, kind: 'marker' });     // LAST → presence+validity = commit signal
-// journal written BEFORE any final-path write; marker written ONLY after all writes succeed.
-// recoverInterrupted on load: marker present+valid → commit; else remove all entry paths deepest-first then journal.
-// rollback uses namespace-gated removeOwnedPaths (deletes only owned paths passing assertNoTraversal within expected namespaces).
-```
-The **entire** stage→verify→commit→rollback cycle is serialized under ONE global `WriteMutex` with a fixed synthetic key (`installMutex`, `'library-install'`) — **intentional design decision**: install/uninstall never run concurrently. All validation happens in-memory (`planInstall`) before any final-path write.
+type FetchResult<T> =
+  | { status: 'ok'; value: T }
+  | { status: 'not-found'; reason: string }
+  | { status: 'unavailable'; reason: string };
 
-## Integrity, Not Authenticity (Security Posture)
-
-```typescript
-export async function verifyIntegrity(content: string, expectedSha256: string): Promise<boolean> {
-  const actual = await sha256String(content);           // TextEncoder → subtle().digest → hex
-  return actual.toLowerCase() === expectedSha256.toLowerCase();
+async fetchRelease(id: string, version: string): Promise<FetchResult<Bundle>> {
+  if (this.baseUrl === '') return { status: 'unavailable', reason: 'not configured' };
+  try {
+    const response = await this.requestUrl({ url: this.url(id, version), method: 'GET' });
+    if (response.status === 404) return { status: 'not-found', reason: 'missing' };
+    if (response.status < 200 || response.status >= 300) return { status: 'unavailable', reason: 'HTTP' };
+    return isReleaseResponse(response.json)
+      ? { status: 'ok', value: response.json }
+      : { status: 'unavailable', reason: 'invalid shape' };
+  } catch (error) {
+    return { status: 'unavailable', reason: safeErrorMessage(error) };
+  }
 }
 ```
-Pure SHA-256 content-hash verification in-memory before any final-path write (D11). Mismatch returns `false` (recoverable, never throw). **Trust caveat — front and center**: this is **integrity, not authenticity**; unsigned releases are installed on manifest-hash trust. Signature (ed25519) verification is a documented **future path**, deferred — do NOT represent installed packages as authenticated.
+Registry/client, installer, and service APIs use explicit result unions. Typed stores throw `LibraryStoreError` for malformed/operational state; higher-level list operations may log and return safe empty values.
 
-## Pure Path-Safety + Namespace Derivation
-
+## Journal-Before-Write, Marker-Last Commit
 ```typescript
-export function assertNoTraversal(relPath: string): string | null {
-  // rejects '\', leading '/', '..'/'.'; returns normalized path or null
-}
-// rewriteSnippetRef: exact match wins, then '/' boundary prefix (longest wins) — same semantics as snippets/protocol-ref-sync
-export function isLibraryManagedPath(path): boolean;   // namespace-gate cleanup
+await installMutex.runExclusive('library-install', async () => {
+  const plan = await planInstall(bundle); // no final-path mutation
+  await journal.write(plan.journal);      // journal first
+  await writeOwnedFiles(plan);
+  await writeProtocol(plan);
+  await writeMarker(plan.record);         // marker is the commit signal, last
+  await journal.remove(plan.id);          // best effort after commit
+});
 ```
-Every path gate runs before write/delete; `slugifyPackageId`/`validPackageSlug` reuse `slugifyLabel`; Cyrillic-safe (`\p{L}`).
+Rollback and startup recovery are namespace-gated, deepest-first, and retain a journal when cleanup fails. A valid matching marker means committed; missing/malformed/mismatched markers roll back owned paths.
+
+## Namespace Safety and Integrity Posture
+```typescript
+const hash = await sha256String(rawId);
+const namespace = `${slugify(rawId)}-${hash.slice(0, 12)}`;
+const relative = assertNoTraversal(bundlePath);
+if (relative === null) return { status: 'failed', reason: 'unsafe path' };
+
+const verified = await verifyIntegrity(content, expectedSha256);
+// verified === true proves bytes match the manifest, not publisher identity.
+```
+Install planning validates closure, `.md` content, paths, hashes, parser output, and staged graph references before final writes. Registry deployment is deferred (`DEFAULT_REGISTRY_URL === ''`); signatures/publisher authentication are also deferred.
 
 ## Architectural Boundaries
-- **Registry URL default is EMPTY and user-configured** — the wire client + transactional install path are real and current, but the plugin ships with no hosted backend; a registry deployment is future/deferred (do not assume one is reachable).
-- **Pure vs Obsidian**: `library-model`, `registry-model`, `library-paths`, `integrity` are zero-Obsidian; service/installer/stores use injected `type App`/`type Vault`.
-- **Market-last commit + one global `installMutex`** are intentional atomicity/safety constraints — do not parallelize without revisiting the journal contract.
-- **Compose, never extend**: `PackageManifest` composes `ProtocolDocumentV1`.
-- `LibraryService` + installer never throw — errors surface as result unions / `LibraryStoreError`.
+- Preserve one global install lock across planning, journal, commit, rollback, recovery, and migration.
+- Do not call ordinary snippet/protocol stores during the multi-file install commit; they would split the transaction boundary.
+- Uninstall owns paths from the installed record, not current settings.
+- Treat readiness/index timeout as committed-but-not-ready, not install failure.
 
 <important if="you are adding a new library capability">
-## Adding a New Library Capability
-1. **Define the model** — new `*Model` shapes with `schema`/`version` sentinels + `is*` guards; wire types in `registry-model.ts` if network-facing
-2. **Pure helpers** — put path/validation logic in a dedicated `*-paths.ts` style file (zero Obsidian)
-3. **Persistence** — via `readJsonFile`/`writeJsonFile` wrapped in a store owning its own `WriteMutex`; document missing-vs-malformed semantics
-4. **Compose a service method** on `LibraryService`: wrap in try/catch, return a result union, never throw; log store failures with `console.warn('[RadiProtocol] …')`
-5. **Network (if needed)** — extend `RegistryClient`: injectable transport, guards, explicit `unavailable`/`not-found`
-6. **Mutation (install/rollback)** — extend `planInstall`, add journal entries via `TransactionJournalIO`, keep the **marker entry LAST**
-7. **Export** the result type; add a test mirroring store/service shape (`vi.fn()` stubs for transport, stub `journalIO`)
+## Adding a Library Capability
+1. Add a versioned model/guard or wire model.
+2. Add pure path/reference/integrity planning and explicit result states.
+3. Extend a typed store/client only when persistence/network is required.
+4. Add all mutation validation to install planning; journal every owned path with the marker last.
+5. Wire the service facade and consume it from views; add recovery/ownership handling where relevant.
+6. Test corruption, traversal, collision, integrity failure, rollback, recovery, and readiness outcomes.
 </important>
 
 <important if="you are writing or modifying tests for the library layer">
-## Testing Conventions
-- Pure modules (`library-model`, `registry-model`, `library-paths`, `integrity`): construct/call directly, no mocking; `integrity` needs Web Crypto available
-- Service/installer: `makeVault()` + `makeApp()` mock factory; inject `vi.fn()` stubs for `requestUrl` transport and `TransactionJournalIO`
-- Assert registry failures return `unavailable`/`not-found` result unions and never throw
-- Journal tests: verify marker is written LAST and that recovery commits valid vs rolls back invalid markers (deepest-first, namespace-gated)
-- Path-safety: assert unsafe paths cause **zero** vault I/O (mock not called)
+- Test pure models/paths/integrity directly; inject `vi.fn()` transport and clocks for registry/service tests.
+- Use in-memory vault maps for stores and installer bundles with production-derived hashes/paths.
+- Assert marker ordering, zero final writes on preflight failure, namespace-gated rollback/uninstall, and integrity-not-authenticity wording.
 </important>

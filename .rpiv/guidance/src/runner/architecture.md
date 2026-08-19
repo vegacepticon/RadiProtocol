@@ -1,123 +1,105 @@
 # Runner Layer Architecture
 
 ## Responsibility
-Pure protocol-traversal state machine + output text accumulation. Core (`protocol-runner.ts`, `runner-state.ts`, `text-accumulator.ts`, `snippet-label.ts`) is a pure FSM with zero Obsidian imports (NFR-01). The `render/` sub-layer maps each state to DOM — see `.rpiv/guidance/src/runner/render/architecture.md`.
+Pure mutable traversal state machine over an already parsed `ProtocolGraph`. It owns navigation, accumulated text, loop frames, undo/redo, and resumable snapshots; parsing, vault writes, snippet I/O, and DOM rendering stay outside the core.
 
 ## Dependencies
-- **graph/graph-model**: `ProtocolGraph`, `LoopContext`, node types
-- **graph/node-label**: `isExitEdge`, `nodeLabel`, `stripExitPrefix`
-- **graph/edge-order**: `orderedOutgoingEdges`
-- **constants/runner-states**: `RUNNER_STATUS` const → **constants/css-classes**: `CSS_CLASS` (render only)
-- **i18n**: `defaultT`, `Translator` (injected, not imported at module scope)
+- **`graph/`**: node/edge contracts, ordered branches, labels, and loop metadata.
+- **`constants/runner-states`**: status literals shared with the host.
+- **`i18n`**: injected/default translator for runner errors.
 
 ## Consumers
-- **views/inline-runner-modal.ts**: sole host — calls `ProtocolRunner` methods + all 7 render functions
+`views/inline-runner-modal.ts` is the production host: it calls runner commands, dispatches every state to renderers, resolves snippets, and appends note deltas.
 
 ## Module Structure
 ```
-src/runner/
-├── protocol-runner.ts    # FSM orchestrator: start, chooseAnswer, stepBack, redo, skip, syncManualEdit…
-├── runner-state.ts       # Discriminated union (RunnerState), UndoEntry, RedoEntry
-├── text-accumulator.ts   # Append-only buffer with O(1) snapshot/restore
-└── snippet-label.ts      # Snippet classification + display label helpers
+protocol-runner.ts             # guarded commands and cursor traversal
+runner-state.ts                # public state + undo/redo/snapshot contracts
+text-accumulator.ts            # separator-aware text buffer
+snippet-label.ts               # pure snippet classification/captions
+render/                         # DOM adapter; see its own guidance
 ```
 
-## Discriminated-Union State Machine (Immutable Snapshots)
-
+## Discriminated State Snapshots
 ```typescript
-export type RunnerState = IdleState | AtNodeState | AwaitingSnippetPickState
-  | AwaitingLoopPickState | AwaitingSnippetFillState | CompleteState | ErrorState;
-// getState() is the ONLY public read — internal fields are private.
-// Each state interface carries ONLY the data that status needs (no currentNodeId on IdleState).
-// States expose booleans (canStepBack/canRedo/undoStackSize), never the stacks themselves.
-// Exhaustiveness: default branch assigns status to `never`.
+export type RunnerState =
+  | { status: 'idle' } | { status: 'at-node'; nodeId: string; accumulatedText: string }
+  | { status: 'awaiting-snippet-pick'; nodeId: string }
+  | { status: 'awaiting-loop-pick'; nodeId: string }
+  | { status: 'awaiting-snippet-fill'; nodeId: string; snippetId: string }
+  | { status: 'complete'; finalText: string } | { status: 'error'; message: string };
+getState(): RunnerState {
+  return this.projectState(); // expose status-specific data; keep stacks private
+}
 ```
+All public consumers narrow on `state.status`; exhaustive switches should retain a `never` check. Four interactive statuses are resumable; idle, complete, and error serialize as `null`.
 
-## Undo-Before-Mutate (Snapshot Sequence Invariant)
-
-Every user-driven forward action follows this exact sequence:
-
+## Guarded Commands and Undo-Before-Mutate
 ```typescript
-chooseAnswer(id: string): void {
-  if (this.runnerStatus !== RUNNER_STATUS.AT_NODE) return;     // 1. Guard
-  if (this.graph === null || this.currentNodeId === null) return;
-  // 2. Validate against graph; on failure transitionToError
-  this.redoStack = [];                                          // 3. Clear redo
-  this.undoStack.push({                                         // 4. Snapshot BEFORE mutation
+chooseAnswer(answerId: string): void {
+  if (this.status !== 'at-node') return;
+  const answer = this.graph?.nodes.get(answerId);
+  if (answer?.kind !== 'answer') return this.transitionToError('Invalid answer');
+  this.redoStack = [];
+  this.undoStack.push({
     nodeId: this.currentNodeId,
     textSnapshot: this.accumulator.snapshot(),
-    loopContextStack: this.loopContextStack.map(f => ({ ...f })), // deep copy!
-    restoreStatus: RUNNER_STATUS.AT_NODE,                        // optional: non-default undo target
-  });
-  // 5. Mutate state…  6. advanceThrough() or set status
+    loopContextStack: this.loopFrames.map(frame => ({ ...frame })),
+  }); // snapshot precedes every mutation
+  this.appendAnswer(answer); this.advanceThrough(answerId);
 }
 ```
+Rejected commands must not mutate history. Automatic start/text/answer traversal is part of the initiating action; first loop entry is the deliberate exception that records loop-entry history.
 
-- `advanceThrough()` (internal auto-advance) **never** pushes undo entries (one explicit exception: first loop entry).
-- `loopContextStack` must be deep-copied with `.map(f => ({ ...f }))`.
-- `completeSnippet()` reuses the earlier snippet-selection undo entry — does not push a new one.
-- `stepBack()` has a **microtask reentrancy guard** (`stepBackInFlight`) — tests await `Promise.resolve()` between repeated calls.
-
-## TextAccumulator (O(1) Snapshots)
-
+## Loop Context and Cursor Traversal
 ```typescript
-export class TextAccumulator {
-  append(text: string): void;
-  appendWithSeparator(text: string, sep: 'newline' | 'space'): void; // no sep before first chunk
-  snapshot(): string;        // immutable string copy (primitives already safe)
-  restoreTo(s: string): void;   // O(1) undo — full replacement
-  overwrite(text: string): void; // manual edit injection (syncManualEdit)
+private advanceThrough(initial: string): void {
+  let cursor = initial; let steps = 0; // reset per call
+  while (++steps <= this.maxSteps) {
+    const node = this.graph?.nodes.get(cursor);
+    if (node === undefined) return this.transitionToError('Missing node');
+    if (node.kind === 'question' && node.loop === true) {
+      this.enterOrReenterLoop(node.id); return;
+    }
+    if (node.kind === 'question') return this.setAtNode(node.id);
+    if (node.kind === 'answer' || node.kind === 'text-block') {
+      cursor = this.firstNeighbour(node.id); continue;
+    }
+    if (node.kind === 'snippet') return this.enterSnippet(node);
+  }
+  this.transitionToError('Possible graph cycle');
 }
 ```
-Caller resolves per-node separator override (`??` runner default); skips truly empty answer text before `appendWithSeparator`.
+Loop exits pop the top frame only when `edge.isLoopExit === true`; re-entry increments the matching top frame. Edge IDs identify branch choices. The traversal cap is per call, not a global iteration limit.
 
-## Loop Context Stack (Nested Re-Entry)
-
+## Resumable JSON Boundary
 ```typescript
-interface LoopContext { loopNodeId: string; iteration: number; textBeforeLoop: string; }
+const snapshot = runner.getSerializableState();
+const wire = snapshot === null ? null : JSON.parse(JSON.stringify(snapshot));
+
+restored.setGraph(graph);       // required precondition
+if (wire !== null) restored.restoreFrom(wire);
+// restoreFrom deep-copies frames/history, clears redo, and resets errors.
 ```
-- First entry: push new frame. Re-entry (top frame matches): increment `iteration` in-place, do NOT push.
-- Exit edge: `pop()` (only normal path that shrinks the stack).
-- Answer "quick exit": if the answer's next target is also a loop exit target, pop the top frame.
-- Dead-end inside a loop → return to owning loop picker (increment iteration). Dead-end outside → `COMPLETE`.
-
-## Cursor-Based Traversal (Per-Call Step Cap)
-
-`advanceThrough(initialNodeId)` uses an iterative cursor + `maxSteps` counter (default 50) that **resets on every call** (not a cumulative limit). Exceeding the cap → `transitionToError('Possible graph cycle')`. Auto-advances: start, text-block, answer. Halts: question, loop, snippet (file-bound → fill; directory/unbound → picker). Terminal error: legacy loop-start/loop-end.
-
-**Ordered adjacency**: use `orderedOutgoingEdges` (or `adjacency.get(id)?.[0]` as "first outgoing edge"); scan in order for first-semantic-match. Use stable **edge IDs** for loop-branch selection (labels/targets can collide).
-
-## Serialization (4 Resumable States) + Manual-Edit Ordering
-
-```typescript
-getSerializableState(): SessionSnapshot | null  // null for idle/complete/error
-restoreFrom(snapshot): void                       // requires setGraph() first; clears redo + error
-```
-
-**4 resumable statuses**: `at-node`, `awaiting-snippet-pick`, `awaiting-loop-pick`, `awaiting-snippet-fill`. (Source comment claims only 2 — stale; treat all 4 as canonical.) Serialized undo preserves `returnToBranchList` but omits `restoreStatus` (missing defaults to `at-node` on undo); verify with `JSON.stringify`/`JSON.parse` round trips. Host MUST call `syncManualEdit(text)` BEFORE the forward action so manual text lands in that action's undo snapshot — accepted only at `at-node`/`awaiting-loop-pick`, does not itself push history.
+Serialized undo entries retain `restoreStatus` and `returnToBranchList`; do not rely on stale comments that omit them. `syncManualEdit()` overwrites text without history and must run before the forward action that captures the undo snapshot.
 
 ## Architectural Boundaries
-- **Pure core, Obsidian-aware shell**: `protocol-runner`, `runner-state`, `text-accumulator`, `snippet-label` have zero Obsidian imports.
-- **No events**: results communicated only via read-only `getState()` snapshots + serialization pair.
-- **Runner never imports views**: documented exception is `render-snippet-picker.ts` → `SnippetTreePicker`.
-- **Error is terminal**: `transitionToError(msg)` sets status + localized message. Recovery requires `start()` or `restoreFrom()`.
+- No Obsidian, DOM, service, or view imports in the core runner.
+- Runner errors are terminal until `start()` or `restoreFrom()`; wrong-state calls are normally no-ops.
+- Runner history changes memory only; the inline host owns note persistence and does not undo prior vault writes.
+- Renderer contracts live in `.rpiv/guidance/src/runner/render/architecture.md`.
 
-<important if="you are adding a new runner state">
-## Adding a New Runner State
-1. **`constants/runner-states.ts`** — add key to `RUNNER_STATUS`
-2. **`runner/runner-state.ts`** — define interface with `status` literal, add to `RunnerState` union
-3. **`protocol-runner.ts`** — add private field, `getState()` case, transition method with undo-before-mutate
-4. **If resumable**: add to `getSerializableState()` + `restoreFrom()` unions (4 states currently resumable)
-5. **If interactive**: create `render/render-<state>.ts` — see `.rpiv/guidance/src/runner/render/architecture.md`
-6. **`views/inline-runner-modal.ts`** — add case to `switch(state.status)` (preserve `never` exhaustiveness)
-7. **Tests**: transition, stepBack round-trip, redo, serialization round-trip
+<important if="you are adding a new runner state or traversal behavior">
+## Adding a Runner State
+1. Add the status literal and state interface/union member.
+2. Add reset/transition logic with phase guards and undo-before-mutate.
+3. Update `getState()` and both serialization/restoration unions if resumable.
+4. Add a renderer and exhaustive `InlineRunnerModal` dispatch; update the two-zone state list when needed.
+5. Add focused transition, undo/redo, JSON round-trip, renderer, and host integration tests.
 </important>
 
 <important if="you are writing or modifying tests for the runner layer">
-## Testing Conventions
-- **Core runner**: construct `ProtocolRunner` directly — no arguments, no mocking
-- **State narrowing**: `if (state.status !== 'at-node') return;` is TS narrowing, not assertion
-- **Test graphs**: inline `new Map<string, RPNode>()` for simple cases; `__tests__/fixtures/*.canvas` for loops
-- **stepBack microtask guard**: `await Promise.resolve()` between intentional repeated calls
-- **Serialization**: assert a real `JSON.stringify`/`JSON.parse` round trip, not just `getSerializableState()` shape
+- Use `new ProtocolRunner()` with inline `ProtocolGraph` builders for exact topology; use compatibility fixtures only for parser-backed behavior.
+- Assert status before status-specific fields, and inspect history through serializable state rather than private fields.
+- Yield `await Promise.resolve()` between permitted repeated `stepBack()` calls; test both `isLoopExit`-based branch selection and four-state snapshot restoration.
 </important>

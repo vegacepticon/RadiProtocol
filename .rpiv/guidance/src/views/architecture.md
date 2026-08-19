@@ -1,131 +1,122 @@
 # Views Layer Architecture
 
 ## Responsibility
-Obsidian UI surface — Modal subclasses, ItemView panels, suggest modals, standalone DOM components, and the inline runner overlay (plain class). All Obsidian API coupling lives here. Views delegate all business logic to domain services and never contain domain logic themselves.
+`src/views/` provides Obsidian presentation and orchestration: ItemViews, Promise modals, suggestion pickers, standalone DOM components, custom editor overlays, and the plain floating inline runner host. Views consume lower services, but current editor projections and note-output orchestration are intentionally view-owned.
 
 ## Dependencies
-- **All lower layers**: protocol, runner, runner/render, graph, snippets, library (`library-paths`, `LibraryService`), utils, constants, settings, i18n
-- **obsidian**: `Modal`, `ItemView`, `SuggestModal`, `AbstractInputSuggest`, `App`, `Notice`, `setIcon`, `Menu`, `TFile`, `WorkspaceLeaf`, `EventRef`
-- **main.ts**: type-only `import type RadiProtocolPlugin` (prevents circular deps) · **dagre**: auto-layout for `ProtocolEditorView` only
+- **Obsidian UI APIs**: `Modal`, `ItemView`, suggestion classes, `Notice`, DOM helpers, workspace/vault events.
+- **Lower layers**: protocol, graph, runner/render, snippets, library, settings, i18n, and utils.
+- **`dagre`**: protocol-editor auto-layout only.
 
 ## Consumers
-- **main.ts**: registers views/modals/commands on plugin load
+`main.ts` registers views, commands, and settings; lower layers do not import views except the documented runner snippet-picker adapter.
 
 ## Module Structure
 ```
-src/views/
-├── confirm-modal.ts, node-picker-modal.ts, protocol-picker-modal.ts, insert-snippet-modal.ts, folder-suggest.ts  # Modals & pickers (Promise-based)
-├── inline-runner-modal.ts, inline-runner-layout.ts     # Inline runner (non-Modal plain class) + layout math
-├── protocol-editor-view.ts                             # Canvas editor (ItemView + dagre auto-layout)
-├── snippet-editor-modal.ts, snippet-fill-in-modal.ts, snippet-chip-editor.ts, option-order-chip-editor.ts  # Editor modals + chip widgets
-├── snippet-manager-view.ts, snippet-tree-picker.ts     # Snippet manager (ItemView + reusable picker)
-├── library-view.ts, library-item-detail-modal.ts, library-install-progress-modal.ts  # Community library (ItemView + modals)
-└── snippet-manager/tree-renderer.ts                    # Extracted DnD + inline-rename
+*-view.ts + protocol-editor-view.ts       # long-lived ItemViews
+*-modal.ts + *-picker.ts + folder-suggest  # Promise/suggestion UI
+inline-runner-modal.ts + inline-runner-layout.ts # plain floating host
+snippet-chip-editor.ts + option-order-chip-editor.ts + tree-renderer.ts # components
+library-* UI modules                         # catalog/install/export presentation
 ```
 
-## Promise-Based Modal Result (safeResolve Double-Guard)
-
+## Promise Modal Results and Child Ownership
 ```typescript
-export class MyModal extends Modal {
-  readonly result: Promise<MyResult>; private resolve!: (v: MyResult) => void; private resolved = false;
-  constructor(app: App) { super(app); this.result = new Promise(r => { this.resolve = r; }); }
+type Result = { saved: true; data: Draft } | { saved: false };
+class EditorModal extends Modal {
+  readonly result: Promise<Result>; private resolved = false;
+  private resolve!: (value: Result) => void;
+  constructor(app: App) {
+    super(app); this.result = new Promise(resolve => { this.resolve = resolve; });
+  }
   onClose(): void { this.safeResolve({ saved: false }); this.contentEl.empty(); }
-  private finish(value: MyResult): void { this.safeResolve(value); this.close(); /* re-enters onClose */ }
-  private safeResolve(value: MyResult): void { if (!this.resolved) { this.resolved = true; this.resolve(value); } } // idempotent
+  private safeResolve(value: Result): void {
+    if (this.resolved) return;
+    this.resolved = true; this.resolve(value);
+  }
 }
-// Caller: const m = new MyModal(app); m.open(); const r = await m.result;
-// Result types are discriminated unions: { saved: true; data: T } | { saved: false }. Resolve intended result BEFORE close(); onClose resolves cancellation fallback (no-op if already resolved).
 ```
+Resolve the intended result before `close()`; `onClose()` supplies the idempotent cancellation fallback. Long operations may expose a separate `completion` promise from the dismissible UI `result`.
 
-## Unsaved-Changes Guard (Overrides `close()`)
-
+## ItemView Generation Ownership
 ```typescript
-private hasUnsavedChanges = false;  // every input mutation sets this true
-close(): void {
-  if (!this.resolved && this.hasUnsavedChanges) { void this.runUnsavedGuard(); return; } // intercept Esc/overlay
-  super.close();
+private async refresh(): Promise<void> {
+  const generation = ++this.generation;
+  const model = await this.loadModel();
+  if (!this.mounted || generation !== this.generation) return;
+  this.model = model; this.renderModel();
 }
-// runUnsavedGuard uses three-button ConfirmModal (Save/Discard/Cancel); Discard → safeResolve + super.close(), Cancel → keep open, failed Save → leave open
+onClose(): void {
+  this.mounted = false; this.generation++;
+  if (this.timer !== null) window.clearTimeout(this.timer);
+  this.contentEl.empty();
+}
 ```
+Use `registerDomEvent()`/`registerEvent()`, slash-boundary watcher filters, debounced refresh, and mounted/generation checks around every awaited model load. The plugin registers each stable `VIEW_TYPE` and activates it through a get-or-create leaf flow.
 
-## Obsidian ItemView (Registered Events + Async-Generation Guard)
-
+## Destroyable Components and Safe DOM
 ```typescript
-async onOpen(): Promise<void> {
-  this.registerEvent(this.app.vault.on('create', (f) => {
-    if (this.shouldHandle(f.path)) this.scheduleRedraw();   // registerEvent (auto-cleanup), NOT bare on
-  }));
+export function mountComponent(options: Options): { destroy(): void } {
+  const listeners: Listener[] = []; options.container.empty();
+  const on = (el: EventTarget, type: string, handler: EventListener) => {
+    el.addEventListener(type, handler); listeners.push({ el, type, handler });
+  };
+  const button = options.container.createEl('button', { text: options.label });
+  on(button, 'click', options.onClick);
+  return { destroy() {
+    for (const item of listeners) item.el.removeEventListener(item.type, item.handler);
+    listeners.length = 0; options.container.empty();
+  }};
 }
-private shouldHandle(path: string): boolean { return path === root || path.startsWith(root + '/'); } // slash boundary
-private scheduleRedraw(): void {
-  if (this.redrawTimer !== null) window.clearTimeout(this.redrawTimer);
-  this.redrawTimer = window.setTimeout(async () => {
-    this.redrawTimer = null; await this.rebuildModel(); this.renderTree(); // model first, one redraw
-  }, 120);                                                  // coalesce rapid vault events
-}
-// Stale post-await work rejected via a generation counter + mounted flag (owns(generation)).
 ```
+Components receive services/callbacks through options, track raw listeners/timers/observers, and expose `destroy()`/`unmount()`. Dynamic/user-authored text uses `textContent`/`createEl({text})`; static UI copy uses the bound translator and accessible roles/labels.
 
-## State-Machine Render Dispatch + Tracked-Listener Cleanup
-
+## View-Owned Orchestration and Exhaustive Dispatch
 ```typescript
-// InlineRunnerModal dispatch — every status covered, compile error on new status:
 switch (state.status) {
-  case 'at-node': renderQuestionAtNode(textZone, actionZone, graph, state, host); break;
-  // …
-  default: { const _exhaustive: never = state; void _exhaustive; }
+  case 'at-node': return renderQuestionAtNode(text, actions, graph, state, host);
+  case 'awaiting-loop-pick': return renderLoopPicker(text, actions, graph, state, host);
+  case 'awaiting-snippet-pick': return mountSnippetPicker(state);
+  case 'complete': return renderComplete(state);
+  case 'error': return renderError(state);
+  default: { const neverState: never = state; return neverState; }
 }
-
-// Destroyable DOM components track every listener for cleanup:
-type ListenerTuple = { el: EventTarget; type: string; handler: EventListener };
-const listeners: ListenerTuple[] = [];
-const on = (el, type, handler) => { el.addEventListener(type, handler); listeners.push({ el, type, handler }); };
-return { destroy() { for (const l of listeners) l.el.removeEventListener(l.type, l.handler); listeners.length = 0; container.empty(); } };
-// InlineRunnerModal is a plain class (NOT Modal) — manually tracks EventRef/observers/timers/children in close(), uses offref() for manual subscriptions.
 ```
-
-## Async Persistence + I18N Injection
-
-```typescript
-this.loadGeneration++; const gen = this.loadGeneration; const path = this.currentPath; // stale-generation guard
-const updated = await store.update(path, mutator);
-if (this.currentPath !== path || this.loadGeneration !== gen) return; // don't apply stale completion
-// I18N: Plugin views use this.plugin.i18n.t.bind(this.plugin.i18n); standalone modals accept t?: Translator defaulting to defaultT; user-authored content is NEVER wrapped in t().
-// Services accessed off the plugin instance (this.plugin.libraryService, this.plugin.snippetService).
-```
+The inline host intentionally owns protocol migration/read/validation, accumulator-delta note writes, child picker/fill lifecycle, and runner dispatch. The editor intentionally owns document-record projections such as defaults, edge labels, and option-order editing. `render-snippet-picker.ts` → `SnippetTreePicker` and snippet-manager → protocol ref-sync are sanctioned cross-layer exceptions.
 
 ## Architectural Boundaries
-- **Views never contain domain logic** — persistence through `SnippetService`, `ProtocolDocumentStore`, `LibraryService`, `rewriteProtocolSnippetRefs`; rendering through `renderMdTemplateSnippet`.
-- **Type-only import from main.ts** — `import type RadiProtocolPlugin` prevents circular deps. **One cross-layer exception**: `runner/render/render-snippet-picker.ts` imports `SnippetTreePicker` from views — documented.
-- **CSS namespaces** `rp-inline-runner-*` / `rp-protocol-editor-*` / `radi-snippet-*` / `rp-stp-*` / `radi-library-*`. **Safe DOM**: `textContent`/`createEl({text})` — never `innerHTML` for user/validation content; pair custom interactive elements with role/tabindex/aria-label + Enter/Space activation.
-- **LibraryView guards**: install flow reads `isLibraryReadOnly`; installed-indicator lookups reuse pure `findInstalledRecordForPath`.
+- Do not put service/network/vault construction in individual views; use plugin-owned services or explicit options.
+- Use type-only plugin/domain imports where runtime cycles are possible.
+- Guard library-managed protocol/snippet paths at every mutation surface.
+- Keep custom overlays and the plain inline host responsible for their own focus, observers, timers, and teardown.
 
-<important if="you are adding a new Modal dialog">
-## Adding a Promise-Based Modal
-1. Create `src/views/my-modal.ts`, extend `Modal`
-2. Add `readonly result: Promise<ResultType>` + `safeResolve` double-guard + `resolved` flag
-3. Define discriminated-union result type (`{ saved: true; data: T } | { saved: false }`)
-4. `onOpen()`: build DOM; `onClose()`: `safeResolve(cancelResult)` + `contentEl.empty()`
-5. If unsaved-changes guard needed, override `close()` + use three-button `ConfirmModal`
-6. Wire in `main.ts` via command that `new MyModal(app, ...).open()`
+<important if="you are adding a new Promise-based Modal">
+## Adding a Modal
+1. Choose `Modal`, `SuggestModal`, or a plain host deliberately and define a typed result.
+2. Add a one-shot resolver, cancellation in `onClose()`, and resolve-before-close ordering.
+3. Inject services/translator; render dynamic content as text; guard late async work.
+4. Unmount child pickers and clear timers/listeners during close.
+5. Add confirm/cancel/Escape/failure/double-resolution tests; see `.rpiv/guidance/src/__tests__/views/architecture.md`.
 </important>
 
-<important if="you are adding a new ItemView sidebar panel">
-## Adding a New ItemView
-1. Define view type constant: `export const MY_VIEW_TYPE = 'radiprotocol-my-view'`
-2. Extend `ItemView`, inject `RadiProtocolPlugin` via constructor
-3. Implement `getViewType()`, `getDisplayText()` (localized), `getIcon()`
-4. `onOpen()`: build shell, `rebuildModel()` then `renderTree()`
-5. Vault watchers via `registerEvent()` + `shouldHandle()` slash-boundary prefix filter
-6. `scheduleRedraw()` with 120ms debounce; guard stale post-await work with generation/mounted flags (clear timer in `onClose`)
-7. Register in `main.ts` `onload()` via `addLeafView()` (get-or-create leaf + `setViewState` + `revealLeaf`), wire an `addCommand` (NFR-06: omit plugin-name prefix)
+<important if="you are adding a new ItemView">
+## Adding an ItemView
+1. Export/register a stable `VIEW_TYPE`, display text, and icon in `main.ts`.
+2. Build the shell in `onOpen()`, register scoped events, and route loads through one generation-guarded refresh.
+3. Debounce vault redraws, invalidate/clear timers in `onClose()`, and test stale/close races and accessibility.
 </important>
 
-<important if="you are adding a standalone DOM component">
-## Adding a Destroyable DOM Component
-1. Accept container + state/services + callbacks + optional `t?: Translator`
-2. Keep plugin/view state OUT of the component where possible
-3. Empty the host when mounting; route every `addEventListener` through a tracking helper
-4. Return a handle with `destroy()` (or symmetrical `mount()`/`unmount()`) — remove every tracked listener with the same target/type/handler tuple, clear timers, null DOM refs
-5. Parent calls `destroy()` before remount and during modal/view close
+<important if="you are adding a standalone DOM component or SuggestModal">
+## Adding a Component or Picker
+1. Accept an options object with state, services, translator, and callbacks; keep plugin state outside.
+2. Define mode/result unions, safe text rendering, keyboard/ARIA behavior, and exact callback payloads.
+3. Track every raw listener/timer/observer and return `destroy()`/`unmount()`; parent owns disposal.
+4. Use the smallest child-specific MockEl test harness and cover no-op, keyboard, stale, and cleanup behavior.
+</important>
+
+<important if="you are adding a custom protocol-editor overlay">
+## Adding an Editor Overlay
+1. Keep the overlay local to the editor owner, with explicit focus restoration and Escape ordering.
+2. Reject stale protocol path/generation completions before applying document or DOM changes.
+3. Preserve read-only library guards and route persistence through the document store.
 </important>

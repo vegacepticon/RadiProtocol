@@ -1,114 +1,100 @@
 # Graph Layer Architecture
 
 ## Responsibility
-Canonical directed-graph types, semantic validation invariants, and shared label/edge-predicate utilities for protocol graphs. Zero Obsidian imports (NFR-01) — fully unit-testable in plain Node.js.
+`src/graph/` is the pure runtime graph kernel for normalized protocol nodes, edge topology, labels, authored ordering, and semantic validation. It has no Obsidian, vault, DOM, or service ownership.
 
 ## Dependencies
-- **i18n/Translator**: localized error messages (injected, English `defaultT` fallback)
+- **`i18n/Translator`**: injected localization for validator diagnostics; tests use the English default.
 
 ## Consumers
-- **protocol/protocol-document-parser**: builds `ProtocolGraph` from parsed records
-- **runner/protocol-runner**: traverses graph during execution
-- **runner/render/***: reads nodes/edges for UI rendering
-- **views/inline-runner-modal**: parse → validate → start pipeline
-- **views/node-picker-modal**, **views/protocol-editor-view**: read node types/kinds
+- **`protocol/`**: parses the persisted document into this runtime graph.
+- **`runner/` and `runner/render/`**: traverse and project nodes/edges.
+- **`views/` and `library/`**: start-node selection, editing projections, and staged install validation.
 
 ## Module Structure
 ```
-src/graph/
-├── graph-model.ts      # Canonical types: RPNodeKind, RPNode union, ProtocolGraph, ParseResult, LoopContext
-├── graph-validator.ts  # Never-throw validator → string[]; DI for i18n + vault probe
-└── node-label.ts       # nodeLabel() + edge predicates (isExitEdge, isLabeledEdge, stripExitPrefix)
+graph-model.ts                 # RPNode/RPEdge/ProtocolGraph contracts
+edge-order.ts + node-label.ts  # pure semantic projections and captions
+graph-validator.ts             # ordered, never-throw graph policy
 ```
 
-## Discriminated-Union Node Model (Exhaustive Narrowing)
-
+## Discriminated Runtime Contract
 ```typescript
-export type RPNodeKind = 'start' | 'question' | 'answer' | 'text-block' | 'snippet' | 'loop'
-  | 'loop-start'  // @deprecated — parseable, rejected at validation
-  | 'loop-end';   // @deprecated — parseable, rejected at validation
-
-export interface QuestionNode extends RPNodeBase { kind: 'question'; questionText: string; }
-
-// Union enables exhaustive switch — adding a kind without handling causes a TS compile error
-export type RPNode = StartNode | QuestionNode | AnswerNode | TextBlockNode
-  | SnippetNode | LoopNode | LoopStartNode | LoopEndNode;
+export type RPNodeKind = 'start' | 'question' | 'answer' | 'text-block' | 'snippet'
+  | 'loop-start' | 'loop-end'; // migration-only arms
+interface QuestionNode extends RPNodeBase {
+  kind: 'question'; questionText: string; loop?: boolean;
+  optionOrder?: string[]; // stable RPEdge IDs
+}
+interface RPEdge {
+  id: string; fromNodeId: string; toNodeId: string; label?: string;
+  isLoopExit?: boolean; // semantic metadata, not caption parsing
+}
+type RPNode = StartNode | QuestionNode | AnswerNode | TextBlockNode
+  | SnippetNode | LoopStartNode | LoopEndNode;
 ```
+A loop is a `question` with `loop === true`; the old standalone loop representation is migration-only. Runtime consumers must narrow the union exhaustively.
 
-`radiprotocol_*`-prefixed optional fields (e.g. `radiprotocol_separator`, `radiprotocol_snippetPath`) namespace persisted canvas properties.
-
-## Graph Container with Materialized Indexes
-
+## Edge Identity and Ordered Projection
 ```typescript
 export interface ProtocolGraph {
-  canvasFilePath: string;
-  nodes: Map<string, RPNode>;            // O(1) lookup by ID
-  edges: RPEdge[];                       // preserves canvas order + edge identity
-  adjacency: Map<string, string[]>;      // forward: nodeId → neighborIds (ordered)
-  reverseAdjacency: Map<string, string[]>; // backward: nodeId → predecessorIds
-  startNodeId: string;                   // '' if no start node
+  nodes: Map<string, RPNode>;
+  edges: RPEdge[];                 // preserve IDs, labels, and parallel edges
+  adjacency: Map<string, string[]>;
+  reverseAdjacency: Map<string, string[]>;
+  startNodeId: string;
+  canvasFilePath: string;          // historical name; may contain .rp.json
 }
+
+const outgoing = orderedOutgoingEdges(graph, questionId);
+// Use adjacency for topology-only traversal; use edges when identity/order
+// or isLoopExit metadata affects the behavior.
 ```
+`orderedOutgoingEdges()` preserves edge-array order when `optionOrder` is absent, skips stale/duplicate IDs, and appends live unlisted edges. `nodeLabel()` is the shared caption source for validator messages and branch buttons.
 
-Adjacency maps are pre-built during parsing. **Use `adjacency` for topology-only traversal; use `edges` when labels or edge identity matter** (loop exits, duplicate-target parallel edges).
-
-## Never-Throw Validator with Check-Ordering Guard
-
+## Ordered Validation with Injected Probes
 ```typescript
-validate(graph: ProtocolGraph): string[]   // [] = valid. Never throws.
+class GraphValidator {
+  constructor(private readonly options: {
+    t?: Translator;
+    snippetFileProbe?: (absolutePath: string) => boolean;
+    rootPath?: string;
+  } = {}) {}
 
-// Check order MATTERS — early returns prevent spurious secondary errors:
-// 1. Zero start nodes → early return (can't BFS without root)
-// 2. Multiple start nodes → error, continue with first
-// 3. Legacy loop-start/loop-end → consolidated migration error, early return
-// 4. BFS reachability (forward adjacency)
-// 5. 3-color DFS cycle detection — cycles through 'loop' nodes are intentional
-// 6. Dead-end questions (no outgoing adjacency)
-// 7. Loop exit/body edge invariants (+-prefixed exits need captions; ≥1 body edge required)
-// 8. Snippet file probe (only if probe + rootPath both injected)
+  validate(graph: ProtocolGraph): string[] {
+    // [] is valid; normal invalidity never throws.
+    // Order: start → migration arms → reachability → cycles → questions
+    // → loop body/exit → optional file-bound snippet probe.
+    return [];
+  }
+}
+
+const validator = new GraphValidator({
+  t: plugin.i18n.t.bind(plugin.i18n),
+  snippetFileProbe: path => app.vault.getAbstractFileByPath(path) !== null,
+  rootPath: settings.snippetFolderPath,
+});
 ```
-
-Dependency injection keeps the validator pure — zero-argument construction works in tests (English defaults, no probe):
-
-```typescript
-new GraphValidator({ snippetFileProbe: p => app.vault.getAbstractFileByPath(p) !== null,
-                     rootPath: settings.snippetFolderPath, t: plugin.i18n.t.bind(plugin.i18n) });
-// Pure test: new GraphValidator()
-```
-
-## Shared Label + Edge Predicates (Single Source of Truth)
-
-```typescript
-export function nodeLabel(node: RPNode): string      // switch on kind — validator errors + UI captions MUST match
-export function isLabeledEdge(edge: RPEdge): boolean // non-empty trimmed label
-export function isExitEdge(edge: RPEdge): boolean    // trimmed label starts with '+'
-export function stripExitPrefix(label: string): string // remove exactly one '+' + following whitespace
-```
-
-`isExitEdge` and `isLabeledEdge` are separate functions, NOT aliases — a labeled body edge is not an exit (regression test asserts `isExitEdge !== isLabeledEdge`). Loop validation partitions outgoing edges into `exits`, `labeledNonExits` (legacy diagnostic), and `body` (everything non-exit).
+Validation order is part of the contract: early migration errors suppress misleading secondary topology errors, and cycles are accepted only when a looped question is on the cycle path.
 
 ## Architectural Boundaries
-- **NO Obsidian imports**: all three files are pure TypeScript. `GraphValidator` receives vault-dependent probes via constructor injection.
-- **NO runtime in graph-model.ts**: type/interface exports only.
-- **NO mutation**: all functions are pure.
-- **Never-throw contract**: `ParseResult` (parsing) + `string[]` (validation). Injected translators/probes are assumed not to throw.
+- Keep graph code pure and mutation-free; inject vault probes and translators instead of importing Obsidian.
+- Parser syntax/shape errors belong to `protocol/`; graph semantic errors belong here.
+- Loop exits are identified by `edge.isLoopExit === true`; labels are presentation data.
+- Edge IDs, not labels or target IDs, identify user-selectable branches.
 
-<important if="you are adding a new node kind to the graph model">
-## Adding a New Node Kind
-1. **`graph-model.ts`** — add kind to `RPNodeKind`, define interface extending `RPNodeBase` with `kind: 'your-kind'`, add to `RPNode` union
-2. **`node-label.ts`** — add case to `nodeLabel()` switch
-3. **`graph-validator.ts`** — add validation rules (required fields, edge constraints)
-4. **`protocol/protocol-document-parser.ts`** — add kind to `VALID_KINDS`, add case to `parseNode()` switch
-5. **`runner/protocol-runner.ts`** — add case to `advanceThrough()` switch (halt or auto-advance)
-6. **`runner/runner-state.ts`** — if interactive, add to `RunnerState` union + `RUNNER_STATUS`
-7. **`runner/render/`** — if interactive, create `render-*.ts`; if auto-advance, no render change
-8. **Tests** — parser, validator, runner, render (if interactive)
+<important if="you are adding a new node kind or graph capability">
+## Adding a New Graph Capability
+1. Extend `graph-model.ts` and every exhaustive label/consumer switch.
+2. Add persisted parsing or migration in `.rpiv/guidance/src/protocol/architecture.md`.
+3. Add semantic invariants here, preserving the ordered `string[]` validator contract.
+4. Add runner state/traversal and renderer behavior where interactive; see `.rpiv/guidance/src/runner/architecture.md` and `src/runner/render/`.
+5. Update editor/picker projections and both locale files.
+6. Test canonical, malformed, stale-order, and migration forms.
 </important>
 
 <important if="you are writing or modifying tests for the graph layer">
-## Testing Conventions
-- `GraphValidator` constructed with zero arguments in tests — English defaults, no vault probe
-- `ParseResult` assertions: always check `result.success` first, then narrow with TypeScript
-- BFS/DFS fixtures live in `__tests__/fixtures/*.canvas`
-- The `nodeLabel` test includes a regression guard: `expect(isExitEdge).not.toBe(isLabeledEdge)`
+- Construct pure graphs directly for edge-order and label tests; include all graph indexes when topology is under test.
+- Use `.canvas` fixtures only through the test-only compatibility helpers described in `.rpiv/guidance/src/__tests__/fixtures/architecture.md`.
+- Assert `ParseResult.success` before reading the graph and use injected map-backed snippet probes.
 </important>
