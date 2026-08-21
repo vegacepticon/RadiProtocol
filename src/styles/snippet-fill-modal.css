@@ -65,11 +65,15 @@
 
 .rp-snippet-preview {
   width: 100%;
-  overflow: hidden;
+  overflow-x: hidden;
+  overflow-y: auto;
   font-family: var(--font-monospace);
   font-size: var(--font-text-size); /* 14px */
   font-weight: var(--font-normal); /* 400 */
   line-height: 1.5;
+  /* Rendered text keeps its newlines/spaces verbatim (div replaces textarea). */
+  white-space: pre-wrap;
+  word-break: break-word;
   background: var(--background-primary);
   border: 1px solid var(--background-modifier-border);
   padding: var(--size-4-2); /* 16px */
@@ -82,10 +86,26 @@
     box-shadow 120ms ease;
 }
 
-.rp-snippet-preview.rp-snippet-preview-complete {
+/* Explicit hover parity: the completed highlight must not disappear while
+   the pointer rests over the preview. */
+.rp-snippet-preview.rp-snippet-preview-complete,
+.rp-snippet-preview.rp-snippet-preview-complete:hover {
   border-color: var(--interactive-accent);
   background: color-mix(in srgb, var(--interactive-accent) 12%, var(--background-primary));
   box-shadow: 0 0 0 1px color-mix(in srgb, var(--interactive-accent) 24%, transparent);
+}
+
+/* Inserted placeholder values (free-text input, choice selection, custom
+   override): darker accent fill than the completed preview background so the
+   inserted fragments stand out while staying readable. */
+.rp-snippet-preview-value {
+  background: color-mix(in srgb, var(--interactive-accent) 34%, var(--background-primary));
+  border-radius: var(--radius-s);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--interactive-accent) 40%, transparent);
+  color: var(--text-normal);
+  padding: 0 2px;
+  box-decoration-break: clone;
+  -webkit-box-decoration-break: clone;
 }
 
 .rp-snippet-modal-btn-row {

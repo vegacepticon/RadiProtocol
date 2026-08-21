@@ -122,6 +122,12 @@ function makeEl(tag = 'div'): MockEl {
     empty(): void {
       children.length = 0;
     },
+    appendText(text: string): void {
+      const node = makeEl('#text');
+      node._text = text;
+      node.parent = el as unknown as MockEl;
+      children.push(node);
+    },
     setText(text: string): void {
       (el as unknown as { _text: string })._text = text;
     },
@@ -683,5 +689,107 @@ describe('SnippetFillInModal — preview complete highlight', () => {
     allButtons[2]!.dispatchEvent({ type: 'click' });
     expect(preview.hasClass('rp-snippet-preview-complete')).toBe(true);
     modal.onClose();
+  });
+});
+
+describe('SnippetFillInModal — inserted values highlighted in preview', () => {
+  /** Collect the preview's child nodes as (text, isValueSpan) pairs. */
+  function previewSegments(preview: MockEl): Array<{ text: string; filled: boolean }> {
+    return preview.children.map((child) => ({
+      text: (child as unknown as { _text: string })._text,
+      filled: child.tagName === 'SPAN' && child.hasClass('rp-snippet-preview-value'),
+    }));
+  }
+
+  function findPreview(root: MockEl): MockEl {
+    const preview = root.querySelectorAll('.rp-snippet-preview')[0];
+    if (!preview) throw new Error('Preview missing');
+    return preview;
+  }
+
+  it('renders a div preview (not textarea) so values can carry spans', () => {
+    const snippet = makeSnippet([{ id: 'f', label: 'F', type: 'free-text' }]);
+    const modal = new SnippetFillInModal(app, snippet);
+    modal.onOpen();
+    const preview = findPreview((modal as unknown as { contentEl: MockEl }).contentEl);
+    expect(preview.tagName).toBe('DIV');
+    expect(preview.getAttribute('aria-readonly')).toBe('true');
+    modal.onClose();
+  });
+
+  it('wraps a filled free-text value in rp-snippet-preview-value span', () => {
+    const snippet = makeSnippet(
+      [{ id: 'f', label: 'F', type: 'free-text' }],
+      'R: {{f}} end',
+    );
+    const modal = new SnippetFillInModal(app, snippet);
+    modal.onOpen();
+    const root = (modal as unknown as { contentEl: MockEl }).contentEl;
+    const preview = findPreview(root);
+    // Initially: raw token as plain text, no value spans
+    expect(previewSegments(preview)).toEqual([{ text: 'R: {{f}} end', filled: false }]);
+    (root.querySelectorAll('.rp-snippet-modal-free-text')[0] as unknown as { _value: string })._value = 'hello';
+    root.querySelectorAll('.rp-snippet-modal-free-text')[0]!.dispatchEvent({ type: 'input' });
+    expect(previewSegments(preview)).toEqual([
+      { text: 'R: ', filled: false },
+      { text: 'hello', filled: true },
+      { text: ' end', filled: false },
+    ]);
+    // Clearing the value removes the highlight span
+    (root.querySelectorAll('.rp-snippet-modal-free-text')[0] as unknown as { _value: string })._value = '';
+    root.querySelectorAll('.rp-snippet-modal-free-text')[0]!.dispatchEvent({ type: 'input' });
+    expect(previewSegments(preview)).toEqual([{ text: 'R: {{f}} end', filled: false }]);
+    modal.onClose();
+  });
+
+  it('wraps choice selections and custom override values in value spans', () => {
+    const snippet = makeSnippet(
+      [
+        { id: 'c', label: 'C', type: 'choice', options: ['a', 'b'] },
+        { id: 'd', label: 'D', type: 'choice', options: ['x', 'y'] },
+      ],
+      'R: {{c}} / {{d}}',
+    );
+    const modal = new SnippetFillInModal(app, snippet);
+    modal.onOpen();
+    const root = (modal as unknown as { contentEl: MockEl }).contentEl;
+    const preview = findPreview(root);
+    const buttons = root.querySelectorAll('.rp-snippet-fill-option-row');
+    buttons[0]!.dispatchEvent({ type: 'click' }); // select 'a'
+    // Custom override on the SECOND choice (first custom row belongs to C)
+    const customRows = root.querySelectorAll('.rp-snippet-modal-custom-row');
+    const customInput = customRows[1]!.querySelectorAll('textarea')[0];
+    if (!customInput) throw new Error('Custom input missing');
+    (customInput as unknown as { _value: string })._value = 'my custom';
+    customInput.dispatchEvent({ type: 'input' });
+    const segments = previewSegments(preview);
+    expect(segments.filter((s) => s.filled).map((s) => s.text)).toEqual(['a', 'my custom']);
+    expect(previewSegments(preview).map((s) => s.text).join('')).toBe('R: a / my custom');
+    modal.onClose();
+  });
+
+  it('keeps multi-line rendered text intact in the preview', () => {
+    const snippet = makeSnippet(
+      [{ id: 'f', label: 'F', type: 'free-text' }],
+      'Line1: {{f}}\nLine2',
+    );
+    const modal = new SnippetFillInModal(app, snippet);
+    modal.onOpen();
+    const root = (modal as unknown as { contentEl: MockEl }).contentEl;
+    const preview = findPreview(root);
+    const textInput = root.querySelectorAll('.rp-snippet-modal-free-text')[0];
+    (textInput as unknown as { _value: string })._value = 'v1';
+    textInput!.dispatchEvent({ type: 'input' });
+    expect(previewSegments(preview).map((s) => s.text).join('')).toBe('Line1: v1\nLine2');
+    modal.onClose();
+  });
+
+  it('CSS keeps the completed highlight on :hover (hover-parity tripwire)', () => {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const { readFileSync } = require('node:fs') as typeof import('node:fs');
+    const cssPath = require.resolve('../../styles/snippet-fill-modal.css');
+    const css = readFileSync(cssPath, 'utf8');
+    expect(css).toMatch(/\.rp-snippet-preview\.rp-snippet-preview-complete:hover/);
+    expect(css).toContain('.rp-snippet-preview-value');
   });
 });

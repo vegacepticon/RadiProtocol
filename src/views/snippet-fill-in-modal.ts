@@ -37,8 +37,8 @@ export class SnippetFillInModal extends Modal {
   /** Map of placeholder id → current string value used for live preview */
   private readonly values: Record<string, string> = {};
 
-  /** Live preview textarea reference for updatePreview() calls */
-  private previewTextarea: HTMLTextAreaElement | null = null;
+  /** Live preview container reference for updatePreview() calls */
+  private previewEl: HTMLDivElement | null = null;
   private readonly t: Translator;
 
   constructor(app: App, snippet: MdTemplateSnippet, t?: Translator) {
@@ -256,19 +256,57 @@ export class SnippetFillInModal extends Modal {
     const previewLabel = previewSection.createEl('p', { cls: 'rp-snippet-preview-label' });
     previewLabel.textContent = this.t('snippetFillIn.preview');
 
-    this.previewTextarea = previewSection.createEl('textarea', { cls: 'rp-snippet-preview' });
-    this.previewTextarea.readOnly = true;
-    this.previewTextarea.setAttribute('aria-label', this.t('snippetPreview.ariaLabel'));
+    // A div (not a textarea) so inserted placeholder values can be highlighted
+    // with spans; static text is preserved verbatim via text nodes.
+    this.previewEl = previewSection.createDiv({ cls: 'rp-snippet-preview' });
+    this.previewEl.setAttribute('role', 'textbox');
+    this.previewEl.setAttribute('aria-readonly', 'true');
+    this.previewEl.setAttribute('aria-label', this.t('snippetPreview.ariaLabel'));
     // Show the raw template initially (unfilled tokens visible per UI-SPEC empty state)
-    this.previewTextarea.value = this.snippet.template;
+    this.renderPreviewContent();
     this.resizePreview();
+  }
+
+  /** Rebuild the preview content: static text nodes + highlighted value spans. */
+  private renderPreviewContent(): void {
+    if (!this.previewEl) return;
+    this.previewEl.empty();
+    for (const segment of this.buildPreviewSegments()) {
+      if (segment.filled) {
+        const span = this.previewEl.createSpan({ cls: 'rp-snippet-preview-value' });
+        span.textContent = segment.text;
+      } else {
+        this.previewEl.appendText(segment.text);
+      }
+    }
+  }
+
+  /**
+   * Split the rendered snippet into segments around filled placeholder values.
+   * Unfilled placeholders stay as raw `{{id}}` tokens in static text.
+   */
+  private buildPreviewSegments(): Array<{ text: string; filled: boolean }> {
+    const segments: Array<{ text: string; filled: boolean }> = [];
+    let output = this.snippet.template;
+    for (const placeholder of this.snippet.placeholders) {
+      const raw = this.values[placeholder.id] ?? '';
+      if (raw.length === 0) continue;
+      const token = `{{${placeholder.id}}}`;
+      const index = output.indexOf(token);
+      if (index < 0) continue;
+      if (index > 0) segments.push({ text: output.slice(0, index), filled: false });
+      segments.push({ text: raw, filled: true });
+      output = output.slice(index + token.length);
+    }
+    if (output.length > 0) segments.push({ text: output, filled: false });
+    return segments;
   }
 
   /** Keep preview compact for short text and readable for long rendered snippets. */
   private resizePreview(): void {
-    if (!this.previewTextarea) return;
-    const scrollHeight = this.previewTextarea.scrollHeight;
-    this.previewTextarea.style.height = `${Math.max(160, scrollHeight)}px`;
+    if (!this.previewEl) return;
+    const scrollHeight = this.previewEl.scrollHeight;
+    this.previewEl.style.height = `${Math.max(160, scrollHeight)}px`;
   }
 
   /** True when every placeholder has a selected/typed value. */
@@ -277,11 +315,11 @@ export class SnippetFillInModal extends Modal {
       && this.snippet.placeholders.every((placeholder) => (this.values[placeholder.id] ?? '').length > 0);
   }
 
-  /** Update the live preview textarea with current field values. */
+  /** Update the live preview with current field values. */
   private updatePreview(): void {
-    if (this.previewTextarea) {
-      this.previewTextarea.value = this.renderCurrentSnippet();
-      this.previewTextarea.toggleClass(
+    if (this.previewEl) {
+      this.renderPreviewContent();
+      this.previewEl.toggleClass(
         'rp-snippet-preview-complete',
         this.areAllPlaceholdersFilled(),
       );
