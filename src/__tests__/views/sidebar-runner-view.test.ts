@@ -302,31 +302,43 @@ describe('SidebarRunnerView transient initialization', () => {
 });
 
 describe('SidebarRunnerView bound-note chrome and focus policy', () => {
-  it('shows the authored note path safely and updates only mismatch chrome', async () => {
+  it('shows bound-note chrome only while focus is off the bound note', async () => {
     const harness = await openMarkedView();
+    const chrome = harness.view.contentEl.querySelector('.rp-sidebar-runner-chrome')!;
     const bound = harness.view.contentEl.querySelector('.rp-sidebar-runner-bound-note')!;
     const mismatch = harness.view.contentEl.querySelector('.rp-sidebar-runner-mismatch')!;
+    const focusButton = harness.view.contentEl.querySelector('.rp-sidebar-runner-focus-note')!;
 
     expect(bound.textContent).toBe('Bound note: notes/target.md');
     expect(mismatch.getAttribute('role')).toBe('status');
     expect(mismatch.getAttribute('aria-live')).toBe('polite');
+    // Launched from the bound note: label, warning, and jump button stay quiet.
+    expect(chrome.hasClass('is-hidden')).toBe(true);
     expect(mismatch.hasClass('is-hidden')).toBe(true);
+
+    harness.environment.setActiveFile(new (TFile as any)('notes/other.md'));
+    harness.environment.emit('active-leaf-change');
+    expect(chrome.hasClass('is-hidden')).toBe(false);
+    expect(mismatch.hasClass('is-hidden')).toBe(false);
+    expect(focusButton.hasClass('is-hidden')).toBe(false);
+    expect(hostState.instances).toHaveLength(1);
+    expect(hostState.instances[0]!.disposed).toBe(false);
+
+    harness.environment.setActiveFile(harness.context.targetNote);
+    harness.environment.emit('active-leaf-change');
+    expect(chrome.hasClass('is-hidden')).toBe(true);
+    expect(mismatch.hasClass('is-hidden')).toBe(true);
+  });
+
+  it('updates the bound-note path on rename even while the chrome is hidden', async () => {
+    const harness = await openMarkedView();
+    const bound = harness.view.contentEl.querySelector('.rp-sidebar-runner-bound-note')!;
 
     const oldPath = harness.context.targetNote.path;
     harness.context.targetNote.path = 'notes/renamed.md';
     harness.environment.emitVault('rename', harness.context.targetNote, oldPath);
     expect(bound.textContent).toBe('Bound note: notes/renamed.md');
     expect(hostState.instances[0]!.options.targetNote).toBe(harness.context.targetNote);
-
-    harness.environment.setActiveFile(new (TFile as any)('notes/other.md'));
-    harness.environment.emit('active-leaf-change');
-    expect(mismatch.hasClass('is-hidden')).toBe(false);
-    expect(hostState.instances).toHaveLength(1);
-    expect(hostState.instances[0]!.disposed).toBe(false);
-
-    harness.environment.setActiveFile(harness.context.targetNote);
-    harness.environment.emit('active-leaf-change');
-    expect(mismatch.hasClass('is-hidden')).toBe(true);
   });
 
   it('focuses an existing file leaf without retargeting the runner', async () => {

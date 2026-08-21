@@ -46,8 +46,10 @@ export class SidebarRunnerView extends ItemView {
 
   private launchContext: SidebarRunnerLaunchContext | null = null;
   private sessionHost: RunnerSessionHost | null = null;
+  private chromeEl: HTMLElement | null = null;
   private boundNoteEl: HTMLElement | null = null;
   private mismatchEl: HTMLElement | null = null;
+  private focusNoteButtonEl: HTMLElement | null = null;
   private sessionEl: HTMLElement | null = null;
   private activeLeafEventRef: EventRef | null = null;
   private targetRenameEventRef: EventRef | null = null;
@@ -212,8 +214,10 @@ export class SidebarRunnerView extends ItemView {
     this.sessionHost = null;
     this.clearLaunchMarker();
     this.launchContext = null;
+    this.chromeEl = null;
     this.boundNoteEl = null;
     this.mismatchEl = null;
+    this.focusNoteButtonEl = null;
     this.sessionEl = null;
     this.contentEl.removeClass('rp-sidebar-runner-view');
     this.contentEl.empty();
@@ -229,10 +233,10 @@ export class SidebarRunnerView extends ItemView {
   private renderShell(): void {
     this.contentEl.empty();
     const root = this.contentEl.createDiv({ cls: 'rp-sidebar-runner-shell' });
-    const chrome = root.createDiv({ cls: 'rp-sidebar-runner-chrome' });
-    this.boundNoteEl = chrome.createDiv({ cls: 'rp-sidebar-runner-bound-note' });
+    this.chromeEl = root.createDiv({ cls: 'rp-sidebar-runner-chrome' });
+    this.boundNoteEl = this.chromeEl.createDiv({ cls: 'rp-sidebar-runner-bound-note' });
     this.updateBoundNoteChrome();
-    this.mismatchEl = chrome.createDiv({
+    this.mismatchEl = this.chromeEl.createDiv({
       cls: 'rp-sidebar-runner-mismatch is-hidden',
       text: this.plugin.i18n.t('sidebarRunner.activeNoteMismatch'),
       attr: {
@@ -240,12 +244,12 @@ export class SidebarRunnerView extends ItemView {
         'aria-live': 'polite',
       },
     });
-    const focusButton = chrome.createEl('button', {
+    this.focusNoteButtonEl = this.chromeEl.createEl('button', {
       cls: 'rp-sidebar-runner-focus-note',
       text: this.plugin.i18n.t('sidebarRunner.focusNote'),
       attr: { type: 'button' },
     });
-    focusButton.addEventListener('click', () => {
+    this.focusNoteButtonEl.addEventListener('click', () => {
       void this.focusBoundNote();
     });
 
@@ -259,11 +263,18 @@ export class SidebarRunnerView extends ItemView {
     }));
   }
 
+  /**
+   * Chrome noise policy: while the bound note itself is focused, the path
+   * label, mismatch warning, and jump button carry no information, so the
+   * whole chrome strip stays hidden. It reappears as soon as the active
+   * note differs (or there is no active file).
+   */
   private updateMismatchChrome(): void {
     if (this.mismatchEl === null || this.launchContext === null) return;
     const activeFile = this.app.workspace.getActiveFile();
     const mismatch = activeFile?.path !== this.launchContext.targetNote.path;
     this.mismatchEl.toggleClass('is-hidden', !mismatch);
+    this.chromeEl?.toggleClass('is-hidden', !mismatch);
   }
 
   private async focusBoundNote(): Promise<void> {

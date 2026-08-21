@@ -5,6 +5,7 @@ import type { MdTemplateSnippet, SnippetPlaceholder } from '../snippets/snippet-
 import { renderMdTemplateSnippet } from '../snippets/snippet-model';
 import type { Translator } from '../i18n';
 import { defaultT } from '../i18n';
+import { createTextarea } from '../utils/dom-helpers';
 
 // Phase 2 (JSON-removal): the fill-in modal accepts Markdown template snippets
 // only and renders exclusively via renderMdTemplateSnippet.
@@ -104,18 +105,33 @@ export class SnippetFillInModal extends Modal {
     // Phase 52: unknown types render nothing. Plan 04 guards upstream via validationError.
   }
 
-  /** free-text: visible label + full-width text input */
+  /**
+   * free-text: visible label + auto-growing textarea. Same compact-start /
+   * grow-with-content behavior as the runner's free-text Answer fields
+   * (rows=1, CSS min-height, JS grow via scrollHeight).
+   */
   private renderFreeTextField(container: HTMLElement, placeholder: SnippetPlaceholder): void {
     const label = container.createEl('label', { cls: 'rp-snippet-modal-label' });
     label.textContent = placeholder.label; // User-authored content, not a UI string
 
-    const input = container.createEl('input', { type: 'text' });
+    const textarea = createTextarea(label, {
+      cls: 'rp-snippet-modal-free-text',
+      // Start at a single compact line; growInput expands it as content grows.
+      attr: { rows: 1 },
+    });
 
-    input.addEventListener('input', () => {
-      this.values[placeholder.id] = input.value;
-      input.toggleClass('rp-snippet-field-filled', input.value.length > 0);
+    textarea.addEventListener('input', () => {
+      this.values[placeholder.id] = textarea.value;
+      textarea.toggleClass('rp-snippet-field-filled', textarea.value.length > 0);
+      this.growInput(textarea);
       this.updatePreview();
     });
+  }
+
+  /** Expand a single-line input textarea to fit its content (runner free-text pattern). */
+  private growInput(textarea: HTMLTextAreaElement): void {
+    textarea.setCssProps({ height: 'auto' });
+    textarea.setCssProps({ height: `${textarea.scrollHeight}px` });
   }
 
   /**
@@ -136,7 +152,7 @@ export class SnippetFillInModal extends Modal {
     const options = placeholder.options ?? [];
 
     const optionButtons: HTMLButtonElement[] = [];
-    let customInput: HTMLInputElement | null = null;
+    let customInput: HTMLTextAreaElement | null = null;
 
     /** Recompute the current value from custom input or toggle-button state. */
     const recomputeValue = (): void => {
@@ -181,8 +197,9 @@ export class SnippetFillInModal extends Modal {
     }
 
     // Custom: free-text override (SNIP-09, D-06/D-09), collapsed by default to reduce visual noise.
-    const customWrapper = optionsDiv.createDiv({ cls: 'rp-snippet-modal-custom-wrapper' });
-    const customToggle = customWrapper.createEl('button', {
+    // The toggle sits inline right after the predefined option pills; the
+    // input row expands below the option list when opened.
+    const customToggle = optionsDiv.createEl('button', {
       cls: 'rp-snippet-modal-custom-toggle',
       type: 'button',
     });
@@ -190,12 +207,16 @@ export class SnippetFillInModal extends Modal {
     customToggle.setAttribute('aria-label', this.t('snippetPreview.showCustomAria', { label: placeholder.label }));
     customToggle.setAttribute('aria-expanded', 'false');
 
-    const customRow = customWrapper.createDiv({ cls: 'rp-snippet-modal-custom-row' });
+    const customRow = fieldset.createDiv({ cls: 'rp-snippet-modal-custom-row' });
     customRow.setAttribute('hidden', 'true');
     const customLabel = customRow.createEl('label');
     customLabel.textContent = this.t('snippetFillIn.customLabel');
 
-    customInput = customRow.createEl('input', { type: 'text' });
+    customInput = createTextarea(customRow, {
+      cls: 'rp-snippet-modal-custom-input',
+      // Same compact auto-growing behavior as free-text placeholder fields.
+      attr: { rows: 1 },
+    });
     customInput.setAttribute('aria-label', this.t('snippetPreview.customValueAria', { label: placeholder.label }));
 
     const setCustomOpen = (open: boolean): void => {
@@ -223,6 +244,7 @@ export class SnippetFillInModal extends Modal {
           btn.setAttribute('aria-pressed', 'false');
         }
       }
+      this.growInput(customInput);
       recomputeValue();
     });
   }

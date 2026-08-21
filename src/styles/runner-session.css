@@ -375,6 +375,10 @@
   display: none;
 }
 
+.rp-sidebar-runner-chrome.is-hidden {
+  display: none;
+}
+
 .rp-sidebar-runner-focus-note {
   grid-column: 2;
   grid-row: 1;

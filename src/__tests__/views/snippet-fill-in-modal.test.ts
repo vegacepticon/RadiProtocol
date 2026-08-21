@@ -36,7 +36,15 @@ interface MockEl {
   dataset: Record<string, string>;
   style: Record<string, string>;
   // accessor-backed: textContent, value, disabled, type, checked, style
-  createEl: (tag: string, opts?: { text?: string; cls?: string; type?: string }) => MockEl;
+  createEl: (
+    tag: string,
+    opts?: {
+      text?: string;
+      cls?: string;
+      type?: string;
+      attr?: Record<string, string | number | boolean>;
+    },
+  ) => MockEl;
   createDiv: (opts?: { cls?: string; text?: string }) => MockEl;
   createSpan: (opts?: { cls?: string; text?: string }) => MockEl;
   empty: () => void;
@@ -48,6 +56,7 @@ interface MockEl {
   setAttribute: (k: string, v: string) => void;
   removeAttribute: (k: string) => void;
   getAttribute: (k: string) => string | null;
+  setCssProps: (props: Record<string, string>) => void;
   focus: () => void;
   addEventListener: (type: string, handler: (ev: unknown) => void) => void;
   removeEventListener: (type: string, handler: (ev: unknown) => void) => void;
@@ -82,12 +91,25 @@ function makeEl(tag = 'div'): MockEl {
     readOnly: false,
     scrollHeight: 0,
     dataset,
-    createEl(subtag: string, opts?: { text?: string; cls?: string; type?: string }): MockEl {
+    createEl(
+      subtag: string,
+      opts?: {
+        text?: string;
+        cls?: string;
+        type?: string;
+        attr?: Record<string, string | number | boolean>;
+      },
+    ): MockEl {
       const child = makeEl(subtag);
       child.parent = el as unknown as MockEl;
       if (opts?.text !== undefined) (child as unknown as { _text: string })._text = opts.text;
       if (opts?.cls) child.classList.add(opts.cls);
       if (opts?.type) (child as unknown as { _type: string })._type = opts.type;
+      if (opts?.attr) {
+        for (const [key, val] of Object.entries(opts.attr)) {
+          child.setAttribute(key, String(val));
+        }
+      }
       children.push(child);
       return child;
     },
@@ -114,6 +136,11 @@ function makeEl(tag = 'div'): MockEl {
     setAttribute(k: string, v: string): void { attrs[k] = v; },
     removeAttribute(k: string): void { delete attrs[k]; },
     getAttribute(k: string): string | null { return attrs[k] ?? null; },
+    setCssProps(props: Record<string, string>): void {
+      for (const [key, val] of Object.entries(props)) {
+        style[key] = val;
+      }
+    },
     focus(): void {},
     addEventListener(type: string, handler: (ev: unknown) => void): void {
       if (!listeners.has(type)) listeners.set(type, []);
@@ -402,6 +429,9 @@ describe('SnippetFillInModal Phase 52 D-06 — Custom override preserved', () =>
     const customRow = root.querySelectorAll('.rp-snippet-modal-custom-row')[0];
     const customToggle = root.querySelectorAll('.rp-snippet-modal-custom-toggle')[0];
     if (!customRow || !customToggle) throw new Error('Custom controls missing');
+    // Toggle sits inline right after the option pills; the row opens below the list.
+    expect(customToggle.parent!.hasClass('rp-snippet-modal-options')).toBe(true);
+    expect(customRow.parent!.tagName).toBe('FIELDSET');
     expect(customRow.getAttribute('hidden')).toBe('true');
     expect(customToggle.getAttribute('aria-expanded')).toBe('false');
     customToggle.dispatchEvent({ type: 'click' });
@@ -422,7 +452,7 @@ describe('SnippetFillInModal Phase 52 D-06 — Custom override preserved', () =>
     buttons[1]!.dispatchEvent({ type: 'click' });
     const customInput = root
       .querySelectorAll('.rp-snippet-modal-custom-row')[0]
-      ?.querySelectorAll('input[type="text"]')[0];
+      ?.querySelectorAll('textarea')[0];
     if (!customInput) throw new Error('Custom input missing');
     (customInput as unknown as { _value: string })._value = 'customX';
     customInput.dispatchEvent({ type: 'input' });
@@ -444,7 +474,7 @@ describe('SnippetFillInModal Phase 52 D-06 — Custom override preserved', () =>
     buttons[0]!.dispatchEvent({ type: 'click' });
     const customInput = root
       .querySelectorAll('.rp-snippet-modal-custom-row')[0]
-      ?.querySelectorAll('input[type="text"]')[0];
+      ?.querySelectorAll('textarea')[0];
     if (!customInput) throw new Error('Custom input missing');
     (customInput as unknown as { _value: string })._value = 'override';
     customInput.dispatchEvent({ type: 'input' });
@@ -471,7 +501,7 @@ describe('SnippetFillInModal Phase 52 — free-text unchanged', () => {
     modal.onOpen();
     const root = (modal as unknown as { contentEl: MockEl }).contentEl;
     const preview = root.querySelectorAll('.rp-snippet-preview')[0];
-    const textInput = root.querySelectorAll('input[type="text"]')[0];
+    const textInput = root.querySelectorAll('.rp-snippet-modal-free-text')[0];
     if (!preview || !textInput) throw new Error('Preview or text input missing');
     preview.scrollHeight = 240;
     (textInput as unknown as { _value: string })._value = 'long rendered text';
@@ -480,7 +510,7 @@ describe('SnippetFillInModal Phase 52 — free-text unchanged', () => {
     modal.onClose();
   });
 
-  it('renders a text input for free-text and inserts its value', async () => {
+  it('renders an auto-growing textarea for free-text and inserts its value', async () => {
     const snippet = makeSnippet(
       [{ id: 'f', label: 'F', type: 'free-text' }],
       'R: {{f}}',
@@ -488,15 +518,30 @@ describe('SnippetFillInModal Phase 52 — free-text unchanged', () => {
     const modal = new SnippetFillInModal(app, snippet);
     modal.onOpen();
     const root = (modal as unknown as { contentEl: MockEl }).contentEl;
-    const textInputs = root.querySelectorAll('input[type="text"]');
-    const textInput = textInputs[0];
+    const textInput = root.querySelectorAll('.rp-snippet-modal-free-text')[0];
     if (!textInput) throw new Error('Text input missing');
+    expect(textInput.tagName).toBe('TEXTAREA');
+    expect(textInput.getAttribute('rows')).toBe('1');
     (textInput as unknown as { _value: string })._value = 'hello';
     textInput.dispatchEvent({ type: 'input' });
     const confirmBtn = findConfirmButton(root);
     confirmBtn.dispatchEvent({ type: 'click' });
     const result = await modal.result;
     expect(result).toBe('R: hello');
+    modal.onClose();
+  });
+
+  it('grows the free-text textarea with its content (runner free-text behavior)', () => {
+    const snippet = makeSnippet([{ id: 'f', label: 'F', type: 'free-text' }]);
+    const modal = new SnippetFillInModal(app, snippet);
+    modal.onOpen();
+    const root = (modal as unknown as { contentEl: MockEl }).contentEl;
+    const field = root.querySelectorAll('.rp-snippet-modal-free-text')[0];
+    if (!field) throw new Error('Free-text field missing');
+    field.scrollHeight = 64;
+    (field as unknown as { _value: string })._value = 'multi\nline';
+    field.dispatchEvent({ type: 'input' });
+    expect(field.style.height).toBe('64px');
     modal.onClose();
   });
 });
@@ -510,8 +555,9 @@ describe('SnippetFillInModal — filled class on text inputs', () => {
     const modal = new SnippetFillInModal(app, snippet);
     modal.onOpen();
     const root = (modal as unknown as { contentEl: MockEl }).contentEl;
-    const textInput = root.querySelectorAll('input[type="text"]')[0];
+    const textInput = root.querySelectorAll('.rp-snippet-modal-free-text')[0];
     if (!textInput) throw new Error('Text input missing');
+    expect(textInput.tagName).toBe('TEXTAREA');
     expect(textInput.hasClass('rp-snippet-field-filled')).toBe(false);
     (textInput as unknown as { _value: string })._value = 'hello';
     textInput.dispatchEvent({ type: 'input' });
@@ -532,7 +578,7 @@ describe('SnippetFillInModal — filled class on text inputs', () => {
     const root = (modal as unknown as { contentEl: MockEl }).contentEl;
     const customRow = root.querySelectorAll('.rp-snippet-modal-custom-row')[0];
     if (!customRow) throw new Error('Custom row missing');
-    const customInput = customRow.querySelectorAll('input[type="text"]')[0];
+    const customInput = customRow.querySelectorAll('textarea')[0];
     if (!customInput) throw new Error('Custom input missing');
     expect(customInput.hasClass('rp-snippet-field-filled')).toBe(false);
     (customInput as unknown as { _value: string })._value = 'custom';
@@ -596,7 +642,7 @@ describe('SnippetFillInModal — preview complete highlight', () => {
     const root = (modal as unknown as { contentEl: MockEl }).contentEl;
     const preview = root.querySelectorAll('.rp-snippet-preview')[0];
     if (!preview) throw new Error('Preview missing');
-    const textInputs = root.querySelectorAll('input[type="text"]');
+    const textInputs = root.querySelectorAll('.rp-snippet-modal-free-text');
     // Initially not complete
     expect(preview.hasClass('rp-snippet-preview-complete')).toBe(false);
     // Fill first — still incomplete
