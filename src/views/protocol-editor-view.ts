@@ -16,6 +16,32 @@ export function protocolMissingFileError(): never {
 	throw new Error('Protocol file disappeared');
 }
 
+/**
+ * Click-to-close guard for protocol-editor modal backdrops.
+ *
+ * A text selection dragged from inside an input and released over the
+ * backdrop produces a synthetic click whose target is the common ancestor
+ * of the press and release points — the backdrop itself. Closing on it
+ * would dismiss the modal mid-edit and discard typed text, so close only
+ * when the press itself started on the backdrop.
+ */
+export function createModalBackdropCloseGuard(backdrop: HTMLElement): {
+	onPointerDown: (e: { target: EventTarget | null }) => void;
+	shouldCloseOnClick: (e: { target: EventTarget | null }) => boolean;
+} {
+	let pressStartedOnBackdrop = false;
+	return {
+		onPointerDown: (e) => {
+			pressStartedOnBackdrop = e.target === backdrop;
+		},
+		shouldCloseOnClick: (e) => {
+			if (!pressStartedOnBackdrop) return false;
+			pressStartedOnBackdrop = false;
+			return e.target === backdrop;
+		},
+	};
+}
+
 /* Phase 4D — default node dimensions and kind-specific defaults */
 const DEFAULT_NODE_WIDTH = 200;
 const DEFAULT_NODE_HEIGHT = 80;
@@ -894,9 +920,11 @@ export class ProtocolEditorView extends ItemView {
         });
       });
     }
+    const backdropGuard = createModalBackdropCloseGuard(modalEl);
+    modalEl.addEventListener('pointerdown', backdropGuard.onPointerDown);
     modalEl.addEventListener('click', (e) => {
       if (isCreating) return;
-      if (e.target === modalEl) closeModal();
+      if (backdropGuard.shouldCloseOnClick(e)) closeModal();
     });
   }
 
@@ -949,9 +977,11 @@ export class ProtocolEditorView extends ItemView {
         });
       });
     }
+    const backdropGuard = createModalBackdropCloseGuard(modalEl);
+    modalEl.addEventListener('pointerdown', backdropGuard.onPointerDown);
     modalEl.addEventListener('click', (e) => {
       if (isCreating) return;
-      if (e.target === modalEl) closeModal();
+      if (backdropGuard.shouldCloseOnClick(e)) closeModal();
     });
   }
 
@@ -1667,8 +1697,10 @@ export class ProtocolEditorView extends ItemView {
     doneBtn.addEventListener('click', () => {
       void persist().then(closeModal);
     });
+    const backdropGuard = createModalBackdropCloseGuard(backdrop);
+    backdrop.addEventListener('pointerdown', backdropGuard.onPointerDown);
     backdrop.addEventListener('click', (e) => {
-      if (e.target === backdrop) closeModal();
+      if (backdropGuard.shouldCloseOnClick(e)) closeModal();
     });
   }
 
@@ -2255,7 +2287,11 @@ export class ProtocolEditorView extends ItemView {
       await this.deleteEdge(edge.id);
     });
 
-    modalEl.addEventListener('click', (e) => { if (e.target === modalEl) closeModal(); });
+    const backdropGuard = createModalBackdropCloseGuard(modalEl);
+    modalEl.addEventListener('pointerdown', backdropGuard.onPointerDown);
+    modalEl.addEventListener('click', (e) => {
+      if (backdropGuard.shouldCloseOnClick(e)) closeModal();
+    });
   }
 
   /* Phase 4D — open edit modal for a node */
@@ -2520,7 +2556,11 @@ export class ProtocolEditorView extends ItemView {
         closeActiveSnippetTargetPicker = closePicker;
 
         pickerCloseBtn.addEventListener('click', () => closePicker());
-        pickerBackdrop.addEventListener('click', (e) => { if (e.target === pickerBackdrop) closePicker(); });
+        const pickerBackdropGuard = createModalBackdropCloseGuard(pickerBackdrop);
+        pickerBackdrop.addEventListener('pointerdown', pickerBackdropGuard.onPointerDown);
+        pickerBackdrop.addEventListener('click', (e) => {
+          if (pickerBackdropGuard.shouldCloseOnClick(e)) closePicker();
+        });
         pickerBackdrop.addEventListener('keydown', (e: KeyboardEvent) => {
           if (e.key !== 'Escape') return;
           e.preventDefault();
@@ -2688,8 +2728,10 @@ export class ProtocolEditorView extends ItemView {
       });
     });
 
+    const backdropGuard = createModalBackdropCloseGuard(modalEl);
+    modalEl.addEventListener('pointerdown', backdropGuard.onPointerDown);
     modalEl.addEventListener('click', (e) => {
-      if (e.target === modalEl) closeModal();
+      if (backdropGuard.shouldCloseOnClick(e)) closeModal();
     });
 
     // Autofocus the first editable text field when opening for a newly-created node
