@@ -27,6 +27,7 @@ import {
   SIDEBAR_RUNNER_VIEW_TYPE,
   createSidebarRunnerEphemeralState,
 } from './views/sidebar-runner-view';
+import { PluginMenuView, PLUGIN_MENU_VIEW_TYPE } from './views/plugin-menu-view';
 import { InsertSnippetModal } from './views/insert-snippet-modal';
 import { SnippetEditorModal } from './views/snippet-editor-modal';
 import { ProtocolEditorView, PROTOCOL_EDITOR_VIEW_TYPE } from './views/protocol-editor-view';
@@ -123,6 +124,10 @@ export default class RadiProtocolPlugin extends Plugin {
       (leaf) => new SidebarRunnerView(leaf, this),
     );
 
+    // Persistent right-sidebar plugin menu (durable workspace state — restored
+    // by Obsidian across restarts once the leaf has been created).
+    this.registerView(PLUGIN_MENU_VIEW_TYPE, (leaf) => new PluginMenuView(leaf, this));
+
     // Command: open-community-library (NFR-06: no plugin name prefix)
     this.addCommand({
       id: 'open-community-library',
@@ -170,8 +175,22 @@ export default class RadiProtocolPlugin extends Plugin {
       callback: () => { void this.handleCreateSnippet(); },
     });
 
+    // Command: open-plugin-menu — reveals (or creates) the persistent right-sidebar menu.
+    this.addCommand({
+      id: 'open-plugin-menu',
+      name: 'Open plugin menu',
+      callback: () => { void this.activatePluginMenuView(); },
+    });
+
     // Settings tab
     this.addSettingTab(new RadiProtocolSettingsTab(this.app, this));
+
+    // Create the persistent plugin-menu leaf once the workspace layout is
+    // ready. If the leaf already exists in the saved workspace (normal case on
+    // restart), nothing happens and Obsidian restores it as durable state.
+    this.app.workspace.onLayoutReady(() => {
+      void this.activatePluginMenuView();
+    });
 
     console.debug('[RadiProtocol] Plugin loaded');
   }
@@ -288,6 +307,21 @@ export default class RadiProtocolPlugin extends Plugin {
 
     if (existing === undefined) {
       await leaf.setViewState({ type: SNIPPET_MANAGER_VIEW_TYPE, active: true });
+    }
+    void workspace.revealLeaf(leaf);
+  }
+
+  /** Get-or-create the persistent right-sidebar plugin menu leaf. Unlike the
+   *  transient sidebar runner, this leaf is durable workspace state: it is
+   *  never detached on unload, so Obsidian restores it across restarts. */
+  async activatePluginMenuView(): Promise<void> {
+    const { workspace } = this.app;
+    const existing = workspace.getLeavesOfType(PLUGIN_MENU_VIEW_TYPE)[0];
+    const leaf = existing ?? workspace.getRightLeaf(false);
+    if (leaf === null) return;
+
+    if (existing === undefined) {
+      await leaf.setViewState({ type: PLUGIN_MENU_VIEW_TYPE, active: false });
     }
     void workspace.revealLeaf(leaf);
   }

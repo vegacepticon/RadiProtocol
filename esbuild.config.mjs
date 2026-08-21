@@ -40,6 +40,8 @@ const CSS_FILES = [
   'donate-section',
   // Phase 6 (library): community library view + modals + read-only integration surface.
   'library',
+  // Persistent right-sidebar plugin menu.
+  'plugin-menu',
 ];
 
 /**

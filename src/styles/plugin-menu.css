@@ -1,0 +1,37 @@
+/* Persistent right-sidebar plugin menu (PluginMenuView). */
+.rp-plugin-menu-view {
+  padding: 8px;
+}
+
+.rp-plugin-menu-header {
+  margin-bottom: 8px;
+
+  h3 {
+    margin: 0;
+  }
+}
+
+.rp-plugin-menu-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.rp-plugin-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 6px 10px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.rp-plugin-menu-item-icon {
+  display: inline-flex;
+  flex-shrink: 0;
+}
+
+.rp-plugin-menu-item-label {
+  overflow-wrap: anywhere;
+}

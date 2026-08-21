@@ -338,6 +338,17 @@
     "focusNote": "Focus note",
     "initializing": "Initializing protocol runner…"
   },
+  "pluginMenu": {
+    "title": "RadiProtocol menu",
+    "runProtocol": "Run protocol",
+    "startFromNode": "Start from specific node",
+    "openProtocolEditor": "Open protocol editor",
+    "insertSnippet": "Insert snippet",
+    "createSnippet": "Create snippet from selection",
+    "openSnippetManager": "Open snippet manager",
+    "openCommunityLibrary": "Open community library",
+    "exportProtocolPackage": "Export protocol as library package"
+  },
   "snippetPreview": {
     "ariaLabel": "Snippet preview",
     "showCustomAria": "Show custom value for {label}",
