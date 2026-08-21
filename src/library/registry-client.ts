@@ -19,7 +19,11 @@ import { isCatalogResponse, isReleaseResponse, type ReleaseFetchResult, type Rel
  * unavailable" state when no endpoint is configured, never a throw. Do NOT
  * hard-code an unprovisioned domain.
  */
-export const DEFAULT_REGISTRY_URL = '';
+/** Bundled default registry endpoint (the production Community Library). Empty string
+ *  would ship the plugin with "catalog unavailable" out of the box; the production
+ *  registry is now embedded. Users can still override it in settings
+ *  (libraryRegistryUrl) for a self-hosted/alternative registry. */
+export const DEFAULT_REGISTRY_URL = 'https://radiprotocol.pages.dev';
 
 /** Extract a message from an unknown rejection WITHOUT ever throwing. Captures
  *  `e.message` with a SINGLE read (a stateful getter cannot TOCTOU between a

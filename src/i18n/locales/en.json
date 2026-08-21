@@ -432,6 +432,21 @@
     "uninstallConfirm": "Uninstall",
     "uninstalledNotice": "Package uninstalled: {packageId}",
     "notInstalledNotice": "Package not installed: {packageId}",
-    "uninstallError": "Uninstall failed: {reason}"
+    "uninstallError": "Uninstall failed: {reason}",
+    "submitTitle": "Submit to Community Library",
+    "submitSummaryPackage": "Package: {packageId} (version {version})",
+    "submitSummarySnippets": "Snippet files included: {count}",
+    "submitWarning": "The Community Library is PUBLIC. Make sure the protocol and snippets contain no patient data or real case identifiers before submitting. A moderator reviews every submission before publication.",
+    "submitCatalogTitle": "Display title",
+    "submitDescription": "Short description",
+    "submitCategories": "Categories (comma-separated)",
+    "submitNote": "Note for the moderator (optional)",
+    "submitNotePlaceholder": "Anything the reviewer should know",
+    "submitLabel": "Submit",
+    "submitUnavailable": "No registry endpoint configured — submission is unavailable.",
+    "submitting": "Submitting…",
+    "submittedNotice": "Submission sent — pending moderation.",
+    "submitSuccessPr": "Submitted! Moderation PR: {prUrl}",
+    "submitError": "Submission failed: {reason}"
   }
 }

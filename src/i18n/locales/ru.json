@@ -432,6 +432,21 @@
     "uninstallConfirm": "Удалить",
     "uninstalledNotice": "Пакет удалён: {packageId}",
     "notInstalledNotice": "Пакет не установлен: {packageId}",
-    "uninstallError": "Ошибка удаления: {reason}"
+    "uninstallError": "Ошибка удаления: {reason}",
+    "submitTitle": "Отправить в Community Library",
+    "submitSummaryPackage": "Пакет: {packageId} (версия {version})",
+    "submitSummarySnippets": "Файлов-сниппетов: {count}",
+    "submitWarning": "Community Library — ПУБЛИЧНЫЙ каталог. Убедитесь, что протокол и сниппеты не содержат данных пациентов или реальных идентификаторов случаев. Каждый сабмит проходит модерацию перед публикацией.",
+    "submitCatalogTitle": "Отображаемое название",
+    "submitDescription": "Краткое описание",
+    "submitCategories": "Категории (через запятую)",
+    "submitNote": "Заметка модератору (необязательно)",
+    "submitNotePlaceholder": "То, что стоит знать проверяющему",
+    "submitLabel": "Отправить",
+    "submitUnavailable": "Адрес реестра не настроен — отправка недоступна.",
+    "submitting": "Отправка…",
+    "submittedNotice": "Сабмит отправлен — ожидает модерации.",
+    "submitSuccessPr": "Отправлено! PR модерации: {prUrl}",
+    "submitError": "Не удалось отправить: {reason}"
   }
 }

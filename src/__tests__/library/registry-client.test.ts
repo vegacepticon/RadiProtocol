@@ -109,7 +109,16 @@ describe('registry-client — fetchRelease', () => {
 });
 
 describe('registry-client — DEFAULT_REGISTRY_URL', () => {
-  it('is empty (no unprovisioned domain hard-coded)', () => {
-    expect(DEFAULT_REGISTRY_URL).toBe('');
+  it('is the production registry (https, provisioned)', () => {
+    // The production Community Library endpoint is bundled so the catalog works
+    // out of the box. Must stay https (the client rejects non-https defaults).
+    expect(DEFAULT_REGISTRY_URL).toBe('https://radiprotocol.pages.dev');
+    expect(() => new URL(DEFAULT_REGISTRY_URL)).not.toThrow();
+    expect(new URL(DEFAULT_REGISTRY_URL).protocol).toBe('https:');
+  });
+
+  it('a settings override of \'\' still yields an unavailable client', () => {
+    const c = new RegistryClient({ baseUrl: '', requestUrl: (() => undefined) as never });
+    expect(c.isUnavailable()).toBe(true);
   });
 });

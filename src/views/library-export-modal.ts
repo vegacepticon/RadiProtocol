@@ -9,6 +9,7 @@ import { App, Modal, Notice } from 'obsidian';
 import type RadiProtocolPlugin from '../main';
 import { FolderSuggest } from './folder-suggest';
 import type { BuildResult } from '../library/library-service';
+import { LibrarySubmitModal } from './library-submit-modal';
 
 export type LibraryExportResult =
   | { exported: true; path: string }
@@ -27,6 +28,7 @@ export class LibraryExportModal extends Modal {
   private releaseVersion = '';
   private authorDisplayName = '';
   private exportBtn!: HTMLButtonElement;
+  private submitBtn!: HTMLButtonElement;
   private statusEl!: HTMLElement;
   private collisionTimer: number | null = null;
   private hasFileCollision = false;
@@ -83,6 +85,13 @@ export class LibraryExportModal extends Modal {
     this.exportBtn.setText(t('library.exportLabel'));
     this.exportBtn.disabled = true;
     this.exportBtn.addEventListener('click', () => { void this.handleExport(); });
+    // Variant B: submit the built package straight to the Community Library moderation
+    // queue (/api/submit → PR). Shares the export preflight (packageId/version required);
+    // builds its own bundle so it works even when the file write collides.
+    this.submitBtn = actions.createEl('button', { cls: 'radi-library-detail-install', attr: { 'aria-label': t('library.submitLabel') } });
+    this.submitBtn.setText(t('library.submitLabel'));
+    this.submitBtn.disabled = true;
+    this.submitBtn.addEventListener('click', () => { void this.handleSubmitToCommunity(); });
     const cancelBtn = actions.createEl('button', { cls: 'radi-library-detail-cancel', attr: { 'aria-label': t('library.cancel') } });
     cancelBtn.setText(t('library.cancel'));
     cancelBtn.addEventListener('click', () => { this.safeResolve({ exported: false }); this.close(); });
@@ -123,7 +132,29 @@ export class LibraryExportModal extends Modal {
 
   private updateExportEnabled(): void {
     const destPath = this.computeDestPath();
-    this.exportBtn.disabled = !(this.packageId.trim() !== '' && this.releaseVersion.trim() !== '' && destPath !== null && !this.hasFileCollision);
+    const metaReady = this.packageId.trim() !== '' && this.releaseVersion.trim() !== '';
+    this.exportBtn.disabled = !(metaReady && destPath !== null && !this.hasFileCollision);
+    // Submit shares the metadata preflight but not the file-collision one (nothing is
+    // written to the vault).
+    if (this.submitBtn !== undefined) this.submitBtn.disabled = !metaReady;
+  }
+
+  /** Build the bundle fresh and open the submit modal (Variant B moderation flow). */
+  private async handleSubmitToCommunity(): Promise<void> {
+    const t = this.plugin.i18n.t.bind(this.plugin.i18n);
+    this.submitBtn.disabled = true;
+    const build: BuildResult = await this.plugin.libraryService.buildLocalPackage(this.protocolPath, {
+      packageId: this.packageId.trim(),
+      releaseVersion: this.releaseVersion.trim(),
+      author: this.authorDisplayName.trim() === '' ? undefined : { displayName: this.authorDisplayName.trim() },
+    });
+    if (build.status === 'failed') {
+      this.statusEl.setText(t('library.exportError', { reason: build.reason }));
+      this.updateExportEnabled();
+      return;
+    }
+    const registryBaseUrl = this.plugin.settings.libraryRegistryUrl ?? '';
+    new LibrarySubmitModal(this.app, this.plugin, build.bundle, { registryBaseUrl }).open();
   }
 
   private async handleExport(): Promise<void> {
