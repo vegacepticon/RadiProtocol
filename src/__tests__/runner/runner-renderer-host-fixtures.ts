@@ -2,7 +2,16 @@
 import { vi } from 'vitest';
 import { I18nService } from '../../i18n';
 
-// MockEl harness
+export interface MockEvent {
+  type: string;
+  target?: MockEl | null;
+  key?: string;
+  ctrlKey?: boolean;
+  altKey?: boolean;
+  metaKey?: boolean;
+  preventDefault?: () => void;
+}
+
 export interface MockEl {
   tagName: string;
   children: MockEl[];
@@ -15,13 +24,21 @@ export interface MockEl {
   _disabled: boolean;
   _type: string;
   _checked: boolean;
-  _listeners: Map<string, Array<(ev: unknown) => void>>;
+  _listeners: Map<string, Array<(ev: MockEvent) => void>>;
+  textContent: string;
+  value: string;
+  disabled: boolean;
+  type: string;
+  checked: boolean;
+  style: Record<string, string>;
   name: string;
   inputMode: string;
   readOnly: boolean;
   dataset: Record<string, string>;
-  createEl: (tag: string, opts?: { text?: string; cls?: string; type?: string }) => MockEl;
-  createDiv: (opts?: { cls?: string; text?: string }) => MockEl;
+  scrollHeight: number;
+  focusCount: number;
+  createEl: (tag: string, opts?: { text?: string; cls?: string; type?: string; attr?: Record<string, string> }) => MockEl;
+  createDiv: (opts?: { cls?: string; text?: string; attr?: Record<string, string> }) => MockEl;
   createSpan: (opts?: { cls?: string; text?: string }) => MockEl;
   empty: () => void;
   setText: (t: string) => void;
@@ -31,9 +48,13 @@ export interface MockEl {
   hasClass: (c: string) => boolean;
   setAttribute: (k: string, v: string) => void;
   getAttribute: (k: string) => string | null;
-  addEventListener: (type: string, handler: (ev: unknown) => void) => void;
-  removeEventListener: (type: string, handler: (ev: unknown) => void) => void;
-  dispatchEvent: (event: { type: string; target?: MockEl }) => void;
+  removeAttribute: (k: string) => void;
+  contains: (candidate: unknown) => boolean;
+  focus: () => void;
+  remove: () => void;
+  addEventListener: (type: string, handler: (ev: MockEvent) => void) => void;
+  removeEventListener: (type: string, handler: (ev: MockEvent) => void) => void;
+  dispatchEvent: (event: MockEvent) => void;
   querySelector: (sel: string) => MockEl | null;
   querySelectorAll: (sel: string) => MockEl[];
   prepend: (el: MockEl) => void;
@@ -41,7 +62,7 @@ export interface MockEl {
 }
 
 export function makeEl(tag = 'div'): MockEl {
-  const listeners = new Map<string, Array<(ev: unknown) => void>>();
+  const listeners = new Map<string, Array<(ev: MockEvent) => void>>();
   const children: MockEl[] = [];
   const attrs: Record<string, string> = {};
   const style: Record<string, string> = {};
@@ -65,77 +86,119 @@ export function makeEl(tag = 'div'): MockEl {
     inputMode: '',
     readOnly: false,
     dataset,
+    scrollHeight: 24,
+    focusCount: 0,
     createEl(subtag: string, opts?: { text?: string; cls?: string; type?: string; attr?: Record<string, string> }): MockEl {
       const child = makeEl(subtag);
       child.parent = el as unknown as MockEl;
-      if (opts?.text !== undefined) (child as unknown as { _text: string })._text = opts.text;
-      if (opts?.cls) child.classList.add(opts.cls);
-      if (opts?.type) (child as unknown as { _type: string })._type = opts.type;
+      if (opts?.text !== undefined) child._text = opts.text;
+      if (opts?.cls) {
+        for (const cls of opts.cls.split(/\s+/).filter(Boolean)) child.classList.add(cls);
+      }
+      if (opts?.type) child._type = opts.type;
       if (opts?.attr) {
-        for (const [k, v] of Object.entries(opts.attr)) {
-          child.setAttribute(k, v);
+        for (const [key, value] of Object.entries(opts.attr)) {
+          child.setAttribute(key, value);
         }
       }
       children.push(child);
       return child;
     },
-    createDiv(opts?: { cls?: string; text?: string }): MockEl {
+    createDiv(opts?: { cls?: string; text?: string; attr?: Record<string, string> }): MockEl {
       return (this as unknown as MockEl).createEl('div', opts);
     },
     createSpan(opts?: { cls?: string; text?: string }): MockEl {
       return (this as unknown as MockEl).createEl('span', opts);
     },
-    empty(): void { children.length = 0; },
-    setText(text: string): void { (el as unknown as { _text: string })._text = text; },
+    empty(): void {
+      for (const child of children) child.parent = null;
+      children.length = 0;
+    },
+    setText(text: string): void { (el as unknown as MockEl)._text = text; },
     addClass(cls: string): void { classSet.add(cls); },
     removeClass(cls: string): void { classSet.delete(cls); },
     toggleClass(cls: string, on?: boolean): void {
       if (on ?? !classSet.has(cls)) classSet.add(cls); else classSet.delete(cls);
     },
     hasClass(cls: string): boolean { return classSet.has(cls); },
-    setAttribute(k: string, v: string): void { attrs[k] = v; },
-    getAttribute(k: string): string | null { return attrs[k] ?? null; },
-    addEventListener(type: string, handler: (ev: unknown) => void): void {
+    setAttribute(key: string, value: string): void {
+      attrs[key] = value;
+      if (key === 'type') (el as unknown as MockEl)._type = value;
+    },
+    getAttribute(key: string): string | null { return attrs[key] ?? null; },
+    removeAttribute(key: string): void { delete attrs[key]; },
+    contains(candidate: unknown): boolean {
+      if (candidate === el) return true;
+      const stack = [...children];
+      while (stack.length > 0) {
+        const current = stack.shift()!;
+        if (current === candidate) return true;
+        stack.push(...current.children);
+      }
+      return false;
+    },
+    focus(): void { (el as unknown as MockEl).focusCount += 1; },
+    remove(): void {
+      const parent = (el as unknown as MockEl).parent;
+      if (parent === null) return;
+      const index = parent.children.indexOf(el as unknown as MockEl);
+      if (index >= 0) parent.children.splice(index, 1);
+      (el as unknown as MockEl).parent = null;
+    },
+    addEventListener(type: string, handler: (ev: MockEvent) => void): void {
       if (!listeners.has(type)) listeners.set(type, []);
       listeners.get(type)!.push(handler);
     },
-    removeEventListener(type: string, handler: (ev: unknown) => void): void {
-      const arr = listeners.get(type); if (!arr) return;
-      const i = arr.indexOf(handler); if (i >= 0) arr.splice(i, 1);
+    removeEventListener(type: string, handler: (ev: MockEvent) => void): void {
+      const registered = listeners.get(type);
+      if (registered === undefined) return;
+      const index = registered.indexOf(handler);
+      if (index >= 0) registered.splice(index, 1);
     },
-    dispatchEvent(event: { type: string; target?: MockEl }): void {
-      const arr = listeners.get(event.type); if (!arr) return;
-      const evt = { ...event, target: event.target ?? (el as unknown as MockEl) };
-      for (const h of arr.slice()) h(evt);
+    dispatchEvent(event: MockEvent): void {
+      const registered = listeners.get(event.type);
+      if (registered === undefined) return;
+      const dispatched = {
+        ...event,
+        target: event.target ?? (el as unknown as MockEl),
+      };
+      for (const handler of registered.slice()) handler(dispatched);
     },
-    querySelector(sel: string): MockEl | null { return walk(el as unknown as MockEl, sel)[0] ?? null; },
-    querySelectorAll(sel: string): MockEl[] { return walk(el as unknown as MockEl, sel); },
-    prepend(child: MockEl): void { children.unshift(child); child.parent = el as unknown as MockEl; },
+    querySelector(selector: string): MockEl | null {
+      return walk(el as unknown as MockEl, selector)[0] ?? null;
+    },
+    querySelectorAll(selector: string): MockEl[] {
+      return walk(el as unknown as MockEl, selector);
+    },
+    prepend(child: MockEl): void {
+      children.unshift(child);
+      child.parent = el as unknown as MockEl;
+    },
     setCssProps(props: Record<string, string>): void {
-      for (const [k, v] of Object.entries(props)) (style as Record<string, string>)[k] = v;
+      for (const [key, value] of Object.entries(props)) style[key] = value;
     },
     style,
   } as unknown as MockEl;
 
   Object.defineProperty(el, 'textContent', {
-    get(): string { return (el as unknown as { _text: string })._text; },
-    set(v: string): void { (el as unknown as { _text: string })._text = String(v); },
+    get(): string { return (el as unknown as MockEl)._text; },
+    set(value: string): void { (el as unknown as MockEl)._text = String(value); },
   });
   Object.defineProperty(el, 'value', {
-    get(): string { return (el as unknown as { _value: string })._value; },
-    set(v: string): void { (el as unknown as { _value: string })._value = String(v); },
+    get(): string { return (el as unknown as MockEl)._value; },
+    set(value: string): void { (el as unknown as MockEl)._value = String(value); },
   });
   Object.defineProperty(el, 'disabled', {
-    get(): boolean { return (el as unknown as { _disabled: boolean })._disabled; },
-    set(v: boolean): void { (el as unknown as { _disabled: boolean })._disabled = Boolean(v); },
+    get(): boolean { return (el as unknown as MockEl)._disabled; },
+    set(value: boolean): void { (el as unknown as MockEl)._disabled = Boolean(value); },
   });
   Object.defineProperty(el, 'type', {
-    get(): string { return (el as unknown as { _type: string })._type; },
-    set(v: string): void { (el as unknown as { _type: string })._type = String(v); },
+    get(): string { return (el as unknown as MockEl)._type; },
+    set(value: string): void { (el as unknown as MockEl)._type = String(value); },
   });
   Object.defineProperty(el, 'checked', {
-    get(): boolean { return (el as unknown as { _checked: boolean })._checked; },
-    set(v: boolean): void { (el as unknown as { _checked: boolean })._checked = Boolean(v); },
+    get(): boolean { return (el as unknown as MockEl)._checked; },
+    set(value: boolean): void { (el as unknown as MockEl)._checked = Boolean(value); },
   });
 
   return el;
@@ -173,8 +236,6 @@ function buildMatcher(sel: string): (el: MockEl) => boolean {
 export function findByClass(root: MockEl, cls: string): MockEl[] {
   return walk(root, '.' + cls);
 }
-
-// Module mock factories
 
 export function createObsidianModuleMock(): Record<string, unknown> {
   class Modal {
@@ -252,20 +313,16 @@ export function createObsidianModuleMock(): Record<string, unknown> {
   return { Modal, Notice, Plugin, ItemView, WorkspaceLeaf, PluginSettingTab, SuggestModal, Setting, TFile, TFolder, AbstractInputSuggest, setIcon: mockSetIcon };
 }
 
-// Minimal setIcon mock for tests that import render-runner-footer
-function mockSetIcon(_el: unknown, _iconId: string): void {
-  // no-op
-}
-
-// ───── SnippetFillInModal mock ─────────────────────────────────────────────
+function mockSetIcon(_el: unknown, _iconId: string): void {}
 
 interface FillModalInstance {
   snippet: unknown;
   result: Promise<string | null>;
-  __resolve: (v: string | null) => void;
-  open: () => void;
-  close: () => void;
+  __resolve(value: string | null): void;
+  open(): void;
+  close(): void;
   opened: boolean;
+  closed: boolean;
 }
 
 const fillModalInstances: FillModalInstance[] = [];
@@ -280,39 +337,90 @@ export function resetFillModalInstances(): void {
 
 export function createSnippetFillInModalMock(): Record<string, unknown> {
   class SnippetFillInModal {
-    result: Promise<string | null>;
-    private resolveFn!: (v: string | null) => void;
+    readonly result: Promise<string | null>;
+    readonly snippet: unknown;
     opened = false;
     closed = false;
-    readonly snippet: unknown;
+    private settled = false;
+    private resolveFn!: (value: string | null) => void;
+
     constructor(_app: unknown, snippet: unknown) {
       this.snippet = snippet;
-      this.result = new Promise<string | null>(res => { this.resolveFn = res; });
+      this.result = new Promise<string | null>((resolve) => { this.resolveFn = resolve; });
       fillModalInstances.push(this as unknown as FillModalInstance);
     }
-    __resolve(v: string | null): void { this.resolveFn(v); }
+
+    private settle(value: string | null): void {
+      if (this.settled) return;
+      this.settled = true;
+      this.resolveFn(value);
+    }
+
+    __resolve(value: string | null): void { this.settle(value); }
     open(): void { this.opened = true; }
-    close(): void { this.closed = true; }
+    close(): void {
+      if (this.closed) return;
+      this.closed = true;
+      this.settle(null);
+    }
   }
   return { SnippetFillInModal, __fillModalInstances: fillModalInstances };
 }
 
-// SnippetTreePicker mock
-export function createSnippetTreePickerMock(mountSpy: () => void): Record<string, unknown> {
+export interface PickerMockInstance {
+  options: Record<string, unknown>;
+  mounted: boolean;
+  unmounted: boolean;
+}
+
+const pickerMockInstances: PickerMockInstance[] = [];
+
+export function getPickerMockInstances(): PickerMockInstance[] {
+  return pickerMockInstances;
+}
+
+export function resetPickerMockInstances(): void {
+  pickerMockInstances.length = 0;
+}
+
+export function createSnippetTreePickerMock(
+  mountSpy: (instance: PickerMockInstance) => void | Promise<void> = () => {},
+): Record<string, unknown> {
   class SnippetTreePicker {
-    constructor(_options: unknown) {}
-    async mount(): Promise<void> { mountSpy(); }
-    unmount(): void {}
+    private readonly instance: PickerMockInstance;
+    constructor(options: Record<string, unknown>) {
+      this.instance = { options, mounted: false, unmounted: false };
+      pickerMockInstances.push(this.instance);
+    }
+    async mount(): Promise<void> {
+      this.instance.mounted = true;
+      await mountSpy(this.instance);
+    }
+    unmount(): void { this.instance.unmounted = true; }
   }
   return { SnippetTreePicker };
 }
 
-// InlineRunnerModal harness helpers
+export function deferred<T>(): {
+  promise: Promise<T>;
+  resolve(value: T): void;
+  reject(error: unknown): void;
+} {
+  let resolve!: (value: T) => void;
+  let reject!: (error: unknown) => void;
+  const promise = new Promise<T>((res, rej) => { resolve = res; reject = rej; });
+  return { promise, resolve, reject };
+}
 
-export function makeBasePlugin(opts: { textSeparator?: string; snippetFolderPath?: string } = {}) {
-  // Phase 85 INLINE-MULTI-01: shared registry backing the registerInlineRunner /
-  // unregisterInlineRunner / getInlineRunner / getOpenInlineRunners mocks. Tests
-  // can inspect `plugin.inlineRunners` directly to assert registry state.
+type FileLike = { path: string };
+type LeafLike = unknown;
+type VaultHandler = (file: FileLike) => void;
+type WorkspaceHandler = (leaf: LeafLike | null) => void;
+type EventRefLike<T> = { event: string; handler: T };
+
+export function makeBasePlugin(
+  opts: { textSeparator?: 'newline' | 'space'; snippetFolderPath?: string } = {},
+) {
   const inlineRunners = new Map<string, unknown>();
   return {
     settings: {
@@ -321,40 +429,103 @@ export function makeBasePlugin(opts: { textSeparator?: string; snippetFolderPath
       protocolFolderPath: 'Protocols',
       locale: 'ru',
     },
-    snippetService: { load: vi.fn(async (_absPath: string) => null), resolveSnippet: vi.fn(async (_id: string) => ({ status: 'missing' })) },
-    insertMutex: { runExclusive: vi.fn(async (_path: string, fn: () => Promise<void>) => fn()) },
+    snippetService: {
+      load: vi.fn<(absolutePath: string) => Promise<unknown | null>>(async () => null),
+      resolveSnippet: vi.fn<(id: string) => Promise<unknown>>(async () => ({ status: 'missing' })),
+    },
+    protocolDocumentStore: {
+      read: vi.fn<(path: string) => Promise<unknown | null>>(async () => ({
+        schema: 'radiprotocol.protocol', version: 1,
+      })),
+    },
+    protocolDocumentParser: {
+      parse: vi.fn<(content: string, path: string) => unknown>(),
+    },
+    insertMutex: {
+      runExclusive: vi.fn<(
+        path: string,
+        operation: () => Promise<void>,
+      ) => Promise<void>>(async (_path, operation) => operation()),
+    },
     canvasLiveEditor: { getCanvasJSON: () => null },
     _vaultModifyCalls: [] as Array<[string, string]>,
-    // Phase 84 I18N-02: real I18nService so InlineRunnerModal constructors'
-    // `this.plugin.i18n.t.bind(this.plugin.i18n)` does not throw.
     i18n: new I18nService('ru'),
-    // Phase 85 INLINE-MULTI-01: registry mock methods.
     inlineRunners,
-    registerInlineRunner: vi.fn((key: string, modal: unknown) => { inlineRunners.set(key, modal); }),
-    unregisterInlineRunner: vi.fn((key: string) => { inlineRunners.delete(key); }),
-    getInlineRunner: vi.fn((key: string) => inlineRunners.get(key) ?? null),
-    getOpenInlineRunners: vi.fn(() => Array.from(inlineRunners.values())),
+    registerInlineRunner: vi.fn<(key: string, modal: unknown) => void>((key, modal) => {
+      inlineRunners.set(key, modal);
+    }),
+    unregisterInlineRunner: vi.fn<(key: string) => void>((key) => {
+      inlineRunners.delete(key);
+    }),
+    getInlineRunner: vi.fn<(key: string) => unknown>((key) => inlineRunners.get(key) ?? null),
+    getOpenInlineRunners: vi.fn<() => unknown[]>(() => Array.from(inlineRunners.values())),
+    getInlineRunnerPosition: vi.fn<() => null>(() => null),
+    saveInlineRunnerPosition: vi.fn<(layout: unknown) => Promise<void>>(async () => {}),
   };
 }
 
-export function makeBaseApp(plugin: ReturnType<typeof makeBasePlugin>, opts: { vaultContent?: string } = {}) {
+export function makeBaseApp(
+  plugin: ReturnType<typeof makeBasePlugin>,
+  opts: { vaultContent?: string } = {},
+) {
   const vaultContent = opts.vaultContent ?? '';
   const modifyCalls: Array<[string, string]> = [];
-  return {
+  const vaultHandlers = new Map<string, VaultHandler[]>();
+  const workspaceHandlers = new Map<string, WorkspaceHandler[]>();
+
+  const app = {
     vault: {
-      getAbstractFileByPath: vi.fn(() => null),
-      read: vi.fn(async () => vaultContent),
-      modify: vi.fn(async (file: { path: string }, content: string) => {
+      getAbstractFileByPath: vi.fn<(path: string) => FileLike | null>((path) =>
+        path === 'Snippets/report.md' ? { path } : null),
+      read: vi.fn<(file: FileLike) => Promise<string>>(async () => vaultContent),
+      modify: vi.fn<(file: FileLike, content: string) => Promise<void>>(async (file, content) => {
         modifyCalls.push([file.path, content]);
         plugin._vaultModifyCalls.push([file.path, content]);
       }),
-      getFiles: vi.fn(() => []),
+      getFiles: vi.fn<() => FileLike[]>(() => []),
+      on: vi.fn<(event: string, handler: VaultHandler) => EventRefLike<VaultHandler>>(
+        (event, handler) => {
+          vaultHandlers.set(event, [...(vaultHandlers.get(event) ?? []), handler]);
+          return { event, handler };
+        },
+      ),
+      offref: vi.fn<(ref: EventRefLike<VaultHandler>) => void>((ref) => {
+        vaultHandlers.set(
+          ref.event,
+          (vaultHandlers.get(ref.event) ?? []).filter((handler) => handler !== ref.handler),
+        );
+      }),
     },
     workspace: {
-      on: vi.fn(() => ({})),
-      getActiveFile: vi.fn(() => null),
-      iterateAllLeaves: vi.fn(() => {}),
+      on: vi.fn<(
+        event: string,
+        handler: WorkspaceHandler,
+      ) => EventRefLike<WorkspaceHandler>>((event, handler) => {
+        workspaceHandlers.set(event, [...(workspaceHandlers.get(event) ?? []), handler]);
+        return { event, handler };
+      }),
+      offref: vi.fn<(ref: EventRefLike<WorkspaceHandler>) => void>((ref) => {
+        workspaceHandlers.set(
+          ref.event,
+          (workspaceHandlers.get(ref.event) ?? []).filter((handler) => handler !== ref.handler),
+        );
+      }),
+      getActiveFile: vi.fn<() => FileLike | null>(() => null),
+      iterateAllLeaves: vi.fn<(callback: (leaf: LeafLike) => void) => void>(() => {}),
     },
     _modifyCalls: modifyCalls,
+    _emitVault(event: string, file: FileLike): void {
+      for (const handler of vaultHandlers.get(event) ?? []) handler(file);
+    },
+    _emitWorkspace(event: string, leaf: LeafLike | null = null): void {
+      for (const handler of workspaceHandlers.get(event) ?? []) handler(leaf);
+    },
+    _vaultHandlerCount(event: string): number {
+      return vaultHandlers.get(event)?.length ?? 0;
+    },
+    _workspaceHandlerCount(event: string): number {
+      return workspaceHandlers.get(event)?.length ?? 0;
+    },
   };
+  return app;
 }

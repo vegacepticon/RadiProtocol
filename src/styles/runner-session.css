@@ -1,0 +1,403 @@
+/* Presentation-neutral runner session layout and controls. */
+
+.rp-runner-session-root {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  background: var(--background-primary);
+}
+
+.rp-runner-session-header {
+  flex-shrink: 0;
+  user-select: none;
+  background: var(--background-primary);
+}
+
+.rp-runner-session-progress {
+  display: flex;
+  align-items: center;
+  gap: var(--size-2-2);
+  padding: var(--size-2-2) var(--size-4-2);
+  border-bottom: 1px solid var(--background-modifier-border);
+}
+
+.rp-runner-session-progress-track {
+  flex: 1 1 auto;
+  min-width: 32px;
+  height: 6px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: var(--background-modifier-border);
+}
+
+.rp-runner-session-progress-fill {
+  width: 0%;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--interactive-accent);
+  transition: width 0.16s ease;
+}
+
+.rp-runner-session-progress-text {
+  flex: 0 0 auto;
+  min-width: 3ch;
+  color: var(--text-muted);
+  font-size: var(--font-ui-smaller);
+  line-height: 1;
+  text-align: right;
+}
+
+.rp-runner-session-content {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  padding: var(--size-4-2);
+}
+
+.rp-runner-session-actions {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  align-items: stretch;
+  min-height: 0;
+  overflow-y: auto;
+  padding: var(--size-2-3) var(--size-4-2);
+  border-top: 1px solid var(--background-modifier-border);
+}
+
+.rp-runner-session-root.rp-state-actions .rp-runner-session-content {
+  flex: 0 0 auto;
+}
+
+.rp-runner-session-root.rp-state-actions .rp-runner-session-actions {
+  flex: 1 1 auto;
+  overflow-y: auto;
+}
+
+.rp-runner-session-root.rp-state-content-only .rp-runner-session-content {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.rp-runner-session-root.rp-state-content-only .rp-runner-session-actions {
+  display: none;
+}
+
+.rp-runner-session-actions .rp-answer-list,
+.rp-runner-session-actions .rp-question-transition-list,
+.rp-runner-session-actions .rp-snippet-branch-list,
+.rp-runner-session-actions .rp-loop-picker-list,
+.rp-runner-session-actions .rp-option-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--size-2-3);
+  margin-bottom: 0;
+}
+
+.rp-runner-session-content .rp-question-text {
+  margin: 0 0 var(--size-4-2);
+  padding: var(--size-2-3) var(--size-2-2);
+  border: 1px solid var(--background-modifier-border);
+  border-radius: var(--radius-s);
+  background: var(--background-secondary);
+  font-size: var(--font-ui-normal);
+  line-height: var(--line-height-tight);
+  text-align: center;
+}
+
+.rp-runner-session-actions .rp-answer-btn,
+.rp-runner-session-actions .rp-question-transition-btn,
+.rp-runner-session-actions .rp-snippet-branch-btn,
+.rp-runner-session-actions .rp-loop-body-btn,
+.rp-runner-session-actions .rp-loop-exit-btn {
+  align-items: flex-start;
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 100%;
+  min-height: 36px;
+  height: auto;
+  padding: var(--size-2-3) var(--size-4-2);
+  overflow-wrap: anywhere;
+  white-space: normal;
+  word-break: break-word;
+  text-align: left;
+}
+
+.rp-runner-session-actions .rp-question-transition-list {
+  margin-top: var(--size-4-3);
+}
+
+.rp-runner-session-actions .rp-question-transition-btn {
+  border-left: 3px solid var(--interactive-accent);
+  background: var(--background-secondary);
+}
+
+.rp-runner-session-footer {
+  flex-shrink: 0;
+  padding: var(--size-2-3) var(--size-4-2);
+  border-top: 1px solid var(--background-modifier-border);
+  background: var(--background-primary);
+}
+
+.rp-runner-session-footer-btn-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--size-2-2);
+}
+
+.rp-runner-session-close-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--background-modifier-border);
+  border-radius: var(--radius-s);
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
+.rp-runner-session-close-btn:hover {
+  background: var(--background-modifier-hover);
+  color: var(--text-normal);
+}
+
+.rp-stp-runner-session-host {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  min-height: 0;
+  height: 100%;
+  overflow: hidden;
+}
+
+.rp-runner-session-content .rp-error-panel {
+  padding: var(--size-4-3);
+  border-radius: var(--radius-s);
+  background: var(--background-modifier-error);
+}
+
+.rp-runner-session-content .rp-error-title {
+  margin: 0 0 var(--size-4-2);
+  color: var(--text-error);
+  font-weight: var(--font-semibold);
+}
+
+.rp-runner-session-content .rp-error-list {
+  margin: 0;
+  padding-left: var(--size-4-4);
+}
+
+.rp-runner-footer-row {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--size-4-2);
+}
+
+.rp-complete-heading {
+  margin: 0 0 var(--size-4-2);
+  font-size: var(--font-ui-medium);
+  font-weight: var(--font-semibold);
+}
+
+.rp-runner-icon-btn {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: 1px solid var(--background-modifier-border);
+  border-radius: var(--radius-s);
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
+.rp-runner-icon-btn:hover {
+  background: var(--background-modifier-hover);
+  color: var(--text-normal);
+}
+
+.rp-runner-icon-btn svg {
+  width: 14px;
+  height: 14px;
+}
+
+.rp-runner-icon-btn:disabled,
+.rp-runner-icon-btn:disabled:hover {
+  background: transparent;
+  color: var(--text-muted);
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.rp-runner-session-root.rp-state-content-only
+  .rp-runner-session-content > .rp-runner-footer-row {
+  flex: 0 0 auto;
+  margin-top: var(--size-2-3);
+}
+
+.rp-runner-session-self-check {
+  display: flex;
+  flex-direction: column;
+  gap: var(--size-2-2);
+}
+
+.rp-runner-session-self-check-item {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--size-2-2);
+  line-height: 1.4;
+}
+
+.rp-runner-session-actions .rp-free-text-answer {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: end;
+  gap: var(--size-2-2);
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 100%;
+  padding: var(--size-4-2);
+  border: 1px solid var(--background-modifier-border);
+  border-radius: var(--radius-s);
+  background: var(--background-secondary);
+}
+
+.rp-runner-session-actions .rp-free-text-answer-label {
+  display: flex;
+  grid-column: 1;
+  flex-direction: column;
+  gap: var(--size-2-2);
+  min-width: 0;
+}
+
+.rp-runner-session-actions .rp-free-text-answer-prompt {
+  overflow-wrap: anywhere;
+  color: var(--text-normal);
+  font-weight: var(--font-medium);
+  line-height: var(--line-height-tight);
+  white-space: pre-wrap;
+}
+
+.rp-runner-session-actions .rp-free-text-answer-textarea {
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
+  min-height: 72px;
+  height: auto;
+  overflow-y: hidden;
+  resize: none;
+  white-space: pre-wrap;
+}
+
+.rp-runner-session-actions .rp-free-text-answer-textarea[aria-invalid="true"] {
+  border-color: var(--text-error);
+}
+
+.rp-runner-session-actions .rp-free-text-answer-controls {
+  display: flex;
+  grid-column: 2;
+  justify-content: flex-end;
+}
+
+.rp-runner-session-actions .rp-free-text-answer-submit {
+  flex: 0 0 auto;
+  min-height: 32px;
+  padding-inline: var(--size-4-3);
+}
+
+.rp-runner-session-actions .rp-free-text-answer-error {
+  grid-column: 1 / -1;
+  margin: 0;
+  color: var(--text-error);
+  font-size: var(--font-ui-smaller);
+  line-height: var(--line-height-tight);
+}
+
+.rp-sidebar-runner-view {
+  box-sizing: border-box;
+  height: 100%;
+  min-height: 0;
+  padding: 0;
+  overflow: hidden;
+}
+
+.rp-sidebar-runner-shell {
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+  width: 100%;
+  height: 100%;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+  background: var(--background-primary);
+}
+
+.rp-sidebar-runner-chrome {
+  display: grid;
+  flex: 0 0 auto;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--size-2-2) var(--size-4-2);
+  padding: var(--size-4-2);
+  border-bottom: 1px solid var(--background-modifier-border);
+  background: var(--background-secondary);
+}
+
+.rp-sidebar-runner-bound-note {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  color: var(--text-normal);
+  font-size: var(--font-ui-small);
+  font-weight: var(--font-medium);
+}
+
+.rp-sidebar-runner-mismatch {
+  grid-column: 1 / -1;
+  color: var(--text-warning);
+  font-size: var(--font-ui-smaller);
+  line-height: var(--line-height-tight);
+}
+
+.rp-sidebar-runner-mismatch.is-hidden {
+  display: none;
+}
+
+.rp-sidebar-runner-focus-note {
+  grid-column: 2;
+  grid-row: 1;
+  white-space: nowrap;
+}
+
+.rp-sidebar-runner-session {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.rp-sidebar-runner-session.rp-runner-session-root {
+  flex: 1 1 auto;
+  width: 100%;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.rp-sidebar-runner-initializing {
+  margin: 0;
+  padding: var(--size-4-3);
+  color: var(--text-muted);
+}

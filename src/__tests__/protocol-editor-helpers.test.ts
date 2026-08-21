@@ -341,8 +341,16 @@ describe('protocol editor helper functions', () => {
       expect(normalizeProtocolEditorSnippetFolderSelection('   ')).toBeUndefined();
     });
 
-    it('returns kind-specific defaults for node type changes', () => {
+    it('returns explicit Answer preset defaults without changing other node-kind defaults', () => {
+      expect(fieldsForProtocolEditorNodeKind(null)).toEqual({});
+      expect(fieldsForProtocolEditorNodeKind('start')).toEqual({});
       expect(fieldsForProtocolEditorNodeKind('question')).toEqual({ questionText: '' });
+      expect(fieldsForProtocolEditorNodeKind('answer')).toEqual({
+        answerText: '',
+        freeText: false,
+      });
+      expect(fieldsForProtocolEditorNodeKind('text-block')).toEqual({ content: '' });
+      expect(fieldsForProtocolEditorNodeKind('snippet')).toEqual({});
       expect(defaultColorForProtocolEditorNodeKind('snippet')).toContain('156');
     });
   });

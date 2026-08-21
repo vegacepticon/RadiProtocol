@@ -1,137 +1,74 @@
-// src/__tests__/views/inline-runner-modal-keyboard.test.ts
-// TASK #88 — Keyboard shortcuts for InlineRunnerModal.
-// Verifies that handleKeydown delegates to runner.stepBack / runner.redo /
-// modal.close with the correct key combos, and that the input/textarea guard
-// suppresses shortcuts while the user is typing.
-
-import { describe, it, expect, vi } from 'vitest';
-import { InlineRunnerModal } from '../../views/inline-runner-modal';
-import { makeBasePlugin, makeBaseApp } from '../runner/runner-renderer-host-fixtures';
-import { TFile } from 'obsidian';
+import { describe, expect, it, vi } from 'vitest';
+import { makeBaseApp, makeBasePlugin } from '../runner/runner-renderer-host-fixtures';
 
 vi.mock('obsidian', async () => {
   const fixtures = await import('../runner/runner-renderer-host-fixtures');
   return fixtures.createObsidianModuleMock();
 });
 
-function makeTargetNote(): TFile {
-  return new (TFile as any)('notes/target.md');
-}
+import { TFile } from 'obsidian';
+import { InlineRunnerModal } from '../../views/inline-runner-modal';
 
-function makeKeyboardEvent(opts: {
+function event(options: {
   key: string;
   ctrlKey?: boolean;
   altKey?: boolean;
   target?: { tagName: string } | null;
 }): KeyboardEvent {
   return {
-    key: opts.key,
-    ctrlKey: opts.ctrlKey ?? false,
-    altKey: opts.altKey ?? false,
-    target: opts.target ?? null,
+    key: options.key,
+    ctrlKey: options.ctrlKey ?? false,
+    altKey: options.altKey ?? false,
+    target: options.target ?? null,
     preventDefault: vi.fn(),
   } as unknown as KeyboardEvent;
 }
 
-describe('InlineRunnerModal keyboard shortcuts (TASK #88)', () => {
-  function setup() {
-    const plugin = makeBasePlugin();
-    const app = makeBaseApp(plugin);
-    const targetNote = makeTargetNote();
-    const modal = new InlineRunnerModal(app as any, plugin as any, 'test.canvas', targetNote);
-    const stepBackSpy = vi.spyOn((modal as any).runner, 'stepBack').mockImplementation(() => {});
-    const redoSpy = vi.spyOn((modal as any).runner, 'redo').mockImplementation(() => {});
-    const closeSpy = vi.spyOn(modal, 'close').mockImplementation(() => {});
-    const renderSpy = vi.spyOn(modal as any, 'render').mockImplementation(() => {});
-    return { modal, stepBackSpy, redoSpy, closeSpy, renderSpy };
-  }
+function setup() {
+  const plugin = makeBasePlugin();
+  const app = makeBaseApp(plugin);
+  const modal = new InlineRunnerModal(
+    app as any,
+    plugin as any,
+    'Protocols/test.rp.json',
+    new (TFile as any)('notes/target.md'),
+  );
+  const handleKeydown = vi.fn();
+  (modal as any).sessionHost = { handleKeydown, dispose: vi.fn(), hasOpenChildModal: () => false };
+  const close = vi.spyOn(modal, 'close').mockImplementation(() => {});
+  return { modal, handleKeydown, close };
+}
 
-  it('Ctrl+ArrowLeft calls stepBack then render', () => {
-    const { modal, stepBackSpy, renderSpy, closeSpy, redoSpy } = setup();
-    const ev = makeKeyboardEvent({ key: 'ArrowLeft', ctrlKey: true });
-    (modal as any).handleKeydown(ev);
-    expect(stepBackSpy).toHaveBeenCalledTimes(1);
-    expect(renderSpy).toHaveBeenCalledTimes(1);
-    expect(redoSpy).not.toHaveBeenCalled();
-    expect(closeSpy).not.toHaveBeenCalled();
-    expect(ev.preventDefault).toHaveBeenCalled();
+describe('InlineRunnerModal keyboard policy', () => {
+  it.each([
+    { key: 'ArrowLeft', ctrlKey: true },
+    { key: 'ArrowLeft', altKey: true },
+    { key: 'ArrowRight', ctrlKey: true },
+    { key: 'ArrowRight', altKey: true },
+  ])('delegates $key with a navigation modifier to the shared host', (keys) => {
+    const h = setup();
+    const keyboardEvent = event(keys);
+    (h.modal as any).handleKeydown(keyboardEvent);
+    expect(h.handleKeydown).toHaveBeenCalledWith(keyboardEvent);
+    expect(h.close).not.toHaveBeenCalled();
   });
 
-  it('Alt+ArrowLeft calls stepBack then render', () => {
-    const { modal, stepBackSpy, renderSpy } = setup();
-    const ev = makeKeyboardEvent({ key: 'ArrowLeft', altKey: true });
-    (modal as any).handleKeydown(ev);
-    expect(stepBackSpy).toHaveBeenCalledTimes(1);
-    expect(renderSpy).toHaveBeenCalledTimes(1);
+  it('keeps Escape as floating-shell close policy', () => {
+    const h = setup();
+    const keyboardEvent = event({ key: 'Escape' });
+    (h.modal as any).handleKeydown(keyboardEvent);
+    expect(keyboardEvent.preventDefault).toHaveBeenCalled();
+    expect(h.close).toHaveBeenCalledTimes(1);
+    expect(h.handleKeydown).not.toHaveBeenCalled();
   });
 
-  it('Ctrl+ArrowRight calls redo then render', () => {
-    const { modal, redoSpy, renderSpy, stepBackSpy, closeSpy } = setup();
-    const ev = makeKeyboardEvent({ key: 'ArrowRight', ctrlKey: true });
-    (modal as any).handleKeydown(ev);
-    expect(redoSpy).toHaveBeenCalledTimes(1);
-    expect(renderSpy).toHaveBeenCalledTimes(1);
-    expect(stepBackSpy).not.toHaveBeenCalled();
-    expect(closeSpy).not.toHaveBeenCalled();
-    expect(ev.preventDefault).toHaveBeenCalled();
-  });
-
-  it('Alt+ArrowRight calls redo then render', () => {
-    const { modal, redoSpy, renderSpy } = setup();
-    const ev = makeKeyboardEvent({ key: 'ArrowRight', altKey: true });
-    (modal as any).handleKeydown(ev);
-    expect(redoSpy).toHaveBeenCalledTimes(1);
-    expect(renderSpy).toHaveBeenCalledTimes(1);
-  });
-
-  it('Escape calls close', () => {
-    const { modal, closeSpy, stepBackSpy, redoSpy, renderSpy } = setup();
-    const ev = makeKeyboardEvent({ key: 'Escape' });
-    (modal as any).handleKeydown(ev);
-    expect(closeSpy).toHaveBeenCalledTimes(1);
-    expect(stepBackSpy).not.toHaveBeenCalled();
-    expect(redoSpy).not.toHaveBeenCalled();
-    expect(renderSpy).not.toHaveBeenCalled();
-    expect(ev.preventDefault).toHaveBeenCalled();
-  });
-
-  it('ignores shortcuts when an INPUT is focused', () => {
-    const { modal, stepBackSpy, redoSpy, closeSpy, renderSpy } = setup();
-    (modal as any).handleKeydown(makeKeyboardEvent({ key: 'ArrowLeft', ctrlKey: true, target: { tagName: 'INPUT' } }));
-    (modal as any).handleKeydown(makeKeyboardEvent({ key: 'ArrowRight', ctrlKey: true, target: { tagName: 'INPUT' } }));
-    (modal as any).handleKeydown(makeKeyboardEvent({ key: 'Escape', target: { tagName: 'INPUT' } }));
-    expect(stepBackSpy).not.toHaveBeenCalled();
-    expect(redoSpy).not.toHaveBeenCalled();
-    expect(closeSpy).not.toHaveBeenCalled();
-    expect(renderSpy).not.toHaveBeenCalled();
-  });
-
-  it('ignores shortcuts when a TEXTAREA is focused', () => {
-    const { modal, stepBackSpy, redoSpy, closeSpy, renderSpy } = setup();
-    (modal as any).handleKeydown(makeKeyboardEvent({ key: 'ArrowLeft', ctrlKey: true, target: { tagName: 'TEXTAREA' } }));
-    expect(stepBackSpy).not.toHaveBeenCalled();
-    expect(redoSpy).not.toHaveBeenCalled();
-    expect(closeSpy).not.toHaveBeenCalled();
-    expect(renderSpy).not.toHaveBeenCalled();
-  });
-
-  it('ignores plain arrow keys without Ctrl/Alt', () => {
-    const { modal, stepBackSpy, redoSpy, closeSpy, renderSpy } = setup();
-    (modal as any).handleKeydown(makeKeyboardEvent({ key: 'ArrowLeft' }));
-    (modal as any).handleKeydown(makeKeyboardEvent({ key: 'ArrowRight' }));
-    expect(stepBackSpy).not.toHaveBeenCalled();
-    expect(redoSpy).not.toHaveBeenCalled();
-    expect(closeSpy).not.toHaveBeenCalled();
-    expect(renderSpy).not.toHaveBeenCalled();
-  });
-
-  it('ignores unrelated keys even with Ctrl/Alt', () => {
-    const { modal, stepBackSpy, redoSpy, closeSpy, renderSpy } = setup();
-    (modal as any).handleKeydown(makeKeyboardEvent({ key: 'Enter', ctrlKey: true }));
-    (modal as any).handleKeydown(makeKeyboardEvent({ key: 'a', altKey: true }));
-    expect(stepBackSpy).not.toHaveBeenCalled();
-    expect(redoSpy).not.toHaveBeenCalled();
-    expect(closeSpy).not.toHaveBeenCalled();
-    expect(renderSpy).not.toHaveBeenCalled();
+  it.each(['INPUT', 'TEXTAREA'])('ignores every shell shortcut from %s', (tagName) => {
+    const h = setup();
+    (h.modal as any).handleKeydown(event({
+      key: 'Escape',
+      target: { tagName },
+    }));
+    expect(h.close).not.toHaveBeenCalled();
+    expect(h.handleKeydown).not.toHaveBeenCalled();
   });
 });

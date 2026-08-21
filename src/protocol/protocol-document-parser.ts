@@ -235,6 +235,7 @@ export class ProtocolDocumentParser {
           kind: 'answer',
           answerText: getString(fields, 'answerText', raw.text ?? '', 'radiprotocol_answerText'),
           displayLabel: getOptionalString(fields, 'displayLabel', 'radiprotocol_displayLabel'),
+          freeText: getOptionalBoolean(fields, 'freeText', 'radiprotocol_freeText') ?? false,
           radiprotocol_separator: getSeparator(fields, 'separator', 'radiprotocol_separator'),
         };
         return node;

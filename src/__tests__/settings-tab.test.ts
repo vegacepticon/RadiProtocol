@@ -3,6 +3,7 @@ import { DEFAULT_SETTINGS, RadiProtocolSettingsTab, type RadiProtocolSettings } 
 import {
   __getMockAbstractInputSuggestInstances,
   __getMockTextComponents,
+  __getMockToggleComponents,
   __resetObsidianMocks,
 } from '../__mocks__/obsidian';
 
@@ -17,6 +18,10 @@ describe('Settings defaults (RUN-07)', () => {
 
   it('DEFAULT_SETTINGS: protocolFolderPath defaults to Protocols', () => {
     expect(DEFAULT_SETTINGS.protocolFolderPath).toBe('Protocols');
+  });
+
+  it('defaults sidebar presentation to disabled for new and migrated installs', () => {
+    expect(DEFAULT_SETTINGS.useSidebarRunner).toBe(false);
   });
 
   it('SettingsTab has display method (stub check)', async () => {
@@ -84,8 +89,33 @@ function renderSettings(settings: Partial<RadiProtocolSettings> = {}) {
     plugin,
     textComponents: __getMockTextComponents(),
     suggesters: __getMockAbstractInputSuggestInstances(),
+    toggleComponents: __getMockToggleComponents(),
   };
 }
+
+describe('Settings sidebar runner toggle', () => {
+  it.each([false, true])(
+    'renders the persisted initial value %s',
+    (useSidebarRunner) => {
+      const { toggleComponents } = renderSettings({ useSidebarRunner });
+
+      expect(toggleComponents).toHaveLength(1);
+      expect(toggleComponents[0]!.value).toBe(useSidebarRunner);
+    },
+  );
+
+  it('persists toggle changes through saveSettings', async () => {
+    const { plugin, toggleComponents } = renderSettings({ useSidebarRunner: false });
+
+    await toggleComponents[0]!.trigger(true);
+    expect(plugin.settings.useSidebarRunner).toBe(true);
+    expect(plugin.saveSettingsCalls).toBe(1);
+
+    await toggleComponents[0]!.trigger(false);
+    expect(plugin.settings.useSidebarRunner).toBe(false);
+    expect(plugin.saveSettingsCalls).toBe(2);
+  });
+});
 
 describe('Settings folder autocomplete (SETTINGS-01)', () => {
   beforeEach(() => {

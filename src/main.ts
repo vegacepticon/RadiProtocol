@@ -18,7 +18,15 @@ import { normalizeProtocolFolderPath, resolveProtocolDocumentFiles } from './pro
 // Phase 45 (LOOP-06): start-from-node command dependencies
 import { NodePickerModal, buildStartableProtocolNodeOptions } from './views/node-picker-modal';
 // Phase 54: inline protocol display mode
-import { InlineRunnerModal } from './views/inline-runner-modal';
+import {
+  InlineRunnerModal,
+  inlineRunnerRegistryKey,
+} from './views/inline-runner-modal';
+import {
+  SidebarRunnerView,
+  SIDEBAR_RUNNER_VIEW_TYPE,
+  createSidebarRunnerEphemeralState,
+} from './views/sidebar-runner-view';
 import { InsertSnippetModal } from './views/insert-snippet-modal';
 import { SnippetEditorModal } from './views/snippet-editor-modal';
 import { ProtocolEditorView, PROTOCOL_EDITOR_VIEW_TYPE } from './views/protocol-editor-view';
@@ -32,6 +40,11 @@ import {
   type LibraryPickerContext,
 } from './views/protocol-picker-modal';
 
+export interface OpenRunnerSessionOptions {
+  protocolPath: string;
+  targetNote: TFile;
+  startNodeId?: string;
+}
 
 export default class RadiProtocolPlugin extends Plugin {
   settings!: RadiProtocolSettings;
@@ -105,6 +118,11 @@ export default class RadiProtocolPlugin extends Plugin {
     // Slice 9 — Register LibraryView ItemView (community library, D4 first-class view)
     this.registerView(LIBRARY_VIEW_TYPE, (leaf) => new LibraryView(leaf, this));
 
+    this.registerView(
+      SIDEBAR_RUNNER_VIEW_TYPE,
+      (leaf) => new SidebarRunnerView(leaf, this),
+    );
+
     // Command: open-community-library (NFR-06: no plugin name prefix)
     this.addCommand({
       id: 'open-community-library',
@@ -136,7 +154,7 @@ export default class RadiProtocolPlugin extends Plugin {
     // Phase 54: inline protocol display mode — command palette only (D3, D9)
     this.addCommand({
       id: 'run-protocol-inline',
-      name: 'Run protocol in inline',
+      name: 'Run protocol',
       callback: () => { void this.handleRunProtocolInline(); },
     });
 
@@ -158,17 +176,17 @@ export default class RadiProtocolPlugin extends Plugin {
     console.debug('[RadiProtocol] Plugin loaded');
   }
 
+  // eslint-disable-next-line obsidianmd/detach-leaves -- runner leaves are intentionally transient and must not survive plugin unload
   async onunload(): Promise<void> {
-    // WR-05: dismiss the canvas picker modal if it's still open
     if (this.pickerModal !== null) {
       this.pickerModal.close();
       this.pickerModal = null;
     }
-    // Phase 85 INLINE-MULTI-01: close any open inline runners to prevent DOM leaks.
     for (const modal of this.inlineRunners.values()) {
       modal.close();
     }
     this.inlineRunners.clear();
+    this.app.workspace.detachLeavesOfType(SIDEBAR_RUNNER_VIEW_TYPE);
     console.debug('[RadiProtocol] Plugin unloaded');
   }
 
@@ -376,8 +394,11 @@ export default class RadiProtocolPlugin extends Plugin {
     }
 
     new NodePickerModal(this.app, options, (opt) => {
-      const modal = new InlineRunnerModal(this.app, this, protocolFile.path, activeFile, opt.id);
-      void modal.open();
+      void this.openRunnerSession({
+        protocolPath: protocolFile.path,
+        targetNote: activeFile,
+        startNodeId: opt.id,
+      });
     }, this).open();
   }
 
@@ -501,7 +522,10 @@ export default class RadiProtocolPlugin extends Plugin {
       protocolFiles,
       (item) => {
         this.pickerModal = null;
-        void this.openInlineRunner(item.file, activeFile);
+        void this.openRunnerSession({
+          protocolPath: item.file.path,
+          targetNote: activeFile,
+        });
       },
       libraryContext,
       this.i18n.t.bind(this.i18n),
@@ -510,20 +534,55 @@ export default class RadiProtocolPlugin extends Plugin {
     this.pickerModal.open();
   }
 
-  /** Open the InlineRunnerModal for a selected protocol and target note.
-   *  Phase 85 INLINE-MULTI-01: if a runner for the same (protocolPath, notePath) is
-   *  already open, focus the existing instance instead of spawning a duplicate. */
-  private async openInlineRunner(protocolFile: TFile, targetNote: TFile): Promise<void> {
-    const key = `${protocolFile.path}#${targetNote.path}`;
+  /** Open one transient runner session using the configured presentation. */
+  async openRunnerSession(options: OpenRunnerSessionOptions): Promise<void> {
+    if (this.settings.useSidebarRunner === true) {
+      const leaf = this.app.workspace.getRightLeaf(false);
+      if (leaf === null) return;
+
+      const ephemeralState = createSidebarRunnerEphemeralState();
+      leaf.setEphemeralState(ephemeralState);
+      try {
+        await leaf.setViewState({
+          type: SIDEBAR_RUNNER_VIEW_TYPE,
+          active: true,
+          state: {},
+        }, ephemeralState);
+        if (leaf.isDeferred) await leaf.loadIfDeferred();
+        await this.app.workspace.revealLeaf(leaf);
+
+        const view = leaf.view;
+        if (!(view instanceof SidebarRunnerView)) {
+          leaf.detach();
+          return;
+        }
+        await view.initialize(options);
+      } catch (error) {
+        leaf.detach();
+        console.error('[RadiProtocol] Failed to open sidebar runner', error);
+      }
+      return;
+    }
+
+    const key = inlineRunnerRegistryKey(
+      options.protocolPath,
+      options.targetNote.path,
+      options.startNodeId,
+    );
     const existing = this.getInlineRunner(key);
     if (existing !== null) {
       existing.focus();
       return;
     }
-    const modal = new InlineRunnerModal(this.app, this, protocolFile.path, targetNote);
+
+    const modal = new InlineRunnerModal(
+      this.app,
+      this,
+      options.protocolPath,
+      options.targetNote,
+      options.startNodeId,
+    );
     await modal.open();
-    if (modal.isOpen()) {
-      this.registerInlineRunner(key, modal);
-    }
+    if (modal.isOpen()) this.registerInlineRunner(key, modal);
   }
 }

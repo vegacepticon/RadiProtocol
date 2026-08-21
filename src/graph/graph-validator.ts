@@ -111,6 +111,17 @@ export class GraphValidator {
       }
     }
 
+    // Free-text Answers use displayLabel ?? answerText as the visible prompt.
+    // Validate that exact projection: a whitespace-only displayLabel masks a
+    // nonblank answerText and therefore still produces an unusable control.
+    for (const [, node] of graph.nodes) {
+      if (node.kind !== 'answer' || node.freeText !== true) continue;
+      const prompt = node.displayLabel ?? node.answerText;
+      if (prompt.trim() === '') {
+        errors.push(this.t('graphValidator.freeTextAnswerPromptRequired', { id: node.id }));
+      }
+    }
+
     // Loop exit/body invariants for looped questions (loop === true).
     // Exit edges are identified by edge.isLoopExit === true (explicit metadata,
     // replacing the former `+`-prefix convention). Multiple exits are valid.

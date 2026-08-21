@@ -60,6 +60,12 @@ export interface AnswerNode extends RPNodeBase {
   kind: 'answer';
   answerText: string;
   displayLabel?: string;
+  /**
+   * When true, the Answer is rendered as a user-entered multiline value.
+   * The Answer id remains the branch identity; answerText/displayLabel supply
+   * only the prompt. Absent/false keeps preset Answer behavior.
+   */
+  freeText?: boolean;
   radiprotocol_separator?: 'newline' | 'space';
 }
 

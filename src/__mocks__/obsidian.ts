@@ -4,67 +4,28 @@
  * Real Obsidian runtime is only available inside the Obsidian desktop app.
  */
 
-/** Minimal mock element returned by createEl/createDiv */
-function makeMockEl(): MockElement {
-  const classes = new Set<string>();
-  const attrs = new Map<string, string>();
-  const listeners = new Map<string, Array<unknown>>();
-  const el: MockElement = {
-    recordedCssProps: [],
-    createEl: (_tag: string, _opts?: unknown) => makeMockEl(),
-    createDiv: (_opts?: unknown) => makeMockEl(),
-    empty: () => {},
-    setText: (_text: string) => {},
-    setCssProps: (props: Record<string, string>) => {
-      el.recordedCssProps.push({ ...props });
-    },
-    type: '',
-    min: '',
-    placeholder: '',
-    value: '',
-    rows: 10,
-    disabled: false,
-    title: '',
-    textContent: '',
-    addEventListener: (type: string, cb: unknown) => {
-      const existing = listeners.get(type) ?? [];
-      existing.push(cb);
-      listeners.set(type, existing);
-    },
-    setAttribute: (name: string, value: string) => {
-      attrs.set(name, value);
-    },
-    setAttr: (name: string, value: string | number | boolean) => {
-      attrs.set(name, String(value));
-    },
-    getAttribute: (name: string) => attrs.get(name) ?? null,
-    addClass: (cls: string) => {
-      classes.add(cls);
-    },
-    removeClass: (cls: string) => {
-      classes.delete(cls);
-    },
-    toggleClass: (cls: string, force?: boolean) => {
-      if (force === true) classes.add(cls);
-      else if (force === false) classes.delete(cls);
-      else if (classes.has(cls)) classes.delete(cls);
-      else classes.add(cls);
-    },
-    querySelectorAll: (_sel: string) => [],
-    click: () => {},
-    setCssStyles: (props: Record<string, string>) => {
-      el.recordedCssProps.push({ ...props });
-    },
-    getCssStyles: () => ({}),
-  };
-  return el;
-}
-
-interface MockElement {
+/** Child-retaining mock element used by ItemView and settings tests. */
+export interface MockElement {
   recordedCssProps: Record<string, string>[];
-  createEl: (tag: string, opts?: unknown) => MockElement;
-  createDiv: (opts?: unknown) => MockElement;
+  tagName: string;
+  children: MockElement[];
+  parentElement: MockElement | null;
+  classList: Set<string>;
+  hidden: boolean;
+  createEl: (tag: string, opts?: {
+    text?: string;
+    cls?: string;
+    type?: string;
+    attr?: Record<string, string>;
+  }) => MockElement;
+  createDiv: (opts?: {
+    text?: string;
+    cls?: string;
+    attr?: Record<string, string>;
+  }) => MockElement;
   empty: () => void;
+  remove: () => void;
+  contains: (candidate: unknown) => boolean;
   setText: (text: string) => void;
   setCssProps: (props: Record<string, string>) => void;
   type: string;
@@ -75,17 +36,145 @@ interface MockElement {
   disabled: boolean;
   title: string;
   textContent: string;
-  addEventListener: (type: string, cb: unknown) => void;
+  addEventListener: (type: string, cb: (event: any) => void) => void;
+  removeEventListener: (type: string, cb: (event: any) => void) => void;
+  dispatchEvent: (event: { type: string; [key: string]: unknown }) => boolean;
   setAttribute: (name: string, value: string) => void;
   setAttr: (name: string, value: string | number | boolean) => void;
   getAttribute: (name: string) => string | null;
   addClass: (cls: string) => void;
   removeClass: (cls: string) => void;
   toggleClass: (cls: string, force?: boolean) => void;
-  querySelectorAll: (sel: string) => MockElement[];
+  hasClass: (cls: string) => boolean;
+  querySelector: (selector: string) => MockElement | null;
+  querySelectorAll: (selector: string) => MockElement[];
   click: () => void;
   setCssStyles: (props: Record<string, string>) => void;
   getCssStyles: () => Record<string, string>;
+}
+
+function makeMockEl(tag = 'div'): MockElement {
+  const classes = new Set<string>();
+  const attrs = new Map<string, string>();
+  const listeners = new Map<string, Array<(event: any) => void>>();
+  const children: MockElement[] = [];
+
+  const matches = (candidate: MockElement, selector: string): boolean => {
+    if (selector.startsWith('.')) return candidate.classList.has(selector.slice(1));
+    const attrMatch = /^([a-zA-Z]+)\[([^=]+)="([^"]+)"\]$/.exec(selector);
+    if (attrMatch !== null) {
+      return candidate.tagName === attrMatch[1]!.toUpperCase()
+        && candidate.getAttribute(attrMatch[2]!) === attrMatch[3];
+    }
+    return candidate.tagName === selector.toUpperCase();
+  };
+
+  const descendants = (selector: string): MockElement[] => {
+    const found: MockElement[] = [];
+    const queue = [...children];
+    while (queue.length > 0) {
+      const candidate = queue.shift()!;
+      if (matches(candidate, selector)) found.push(candidate);
+      queue.push(...candidate.children);
+    }
+    return found;
+  };
+
+  const el: MockElement = {
+    recordedCssProps: [],
+    tagName: tag.toUpperCase(),
+    children,
+    parentElement: null,
+    classList: classes,
+    hidden: false,
+    createEl: (childTag, opts = {}) => {
+      const child = makeMockEl(childTag);
+      child.parentElement = el;
+      if (opts.text !== undefined) child.textContent = opts.text;
+      if (opts.cls !== undefined) {
+        for (const cls of opts.cls.split(/\s+/).filter(Boolean)) child.addClass(cls);
+      }
+      if (opts.type !== undefined) {
+        child.type = opts.type;
+        child.setAttribute('type', opts.type);
+      }
+      if (opts.attr !== undefined) {
+        for (const [name, value] of Object.entries(opts.attr)) {
+          child.setAttribute(name, value);
+        }
+      }
+      children.push(child);
+      return child;
+    },
+    createDiv: (opts = {}) => el.createEl('div', opts),
+    empty: () => {
+      for (const child of children) child.parentElement = null;
+      children.length = 0;
+    },
+    remove: () => {
+      const parent = el.parentElement;
+      if (parent === null) return;
+      const index = parent.children.indexOf(el);
+      if (index >= 0) parent.children.splice(index, 1);
+      el.parentElement = null;
+    },
+    contains: (candidate) => {
+      if (candidate === el) return true;
+      const queue = [...children];
+      while (queue.length > 0) {
+        const child = queue.shift()!;
+        if (child === candidate) return true;
+        queue.push(...child.children);
+      }
+      return false;
+    },
+    setText: (text) => { el.textContent = text; },
+    setCssProps: (props) => { el.recordedCssProps.push({ ...props }); },
+    type: '',
+    min: '',
+    placeholder: '',
+    value: '',
+    rows: 10,
+    disabled: false,
+    title: '',
+    textContent: '',
+    addEventListener: (type, cb) => {
+      listeners.set(type, [...(listeners.get(type) ?? []), cb]);
+    },
+    removeEventListener: (type, cb) => {
+      listeners.set(type, (listeners.get(type) ?? []).filter(listener => listener !== cb));
+    },
+    dispatchEvent: (event) => {
+      const dispatched = {
+        ...event,
+        target: event.target === undefined ? el : event.target,
+      };
+      for (const listener of listeners.get(event.type) ?? []) listener(dispatched);
+      return true;
+    },
+    setAttribute: (name, value) => {
+      attrs.set(name, value);
+      if (name === 'type') el.type = value;
+    },
+    setAttr: (name, value) => { attrs.set(name, String(value)); },
+    getAttribute: (name) => attrs.get(name) ?? null,
+    addClass: (cls) => { classes.add(cls); },
+    removeClass: (cls) => { classes.delete(cls); },
+    toggleClass: (cls, force) => {
+      if (force === true) classes.add(cls);
+      else if (force === false) classes.delete(cls);
+      else if (classes.has(cls)) classes.delete(cls);
+      else classes.add(cls);
+    },
+    hasClass: (cls) => classes.has(cls),
+    querySelector: (selector) => descendants(selector)[0] ?? null,
+    querySelectorAll: (selector) => descendants(selector),
+    click: () => { el.dispatchEvent({ type: 'click' }); },
+    setCssStyles: (props) => { el.recordedCssProps.push({ ...props }); },
+    getCssStyles: () => Object.assign({}, ...el.recordedCssProps),
+  };
+
+  return el;
 }
 
 interface MockInputEvent {
@@ -102,6 +191,7 @@ interface MockInputEl {
 }
 
 const mockTextComponents: MockTextComponent[] = [];
+const mockToggleComponents: MockToggle[] = [];
 const mockAbstractInputSuggestInstances: AbstractInputSuggest<unknown>[] = [];
 
 function makeMockInputEl(): MockInputEl {
@@ -152,11 +242,16 @@ interface MockTextComponent {
 
 export function __resetObsidianMocks(): void {
   mockTextComponents.length = 0;
+  mockToggleComponents.length = 0;
   mockAbstractInputSuggestInstances.length = 0;
 }
 
 export function __getMockTextComponents(): MockTextComponent[] {
   return mockTextComponents;
+}
+
+export function __getMockToggleComponents(): MockToggle[] {
+  return mockToggleComponents;
 }
 
 export function __getMockAbstractInputSuggestInstances(): AbstractInputSuggest<unknown>[] {
@@ -202,17 +297,32 @@ interface MockDropdown {
   onChange: (cb: (v: string) => void) => MockDropdown;
 }
 
-function makeMockToggle(): MockToggle {
-  const toggle: MockToggle = {
-    setValue: (_value: boolean) => toggle,
-    onChange: (_cb: (value: boolean) => void) => toggle,
-  };
-  return toggle;
+export interface MockToggle {
+  value: boolean;
+  setValue: (value: boolean) => MockToggle;
+  onChange: (cb: (value: boolean) => void | Promise<void>) => MockToggle;
+  trigger: (value: boolean) => Promise<void>;
 }
 
-interface MockToggle {
-  setValue: (value: boolean) => MockToggle;
-  onChange: (cb: (value: boolean) => void) => MockToggle;
+function makeMockToggle(): MockToggle {
+  let onChange: ((value: boolean) => void | Promise<void>) | null = null;
+  const toggle: MockToggle = {
+    value: false,
+    setValue: (value) => {
+      toggle.value = value;
+      return toggle;
+    },
+    onChange: (cb) => {
+      onChange = cb;
+      return toggle;
+    },
+    trigger: async (value) => {
+      toggle.value = value;
+      await onChange?.(value);
+    },
+  };
+  mockToggleComponents.push(toggle);
+  return toggle;
 }
 
 /** Mock ButtonComponent — supports setCta and onClick chaining */
@@ -246,21 +356,110 @@ interface MockExtraButton {
   onClick: (cb: () => void) => MockExtraButton;
 }
 
+interface MockEventRef {
+  event: string;
+  handler: (...args: any[]) => void;
+}
+
 export class ItemView {
-  leaf: unknown;
-  contentEl: ReturnType<typeof makeMockEl>;
-  constructor(leaf: unknown) {
+  app: any;
+  leaf: WorkspaceLeaf;
+  containerEl: MockElement;
+  contentEl: MockElement;
+  private readonly eventRefs: MockEventRef[] = [];
+
+  constructor(leaf: WorkspaceLeaf) {
     this.leaf = leaf;
-    this.contentEl = makeMockEl();
+    this.app = leaf.app;
+    this.containerEl = makeMockEl();
+    this.contentEl = this.containerEl.createDiv();
   }
+
   getViewType(): string { return ''; }
   getDisplayText(): string { return ''; }
   getIcon(): string { return ''; }
   getState(): Record<string, unknown> { return {}; }
   setState(_state: unknown, _result: unknown): Promise<void> { return Promise.resolve(); }
+  getEphemeralState(): Record<string, unknown> { return this.leaf.getEphemeralState(); }
+  setEphemeralState(state: unknown): void { this.leaf.setEphemeralState(state); }
+  registerEvent(ref: MockEventRef): MockEventRef {
+    this.eventRefs.push(ref);
+    return ref;
+  }
+  registerDomEvent(
+    element: MockElement,
+    event: string,
+    callback: (event: any) => void,
+  ): void {
+    element.addEventListener(event, callback);
+  }
+  onOpen(): void | Promise<void> {}
+  onClose(): void | Promise<void> {}
 }
 
-export class WorkspaceLeaf {}
+export class WorkspaceLeaf {
+  app: any;
+  view: any = {};
+  isDeferred = false;
+  detached = false;
+  detachCalls = 0;
+  openedFile: TFile | null = null;
+  lastViewState: Record<string, unknown> | null = null;
+  lastEState: unknown = null;
+  private ephemeralState: Record<string, unknown> = {};
+  private closed = false;
+  private readonly viewFactory?: (leaf: WorkspaceLeaf, type: string) => any;
+
+  constructor(
+    app: any = {},
+    viewFactory?: (leaf: WorkspaceLeaf, type: string) => any,
+  ) {
+    this.app = app;
+    this.viewFactory = viewFactory;
+  }
+
+  getViewState(): Record<string, unknown> {
+    return this.lastViewState ?? { type: 'empty' };
+  }
+
+  async setViewState(viewState: Record<string, unknown>, eState?: unknown): Promise<void> {
+    this.lastViewState = viewState;
+    this.lastEState = eState;
+    if (eState !== undefined) this.setEphemeralState(eState);
+    const type = typeof viewState.type === 'string' ? viewState.type : '';
+    if (this.viewFactory !== undefined) {
+      this.view = this.viewFactory(this, type);
+      await this.view.onOpen?.();
+    }
+  }
+
+  async loadIfDeferred(): Promise<void> {
+    this.isDeferred = false;
+  }
+
+  getEphemeralState(): Record<string, unknown> {
+    return this.ephemeralState;
+  }
+
+  setEphemeralState(state: unknown): void {
+    this.ephemeralState = state !== null && typeof state === 'object'
+      ? { ...(state as Record<string, unknown>) }
+      : {};
+  }
+
+  detach(): void {
+    this.detachCalls += 1;
+    this.detached = true;
+    if (this.closed) return;
+    this.closed = true;
+    void this.view?.onClose?.();
+  }
+
+  async openFile(file: TFile): Promise<void> {
+    this.openedFile = file;
+    this.view = { file };
+  }
+}
 
 export class PluginSettingTab {
   app: unknown;
@@ -277,6 +476,35 @@ export class PluginSettingTab {
 export class Plugin {
   app: unknown = {};
   manifest: unknown = {};
+}
+
+export class App {}
+
+export class MarkdownView {
+  file: TFile | null = null;
+  editor = {
+    replaceSelection: (_value: string): void => {},
+    getSelection: (): string => '',
+  };
+}
+
+export class Menu {
+  addItem(callback: (item: {
+    setTitle(title: string): any;
+    setIcon(icon: string): any;
+    onClick(handler: () => void): any;
+  }) => void): this {
+    const item: any = {
+      setTitle: () => item,
+      setIcon: () => item,
+      onClick: () => item,
+    };
+    callback(item);
+    return this;
+  }
+
+  showAtMouseEvent(_event: MouseEvent): void {}
+  showAtPosition(_position: { x: number; y: number }): void {}
 }
 
 export class Modal {

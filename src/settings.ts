@@ -27,6 +27,8 @@ export interface RadiProtocolSettings {
   protocolFolderPath: string;
   /** Separator inserted before each new text chunk in the runner (D-08, SEP-01). Default: 'newline'. */
   textSeparator: 'newline' | 'space';
+  /** Present runner sessions in independent transient right-sidebar leaves. Absent = false for compatibility. */
+  useSidebarRunner?: boolean;
   /** Phase 60 (D-01): Last dragged inline runner position; Phase 67 (D-05/D-06) extended with optional width/height. */
   inlineRunnerPosition?: InlineRunnerLayout | null;
   /** Phase 84 (I18N-01): UI language. Default 'en' for new installs; existing installs without this key default to 'ru' for backward compat. */
@@ -42,6 +44,7 @@ export const DEFAULT_SETTINGS: RadiProtocolSettings = {
   snippetTreeExpandedPaths: [],
   protocolFolderPath: 'Protocols',
   textSeparator: 'newline',
+  useSidebarRunner: false,
   inlineRunnerPosition: null,
   locale: 'en',
   libraryRegistryUrl: '',
@@ -91,6 +94,16 @@ export class RadiProtocolSettingsTab extends PluginSettingTab {
             void this.plugin.saveSettings();
           });
       });
+
+    new Setting(containerEl)
+      .setName(this.plugin.i18n.t('settings.useSidebarRunner'))
+      .setDesc(this.plugin.i18n.t('settings.useSidebarRunnerDesc'))
+      .addToggle(toggle => toggle
+        .setValue(this.plugin.settings.useSidebarRunner === true)
+        .onChange(async (value) => {
+          this.plugin.settings.useSidebarRunner = value;
+          await this.plugin.saveSettings();
+        }));
 
     // Group 2 — Storage
     new Setting(containerEl).setName(this.plugin.i18n.t('settings.storageHeading')).setHeading();

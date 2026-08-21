@@ -1,684 +1,264 @@
-// Phase 59 Wave 0 — INLINE-FIX-04 / INLINE-FIX-05 / D1 / D6 / D7 test scaffolding.
-// Phase 75 plan 06 — MockEl harness, obsidian mock, and SnippetFillInModal mock
-// moved to runner-renderer-host-fixtures.ts (shared across all 3 inline host
-// test files). The host-specific tests below remain unchanged: vault.modify
-// content / append-policy, modal lifecycle (instance creation, open, resolve),
-// and source-string regression guards.
-import { describe, it, expect, beforeEach, vi } from 'vitest';
-import * as fs from 'node:fs';
-import * as path from 'node:path';
-import {
-  type MockEl,
-  makeEl,
-  resetFillModalInstances,
-  getFillModalInstances,
-} from '../runner/runner-renderer-host-fixtures';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { makeBaseApp, makeBasePlugin, makeEl, type MockEl } from '../runner/runner-renderer-host-fixtures';
+
+const hostInstances = vi.hoisted(() => [] as Array<{
+  options: Record<string, unknown>;
+  disposed: boolean;
+  childOpen: boolean;
+  keydown: ReturnType<typeof vi.fn>;
+  header: MockEl | null;
+}>);
+const layoutInstances = vi.hoisted(() => [] as Array<{
+  enableDragging: ReturnType<typeof vi.fn>;
+  applyInitialLayout: ReturnType<typeof vi.fn>;
+  reclampCurrentPosition: ReturnType<typeof vi.fn>;
+  startWindowResizeListener: ReturnType<typeof vi.fn>;
+  handleResizeTick: ReturnType<typeof vi.fn>;
+  destroy: ReturnType<typeof vi.fn>;
+}>);
+const resizeObservers = vi.hoisted(() => [] as Array<{
+  observed: unknown[];
+  disconnected: boolean;
+}>);
 
 vi.mock('obsidian', async () => {
   const fixtures = await import('../runner/runner-renderer-host-fixtures');
   return fixtures.createObsidianModuleMock();
 });
-
-vi.mock('../../views/snippet-fill-in-modal', async () => {
-  const fixtures = await import('../runner/runner-renderer-host-fixtures');
-  return fixtures.createSnippetFillInModalMock();
-});
-
-import { InlineRunnerModal } from '../../views/inline-runner-modal';
-import { TFile } from 'obsidian';
-import { makeBaseApp, makeBasePlugin } from '../runner/runner-renderer-host-fixtures';
-import type { ProtocolGraph, RPNode } from '../../graph/graph-model';
-
-// ───── Helpers ─────
-
-function makeTargetNote(): TFile {
-  return new (TFile as any)('notes/target.md');
-}
-
-function setupModal(opts?: { vaultContent?: string; textSeparator?: string }): {
-  modal: InlineRunnerModal;
-  app: ReturnType<typeof makeBaseApp>;
-  plugin: ReturnType<typeof makeBasePlugin>;
-  targetNote: TFile;
-} {
-  const targetNote = makeTargetNote();
-  const plugin = makeBasePlugin({ textSeparator: opts?.textSeparator });
-  const app = makeBaseApp(plugin, { vaultContent: opts?.vaultContent });
-  const modal = new InlineRunnerModal(
-    app as any,
-    plugin as any,
-    'test.canvas',
-    targetNote,
-  );
-  return { modal, app, plugin, targetNote };
-}
-
-// Shorthand: mock runner.getState + (optional) runner.pickSnippet/completeSnippet around an
-// accumulator delta. Most tests in this file follow the same shape — wire a
-// snippet-pick or snippet-fill state, then assert vault.modify content.
-function spyRunnerState(
-  modal: InlineRunnerModal,
-  status: 'awaiting-snippet-pick' | 'awaiting-snippet-fill',
-  initial: string,
-  separator: '\n' | ' ' | '' = '\n',
-): { setText: (t: string) => void; getText: () => string } {
-  let accumulatedText = initial;
-  vi.spyOn((modal as any).runner, 'getState').mockImplementation(() => ({
-    status, accumulatedText,
-  } as any));
-  vi.spyOn((modal as any).runner, 'pickSnippet').mockImplementation(() => {});
-  vi.spyOn((modal as any).runner, 'completeSnippet').mockImplementation((text: any) => {
-    accumulatedText += separator + text;
-  });
-  return { setText: t => { accumulatedText = t; }, getText: () => accumulatedText };
-}
-
-const MD_TEMPLATE_FILL_SNIPPET = {
-  kind: 'md-template',
-  name: 'fill',
-  path: 'Snippets/fill.md',
-  template: 'R: {{f}}',
-  placeholders: [{ id: 'f', label: 'Findings', type: 'free-text' as const }],
-  validationError: null,
-};
-
-// ───── Tests ─────
-
-describe('InlineRunnerModal — snippet insert separator (INLINE-FIX-04)', () => {
-  it('(a) MD snippet append includes configured newline separator between prior text and snippet content', async () => {
-    const { modal, app } = setupModal({ vaultContent: 'Prior answer' });
-    spyRunnerState(modal, 'awaiting-snippet-pick', 'Prior answer', '\n');
-
-    const mdSnippet = { kind: 'md', path: 'Snippets/report.md', content: 'Report text' };
-    await (modal as any).handleSnippetPickerSelection(mdSnippet);
-
-    expect(app.vault.modify).toHaveBeenCalledWith(
-      expect.anything(),
-      'Prior answer\nReport text',
-    );
-  });
-
-  it('(b) md-template zero-placeholder snippet append applies separator', async () => {
-    const { modal, app } = setupModal({ vaultContent: 'Prior answer' });
-    spyRunnerState(modal, 'awaiting-snippet-pick', 'Prior answer', '\n');
-
-    const templateSnippet = { kind: 'md-template', name: 'static', path: 'Snippets/static.md', template: 'Static text', placeholders: [], validationError: null };
-    await (modal as any).handleSnippetPickerSelection(templateSnippet);
-
-    expect(app.vault.modify).toHaveBeenCalledWith(
-      expect.anything(),
-      'Prior answer\nStatic text',
-    );
-  });
-
-  it('(d) per-node radiprotocol_snippetSeparator = "space" overrides global newline', async () => {
-    const { modal, app } = setupModal({ vaultContent: 'Prior answer' });
-    spyRunnerState(modal, 'awaiting-snippet-pick', 'Prior answer', ' ');
-
-    const mdSnippet = { kind: 'md', path: 'Snippets/report.md', content: 'Report text' };
-    await (modal as any).handleSnippetPickerSelection(mdSnippet);
-
-    expect(app.vault.modify).toHaveBeenCalledWith(
-      expect.anything(),
-      'Prior answer Report text',
-    );
-  });
-
-  it('(e) first-chunk invariant — no leading separator when accumulator is empty', async () => {
-    const { modal, app } = setupModal({ vaultContent: '' });
-    // separator='' simulates the runner's first-chunk-no-separator invariant
-    // (production runner suppresses the leading separator when the accumulator
-    // is empty). The test verifies the host append-policy honors that result.
-    spyRunnerState(modal, 'awaiting-snippet-pick', '', '');
-
-    const mdSnippet = { kind: 'md', path: 'Snippets/report.md', content: 'First snippet' };
-    await (modal as any).handleSnippetPickerSelection(mdSnippet);
-
-    expect(app.vault.modify).toHaveBeenCalledWith(
-      expect.anything(),
-      'First snippet',
-    );
-  });
-});
-
-describe('InlineRunnerModal — JSON fill-in modal (INLINE-FIX-05)', () => {
-  beforeEach(() => {
-    resetFillModalInstances();
-  });
-
-  it('(a) JSON snippet with placeholders instantiates new SnippetFillInModal(app, snippet)', async () => {
-    const { modal } = setupModal();
-    spyRunnerState(modal, 'awaiting-snippet-fill', '', '');
-
-    const zone = makeEl('div');
-    vi.spyOn((modal as any).plugin.snippetService, 'resolveSnippet').mockResolvedValue({ status: 'found', snippet: MD_TEMPLATE_FILL_SNIPPET });
-
-    const promise = (modal as any).handleSnippetFill('fill', zone);
-    await new Promise(r => setTimeout(r, 10));
-
-    const instances = getFillModalInstances();
-    expect(instances.length).toBeGreaterThanOrEqual(1);
-    const instance = instances[instances.length - 1]!;
-    expect(instance.snippet).toBe(MD_TEMPLATE_FILL_SNIPPET);
-    expect(instance.opened).toBe(true);
-
-    instance.__resolve('R: resolved');
-    await promise;
-  });
-
-  it('(b) modal.__resolve(rendered) — runner.completeSnippet(rendered) called + delta appended to note', async () => {
-    const { modal, app } = setupModal({ vaultContent: 'Prior text' });
-    spyRunnerState(modal, 'awaiting-snippet-fill', 'Prior text', '\n');
-
-    const zone = makeEl('div');
-    vi.spyOn((modal as any).plugin.snippetService, 'resolveSnippet').mockResolvedValue({ status: 'found', snippet: MD_TEMPLATE_FILL_SNIPPET });
-
-    const promise = (modal as any).handleSnippetFill('fill', zone);
-    await new Promise(r => setTimeout(r, 10));
-
-    const instances = getFillModalInstances();
-    instances[instances.length - 1]!.__resolve('R: resolved');
-    await promise;
-
-    expect(app.vault.modify).toHaveBeenCalledWith(
-      expect.anything(),
-      'Prior text\nR: resolved',
-    );
-  });
-
-  it('(c) modal.__resolve(null) — runner.completeSnippet("") called + no note append (first-chunk invariant)', async () => {
-    const { modal, app } = setupModal({ vaultContent: '' });
-    spyRunnerState(modal, 'awaiting-snippet-fill', '', '');
-
-    const zone = makeEl('div');
-    vi.spyOn((modal as any).plugin.snippetService, 'resolveSnippet').mockResolvedValue({ status: 'found', snippet: MD_TEMPLATE_FILL_SNIPPET });
-
-    const promise = (modal as any).handleSnippetFill('fill', zone);
-    await new Promise(r => setTimeout(r, 10));
-
-    const instances = getFillModalInstances();
-    instances[instances.length - 1]!.__resolve(null);
-    await promise;
-
-    // After Wave 1c: completeSnippet('') is a no-op for empty string, so no vault.modify call
-    expect(app.vault.modify).not.toHaveBeenCalled();
-  });
-
-  it('(d) in-panel renderSnippetFillIn is no longer reachable (source-string grep inside test)', () => {
-    const src = fs.readFileSync(
-      path.resolve(__dirname, '../../views/inline-runner-modal.ts'),
-      'utf8',
-    );
-    expect(src).not.toContain('renderSnippetFillIn');
-    expect(src).not.toContain('rp-snippet-fill-form');
-  });
-
-  it('(e) Z-index sanity — SnippetFillInModal open() called AFTER inline container attached to DOM', async () => {
-    const { modal } = setupModal();
-    vi.spyOn((modal as any).runner, 'getState').mockImplementation(() => ({
-      status: 'awaiting-snippet-fill',
-      accumulatedText: '',
-    } as any));
-
-    const zone = makeEl('div');
-    vi.spyOn((modal as any).plugin.snippetService, 'resolveSnippet').mockResolvedValue({ status: 'found', snippet: MD_TEMPLATE_FILL_SNIPPET });
-
-    // Simulate container being attached
-    (modal as any).containerEl = makeEl('div') as MockEl;
-    (modal as any).containerEl.setAttribute('class', 'rp-inline-runner-container');
-
-    const promise = (modal as any).handleSnippetFill('fill', zone);
-    await new Promise(r => setTimeout(r, 10));
-
-    const instances = getFillModalInstances();
-    const instance = instances[instances.length - 1]!;
-    expect(instance.opened).toBe(true);
-    instance.__resolve('R: resolved');
-    await promise;
-  });
-});
-
-describe('InlineRunnerModal — resolveSnippet outcomes (Phase 2 JSON-removal)', () => {
-  beforeEach(() => {
-    resetFillModalInstances();
-  });
-
-  it('legacy-json (explicit .json ref) renders the unsupported-format state and calls stepBack', async () => {
-    const { modal } = setupModal();
-    spyRunnerState(modal, 'awaiting-snippet-fill', '', '');
-    const stepBackSpy = vi.spyOn((modal as any).runner, 'stepBack').mockImplementation(() => {});
-    const renderSpy = vi.spyOn((modal as any), 'render').mockImplementation(() => {});
-
-    const zone = makeEl('div');
-    vi.spyOn((modal as any).plugin.snippetService, 'resolveSnippet').mockResolvedValue({
-      status: 'legacy-json',
-      path: 'Snippets/legacy.json',
-    });
-
-    await (modal as any).handleSnippetFill('legacy.json', zone);
-
-    expect(stepBackSpy).toHaveBeenCalledTimes(1);
-    expect(renderSpy).toHaveBeenCalled();
-    // No fill-in modal is opened for legacy-json.
-    expect(getFillModalInstances()).toHaveLength(0);
-    // The zone renders the localized unsupported-format message containing the path.
-    expect(zone.children.length).toBeGreaterThanOrEqual(1);
-    expect(zone.children[0]!._text).toContain('Snippets/legacy.json');
-  });
-
-  it('legacy-json (extensionless id backed by a .json file) renders the unsupported-format state and calls stepBack', async () => {
-    const { modal } = setupModal();
-    spyRunnerState(modal, 'awaiting-snippet-fill', '', '');
-    const stepBackSpy = vi.spyOn((modal as any).runner, 'stepBack').mockImplementation(() => {});
-    vi.spyOn((modal as any), 'render').mockImplementation(() => {});
-
-    const zone = makeEl('div');
-    vi.spyOn((modal as any).plugin.snippetService, 'resolveSnippet').mockResolvedValue({
-      status: 'legacy-json',
-      path: 'Snippets/sub/old.json',
-    });
-
-    await (modal as any).handleSnippetFill('old', zone);
-
-    expect(stepBackSpy).toHaveBeenCalledTimes(1);
-    expect(getFillModalInstances()).toHaveLength(0);
-    expect(zone.children[0]!._text).toContain('Snippets/sub/old.json');
-  });
-
-  it('missing renders the not-found state and does NOT call stepBack', async () => {
-    const { modal } = setupModal();
-    spyRunnerState(modal, 'awaiting-snippet-fill', '', '');
-    const stepBackSpy = vi.spyOn((modal as any).runner, 'stepBack').mockImplementation(() => {});
-
-    const zone = makeEl('div');
-    vi.spyOn((modal as any).plugin.snippetService, 'resolveSnippet').mockResolvedValue({
-      status: 'missing' });
-
-    await (modal as any).handleSnippetFill('nonexistent', zone);
-
-    expect(stepBackSpy).not.toHaveBeenCalled();
-    expect(getFillModalInstances()).toHaveLength(0);
-    expect(zone.children.length).toBeGreaterThanOrEqual(1);
-    expect(zone.children[0]!._text).toContain("Snippet 'nonexistent' not found.");
-  });
-});
-
-describe('InlineRunnerModal — Phase 54 D1/D6/D7 regression guards', () => {
-  it('D1 gate — inline container does NOT get is-hidden while SnippetFillInModal is open (isFillModalOpen flag)', () => {
-    const { modal } = setupModal();
-    const container = makeEl('div');
-    (modal as any).containerEl = container;
-    (modal as any).isFillModalOpen = true;
-
-    // Simulate active leaf change when a different file is active
-    (modal as any).app.workspace.getActiveFile = vi.fn(() => new (TFile as any)('other.md'));
-    (modal as any).app.workspace.iterateAllLeaves = vi.fn((cb: any) => {
-      cb({ view: { file: new (TFile as any)('notes/target.md') } });
-    });
-
-    (modal as any).handleActiveLeafChange();
-
-    expect(container.hasClass('is-hidden')).toBe(false);
-  });
-
-  it('D6 reversal — renderSnippetFillIn symbol does not exist in current inline-runner-modal.ts source', () => {
-    const src = fs.readFileSync(
-      path.resolve(__dirname, '../../views/inline-runner-modal.ts'),
-      'utf8',
-    );
-    expect(src).not.toContain('renderSnippetFillIn');
-    expect(src).not.toContain('rp-snippet-fill-form');
-  });
-
-  it('D7 parity — inline snippet insert produces same delta as sidebar for identical fixture', async () => {
-    const { modal, app } = setupModal({ vaultContent: '' });
-    spyRunnerState(modal, 'awaiting-snippet-pick', '', '\n');
-
-    const mdSnippet = { kind: 'md', path: 'Snippets/report.md', content: 'Report text' };
-    await (modal as any).handleSnippetPickerSelection(mdSnippet);
-
-    const inlineDelta = app._modifyCalls[0]?.[1] ?? '';
-    expect(inlineDelta).toBe('\nReport text');
-  });
-});
-
-describe('InlineRunnerModal — INLINE-FIX-04 (c) JSON with-placeholder + separator', () => {
-  beforeEach(() => {
-    resetFillModalInstances();
-  });
-
-  it('(c) md-template with-placeholder snippet insert applies separator after modal resolves', async () => {
-    const { modal, app } = setupModal({ vaultContent: 'Prior text' });
-    spyRunnerState(modal, 'awaiting-snippet-fill', 'Prior text', '\n');
-
-    const zone = makeEl('div');
-    vi.spyOn((modal as any).plugin.snippetService, 'resolveSnippet').mockResolvedValue({ status: 'found', snippet: MD_TEMPLATE_FILL_SNIPPET });
-
-    const promise = (modal as any).handleSnippetFill('fill', zone);
-    await new Promise(r => setTimeout(r, 10));
-
-    const instances = getFillModalInstances();
-    instances[instances.length - 1]!.__resolve('R: resolved');
-    await promise;
-
-    expect(app.vault.modify).toHaveBeenCalledWith(
-      expect.anything(),
-      'Prior text\nR: resolved',
-    );
-  });
-});
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Phase 85 INLINE-MULTI-01 — registry integration tests.
-// Verifies that close() unregisters the modal from the plugin registry, and
-// that focus() unhides + reattaches the container so the modal stacks on top.
-describe('InlineRunnerModal — Phase 85 INLINE-MULTI-01 registry integration', () => {
-  it('close() calls plugin.unregisterInlineRunner with `${canvasPath}#${notePath}` key', () => {
-    const { modal, plugin, targetNote } = setupModal();
-    const expectedKey = `test.canvas#${targetNote.path}`;
-    // Pre-populate registry as if openInlineRunner had completed.
-    plugin.registerInlineRunner(expectedKey, modal as unknown as never);
-    expect(plugin.inlineRunners.has(expectedKey)).toBe(true);
-
-    modal.close();
-
-    expect(plugin.unregisterInlineRunner).toHaveBeenCalledWith(expectedKey);
-    expect(plugin.inlineRunners.has(expectedKey)).toBe(false);
-  });
-
-  it('focus() removes is-hidden class and re-appends container to document.body', () => {
-    const { modal } = setupModal();
-    const container = makeEl('div');
-    container.addClass('is-hidden');
-    (modal as any).containerEl = container;
-    (modal as any).isHidden = true;
-
-    // Mock document.body.appendChild — node env has no DOM.
-    const appendChildSpy = vi.fn();
-    const fakeDocument = { body: { appendChild: appendChildSpy } };
-    vi.stubGlobal('document', fakeDocument);
-    try {
-      (modal as any).focus();
-    } finally {
-      vi.unstubAllGlobals();
-    }
-
-    expect(container.hasClass('is-hidden')).toBe(false);
-    expect(appendChildSpy).toHaveBeenCalledWith(container);
-    expect((modal as any).isHidden).toBe(false);
-  });
-
-  it('keeps parallel inline runner progress isolated by canvas#note registry key', async () => {
-    const plugin = makeBasePlugin();
-    const app = makeBaseApp(plugin, { vaultContent: '' });
-    const noteA = new (TFile as any)('notes/a.md');
-    const noteB = new (TFile as any)('notes/b.md');
-    (app.vault.read as any).mockImplementation(async (file: { path: string }) => {
-      if (file.path === 'notes/a.md') return 'A progress';
-      if (file.path === 'notes/b.md') return 'B progress';
-      return '';
-    });
-    const first = new InlineRunnerModal(app as any, plugin as any, 'test.canvas', noteA);
-    const second = new InlineRunnerModal(app as any, plugin as any, 'test.canvas', noteB);
-
-    plugin.registerInlineRunner('test.canvas#notes/a.md', first);
-    plugin.registerInlineRunner('test.canvas#notes/b.md', second);
-    expect(plugin.inlineRunners.size).toBe(2);
-    expect(plugin.getInlineRunner('test.canvas#notes/a.md')).toBe(first);
-    expect(plugin.getInlineRunner('test.canvas#notes/b.md')).toBe(second);
-
-    spyRunnerState(first, 'awaiting-snippet-pick', 'A progress', '\n');
-    spyRunnerState(second, 'awaiting-snippet-pick', 'B progress', '\n');
-
-    await (first as any).handleSnippetPickerSelection({ kind: 'md', path: 'Snippets/a.md', content: 'Alpha' });
-    await (second as any).handleSnippetPickerSelection({ kind: 'md', path: 'Snippets/b.md', content: 'Beta' });
-
-    expect(app._modifyCalls).toEqual([
-      ['notes/a.md', 'A progress\nAlpha'],
-      ['notes/b.md', 'B progress\nBeta'],
-    ]);
-  });
-});
-
-describe('InlineRunnerModal — progress calculation (v1.17.1)', () => {
-  function makeProgressGraph() {
-    const node = (id: string, kind: any = 'question') => ({ id, kind, x: 0, y: 0, width: 100, height: 60, questionText: id });
-    const nodes = new Map<string, any>([
-      ['start', { id: 'start', kind: 'start', x: 0, y: 0, width: 100, height: 60 }],
-      ['q1', node('q1')],
-      ['q2', node('q2')],
-      ['q3', node('q3')],
-      ['q4', node('q4')],
-    ]);
-    return {
-      canvasFilePath: 'test.canvas',
-      nodes,
-      edges: [],
-      adjacency: new Map([
-        ['start', ['q1']],
-        ['q1', ['q2']],
-        ['q2', ['q3']],
-        ['q3', ['q4']],
-        ['q4', []],
-      ]),
-      reverseAdjacency: new Map(),
-      startNodeId: 'start',
-    };
-  }
-
-  it('uses graph distance instead of visited/all-nodes ratio', () => {
-    const { modal } = setupModal();
-    (modal as any).graph = makeProgressGraph();
-
-    expect((modal as any).calculateProgressPercent({ status: 'at-node', currentNodeId: 'q4' })).toBe(99);
-  });
-
-  it('starts from selected node with matching baseline progress', () => {
-    const targetNote = makeTargetNote();
-    const plugin = makeBasePlugin();
-    const app = makeBaseApp(plugin, { vaultContent: '' });
-    const modal = new InlineRunnerModal(app as any, plugin as any, 'test.canvas', targetNote, 'q2');
-    (modal as any).graph = makeProgressGraph();
-
-    const percent = (modal as any).calculateProgressPercent({ status: 'at-node', currentNodeId: 'q2' });
-    expect(percent).toBeGreaterThan(0);
-    expect(percent).toBeLessThan(99);
-  });
-});
-
-describe('InlineRunnerModal — self-check completion', () => {
-  it('renders checklist without the protocol-result copy button', () => {
-    const { modal } = setupModal();
-    (modal as any).selfCheckItems = ['Item 1'];
-    (modal as any).selfCheckEnabled = true;
-
-    const zone = makeEl('div');
-    (modal as any).renderSelfCheckCompletion(zone);
-
-    const checklist = zone.children.find((c: MockEl) =>
-      c.classList.has('rp-inline-runner-self-check'),
-    )!;
-    expect(checklist).toBeDefined();
-    expect(checklist.children.some((c: MockEl) =>
-      c.classList.has('rp-inline-runner-self-check-copy-row'),
-    )).toBe(false);
-    expect(checklist.children.some((c: MockEl) =>
-      c.classList.has('rp-inline-runner-copy-result-btn'),
-    )).toBe(false);
-  });
-});
-
-describe('InlineRunnerModal — snippet picker resize CSS regression', () => {
-  it('inline snippet picker uses flex growth instead of fixed body/list height caps', () => {
-    const snippetPickerCss = fs.readFileSync(
-      path.resolve(__dirname, '../../styles/snippet-tree-picker.css'),
-      'utf8',
-    );
-    const inlineRunnerCss = fs.readFileSync(
-      path.resolve(__dirname, '../../styles/inline-runner.css'),
-      'utf8',
-    );
-
-    expect(snippetPickerCss).not.toMatch(/\.rp-stp-inline-host\s+\.rp-stp-body,\s*\.rp-stp-modal-host\s+\.rp-stp-body\s*\{[^}]*height:\s*360px/);
-    expect(snippetPickerCss).toMatch(/\.rp-stp-inline-host\s+\.rp-stp-body\s*\{[^}]*height:\s*100%/);
-    expect(snippetPickerCss).toMatch(/\.rp-stp-inline-host\s+\.rp-stp-list\s*\{[^}]*max-height:\s*none/);
-
-    expect(inlineRunnerCss).toMatch(/\.rp-inline-runner-container\.rp-state-content-only\s+\.rp-inline-runner-content\s*\{[^}]*display:\s*flex/);
-    expect(inlineRunnerCss).toMatch(/\.rp-stp-inline-host\s*\{[^}]*flex:\s*1 1 auto/);
-    expect(inlineRunnerCss).toMatch(/\.rp-stp-inline-host\s*\{[^}]*overflow:\s*hidden/);
-    expect(inlineRunnerCss).toMatch(/\.rp-stp-inline-host\s+\.rp-stp-list\s*\{[^}]*overflow-y:\s*auto/);
-  });
-});
-
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Phase 43 merge — direct inline-open migration seam.
-// The inline runner must cross ProtocolDocumentStore.read() (the migration seam)
-// BEFORE its own raw vault read + parse, so a legacy `kind: 'loop'` document
-// selected for direct execution is canonicalized to a looped Question before the
-// parser sees it (the parser rejects the legacy 'loop' kind post-merge).
-describe('InlineRunnerModal — migration seam before direct inline raw read', () => {
-  function stubOpenGlobals(): void {
-    const body = makeEl('body');
-    (body as any).createDiv = (opts?: { cls?: string; text?: string }) => {
-      const el = makeEl('div');
-      if (opts?.cls) el.addClass(opts.cls);
-      if (opts?.text !== undefined) el.setText(opts.text);
-      // InlineRunnerLayoutManager.getContainerSize() reads bounding rect.
-      (el as any).getBoundingClientRect = () => ({ width: 420, height: 320, top: 0, left: 0, right: 420, bottom: 320 });
-      // InlineRunnerModal.close() removes the container from the DOM.
-      (el as any).remove = () => {};
-      return el;
-    };
-    (body as any).appendChild = () => {};
-    vi.stubGlobal('document', {
-      body,
-      documentElement: { clientWidth: 1024, clientHeight: 768 },
-      addEventListener: vi.fn(),
-      removeEventListener: vi.fn(),
-      querySelectorAll: () => [] as MockEl[],
-    });
-    vi.stubGlobal('window', {
-      innerWidth: 1024,
-      innerHeight: 768,
-      addEventListener: vi.fn(),
-      removeEventListener: vi.fn(),
-      setTimeout: (cb: () => void, ms?: number) => setTimeout(cb, ms),
-      clearTimeout: (id: ReturnType<typeof setTimeout>) => clearTimeout(id),
-    });
-    vi.stubGlobal('ResizeObserver', class { observe(): void {} disconnect(): void {} unobserve(): void {} });
-  }
-
-  it('migrates a legacy protocol before the direct inline raw read and parse', async () => {
-    stubOpenGlobals();
-    try {
-      const targetNote = makeTargetNote();
-      const plugin = makeBasePlugin();
-      // Layout manager reads these during applyInitialLayout().
-      (plugin as any).getInlineRunnerPosition = () => null;
-      (plugin as any).saveInlineRunnerPosition = vi.fn();
-      const app = makeBaseApp(plugin, { vaultContent: '' });
-      // Keep the target note open + active so handleActiveLeafChange() does not close() mid-open().
-      (app.workspace.getActiveFile as ReturnType<typeof vi.fn>).mockReturnValue(targetNote);
-      (app.workspace.iterateAllLeaves as ReturnType<typeof vi.fn>).mockImplementation((cb: (leaf: unknown) => void) => {
-        cb({ view: { file: targetNote } });
-      });
-      const file = new (TFile as any)('test.canvas');
-      (app.vault.getAbstractFileByPath as ReturnType<typeof vi.fn>).mockReturnValue(file);
-
-      const legacy = JSON.stringify({
-        schema: 'radiprotocol.protocol', version: 1, id: 'legacy', title: 'Legacy',
-        createdAt: '2026-01-01T00:00:00.000Z', updatedAt: '2026-01-01T00:00:00.000Z',
-        nodes: [{ id: 'loop', kind: 'loop', x: 0, y: 0, width: 200, height: 60, fields: { headerText: 'Repeat?' } }],
-        edges: [],
-      });
-      const canonical = JSON.stringify({
-        schema: 'radiprotocol.protocol', version: 1, id: 'legacy', title: 'Legacy',
-        createdAt: '2026-01-01T00:00:00.000Z', updatedAt: '2026-01-02T00:00:00.000Z',
-        nodes: [{ id: 'loop', kind: 'question', x: 0, y: 0, width: 200, height: 60, fields: { questionText: 'Repeat?', loop: true } }],
-        edges: [],
-      });
-      let persisted = legacy;
-      (plugin as any).protocolDocumentStore = {
-        read: vi.fn(async () => {
-          persisted = canonical;
-          return JSON.parse(canonical);
-        }),
+vi.mock('../../views/runner-session-host', () => ({
+  RunnerSessionHost: class {
+    private readonly instance: (typeof hostInstances)[number];
+    constructor(options: Record<string, unknown>) {
+      this.instance = {
+        options,
+        disposed: false,
+        childOpen: false,
+        keydown: vi.fn(),
+        header: null,
       };
-      (app.vault.read as ReturnType<typeof vi.fn>).mockImplementation(async () => persisted);
-      const parse = vi.fn((content: string) => {
-        expect(content).toBe(canonical);
-        expect(content).not.toContain('"kind":"loop"');
-        return {
-          success: true as const,
-          graph: {
-            canvasFilePath: 'test.canvas',
-            nodes: new Map([['loop', { id: 'loop', kind: 'question', questionText: 'Repeat?', loop: true, x: 0, y: 0, width: 200, height: 60 }]]),
-            edges: [], adjacency: new Map([['loop', []]]), reverseAdjacency: new Map([['loop', []]]), startNodeId: 'loop',
-          },
-        };
-      });
-      (plugin as any).protocolDocumentParser = { parse };
-
-      const modal = new InlineRunnerModal(app as any, plugin as any, 'test.canvas', targetNote);
-      await modal.open();
-
-      expect((plugin as any).protocolDocumentStore.read).toHaveBeenCalledWith('test.canvas');
-      expect(parse).toHaveBeenCalledOnce();
-    } finally {
-      vi.unstubAllGlobals();
+      hostInstances.push(this.instance);
     }
+    async mount(root: MockEl): Promise<boolean> {
+      root.empty();
+      root.addClass('rp-runner-session-root');
+      this.instance.header = root.createDiv({ cls: 'rp-runner-session-header' });
+      return true;
+    }
+    dispose(): void { this.instance.disposed = true; }
+    hasOpenChildModal(): boolean { return this.instance.childOpen; }
+    getHeaderElement(): MockEl | null { return this.instance.header; }
+    handleKeydown(event: KeyboardEvent): boolean {
+      Reflect.apply(this.instance.keydown as unknown as (...args: unknown[]) => void, undefined, [event]);
+      return true;
+    }
+  },
+}));
+vi.mock('../../views/inline-runner-layout', () => ({
+  clampInlineRunnerPosition: vi.fn(),
+  clampInlineRunnerLayout: vi.fn(),
+  InlineRunnerLayoutManager: class {
+    private readonly instance: (typeof layoutInstances)[number];
+    constructor() {
+      this.instance = {
+        enableDragging: vi.fn(),
+        applyInitialLayout: vi.fn(),
+        reclampCurrentPosition: vi.fn(async () => {}),
+        startWindowResizeListener: vi.fn(),
+        handleResizeTick: vi.fn(),
+        destroy: vi.fn(),
+      };
+      layoutInstances.push(this.instance);
+    }
+    enableDragging(header: HTMLElement): void {
+      Reflect.apply(this.instance.enableDragging as unknown as (...args: unknown[]) => void, undefined, [header]);
+    }
+    applyInitialLayout(): void {
+      Reflect.apply(this.instance.applyInitialLayout as unknown as (...args: unknown[]) => void, undefined, []);
+    }
+    async reclampCurrentPosition(value: boolean): Promise<void> {
+      await Reflect.apply(
+        this.instance.reclampCurrentPosition as unknown as (...args: unknown[]) => Promise<void>,
+        undefined,
+        [value],
+      );
+    }
+    startWindowResizeListener(): void {
+      Reflect.apply(this.instance.startWindowResizeListener as unknown as (...args: unknown[]) => void, undefined, []);
+    }
+    handleResizeTick(): void {
+      Reflect.apply(this.instance.handleResizeTick as unknown as (...args: unknown[]) => void, undefined, []);
+    }
+    destroy(): void {
+      Reflect.apply(this.instance.destroy as unknown as (...args: unknown[]) => void, undefined, []);
+    }
+    getAppliedLayout(): null { return null; }
+    restoreOrDefaultPosition(): void {}
+  },
+}));
+
+import { TFile } from 'obsidian';
+import {
+  InlineRunnerModal,
+  inlineRunnerRegistryKey,
+} from '../../views/inline-runner-modal';
+
+function target(path = 'notes/target.md'): TFile {
+  return Object.assign(new TFile(), { path });
+}
+
+function installDom(): MockEl {
+  const body = makeEl('body');
+  (body as any).appendChild = vi.fn((child: MockEl) => {
+    child.parent = body;
+    if (!body.children.includes(child)) body.children.push(child);
   });
+  const originalCreateDiv = body.createDiv.bind(body);
+  body.createDiv = (options) => {
+    const child = originalCreateDiv(options);
+    (child as any).getBoundingClientRect = () => ({ width: 420, height: 320 });
+    return child;
+  };
+  vi.stubGlobal('document', {
+    body,
+    documentElement: { clientWidth: 1024, clientHeight: 768 },
+    addEventListener: vi.fn(),
+    removeEventListener: vi.fn(),
+    querySelectorAll: vi.fn(() => []),
+  });
+  vi.stubGlobal('window', {
+    innerWidth: 1024,
+    innerHeight: 768,
+    addEventListener: vi.fn(),
+    removeEventListener: vi.fn(),
+    setTimeout: globalThis.setTimeout,
+    clearTimeout: globalThis.clearTimeout,
+  });
+  vi.stubGlobal('ResizeObserver', class {
+    private readonly state = { observed: [] as unknown[], disconnected: false };
+    constructor() { resizeObservers.push(this.state); }
+    observe(target: unknown): void { this.state.observed.push(target); }
+    disconnect(): void { this.state.disconnected = true; }
+  });
+  return body;
+}
+
+beforeEach(() => {
+  hostInstances.length = 0;
+  layoutInstances.length = 0;
+  resizeObservers.length = 0;
+  installDom();
 });
 
-describe('InlineRunnerModal — direct Question transition host', () => {
-  it('delegates the concrete edge ID, rerenders, and never modifies the note', () => {
-    const { modal, app } = setupModal({ vaultContent: 'Existing note' });
-    const graph: ProtocolGraph = {
-      canvasFilePath: 'question-transition.rp.json',
-      nodes: new Map<string, RPNode>([
-        ['start', { id: 'start', kind: 'start', x: 0, y: 0, width: 100, height: 60 }],
-        ['q-source', { id: 'q-source', kind: 'question', questionText: 'Source?', x: 0, y: 60, width: 100, height: 60 }],
-        ['q-target', { id: 'q-target', kind: 'question', questionText: 'Target?', x: 0, y: 120, width: 100, height: 60 }],
-      ]),
-      edges: [
-        { id: 'e-start', fromNodeId: 'start', toNodeId: 'q-source' },
-        { id: 'e-transition', fromNodeId: 'q-source', toNodeId: 'q-target', label: 'Continue' },
-      ],
-      adjacency: new Map([
-        ['start', ['q-source']],
-        ['q-source', ['q-target']],
-      ]),
-      reverseAdjacency: new Map([
-        ['q-source', ['start']],
-        ['q-target', ['q-source']],
-      ]),
-      startNodeId: 'start',
-    };
-    const content = makeEl('div');
-    const actions = makeEl('div');
-    (modal as any).contentEl = content;
-    (modal as any).actionsEl = actions;
-    (modal as any).footerBtnRowEl = makeEl('div');
-    (modal as any).containerEl = makeEl('div');
-    (modal as any).graph = graph;
-    (modal as any).runner.start(graph);
-    const chooseSpy = vi.spyOn((modal as any).runner, 'chooseQuestionBranch');
-    const renderSpy = vi.spyOn(modal as any, 'render');
+afterEach(() => vi.unstubAllGlobals());
 
-    (modal as any).render();
-    const transitionButtons = actions.querySelectorAll('.rp-question-transition-btn');
-    expect(transitionButtons).toHaveLength(1);
-
-    transitionButtons[0]!.dispatchEvent({ type: 'click' });
-
-    expect(chooseSpy).toHaveBeenCalledWith('e-transition');
-    expect(renderSpy).toHaveBeenCalledTimes(2);
-    expect((modal as any).runner.getState()).toMatchObject({
-      status: 'at-node',
-      currentNodeId: 'q-target',
-      accumulatedText: '',
+describe('InlineRunnerModal floating shell', () => {
+  it('mounts a shared host, preserves registry identity, and disposes it on close', async () => {
+    const plugin = makeBasePlugin();
+    const app = makeBaseApp(plugin);
+    const note = target();
+    app.workspace.getActiveFile.mockReturnValue(note as never);
+    app.workspace.iterateAllLeaves.mockImplementation((callback: (leaf: unknown) => void) => {
+      callback({ view: { file: note } });
     });
-    expect(app.vault.modify).not.toHaveBeenCalled();
+    const modal = new InlineRunnerModal(app as any, plugin as any, 'Protocols/test.rp.json', note, 'q2');
+
+    await modal.open();
+    expect(modal.isOpen()).toBe(true);
+    expect(hostInstances).toHaveLength(1);
+    expect(hostInstances[0]!.options).toMatchObject({
+      protocolPath: 'Protocols/test.rp.json',
+      targetNote: note,
+      startNodeId: 'q2',
+    });
+    const container = (modal as any).containerEl as MockEl;
+    const layout = layoutInstances[0]!;
+    const provisionalHeader = layout.enableDragging.mock.calls[0]?.[0];
+    expect(layout.enableDragging).toHaveBeenCalledTimes(2);
+    expect(provisionalHeader).not.toBe(hostInstances[0]!.header);
+    expect(layout.enableDragging.mock.calls[1]?.[0]).toBe(hostInstances[0]!.header);
+    expect(container.querySelector('.rp-runner-session-header')).toBe(hostInstances[0]!.header);
+    expect(layout.applyInitialLayout).toHaveBeenCalledTimes(1);
+    expect(layout.startWindowResizeListener).toHaveBeenCalledTimes(1);
+    expect(resizeObservers[0]!.observed).toEqual([container]);
+    expect(container._listeners.get('keydown')).toHaveLength(1);
+
+    const key = inlineRunnerRegistryKey(
+      'Protocols/test.rp.json',
+      'notes/target.md',
+      'q2',
+    );
+    plugin.registerInlineRunner(key, modal);
+    modal.close();
+    modal.close();
+    expect(hostInstances[0]!.disposed).toBe(true);
+    expect(container._listeners.get('keydown')).toHaveLength(0);
+    expect(app._workspaceHandlerCount('active-leaf-change')).toBe(0);
+    expect(app._workspaceHandlerCount('layout-change')).toBe(0);
+    expect(resizeObservers[0]!.disconnected).toBe(true);
+    expect(layout.destroy).toHaveBeenCalledTimes(1);
+    expect(plugin.unregisterInlineRunner).toHaveBeenCalledWith(key);
+    expect(plugin.unregisterInlineRunner).toHaveBeenCalledTimes(1);
+    expect(plugin.inlineRunners.size).toBe(0);
+  });
+
+  it('hides on active-note mismatch, shows on return, and closes when the target leaf is gone', async () => {
+    const plugin = makeBasePlugin();
+    const app = makeBaseApp(plugin);
+    const note = target();
+    let targetOpen = true;
+    app.workspace.getActiveFile.mockReturnValue(target('notes/other.md') as never);
+    app.workspace.iterateAllLeaves.mockImplementation((callback: (leaf: unknown) => void) => {
+      if (targetOpen) callback({ view: { file: note } });
+    });
+    const modal = new InlineRunnerModal(app as any, plugin as any, 'Protocols/test.rp.json', note);
+    await modal.open();
+    const container = (modal as any).containerEl as MockEl;
+    expect(container.hasClass('is-hidden')).toBe(true);
+
+    app.workspace.getActiveFile.mockReturnValue(note as never);
+    app._emitWorkspace('active-leaf-change');
+    expect(container.hasClass('is-hidden')).toBe(false);
+
+    targetOpen = false;
+    app._emitWorkspace('active-leaf-change');
+    expect(modal.isOpen()).toBe(false);
+    expect(hostInstances[0]!.disposed).toBe(true);
+  });
+
+  it('gates active-leaf visibility while the host owns a child modal', async () => {
+    const plugin = makeBasePlugin();
+    const app = makeBaseApp(plugin);
+    const note = target();
+    app.workspace.getActiveFile.mockReturnValue(note as never);
+    app.workspace.iterateAllLeaves.mockImplementation((callback: (leaf: unknown) => void) => {
+      callback({ view: { file: note } });
+    });
+    const modal = new InlineRunnerModal(app as any, plugin as any, 'Protocols/test.rp.json', note);
+    await modal.open();
+    const container = (modal as any).containerEl as MockEl;
+
+    hostInstances[0]!.childOpen = true;
+    app.workspace.getActiveFile.mockReturnValue(target('notes/other.md') as never);
+    app._emitWorkspace('active-leaf-change');
+    expect(container.hasClass('is-hidden')).toBe(false);
+  });
+
+  it('focus reattaches and unhides the floating container', async () => {
+    const body = document.body as unknown as MockEl & { appendChild: ReturnType<typeof vi.fn> };
+    const plugin = makeBasePlugin();
+    const app = makeBaseApp(plugin);
+    const note = target();
+    app.workspace.getActiveFile.mockReturnValue(note as never);
+    app.workspace.iterateAllLeaves.mockImplementation((callback: (leaf: unknown) => void) => {
+      callback({ view: { file: note } });
+    });
+    const modal = new InlineRunnerModal(app as any, plugin as any, 'Protocols/test.rp.json', note);
+    await modal.open();
+    const container = (modal as any).containerEl as MockEl;
+    container.addClass('is-hidden');
+
+    modal.focus();
+    expect(body.appendChild).toHaveBeenCalledWith(container);
+    expect(container.hasClass('is-hidden')).toBe(false);
   });
 });

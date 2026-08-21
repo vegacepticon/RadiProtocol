@@ -1,112 +1,62 @@
-// views/inline-runner-modal.ts — Phase 54: Inline protocol display mode
-// A floating, non-blocking DOM host for inline protocol runs over the active note.
-// NOT an Obsidian Modal subclass — plain class managing its own DOM element.
-import { App, TFile, Notice, setIcon } from 'obsidian';
+// A floating, non-blocking shell around the presentation-neutral runner session host.
+import { App, Notice, TFile, type EventRef } from 'obsidian';
 import type RadiProtocolPlugin from '../main';
-import { ProtocolRunner } from '../runner/protocol-runner';
-import { GraphValidator } from '../graph/graph-validator';
-import type { ProtocolGraph, AnswerNode } from '../graph/graph-model';
-import type { RunnerState } from '../runner/runner-state';
-import { SnippetTreePicker } from './snippet-tree-picker';
-import { SnippetFillInModal } from './snippet-fill-in-modal';
-import { renderLoopPicker } from '../runner/render/render-loop-picker';
-import { renderQuestionAtNode } from '../runner/render/render-question';
-import { renderSnippetPicker } from '../runner/render/render-snippet-picker';
-import { renderCompleteHeading } from '../runner/render/render-complete';
-import { renderErrorList } from '../runner/render/render-error';
-import { createButton } from '../utils/dom-helpers';
-import { CSS_CLASS } from '../constants/css-classes';
-import {
-  renderSnippetFillLoading,
-  renderSnippetFillNotFound,
-  renderSnippetFillUnsupportedFormat,
-} from '../runner/render/render-snippet-fill';
 import type { InlineRunnerLayout } from '../settings';
 import { InlineRunnerLayoutManager } from './inline-runner-layout';
+import { RunnerSessionHost } from './runner-session-host';
 
 // Re-export clamp functions for backward compatibility (tests import from this module).
 export { clampInlineRunnerPosition, clampInlineRunnerLayout } from './inline-runner-layout';
 
-/**
- * InlineRunnerModal — floating panel that hosts the Runner UI over an active note.
- *
- * Lifecycle:
- *   const modal = new InlineRunnerModal(app, plugin, canvasPath, targetNote);
- *   modal.open();   // parses canvas, starts runner, shows panel
- *   modal.close();  // unsubscribes, removes from DOM
- */
+export function inlineRunnerRegistryKey(
+  protocolPath: string,
+  notePath: string,
+  startNodeId?: string,
+): string {
+  const startSuffix = startNodeId === undefined
+    ? ''
+    : `#start=${encodeURIComponent(startNodeId)}`;
+  return `${protocolPath}#${notePath}${startSuffix}`;
+}
+
 export class InlineRunnerModal {
   private readonly app: App;
   private readonly plugin: RadiProtocolPlugin;
+  private readonly protocolPath: string;
   private readonly targetNote: TFile;
   private readonly startNodeId: string | undefined;
 
   private containerEl: HTMLElement | null = null;
+  /** Shared session header used as the floating drag handle. */
   private headerEl: HTMLElement | null = null;
-  private progressFillEl: HTMLElement | null = null;
-  private progressTextEl: HTMLElement | null = null;
-  private contentEl: HTMLElement | null = null;
-  private actionsEl: HTMLElement | null = null;
-  private footerBtnRowEl: HTMLElement | null = null;
-
-  private runner: ProtocolRunner;
-  private readonly validator: GraphValidator;
-  private graph: ProtocolGraph | null = null;
-  private canvasFilePath: string | null = null;
-  private selfCheckItems: string[] = [];
-  private selfCheckEnabled = false;
-
-  private activeFileEventRef: import('obsidian').EventRef | null = null;
-  private fileDeleteEventRef: import('obsidian').EventRef | null = null;
+  private sessionHost: RunnerSessionHost | null = null;
+  private layoutManager: InlineRunnerLayoutManager | null = null;
+  private resizeObserver: ResizeObserver | null = null;
+  private activeFileEventRef: EventRef | null = null;
+  private workspaceLayoutRef: EventRef | null = null;
+  private boundKeyHandler: ((event: KeyboardEvent) => void) | null = null;
   private isHidden = false;
   private openedSuccessfully = false;
-
-  private snippetTreePicker: SnippetTreePicker | null = null;
-  private resizeObserver: ResizeObserver | null = null;
-  private workspaceLayoutRef: import('obsidian').EventRef | null = null;
-  private layoutManager: InlineRunnerLayoutManager | null = null;
-
-  /** Phase 59 INLINE-FIX-05: tracks the active fill-in modal so close() can dispose it. */
-  private fillModal: SnippetFillInModal | null = null;
-
-  /** Phase 59 INLINE-FIX-05: gate flag — when true, D1 handleActiveLeafChange skips hide/show
- *  to prevent the inline container from disappearing while SnippetFillInModal is active. */
-  private isFillModalOpen = false;
-
-  private boundKeyHandler: ((e: KeyboardEvent) => void) | null = null;
+  private closed = false;
 
   constructor(
     app: App,
     plugin: RadiProtocolPlugin,
-    canvasFilePath: string,
+    protocolPath: string,
     targetNote: TFile,
     startNodeId?: string,
   ) {
     this.app = app;
     this.plugin = plugin;
-    this.canvasFilePath = canvasFilePath;
+    this.protocolPath = protocolPath;
     this.targetNote = targetNote;
     this.startNodeId = startNodeId;
-    // Phase 84 (I18N-02): inject translator so runtime / validator messages follow the active locale.
-    this.runner = new ProtocolRunner({
-      defaultSeparator: this.plugin.settings.textSeparator,
-      t: this.plugin.i18n.t.bind(this.plugin.i18n),
-    });
-    this.validator = new GraphValidator({
-      snippetFileProbe: (absPath) => this.app.vault.getAbstractFileByPath(absPath) !== null,
-      snippetFolderPath: this.plugin.settings.snippetFolderPath,
-      t: this.plugin.i18n.t.bind(this.plugin.i18n),
-    });
   }
 
-  // ── Phase 85 INLINE-MULTI-01 — Registry accessors ────────────────────────
-
-  /** Identifier for the protocol file driving this runner. */
-  getCanvasFilePath(): string | null {
-    return this.canvasFilePath;
+  getCanvasFilePath(): string {
+    return this.protocolPath;
   }
 
-  /** The markdown note this runner appends answers/snippets into. */
   getTargetNote(): TFile {
     return this.targetNote;
   }
@@ -115,9 +65,6 @@ export class InlineRunnerModal {
     return this.openedSuccessfully && this.containerEl !== null;
   }
 
-  /** Bring an already-open inline runner to the foreground.
-   *  Re-appends the container to document.body (so it stacks above sibling
-   *  runners) and clears the D1 `is-hidden` class if previously hidden. */
   focus(): void {
     if (this.containerEl === null) return;
     document.body.appendChild(this.containerEl);
@@ -125,926 +72,177 @@ export class InlineRunnerModal {
     this.isHidden = false;
   }
 
-  // ── Lifecycle ─────────────────────────────────────────────────────────────
-
   async open(): Promise<void> {
-    console.debug('[RadiProtocol] InlineRunnerModal.open()', this.canvasFilePath);
-
-    // Build DOM shell
+    if (this.containerEl !== null || this.closed) return;
     this.buildContainer();
+    if (this.containerEl === null) return;
 
-    // Parse and validate .rp.json protocol file.
-    const protocolPath = this.canvasFilePath!;
-    const file = this.app.vault.getAbstractFileByPath(protocolPath);
-    if (!(file instanceof TFile)) {
-      const reason = this.plugin.i18n.t('inlineRunner.protocolFileNotFound', { path: protocolPath });
-      console.warn('[RadiProtocol] InlineRunnerModal.open() failed:', reason);
-      new Notice(reason);
+    const t = this.plugin.i18n.t.bind(this.plugin.i18n);
+    const sessionHost = new RunnerSessionHost({
+      app: this.app,
+      protocolPath: this.protocolPath,
+      targetNote: this.targetNote,
+      startNodeId: this.startNodeId,
+      protocolDocumentStore: this.plugin.protocolDocumentStore,
+      protocolDocumentParser: this.plugin.protocolDocumentParser,
+      snippetService: this.plugin.snippetService,
+      getTextSeparator: () => this.plugin.settings.textSeparator,
+      getSnippetFolderPath: () => this.plugin.settings.snippetFolderPath,
+      withTargetNoteLock: (path, operation) =>
+        this.plugin['insertMutex'].runExclusive(path, operation),
+      t,
+      notify: (message) => new Notice(message),
+      onRequestClose: () => this.close(),
+    });
+    this.sessionHost = sessionHost;
+
+    // mount() builds the shared DOM synchronously before its first protocol read,
+    // so floating drag policy can bind to the real shared header during loading.
+    const mounting = sessionHost.mount(this.containerEl);
+    const header = sessionHost.getHeaderElement();
+    if (header !== null) {
+      this.headerEl = header;
+      this.layoutManager?.enableDragging(header);
+    }
+
+    const mounted = await mounting;
+    if (!mounted || this.closed || this.containerEl === null) {
       this.close();
       return;
     }
 
-    let content: string;
-    try {
-      // Every execution path must cross the store migration seam before parsing.
-      // read() persists legacy standalone loops into canonical looped Questions;
-      // the raw read below then observes that canonical on-disk document.
-      const canonicalDoc = await this.plugin.protocolDocumentStore.read(protocolPath);
-      if (canonicalDoc === null) {
-        const reason = this.plugin.i18n.t('inlineRunner.couldNotReadProtocol', { path: protocolPath });
-        console.warn('[RadiProtocol] InlineRunnerModal.open() failed:', reason);
-        new Notice(reason);
-        this.close();
-        return;
-      }
-      content = await this.app.vault.read(file);
-    } catch {
-      const reason = this.plugin.i18n.t('inlineRunner.couldNotReadProtocol', { path: protocolPath });
-      console.warn('[RadiProtocol] InlineRunnerModal.open() failed:', reason);
-      new Notice(reason);
-      this.close();
-      return;
-    }
-
-    this.selfCheckItems = [];
-    this.selfCheckEnabled = false;
-    try {
-      const rawDoc = JSON.parse(content) as { selfCheckItems?: unknown; selfCheckEnabled?: unknown };
-      if (Array.isArray(rawDoc.selfCheckItems)) {
-        this.selfCheckItems = rawDoc.selfCheckItems
-          .filter((item): item is string => typeof item === 'string')
-          .map(item => item.trim())
-          .filter(item => item.length > 0);
-      }
-      if (rawDoc.selfCheckEnabled === true) this.selfCheckEnabled = true;
-    } catch {
-      this.selfCheckItems = [];
-      this.selfCheckEnabled = false;
-    }
-
-    const parseResult = this.plugin.protocolDocumentParser.parse(content, protocolPath);
-    if (!parseResult.success) {
-      console.warn('[RadiProtocol] InlineRunnerModal.open() parse failed:', parseResult.error);
-      new Notice(parseResult.error);
-      this.close();
-      return;
-    }
-
-    const validationErrors = this.validator.validate(parseResult.graph);
-    if (validationErrors.length > 0) {
-      console.warn('[RadiProtocol] InlineRunnerModal.open() validation failed:', validationErrors);
-      new Notice(validationErrors.join('\n'));
-      this.close();
-      return;
-    }
-
-    this.graph = parseResult.graph;
-    this.runner.start(this.graph, this.startNodeId);
-    this.render();
     this.openedSuccessfully = true;
-
-    // D1: freeze/resume on note switch
     this.activeFileEventRef = this.app.workspace.on('active-leaf-change', () => {
       this.handleActiveLeafChange();
     });
-
-    // D2: close when target note is deleted
-    this.fileDeleteEventRef = this.app.vault.on('delete', (deletedFile) => {
-      if (deletedFile instanceof TFile && deletedFile.path === this.targetNote.path) {
-        this.handleTargetNoteDeleted();
-      }
-    });
-
-    // Initial visibility check
     this.handleActiveLeafChange();
+    const container = this.containerEl;
+    if (!this.openedSuccessfully || container === null || this.closed) return;
 
-    // Phase 85 INLINE-MULTI-02: cascade-or-default position decision.
-    this.layoutManager!.applyInitialLayout();
-
-    // Re-clamp on layout changes without resetting to note-width anchoring.
+    this.layoutManager?.applyInitialLayout();
     this.workspaceLayoutRef = this.app.workspace.on('layout-change', () => {
-      void this.layoutManager!.reclampCurrentPosition(true);
+      void this.layoutManager?.reclampCurrentPosition(true);
     });
-    this.layoutManager!.startWindowResizeListener();
+    this.layoutManager?.startWindowResizeListener();
 
-    // Phase 67 D-04 / D-07: debounced save on resize-end + .is-resizing lifecycle.
-    if (this.containerEl !== null) {
-      this.resizeObserver = new ResizeObserver(() => this.layoutManager!.handleResizeTick());
-      this.resizeObserver.observe(this.containerEl);
-    }
+    this.resizeObserver = new ResizeObserver(() => this.layoutManager?.handleResizeTick());
+    this.resizeObserver.observe(container);
 
-    // Keyboard shortcuts: Ctrl/Alt+Left = step back, Ctrl/Alt+Right = redo, Escape = close
-    this.boundKeyHandler = (e: KeyboardEvent) => this.handleKeydown(e);
-    this.containerEl?.addEventListener('keydown', this.boundKeyHandler);
+    this.boundKeyHandler = (event) => this.handleKeydown(event);
+    const mountedContainer = container as HTMLElement;
+    mountedContainer.addEventListener('keydown', this.boundKeyHandler);
   }
 
   close(): void {
-    console.debug('[RadiProtocol] InlineRunnerModal.close()');
+    if (this.closed) return;
+    this.closed = true;
     this.openedSuccessfully = false;
 
-    // Unmount picker if active
-    if (this.snippetTreePicker !== null) {
-      this.snippetTreePicker.unmount();
-      this.snippetTreePicker = null;
-    }
+    this.sessionHost?.dispose();
+    this.sessionHost = null;
 
-    // Phase 59 INLINE-FIX-05: ensure fill-in modal is closed if inline closes first.
-    // Single .close() call here — handleSnippetFill's finally does NOT call .close()
-    // (modal self-closed when result resolved). This close() runs only when inline
-    // closes BEFORE the modal resolves (orphan scenario).
-    if (this.fillModal !== null) {
-      this.fillModal.close();
-      this.fillModal = null;
-    }
-    this.isFillModalOpen = false;
-
-    // Unsubscribe event listeners
     if (this.boundKeyHandler !== null && this.containerEl !== null) {
       this.containerEl.removeEventListener('keydown', this.boundKeyHandler);
     }
     this.boundKeyHandler = null;
-
     if (this.activeFileEventRef !== null) {
       this.app.workspace.offref(this.activeFileEventRef);
       this.activeFileEventRef = null;
-    }
-    if (this.fileDeleteEventRef !== null) {
-      this.app.vault.offref(this.fileDeleteEventRef);
-      this.fileDeleteEventRef = null;
     }
     if (this.workspaceLayoutRef !== null) {
       this.app.workspace.offref(this.workspaceLayoutRef);
       this.workspaceLayoutRef = null;
     }
-    if (this.resizeObserver !== null) {
-      this.resizeObserver.disconnect();
-      this.resizeObserver = null;
-    }
-    // Phase 67: defensive resize-state cleanup delegated to layout manager.
-    if (this.layoutManager !== null) {
-      this.layoutManager.destroy();
-      this.layoutManager = null;
-    }
+    this.resizeObserver?.disconnect();
+    this.resizeObserver = null;
+    this.layoutManager?.destroy();
+    this.layoutManager = null;
 
-    // Phase 85 INLINE-MULTI-01: unregister from the plugin's registry. Computed
-    // BEFORE we null out canvasFilePath/containerEl so the key is still derivable.
-    if (this.canvasFilePath !== null) {
-      const key = `${this.canvasFilePath}#${this.targetNote.path}`;
-      this.plugin.unregisterInlineRunner(key);
-    }
-
-    // Remove from DOM
-    if (this.containerEl !== null) {
-      this.containerEl.remove();
-      this.containerEl = null;
-    }
-
+    this.plugin.unregisterInlineRunner(inlineRunnerRegistryKey(
+      this.protocolPath,
+      this.targetNote.path,
+      this.startNodeId,
+    ));
+    this.containerEl?.remove();
+    this.containerEl = null;
     this.headerEl = null;
-    this.progressFillEl = null;
-    this.progressTextEl = null;
-    this.contentEl = null;
-    this.actionsEl = null;
-    this.footerBtnRowEl = null;
-    this.graph = null;
   }
 
-  // ── DOM Building ──────────────────────────────────────────────────────────
+  getAppliedLayout(): InlineRunnerLayout | null {
+    return this.layoutManager?.getAppliedLayout() ?? null;
+  }
+
+  restoreOrDefaultPosition(): void {
+    this.layoutManager?.restoreOrDefaultPosition();
+  }
+
+  applyInitialLayout(): void {
+    this.layoutManager?.applyInitialLayout();
+  }
+
+  async reclampCurrentPosition(persistIfChanged: boolean): Promise<void> {
+    await this.layoutManager?.reclampCurrentPosition(persistIfChanged);
+  }
+
+  handleResizeTick(): void {
+    this.layoutManager?.handleResizeTick();
+  }
 
   private buildContainer(): void {
-    const container = document.body.createDiv({ cls: 'rp-inline-runner-container' });
+    const container = document.body.createDiv({
+      cls: 'rp-inline-runner-container rp-runner-session-root',
+    });
     this.containerEl = container;
-
-    // Create layout manager for position/drag/resize.
     this.layoutManager = new InlineRunnerLayoutManager({
       containerEl: container,
       getSavedLayout: () => this.plugin.getInlineRunnerPosition(),
       saveLayout: (layout) => this.plugin.saveInlineRunnerPosition(layout),
-      getOpenLayouts: () => this.plugin.getOpenInlineRunners().map(r => r.getAppliedLayout()),
+      getOpenLayouts: () => this.plugin.getOpenInlineRunners().map((runner) =>
+        runner.getAppliedLayout()),
     });
-
-    // Header — drag handle + progress bar at top of modal
-    const header = container.createDiv({ cls: 'rp-inline-runner-header' });
-    this.headerEl = header;
-    this.layoutManager.enableDragging(header);
-
-    // Progress bar — top of modal, inside header
-    const progress = header.createDiv({ cls: 'rp-inline-runner-progress', attr: { role: 'progressbar', 'aria-valuemin': '0', 'aria-valuemax': '100' } });
-    const progressTrack = progress.createDiv({ cls: 'rp-inline-runner-progress-track' });
-    this.progressFillEl = progressTrack.createDiv({ cls: 'rp-inline-runner-progress-fill' });
-    this.progressTextEl = progress.createDiv({ cls: 'rp-inline-runner-progress-text' });
-
-    // Content area — scrollable text (top half of modal)
-    const content = container.createDiv({ cls: 'rp-inline-runner-content' });
-    this.contentEl = content;
-
-    // Actions zone — buttons anchored from top, scrollable if overflow (bottom half)
-    const actions = container.createDiv({ cls: 'rp-inline-runner-actions' });
-    this.actionsEl = actions;
-
-    // Footer — close button (left) + Back/Skip (right)
-    const footer = container.createDiv({ cls: 'rp-inline-runner-footer' });
-    const footerBtnRow = footer.createDiv({ cls: 'rp-inline-runner-footer-btn-row' });
-    this.footerBtnRowEl = footerBtnRow;
-
-    // Close button — left side of footer row (square icon button)
-    const closeBtn = footerBtnRow.createEl('button', { cls: 'rp-inline-runner-close-btn rp-runner-icon-btn' });
-    setIcon(closeBtn, 'x');
-    closeBtn.setAttribute('aria-label', this.plugin.i18n.t('protocolRunner.closeProtocol'));
-    closeBtn.addEventListener('click', () => {
-      this.close();
-    });
+    // Preserve the established buildContainer()/layout test seam and make the
+    // loading shell draggable before the session host replaces its contents.
+    this.headerEl = container.createDiv({ cls: 'rp-runner-session-header' });
+    this.layoutManager.enableDragging(this.headerEl);
   }
 
-  // ── Rendering ─────────────────────────────────────────────────────────────
-
-  private calculateProgressPercent(state: RunnerState): number {
-    if (this.graph === null) return 0;
-    if (state.status === 'complete') return 100;
-    if (state.status === 'idle' || state.status === 'error') return 0;
-
-    const currentNodeId = state.status === 'at-node' ? state.currentNodeId : state.nodeId;
-    const globalDistances = this.calculateShortestDistances(this.graph.startNodeId);
-    const globalMaxDistance = Math.max(1, ...globalDistances.values());
-    const sessionStartNodeId = this.startNodeId ?? this.graph.startNodeId;
-    const baselineDistance = globalDistances.get(sessionStartNodeId) ?? 0;
-    const baselinePercent = Math.round((baselineDistance / globalMaxDistance) * 99);
-
-    const sessionDistances = this.calculateShortestDistances(sessionStartNodeId);
-    const currentSessionDistance = sessionDistances.get(currentNodeId);
-    if (currentSessionDistance === undefined) return Math.min(99, Math.max(0, baselinePercent));
-
-    const sessionMaxDistance = Math.max(1, ...sessionDistances.values());
-    const remainingPercent = 99 - baselinePercent;
-    const sessionPercent = Math.round((currentSessionDistance / sessionMaxDistance) * remainingPercent);
-    return Math.min(99, Math.max(0, baselinePercent + sessionPercent));
-  }
-
-  private calculateShortestDistances(startNodeId: string): Map<string, number> {
-    const distances = new Map<string, number>();
-    if (this.graph === null) return distances;
-
-    const queue: string[] = [startNodeId];
-    distances.set(startNodeId, 0);
-
-    while (queue.length > 0) {
-      const current = queue.shift();
-      if (current === undefined) break;
-      const currentDistance = distances.get(current) ?? 0;
-      for (const next of this.graph.adjacency.get(current) ?? []) {
-        if (distances.has(next)) continue;
-        distances.set(next, currentDistance + 1);
-        queue.push(next);
-      }
-    }
-
-    return distances;
-  }
-
-  private updateProgress(state: RunnerState): void {
-    if (this.progressFillEl === null || this.progressTextEl === null) return;
-    const percent = this.calculateProgressPercent(state);
-    this.progressFillEl.style.width = `${percent}%`;
-    this.progressTextEl.setText(`${percent}%`);
-    const progressEl = this.containerEl?.querySelector('.rp-inline-runner-progress');
-    progressEl?.setAttribute('aria-valuenow', String(percent));
-    progressEl?.setAttribute('aria-label', this.plugin.i18n.t('protocolRunner.progressLabel', { percent: String(percent) }));
-  }
-
-  private render(): void {
-    if (this.contentEl === null) return;
-
-    // Unmount picker if state has left awaiting-snippet-pick
-    const state = this.runner.getState();
-    this.updateProgress(state);
-    if (this.snippetTreePicker !== null && state.status !== 'awaiting-snippet-pick') {
-      this.snippetTreePicker.unmount();
-      this.snippetTreePicker = null;
-    }
-
-    this.contentEl.empty();
-    if (this.actionsEl !== null) this.actionsEl.empty();
-
-    // Toggle layout state class on container:
-    //   rp-state-actions      → split layout: content 50% + actions 50% (at-node, awaiting-loop-pick)
-    //   rp-state-content-only → full-height content, actions hidden (all other states)
-    const actionsStates: RunnerState['status'][] = ['at-node', 'awaiting-loop-pick'];
-    const hasActions = actionsStates.includes(state.status);
-    if (this.containerEl !== null) {
-      this.containerEl.toggleClass('rp-state-actions', hasActions);
-      this.containerEl.toggleClass('rp-state-content-only', !hasActions);
-    }
-
-    // Recreate footer-row children (close btn destroyed by empty, must re-add)
-    if (this.footerBtnRowEl !== null) {
-      this.footerBtnRowEl.empty();
-
-      // Close button — direct child of the footer row, anchors the left side.
-      // renderFooterIcons() appends Back/Redo/Skip as the second flex item (right side).
-      const closeBtn = this.footerBtnRowEl.createEl('button', { cls: 'rp-inline-runner-close-btn rp-runner-icon-btn' });
-      setIcon(closeBtn, 'x');
-      closeBtn.setAttribute('aria-label', this.plugin.i18n.t('protocolRunner.closeProtocol'));
-      closeBtn.addEventListener('click', () => {
-        this.close();
-      });
-    }
-
-    switch (state.status) {
-      case 'idle': {
-        this.contentEl.createEl('p', {
-          text: this.plugin.i18n.t('protocolRunner.starting'),
-          cls: CSS_CLASS.EMPTY_STATE_BODY,
-        });
-        break;
-      }
-
-      case 'at-node': {
-        const result = renderQuestionAtNode(
-          this.contentEl,
-          this.actionsEl!,
-          this.graph,
-          state,
-          {
-            bindClick: (el, handler) => el.addEventListener('click', handler),
-            renderError: (messages) => this.renderError(this.contentEl!, messages),
-            onChooseAnswer: (answerNode) => this.handleAnswerClick(answerNode),
-            onChooseQuestionBranch: (edge) => {
-              this.runner.chooseQuestionBranch(edge.id);
-              this.render();
-            },
-            onChooseSnippetBranch: (snippetNode, isFileBound) => {
-              if (isFileBound) {
-                const snippetPath = snippetNode.radiprotocol_snippetPath as string;
-                this.runner.pickFileBoundSnippet(state.currentNodeId, snippetNode.id, snippetPath);
-              } else {
-                this.runner.chooseSnippetBranch(snippetNode.id);
-              }
-              this.render();
-            },
-          },
-        );
-        if (result === 'error') return;
-        if (result === 'not-question') {
-          this.contentEl.createEl('p', {
-            text: this.plugin.i18n.t('protocolRunner.processing'),
-            cls: CSS_CLASS.EMPTY_STATE_BODY,
-          });
-        }
-
-        // Footer icon buttons: Back + Skip (only when question has answers)
-        if (this.footerBtnRowEl !== null && this.graph !== null) {
-          const node = this.graph.nodes.get(state.currentNodeId);
-          if (node !== undefined && node.kind === 'question') {
-            const neighborIds = this.graph.adjacency.get(state.currentNodeId) ?? [];
-            const hasAnswers = neighborIds.some(
-              (nid) => this.graph!.nodes.get(nid)?.kind === 'answer',
-            );
-            this.renderFooterIcons(state.canStepBack, hasAnswers && typeof this.runner.skip === 'function', state.canRedo);
-          }
-        }
-        break;
-      }
-
-      case 'awaiting-snippet-pick': {
-        this.contentEl.createEl('p', {
-          text: this.plugin.i18n.t('protocolRunner.loadingSnippets'),
-          cls: CSS_CLASS.EMPTY_STATE_BODY,
-        });
-        void this.mountSnippetPicker(state, this.contentEl);
-        break;
-      }
-
-      case 'awaiting-loop-pick': {
-        const rendered = renderLoopPicker(
-          this.contentEl,
-          this.actionsEl!,
-          this.graph,
-          state,
-          {
-            bindClick: (el, handler) => el.addEventListener('click', handler),
-            renderError: (messages) => this.renderError(this.contentEl!, messages),
-            onChooseLoopBranch: (edge, isExit) => this.handleLoopBranchClick(edge, isExit),
-          },
-        );
-        if (!rendered) return;
-
-        // Footer icon buttons: Back only (no Skip in loop picker)
-        if (this.footerBtnRowEl !== null) {
-          this.renderFooterIcons(state.canStepBack, false, state.canRedo);
-        }
-        break;
-      }
-
-      case 'awaiting-snippet-fill': {
-        renderSnippetFillLoading(this.contentEl);
-        void this.handleSnippetFill(state.snippetId, this.contentEl);
-        break;
-      }
-
-      case 'complete': {
-        if (!this.selfCheckEnabled) {
-          const scheduleClose = typeof window !== 'undefined' ? window.setTimeout.bind(window) : globalThis.setTimeout;
-          scheduleClose(() => this.close(), 0);
-          break;
-        }
-        if (this.selfCheckItems.length === 0) {
-          const scheduleClose = typeof window !== 'undefined' ? window.setTimeout.bind(window) : globalThis.setTimeout;
-          scheduleClose(() => this.close(), 0);
-          break;
-        }
-        this.renderSelfCheckCompletion(this.contentEl);
-        break;
-      }
-
-      case 'error': {
-        this.renderError(this.contentEl, [state.message]);
-        break;
-      }
-
-      default: {
-        const _exhaustive: never = state;
-        void _exhaustive;
-        break;
-      }
-    }
-  }
-
-  /** Render Back/Redo/Skip icon buttons into the footer row (after close btn). */
-  private renderFooterIcons(showBack: boolean, showSkip: boolean, showRedo: boolean): void {
-    if (this.footerBtnRowEl === null) return;
-    if (!showBack && !showSkip && !showRedo) return;
-
-    const t = this.plugin.i18n.t.bind(this.plugin.i18n);
-    // Container for Back+Redo+Skip, pushed right via justify-content: flex-end
-    const iconsGroup = this.footerBtnRowEl.createDiv({ cls: 'rp-runner-footer-row' });
-    if (showBack) {
-      const backBtn = createButton(iconsGroup, {
-        cls: 'rp-step-back-btn rp-runner-icon-btn',
-        attr: { 'aria-label': t('protocolRunner.stepBack') },
-      });
-      setIcon(backBtn, 'arrow-left');
-      // Phase 66 D-01/D-02/D-03: visual half of double-click guard
-      backBtn.addEventListener('click', () => {
-        backBtn.disabled = true;
-        this.runner.stepBack();
-        this.render();
-      });
-    }
-    if (showRedo) {
-      const redoBtn = createButton(iconsGroup, {
-        cls: 'rp-step-redo-btn rp-runner-icon-btn',
-        attr: { 'aria-label': t('protocolRunner.stepRedo') },
-      });
-      setIcon(redoBtn, 'redo');
-      redoBtn.addEventListener('click', () => {
-        redoBtn.disabled = true;
-        this.runner.redo();
-        this.render();
-      });
-    }
-    if (showSkip) {
-      const skipBtn = createButton(iconsGroup, {
-        cls: 'rp-skip-btn rp-runner-icon-btn',
-        attr: { 'aria-label': t('protocolRunner.stepSkip') },
-      });
-      setIcon(skipBtn, 'skip-forward');
-      skipBtn.addEventListener('click', () => {
-        this.runner.skip();
-        this.render();
-      });
-    }
-  }
-
-  private renderSelfCheckCompletion(container: HTMLElement): void {
-    renderCompleteHeading(container);
-    const checklist = container.createDiv({ cls: 'rp-inline-runner-self-check' });
-    checklist.createEl('h4', { text: this.plugin.i18n.t('selfCheck.title') });
-    const checked = new Set<number>();
-    const updateCompletion = () => {
-      if (checked.size === this.selfCheckItems.length) this.close();
-    };
-    this.selfCheckItems.forEach((item, index) => {
-      const label = checklist.createEl('label', { cls: 'rp-inline-runner-self-check-item' });
-      const checkbox = label.createEl('input', { type: 'checkbox' });
-      label.createSpan({ text: item });
-      checkbox.addEventListener('change', () => {
-        if (checkbox.checked) checked.add(index);
-        else checked.delete(index);
-        updateCompletion();
-      });
-    });
-
-  }
-
-  // ── Event Handlers ────────────────────────────────────────────────────────
-
-  /** D1: freeze/resume — hide modal when active note is not the target note. */
   private handleActiveLeafChange(): void {
     if (this.containerEl === null) return;
-
-    // Phase 59 INLINE-FIX-05 / Pitfall 3: while SnippetFillInModal is open, focus
-    // may transition to the stacked modal and fire active-leaf-change. Skipping the
-    // D1 hide/show logic here keeps the inline container visible under the modal
-    // so the user sees context while filling placeholders, and avoids a hide→show
-    // flicker when the modal closes.
-    if (this.isFillModalOpen) return;
+    if (this.sessionHost?.hasOpenChildModal() === true) return;
 
     const activeFile = this.app.workspace.getActiveFile();
-    const isTargetActive = activeFile !== null && activeFile.path === this.targetNote.path;
-
-    // Check if target note has any open leaves by iterating all leaves
+    const isTargetActive = activeFile?.path === this.targetNote.path;
     let targetHasOpenLeaves = false;
     this.app.workspace.iterateAllLeaves((leaf) => {
       const view = leaf.view;
-      if ('file' in view && view.file instanceof TFile) {
-        if (view.file.path === this.targetNote.path) {
-          targetHasOpenLeaves = true;
-        }
+      if ('file' in view && view.file instanceof TFile && view.file.path === this.targetNote.path) {
+        targetHasOpenLeaves = true;
       }
     });
 
     if (!targetHasOpenLeaves) {
-      // D2: target note tab closed — end the run
       this.close();
       return;
     }
-
     if (isTargetActive) {
       if (this.isHidden) {
         this.containerEl.removeClass('is-hidden');
         this.isHidden = false;
       }
-    } else {
-      if (!this.isHidden) {
-        this.containerEl.addClass('is-hidden');
-        this.isHidden = true;
-      }
+    } else if (!this.isHidden) {
+      this.containerEl.addClass('is-hidden');
+      this.isHidden = true;
     }
   }
 
-  /** D2: target note was deleted — close the modal. */
-  private handleTargetNoteDeleted(): void {
-    console.debug('[RadiProtocol] InlineRunnerModal: target note deleted, closing');
-    this.close();
-  }
-
-  private handleKeydown(e: KeyboardEvent): void {
-    const target = e.target as HTMLElement | null;
-    if (target !== null && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA')) {
-      return;
-    }
-
-    if (e.key === 'Escape') {
-      e.preventDefault();
+  private handleKeydown(event: KeyboardEvent): void {
+    const target = event.target as HTMLElement | null;
+    if (target !== null && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA')) return;
+    if (event.key === 'Escape') {
+      event.preventDefault();
       this.close();
       return;
     }
-
-    if ((e.ctrlKey || e.altKey) && e.key === 'ArrowLeft') {
-      e.preventDefault();
-      this.runner.stepBack();
-      this.render();
-      return;
-    }
-
-    if ((e.ctrlKey || e.altKey) && e.key === 'ArrowRight') {
-      e.preventDefault();
-      this.runner.redo();
-      this.render();
-      return;
-    }
-  }
-
-  /** Phase 85 INLINE-MULTI-02: public so the cascade logic in another modal's
-   *  open() can read this instance's current applied position. */
-  getAppliedLayout(): InlineRunnerLayout | null {
-    if (this.layoutManager === null) return null;
-    return this.layoutManager.getAppliedLayout();
-  }
-
-  /** Delegates to InlineRunnerLayoutManager.restoreOrDefaultPosition(). */
-  restoreOrDefaultPosition(): void {
-    this.layoutManager?.restoreOrDefaultPosition();
-  }
-
-  /** Delegates to InlineRunnerLayoutManager.applyInitialLayout(). */
-  applyInitialLayout(): void {
-    this.layoutManager?.applyInitialLayout();
-  }
-
-  /** Delegates to InlineRunnerLayoutManager.reclampCurrentPosition(). */
-  async reclampCurrentPosition(persistIfChanged: boolean): Promise<void> {
-    await this.layoutManager?.reclampCurrentPosition(persistIfChanged);
-  }
-
-  /** Delegates to InlineRunnerLayoutManager.handleResizeTick().
-   *  Exposed for ResizeObserver test harness in inline-runner-layout.test.ts. */
-  handleResizeTick(): void {
-    this.layoutManager?.handleResizeTick();
-  }
-
-  /** Resolve the textSeparator enum to its actual string value. */
-  private resolveSeparator(): string {
-    const sep = this.plugin.settings.textSeparator;
-    return sep === 'newline' ? '\n' : ' ';
-  }
-
-  /** Handle answer button click — append answer to note and advance. */
-  private async handleAnswerClick(answerNode: AnswerNode): Promise<void> {
-    const stateBefore = this.runner.getState();
-    const beforeText = this.extractAccumulatedText(stateBefore);
-
-    this.runner.chooseAnswer(answerNode.id);
-
-    const stateAfter = this.runner.getState();
-    const afterText = this.extractAccumulatedText(stateAfter);
-
-    if (afterText.length > beforeText.length) {
-      // WR-01: defensive check — text should only grow (append-only invariant)
-      if (!afterText.startsWith(beforeText)) {
-        console.warn('[RadiProtocol] Text changed non-monotonically, skipping append');
-        this.render();
-        return;
-      }
-      const appendedText = afterText.slice(beforeText.length);
-      await this.appendAnswerToNote(appendedText);
-    }
-
-    this.render();
-  }
-
-  /** Append text to the end of the target note. The delta already contains
-   *  separators from the accumulator, but Obsidian adds a trailing newline
-   *  to files on save. If the note already ends with the separator char and
-   *  the delta starts with it, strip the leading separator from the delta
-   *  to avoid duplication.
-   *  CR-02: Protected by insertMutex to prevent read-modify-write races
-   *  with concurrent vault.modify calls (e.g., user edits, other plugins). */
-  private async appendAnswerToNote(text: string): Promise<void> {
-    await this.plugin['insertMutex'].runExclusive(this.targetNote.path, async () => {
-      const currentContent = await this.app.vault.read(this.targetNote);
-      let toAppend = text;
-      const sep = this.resolveSeparator();
-      if (currentContent.endsWith(sep) && text.startsWith(sep)) {
-        toAppend = text.slice(sep.length);
-      }
-      const newContent = currentContent + toAppend;
-      await this.app.vault.modify(this.targetNote, newContent);
-    });
-  }
-
-  /**
-   * Phase 59 INLINE-FIX-04 — Accumulator-diff helper for snippet insert paths.
-   *
-   * Mirrors {@link handleAnswerClick}'s diff logic so snippet dispatch
-   * sites can append the separator-applied delta (not raw snippet content) to the note.
-   *
-   * Contract: caller captures `beforeText` BEFORE calling `runner.completeSnippet(...)`.
-   * After completeSnippet mutates the accumulator (applying the per-node or global
-   * separator), this helper reads `afterText`, computes the delta, and pipes it through
-   * the same `appendAnswerToNote` sink that the answer path uses — preserving the
-   * `TextAccumulator.appendWithSeparator` first-chunk invariant.
-   *
-   * Non-monotonic accumulator growth (afterText does not start with beforeText) is
-   * treated as a bug and logged via console.warn, mirroring WR-01 in handleAnswerClick.
-   */
-  private async appendDeltaFromAccumulator(beforeText: string): Promise<void> {
-    const afterText = this.extractAccumulatedText(this.runner.getState());
-    if (afterText.length <= beforeText.length) return;
-    if (!afterText.startsWith(beforeText)) {
-      console.warn('[RadiProtocol] Text changed non-monotonically, skipping append');
-      return;
-    }
-    await this.appendAnswerToNote(afterText.slice(beforeText.length));
-  }
-
-  /** Handle loop branch click — append any traversed answer text to note. */
-  private async handleLoopBranchClick(edge: import('../graph/graph-model').RPEdge, _isExit: boolean): Promise<void> {
-    void _isExit;
-    // Capture accumulated text before the branch choice
-    const stateBefore = this.runner.getState();
-    const beforeText = stateBefore.status === 'awaiting-loop-pick'
-      ? stateBefore.accumulatedText
-      : '';
-
-    this.runner.chooseLoopBranch(edge.id);
-
-    // After chooseLoopBranch, the runner may have advanced through answer/text-block nodes.
-    // Capture the new accumulated text — the delta is what was appended by advanceThrough.
-    const stateAfter = this.runner.getState();
-    let afterText = '';
-    if (stateAfter.status === 'at-node') {
-      afterText = stateAfter.accumulatedText;
-    } else if (stateAfter.status === 'awaiting-loop-pick') {
-      afterText = stateAfter.accumulatedText;
-    } else if (stateAfter.status === 'complete') {
-      afterText = stateAfter.finalText;
-    } else if (stateAfter.status === 'awaiting-snippet-pick') {
-      afterText = stateAfter.accumulatedText;
-    } else if (stateAfter.status === 'awaiting-snippet-fill') {
-      afterText = stateAfter.accumulatedText;
-    } else {
-      // WR-02: unexpected state — preserve baseline to avoid spurious append
-      console.warn('[RadiProtocol] Unexpected state after loop branch:', stateAfter.status);
-      afterText = beforeText;
-    }
-
-    if (afterText.length > beforeText.length) {
-      const appendedText = afterText.slice(beforeText.length);
-      await this.appendAnswerToNote(appendedText);
-    }
-
-    this.render();
-  }
-
-  /** Extract accumulated text from any runner state. */
-  private extractAccumulatedText(state: ReturnType<typeof this.runner.getState>): string {
-    switch (state.status) {
-      case 'at-node':
-      case 'awaiting-loop-pick':
-      case 'awaiting-snippet-pick':
-      case 'awaiting-snippet-fill':
-        return state.accumulatedText;
-      case 'complete':
-        return state.finalText;
-      default:
-        return '';
-    }
-  }
-
-
-
-  /** Render snippet picker inline (Phase 51 D-06 pattern). */
-  private async mountSnippetPicker(
-    state: {
-      status: 'awaiting-snippet-pick';
-      nodeId: string;
-      subfolderPath: string | undefined;
-      accumulatedText: string;
-      canStepBack: boolean;
-      canRedo: boolean;
-      undoStackSize: number;
-    },
-    questionZone: HTMLElement,
-  ): Promise<void> {
-    if (this.snippetTreePicker !== null) {
-      this.snippetTreePicker.unmount();
-      this.snippetTreePicker = null;
-    }
-
-    this.snippetTreePicker = renderSnippetPicker(questionZone, state, {
-      app: this.app,
-      snippetService: this.plugin.snippetService,
-      rootPath: this.plugin.settings.snippetFolderPath,
-      hostClass: CSS_CLASS.STP_INLINE_HOST,
-      copy: {
-        notFound: (relativePath) => this.plugin.i18n.t('inlineRunner.snippetNotFound', { path: relativePath }),
-      },
-      t: this.plugin.i18n.t.bind(this.plugin.i18n),
-      bindClick: (el, handler) => el.addEventListener('click', handler),
-      getCurrentNodeId: () => {
-        const s = this.runner.getState();
-        return s.status === 'awaiting-snippet-pick' ? s.nodeId : null;
-      },
-      // CR-01: detached-DOM guard for inline modal closures.
-      isStillMounted: () =>
-        this.containerEl !== null && document.body.contains(this.containerEl),
-      // Inline modal re-renders before showing the error so the new picker
-      // takes a fresh DOM, then writes the error into contentEl.
-      presentAsyncError: (message) => {
-        this.render();
-        if (this.contentEl) {
-          this.contentEl.createEl('p', {
-            cls: CSS_CLASS.EMPTY_STATE_BODY,
-            text: message,
-          });
-        }
-      },
-      onSnippetReady: (snippet) => this.handleSnippetPickerSelection(snippet),
-      onBack: () => {
-        if (this.snippetTreePicker !== null) {
-          this.snippetTreePicker.unmount();
-          this.snippetTreePicker = null;
-        }
-        this.runner.stepBack();
-        this.render();
-      },
-      onRedo: () => {
-        this.runner.redo();
-        this.render();
-      },
-    });
-  }
-
-  /** Handle snippet picker selection — append to note and advance.
-   *  Phase 2 (JSON-removal): Snippet is now MdSnippet | MdTemplateSnippet, so
-   *  the JSON validation gate is gone and pickId is always the snippet path. */
-  private async handleSnippetPickerSelection(snippet: import('../snippets/snippet-model').Snippet): Promise<void> {
-    this.runner.pickSnippet(snippet.path);
-
-    if (snippet.kind === 'md') {
-      // Phase 59 INLINE-FIX-04: capture baseline BEFORE completeSnippet so the
-      // accumulator delta includes the resolved separator applied by
-      // runner → TextAccumulator.appendWithSeparator. Raw snippet.content bypasses it.
-      const beforeText = this.extractAccumulatedText(this.runner.getState());
-      this.runner.completeSnippet(snippet.content);
-      await this.appendDeltaFromAccumulator(beforeText);
-      this.snippetTreePicker?.unmount();
-      this.snippetTreePicker = null;
-      this.render();
-      return;
-    }
-
-    if (snippet.placeholders.length === 0) {
-      // Phase 59 INLINE-FIX-04: same accumulator-diff pattern as MD arm above.
-      const beforeText = this.extractAccumulatedText(this.runner.getState());
-      this.runner.completeSnippet(snippet.template);
-      await this.appendDeltaFromAccumulator(beforeText);
-      this.snippetTreePicker?.unmount();
-      this.snippetTreePicker = null;
-      this.render();
-      return;
-    }
-
-    // Snippet has placeholders — advance to awaiting-snippet-fill state
-    this.render();
-  }
-
-  /**
-   * Phase 59 INLINE-FIX-05 — Resolve snippet and dispatch fill-in modal.
-   *
-   * Phase 2 (JSON-removal): all snippet-ID resolution (direct full-path,
-   * extensionless root probe, unique-subdirectory fallback) is owned by
-   * `SnippetService.resolveSnippet`, which returns a discriminated
-   * `SnippetResolution` (`found | legacy-json | missing`). This method only
-   * orchestrates on that result and delegates presentation to
-   * `render-snippet-fill.ts`. No path-shape branching, `${id}.json`/`${id}.md`
-   * probe loop, `app.vault.getFiles().filter(...)` subdirectory scan, or
-   * JSON-kind validation gate remains in the view.
-   */
-  private async handleSnippetFill(snippetId: string, questionZone: HTMLElement): Promise<void> {
-    const t = this.plugin.i18n.t.bind(this.plugin.i18n);
-    const resolution = await this.plugin.snippetService.resolveSnippet(snippetId);
-
-    if (resolution.status === 'missing') {
-      renderSnippetFillNotFound(questionZone, snippetId);
-      return;
-    }
-
-    if (resolution.status === 'legacy-json') {
-      renderSnippetFillUnsupportedFormat(questionZone, resolution.path, t);
-      this.runner.stepBack();
-      this.render();
-      return;
-    }
-
-    const snippet = resolution.snippet;
-    // Capture accumulator baseline before any runner mutation, for separator-applied delta.
-    const beforeText = this.extractAccumulatedText(this.runner.getState());
-
-    if (snippet.kind === 'md') {
-      this.runner.completeSnippet(snippet.content);
-      await this.appendDeltaFromAccumulator(beforeText);
-      this.render();
-      return;
-    }
-
-    // md-template
-    if (snippet.placeholders.length === 0) {
-      this.runner.completeSnippet(snippet.template);
-      await this.appendDeltaFromAccumulator(beforeText);
-      this.render();
-      return;
-    }
-
-    // md-template with placeholders — open the stacked fill-in modal.
-    const modal = new SnippetFillInModal(this.app, snippet, t);
-    this.fillModal = modal;
-    this.isFillModalOpen = true;
-    modal.open();
-    let rendered: string | null;
-    try {
-      rendered = await modal.result;
-    } finally {
-      // Clear flags. DO NOT call modal.close() here — the modal self-closed when its
-      // result promise resolved (submit/cancel/escape all trigger close + resolve inside
-      // SnippetFillInModal). Double-closing would fire duplicate onClose handlers.
-      this.isFillModalOpen = false;
-      this.fillModal = null;
-    }
-    if (rendered !== null) {
-      this.runner.completeSnippet(rendered);
-    } else {
-      // D-11 parity with sidebar: cancel/escape → completeSnippet('') advances runner.
-      this.runner.completeSnippet('');
-    }
-    await this.appendDeltaFromAccumulator(beforeText);
-    this.render();
-  }
-
-  /** Render error state. */
-  private renderError(zone: HTMLElement, errors: string[]): void {
-    zone.empty();
-    const errorPanel = zone.createDiv({ cls: 'rp-error-panel' });
-    renderErrorList(errorPanel, errors, { titleClass: CSS_CLASS.ERROR_TITLE });
+    this.sessionHost?.handleKeydown(event);
   }
 }

@@ -22,7 +22,7 @@ interface ProtocolRunnerOptions {
  *
  * Public API (D-01):
  *   start(graph)              — begin a session
- *   chooseAnswer(answerId)    — user selects a preset-text answer
+ *   chooseAnswer(answerId, submittedText?) — select a preset or free-text Answer
  *   chooseQuestionBranch(edgeId) — user selects a direct Question-to-Question edge
  *   stepBack()                — undo last user action
  *   completeSnippet(text)     — Phase 5 submits rendered snippet text
@@ -86,18 +86,30 @@ export class ProtocolRunner {
   }
 
   /**
-   * User selects a preset-text answer button.
-   * Only valid in at-node state when the current node is a question.
-   * Pushes undo entry BEFORE mutation (D-03, D-04).
+   * User selects an Answer. Preset Answers append their authored answerText;
+   * free-text Answers append the submitted command payload while retaining the
+   * Answer id as branch identity. A blank free-text payload is rejected before
+   * redo/history/accumulator/navigation mutation. Accepted text is preserved
+   * verbatim after the blank-only check.
+   *
+   * @returns true when the Answer command was accepted; false for a wrong-state,
+   * invalid Answer, or blank free-text submission.
    */
-  chooseAnswer(answerId: string): void {
-    if (this.runnerStatus !== RUNNER_STATUS.AT_NODE) return;
-    if (this.graph === null || this.currentNodeId === null) return;
+  chooseAnswer(answerId: string, submittedText?: string): boolean {
+    if (this.runnerStatus !== RUNNER_STATUS.AT_NODE) return false;
+    if (this.graph === null || this.currentNodeId === null) return false;
 
     const answerNode = this.graph.nodes.get(answerId);
     if (answerNode === undefined || answerNode.kind !== 'answer') {
       this.transitionToError(`Answer node '${answerId}' not found or is not an answer node.`);
-      return;
+      return false;
+    }
+
+    const textToAppend = answerNode.freeText === true
+      ? submittedText
+      : answerNode.answerText;
+    if (answerNode.freeText === true && (textToAppend === undefined || textToAppend.trim() === '')) {
+      return false;
     }
 
     // Forward action — clear redo stack (any undone transition is now invalidated)
@@ -109,10 +121,9 @@ export class ProtocolRunner {
       loopContextStack: this.loopContextStack.map(f => ({ ...f })),
     });
 
-    // Append only explicit answer text. A truly empty answer behaves like Skip:
-    // it still advances through the selected branch, but does not insert the
-    // configured separator as a standalone character.
-    this.appendAnswerText(answerNode.answerText, this.resolveSeparator(answerNode));
+    // Append the authored text for preset Answers, or the accepted command payload
+    // for free-text Answers. A truly empty preset answer behaves like Skip.
+    this.appendAnswerText(textToAppend ?? '', this.resolveSeparator(answerNode));
 
     // Advance to the next node after this answer.
     // Phase 44 UAT-fix: dead-end answer inside a loop body returns to the owning picker
@@ -122,9 +133,10 @@ export class ProtocolRunner {
     const next = neighbors !== undefined ? neighbors[0] : undefined;
     if (next === undefined) {
       this.advanceOrReturnToLoop(undefined);
-      return;
+      return true;
     }
     this.advanceThrough(next);
+    return true;
   }
 
   /**
@@ -831,9 +843,14 @@ export class ProtocolRunner {
           return;
         }
         case 'answer': {
-          // Answer nodes are traversed as pass-through: append non-empty text, follow edge.
-          // This handles answer → text-block → question chains correctly.
-          this.appendAnswerText(node.answerText, this.resolveSeparator(node));
+          // A free-text Answer's authored text is a prompt only. Selected
+          // free-text Answers are handled by chooseAnswer(answerId, payload);
+          // if one is encountered in an automatic chain, pass through without
+          // inserting its prompt.
+          this.appendAnswerText(
+            node.freeText === true ? '' : node.answerText,
+            this.resolveSeparator(node),
+          );
           const next = this.firstNeighbour(cursor);
 
           // Quick-exit from loop body: if an answer node inside a loop body is wired

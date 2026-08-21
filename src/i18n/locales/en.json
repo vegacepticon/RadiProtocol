@@ -7,6 +7,8 @@
     "english": "English",
     "textSeparator": "Text separator",
     "textSeparatorDesc": "How accumulated report text is joined between nodes. \"newline\" adds a line break before each new chunk; \"space\" adds a single space.",
+    "useSidebarRunner": "Run protocols in the right sidebar",
+    "useSidebarRunnerDesc": "Open every protocol run as a new transient right-sidebar session instead of a floating panel.",
     "newline": "Newline (default)",
     "space": "Space",
     "protocolHeading": "Protocol",
@@ -56,6 +58,8 @@
     "createProtocolFailed": "Failed to create protocol: {error}",
     "questionTextLabel": "Question text",
     "answerTextLabel": "Answer text",
+    "freeTextAnswerLabel": "Collect a free-text response",
+    "freeTextAnswerHelp": "Use the Answer label or text as the prompt; the radiologist enters multiline report text during the run.",
     "contentLabel": "Content",
     "snippetSeparatorLabel": "How to separate this snippet from previous text",
     "noEditableFields": "No editable content fields for this node kind.",
@@ -297,6 +301,7 @@
     "multipleStartNodes": "Multiple start nodes found ({count}). Only one start node is allowed.",
     "unreachableNodes": "{count} unreachable node(s) found: {nodeList}. Connect these nodes to the protocol or remove them.",
     "deadEndQuestion": "Question \"{questionText}\" has no outgoing branches. Add at least one answer or snippet node connected from this question.",
+    "freeTextAnswerPromptRequired": "Free-text Answer \"{id}\" needs a nonblank display label or answer text to use as its prompt.",
     "unintentionalCycle": "Unintentional cycle detected: {cycleLabel}. Cycles must pass through a loop question. Remove the back-edge or enable the loop toggle on a question in the cycle."
   },
   "protocolRunner": {
@@ -309,6 +314,8 @@
     "starting": "Starting protocol…",
     "processing": "Processing…",
     "loadingSnippets": "Loading snippets…",
+    "freeTextSubmit": "Submit",
+    "freeTextBlankError": "Enter a value before submitting.",
     "keyStepBack": "Ctrl+← Back",
     "keyStepRedo": "Ctrl+→ Redo",
     "keyClose": "Esc Close"
@@ -317,7 +324,16 @@
     "protocolFileNotFound": "Protocol file not found: \"{path}\".",
     "couldNotReadProtocol": "Could not read protocol file: \"{path}\".",
     "snippetNotFound": "Snippet not found: \"{path}\".",
-    "snippetLegacyJson": "Snippet \"{path}\" uses the legacy JSON format, which is no longer supported. Please recreate it as a Markdown template, then update the protocol."
+    "snippetLegacyJson": "Snippet \"{path}\" uses the legacy JSON format, which is no longer supported. Please recreate it as a Markdown template, then update the protocol.",
+    "noteWriteFailed": "Could not write protocol output to the bound note.",
+    "snippetLoadFailed": "Could not load the selected snippet. Go back and try again."
+  },
+  "sidebarRunner": {
+    "title": "Protocol runner",
+    "boundNote": "Bound note: {path}",
+    "activeNoteMismatch": "The active note differs from this runner's bound note.",
+    "focusNote": "Focus note",
+    "initializing": "Initializing protocol runner…"
   },
   "snippetPreview": {
     "ariaLabel": "Snippet preview",

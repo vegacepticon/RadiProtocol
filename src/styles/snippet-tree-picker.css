@@ -27,7 +27,8 @@
   height: 360px;
 }
 
-.rp-stp-inline-host .rp-stp-body {
+.rp-stp-inline-host .rp-stp-body,
+.rp-stp-runner-session-host .rp-stp-body {
   flex: 1 1 auto;
   min-height: 0;
   height: 100%;
@@ -41,7 +42,8 @@
   flex: 1 1 auto;
 }
 
-.rp-stp-inline-host .rp-stp-root {
+.rp-stp-inline-host .rp-stp-root,
+.rp-stp-runner-session-host .rp-stp-root {
   display: flex;
   flex: 1 1 auto;
   flex-direction: column;
@@ -307,7 +309,8 @@
   overflow-y: auto;
 }
 
-.rp-stp-inline-host .rp-stp-list {
+.rp-stp-inline-host .rp-stp-list,
+.rp-stp-runner-session-host .rp-stp-list {
   flex: 1 1 auto;
   min-height: 0;
   max-height: none;

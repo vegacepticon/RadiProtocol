@@ -84,7 +84,7 @@ export interface ProtocolNodeRecord {
   text?: string;
   /**
    * Typed node fields. Keys are camelCase without prefix:
-   * - questionText, answerText, displayLabel, content, separator,
+   * - questionText, answerText, displayLabel, freeText, content, separator,
    *   loop, optionOrder, subfolderPath, snippetLabel, snippetSeparator, snippetPath.
    *
    * Parser validates field presence/absence per node kind.

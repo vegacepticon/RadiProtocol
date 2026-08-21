@@ -1,361 +1,45 @@
-/* Phase 54 / 60 / 67 / 88: Inline runner — 3-zone layout with stable button anchor */
+/* Floating presentation overrides for the shared runner session host. */
 
 .rp-inline-runner-container {
   position: fixed;
-  bottom: 0;
-  background: var(--background-primary);
-  border-top: 1px solid var(--background-modifier-border);
-  box-shadow: 0 -2px 12px rgba(0, 0, 0, 0.15);
-  display: flex;
-  flex-direction: column;
+  right: auto;
+  bottom: auto;
   z-index: var(--layer-modal);
-  transition: left 0.15s ease, right 0.15s ease;
+  box-sizing: border-box;
+  width: min(360px, calc(100vw - var(--size-4-8)));
+  max-width: calc(100vw - var(--size-4-8));
+  min-width: 240px;
+  height: min(45vh, 480px);
+  max-height: calc(100vh - var(--size-4-8));
+  min-height: 120px;
+  overflow: hidden;
+  resize: both;
+  border: 1px solid var(--background-modifier-border);
+  border-radius: var(--radius-m);
+  box-shadow: var(--shadow-l);
+  transition: box-shadow 0.12s ease;
 }
 
 .rp-inline-runner-container.is-hidden {
   display: none;
 }
 
-/* Phase 88: Header — drag handle + progress bar at top of modal */
-.rp-inline-runner-header {
-  flex-shrink: 0;
+.rp-inline-runner-container .rp-runner-session-header {
   cursor: grab;
-  user-select: none;
-  background: var(--background-primary);
 }
 
-.rp-inline-runner-container.is-dragging .rp-inline-runner-header {
+.rp-inline-runner-container.is-dragging .rp-runner-session-header {
   cursor: grabbing;
 }
 
-/* Progress bar — top of modal, inside header */
-.rp-inline-runner-header .rp-inline-runner-progress {
-  display: flex;
-  align-items: center;
-  gap: var(--size-2-2);
-  padding: var(--size-2-2) var(--size-4-2);
-  border-bottom: 1px solid var(--background-modifier-border);
-}
-
-.rp-inline-runner-header .rp-inline-runner-progress-track {
-  flex: 1 1 auto;
-  height: 6px;
-  min-width: 32px;
-  overflow: hidden;
-  border-radius: 999px;
-  background: var(--background-modifier-border);
-}
-
-.rp-inline-runner-header .rp-inline-runner-progress-fill {
-  width: 0%;
-  height: 100%;
-  border-radius: inherit;
-  background: var(--interactive-accent);
-  transition: width 0.16s ease;
-}
-
-.rp-inline-runner-header .rp-inline-runner-progress-text {
-  flex: 0 0 auto;
-  min-width: 3ch;
-  color: var(--text-muted);
-  font-size: var(--font-ui-smaller);
-  line-height: 1;
-  text-align: right;
-}
-
-/* Phase 60: compact draggable inline runner */
-.rp-inline-runner-container {
-  width: min(360px, calc(100vw - var(--size-4-8)));
-  max-width: calc(100vw - var(--size-4-8));
-  height: min(45vh, 480px);
-  max-height: min(52vh, calc(100vh - var(--size-4-8)));
-  bottom: auto;
-  right: auto;
-  border: 1px solid var(--background-modifier-border);
-  border-radius: var(--radius-m);
-  box-shadow: var(--shadow-l);
-  overflow: hidden;
-  transition: box-shadow 0.12s ease;
-}
-
-.rp-inline-runner-container.is-dragging {
-  box-shadow: var(--shadow-xl);
-}
-
-/* Phase 67: resizable inline runner */
-.rp-inline-runner-container {
-  resize: both;
-  overflow: hidden;
-  min-width: 240px;
-  min-height: 120px;
-  max-width: calc(100vw - var(--size-4-8));
-  max-height: calc(100vh - var(--size-4-8));
-}
-
+.rp-inline-runner-container.is-dragging,
 .rp-inline-runner-container.is-resizing {
   box-shadow: var(--shadow-xl);
 }
 
-/* Phase 77: applyPosition/applyLayout reset right/bottom/maxWidth/transform */
 .rp-inline-runner-container.rp-inline-runner-applied-position {
   right: auto;
   bottom: auto;
   max-width: none;
   transform: none;
-}
-
-/* Phase 88: Content zone — flexible, scrollable */
-.rp-inline-runner-content {
-  flex: 1 1 auto;
-  min-height: 0;
-  overflow-y: auto;
-  padding: var(--size-4-2);
-}
-
-/* Phase 88: Actions zone — anchored button area.
- * Shown for states with buttons (at-node, awaiting-loop-pick).
- * Hidden for states that need full content area (snippet-pick, snippet-fill, etc.). */
-.rp-inline-runner-actions {
-  flex: 1 1 auto;
-  min-height: 0;
-  overflow-y: auto;
-  border-top: 1px solid var(--background-modifier-border);
-  padding: var(--size-2-3) var(--size-4-2);
-  display: flex;
-  flex-direction: column;
-  align-items: stretch;
-}
-
-/* When actions are shown (at-node, awaiting-loop-pick), content sizes to its text, actions fills remainder */
-.rp-inline-runner-container.rp-state-actions .rp-inline-runner-content {
-  flex: 0 0 auto;
-}
-.rp-inline-runner-container.rp-state-actions .rp-inline-runner-actions {
-  flex: 1 1 auto;
-  overflow-y: auto;
-}
-
-/* When content is fullscreen (no actions zone visible), content takes all */
-.rp-inline-runner-container.rp-state-content-only .rp-inline-runner-content {
-  flex: 1 1 auto;
-  display: flex;
-  flex-direction: column;
-  min-height: 0;
-}
-.rp-inline-runner-container.rp-state-content-only .rp-inline-runner-actions {
-  display: none;
-}
-
-/* Phase 88: Button lists inside actions */
-.rp-inline-runner-actions .rp-answer-list,
-.rp-inline-runner-actions .rp-question-transition-list,
-.rp-inline-runner-actions .rp-snippet-branch-list,
-.rp-inline-runner-actions .rp-loop-picker-list {
-  display: flex;
-  flex-direction: column;
-  gap: var(--size-2-3);
-  margin-bottom: 0;
-}
-
-/* Phase 88: Question text frame — subtle border, non-intrusive, centered, larger */
-.rp-inline-runner-content .rp-question-text {
-  margin: 0 0 var(--size-4-2) 0;
-  font-size: var(--font-ui-normal);
-  line-height: var(--line-height-tight);
-  text-align: center;
-  padding: var(--size-2-3) var(--size-2-2);
-  border: 1px solid var(--background-modifier-border);
-  border-radius: var(--radius-s);
-  background: var(--background-secondary);
-}
-
-/* Phase 88: Unified action button selectors — only in .rp-inline-runner-actions now */
-.rp-inline-runner-actions .rp-answer-btn,
-.rp-inline-runner-actions .rp-question-transition-btn,
-.rp-inline-runner-actions .rp-snippet-branch-btn,
-.rp-inline-runner-actions .rp-loop-body-btn,
-.rp-inline-runner-actions .rp-loop-exit-btn {
-  padding: var(--size-2-3) var(--size-4-2);
-  width: 100%;
-  min-height: 36px;
-  white-space: normal;
-  overflow-wrap: anywhere;
-  word-break: break-word;
-  height: auto;
-  align-items: flex-start;
-  max-width: 100%;
-  box-sizing: border-box;
-  text-align: left;
-}
-
-/* Direct Question transitions are navigation, not report-producing Answers. */
-.rp-inline-runner-actions .rp-question-transition-list {
-  margin-top: var(--size-4-3);
-}
-
-.rp-inline-runner-actions .rp-question-transition-btn {
-  border-left: 3px solid var(--interactive-accent);
-  background: var(--background-secondary);
-}
-
-/* Phase 88: Footer — close btn + Back/Skip */
-.rp-inline-runner-footer {
-  flex-shrink: 0;
-  padding: var(--size-2-3) var(--size-4-2);
-  border-top: 1px solid var(--background-modifier-border);
-  background: var(--background-primary);
-}
-
-/* Phase 88: Footer button row — close (left) + Back/Skip (right) */
-.rp-inline-runner-footer-btn-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--size-2-2);
-}
-
-/* Close button in footer — square rp-runner-icon-btn */
-.rp-inline-runner-footer-btn-row .rp-inline-runner-close-btn {
-  background: transparent;
-  border: 1px solid var(--background-modifier-border);
-  cursor: pointer;
-  color: var(--text-muted);
-  border-radius: var(--radius-s);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.rp-inline-runner-footer-btn-row .rp-inline-runner-close-btn:hover {
-  background: var(--background-modifier-hover);
-  color: var(--text-normal);
-}
-
-/* Snippet picker inline host */
-.rp-stp-inline-host {
-  width: 100%;
-  max-width: 100%;
-  min-width: 0;
-  flex: 1 1 auto;
-  min-height: 0;
-  height: 100%;
-  overflow: hidden;
-  box-sizing: border-box;
-}
-
-.rp-stp-inline-host .rp-stp-root,
-.rp-stp-inline-host .rp-stp-body,
-.rp-stp-inline-host .rp-stp-search,
-.rp-stp-inline-host .rp-stp-list {
-  width: 100%;
-  max-width: 100%;
-  min-width: 0;
-  min-height: 0;
-  box-sizing: border-box;
-}
-
-.rp-stp-inline-host .rp-stp-root,
-.rp-stp-inline-host .rp-stp-body {
-  display: flex;
-  flex: 1 1 auto;
-  flex-direction: column;
-}
-
-.rp-stp-inline-host .rp-stp-body {
-  min-height: 0;
-  height: 100%;
-}
-
-.rp-stp-inline-host .rp-stp-list {
-  flex: 1 1 auto;
-  max-height: none;
-  overflow-x: hidden;
-  overflow-y: auto;
-}
-
-/* Error panel */
-.rp-inline-runner-content .rp-error-panel {
-  background: var(--background-modifier-error);
-  border-radius: var(--radius-s);
-  padding: var(--size-4-3);
-}
-
-.rp-inline-runner-content .rp-error-title {
-  font-weight: var(--font-semibold);
-  color: var(--text-error);
-  margin: 0 0 var(--size-4-2) 0;
-}
-
-.rp-inline-runner-content .rp-error-list {
-  margin: 0;
-  padding-left: var(--size-4-4);
-}
-
-/* Phase 75: runner footer row (Back/Skip) */
-.rp-runner-footer-row {
-  display: flex;
-  gap: var(--size-4-2);
-  justify-content: flex-end;
-}
-
-/* Phase 75: complete heading */
-.rp-complete-heading {
-  font-size: var(--font-ui-medium);
-  font-weight: var(--font-semibold);
-  margin: 0 0 var(--size-4-2) 0;
-}
-
-/* Icon buttons (Back/Skip/Close) */
-.rp-runner-icon-btn {
-  width: 28px;
-  height: 28px;
-  padding: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: var(--radius-s);
-  background: transparent;
-  border: 1px solid var(--background-modifier-border);
-  color: var(--text-muted);
-  cursor: pointer;
-  flex-shrink: 0;
-}
-
-.rp-runner-icon-btn:hover {
-  background: var(--background-modifier-hover);
-  color: var(--text-normal);
-}
-
-.rp-runner-icon-btn svg {
-  width: 14px;
-  height: 14px;
-}
-
-.rp-inline-runner-container.rp-state-content-only .rp-inline-runner-content > .rp-runner-footer-row {
-  flex: 0 0 auto;
-  margin-top: var(--size-2-3);
-}
-
-/* Self-check */
-.rp-inline-runner-self-check {
-  display: flex;
-  flex-direction: column;
-  gap: var(--size-2-2);
-}
-
-.rp-inline-runner-self-check-item {
-  display: flex;
-  align-items: flex-start;
-  gap: var(--size-2-2);
-  line-height: 1.4;
-}
-
-/* Phase 2 — disabled icon buttons read as inactive. Additive: also styles the
-   Back/Redo/Skip buttons' disabled state set via .disabled = true in renderFooterIcons. */
-.rp-runner-icon-btn:disabled,
-.rp-runner-icon-btn:disabled:hover {
-  opacity: 0.4;
-  cursor: not-allowed;
-  background: transparent;
-  color: var(--text-muted);
 }

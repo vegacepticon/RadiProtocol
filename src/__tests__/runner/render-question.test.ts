@@ -1,57 +1,30 @@
 import { describe, expect, it, vi } from 'vitest';
-import type { ProtocolGraph, RPNode } from '../../graph/graph-model';
-import { renderQuestionAtNode } from '../../runner/render/render-question';
+import type { ProtocolGraph, RPEdge, RPNode } from '../../graph/graph-model';
+import {
+  renderQuestionAtNode,
+  type QuestionBranchHost,
+} from '../../runner/render/render-question';
+import {
+  findByClass,
+  makeEl,
+  type MockEl,
+} from './runner-renderer-host-fixtures';
 
-class MockEl {
-  children: MockEl[] = [];
-  cls = '';
-  text = '';
-  title = '';
-  disabled = false;
-  attrs = new Map<string, string>();
-  clickHandler: ((ev: MouseEvent) => void) | null = null;
-  cssProps = new Map<string, string>();
+const state = {
+  status: 'at-node' as const,
+  currentNodeId: 'q',
+  accumulatedText: 'before',
+  canStepBack: true,
+  canRedo: false,
+  undoStackSize: 0,
+};
 
-  constructor(readonly tag: string) {}
-
-  createDiv(opts?: { cls?: string }): MockEl {
-    const child = new MockEl('div');
-    child.cls = opts?.cls ?? '';
-    this.children.push(child);
-    return child;
-  }
-
-  createEl(tag: string, opts?: { cls?: string; text?: string }): MockEl {
-    const child = new MockEl(tag);
-    child.cls = opts?.cls ?? '';
-    child.text = opts?.text ?? '';
-    this.children.push(child);
-    return child;
-  }
-
-  setAttribute(name: string, value: string): void {
-    this.attrs.set(name, value);
-  }
-
-  setCssProps(props: Record<string, string>): void {
-    for (const [k, v] of Object.entries(props)) {
-      this.cssProps.set(k, v);
-    }
-  }
+function asHtml(element: MockEl): HTMLElement {
+  return element as unknown as HTMLElement;
 }
 
-function asHtml(el: MockEl): HTMLElement {
-  return el as unknown as HTMLElement;
-}
-
-function findByClass(root: MockEl, cls: string): MockEl[] {
-  const out: MockEl[] = [];
-  const visit = (el: MockEl): void => {
-    if (el.cls.split(/\s+/).includes(cls)) out.push(el);
-    for (const child of el.children) visit(child);
-  };
-  visit(root);
-  return out;
+function className(element: MockEl): string {
+  return Array.from(element.classList).join(' ');
 }
 
 function baseNode(id: string, kind: RPNode['kind'], extra: Partial<RPNode> = {}): RPNode {
@@ -71,168 +44,386 @@ function baseNode(id: string, kind: RPNode['kind'], extra: Partial<RPNode> = {})
   } as RPNode;
 }
 
-function makeGraph(current: RPNode = baseNode('q', 'question')): ProtocolGraph {
-  const nodes = new Map<string, RPNode>();
-  nodes.set(current.id, current);
-  nodes.set('a1', baseNode('a1', 'answer', { answerText: 'Raw answer', displayLabel: 'Shown answer' }));
-  nodes.set('s-file', baseNode('s-file', 'snippet', {
-    radiprotocol_snippetPath: 'Chest/report.json',
-  }));
-  nodes.set('s-dir', baseNode('s-dir', 'snippet', {
-    snippetLabel: 'Folder label',
-  }));
-  nodes.set('q-labeled', baseNode('q-labeled', 'question', { questionText: 'Labeled target' }));
-  nodes.set('q-fallback', baseNode('q-fallback', 'question', { questionText: 'Fallback question' }));
-  nodes.set('q-id', baseNode('q-id', 'question', { questionText: '   ' }));
+function graphFrom(nodes: RPNode[], edges: RPEdge[]): ProtocolGraph {
+  const adjacency = new Map<string, string[]>();
+  const reverseAdjacency = new Map<string, string[]>();
+  for (const edge of edges) {
+    adjacency.set(edge.fromNodeId, [
+      ...(adjacency.get(edge.fromNodeId) ?? []),
+      edge.toNodeId,
+    ]);
+    reverseAdjacency.set(edge.toNodeId, [
+      ...(reverseAdjacency.get(edge.toNodeId) ?? []),
+      edge.fromNodeId,
+    ]);
+  }
   return {
-    canvasFilePath: 'test.canvas',
-    nodes,
-    edges: [
-      { id: 'e-fallback', fromNodeId: current.id, toNodeId: 'q-fallback' },
-      { id: 'e-labeled', fromNodeId: current.id, toNodeId: 'q-labeled', label: 'Direct label' },
-      { id: 'e-id', fromNodeId: current.id, toNodeId: 'q-id', label: '   ' },
-    ],
-    adjacency: new Map([[current.id, ['a1', 'q-labeled', 's-file', 's-dir', 'q-fallback', 'q-id']]]),
-    reverseAdjacency: new Map(),
-    startNodeId: current.id,
+    canvasFilePath: 'test.rp.json',
+    nodes: new Map(nodes.map((node) => [node.id, node])),
+    edges,
+    adjacency,
+    reverseAdjacency,
+    startNodeId: 'q',
   };
 }
 
-describe('shared question branch renderer', () => {
-  it('renders question text in text zone and answer/snippet buttons in action zone, delegates clicks', () => {
-    const textZone = new MockEl('text');
-    const actionZone = new MockEl('actions');
-    const onChooseAnswer = vi.fn();
-    const onChooseSnippetBranch = vi.fn();
-    const onChooseQuestionBranch = vi.fn();
+function groupedGraph(current: RPNode = baseNode('q', 'question')): ProtocolGraph {
+  const nodes = [
+    current,
+    baseNode('a1', 'answer', {
+      answerText: 'Raw answer',
+      displayLabel: 'Shown answer',
+    }),
+    baseNode('s-file', 'snippet', {
+      radiprotocol_snippetPath: 'Chest/report.json',
+    }),
+    baseNode('s-dir', 'snippet', { snippetLabel: 'Folder label' }),
+    baseNode('q-labeled', 'question', { questionText: 'Labeled target' }),
+    baseNode('q-fallback', 'question', { questionText: 'Fallback question' }),
+    baseNode('q-id', 'question', { questionText: '   ' }),
+  ];
+  return graphFrom(nodes, [
+    { id: 'e-answer', fromNodeId: current.id, toNodeId: 'a1' },
+    { id: 'e-file', fromNodeId: current.id, toNodeId: 's-file' },
+    { id: 'e-dir', fromNodeId: current.id, toNodeId: 's-dir' },
+    { id: 'e-fallback', fromNodeId: current.id, toNodeId: 'q-fallback' },
+    {
+      id: 'e-labeled',
+      fromNodeId: current.id,
+      toNodeId: 'q-labeled',
+      label: 'Direct label',
+    },
+    {
+      id: 'e-id',
+      fromNodeId: current.id,
+      toNodeId: 'q-id',
+      label: '   ',
+    },
+  ]);
+}
 
-    const result = renderQuestionAtNode(asHtml(textZone), asHtml(actionZone), makeGraph(), {
-      status: 'at-node',
-      currentNodeId: 'q',
-      accumulatedText: 'before',
-      canStepBack: true,
-      canRedo: false,
-      undoStackSize: 0,
-    }, {
-      bindClick: (el, handler) => {
-        (el as unknown as MockEl).clickHandler = handler;
-      },
-      renderError: vi.fn(),
+interface HostHarness {
+  host: QuestionBranchHost;
+  onChooseAnswer: ReturnType<typeof vi.fn>;
+  onChooseSnippetBranch: ReturnType<typeof vi.fn>;
+  onChooseQuestionBranch: ReturnType<typeof vi.fn>;
+  onAnswerDraftChange: ReturnType<typeof vi.fn>;
+  onSubmitFreeText: ReturnType<typeof vi.fn>;
+  requestAnswerFocus: ReturnType<typeof vi.fn>;
+  renderError: ReturnType<typeof vi.fn>;
+}
+
+function hostHarness(options: {
+  drafts?: Record<string, string>;
+  errors?: Record<string, string>;
+  focusRequest?: string | null;
+} = {}): HostHarness {
+  const onChooseAnswer = vi.fn();
+  const onChooseSnippetBranch = vi.fn();
+  const onChooseQuestionBranch = vi.fn();
+  const onAnswerDraftChange = vi.fn(() => true);
+  const onSubmitFreeText = vi.fn();
+  const requestAnswerFocus = vi.fn();
+  const renderError = vi.fn();
+  return {
+    host: {
+      bindClick: (element, handler) => element.addEventListener('click', handler),
+      bindInput: (element, handler) => element.addEventListener('input', handler),
+      bindKeydown: (element, handler) => element.addEventListener('keydown', handler),
+      scheduleTextareaResize: (_textarea, resize) => resize(),
+      renderError,
+      getAnswerDraft: (answerId) => options.drafts?.[answerId] ?? '',
+      onAnswerDraftChange,
+      getAnswerError: (answerId) => options.errors?.[answerId],
+      onSubmitFreeText,
+      getAnswerFocusRequest: () => options.focusRequest ?? null,
+      requestAnswerFocus,
       onChooseAnswer,
       onChooseSnippetBranch,
       onChooseQuestionBranch,
-    });
+      t: (key) => key === 'protocolRunner.freeTextSubmit' ? 'Submit' : key,
+    },
+    onChooseAnswer,
+    onChooseSnippetBranch,
+    onChooseQuestionBranch,
+    onAnswerDraftChange,
+    onSubmitFreeText,
+    requestAnswerFocus,
+    renderError,
+  };
+}
+
+function render(
+  runtimeGraph: ProtocolGraph | null,
+  harness: HostHarness,
+): { textZone: MockEl; actionZone: MockEl; result: ReturnType<typeof renderQuestionAtNode> } {
+  const textZone = makeEl('div');
+  const actionZone = makeEl('div');
+  const result = renderQuestionAtNode(
+    asHtml(textZone),
+    asHtml(actionZone),
+    runtimeGraph,
+    state,
+    harness.host,
+  );
+  return { textZone, actionZone, result };
+}
+
+describe('shared question branch renderer', () => {
+  it('preserves grouped preset/question/snippet projection and callback identity', () => {
+    const harness = hostHarness();
+    const { textZone, actionZone, result } = render(groupedGraph(), harness);
 
     expect(result).toBe('rendered');
-    expect(findByClass(textZone, 'rp-question-text')[0]?.text).toBe('Pick one');
-    expect(actionZone.children.map(child => child.cls)).toEqual([
+    expect(findByClass(textZone, 'rp-question-text')[0]?._text).toBe('Pick one');
+    expect(actionZone.children.map(className)).toEqual([
       'rp-answer-list rp-stack',
       'rp-question-transition-list',
       'rp-snippet-branch-list',
     ]);
-    expect(findByClass(actionZone, 'rp-answer-btn')[0]?.text).toBe('Shown answer');
-    expect(findByClass(actionZone, 'rp-question-transition-btn').map(btn => btn.text)).toEqual([
+    expect(findByClass(actionZone, 'rp-answer-btn')[0]?._text).toBe('Shown answer');
+    expect(findByClass(actionZone, 'rp-question-transition-btn').map((button) => button._text)).toEqual([
       'Fallback question',
       'Direct label',
       'q-id',
     ]);
-    expect(findByClass(actionZone, 'rp-snippet-branch-btn').map(btn => btn.text)).toEqual([
+    expect(findByClass(actionZone, 'rp-snippet-branch-btn').map((button) => button._text)).toEqual([
       '📄 report',
       '📁 Folder label',
     ]);
 
-    findByClass(actionZone, 'rp-answer-btn')[0]!.clickHandler?.({} as MouseEvent);
-    for (const btn of findByClass(actionZone, 'rp-question-transition-btn')) {
-      btn.clickHandler?.({} as MouseEvent);
+    findByClass(actionZone, 'rp-answer-btn')[0]!.dispatchEvent({ type: 'click' });
+    for (const button of findByClass(actionZone, 'rp-question-transition-btn')) {
+      button.dispatchEvent({ type: 'click' });
     }
-    findByClass(actionZone, 'rp-snippet-branch-btn')[0]!.clickHandler?.({} as MouseEvent);
-    findByClass(actionZone, 'rp-snippet-branch-btn')[1]!.clickHandler?.({} as MouseEvent);
+    for (const button of findByClass(actionZone, 'rp-snippet-branch-btn')) {
+      button.dispatchEvent({ type: 'click' });
+    }
 
-    expect(onChooseAnswer.mock.calls[0]?.[0].id).toBe('a1');
-    expect(onChooseQuestionBranch.mock.calls.map(call => call[0].id)).toEqual([
+    expect(harness.onChooseAnswer.mock.calls[0]?.[0].id).toBe('a1');
+    expect(harness.onChooseQuestionBranch.mock.calls.map((call) => call[0].id)).toEqual([
       'e-fallback',
       'e-labeled',
       'e-id',
     ]);
-    expect(onChooseSnippetBranch.mock.calls[0]?.[0].id).toBe('s-file');
-    expect(onChooseSnippetBranch.mock.calls[0]?.[1]).toBe(true);
-    expect(onChooseSnippetBranch.mock.calls[1]?.[0].id).toBe('s-dir');
-    expect(onChooseSnippetBranch.mock.calls[1]?.[1]).toBe(false);
+    expect(harness.onChooseSnippetBranch.mock.calls.map((call) => [
+      call[0].id,
+      call[1],
+    ])).toEqual([
+      ['s-file', true],
+      ['s-dir', false],
+    ]);
   });
 
-  it('renders an interleaved single stack in authored optionOrder (per-kind buttons preserved)', () => {
-    const textZone = new MockEl('text');
-    const actionZone = new MockEl('actions');
-    const onChooseAnswer = vi.fn();
-    const onChooseSnippetBranch = vi.fn();
-    const onChooseQuestionBranch = vi.fn();
+  it('renders a free-text row at its exact mixed authored position', () => {
+    const question = baseNode('q', 'question', {
+      optionOrder: ['e-snippet', 'e-free', 'e-next', 'e-preset'],
+    });
+    const runtimeGraph = graphFrom([
+      question,
+      baseNode('free', 'answer', {
+        answerText: 'Describe',
+        freeText: true,
+      }),
+      baseNode('preset', 'answer', { answerText: 'Preset' }),
+      baseNode('snippet', 'snippet', {
+        radiprotocol_snippetPath: 'Chest/report.md',
+      }),
+      baseNode('next', 'question', { questionText: 'Next' }),
+    ], [
+      { id: 'e-preset', fromNodeId: 'q', toNodeId: 'preset' },
+      { id: 'e-next', fromNodeId: 'q', toNodeId: 'next', label: 'Continue' },
+      { id: 'e-free', fromNodeId: 'q', toNodeId: 'free' },
+      { id: 'e-snippet', fromNodeId: 'q', toNodeId: 'snippet' },
+    ]);
+    const harness = hostHarness();
+    const { actionZone } = render(runtimeGraph, harness);
+    const optionList = findByClass(actionZone, 'rp-option-list')[0]!;
 
-    const q = baseNode('q', 'question', { questionText: 'Pick one', optionOrder: ['e-snippet', 'e-a1', 'e-q2'] });
-    const nodes = new Map<string, RPNode>();
-    nodes.set('q', q);
-    nodes.set('a1', baseNode('a1', 'answer', { answerText: 'Raw answer', displayLabel: 'Shown answer' }));
-    nodes.set('s-file', baseNode('s-file', 'snippet', { radiprotocol_snippetPath: 'Chest/report.json' }));
-    nodes.set('q2', baseNode('q2', 'question', { questionText: 'Next question' }));
-    const graph: ProtocolGraph = {
-      canvasFilePath: 'test.canvas',
-      nodes,
-      edges: [
-        { id: 'e-a1', fromNodeId: 'q', toNodeId: 'a1' },
-        { id: 'e-q2', fromNodeId: 'q', toNodeId: 'q2', label: 'Go to q2' },
-        { id: 'e-snippet', fromNodeId: 'q', toNodeId: 's-file' },
-      ],
-      adjacency: new Map([['q', ['a1', 'q2', 's-file']]]),
-      reverseAdjacency: new Map(),
-      startNodeId: 'q',
-    };
+    expect(optionList.children.map(className)).toEqual([
+      'rp-snippet-branch-btn',
+      'rp-free-text-answer',
+      'rp-question-transition-btn',
+      'rp-answer-btn',
+    ]);
+    expect(findByClass(optionList, 'rp-free-text-answer-prompt')[0]?._text).toBe('Describe');
+    expect(harness.requestAnswerFocus).not.toHaveBeenCalled();
+  });
 
-    const result = renderQuestionAtNode(asHtml(textZone), asHtml(actionZone), graph, {
-      status: 'at-node', currentNodeId: 'q', accumulatedText: '', canStepBack: true, canRedo: false, undoStackSize: 0,
-    }, {
-      bindClick: (el, handler) => { (el as unknown as MockEl).clickHandler = handler; },
-      renderError: vi.fn(),
-      onChooseAnswer,
-      onChooseSnippetBranch,
-      onChooseQuestionBranch,
+  it('projects authored prompt, draft, implicit label, blank error, and ARIA safely', () => {
+    const runtimeGraph = graphFrom([
+      baseNode('q', 'question'),
+      baseNode('free-label', 'answer', {
+        answerText: 'Fallback prompt',
+        displayLabel: 'Authored label',
+        freeText: true,
+      }),
+      baseNode('free-fallback', 'answer', {
+        answerText: 'Fallback prompt',
+        freeText: true,
+      }),
+    ], [
+      { id: 'e-label', fromNodeId: 'q', toNodeId: 'free-label' },
+      { id: 'e-fallback', fromNodeId: 'q', toNodeId: 'free-fallback' },
+    ]);
+    const harness = hostHarness({
+      drafts: { 'free-label': 'line one\nline two' },
+      errors: { 'free-label': 'Enter a value before submitting.' },
+    });
+    const { actionZone } = render(runtimeGraph, harness);
+    const rows = findByClass(actionZone, 'rp-free-text-answer');
+    const labels = findByClass(actionZone, 'rp-free-text-answer-label');
+    const prompts = findByClass(actionZone, 'rp-free-text-answer-prompt');
+    const textareas = findByClass(actionZone, 'rp-free-text-answer-textarea');
+    const alerts = findByClass(actionZone, 'rp-free-text-answer-error');
+
+    expect(rows).toHaveLength(2);
+    expect(labels.map((label) => label.tagName)).toEqual(['LABEL', 'LABEL']);
+    expect(prompts.map((prompt) => prompt._text)).toEqual([
+      'Authored label',
+      'Fallback prompt',
+    ]);
+    expect(textareas[0]!.value).toBe('line one\nline two');
+    expect(textareas[1]!.value).toBe('');
+    expect(textareas[0]!.getAttribute('aria-invalid')).toBe('true');
+    expect(textareas[1]!.getAttribute('aria-invalid')).toBeNull();
+    expect(alerts).toHaveLength(1);
+    expect(alerts[0]!._text).toBe('Enter a value before submitting.');
+    expect(alerts[0]!.getAttribute('role')).toBe('alert');
+  });
+
+  it('forwards exact input, clears local error/ARIA, and grows initially and on input', () => {
+    const runtimeGraph = graphFrom([
+      baseNode('q', 'question'),
+      baseNode('free', 'answer', { answerText: 'Describe', freeText: true }),
+    ], [
+      { id: 'e-free', fromNodeId: 'q', toNodeId: 'free' },
+    ]);
+    const harness = hostHarness({ errors: { free: 'Blank' } });
+    const { actionZone } = render(runtimeGraph, harness);
+    const textarea = findByClass(actionZone, 'rp-free-text-answer-textarea')[0]!;
+
+    expect(textarea.style.height).toBe(`${textarea.scrollHeight}px`);
+    textarea.scrollHeight = 73;
+    textarea.value = '  exact\nvalue  ';
+    textarea.dispatchEvent({ type: 'input' });
+
+    expect(harness.onAnswerDraftChange).toHaveBeenCalledTimes(1);
+    expect(harness.onAnswerDraftChange.mock.calls[0]?.[0].id).toBe('free');
+    expect(harness.onAnswerDraftChange.mock.calls[0]?.[1]).toBe('  exact\nvalue  ');
+    expect(textarea.style.height).toBe('73px');
+    expect(textarea.getAttribute('aria-invalid')).toBeNull();
+    expect(findByClass(actionZone, 'rp-free-text-answer-error')).toHaveLength(0);
+  });
+
+  it('submits once per click or Mod+Enter, leaves plain Enter untouched, and binds one listener per event', () => {
+    const runtimeGraph = graphFrom([
+      baseNode('q', 'question'),
+      baseNode('free', 'answer', { answerText: 'Describe', freeText: true }),
+    ], [
+      { id: 'e-free', fromNodeId: 'q', toNodeId: 'free' },
+    ]);
+    const harness = hostHarness();
+    const { actionZone } = render(runtimeGraph, harness);
+    const textarea = findByClass(actionZone, 'rp-free-text-answer-textarea')[0]!;
+    const submit = findByClass(actionZone, 'rp-free-text-answer-submit')[0]!;
+    textarea.value = 'submitted';
+
+    expect(textarea._listeners.get('input')).toHaveLength(1);
+    expect(textarea._listeners.get('keydown')).toHaveLength(1);
+    expect(submit._listeners.get('click')).toHaveLength(1);
+    expect(submit._text).toBe('Submit');
+
+    submit.dispatchEvent({ type: 'click' });
+    const ctrlPreventDefault = vi.fn();
+    textarea.dispatchEvent({
+      type: 'keydown',
+      key: 'Enter',
+      ctrlKey: true,
+      metaKey: false,
+      preventDefault: ctrlPreventDefault,
+    });
+    const metaPreventDefault = vi.fn();
+    textarea.dispatchEvent({
+      type: 'keydown',
+      key: 'Enter',
+      ctrlKey: false,
+      metaKey: true,
+      preventDefault: metaPreventDefault,
+    });
+    const plainPreventDefault = vi.fn();
+    textarea.dispatchEvent({
+      type: 'keydown',
+      key: 'Enter',
+      ctrlKey: false,
+      metaKey: false,
+      preventDefault: plainPreventDefault,
     });
 
-    expect(result).toBe('rendered');
-    expect(actionZone.children.map((c) => c.cls)).toEqual(['rp-option-list rp-stack']);
-    const buttons = actionZone.children[0]!.children;
-    expect(buttons.map((b) => b.cls)).toEqual(['rp-snippet-branch-btn', 'rp-answer-btn', 'rp-question-transition-btn']);
-    expect(buttons.map((b) => b.text)).toEqual(['📄 report', 'Shown answer', 'Go to q2']);
+    expect(harness.onSubmitFreeText).toHaveBeenCalledTimes(3);
+    expect(harness.onSubmitFreeText.mock.calls.map((call) => [
+      call[0].id,
+      call[1],
+    ])).toEqual([
+      ['free', 'submitted'],
+      ['free', 'submitted'],
+      ['free', 'submitted'],
+    ]);
+    expect(ctrlPreventDefault).toHaveBeenCalledTimes(1);
+    expect(metaPreventDefault).toHaveBeenCalledTimes(1);
+    expect(plainPreventDefault).not.toHaveBeenCalled();
+  });
 
-    buttons[0]!.clickHandler?.({} as MouseEvent);
-    buttons[1]!.clickHandler?.({} as MouseEvent);
-    buttons[2]!.clickHandler?.({} as MouseEvent);
-    expect(onChooseSnippetBranch.mock.calls[0]?.[0].id).toBe('s-file');
-    expect(onChooseSnippetBranch.mock.calls[0]?.[1]).toBe(true);
-    expect(onChooseAnswer.mock.calls[0]?.[0].id).toBe('a1');
-    expect(onChooseQuestionBranch.mock.calls[0]?.[0].id).toBe('e-q2');
+  it('requests initial focus only for a sole free-text action and honors explicit mixed-question focus', () => {
+    const soleGraph = graphFrom([
+      baseNode('q', 'question'),
+      baseNode('free', 'answer', { answerText: 'Describe', freeText: true }),
+    ], [
+      { id: 'e-free', fromNodeId: 'q', toNodeId: 'free' },
+    ]);
+    const sole = hostHarness();
+    const soleRender = render(soleGraph, sole);
+    expect(sole.requestAnswerFocus).toHaveBeenCalledTimes(1);
+    expect(sole.requestAnswerFocus.mock.calls[0]?.[0]).toBe('free');
+    expect(sole.requestAnswerFocus.mock.calls[0]?.[1]).toBe(
+      findByClass(soleRender.actionZone, 'rp-free-text-answer-textarea')[0],
+    );
+    expect(sole.requestAnswerFocus.mock.calls[0]?.[2]).toBe(false);
+
+    const mixedGraph = graphFrom([
+      baseNode('q', 'question'),
+      baseNode('free', 'answer', { answerText: 'Describe', freeText: true }),
+      baseNode('preset', 'answer', { answerText: 'Preset' }),
+      baseNode('snippet', 'snippet', { snippetLabel: 'Snippet' }),
+      baseNode('next', 'question', { questionText: 'Next' }),
+    ], [
+      { id: 'e-free', fromNodeId: 'q', toNodeId: 'free' },
+      { id: 'e-preset', fromNodeId: 'q', toNodeId: 'preset' },
+      { id: 'e-snippet', fromNodeId: 'q', toNodeId: 'snippet' },
+      { id: 'e-next', fromNodeId: 'q', toNodeId: 'next' },
+    ]);
+    const mixedInitial = hostHarness();
+    render(mixedGraph, mixedInitial);
+    expect(mixedInitial.requestAnswerFocus).not.toHaveBeenCalled();
+
+    const mixedError = hostHarness({ focusRequest: 'free' });
+    const mixedRender = render(mixedGraph, mixedError);
+    expect(mixedError.requestAnswerFocus).toHaveBeenCalledTimes(1);
+    expect(mixedError.requestAnswerFocus.mock.calls[0]?.[0]).toBe('free');
+    expect(mixedError.requestAnswerFocus.mock.calls[0]?.[1]).toBe(
+      findByClass(mixedRender.actionZone, 'rp-free-text-answer-textarea')[0],
+    );
+    expect(mixedError.requestAnswerFocus.mock.calls[0]?.[2]).toBe(true);
   });
 
   it('returns error/not-question for host-specific chrome handling', () => {
-    const textZone = new MockEl('text');
-    const actionZone = new MockEl('actions');
-    const renderError = vi.fn();
-    const host = {
-      bindClick: vi.fn(),
-      renderError,
-      onChooseAnswer: vi.fn(),
-      onChooseSnippetBranch: vi.fn(),
-      onChooseQuestionBranch: vi.fn(),
-    };
-    const state = {
-      status: 'at-node' as const,
-      currentNodeId: 'q',
-      accumulatedText: '',
-      canStepBack: false,
-      canRedo: false,
-      undoStackSize: 0,
-    };
+    const harness = hostHarness();
+    expect(render(null, harness).result).toBe('error');
+    expect(harness.renderError).toHaveBeenCalledWith([
+      'Internal error: graph not loaded.',
+    ]);
 
-    expect(renderQuestionAtNode(asHtml(textZone), asHtml(actionZone), null, state, host)).toBe('error');
-    expect(renderQuestionAtNode(asHtml(textZone), asHtml(actionZone), makeGraph(baseNode('q', 'text-block')), state, host)).toBe('not-question');
-    expect(renderError).toHaveBeenCalledWith(['Internal error: graph not loaded.']);
+    const nonQuestion = groupedGraph(baseNode('q', 'text-block'));
+    expect(render(nonQuestion, hostHarness()).result).toBe('not-question');
   });
 });

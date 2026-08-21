@@ -344,6 +344,8 @@ const t = (key: string, _params?: Record<string, string>): string => {
     'protocolEditor.nodeKind.snippet': 'Snippet',
     'protocolEditor.questionTextLabel': 'Question text',
     'protocolEditor.answerTextLabel': 'Answer text',
+    'protocolEditor.freeTextAnswerLabel': 'Collect a free-text response',
+    'protocolEditor.freeTextAnswerHelp': 'Use the Answer label or text as the prompt; the radiologist enters multiline report text during the run.',
     'protocolEditor.loopToggleLabel': 'Loop',
     'protocolEditor.loopBadgeAriaLabel': 'Loop question',
     'protocolEditor.contentLabel': 'Content',
@@ -824,6 +826,207 @@ describe('openEditModal — empty multiline field regression (1.22.0 bug)', () =
     const savedAnswer = savedNodes.find(n => n.id === 'a1');
     expect(savedAnswer).toBeDefined();
     expect(savedAnswer!.fields['answerText']).toBe('');
+  });
+});
+
+describe('openEditModal — Answer free-text authoring', () => {
+  let savedDocument: unknown;
+
+  beforeEach(() => {
+    savedDocument = (globalThis as any).document;
+  });
+
+  afterEach(() => {
+    (globalThis as any).document = savedDocument;
+  });
+
+  interface AnswerModalHarness {
+    view: ProtocolEditorView;
+    documentBody: MockEl;
+    updateSpy: ReturnType<typeof vi.fn>;
+    storedDocument(): ProtocolDocumentV1;
+  }
+
+  function openAnswerModal(
+    initialFields: Record<string, unknown>,
+    options: { libraryReadOnly?: boolean } = {},
+  ): AnswerModalHarness {
+    const documentBody = makeEl('body');
+    (globalThis as any).document = { body: documentBody, activeElement: null };
+
+    const fields: Record<string, unknown> = { answerText: 'Answer body' };
+    Object.assign(fields, initialFields);
+    let stored: ProtocolDocumentV1 = {
+      schema: 'radiprotocol.protocol',
+      version: 1,
+      id: 'answer-authoring',
+      title: 'Answer authoring',
+      createdAt: '2026-08-20T00:00:00Z',
+      updatedAt: '2026-08-20T00:00:00Z',
+      nodes: [{
+        id: 'answer-1',
+        kind: 'answer',
+        x: 0,
+        y: 0,
+        width: 200,
+        height: 80,
+        text: typeof fields['answerText'] === 'string' ? fields['answerText'] : '',
+        fields,
+      }],
+      edges: [],
+    };
+
+    const updateSpy = vi.fn(async (
+      _path: string,
+      mutator: (document: ProtocolDocumentV1 | null) => ProtocolDocumentV1,
+    ): Promise<ProtocolDocumentV1> => {
+      stored = mutator(stored);
+      return stored;
+    });
+
+    const view = new ProtocolEditorView({} as any, {
+      i18n: { t },
+      settings: {
+        protocolFolderPath: 'Protocols',
+        snippetFolderPath: '.radiprotocol/snippets',
+      },
+      protocolDocumentStore: { update: updateSpy },
+    } as any);
+    const viewportEl = makeEl('div');
+    (viewportEl as any).scrollLeft = 15000;
+    (viewportEl as any).scrollTop = 12000;
+    (view as any).protocolPath = 'Protocols/answer-authoring.rp.json';
+    (view as any).doc = stored;
+    (view as any).viewportEl = viewportEl;
+    (view as any).zoom = 1;
+    (view as any).libraryReadOnly = options.libraryReadOnly === true;
+    (view as any).restoreEditorFocus = vi.fn();
+    (view as any).loadProtocol = vi.fn(async () => {
+      (view as any).doc = stored;
+    });
+
+    (view as any).openEditModal(stored.nodes[0]);
+    return {
+      view,
+      documentBody,
+      updateSpy,
+      storedDocument: () => stored,
+    };
+  }
+
+  function findFreeTextCheckbox(root: MockEl): MockEl {
+    const checkbox = findAllByTag(root, 'input').find((input) => {
+      if (input._attrs['type'] !== 'checkbox') return false;
+      return input.parent?.children.some((child) =>
+        child.tagName === 'SPAN'
+        && child._text === 'Collect a free-text response') === true;
+    });
+    expect(checkbox).toBeDefined();
+    return checkbox!;
+  }
+
+  async function saveAnswerModal(root: MockEl): Promise<void> {
+    const saveButton = findAllByTag(root, 'button').find((button) => button._text === 'Save');
+    expect(saveButton).toBeDefined();
+    const handlers = saveButton!._listeners.get('click') ?? [];
+    expect(handlers).toHaveLength(1);
+    for (const handler of handlers) await handler({ target: saveButton });
+  }
+
+  const initialStateCases: Array<{
+    name: string;
+    fields: Record<string, unknown>;
+    expectedChecked: boolean;
+  }> = [
+    { name: 'absent', fields: {}, expectedChecked: false },
+    { name: 'malformed', fields: { freeText: 'true' }, expectedChecked: false },
+    { name: 'false', fields: { freeText: false }, expectedChecked: false },
+    { name: 'true', fields: { freeText: true }, expectedChecked: true },
+    { name: 'legacy-only true', fields: { radiprotocol_freeText: true }, expectedChecked: true },
+    {
+      name: 'canonical false wins over legacy true',
+      fields: { freeText: false, radiprotocol_freeText: true },
+      expectedChecked: false,
+    },
+    {
+      name: 'malformed canonical suppresses legacy true',
+      fields: { freeText: 'true', radiprotocol_freeText: true },
+      expectedChecked: false,
+    },
+  ];
+
+  it.each(initialStateCases)(
+    'initializes an Answer checkbox from a strictly true freeText value: $name',
+    ({ fields, expectedChecked }) => {
+      const harness = openAnswerModal(fields);
+      const checkbox = findFreeTextCheckbox(harness.documentBody);
+
+      expect((checkbox as any).checked).toBe(expectedChecked);
+      expect(findAllByClass(
+        harness.documentBody,
+        'rp-protocol-editor-modal-help',
+      ).some((element) => element._text
+        === 'Use the Answer label or text as the prompt; the radiologist enters multiline report text during the run.')).toBe(true);
+    },
+  );
+
+  const persistenceCases: Array<{
+    initialValue: boolean;
+    savedValue: boolean;
+  }> = [
+    { initialValue: false, savedValue: true },
+    { initialValue: true, savedValue: false },
+  ];
+
+  it.each(persistenceCases)(
+    'persists freeText=$savedValue and restores it when the Answer modal reopens',
+    async ({ initialValue, savedValue }) => {
+      const harness = openAnswerModal({ freeText: initialValue });
+      const checkbox = findFreeTextCheckbox(harness.documentBody);
+      (checkbox as any).checked = savedValue;
+
+      await saveAnswerModal(harness.documentBody);
+
+      expect(harness.updateSpy).toHaveBeenCalledTimes(1);
+      expect(harness.storedDocument().nodes[0]!.fields['freeText']).toBe(savedValue);
+
+      (harness.view as any).openEditModal(harness.storedDocument().nodes[0]);
+      const reopenedCheckbox = findFreeTextCheckbox(harness.documentBody);
+      expect((reopenedCheckbox as any).checked).toBe(savedValue);
+    },
+  );
+
+  it('preserves an empty answerText while persisting explicit freeText state', async () => {
+    const harness = openAnswerModal({ answerText: 'Answer body', freeText: false });
+    const textareas = findAllByTag(harness.documentBody, 'textarea');
+    expect(textareas).toHaveLength(1);
+    textareas[0]!.value = '';
+    const checkbox = findFreeTextCheckbox(harness.documentBody);
+    (checkbox as any).checked = true;
+
+    await saveAnswerModal(harness.documentBody);
+
+    const savedFields = harness.storedDocument().nodes[0]!.fields;
+    expect(savedFields['answerText']).toBe('');
+    expect(savedFields['freeText']).toBe(true);
+  });
+
+  it('keeps the existing library read-only guard authoritative for Answer edits', async () => {
+    const harness = openAnswerModal(
+      { answerText: 'Original answer', freeText: false },
+      { libraryReadOnly: true },
+    );
+    const checkbox = findFreeTextCheckbox(harness.documentBody);
+    (checkbox as any).checked = true;
+    findAllByTag(harness.documentBody, 'textarea')[0]!.value = 'Changed answer';
+
+    await saveAnswerModal(harness.documentBody);
+
+    expect(harness.updateSpy).not.toHaveBeenCalled();
+    expect(harness.storedDocument().nodes[0]!.fields).toEqual({
+      answerText: 'Original answer',
+      freeText: false,
+    });
   });
 });
 

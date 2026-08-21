@@ -120,6 +120,36 @@ describe('ProtocolDocumentParser — node types', () => {
     }
   });
 
+  it('normalizes Answer freeText booleans and gives canonical values precedence', () => {
+    const doc = docWithNodes([
+      { id: 'true', kind: 'answer', fields: { answerText: 'Prompt', freeText: true } },
+      { id: 'false', kind: 'answer', fields: { answerText: 'Preset', freeText: false } },
+      { id: 'absent', kind: 'answer', fields: { answerText: 'Preset' } },
+      { id: 'malformed', kind: 'answer', fields: { answerText: 'Preset', freeText: 'true' } },
+      {
+        id: 'canonical-wins',
+        kind: 'answer',
+        fields: { answerText: 'Preset', freeText: false, radiprotocol_freeText: true },
+      },
+      {
+        id: 'legacy',
+        kind: 'answer',
+        fields: { answerText: 'Prompt', radiprotocol_freeText: true },
+      },
+    ]);
+
+    const result = parser.parse(JSON.stringify(doc), 'test.rp.json');
+
+    expect(result.success).toBe(true);
+    if (!result.success) return;
+    expect((result.graph.nodes.get('true') as any).freeText).toBe(true);
+    expect((result.graph.nodes.get('false') as any).freeText).toBe(false);
+    expect((result.graph.nodes.get('absent') as any).freeText).toBe(false);
+    expect((result.graph.nodes.get('malformed') as any).freeText).toBe(false);
+    expect((result.graph.nodes.get('canonical-wins') as any).freeText).toBe(false);
+    expect((result.graph.nodes.get('legacy') as any).freeText).toBe(true);
+  });
+
   it('parses legacy radiprotocol_* field keys in .rp.json and prefers camelCase', () => {
     const doc = docWithNodes([{
       id: 'n1', kind: 'question',

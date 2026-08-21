@@ -34,6 +34,7 @@ const CSS_FILES = [
   'snippet-fill-modal',
   'loop-support',
   'snippet-tree-picker',
+  'runner-session',
   'inline-runner',
   'protocol-editor',
   'donate-section',

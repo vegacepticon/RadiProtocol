@@ -1,22 +1,42 @@
 // runner/render/render-question.ts
 // Phase 87 — 2-zone render: textZone (question text, choices text, errors) + actionZone (answer/snippet buttons).
+import { orderedOutgoingEdges } from '../../graph/edge-order';
+import { nodeLabel } from '../../graph/node-label';
 import type { AnswerNode, ProtocolGraph, RPEdge, SnippetNode } from '../../graph/graph-model';
+import type { Translator } from '../../i18n';
+import { createButton, createTextarea } from '../../utils/dom-helpers';
 import type { RunnerState } from '../runner-state';
 import { isFileBoundSnippetNode, snippetBranchLabel } from '../snippet-label';
-import { nodeLabel } from '../../graph/node-label';
-import { orderedOutgoingEdges } from '../../graph/edge-order';
-import { createButton } from '../../utils/dom-helpers';
 
 type AtNodeState = Extract<RunnerState, { status: 'at-node' }>;
 
 type RenderQuestionResult = 'rendered' | 'not-question' | 'error';
 
+interface FreeTextControl {
+  answerId: string;
+  textarea: HTMLTextAreaElement;
+}
+
 export interface QuestionBranchHost {
   bindClick(el: HTMLElement, handler: (ev: MouseEvent) => void): void;
+  bindInput(el: HTMLTextAreaElement, handler: (ev: Event) => void): void;
+  bindKeydown(el: HTMLTextAreaElement, handler: (ev: KeyboardEvent) => void): void;
+  scheduleTextareaResize(textarea: HTMLTextAreaElement, resize: () => void): void;
   renderError(messages: string[]): void;
+  getAnswerDraft(answerId: string): string;
+  onAnswerDraftChange(answerNode: AnswerNode, value: string): boolean;
+  getAnswerError(answerId: string): string | undefined;
+  onSubmitFreeText(answerNode: AnswerNode, value: string): void | Promise<void>;
+  getAnswerFocusRequest(): string | null;
+  requestAnswerFocus(
+    answerId: string,
+    textarea: HTMLTextAreaElement,
+    explicitRequest: boolean,
+  ): void;
   onChooseAnswer(answerNode: AnswerNode): void | Promise<void>;
   onChooseSnippetBranch(snippetNode: SnippetNode, isFileBound: boolean): void | Promise<void>;
   onChooseQuestionBranch(edge: RPEdge): void | Promise<void>;
+  t: Translator;
 }
 
 // Shared per-kind button construction for both the grouped fallback and the
@@ -31,6 +51,81 @@ function appendAnswerButton(parent: HTMLElement, answerNode: AnswerNode, host: Q
   host.bindClick(btn, () => {
     void host.onChooseAnswer(answerNode);
   });
+}
+
+function growTextarea(textarea: HTMLTextAreaElement): void {
+  textarea.setCssProps({ height: 'auto' });
+  textarea.setCssProps({ height: `${textarea.scrollHeight}px` });
+}
+
+function appendFreeTextAnswer(
+  parent: HTMLElement,
+  answerNode: AnswerNode,
+  host: QuestionBranchHost,
+): FreeTextControl {
+  const row = parent.createDiv({ cls: 'rp-free-text-answer' });
+  const label = row.createEl('label', { cls: 'rp-free-text-answer-label' });
+  label.createSpan({
+    cls: 'rp-free-text-answer-prompt',
+    text: answerNode.displayLabel ?? answerNode.answerText,
+  });
+
+  const textarea = createTextarea(label, {
+    cls: 'rp-free-text-answer-textarea',
+  });
+  textarea.value = host.getAnswerDraft(answerNode.id);
+
+  let alertElement: HTMLElement | null = null;
+  const error = host.getAnswerError(answerNode.id);
+  if (error !== undefined) {
+    textarea.setAttribute('aria-invalid', 'true');
+    alertElement = row.createEl('p', {
+      cls: 'rp-free-text-answer-error',
+      text: error,
+      attr: { role: 'alert' },
+    });
+  }
+
+  const controls = row.createDiv({ cls: 'rp-free-text-answer-controls' });
+  const submitButton = createButton(controls, {
+    cls: 'rp-free-text-answer-submit',
+    text: host.t('protocolRunner.freeTextSubmit'),
+    attr: { type: 'button' },
+  });
+
+  host.bindInput(textarea, () => {
+    const value = textarea.value;
+    if (!host.onAnswerDraftChange(answerNode, value)) return;
+    textarea.removeAttribute('aria-invalid');
+    if (alertElement !== null) {
+      alertElement.remove();
+      alertElement = null;
+    }
+    growTextarea(textarea);
+  });
+  host.bindKeydown(textarea, (event) => {
+    if (event.key !== 'Enter' || (!event.ctrlKey && !event.metaKey)) return;
+    event.preventDefault();
+    void host.onSubmitFreeText(answerNode, textarea.value);
+  });
+  host.bindClick(submitButton, () => {
+    void host.onSubmitFreeText(answerNode, textarea.value);
+  });
+
+  host.scheduleTextareaResize(textarea, () => growTextarea(textarea));
+  return { answerId: answerNode.id, textarea };
+}
+
+function appendAnswerOption(
+  parent: HTMLElement,
+  answerNode: AnswerNode,
+  host: QuestionBranchHost,
+): FreeTextControl | null {
+  if (answerNode.freeText === true) {
+    return appendFreeTextAnswer(parent, answerNode, host);
+  }
+  appendAnswerButton(parent, answerNode, host);
+  return null;
 }
 
 function appendQuestionTransitionButton(parent: HTMLElement, edge: RPEdge, graph: ProtocolGraph, host: QuestionBranchHost): void {
@@ -61,6 +156,26 @@ function appendSnippetBranchButton(parent: HTMLElement, snippetNode: SnippetNode
   });
 }
 
+function requestProjectedAnswerFocus(
+  controls: FreeTextControl[],
+  actionableOptionCount: number,
+  host: QuestionBranchHost,
+): void {
+  const requestedAnswerId = host.getAnswerFocusRequest();
+  for (const control of controls) {
+    const isExplicitRequest = requestedAnswerId === control.answerId;
+    const isSoleFreeTextAction = requestedAnswerId === null
+      && actionableOptionCount === 1;
+    if (isExplicitRequest || isSoleFreeTextAction) {
+      host.requestAnswerFocus(
+        control.answerId,
+        control.textarea,
+        isExplicitRequest,
+      );
+    }
+  }
+}
+
 export function renderQuestionAtNode(
   textZone: HTMLElement,
   actionZone: HTMLElement,
@@ -87,13 +202,14 @@ export function renderQuestionAtNode(
     cls: 'rp-question-text',
   });
 
+  let actionableOptionCount = 0;
+  const freeTextControls: FreeTextControl[] = [];
+
   // Authored display order: when the question carries an `optionOrder`, render
   // its outgoing options as a single interleaved stack in that order (answers,
-  // question transitions, snippet branches interleaved). Per-kind button
-  // construction is byte-for-byte identical to the grouped fallback below via
-  // the shared append*Button helpers — only the container/iteration order
-  // changes. When `optionOrder` is absent, the grouped edges-array fallback runs
-  // unchanged (backward compatible).
+  // question transitions, snippet branches interleaved). Per-kind preset button
+  // construction stays shared with the grouped fallback; a free-text Answer is
+  // one direct child at the same authored position.
   if (node.optionOrder !== undefined) {
     const orderedEdges = orderedOutgoingEdges(graph, state.currentNodeId);
     if (orderedEdges.length > 0) {
@@ -103,14 +219,19 @@ export function renderQuestionAtNode(
         const target = graph.nodes.get(edge.toNodeId);
         if (target === undefined) continue;
         if (target.kind === 'answer') {
-          appendAnswerButton(optionList, target, host);
+          actionableOptionCount += 1;
+          const control = appendAnswerOption(optionList, target, host);
+          if (control !== null) freeTextControls.push(control);
         } else if (target.kind === 'question') {
+          actionableOptionCount += 1;
           appendQuestionTransitionButton(optionList, edge, graph, host);
         } else if (target.kind === 'snippet') {
+          actionableOptionCount += 1;
           appendSnippetBranchButton(optionList, target, host);
         }
       }
     }
+    requestProjectedAnswerFocus(freeTextControls, actionableOptionCount, host);
     return 'rendered';
   }
 
@@ -129,7 +250,9 @@ export function renderQuestionAtNode(
     const answerList = actionZone.createDiv({ cls: 'rp-answer-list rp-stack' });
     answerList.setCssProps({ 'margin-top': 'var(--size-4-3)' });
     for (const answerNode of answerNeighbors) {
-      appendAnswerButton(answerList, answerNode, host);
+      actionableOptionCount += 1;
+      const control = appendAnswerOption(answerList, answerNode, host);
+      if (control !== null) freeTextControls.push(control);
     }
   }
 
@@ -146,6 +269,7 @@ export function renderQuestionAtNode(
       transitionList.setCssProps({ 'margin-top': 'var(--size-4-3)' });
     }
     for (const edge of questionEdges) {
+      actionableOptionCount += 1;
       appendQuestionTransitionButton(transitionList, edge, graph, host);
     }
   }
@@ -157,9 +281,11 @@ export function renderQuestionAtNode(
       snippetList.setCssProps({ 'margin-top': 'var(--size-4-3)' });
     }
     for (const snippetNode of snippetNeighbors) {
+      actionableOptionCount += 1;
       appendSnippetBranchButton(snippetList, snippetNode, host);
     }
   }
 
+  requestProjectedAnswerFocus(freeTextControls, actionableOptionCount, host);
   return 'rendered';
 }

@@ -27,7 +27,9 @@ import { renderRunnerFooter, type RunnerFooterHost } from './render-footer';
 
 type AwaitingSnippetPickState = Extract<RunnerState, { status: 'awaiting-snippet-pick' }>;
 
-type SnippetPickerHostClass = typeof CSS_CLASS.STP_INLINE_HOST;
+type SnippetPickerHostClass =
+  | typeof CSS_CLASS.STP_RUNNER_SESSION_HOST
+  | typeof CSS_CLASS.STP_INLINE_HOST;
 
 /** Host-supplied copy for async errors surfaced by the picker. */
 export interface SnippetPickerCopy {
@@ -42,15 +44,14 @@ export interface SnippetPickerRenderOptions extends RunnerFooterHost {
   t?: Translator;
   /** Vault-relative root path (plugin.settings.snippetFolderPath). */
   rootPath: string;
-  /** Host wrapper CSS hook. Inline modal: rp-stp-inline-host. */
+  /** Host wrapper CSS hook for either the extracted session host or legacy inline host. */
   hostClass: SnippetPickerHostClass;
   /** Copy locale (EN divergence preserved unless explicitly merged). */
   copy: SnippetPickerCopy;
   /** Returns the runner's current awaiting-snippet-pick nodeId, or null if the
    *  state has changed (advanced/stepped-back/error/etc). T-30-04 stale-result guard. */
   getCurrentNodeId(): string | null;
-  /** Optional DOM-attached guard. Inline modal returns
-   *  `document.body.contains(this.containerEl)`. */
+  /** Optional host-ownership guard. The session host supplies its render-operation check. */
   isStillMounted?(): boolean;
   /** Host-controlled async error presentation. Default: empty `questionZone`
    *  and append a `.rp-empty-state-body` paragraph in place. Inline modal

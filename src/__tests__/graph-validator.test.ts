@@ -3,6 +3,7 @@ import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { CanvasParser } from './helpers/canvas-parser';
 import { GraphValidator } from '../graph/graph-validator';
+import type { AnswerNode, ProtocolGraph, RPNode } from '../graph/graph-model';
 
 const fixturesDir = path.join(__dirname, 'fixtures');
 
@@ -16,6 +17,84 @@ function parseFixture(name: string) {
   if (!result.success) throw new Error(`Fixture ${name} failed to parse: ${result.error}`);
   return result.graph;
 }
+
+function graphWithFreeTextAnswer(
+  answer: Pick<AnswerNode, 'answerText' | 'displayLabel' | 'freeText'>,
+): ProtocolGraph {
+  const nodes = new Map<string, RPNode>([
+    ['start', { id: 'start', kind: 'start', x: 0, y: 0, width: 100, height: 60 }],
+    ['question', {
+      id: 'question', kind: 'question', questionText: 'Choose',
+      x: 0, y: 80, width: 100, height: 60,
+    }],
+    ['answer', {
+      id: 'answer', kind: 'answer', ...answer,
+      x: 0, y: 160, width: 100, height: 60,
+    }],
+  ]);
+  return {
+    canvasFilePath: 'free-text-answer.rp.json',
+    nodes,
+    edges: [
+      { id: 'start-question', fromNodeId: 'start', toNodeId: 'question' },
+      { id: 'question-answer', fromNodeId: 'question', toNodeId: 'answer' },
+    ],
+    adjacency: new Map([
+      ['start', ['question']],
+      ['question', ['answer']],
+    ]),
+    reverseAdjacency: new Map([
+      ['question', ['start']],
+      ['answer', ['question']],
+    ]),
+    startNodeId: 'start',
+  };
+}
+
+describe('GraphValidator — free-text Answer prompt', () => {
+  it('rejects a flagged Answer when its effective prompt is blank', () => {
+    const errors = new GraphValidator().validate(graphWithFreeTextAnswer({
+      answerText: '   ',
+      displayLabel: undefined,
+      freeText: true,
+    }));
+
+    expect(errors).toContain(
+      'Free-text Answer "answer" needs a nonblank display label or answer text to use as its prompt.',
+    );
+  });
+
+  it('validates displayLabel ?? answerText exactly, including whitespace masking', () => {
+    const errors = new GraphValidator().validate(graphWithFreeTextAnswer({
+      answerText: 'Nonblank fallback',
+      displayLabel: ' \n ',
+      freeText: true,
+    }));
+
+    expect(errors.some(error => error.includes('Free-text Answer "answer"'))).toBe(true);
+  });
+
+  it('accepts a nonblank answerText fallback or displayLabel', () => {
+    expect(new GraphValidator().validate(graphWithFreeTextAnswer({
+      answerText: 'Describe the finding',
+      displayLabel: undefined,
+      freeText: true,
+    }))).toEqual([]);
+    expect(new GraphValidator().validate(graphWithFreeTextAnswer({
+      answerText: '',
+      displayLabel: 'Other finding',
+      freeText: true,
+    }))).toEqual([]);
+  });
+
+  it('keeps blank preset Answers valid', () => {
+    expect(new GraphValidator().validate(graphWithFreeTextAnswer({
+      answerText: '',
+      displayLabel: undefined,
+      freeText: false,
+    }))).toEqual([]);
+  });
+});
 
 describe('GraphValidator', () => {
   describe('valid protocols', () => {

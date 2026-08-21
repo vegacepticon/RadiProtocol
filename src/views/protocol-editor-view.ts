@@ -250,7 +250,7 @@ function worldYToSurfaceY(y: number): number {
 const NODE_KIND_DEFAULTS: Record<string, NodeKindDefault> = {
   start: { kind: 'start', fields: {}, color: 'rgba(76, 175, 80, 0.28)' },
   question: { kind: 'question', fields: { questionText: '' }, color: 'rgba(33, 150, 243, 0.24)' },
-  answer: { kind: 'answer', fields: { answerText: '' }, color: 'rgba(255, 193, 7, 0.28)' },
+  answer: { kind: 'answer', fields: { answerText: '', freeText: false }, color: 'rgba(255, 193, 7, 0.28)' },
   'text-block': { kind: 'text-block', fields: { content: '' }, color: 'rgba(255, 235, 59, 0.24)' },
   snippet: { kind: 'snippet', fields: {}, color: 'rgba(156, 39, 176, 0.24)' },
 };
@@ -2335,6 +2335,26 @@ export class ProtocolEditorView extends ItemView {
       textControls.push({ key: 'loop', value: () => input.checked ? true : undefined });
     };
 
+    const addAnswerFreeTextToggle = (nodeRecord: ProtocolNodeRecord) => {
+      const field = body.createDiv({
+        cls: 'rp-protocol-editor-modal-field rp-protocol-editor-checkbox-field',
+      });
+      const label = field.createEl('label');
+      const input = label.createEl('input', {
+        attr: { type: 'checkbox' },
+      }) as HTMLInputElement;
+      const canonicalFreeText = nodeRecord.fields['freeText'];
+      input.checked = canonicalFreeText === true
+        || (canonicalFreeText === undefined
+          && nodeRecord.fields['radiprotocol_freeText'] === true);
+      label.createSpan({ text: t('protocolEditor.freeTextAnswerLabel') });
+      field.createDiv({
+        cls: 'rp-protocol-editor-modal-help',
+        text: t('protocolEditor.freeTextAnswerHelp'),
+      });
+      textControls.push({ key: 'freeText', value: () => input.checked });
+    };
+
     const addOptionOrderChips = (nodeRecord: ProtocolNodeRecord) => {
       const outgoing = (this.doc?.edges ?? []).filter((e) => e.fromNodeId === nodeRecord.id);
       const nodeById = new Map((this.doc?.nodes ?? []).map((n) => [n.id, n] as [string, ProtocolNodeRecord]));
@@ -2536,6 +2556,7 @@ export class ProtocolEditorView extends ItemView {
       case 'answer':
         addInput('displayLabel', t('protocolEditor.answerButtonLabelLabel'), node.fields['displayLabel']);
         addInput('answerText', t('protocolEditor.answerTextLabel'), node.fields['answerText'] ?? node.text, true);
+        addAnswerFreeTextToggle(node);
         addSeparator('separator', t('protocolEditor.answerSeparatorLabel'), node.fields['separator']);
         break;
       case 'text-block':
