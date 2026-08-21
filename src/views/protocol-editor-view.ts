@@ -1105,6 +1105,11 @@ export class ProtocolEditorView extends ItemView {
       setIcon(badge, 'repeat');
       badge.setAttr('aria-label', this.plugin.i18n.t('protocolEditor.loopBadgeAriaLabel'));
     }
+    if (node.kind === 'answer' && node.fields['freeText'] === true) {
+      const badge = nodeEl.createDiv({ cls: 'rp-protocol-editor-node-free-text-badge' });
+      setIcon(badge, 'text-cursor-input');
+      badge.setAttr('aria-label', this.plugin.i18n.t('protocolEditor.freeTextBadgeAriaLabel'));
+    }
     const resizeHandle = nodeEl.createDiv({ cls: 'rp-protocol-editor-resize-handle' });
     resizeHandle.setAttr('aria-label', this.plugin.i18n.t('protocolEditor.resizeNodeLabel'));
 
@@ -2334,7 +2339,7 @@ export class ProtocolEditorView extends ItemView {
 
     const textControls: Array<{ key: string; value: () => string | boolean | string[] | undefined }> = [];
     const firstEditableField: Array<HTMLInputElement | HTMLTextAreaElement> = [];
-    const addInput = (key: string, label: string, value: unknown, multiline = false) => {
+    const addInput = (key: string, label: string, value: unknown, multiline = false): HTMLElement => {
       const field = body.createDiv({ cls: 'rp-protocol-editor-modal-field' });
       field.createEl('label', { text: label });
       const initialValue = typeof value === 'string' ? value : '';
@@ -2352,14 +2357,43 @@ export class ProtocolEditorView extends ItemView {
         textControls.push({ key, value: () => input.value || undefined });
         if (firstEditableField.length === 0) firstEditableField.push(input);
       }
+      return field;
     };
-    const addStartPointCheckbox = () => {
+    const addStartPointCheckbox = (): HTMLInputElement => {
       const field = body.createDiv({ cls: 'rp-protocol-editor-modal-field rp-protocol-editor-modal-checkbox-field rp-protocol-editor-modal-start-point-field' });
       const label = field.createEl('label');
       const input = label.createEl('input', { attr: { type: 'checkbox' } }) as HTMLInputElement;
       input.checked = node.fields['startPointEnabled'] === true;
       label.createSpan({ text: t('protocolEditor.startPointEnabledLabel') });
       textControls.push({ key: 'startPointEnabled', value: () => input.checked ? true : undefined });
+
+      // Optional per-node label shown by the "start from specific node" picker
+      // instead of the node's own caption. Only persisted while enabled.
+      let labelInput: HTMLInputElement | null = null;
+      const labelField = body.createDiv({
+        cls: 'rp-protocol-editor-modal-field rp-protocol-editor-modal-start-point-label-field',
+      });
+      labelField.createEl('label', { text: t('protocolEditor.startPointCustomLabelLabel') });
+      labelInput = labelField.createEl('input', {
+        attr: {
+          type: 'text',
+          value: typeof node.fields['startPointLabel'] === 'string' ? node.fields['startPointLabel'] as string : '',
+          placeholder: t('protocolEditor.startPointCustomLabelPlaceholder'),
+        },
+      }) as HTMLInputElement;
+      if (firstEditableField.length === 0 && input.checked) firstEditableField.push(labelInput);
+      textControls.push({
+        key: 'startPointLabel',
+        value: () => {
+          if (!input.checked) return undefined;
+          const trimmed = labelInput.value.trim();
+          return trimmed === '' ? undefined : trimmed;
+        },
+      });
+      const syncLabelVisibility = () => labelField.toggleClass('is-hidden', !input.checked);
+      input.addEventListener('change', syncLabelVisibility);
+      syncLabelVisibility();
+      return input;
     };
 
     const addLoopToggle = (nodeRecord: ProtocolNodeRecord) => {
@@ -2371,7 +2405,7 @@ export class ProtocolEditorView extends ItemView {
       textControls.push({ key: 'loop', value: () => input.checked ? true : undefined });
     };
 
-    const addAnswerFreeTextToggle = (nodeRecord: ProtocolNodeRecord) => {
+    const addAnswerFreeTextToggle = (nodeRecord: ProtocolNodeRecord, answerTextField: HTMLElement) => {
       const field = body.createDiv({
         cls: 'rp-protocol-editor-modal-field rp-protocol-editor-checkbox-field',
       });
@@ -2389,6 +2423,11 @@ export class ProtocolEditorView extends ItemView {
         text: t('protocolEditor.freeTextAnswerHelp'),
       });
       textControls.push({ key: 'freeText', value: () => input.checked });
+      // Free-text Answers use the display label as the runner prompt; the
+      // multiline answer text is not appended, so hide it to reduce noise.
+      const syncAnswerTextVisibility = () => answerTextField.toggleClass('is-hidden', input.checked);
+      input.addEventListener('change', syncAnswerTextVisibility);
+      syncAnswerTextVisibility();
     };
 
     const addOptionOrderChips = (nodeRecord: ProtocolNodeRecord) => {
@@ -2593,12 +2632,13 @@ export class ProtocolEditorView extends ItemView {
         addLoopToggle(node);
         addOptionOrderChips(node);
         break;
-      case 'answer':
+      case 'answer': {
         addInput('displayLabel', t('protocolEditor.answerButtonLabelLabel'), node.fields['displayLabel']);
-        addInput('answerText', t('protocolEditor.answerTextLabel'), node.fields['answerText'] ?? node.text, true);
-        addAnswerFreeTextToggle(node);
+        const answerTextField = addInput('answerText', t('protocolEditor.answerTextLabel'), node.fields['answerText'] ?? node.text, true);
+        addAnswerFreeTextToggle(node, answerTextField);
         addSeparator('separator', t('protocolEditor.answerSeparatorLabel'), node.fields['separator']);
         break;
+      }
       case 'text-block':
         addInput('content', t('protocolEditor.contentLabel'), node.fields['content'] ?? node.text, true);
         addSeparator('separator', t('protocolEditor.textSeparatorLabel'), node.fields['separator']);

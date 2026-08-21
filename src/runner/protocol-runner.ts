@@ -44,6 +44,13 @@ export class ProtocolRunner {
   /** Phase 66 D-01: silently no-ops a second stepBack call in the same synchronous tick. */
   private _stepBackInFlight = false;
   private runnerStatus: RunnerState['status'] = RUNNER_STATUS.IDLE;
+  /**
+   * Start-from-node support: when the explicit session start node is a free-text
+   * Answer, advanceThrough must HALT on it instead of passing through silently,
+   * so the radiologist is prompted for the report text. Null for every other
+   * start configuration (preset Answers keep their normal auto-append flow).
+   */
+  private explicitStartFreeTextAnswerId: string | null = null;
 
   // Extra fields for non-at-node states
   private errorMessage: string | null = null;
@@ -80,6 +87,13 @@ export class ProtocolRunner {
     this.snippetId = null;
     this.snippetNodeId = null;
     this.loopContextStack = [];
+    // Start-from-node: a free-text Answer chosen as the explicit session start
+    // must HALT (prompt for text) instead of being silently passed through.
+    const startNode = startNodeId !== undefined ? graph.nodes.get(startNodeId) : undefined;
+    this.explicitStartFreeTextAnswerId =
+      startNode !== undefined && startNode.kind === 'answer' && startNode.freeText === true
+        ? startNodeId!
+        : null;
     this.runnerStatus = RUNNER_STATUS.AT_NODE;
     // Auto-advance from the explicit start or graph.startNodeId default
     this.advanceThrough(startNodeId ?? graph.startNodeId);
@@ -896,6 +910,15 @@ export class ProtocolRunner {
           return;
         }
         case 'answer': {
+          // Start-from-node halt: when the session was started AT this free-text
+          // Answer, stop here so the radiologist submits the report text (the
+          // host renders the same free-text row as a question branch would).
+          // Undo history stays empty — this is the initial state, not a user action.
+          if (cursor === this.explicitStartFreeTextAnswerId) {
+            this.currentNodeId = cursor;
+            this.runnerStatus = RUNNER_STATUS.AT_NODE;
+            return;
+          }
           // A free-text Answer's authored text is a prompt only. Selected
           // free-text Answers are handled by chooseAnswer(answerId, payload);
           // if one is encountered in an automatic chain, pass through without

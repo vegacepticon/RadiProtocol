@@ -2,7 +2,7 @@
 // Implements the "Start from specific node" picker (RUN-10 / D-06)
 import { App, SuggestModal } from 'obsidian';
 import type { ProtocolGraph, QuestionNode, TextBlockNode, SnippetNode, RPNodeKind } from '../graph/graph-model';
-import type { ProtocolNodeRecord } from '../protocol/protocol-document';
+import type { ProtocolEdgeRecord, ProtocolNodeRecord } from '../protocol/protocol-document';
 import type RadiProtocolPlugin from '../main';
 import { defaultT, type Translator } from '../i18n';
 
@@ -114,15 +114,50 @@ function stringField(record: ProtocolNodeRecord, key: string): string | undefine
   return typeof value === 'string' && value.trim() !== '' ? value.trim() : undefined;
 }
 
+/**
+ * Graph distance (BFS hop count) from the document's start node to every
+ * reachable node, used to order "start from specific node" picker options by
+ * protocol position: nodes closer to start appear first. Nodes unreachable
+ * from start get distance Infinity and sort last, keeping their relative
+ * document order.
+ */
+function graphDistancesFromStart(nodes: ProtocolNodeRecord[], edges: ProtocolEdgeRecord[]): Map<string, number> {
+  const adjacency = new Map<string, string[]>();
+  for (const edge of edges) {
+    const list = adjacency.get(edge.fromNodeId);
+    if (list === undefined) adjacency.set(edge.fromNodeId, [edge.toNodeId]);
+    else list.push(edge.toNodeId);
+  }
+  const startNode = nodes.find((node) => node.kind === 'start');
+  const distances = new Map<string, number>();
+  if (startNode === undefined) return distances;
+  distances.set(startNode.id, 0);
+  const queue = [startNode.id];
+  while (queue.length > 0) {
+    const current = queue.shift();
+    if (current === undefined) break;
+    const distance = distances.get(current) ?? 0;
+    for (const next of adjacency.get(current) ?? []) {
+      if (distances.has(next)) continue;
+      distances.set(next, distance + 1);
+      queue.push(next);
+    }
+  }
+  return distances;
+}
+
 export function buildStartableProtocolNodeOptions(
   nodes: ProtocolNodeRecord[],
   t: Translator = defaultT,
+  edges: ProtocolEdgeRecord[] = [],
 ): NodeOption[] {
   const options: NodeOption[] = [];
   for (const node of nodes) {
     if (node.kind === null || node.fields['startPointEnabled'] !== true) continue;
     if (node.kind === 'loop-start' || node.kind === 'loop-end') continue;
+    const customLabel = stringField(node, 'startPointLabel');
     const label =
+      customLabel ??
       stringField(node, 'displayLabel') ??
       stringField(node, 'snippetLabel') ??
       stringField(node, 'questionText') ??
@@ -132,7 +167,21 @@ export function buildStartableProtocolNodeOptions(
       (node.kind === 'snippet' ? t('nodePicker.rootSnippets') : node.id);
     options.push({ id: node.id, label, kind: node.kind });
   }
-  return sortNodeOptions(options);
+  // Order by protocol position (BFS distance from start); alphabetical only as
+  // a tie-break for same-distance options. Unreachable-from-start options sort
+  // last in document order.
+  const distances = graphDistancesFromStart(nodes, edges);
+  const docIndexById = new Map(nodes.map((node, index) => [node.id, index] as [string, number]));
+  options.sort((a, b) => {
+    const da = distances.get(a.id) ?? Number.POSITIVE_INFINITY;
+    const db = distances.get(b.id) ?? Number.POSITIVE_INFINITY;
+    if (da !== db) return da - db;
+    const ia = docIndexById.get(a.id) ?? 0;
+    const ib = docIndexById.get(b.id) ?? 0;
+    if (ia !== ib) return ia - ib;
+    return a.label.toLowerCase().localeCompare(b.label.toLowerCase());
+  });
+  return options;
 }
 
 /**

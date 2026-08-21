@@ -60,6 +60,7 @@
     "answerTextLabel": "Answer text",
     "freeTextAnswerLabel": "Collect a free-text response",
     "freeTextAnswerHelp": "Use the Answer label or text as the prompt; the radiologist enters multiline report text during the run.",
+    "freeTextBadgeAriaLabel": "Free-text answer",
     "contentLabel": "Content",
     "snippetSeparatorLabel": "How to separate this snippet from previous text",
     "noEditableFields": "No editable content fields for this node kind.",
@@ -96,6 +97,8 @@
     "snippetTargetHelp": "Choose a folder to ask for a snippet during the run, or choose a snippet file directly.",
     "snippetNodeLabelLabel": "Snippet button label",
     "startPointEnabledLabel": "Show in “start from node” command",
+    "startPointCustomLabelLabel": "Custom label for the “start from node” picker",
+    "startPointCustomLabelPlaceholder": "Leave empty to use the node's own label",
     "useGlobalSeparator": "Use global separator",
     "nodeKind": {
       "start": "Start",

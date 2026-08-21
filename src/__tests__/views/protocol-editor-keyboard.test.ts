@@ -348,6 +348,9 @@ const t = (key: string, _params?: Record<string, string>): string => {
     'protocolEditor.freeTextAnswerHelp': 'Use the Answer label or text as the prompt; the radiologist enters multiline report text during the run.',
     'protocolEditor.loopToggleLabel': 'Loop',
     'protocolEditor.loopBadgeAriaLabel': 'Loop question',
+    'protocolEditor.freeTextBadgeAriaLabel': 'Free-text answer',
+    'protocolEditor.startPointCustomLabelLabel': 'Custom label for the “start from node” picker',
+    'protocolEditor.startPointCustomLabelPlaceholder': 'Leave empty to use the node\'s own label',
     'protocolEditor.contentLabel': 'Content',
     'protocolEditor.snippetSeparatorLabel': 'Separator',
     'protocolEditor.noNodes': 'No nodes',
@@ -1028,6 +1031,41 @@ describe('openEditModal — Answer free-text authoring', () => {
       freeText: false,
     });
   });
+
+  it('hides the answer-text field while freeText is enabled and reveals it when disabled', () => {
+    const harness = openAnswerModal({ freeText: true });
+    const answerField = findAllByClass(
+      harness.documentBody,
+      'rp-protocol-editor-modal-field',
+    ).find((field) =>
+      field.children.some((child) =>
+        child.tagName === 'LABEL' && child._text === 'Answer text'),
+    );
+    expect(answerField).toBeDefined();
+    expect(answerField!.classList.has('is-hidden')).toBe(true);
+
+    const checkbox = findFreeTextCheckbox(harness.documentBody);
+    (checkbox as any).checked = false;
+    for (const handler of checkbox!._listeners.get('change') ?? []) handler({});
+    expect(answerField!.classList.has('is-hidden')).toBe(false);
+
+    (checkbox as any).checked = true;
+    for (const handler of checkbox!._listeners.get('change') ?? []) handler({});
+    expect(answerField!.classList.has('is-hidden')).toBe(true);
+  });
+
+  it('keeps the answer-text field visible when freeText is off', () => {
+    const harness = openAnswerModal({ freeText: false });
+    const answerField = findAllByClass(
+      harness.documentBody,
+      'rp-protocol-editor-modal-field',
+    ).find((field) =>
+      field.children.some((child) =>
+        child.tagName === 'LABEL' && child._text === 'Answer text'),
+    );
+    expect(answerField).toBeDefined();
+    expect(answerField!.classList.has('is-hidden')).toBe(false);
+  });
 });
 
 describe('openEditModal — snippet target picker lifecycle', () => {
@@ -1632,5 +1670,179 @@ describe('ProtocolEditorView: optionOrder FR-6 append + FR-5 drag-persist', () =
     (view as any).openEditModal((view as any).doc.nodes.find((n: ProtocolNodeRecord) => n.id === 'node-q'));
     chips = documentBody.querySelectorAll('.rp-option-order-chip');
     expect(chips.map((c) => c.querySelector('.rp-option-order-chip-label')?._text)).toEqual(['A2', 'A']);
+  });
+});
+
+describe('ProtocolEditorView: start-point custom label + free-text answer badge', () => {
+  let savedWindow: unknown;
+  let savedRAF: unknown;
+  let savedDocument: unknown;
+  beforeEach(() => {
+    savedWindow = (globalThis as any).window;
+    savedRAF = (globalThis as any).requestAnimationFrame;
+    savedDocument = (globalThis as any).document;
+    (globalThis as any).window = globalThis;
+    (globalThis as any).requestAnimationFrame = (cb: FrameRequestCallback) => { cb(0); return 0; };
+  });
+  afterEach(() => {
+    (globalThis as any).window = savedWindow;
+    (globalThis as any).requestAnimationFrame = savedRAF;
+    (globalThis as any).document = savedDocument;
+  });
+
+  function createStartPointView(node: ProtocolNodeRecord): {
+    view: ProtocolEditorView; documentBody: MockEl; surfaceEl: MockEl; updateSpy: ReturnType<typeof vi.fn>;
+  } {
+    const documentBody = makeEl('body');
+    (globalThis as any).document = { body: documentBody, activeElement: null };
+
+    const holder: { view: ProtocolEditorView | null } = { view: null };
+    const updateSpy = vi.fn(async (_path: string, mutator: (doc: ProtocolDocumentV1) => ProtocolDocumentV1): Promise<ProtocolDocumentV1> => {
+      const current = (holder.view as any).doc as ProtocolDocumentV1;
+      const updated = mutator(current);
+      (holder.view as any).doc = updated;
+      return updated;
+    });
+
+    const mockPlugin = {
+      i18n: { t },
+      settings: { snippetFolderPath: '.radiprotocol/snippets' },
+      protocolDocumentStore: { update: updateSpy },
+    } as any;
+
+    const view = new ProtocolEditorView({} as any, mockPlugin);
+    holder.view = view;
+
+    const surfaceEl = makeEl('div');
+    (view as any).surfaceEl = surfaceEl;
+    (view as any).svgEl = makeEl('svg');
+    (view as any).viewportEl = makeEl('div');
+    (view as any).rootEl = makeEl('div');
+    (view as any).protocolPath = 'test.rp.json';
+    (view as any).zoom = 1;
+    (view as any).loadProtocol = vi.fn(async () => {});
+
+    const doc: ProtocolDocumentV1 = {
+      schema: 'radiprotocol.protocol',
+      version: 1,
+      id: 'test-doc',
+      title: 'Test Protocol',
+      createdAt: '2025-01-01T00:00:00Z',
+      updatedAt: '2025-01-01T00:00:00Z',
+      nodes: [node],
+      edges: [],
+    };
+    (view as any).doc = doc;
+
+    return { view, documentBody, surfaceEl, updateSpy };
+  }
+
+  function findStartCheckbox(root: MockEl): MockEl | undefined {
+    return findAllByTag(root, 'input').filter((i) => i._attrs['type'] === 'checkbox')
+      .find((c) => c.parent?.children.some((ch) =>
+        ch.tagName === 'SPAN' && ch._text === 'Start point'));
+  }
+
+  function findStartLabelInput(root: MockEl): MockEl | undefined {
+    return findAllByTag(root, 'input')
+      .find((i) => i._attrs['type'] === 'text' && i.parent?.children.some((ch) =>
+        ch.tagName === 'LABEL' && ch._text === 'Custom label for the “start from node” picker'));
+  }
+
+  function findButtonByText(root: MockEl, text: string): MockEl | undefined {
+    return findAllByTag(root, 'button').find((b) => b._text === text);
+  }
+
+  it('hides the custom label input while the start checkbox is off and reveals it when checked', () => {
+    const { view, documentBody } = createStartPointView({
+      id: 'a1', kind: 'answer', x: 0, y: 0, width: 100, height: 50,
+      fields: { answerText: 'Body' },
+    });
+    (view as any).openEditModal((view as any).doc.nodes[0]);
+
+    const startCheckbox = findStartCheckbox(documentBody);
+    expect(startCheckbox).toBeDefined();
+    const labelInput = findStartLabelInput(documentBody);
+    expect(labelInput).toBeDefined();
+    expect((startCheckbox as any).checked).toBe(false);
+    expect(labelInput!.parent!.classList.has('is-hidden')).toBe(true);
+
+    (startCheckbox as any).checked = true;
+    for (const handler of startCheckbox!._listeners.get('change') ?? []) handler({});
+    expect(labelInput!.parent!.classList.has('is-hidden')).toBe(false);
+
+    (startCheckbox as any).checked = false;
+    for (const handler of startCheckbox!._listeners.get('change') ?? []) handler({});
+    expect(labelInput!.parent!.classList.has('is-hidden')).toBe(true);
+  });
+
+  it('persists a non-blank custom label only while the start point is enabled', async () => {
+    const { view, documentBody, updateSpy } = createStartPointView({
+      id: 'q1', kind: 'question', x: 0, y: 0, width: 100, height: 50,
+      fields: { questionText: 'Where?' },
+    });
+    (view as any).openEditModal((view as any).doc.nodes[0]);
+
+    const startCheckbox = findStartCheckbox(documentBody)!;
+    (startCheckbox as any).checked = true;
+    for (const handler of startCheckbox._listeners.get('change') ?? []) handler({});
+    findStartLabelInput(documentBody)!.value = '  My entry  ';
+
+    const saveBtn = findButtonByText(documentBody, 'Save')!;
+    for (const handler of saveBtn._listeners.get('click') ?? []) await handler({});
+
+    expect(updateSpy).toHaveBeenCalledTimes(1);
+    const persisted = (view as any).doc as ProtocolDocumentV1;
+    expect(persisted.nodes[0]!.fields['startPointEnabled']).toBe(true);
+    expect(persisted.nodes[0]!.fields['startPointLabel']).toBe('My entry');
+  });
+
+  it('drops the custom label when the start checkbox is saved unchecked', async () => {
+    const { view, documentBody } = createStartPointView({
+      id: 'q1', kind: 'question', x: 0, y: 0, width: 100, height: 50,
+      fields: { questionText: 'Where?', startPointEnabled: true, startPointLabel: 'Old entry' },
+    });
+    (view as any).openEditModal((view as any).doc.nodes[0]);
+
+    const startCheckbox = findStartCheckbox(documentBody)!;
+    expect((startCheckbox as any).checked).toBe(true);
+    // The stored label is restored into the input.
+    expect(findStartLabelInput(documentBody)!.value).toBe('Old entry');
+
+    (startCheckbox as any).checked = false;
+    const saveBtn = findButtonByText(documentBody, 'Save')!;
+    for (const handler of saveBtn._listeners.get('click') ?? []) await handler({});
+
+    const persisted = (view as any).doc as ProtocolDocumentV1;
+    expect(persisted.nodes[0]!.fields['startPointEnabled']).toBeUndefined();
+    expect(persisted.nodes[0]!.fields['startPointLabel']).toBeUndefined();
+  });
+
+  it('renderDocument renders a free-text badge on an Answer with freeText enabled', () => {
+    const { view, surfaceEl } = createStartPointView({
+      id: 'a1', kind: 'answer', x: 0, y: 0, width: 100, height: 50,
+      fields: { answerText: 'Body', freeText: true },
+    });
+    (view as any).renderDocument();
+
+    const badges = findAllByClass(surfaceEl, 'rp-protocol-editor-node-free-text-badge');
+    expect(badges.length).toBe(1);
+    expect(badges[0]!._attrs['aria-label']).toBe('Free-text answer');
+  });
+
+  it('renderDocument omits the free-text badge on preset Answers and other kinds', () => {
+    const { view, surfaceEl } = createStartPointView({
+      id: 'a1', kind: 'answer', x: 0, y: 0, width: 100, height: 50,
+      fields: { answerText: 'Body' },
+    });
+    (view as any).renderDocument();
+    expect(findAllByClass(surfaceEl, 'rp-protocol-editor-node-free-text-badge')).toHaveLength(0);
+
+    const second = createStartPointView({
+      id: 'q1', kind: 'question', x: 0, y: 0, width: 100, height: 50,
+      fields: { questionText: 'Q', freeText: true },
+    });
+    (second.view as any).renderDocument();
+    expect(findAllByClass(second.surfaceEl, 'rp-protocol-editor-node-free-text-badge')).toHaveLength(0);
   });
 });

@@ -278,6 +278,24 @@ describe('RunnerSessionHost bootstrap and projection', () => {
 });
 
 describe('RunnerSessionHost note deltas and snippets', () => {
+  it('flushes the initial accumulator to the note when started from an explicit node', async () => {
+    const h = harness(answerGraph());
+    // Start at the seed text-block BEFORE the question: its content is
+    // auto-appended during start() with no user action, so mount() must write it.
+    (h.host as any).options.startNodeId = 'seed';
+    expect(await h.host.mount(h.root as unknown as HTMLElement)).toBe(true);
+    await flushMicrotasks();
+
+    expect(h.app.vault.modify).toHaveBeenCalledWith(h.targetNote, 'Seed\nSeed');
+  });
+
+  it('does not flush an initial buffer for a regular protocol start', async () => {
+    const h = harness(answerGraph());
+    expect(await h.host.mount(h.root as unknown as HTMLElement)).toBe(true);
+    await flushMicrotasks();
+    expect(h.app.vault.modify).not.toHaveBeenCalled();
+  });
+
   it('writes an append-only accumulator delta to the fixed note through the path mutex', async () => {
     const h = harness(answerGraph(), JSON.stringify({ selfCheckEnabled: true, selfCheckItems: ['Review'] }));
     expect(await h.host.mount(h.root as unknown as HTMLElement)).toBe(true);

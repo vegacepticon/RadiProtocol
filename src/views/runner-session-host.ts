@@ -171,6 +171,14 @@ export class RunnerSessionHost {
     this.graph = parseResult.graph;
     this.runner.start(this.graph, this.options.startNodeId);
     this.render();
+    // Start-from-node auto-appended content (e.g. starting AT a preset Answer or
+    // a text-block chain between the chosen node and the first question) lands in
+    // the accumulator without a user action, so the host must flush the initial
+    // buffer to the target note itself — normal writes are deltas only. Regular
+    // start-of-protocol sessions keep their lazy first-action delta semantics.
+    if (this.options.startNodeId !== undefined) {
+      await this.appendToTargetNote(this.captureAccumulatorDelta(''), lifecycleGeneration);
+    }
     return this.mounted;
   }
 

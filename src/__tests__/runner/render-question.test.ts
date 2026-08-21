@@ -427,3 +427,53 @@ describe('shared question branch renderer', () => {
     expect(render(nonQuestion, hostHarness()).result).toBe('not-question');
   });
 });
+
+describe('start-from-node answer halt renderer', () => {
+  function answerStartGraph(answerExtra: Partial<RPNode> = {}): ProtocolGraph {
+    return graphFrom([
+      baseNode('a1', 'answer', { displayLabel: 'Conclusion prompt', ...answerExtra }),
+    ], []);
+  }
+
+  const answerState = {
+    status: 'at-node' as const,
+    currentNodeId: 'a1',
+    accumulatedText: '',
+    canStepBack: false,
+    canRedo: false,
+    undoStackSize: 0,
+  };
+
+  function renderAnswer(harness: HostHarness, extra: Partial<RPNode> = {}) {
+    const textZone = makeEl('div');
+    const actionZone = makeEl('div');
+    const result = renderQuestionAtNode(
+      asHtml(textZone),
+      asHtml(actionZone),
+      answerStartGraph(extra),
+      answerState,
+      harness.host,
+    );
+    return { textZone, actionZone, result };
+  }
+
+  it('renders the free-text row when a free-text Answer is the explicit start node', () => {
+    const harness = hostHarness();
+    const { actionZone, result } = renderAnswer(harness, { freeText: true });
+
+    expect(result).toBe('rendered');
+    expect(findByClass(actionZone, 'rp-free-text-answer')).toHaveLength(1);
+    expect(findByClass(actionZone, 'rp-free-text-answer-prompt')[0]?._text)
+      .toBe('Conclusion prompt');
+    // The sole free-text action gets projected focus without an explicit request.
+    expect(harness.requestAnswerFocus).toHaveBeenCalledTimes(1);
+    expect(harness.requestAnswerFocus.mock.calls[0]?.[0]).toBe('a1');
+  });
+
+  it('reports not-question for a preset Answer start node (auto-append path)', () => {
+    const harness = hostHarness();
+    const { result } = renderAnswer(harness);
+    expect(result).toBe('not-question');
+    expect(findByClass(makeEl('div'), 'rp-free-text-answer')).toHaveLength(0);
+  });
+});

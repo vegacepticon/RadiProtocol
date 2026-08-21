@@ -195,6 +195,18 @@ export function renderQuestionAtNode(
     host.renderError([`Node "${state.currentNodeId}" not found in graph.`]);
     return 'error';
   }
+  if (node.kind === 'answer') {
+    // Start-from-node halt: the session began AT this Answer. Only free-text
+    // Answers halt here (preset ones auto-append and advance); render the same
+    // free-text row used for question branches so the radiologist can submit.
+    const answerNode = node as AnswerNode;
+    if (answerNode.freeText !== true) return 'not-question';
+    const answerList = actionZone.createDiv({ cls: 'rp-answer-list rp-stack' });
+    answerList.setCssProps({ 'margin-top': 'var(--size-4-3)' });
+    const control = appendFreeTextAnswer(answerList, answerNode, host);
+    requestProjectedAnswerFocus([control], 1, host);
+    return 'rendered';
+  }
   if (node.kind !== 'question') {
     return 'not-question';
   }

@@ -387,7 +387,7 @@ export default class RadiProtocolPlugin extends Plugin {
       return;
     }
 
-    const options = buildStartableProtocolNodeOptions(doc.nodes, this.i18n.t.bind(this.i18n));
+    const options = buildStartableProtocolNodeOptions(doc.nodes, this.i18n.t.bind(this.i18n), doc.edges);
     if (options.length === 0) {
       new Notice(this.i18n.t('startFromNode.noStartPoints'));
       return;

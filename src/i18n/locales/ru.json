@@ -60,6 +60,7 @@
     "answerTextLabel": "Текст ответа",
     "freeTextAnswerLabel": "Запрашивать свободный текст",
     "freeTextAnswerHelp": "Использовать подпись или текст ответа как подсказку; рентгенолог вводит многострочный текст заключения при запуске.",
+    "freeTextBadgeAriaLabel": "Ответ со свободным текстом",
     "contentLabel": "Текст блока",
     "snippetSeparatorLabel": "Разделитель после сниппета",
     "noEditableFields": "Для этого типа узла нет редактируемых полей.",
@@ -96,6 +97,8 @@
     "snippetTargetHelp": "Выберите папку, чтобы при запуске выбрать сниппет из неё, или выберите конкретный файл сниппета.",
     "snippetNodeLabelLabel": "Подпись кнопки сниппета",
     "startPointEnabledLabel": "Показывать в команде «старт с узла»",
+    "startPointCustomLabelLabel": "Своя подпись для списка «старт с узла»",
+    "startPointCustomLabelPlaceholder": "Оставить пустым — используется подпись узла",
     "useGlobalSeparator": "Использовать общий разделитель",
     "nodeKind": {
       "start": "Старт",
