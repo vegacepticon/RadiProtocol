@@ -72,6 +72,8 @@ function appendFreeTextAnswer(
 
   const textarea = createTextarea(label, {
     cls: 'rp-free-text-answer-textarea',
+    // Start at a single compact line; growTextarea expands it as content grows.
+    attr: { rows: 1 },
   });
   textarea.value = host.getAnswerDraft(answerNode.id);
 

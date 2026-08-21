@@ -910,3 +910,90 @@ describe('RunnerSessionHost free-text drafts and submission', () => {
     }
   });
 });
+
+function freeTextLoopGraph(): ProtocolGraph {
+  return graph([
+    { ...base, id: 'start', kind: 'start' },
+    { ...base, id: 'loop', kind: 'question', questionText: 'Repeat?', loop: true },
+    {
+      ...base,
+      id: 'free',
+      kind: 'answer',
+      answerText: 'Describe finding',
+      freeText: true,
+      radiprotocol_separator: 'space',
+    },
+    { ...base, id: 'end', kind: 'text-block', content: 'End' },
+  ], [
+    { id: 'start-loop', fromNodeId: 'start', toNodeId: 'loop' },
+    { id: 'loop-free', fromNodeId: 'loop', toNodeId: 'free' },
+    { id: 'free-loop', fromNodeId: 'free', toNodeId: 'loop' },
+    { id: 'loop-exit', fromNodeId: 'loop', toNodeId: 'end', label: 'Finish', isLoopExit: true },
+  ]);
+}
+
+describe('RunnerSessionHost free-text Answer as a direct loop branch target', () => {
+  it('renders the free-text row inside the loop picker and writes the submitted text to the bound note', async () => {
+    const h = harness(freeTextLoopGraph());
+    expect(await h.host.mount(h.root as unknown as HTMLElement)).toBe(true);
+
+    // Loop picker with a free-text body branch: no dead body button, real row.
+    expect(h.root.querySelectorAll('.rp-loop-body-btn')).toHaveLength(0);
+    expect(h.root.querySelectorAll('.rp-loop-exit-btn')).toHaveLength(1);
+    const textarea = h.root.querySelector('.rp-free-text-answer-textarea')!;
+    expect(h.root.querySelector('.rp-free-text-answer-prompt')?._text).toBe('Describe finding');
+
+    textarea.value = 'custom finding';
+    textarea.dispatchEvent({ type: 'input' });
+    h.root.querySelector('.rp-free-text-answer-submit')!
+      .dispatchEvent({ type: 'click' });
+    await flushMicrotasks();
+
+    expect(h.app.vault.modify).toHaveBeenCalledTimes(1);
+    expect(h.app.vault.modify).toHaveBeenCalledWith(h.targetNote, 'Seed\ncustom finding');
+    // Back-edge re-entry returns to the picker; the draft was consumed.
+    expect(h.root.querySelector('.rp-loop-exit-btn')).not.toBeNull();
+    expect(h.root.querySelector('.rp-free-text-answer-textarea')?.value).toBe('');
+  });
+
+  it('rejects blank loop free-text without runner mutation, lock, read, or write', async () => {
+    const h = harness(freeTextLoopGraph());
+    expect(await h.host.mount(h.root as unknown as HTMLElement)).toBe(true);
+    const runner = (h.host as any).runner as ProtocolRunner;
+    const stateBefore = runner.getState();
+    const historyBefore = runner.getSerializableState();
+
+    h.root.querySelector('.rp-free-text-answer-submit')!
+      .dispatchEvent({ type: 'click' });
+    await flushMicrotasks();
+
+    const alert = h.root.querySelector('.rp-free-text-answer-error')!;
+    expect(alert._text).toBe('Введите текст перед отправкой.');
+    expect(alert.getAttribute('role')).toBe('alert');
+    expect(h.root.querySelector('.rp-free-text-answer-textarea')!
+      .getAttribute('aria-invalid')).toBe('true');
+    expect(runner.getState()).toEqual(stateBefore);
+    expect(runner.getSerializableState()).toEqual(historyBefore);
+    expect(h.withTargetNoteLock).not.toHaveBeenCalled();
+    expect(h.app.vault.modify).not.toHaveBeenCalled();
+  });
+
+  it('retains the loop free-text draft across a destructive rerender and clears it after acceptance', async () => {
+    const h = harness(freeTextLoopGraph());
+    expect(await h.host.mount(h.root as unknown as HTMLElement)).toBe(true);
+
+    const textarea = h.root.querySelector('.rp-free-text-answer-textarea')!;
+    textarea.value = 'kept draft';
+    textarea.dispatchEvent({ type: 'input' });
+
+    (h.host as any).render();
+    expect(h.root.querySelector('.rp-free-text-answer-textarea')?.value).toBe('kept draft');
+
+    h.root.querySelector('.rp-free-text-answer-submit')!
+      .dispatchEvent({ type: 'click' });
+    await flushMicrotasks();
+
+    expect(h.app.vault.modify).toHaveBeenCalledTimes(1);
+    expect(h.root.querySelector('.rp-free-text-answer-textarea')?.value).toBe('');
+  });
+});

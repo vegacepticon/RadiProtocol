@@ -425,8 +425,40 @@ export class RunnerSessionHost {
           state,
           {
             bindClick: (element, handler) => element.addEventListener('click', handler),
+            bindInput: (element, handler) => element.addEventListener('input', handler),
+            bindKeydown: (element, handler) => element.addEventListener('keydown', handler),
+            scheduleTextareaResize: (textarea, resize) => {
+              this.deferTextareaResize(
+                textarea,
+                resize,
+                lifecycleGeneration,
+                operationGeneration,
+              );
+            },
             renderError: (messages) => this.renderError(messages),
+            getAnswerDraft: (answerId) => this.answerDrafts.get(answerId) ?? '',
+            onAnswerDraftChange: (answerNode, value) => {
+              if (!this.isOperationCurrent(lifecycleGeneration, operationGeneration)) return false;
+              this.handleAnswerDraftChange(answerNode.id, value);
+              return true;
+            },
+            getAnswerError: (answerId) => this.answerErrors.get(answerId),
+            onSubmitFreeText: (edge, submittedText) => {
+              if (!this.isOperationCurrent(lifecycleGeneration, operationGeneration)) return;
+              return this.handleLoopBranchClick(edge, submittedText);
+            },
             onChooseLoopBranch: (edge) => this.handleLoopBranchClick(edge),
+            getAnswerFocusRequest: () => this.answerFocusRequest,
+            requestAnswerFocus: (answerId, textarea, explicitRequest) => {
+              this.deferAnswerFocus(
+                answerId,
+                textarea,
+                explicitRequest,
+                lifecycleGeneration,
+                operationGeneration,
+              );
+            },
+            t: this.options.t,
           },
         );
         if (rendered) this.renderFooterIcons(state.canStepBack, false, state.canRedo);
@@ -685,12 +717,17 @@ export class RunnerSessionHost {
 
   private reconcileAnswerFocusRequest(state: RunnerState): void {
     if (this.answerFocusRequest === null) return;
-    if (state.status !== 'at-node') {
-      this.answerFocusRequest = null;
+    // Free-text errors can originate at an at-node question OR at a looped
+    // question's picker (free-text Answer as a direct loop branch target), so
+    // both states retain a focus request while the requested Answer remains an
+    // outgoing neighbour of the current node.
+    if (state.status === 'at-node' || state.status === 'awaiting-loop-pick') {
+      const nodeId = state.status === 'at-node' ? state.currentNodeId : state.nodeId;
+      const outgoing = this.graph?.adjacency.get(nodeId) ?? [];
+      if (!outgoing.includes(this.answerFocusRequest)) this.answerFocusRequest = null;
       return;
     }
-    const outgoing = this.graph?.adjacency.get(state.currentNodeId) ?? [];
-    if (!outgoing.includes(this.answerFocusRequest)) this.answerFocusRequest = null;
+    this.answerFocusRequest = null;
   }
 
   private deferAnswerFocus(
@@ -746,11 +783,46 @@ export class RunnerSessionHost {
     this.answerFocusTimer = null;
   }
 
-  private async handleLoopBranchClick(edge: RPEdge): Promise<void> {
+  private async handleLoopBranchClick(
+    edge: RPEdge,
+    submittedText?: string,
+  ): Promise<void> {
     const lifecycleGeneration = this.lifecycleGeneration;
     const operationGeneration = this.operationGeneration;
+    this.clearAnswerFocusTimer();
+
+    // A free-text Answer as a direct loop branch target requires typed input:
+    // blank submissions surface the inline error and restore focus, exactly like
+    // the at-node free-text path, without any runner/vault mutation.
+    const target = this.graph?.nodes.get(edge.toNodeId);
+    const freeTextTarget = target !== undefined
+      && target.kind === 'answer'
+      && target.freeText === true
+      ? target
+      : undefined;
+    if (
+      freeTextTarget !== undefined
+      && (submittedText === undefined || submittedText.trim() === '')
+    ) {
+      this.answerErrors.set(
+        freeTextTarget.id,
+        this.options.t('protocolRunner.freeTextBlankError'),
+      );
+      this.answerFocusRequest = freeTextTarget.id;
+      this.render();
+      return;
+    }
+
     const beforeText = this.extractAccumulatedText(this.runner.getState());
-    this.runner.chooseLoopBranch(edge.id);
+    const accepted = this.runner.chooseLoopBranch(edge.id, submittedText);
+    if (!accepted) return;
+
+    if (freeTextTarget !== undefined) {
+      this.answerDrafts.delete(freeTextTarget.id);
+      this.answerErrors.delete(freeTextTarget.id);
+      if (this.answerFocusRequest === freeTextTarget.id) this.answerFocusRequest = null;
+    }
+
     const delta = this.captureAccumulatorDelta(beforeText);
     await this.appendToTargetNote(delta, lifecycleGeneration);
     if (this.isOperationCurrent(lifecycleGeneration, operationGeneration)) this.render();

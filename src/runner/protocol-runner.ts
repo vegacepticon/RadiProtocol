@@ -309,23 +309,44 @@ export class ProtocolRunner {
    *   - other    → walk the body branch (B1 re-entry guard inside the looped-question
    *                case handles the iteration increment on return to picker)
    *
+   * When the selected edge targets a free-text Answer, `submittedText` is
+   * required (blank rejected before any mutation): the payload is appended
+   * with the Answer's separator and traversal continues through the Answer's
+   * first neighbour — the exact contract advanceThrough applies to a preset
+   * Answer auto-advanced in a loop body (including loop quick-exit and
+   * dead-end return to the picker). A preset Answer target ignores an
+   * accidental payload, mirroring chooseAnswer.
+   *
    * edgeId is the stable identifier per locked decision (planner D-02): labels
    * can duplicate and targetNodeIds can collide when two body branches point to
    * the same node. Only edgeId is unambiguous.
    *
    * Post loop→question merge: the exit predicate is the explicit `edge.isLoopExit`
    * flag, replacing the former `+`-prefix label convention.
+   *
+   * @returns true when the branch command was accepted; false for a
+   * wrong-state, unknown edge, or blank free-text submission.
    */
-  chooseLoopBranch(edgeId: string): void {
-    if (this.runnerStatus !== RUNNER_STATUS.AWAITING_LOOP_PICK) return;
-    if (this.graph === null || this.currentNodeId === null) return;
+  chooseLoopBranch(edgeId: string, submittedText?: string): boolean {
+    if (this.runnerStatus !== RUNNER_STATUS.AWAITING_LOOP_PICK) return false;
+    if (this.graph === null || this.currentNodeId === null) return false;
 
     const edge = this.graph.edges.find(e => e.id === edgeId);
     if (edge === undefined || edge.fromNodeId !== this.currentNodeId) {
       this.transitionToError(
         `Loop picker edge '${edgeId}' not found or does not originate at current looped question.`,
       );
-      return;
+      return false;
+    }
+
+    const target = this.graph.nodes.get(edge.toNodeId);
+    const freeTextTarget = target !== undefined
+      && target.kind === 'answer'
+      && target.freeText === true
+      ? target
+      : undefined;
+    if (freeTextTarget !== undefined && (submittedText === undefined || submittedText.trim() === '')) {
+      return false;
     }
 
     // Forward action — clear redo stack
@@ -354,8 +375,40 @@ export class ProtocolRunner {
     // iteration = 2*N + 1 after N picks — confusing and out of line with the
     // Plan 02b RUN-02 assertion expect(iteration).toBe(2).
 
+    if (freeTextTarget !== undefined) {
+      // Mirror advanceThrough's case 'answer' for the submitted payload: append
+      // the free text, then advance from the Answer's first neighbour (the
+      // Answer node itself is not re-entered because its text was just appended).
+      this.appendAnswerText(submittedText ?? '', this.resolveSeparator(freeTextTarget));
+      const next = this.firstNeighbour(freeTextTarget.id);
+
+      // Quick-exit from loop body: same contract as advanceThrough's answer case
+      // — if the Answer is wired directly to the same target as any of the
+      // loop's isLoopExit edges, pop the loop frame so the runner continues past
+      // the loop instead of returning to the picker when the branch dead-ends.
+      if (this.graph !== null && this.loopContextStack.length > 0 && next !== undefined) {
+        const topLoop = this.loopContextStack[this.loopContextStack.length - 1];
+        if (topLoop !== undefined) {
+          const exitsToNext = this.graph.edges.some(
+            e => e.fromNodeId === topLoop.loopNodeId && e.isLoopExit === true && e.toNodeId === next,
+          );
+          if (exitsToNext) {
+            this.loopContextStack.pop();
+          }
+        }
+      }
+
+      if (next === undefined) {
+        this.advanceOrReturnToLoop(undefined);
+      } else {
+        this.advanceThrough(next);
+      }
+      return true;
+    }
+
     this.runnerStatus = RUNNER_STATUS.AT_NODE;
     this.advanceThrough(edge.toNodeId);
+    return true;
   }
 
   /**

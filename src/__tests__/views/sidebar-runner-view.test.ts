@@ -53,10 +53,34 @@ vi.mock('../../views/runner-session-host', () => ({
 import { TFile, WorkspaceLeaf } from 'obsidian';
 import {
   SidebarRunnerView,
+  SIDEBAR_RUNNER_LAUNCH_MARKER,
   createSidebarRunnerEphemeralState,
 } from '../../views/sidebar-runner-view';
 
 type TestLeaf = any;
+
+/**
+ * Real Obsidian delegates WorkspaceLeaf.getEphemeralState()/setEphemeralState()
+ * to the CURRENT view instance (base View is a no-op). The shared mock stores
+ * leaf-side state instead, which masks the launch-marker handoff bug. This
+ * subclass reproduces the real delegation semantics for the sidebar suite.
+ */
+class DelegatingLeaf extends (WorkspaceLeaf as any) {
+  constructor(app: any) {
+    super(app);
+  }
+
+  getEphemeralState(): Record<string, unknown> {
+    const viewState = this.view?.getEphemeralState?.();
+    return viewState !== undefined && viewState !== null
+      ? viewState
+      : {};
+  }
+
+  setEphemeralState(state: unknown): void {
+    this.view?.setEphemeralState?.(state);
+  }
+}
 
 type WorkspaceEventRef = {
   event: string;
@@ -176,12 +200,15 @@ async function openMarkedView(
     targetNote: new (TFile as any)('notes/target.md'),
   },
 ) {
-  const leaf = new (WorkspaceLeaf as any)(environment.app) as TestLeaf;
-  leaf.setEphemeralState(createSidebarRunnerEphemeralState());
+  const leaf = new DelegatingLeaf(environment.app) as TestLeaf;
   const view = new SidebarRunnerView(leaf, environment.plugin);
   leaf.view = view;
   environment.allLeaves.push(leaf);
+  // Real Obsidian ordering: onOpen runs while setViewState creates the view,
+  // THEN the eState argument is applied to the view, then main.ts calls
+  // initialize(). Mirror that here so the marker handoff is exercised.
   await view.onOpen();
+  leaf.setEphemeralState(createSidebarRunnerEphemeralState());
   const initialized = await view.initialize(context);
   return { environment, leaf, view, context, initialized };
 }
@@ -223,6 +250,35 @@ describe('SidebarRunnerView transient initialization', () => {
     expect(hostState.instances[0]!.root).toBe(
       harness.view.contentEl.querySelector('.rp-sidebar-runner-session'),
     );
+  });
+
+  it('accepts the launch marker handed off through the view after onOpen (real Obsidian delegation)', async () => {
+    // Real Obsidian: WorkspaceLeaf.setViewState(state, eState) creates the
+    // view (onOpen runs), then applies eState via view.setEphemeralState, then
+    // main.ts calls initialize(). With the view-side ephemeral store, the
+    // marker must be visible to initialize even though onOpen never saw it.
+    const environment = makeEnvironment();
+    const leaf = new DelegatingLeaf(environment.app) as TestLeaf;
+    const view = new SidebarRunnerView(leaf, environment.plugin);
+    leaf.view = view;
+
+    await view.onOpen();
+    expect(view.getEphemeralState()).toEqual({});
+
+    // setViewState tail: eState reaches the view instance.
+    leaf.setEphemeralState(createSidebarRunnerEphemeralState());
+    expect(view.getEphemeralState()).toEqual({ [SIDEBAR_RUNNER_LAUNCH_MARKER]: true });
+
+    const context = {
+      protocolPath: 'Protocols/chest.rp.json',
+      targetNote: new (TFile as any)('reports/chest.md'),
+    };
+    const initialized = await view.initialize(context);
+    expect(initialized).toBe(true);
+    // The one-shot marker was consumed and is no longer visible anywhere.
+    expect(view.getEphemeralState()).toEqual({});
+    expect(hostState.instances).toHaveLength(1);
+    expect(hostState.instances[0]!.options).toMatchObject(context);
   });
 
   it('detaches an unmarked restored view on the scheduled turn', async () => {

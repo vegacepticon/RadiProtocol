@@ -33,6 +33,17 @@ export function createSidebarRunnerEphemeralState(): SidebarRunnerEphemeralState
 export class SidebarRunnerView extends ItemView {
   private readonly plugin: RadiProtocolPlugin;
 
+  /**
+   * View-side ephemeral state store. Obsidian's WorkspaceLeaf delegates
+   * getEphemeralState()/setEphemeralState() to the CURRENT view instance, and
+   * the base View class implements both as no-ops (`{}` / empty). Without a
+   * real override the one-shot launch marker passed to setViewState(state,
+   * eState) never reaches this view, so every launch was treated as an
+   * unmarked restore and the leaf detached itself. Storing the state on the
+   * instance mirrors Obsidian's own views (e.g. MarkdownView).
+   */
+  private ephemeralState: Record<string, unknown> = {};
+
   private launchContext: SidebarRunnerLaunchContext | null = null;
   private sessionHost: RunnerSessionHost | null = null;
   private boundNoteEl: HTMLElement | null = null;
@@ -67,6 +78,20 @@ export class SidebarRunnerView extends ItemView {
   /** No protocol/session data is durable workspace state. */
   getState(): Record<string, unknown> {
     return {};
+  }
+
+  /**
+   * Overrides of the base View no-ops. WorkspaceLeaf.getEphemeralState() /
+   * WorkspaceLeaf.setEphemeralState() delegate here, so the one-shot launch
+   * marker applied by setViewState(state, eState) is visible to
+   * onOpen()/initialize() and can be consumed/cleared.
+   */
+  getEphemeralState(): Record<string, unknown> {
+    return this.ephemeralState;
+  }
+
+  setEphemeralState(state: unknown): void {
+    this.ephemeralState = (state ?? {}) as Record<string, unknown>;
   }
 
   async onOpen(): Promise<void> {

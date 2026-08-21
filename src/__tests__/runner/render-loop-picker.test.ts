@@ -1,33 +1,45 @@
 import { describe, expect, it, vi } from 'vitest';
 import type { ProtocolGraph, RPEdge, RPNode } from '../../graph/graph-model';
 import { renderRunnerFooter } from '../../runner/render/render-footer';
-import { renderLoopPicker } from '../../runner/render/render-loop-picker';
+import { renderLoopPicker, type LoopPickerHost } from '../../runner/render/render-loop-picker';
 
 class MockEl {
   children: MockEl[] = [];
+  parent: MockEl | null = null;
   cls = '';
   text = '';
   title = '';
   disabled = false;
   attrs = new Map<string, string>();
   clickHandler: ((ev: MouseEvent) => void) | null = null;
+  value = '';
+  style: Record<string, string> = {};
+  scrollHeight = 24;
+  focusCount = 0;
+  private readonly listeners = new Map<string, Array<(ev: any) => void>>();
 
   constructor(readonly tag: string) {}
 
   createDiv(opts?: { cls?: string }): MockEl {
     const child = new MockEl('div');
     child.cls = opts?.cls ?? '';
+    child.parent = this;
     this.children.push(child);
     return child;
+  }
+
+  createSpan(opts?: { cls?: string; text?: string }): MockEl {
+    return this.createEl('span', opts);
   }
 
   createEl(tag: string, opts?: { cls?: string; text?: string; attr?: Record<string, string> }): MockEl {
     const child = new MockEl(tag);
     child.cls = opts?.cls ?? '';
     child.text = opts?.text ?? '';
+    child.parent = this;
     if (opts?.attr) {
       for (const [k, v] of Object.entries(opts.attr)) {
-        child.setAttribute(k, v);
+        child.setAttribute(k, String(v));
       }
     }
     this.children.push(child);
@@ -36,6 +48,37 @@ class MockEl {
 
   setAttribute(name: string, value: string): void {
     this.attrs.set(name, value);
+  }
+
+  removeAttribute(name: string): void {
+    this.attrs.delete(name);
+  }
+
+  addEventListener(type: string, handler: (ev: any) => void): void {
+    const list = this.listeners.get(type) ?? [];
+    list.push(handler);
+    this.listeners.set(type, list);
+  }
+
+  dispatchEvent(event: any): void {
+    for (const handler of this.listeners.get(event.type) ?? []) {
+      handler({ ...event, target: event.target ?? this });
+    }
+  }
+
+  setCssProps(props: Record<string, string>): void {
+    for (const [key, value] of Object.entries(props)) this.style[key] = value;
+  }
+
+  focus(): void {
+    this.focusCount += 1;
+  }
+
+  remove(): void {
+    if (this.parent === null) return;
+    const index = this.parent.children.indexOf(this);
+    if (index >= 0) this.parent.children.splice(index, 1);
+    this.parent = null;
   }
 }
 
@@ -82,6 +125,31 @@ function graph(edges: RPEdge[]): ProtocolGraph {
     adjacency: new Map(),
     reverseAdjacency: new Map(),
     startNodeId: 'loop',
+  };
+}
+
+function makeHost(overrides: Partial<LoopPickerHost> = {}): LoopPickerHost {
+  return {
+    bindClick: (el, handler) => {
+      (el as unknown as MockEl).clickHandler = handler;
+    },
+    bindInput: (el, handler) => {
+      (el as unknown as MockEl).addEventListener('input', handler as (ev: any) => void);
+    },
+    bindKeydown: (el, handler) => {
+      (el as unknown as MockEl).addEventListener('keydown', handler as (ev: any) => void);
+    },
+    scheduleTextareaResize: (_textarea, resize) => resize(),
+    renderError: vi.fn(),
+    getAnswerDraft: () => '',
+    onAnswerDraftChange: () => true,
+    getAnswerError: () => undefined,
+    onSubmitFreeText: vi.fn(),
+    onChooseLoopBranch: vi.fn(),
+    getAnswerFocusRequest: () => null,
+    requestAnswerFocus: vi.fn(),
+    t: (key: string) => (key === 'protocolRunner.freeTextSubmit' ? 'Submit' : key),
+    ...overrides,
   };
 }
 
@@ -208,13 +276,7 @@ describe('shared loop picker renderer', () => {
       canStepBack: true,
       canRedo: false,
       undoStackSize: 0,
-    }, {
-      bindClick: (el, handler) => {
-        (el as unknown as MockEl).clickHandler = handler;
-      },
-      renderError: vi.fn(),
-      onChooseLoopBranch,
-    });
+    }, makeHost({ onChooseLoopBranch }));
 
     expect(rendered).toBe(true);
     expect(findByClass(textZone, 'rp-loop-header-text')[0]?.text).toBe('Repeat?');
@@ -232,11 +294,7 @@ describe('shared loop picker renderer', () => {
     const textZone = new MockEl('text');
     const actionZone = new MockEl('actions');
     const renderError = vi.fn();
-    const host = {
-      bindClick: vi.fn(),
-      renderError,
-      onChooseLoopBranch: vi.fn(),
-    };
+    const host = makeHost({ bindClick: vi.fn(), renderError });
     const state = {
       status: 'awaiting-loop-pick' as const,
       nodeId: 'missing',
@@ -265,7 +323,7 @@ describe('shared loop picker renderer', () => {
       ]),
     };
     const state = { status: 'awaiting-loop-pick' as const, nodeId: 'loop', accumulatedText: '', canStepBack: false, canRedo: false, undoStackSize: 0 };
-    const rendered = renderLoopPicker(asHtml(textZone), asHtml(actionZone), graphOrdinary, state, { bindClick: vi.fn(), renderError, onChooseLoopBranch: vi.fn() });
+    const rendered = renderLoopPicker(asHtml(textZone), asHtml(actionZone), graphOrdinary, state, makeHost({ bindClick: vi.fn(), renderError }));
     expect(rendered).toBe(false);
     expect(renderError).toHaveBeenCalledWith(['Looped question "loop" not found in graph.']);
   });
@@ -277,11 +335,8 @@ describe('shared loop picker renderer', () => {
     const onChooseLoopBranch = vi.fn();
     renderLoopPicker(asHtml(textZone), asHtml(actionZone), graph([unlabeledExit]), {
       status: 'awaiting-loop-pick', nodeId: 'loop', accumulatedText: '', canStepBack: false, canRedo: false, undoStackSize: 0,
-    }, {
-      bindClick: (el, handler) => { (el as unknown as MockEl).clickHandler = handler; },
-      renderError: vi.fn(),
-      onChooseLoopBranch,
-    });
+    }, makeHost({ onChooseLoopBranch }));
+
     const exitBtn = findByClass(actionZone, 'rp-loop-exit-btn')[0]!;
     expect(exitBtn.text).toBe('');
     // target 'exit' is a text-block with content 'Done' → nodeLabel slices to 'Done'
@@ -307,11 +362,7 @@ describe('shared loop picker renderer', () => {
 
     renderLoopPicker(asHtml(textZone), asHtml(actionZone), orderedGraph, {
       status: 'awaiting-loop-pick', nodeId: 'loop', accumulatedText: '', canStepBack: true, canRedo: false, undoStackSize: 0,
-    }, {
-      bindClick: (el, handler) => { (el as unknown as MockEl).clickHandler = handler; },
-      renderError: vi.fn(),
-      onChooseLoopBranch,
-    });
+    }, makeHost({ onChooseLoopBranch }));
 
     const list = findByClass(actionZone, 'rp-loop-picker-list')[0]!;
     expect(list.children.map((b) => b.cls)).toEqual(['rp-loop-exit-btn', 'rp-loop-body-btn']);
@@ -325,15 +376,117 @@ describe('shared loop picker renderer', () => {
     const onChooseLoopBranch = vi.fn();
     renderLoopPicker(asHtml(textZone), asHtml(actionZone), graph([whitespaceExit]), {
       status: 'awaiting-loop-pick', nodeId: 'loop', accumulatedText: '', canStepBack: false, canRedo: false, undoStackSize: 0,
-    }, {
-      bindClick: (el, handler) => { (el as unknown as MockEl).clickHandler = handler; },
-      renderError: vi.fn(),
-      onChooseLoopBranch,
-    });
+    }, makeHost({ onChooseLoopBranch }));
+
     const exitBtn = findByClass(actionZone, 'rp-loop-exit-btn')[0]!;
     // Verbatim whitespace preserved as visible text
     expect(exitBtn.text).toBe('   ');
     // Trimmed-empty caption is treated as unlabeled → target-derived aria-label
     expect(exitBtn.attrs.get('aria-label')).toBe('Done');
+  });
+
+  it('renders an inline free-text row for a body edge targeting a free-text Answer, not a dead button', () => {
+    const textZone = new MockEl('text');
+    const actionZone = new MockEl('actions');
+    const freeEdge = { id: 'e-free', fromNodeId: 'loop', toNodeId: 'free' };
+    const exitEdge = { id: 'e-exit', fromNodeId: 'loop', toNodeId: 'exit', label: 'finish', isLoopExit: true };
+    const freeGraph = graph([freeEdge, exitEdge]);
+    freeGraph.nodes.set('free', node('free', 'answer', {
+      answerText: 'Describe the finding', displayLabel: 'Describe', freeText: true,
+    }));
+    const onChooseLoopBranch = vi.fn();
+    const onSubmitFreeText = vi.fn();
+
+    const rendered = renderLoopPicker(asHtml(textZone), asHtml(actionZone), freeGraph, {
+      status: 'awaiting-loop-pick', nodeId: 'loop', accumulatedText: '', canStepBack: true, canRedo: false, undoStackSize: 0,
+    }, makeHost({ onChooseLoopBranch, onSubmitFreeText }));
+
+    expect(rendered).toBe(true);
+    // No plain button for the free-text branch; the exit keeps its button.
+    expect(findByClass(actionZone, 'rp-loop-body-btn')).toHaveLength(0);
+    expect(findByClass(actionZone, 'rp-loop-exit-btn')).toHaveLength(1);
+    const rows = findByClass(actionZone, 'rp-free-text-answer');
+    expect(rows).toHaveLength(1);
+    expect(findByClass(rows[0]!, 'rp-free-text-answer-prompt')[0]?.text).toBe('Describe');
+    const textarea = findByClass(rows[0]!, 'rp-free-text-answer-textarea')[0]!;
+    expect(textarea.attrs.get('rows')).toBe('1');
+    expect(findByClass(rows[0]!, 'rp-free-text-answer-submit')[0]?.text).toBe('Submit');
+
+    // Draft is projected into the textarea.
+    const draftHost = makeHost({ getAnswerDraft: () => 'drafted value' });
+    const draftZone = new MockEl('actions');
+    renderLoopPicker(asHtml(new MockEl('text')), asHtml(draftZone), freeGraph, {
+      status: 'awaiting-loop-pick', nodeId: 'loop', accumulatedText: '', canStepBack: true, canRedo: false, undoStackSize: 0,
+    }, draftHost);
+    expect(findByClass(draftZone, 'rp-free-text-answer-textarea')[0]?.value).toBe('drafted value');
+  });
+
+  it('forwards input to the draft host, clears error/ARIA, grows, and submits once per click or Mod+Enter', () => {
+    const textZone = new MockEl('text');
+    const actionZone = new MockEl('actions');
+    const freeEdge = { id: 'e-free', fromNodeId: 'loop', toNodeId: 'free' };
+    const freeGraph = graph([freeEdge]);
+    freeGraph.nodes.set('free', node('free', 'answer', { answerText: 'Describe', freeText: true }));
+    const onAnswerDraftChange = vi.fn<(answerNode: { id: string }, value: string) => boolean>(() => true);
+    const onSubmitFreeText = vi.fn<(edge: { id: string }, value: string) => void>();
+    const getAnswerError = vi.fn(() => 'Enter a value');
+    const host = makeHost({ onAnswerDraftChange, onSubmitFreeText, getAnswerError });
+
+    renderLoopPicker(asHtml(textZone), asHtml(actionZone), freeGraph, {
+      status: 'awaiting-loop-pick', nodeId: 'loop', accumulatedText: '', canStepBack: true, canRedo: false, undoStackSize: 0,
+    }, host);
+
+    const row = findByClass(actionZone, 'rp-free-text-answer')[0]!;
+    const textarea = findByClass(row, 'rp-free-text-answer-textarea')[0]!;
+    const submit = findByClass(row, 'rp-free-text-answer-submit')[0]!;
+    expect(textarea.attrs.get('aria-invalid')).toBe('true');
+    expect(findByClass(row, 'rp-free-text-answer-error')[0]?.text).toBe('Enter a value');
+
+    textarea.value = 'typed text';
+    textarea.dispatchEvent({ type: 'input' });
+    expect(onAnswerDraftChange).toHaveBeenCalledTimes(1);
+    expect(onAnswerDraftChange.mock.calls[0]?.[0]?.id).toBe('free');
+    expect(onAnswerDraftChange.mock.calls[0]?.[1]).toBe('typed text');
+    expect(textarea.attrs.get('aria-invalid')).toBeUndefined();
+    expect(findByClass(row, 'rp-free-text-answer-error')).toHaveLength(0);
+    expect(textarea.style.height).toBe(`${textarea.scrollHeight}px`);
+
+    submit.clickHandler?.({} as MouseEvent);
+    const preventDefault = vi.fn();
+    textarea.dispatchEvent({
+      type: 'keydown', key: 'Enter', ctrlKey: true, metaKey: false, preventDefault,
+    });
+    expect(onSubmitFreeText).toHaveBeenCalledTimes(2);
+    expect(onSubmitFreeText.mock.calls.map((call) => [call[0]?.id, call[1]])).toEqual([
+      ['e-free', 'typed text'],
+      ['e-free', 'typed text'],
+    ]);
+    expect(preventDefault).toHaveBeenCalledTimes(1);
+  });
+
+  it('projects sole-action and explicit focus requests onto the free-text textarea', () => {
+    const freeEdge = { id: 'e-free', fromNodeId: 'loop', toNodeId: 'free' };
+    const freeGraph = graph([freeEdge]);
+    freeGraph.nodes.set('free', node('free', 'answer', { answerText: 'Describe', freeText: true }));
+    const requestAnswerFocus = vi.fn<(answerId: string, textarea: unknown, explicitRequest: boolean) => void>();
+
+    const sole = makeHost({ requestAnswerFocus });
+    renderLoopPicker(asHtml(new MockEl('text')), asHtml(new MockEl('actions')), freeGraph, {
+      status: 'awaiting-loop-pick', nodeId: 'loop', accumulatedText: '', canStepBack: true, canRedo: false, undoStackSize: 0,
+    }, sole);
+    expect(requestAnswerFocus).toHaveBeenCalledTimes(1);
+    expect(requestAnswerFocus.mock.calls[0]?.[0]).toBe('free');
+    expect(requestAnswerFocus.mock.calls[0]?.[2]).toBe(false);
+
+    const exitEdge = { id: 'e-exit', fromNodeId: 'loop', toNodeId: 'exit', label: 'finish', isLoopExit: true };
+    const mixedGraph = graph([freeEdge, exitEdge]);
+    mixedGraph.nodes.set('free', node('free', 'answer', { answerText: 'Describe', freeText: true }));
+    const mixed = makeHost({ requestAnswerFocus, getAnswerFocusRequest: () => 'free' });
+    renderLoopPicker(asHtml(new MockEl('text')), asHtml(new MockEl('actions')), mixedGraph, {
+      status: 'awaiting-loop-pick', nodeId: 'loop', accumulatedText: '', canStepBack: true, canRedo: false, undoStackSize: 0,
+    }, mixed);
+    expect(requestAnswerFocus).toHaveBeenCalledTimes(2);
+    expect(requestAnswerFocus.mock.calls[1]?.[0]).toBe('free');
+    expect(requestAnswerFocus.mock.calls[1]?.[2]).toBe(true);
   });
 });

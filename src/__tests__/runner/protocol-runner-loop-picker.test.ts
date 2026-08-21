@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { ProtocolRunner } from '../../runner/protocol-runner';
-import type { ProtocolGraph, RPNode } from '../../graph/graph-model';
+import type { ProtocolGraph, RPNode, RPEdge } from '../../graph/graph-model';
 import { unifiedLoopLabeledBodyGraph, unifiedLoopLongBodyGraph, unifiedLoopNestedGraph, unifiedLoopValidGraph } from '../fixtures/protocol-document-fixtures';
 
 
@@ -716,5 +716,198 @@ describe('ProtocolRunner RUNFIX-01 — manual edits survive loop transitions', (
     if (state.status !== 'awaiting-loop-pick') return;
     expect(state.nodeId).toBe('loop');
     expect(state.canStepBack).toBe(true);
+  });
+});
+
+/**
+ * Free-text Answer as a DIRECT loop body/exit branch target (the loop picker
+ * renders a free-text row for these edges). Graph:
+ *   start → loop(loop:true) → e2 body → free(freeText) → e4 back-edge → loop
+ *                        └── e3 exit (isLoopExit) → end(text-block 'Done')
+ */
+function freeTextLoopGraph(): ProtocolGraph {
+  const nodes = new Map<string, RPNode>([
+    ['start', { id: 'start', kind: 'start', x: 0, y: 0, width: 100, height: 60 }],
+    ['loop', { id: 'loop', kind: 'question', x: 0, y: 100, width: 100, height: 60, questionText: 'Loop', loop: true }],
+    ['free', {
+      id: 'free', kind: 'answer', x: 120, y: 100, width: 100, height: 60,
+      answerText: 'Describe', freeText: true, radiprotocol_separator: 'space',
+    }],
+    ['end', { id: 'end', kind: 'text-block', x: 0, y: 200, width: 100, height: 60, content: 'Done' }],
+  ]);
+  const edges: RPEdge[] = [
+    { id: 'e1', fromNodeId: 'start', toNodeId: 'loop' },
+    { id: 'e2', fromNodeId: 'loop', toNodeId: 'free' },
+    { id: 'e3', fromNodeId: 'loop', toNodeId: 'end', label: 'done', isLoopExit: true },
+    { id: 'e4', fromNodeId: 'free', toNodeId: 'loop' },
+  ];
+  const adjacency = new Map<string, string[]>();
+  const reverseAdjacency = new Map<string, string[]>();
+  for (const edge of edges) {
+    adjacency.set(edge.fromNodeId, [...(adjacency.get(edge.fromNodeId) ?? []), edge.toNodeId]);
+    reverseAdjacency.set(edge.toNodeId, [...(reverseAdjacency.get(edge.toNodeId) ?? []), edge.fromNodeId]);
+  }
+  return {
+    canvasFilePath: 'test:free-text-loop.canvas',
+    nodes,
+    edges,
+    adjacency,
+    reverseAdjacency,
+    startNodeId: 'start',
+  };
+}
+
+describe('ProtocolRunner free-text Answer as a direct loop branch target', () => {
+  it('accepts submitted text on a free-text body branch and re-enters the picker with iteration incremented', () => {
+    const runner = new ProtocolRunner();
+    runner.start(freeTextLoopGraph());
+    expect(runner.getState().status).toBe('awaiting-loop-pick');
+
+    expect(runner.chooseLoopBranch('e2', 'custom finding')).toBe(true);
+
+    const state = runner.getState();
+    expect(state.status).toBe('awaiting-loop-pick');
+    if (state.status !== 'awaiting-loop-pick') return;
+    expect(state.nodeId).toBe('loop');
+    expect(state.accumulatedText).toBe('custom finding');
+    const serialized = runner.getSerializableState();
+    expect(serialized?.loopContextStack[0]?.iteration).toBe(2);
+  });
+
+  it.each([undefined, '', '   ', '\n\t '])(
+    'rejects blank payload %p on a free-text loop branch without mutating state or history',
+    (payload) => {
+      const runner = new ProtocolRunner();
+      runner.start(freeTextLoopGraph());
+      const before = runner.getSerializableState();
+      expect(before?.loopContextStack[0]?.iteration).toBe(1);
+
+      expect(runner.chooseLoopBranch('e2', payload as string | undefined)).toBe(false);
+
+      const state = runner.getState();
+      expect(state.status).toBe('awaiting-loop-pick');
+      if (state.status !== 'awaiting-loop-pick') return;
+      expect(state.accumulatedText).toBe('');
+      expect(runner.getSerializableState()).toEqual(before);
+    },
+  );
+
+  it('appends submitted text then downstream text with the authored separators', () => {
+    // free → tail text-block (newline separator) → dead-end → picker
+    const graph = freeTextLoopGraph();
+    const tail: RPNode = {
+      id: 'tail', kind: 'text-block', x: 240, y: 100, width: 100, height: 60, content: 'Tail',
+    };
+    graph.nodes.set('tail', tail);
+    graph.edges.push({ id: 'e5', fromNodeId: 'free', toNodeId: 'tail' });
+    graph.adjacency.set('free', ['tail']);
+    graph.adjacency.set('tail', []);
+    graph.reverseAdjacency.set('tail', ['free']);
+
+    const runner = new ProtocolRunner();
+    runner.start(graph);
+    expect(runner.chooseLoopBranch('e2', 'finding')).toBe(true);
+
+    const state = runner.getState();
+    expect(state.status).toBe('awaiting-loop-pick');
+    if (state.status !== 'awaiting-loop-pick') return;
+    expect(state.accumulatedText).toBe('finding\nTail');
+  });
+
+  it('preserves the loop quick-exit when the free-text answer targets the exit destination', () => {
+    const graph = freeTextLoopGraph();
+    const after: RPNode = {
+      id: 'after', kind: 'question', x: 240, y: 100, width: 100, height: 60, questionText: 'After',
+    };
+    graph.nodes.set('after', after);
+    // free → after (matching the exit edge target) → frame pops, no picker return
+    graph.edges.push({ id: 'e5', fromNodeId: 'free', toNodeId: 'after' });
+    graph.adjacency.set('free', ['after']);
+    graph.adjacency.set('after', []);
+    graph.reverseAdjacency.set('after', ['free', 'loop']);
+
+    const runner = new ProtocolRunner();
+    runner.start(graph);
+    expect(runner.chooseLoopBranch('e2', 'finding')).toBe(true);
+
+    const state = runner.getState();
+    expect(state.status).toBe('at-node');
+    if (state.status !== 'at-node') return;
+    expect(state.currentNodeId).toBe('after');
+    expect(state.accumulatedText).toBe('finding');
+  });
+
+  it('undoes and redoes a free-text loop branch as one snapshot', async () => {
+    const runner = new ProtocolRunner();
+    runner.start(freeTextLoopGraph());
+    expect(runner.chooseLoopBranch('e2', 'finding')).toBe(true);
+
+    runner.stepBack();
+    await Promise.resolve();
+    let state = runner.getState();
+    expect(state.status).toBe('awaiting-loop-pick');
+    if (state.status !== 'awaiting-loop-pick') return;
+    expect(state.accumulatedText).toBe('');
+    expect(state.canRedo).toBe(true);
+    const undone = runner.getSerializableState();
+    expect(undone?.loopContextStack[0]?.iteration).toBe(1);
+
+    runner.redo();
+    state = runner.getState();
+    expect(state.status).toBe('awaiting-loop-pick');
+    if (state.status !== 'awaiting-loop-pick') return;
+    expect(state.accumulatedText).toBe('finding');
+    expect(runner.getSerializableState()?.loopContextStack[0]?.iteration).toBe(2);
+  });
+
+  it('ignores an accidental submitted payload for a preset answer loop branch', () => {
+    const graph = freeTextLoopGraph();
+    graph.nodes.set('free', {
+      id: 'free',
+      kind: 'answer',
+      x: 120,
+      y: 100,
+      width: 100,
+      height: 60,
+      answerText: 'Preset body',
+      freeText: false,
+    });
+
+    const runner = new ProtocolRunner();
+    runner.start(graph);
+    expect(runner.chooseLoopBranch('e2', 'Injected')).toBe(true);
+
+    const state = runner.getState();
+    expect(state.status).toBe('awaiting-loop-pick');
+    if (state.status !== 'awaiting-loop-pick') return;
+    expect(state.accumulatedText).toBe('Preset body');
+  });
+
+  it('accepts free text on an isLoopExit edge targeting a free-text answer and pops the frame', () => {
+    const graph = freeTextLoopGraph();
+    const after: RPNode = {
+      id: 'after', kind: 'question', x: 240, y: 100, width: 100, height: 60, questionText: 'After',
+    };
+    graph.nodes.set('after', after);
+    // e3 becomes an exit targeting the free-text answer; answer dead-ends into after
+    graph.edges[2] = { id: 'e3', fromNodeId: 'loop', toNodeId: 'free', label: 'finish', isLoopExit: true };
+    graph.edges.push({ id: 'e5', fromNodeId: 'free', toNodeId: 'after' });
+    graph.adjacency.set('loop', ['free']);
+    graph.adjacency.set('free', ['after']);
+    graph.adjacency.set('after', []);
+    graph.reverseAdjacency.set('after', ['free']);
+    graph.reverseAdjacency.set('free', ['loop']);
+
+    const runner = new ProtocolRunner();
+    runner.start(graph);
+    expect(runner.getState().status).toBe('awaiting-loop-pick');
+    expect(runner.chooseLoopBranch('e3', 'final note')).toBe(true);
+
+    const state = runner.getState();
+    expect(state.status).toBe('at-node');
+    if (state.status !== 'at-node') return;
+    expect(state.currentNodeId).toBe('after');
+    expect(state.accumulatedText).toBe('final note');
+    expect(runner.getSerializableState()?.loopContextStack).toHaveLength(0);
   });
 });
