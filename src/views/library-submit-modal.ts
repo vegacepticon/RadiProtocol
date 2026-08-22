@@ -10,7 +10,7 @@
 // results, never throws. Promise-based Modal with safeResolve double-guard, modeled after
 // LibraryExportModal.
 
-import { App, Modal, Notice } from 'obsidian';
+import { App, Modal, Notice, requestUrl } from 'obsidian';
 import type RadiProtocolPlugin from '../main';
 import type { ReleaseBundle } from '../library/library-model';
 import { normalizeRegistryUrl } from '../library/registry-client';
@@ -25,9 +25,11 @@ export type SubmitTransport = (
   body: string,
 ) => Promise<{ status: number; bodyText: string }>;
 
-/** Production transport over Obsidian's requestUrl. */
+/** Production transport over Obsidian's requestUrl.
+ *  Static import (NOT `await import('obsidian')`): esbuild leaves dynamic imports
+ *  unresolved in the bundle, and the virtual 'obsidian' module only resolves for
+ *  static imports — a dynamic one throws "Failed to resolve module specifier". */
 export const requestUrlSubmitTransport: SubmitTransport = async (url, body) => {
-  const { requestUrl } = await import('obsidian');
   const res = await requestUrl({ url, method: 'POST', contentType: 'application/json', body });
   return { status: res.status, bodyText: res.text };
 };
