@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { RegistryClient, normalizeRegistryUrl, DEFAULT_REGISTRY_URL } from '../../library/registry-client';
+import { RegistryClient, normalizeRegistryUrl, DEFAULT_REGISTRY_URL, REGISTRY_URLS } from '../../library/registry-client';
 import type { CatalogResponse, ReleaseResponse } from '../../library/registry-model';
 import { createEmptyProtocolDocument } from '../../protocol/protocol-document';
 import { PACKAGE_MANIFEST_SCHEMA, PACKAGE_MANIFEST_VERSION } from '../../library/library-model';
@@ -108,17 +108,61 @@ describe('registry-client — fetchRelease', () => {
   });
 });
 
-describe('registry-client — DEFAULT_REGISTRY_URL', () => {
+describe('registry-client — DEFAULT_REGISTRY_URL / REGISTRY_URLS', () => {
   it('is the production registry (https, provisioned)', () => {
     // The production Community Library endpoint is bundled so the catalog works
     // out of the box. Must stay https (the client rejects non-https defaults).
-    expect(DEFAULT_REGISTRY_URL).toBe('https://radiprotocol.pages.dev');
+    expect(DEFAULT_REGISTRY_URL).toBe('https://library.radiprotocol.pro');
     expect(() => new URL(DEFAULT_REGISTRY_URL)).not.toThrow();
     expect(new URL(DEFAULT_REGISTRY_URL).protocol).toBe('https:');
   });
 
-  it('a settings override of \'\' still yields an unavailable client', () => {
+  it('REGISTRY_URLS bundles the pages.dev origin as a fallback mirror', () => {
+    // *.pages.dev is ISP-blocked in some regions; the custom domain is primary.
+    expect(REGISTRY_URLS.length).toBeGreaterThanOrEqual(2);
+    expect(REGISTRY_URLS).toContain('https://radiprotocol.pages.dev');
+    for (const u of REGISTRY_URLS) {
+      expect(new URL(u).protocol).toBe('https:');
+    }
+  });
+
+  it('a settings override of \'\' falls through to the bundled mirror list', () => {
     const c = new RegistryClient({ baseUrl: '', requestUrl: (() => undefined) as never });
-    expect(c.isUnavailable()).toBe(true);
+    expect(c.isUnavailable()).toBe(false);
+  });
+
+  it('an explicit override collapses the client to a single endpoint', async () => {
+    const requestUrl = vi.fn(async () => okResponse({ entries: [] }));
+    const c = new RegistryClient({ baseUrl: 'https://example.com', requestUrl: requestUrl as never });
+    await c.fetchCatalog();
+    expect(requestUrl).toHaveBeenCalledTimes(1);
+    expect(requestUrl).toHaveBeenCalledWith(expect.objectContaining({ url: 'https://example.com/catalog' }));
+  });
+
+  it('with no override a network failure on the first mirror falls through to the next', async () => {
+    const body: CatalogResponse = {
+      entries: [{ packageId: 'chest-ct', title: 'Chest CT', description: 'd', author: { displayName: 'X' }, latestVersion: '1.0.0', categories: ['radiology'], updatedAt: 't' }],
+      serverTime: 't',
+    };
+    const requestUrl = vi.fn()
+      .mockRejectedValueOnce(new Error('net::ERR_CONNECTION_RESET'))
+      .mockResolvedValueOnce(okResponse(body));
+    const c = new RegistryClient({ requestUrl: requestUrl as never });
+    const r = await c.fetchCatalog();
+    expect(r.status).toBe('ok');
+    expect(requestUrl).toHaveBeenCalledTimes(2);
+    expect(requestUrl).toHaveBeenNthCalledWith(1, expect.objectContaining({ url: 'https://library.radiprotocol.pro/catalog' }));
+    expect(requestUrl).toHaveBeenNthCalledWith(2, expect.objectContaining({ url: 'https://radiprotocol.pages.dev/catalog' }));
+  });
+
+  it('with no override an unreachable every-mirror network reports unavailable with the last reason', async () => {
+    const requestUrl = vi.fn(async () => { throw new Error('net::ERR_CONNECTION_RESET'); });
+    const c = new RegistryClient({ requestUrl: requestUrl as never });
+    const r = await c.fetchCatalog();
+    expect(r.status).toBe('unavailable');
+    if (r.status === 'unavailable') {
+      expect(r.reason).toContain('ERR_CONNECTION_RESET');
+    }
+    expect(requestUrl).toHaveBeenCalledTimes(REGISTRY_URLS.length);
   });
 });

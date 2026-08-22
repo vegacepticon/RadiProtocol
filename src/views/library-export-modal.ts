@@ -9,6 +9,7 @@ import { App, Modal, Notice } from 'obsidian';
 import type RadiProtocolPlugin from '../main';
 import { FolderSuggest } from './folder-suggest';
 import type { BuildResult } from '../library/library-service';
+import { DEFAULT_REGISTRY_URL } from '../library/registry-client';
 import { LibrarySubmitModal } from './library-submit-modal';
 
 export type LibraryExportResult =
@@ -153,7 +154,9 @@ export class LibraryExportModal extends Modal {
       this.updateExportEnabled();
       return;
     }
-    const registryBaseUrl = this.plugin.settings.libraryRegistryUrl ?? '';
+    // Empty override → the submit modal falls back to DEFAULT_REGISTRY_URL
+    // (the bundled primary mirror) via its own normalizeRegistryUrl default.
+    const registryBaseUrl = this.plugin.settings.libraryRegistryUrl?.trim() || DEFAULT_REGISTRY_URL;
     new LibrarySubmitModal(this.app, this.plugin, build.bundle, { registryBaseUrl }).open();
   }
 

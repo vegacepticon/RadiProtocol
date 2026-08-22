@@ -9,7 +9,7 @@ import { SnippetService } from './snippets/snippet-service';
 // the field is initialized in Phase 9.
 import { LibraryView, LIBRARY_VIEW_TYPE } from './views/library-view';
 import { LibraryExportModal } from './views/library-export-modal';
-import { RegistryClient, DEFAULT_REGISTRY_URL } from './library/registry-client';
+import { RegistryClient } from './library/registry-client';
 import { LibraryService } from './library/library-service';
 import type { InstalledRecord } from './library/library-model';
 import { WriteMutex } from './utils/write-mutex';
@@ -84,9 +84,10 @@ export default class RadiProtocolPlugin extends Plugin {
     this.snippetService = new SnippetService(this.app, this.settings, this.i18n.t.bind(this.i18n));
 
     // Slice 9 — community library services (wired here; consumed by Slices 6-8 views).
-    // libraryRegistryUrl is the advanced override (empty/undefined → DEFAULT_REGISTRY_URL
-    // → "catalog unavailable" when the bundled default is also empty).
-    this.registryClient = new RegistryClient({ baseUrl: this.settings.libraryRegistryUrl || DEFAULT_REGISTRY_URL });
+    // libraryRegistryUrl is the advanced override. Empty/undefined → the
+    // RegistryClient falls back to the bundled mirror list (REGISTRY_URLS).
+    const registryOverride = this.settings.libraryRegistryUrl?.trim() || undefined;
+    this.registryClient = new RegistryClient({ baseUrl: registryOverride });
     // Step 5 C11: normalize both roots so installer paths match resolver-enumerated
     // paths (trailing slashes/backslashes would otherwise mismatch). There is no
     // snippet-specific normalizer — the shared normalizeProtocolFolderPath is used
@@ -345,7 +346,8 @@ export default class RadiProtocolPlugin extends Plugin {
    *  preserved (they own no URL-dependent state); only the URL-bound client is
    *  replaced. The LibraryView picks up the new service on its next refresh. */
   async rebuildLibraryServices(): Promise<void> {
-    this.registryClient = new RegistryClient({ baseUrl: this.settings.libraryRegistryUrl || DEFAULT_REGISTRY_URL });
+    const registryOverride = this.settings.libraryRegistryUrl?.trim() || undefined;
+    this.registryClient = new RegistryClient({ baseUrl: registryOverride });
     this.libraryService = new LibraryService(this.app, {
       protocolFolderPath: normalizeProtocolFolderPath(this.settings.protocolFolderPath),
       snippetFolderPath: normalizeProtocolFolderPath(this.settings.snippetFolderPath),

@@ -19,11 +19,20 @@ import { isCatalogResponse, isReleaseResponse, type ReleaseFetchResult, type Rel
  * unavailable" state when no endpoint is configured, never a throw. Do NOT
  * hard-code an unprovisioned domain.
  */
+/** Bundled registry endpoints, tried in order. The custom domain is primary
+ *  (*.pages.dev is ISP-blocked in some regions, e.g. RU); the pages.dev origin
+ *  remains a working alias everywhere else. An explicit settings override
+ *  (libraryRegistryUrl) replaces the whole list. */
+export const REGISTRY_URLS = [
+  'https://library.radiprotocol.pro',
+  'https://radiprotocol.pages.dev',
+] as const;
+
 /** Bundled default registry endpoint (the production Community Library). Empty string
  *  would ship the plugin with "catalog unavailable" out of the box; the production
  *  registry is now embedded. Users can still override it in settings
  *  (libraryRegistryUrl) for a self-hosted/alternative registry. */
-export const DEFAULT_REGISTRY_URL = 'https://radiprotocol.pages.dev';
+export const DEFAULT_REGISTRY_URL: string = REGISTRY_URLS[0];
 
 /** Extract a message from an unknown rejection WITHOUT ever throwing. Captures
  *  `e.message` with a SINGLE read (a stateful getter cannot TOCTOU between a
@@ -69,50 +78,64 @@ export function normalizeRegistryUrl(url: string | undefined, httpsOnly = true):
 
 export class RegistryClient {
   private readonly requestUrl: typeof obsidianRequestUrl;
-  private readonly baseUrl: string;
+  /** Endpoints to try in order. An explicit valid settings override collapses
+   *  this to a single entry; no override → all bundled mirrors (first OK wins,
+   *  network-level failures fall through to the next mirror). */
+  private readonly baseUrls: readonly string[];
 
   constructor(options: RegistryClientOptions = {}) {
     this.requestUrl = options.requestUrl ?? obsidianRequestUrl;
-    this.baseUrl = normalizeRegistryUrl(
-      options.baseUrl ?? DEFAULT_REGISTRY_URL,
-      options.httpsOnly ?? true,
-    );
+    const httpsOnly = options.httpsOnly ?? true;
+    const rawOverride = options.baseUrl;
+    if (rawOverride === undefined || rawOverride.trim() === '') {
+      // No user override → bundled mirror list (custom domain first).
+      this.baseUrls = REGISTRY_URLS.map((u) => normalizeRegistryUrl(u, httpsOnly)).filter((u) => u !== '');
+    } else {
+      const normalized = normalizeRegistryUrl(rawOverride, httpsOnly);
+      this.baseUrls = normalized === '' ? [] : [normalized];
+    }
   }
 
   /** True when no usable endpoint is configured. */
   isUnavailable(): boolean {
-    return this.baseUrl === '';
+    return this.baseUrls.length === 0;
   }
 
   /**
    * Fetch the catalog. Returns an explicit `unavailable` state (never a throw)
-   * when no endpoint is configured, the URL is invalid, the network fails, or
-   * the response is malformed. `cachedSnapshot` is always null here — the
-   * caller (LibraryService) merges with the cached snapshot from the cache store.
+   * when no endpoint is configured, every mirror fails at the network level, or
+   * the response is malformed. Non-2xx from any mirror is returned as-is (the
+   * server answered — mirroring cannot help). `cachedSnapshot` is always null
+   * here — the caller (LibraryService) merges with the cached snapshot from the
+   * cache store.
    */
   async fetchCatalog(): Promise<CatalogFetchResult> {
     if (this.isUnavailable()) {
       return { status: 'unavailable', reason: 'no registry endpoint configured', cachedSnapshot: null };
     }
-    try {
-      const res = await this.requestUrl({ url: `${this.baseUrl}/catalog`, method: 'GET', throw: false });
-      if (res.status < 200 || res.status >= 300) {
-        return { status: 'unavailable', reason: `catalog fetch returned status ${res.status}`, cachedSnapshot: null };
+    let lastReason = '';
+    for (const base of this.baseUrls) {
+      try {
+        const res = await this.requestUrl({ url: `${base}/catalog`, method: 'GET', throw: false });
+        if (res.status < 200 || res.status >= 300) {
+          return { status: 'unavailable', reason: `catalog fetch returned status ${res.status}`, cachedSnapshot: null };
+        }
+        const body = res.json;
+        if (!isCatalogResponse(body)) {
+          return { status: 'unavailable', reason: 'malformed catalog response', cachedSnapshot: null };
+        }
+        const snapshot: CatalogSnapshot = {
+          schema: CATALOG_SNAPSHOT_SCHEMA,
+          version: CATALOG_SNAPSHOT_VERSION,
+          fetchedAt: new Date().toISOString(),
+          entries: body.entries,
+        };
+        return { status: 'ok', snapshot };
+      } catch (e) {
+        lastReason = `catalog fetch failed: ${safeErrorMessage(e)}`;
       }
-      const body = res.json;
-      if (!isCatalogResponse(body)) {
-        return { status: 'unavailable', reason: 'malformed catalog response', cachedSnapshot: null };
-      }
-      const snapshot: CatalogSnapshot = {
-        schema: CATALOG_SNAPSHOT_SCHEMA,
-        version: CATALOG_SNAPSHOT_VERSION,
-        fetchedAt: new Date().toISOString(),
-        entries: body.entries,
-      };
-      return { status: 'ok', snapshot };
-    } catch (e) {
-      return { status: 'unavailable', reason: `catalog fetch failed: ${safeErrorMessage(e)}`, cachedSnapshot: null };
     }
+    return { status: 'unavailable', reason: lastReason, cachedSnapshot: null };
   }
 
   /**
@@ -127,7 +150,7 @@ export class RegistryClient {
       return { status: 'unavailable', reason: 'no registry endpoint configured' };
     }
     try {
-      const url = `${this.baseUrl}/packages/${encodeURIComponent(packageId)}/releases/${encodeURIComponent(version)}`;
+      const url = `${this.baseUrls[0]}/packages/${encodeURIComponent(packageId)}/releases/${encodeURIComponent(version)}`;
       const res = await this.requestUrl({ url, method: 'GET', throw: false });
       if (res.status === 404) {
         return { status: 'not-found', reason: `release ${packageId}@${version} not found` };
@@ -161,7 +184,7 @@ export class RegistryClient {
       return { status: 'unavailable', reason: 'no registry endpoint configured' };
     }
     try {
-      const url = `${this.baseUrl}/packages/${encodeURIComponent(packageId)}/releases/${encodeURIComponent(version)}/manifest`;
+      const url = `${this.baseUrls[0]}/packages/${encodeURIComponent(packageId)}/releases/${encodeURIComponent(version)}/manifest`;
       const res = await this.requestUrl({ url, method: 'GET', throw: false });
       if (res.status === 404) {
         return { status: 'not-found', reason: `release ${packageId}@${version} not found` };
