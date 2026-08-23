@@ -308,6 +308,76 @@ describe('LibraryService — install', () => {
   });
 });
 
+describe('LibraryService — installFromFile / installFromBundle', () => {
+  it('reads a valid bundle file and routes it through the transactional installer', async () => {
+    const doc = {
+      schema: 'radiprotocol.protocol', version: 1,
+      id: 'review-pkg-1', title: 'Review Pkg',
+      createdAt: '2026-01-01T00:00:00.000Z', updatedAt: '2026-01-01T00:00:00.000Z',
+      nodes: [], edges: [],
+    };
+    const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(JSON.stringify(doc, null, 2) + '\n'));
+    const sha = [...new Uint8Array(digest)].map((b) => b.toString(16).padStart(2, '0')).join('');
+    const bundle = {
+      manifest: {
+        schema: 'radiprotocol.package', version: 1,
+        packageId: 'review-pkg', releaseVersion: '1.0.0',
+        protocolDoc: doc, protocolSha256: sha,
+        snippetFiles: [], catalogEntryId: 'review-pkg',
+        publishedAt: '2026-01-01T00:00:00.000Z',
+      },
+      snippetContents: [],
+    } as unknown as ReleaseBundle;
+    const fileBody = JSON.stringify(bundle);
+    const { service, installer } = makeService({ files: { 'Downloads/review-pkg-1.0.0.json': fileBody } });
+    const result = await service.installFromFile('Downloads/review-pkg-1.0.0.json');
+    expect(result.status).toBe('ok');
+    expect(installer.install).toHaveBeenCalledWith(bundle);
+  });
+
+  it('fails with an explicit reason when the file is missing, invalid JSON, or the wrong shape', async () => {
+    const { service } = makeService({
+      files: {
+        'bad-json.json': '{ not json',
+        'wrong-shape.json': JSON.stringify({ manifest: {} }),
+      },
+    });
+    const missing = await service.installFromFile('Downloads/nope.json');
+    expect(missing.status).toBe('failed');
+    if (missing.status === 'failed') expect(missing.reason).toContain('could not read file');
+
+    const badJson = await service.installFromFile('bad-json.json');
+    expect(badJson.status).toBe('failed');
+    if (badJson.status === 'failed') expect(badJson.reason).toBe('file is not valid JSON');
+
+    const wrongShape = await service.installFromFile('wrong-shape.json');
+    expect(wrongShape.status).toBe('failed');
+    if (wrongShape.status === 'failed') expect(wrongShape.reason).toContain('not a valid release bundle');
+  });
+
+  it('installFromBundle refuses an empty protocol root before any mutation', async () => {
+    const bundle = { manifest: { packageId: 'chest-ct', releaseVersion: '1.0.0' }, snippetContents: [] } as unknown as ReleaseBundle;
+    const { service, installer } = makeService({ settings: { ...SETTINGS, protocolFolderPath: '' } });
+    const result = await service.installFromBundle(bundle);
+    expect(result).toEqual({
+      status: 'failed', packageId: 'chest-ct', releaseVersion: '1.0.0',
+      reason: 'protocol folder is not configured',
+    });
+    expect(installer.install).not.toHaveBeenCalled();
+  });
+
+  it('reports readiness through the same path as registry installs', async () => {
+    const bundle = { manifest: { packageId: 'chest-ct', releaseVersion: '2.0.0' }, snippetContents: [] } as unknown as ReleaseBundle;
+    const { service } = makeService();
+    const expectedPath = await protocolPath('chest-ct', '2.0.0');
+    const result = await service.installFromBundle(bundle);
+    expect(result.status).toBe('ok');
+    if (result.status === 'ok') {
+      expect(result.readiness).toEqual({ status: 'ready', protocolPath: expectedPath });
+    }
+  });
+});
+
 describe('LibraryService — uninstall / listInstalled / recovery', () => {
   it('delegates uninstall to installer.uninstall', async () => {
     const { service, installer } = makeService({ uninstallResult: { status: 'ok', packageId: 'chest-ct', releaseVersion: '1.0.0' } });

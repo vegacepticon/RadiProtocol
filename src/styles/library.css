@@ -32,6 +32,29 @@
   flex-shrink: 0;
 }
 
+/* Header import-from-file button sits next to Refresh. */
+.radi-library-header .radi-library-import {
+  flex-shrink: 0;
+}
+
+/* Import modal: path row + identity preview + status banner. */
+.radi-library-import .radi-library-import-field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--size-2-1);
+  margin-bottom: var(--size-4-2);
+}
+
+.radi-library-import .radi-library-import-path {
+  width: 100%;
+}
+
+.radi-library-import-preview {
+  margin-bottom: var(--size-4-2);
+  color: var(--text-muted);
+  font-size: var(--font-ui-small);
+}
+
 /* Search + category filter row. */
 .radi-library-search {
   display: flex;

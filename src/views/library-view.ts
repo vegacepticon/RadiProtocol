@@ -41,6 +41,7 @@ import { isLibraryManagedPath } from '../library/library-paths';
 import type { CatalogEntry, InstalledRecord } from '../library/library-model';
 import type { CatalogListResult } from '../library/library-service';
 import { LibraryItemDetailModal } from './library-item-detail-modal';
+import { LibraryImportModal } from './library-import-modal';
 import { LibraryInstallProgressModal } from './library-install-progress-modal';
 import { ConfirmModal } from './confirm-modal';
 
@@ -109,6 +110,12 @@ export class LibraryView extends ItemView {
     });
     refreshBtn.setText(t('library.refreshLabel'));
     this.registerDomEvent(refreshBtn, 'click', () => { void this.refresh(); });
+
+    // Import-from-file (moderation review flow): install a release bundle JSON from
+    // the vault without going through the registry.
+    const importBtn = header.createEl('button', { cls: 'radi-library-import' });
+    importBtn.setText(t('library.importOpenLabel'));
+    this.registerDomEvent(importBtn, 'click', () => { void this.openImport(); });
 
     // Search + category filter row. Both re-filter the loaded catalog
     // synchronously (no fetch).
@@ -426,6 +433,15 @@ export class LibraryView extends ItemView {
     if (result.install) {
       await this.openInstall(result.packageId, result.version);
     }
+  }
+
+  /** Import-from-file (moderation review): open the import modal, install the bundle,
+   *  and refresh the installed list when the modal settles with a result. */
+  private async openImport(): Promise<void> {
+    const modal = new LibraryImportModal(this.app, this.plugin);
+    modal.open();
+    const result = await modal.completion;
+    if (result !== null && result.status === 'ok') await this.refresh();
   }
 
   private async openInstall(packageId: string, version: string): Promise<void> {

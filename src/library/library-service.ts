@@ -9,6 +9,7 @@
 import { TFile, type App } from 'obsidian';
 import { defaultT, type Translator } from '../i18n';
 import { PACKAGE_MANIFEST_SCHEMA, PACKAGE_MANIFEST_VERSION, type CatalogEntry, type CatalogFetchResult, type InstalledRecord, type PackageManifest, type PackageSnippetFile, type ReleaseBundle } from './library-model';
+import { isReleaseResponse } from './registry-model';
 import { RegistryClient } from './registry-client';
 import { LibraryCacheStore } from './library-cache-store';
 import { InstalledRecordStore } from './installed-record-store';
@@ -199,6 +200,57 @@ export class LibraryService {
       const protocolPath = libraryProtocolFilePath(this.settings.protocolFolderPath, pkgSegment, versionSlug);
 
       const installResult = await this.installer.install(release.bundle);
+      if (installResult.status === 'failed') return installResult;
+
+      const readiness = await this.waitForProtocolReadiness(protocolPath);
+      return { ...installResult, readiness };
+    } catch (e) {
+      return { status: 'failed', packageId, releaseVersion: version, reason: `install failed: ${safeErrorMessage(e)}` };
+    }
+  }
+
+  /** Install a package from a LOCAL release bundle file (moderation review flow):
+   *  read + validate the JSON, run the SAME transactional installer used for
+   *  registry installs, then wait for vault-index readiness. Never throws. */
+  async installFromFile(filePath: string): Promise<LibraryInstallResult> {
+    try {
+      let raw: string;
+      try {
+        raw = await this.app.vault.adapter.read(filePath);
+      } catch {
+        return { status: 'failed', packageId: '', releaseVersion: '', reason: `could not read file: ${filePath}` };
+      }
+      let parsedJson: unknown;
+      try {
+        parsedJson = JSON.parse(raw);
+      } catch {
+        return { status: 'failed', packageId: '', releaseVersion: '', reason: 'file is not valid JSON' };
+      }
+      if (!isReleaseResponse(parsedJson)) {
+        return { status: 'failed', packageId: '', releaseVersion: '', reason: 'file is not a valid release bundle ({ manifest, snippetContents })' };
+      }
+      const bundle = { manifest: parsedJson.manifest, snippetContents: parsedJson.snippetContents };
+      return await this.installFromBundle(bundle);
+    } catch (e) {
+      return { status: 'failed', packageId: '', releaseVersion: '', reason: `import failed: ${safeErrorMessage(e)}` };
+    }
+  }
+
+  /** Transactional install of an in-memory bundle + readiness wait. Never throws. */
+  async installFromBundle(bundle: ReleaseBundle): Promise<LibraryInstallResult> {
+    const packageId = bundle.manifest.packageId;
+    const version = bundle.manifest.releaseVersion;
+    try {
+      if (this.settings.protocolFolderPath === '') {
+        return { status: 'failed', packageId, releaseVersion: version, reason: 'protocol folder is not configured' };
+      }
+      // Derive the expected indexed path before mutation. If Web Crypto/path
+      // derivation fails, no install has started and returning failed is truthful.
+      const pkgSegment = await packageNamespaceSegment(packageId);
+      const versionSlug = slugifyPackageId(version);
+      const protocolPath = libraryProtocolFilePath(this.settings.protocolFolderPath, pkgSegment, versionSlug);
+
+      const installResult = await this.installer.install(bundle);
       if (installResult.status === 'failed') return installResult;
 
       const readiness = await this.waitForProtocolReadiness(protocolPath);
