@@ -52,3 +52,26 @@ jobs:
           generate_release_notes: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Prune old releases (keep 3 latest)
+        if: success()
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # Keep the newest KEEP releases (by semver), delete older ones together
+          # with their tags. Runs only after a successful release publish.
+          KEEP=3
+          echo "Releases before prune:"
+          gh release list --limit 100 --json tagName -q '.[].tagName' | sort -V | tee /tmp/releases.txt
+          COUNT=$(wc -l < /tmp/releases.txt)
+          if [ "$COUNT" -le "$KEEP" ]; then
+            echo "Only $COUNT releases — nothing to prune."
+            exit 0
+          fi
+          DELETE=$(head -n $((COUNT - KEEP)) /tmp/releases.txt)
+          for TAG in $DELETE; do
+            echo "Deleting release + tag: $TAG"
+            gh release delete "$TAG" --yes --cleanup-tag || git push origin ":refs/tags/$TAG"
+          done
+          echo "Releases after prune:"
+          gh release list --limit 100
