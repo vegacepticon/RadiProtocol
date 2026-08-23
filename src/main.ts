@@ -454,7 +454,7 @@ export default class RadiProtocolPlugin extends Plugin {
     const editor = activeView?.editor;
     if (editor !== undefined) {
       editor.replaceSelection(rendered);
-      new Notice(this.i18n.t('insertSnippet.inserted'));
+      // No "inserted" Notice: the inserted text is visible in the editor itself.
       return;
     }
 
@@ -463,7 +463,6 @@ export default class RadiProtocolPlugin extends Plugin {
       const separator = current.endsWith('\n') || current.length === 0 ? '' : '\n';
       await this.app.vault.modify(activeFile, `${current}${separator}${rendered}`);
     });
-    new Notice(this.i18n.t('insertSnippet.inserted'));
   }
 
   /**

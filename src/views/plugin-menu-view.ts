@@ -71,9 +71,11 @@ export class PluginMenuView extends ItemView {
 
     const list = this.contentEl.createDiv({ cls: 'rp-plugin-menu-list' });
     for (const action of PLUGIN_MENU_ACTIONS) {
+      // No aria-label: the visible label already carries the same text, and
+      // Obsidian surfaces aria-label as a hover tooltip — pure duplication.
       const item = list.createEl('button', {
         cls: 'rp-plugin-menu-item',
-        attr: { type: 'button', 'aria-label': t(action.labelKey) },
+        attr: { type: 'button' },
       });
       const iconEl = item.createEl('span', { cls: 'rp-plugin-menu-item-icon' });
       setIcon(iconEl, action.icon);

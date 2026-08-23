@@ -14,6 +14,7 @@ import { App, Modal, Notice, requestUrl } from 'obsidian';
 import type RadiProtocolPlugin from '../main';
 import type { ReleaseBundle } from '../library/library-model';
 import { normalizeRegistryUrl } from '../library/registry-client';
+import { LIBRARY_SUBMISSION_CATEGORIES } from '../library/package-metadata';
 
 export type LibrarySubmitResult =
   | { submitted: true; prUrl: string }
@@ -50,7 +51,7 @@ export class LibrarySubmitModal extends Modal {
   private readonly options: LibrarySubmitModalOptions;
   private title = '';
   private description = '';
-  private categories = '';
+  private readonly selectedCategories = new Set<string>();
   private note = '';
   private submitBtn!: HTMLButtonElement;
   private statusEl!: HTMLElement;
@@ -99,11 +100,22 @@ export class LibrarySubmitModal extends Modal {
     descInput.rows = 2;
     descInput.addEventListener('input', () => { this.description = descInput.value; });
 
+    // Categories — fixed taxonomy as checkboxes (one or more required).
     const catRow = contentEl.createDiv({ cls: 'radi-library-submit-field' });
-    catRow.createEl('label', { text: t('library.submitCategories'), attr: { for: 'radi-library-submit-categories' } });
-    const catInput = catRow.createEl('input', { cls: 'radi-library-submit-categories', attr: { type: 'text' } });
-    catInput.placeholder = 'chest, protocols'; // eslint-disable-line obsidianmd/ui/sentence-case -- example category values, not UI copy
-    catInput.addEventListener('input', () => { this.categories = catInput.value; });
+    catRow.createEl('label', { text: t('library.submitCategories') });
+    const catList = catRow.createDiv({ cls: 'radi-library-submit-categories' });
+    for (const categoryId of LIBRARY_SUBMISSION_CATEGORIES) {
+      const optionRow = catList.createEl('label', { cls: 'radi-library-submit-category-option' });
+      const checkbox = optionRow.createEl('input', { attr: { type: 'checkbox' } });
+      checkbox.addEventListener('change', () => {
+        if (checkbox.checked) this.selectedCategories.add(categoryId);
+        else this.selectedCategories.delete(categoryId);
+        this.updateSubmitEnabled();
+      });
+      // Localized display label; the stable id goes to the API.
+      const labelKey = `library.category.${categoryId}`;
+      optionRow.createEl('span', { text: t(labelKey, undefined, categoryId) });
+    }
 
     const noteRow = contentEl.createDiv({ cls: 'radi-library-submit-field' });
     noteRow.createEl('label', { text: t('library.submitNote'), attr: { for: 'radi-library-submit-note' } });
@@ -115,13 +127,15 @@ export class LibrarySubmitModal extends Modal {
 
     this.statusEl = contentEl.createDiv({ cls: 'radi-library-submit-status' });
 
+    // Buttons carry visible text; no aria-label — Obsidian would surface it
+    // as a duplicate hover tooltip.
     const actions = contentEl.createDiv({ cls: 'radi-library-submit-actions' });
-    this.submitBtn = actions.createEl('button', { cls: 'radi-library-detail-install mod-cta', attr: { 'aria-label': t('library.submitLabel') } });
+    this.submitBtn = actions.createEl('button', { cls: 'radi-library-detail-install mod-cta' });
     this.submitBtn.setText(t('library.submitLabel'));
-    this.submitBtn.disabled = !this.endpointAvailable();
+    this.submitBtn.disabled = !this.endpointAvailable() || !this.canSubmit();
     if (!this.endpointAvailable()) this.statusEl.setText(t('library.submitUnavailable'));
     this.submitBtn.addEventListener('click', () => { void this.handleSubmit(); });
-    const cancelBtn = actions.createEl('button', { cls: 'radi-library-detail-cancel', attr: { 'aria-label': t('library.cancel') } });
+    const cancelBtn = actions.createEl('button', { cls: 'radi-library-detail-cancel' });
     cancelBtn.setText(t('library.cancel'));
     cancelBtn.addEventListener('click', () => { this.safeResolve({ submitted: false }); this.close(); });
   }
@@ -139,6 +153,16 @@ export class LibrarySubmitModal extends Modal {
     return normalizeRegistryUrl(this.options.registryBaseUrl) !== '';
   }
 
+  /** At least one category must be selected before submission is allowed. */
+  private canSubmit(): boolean {
+    return this.selectedCategories.size > 0;
+  }
+
+  private updateSubmitEnabled(): void {
+    if (this.submitBtn === undefined) return;
+    this.submitBtn.disabled = !this.endpointAvailable() || !this.canSubmit() || this.inFlight;
+  }
+
   private endpoint(): string {
     return `${normalizeRegistryUrl(this.options.registryBaseUrl)}/api/submit`;
   }
@@ -154,7 +178,7 @@ export class LibrarySubmitModal extends Modal {
       meta: {
         title: this.title.trim() || this.bundle.manifest.protocolDoc.title,
         description: this.description.trim(),
-        categories: this.categories.split(',').map((c) => c.trim()).filter((c) => c !== ''),
+        categories: LIBRARY_SUBMISSION_CATEGORIES.filter((c) => this.selectedCategories.has(c)),
         authorDisplayName: this.bundle.manifest.author?.displayName ?? '',
         note: this.note.trim(),
       },

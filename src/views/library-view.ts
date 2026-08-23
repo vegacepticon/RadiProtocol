@@ -106,7 +106,6 @@ export class LibraryView extends ItemView {
     header.createEl('h2', { text: t('library.viewTitle') });
     const refreshBtn = header.createEl('button', {
       cls: 'radi-library-refresh',
-      attr: { 'aria-label': t('library.refreshLabel') },
     });
     refreshBtn.setText(t('library.refreshLabel'));
     this.registerDomEvent(refreshBtn, 'click', () => { void this.refresh(); });

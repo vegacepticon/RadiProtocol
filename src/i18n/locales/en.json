@@ -78,7 +78,6 @@
     "answerSeparatorLabel": "How to separate this answer from previous text",
     "textSeparatorLabel": "How to separate this text block from previous text",
     "loopExitLabel": "This edge exits the loop",
-    "minimapLabel": "Minimap — click or drag to pan",
     "toggleMinimap": "Toggle minimap",
     "autoLayout": "Auto layout",
     "autoLayoutVertical": "Vertical layout",
@@ -177,8 +176,7 @@
     "title": "Insert snippet",
     "setSnippetFolderFirst": "Set a snippet folder in settings before inserting snippets.",
     "openMarkdownFirst": "Open a Markdown note first, then insert a snippet.",
-    "notFound": "Snippet not found: {path}",
-    "inserted": "Snippet inserted."
+    "notFound": "Snippet not found: {path}"
   },
   "snippetTreePicker": {
     "selectFolder": "Select this folder",
@@ -412,13 +410,10 @@
     "readOnlyNotice": "This item is part of an installed library package and is read-only.",
     "collisionError": "Destination collision: package '{incoming}' collides with already-installed package '{existing}' at the same location.",
     "dirtySlotError": "Incomplete install of {packageId}@{version} — run recovery first: {path}",
+    "exportSummaryIdentity": "Will be published as: {packageId} (version {version})",
     "exportTitle": "Export package",
     "exportDestination": "Destination folder",
     "exportFolderPlaceholder": "e.g. Exports",
-    "exportFilename": "File name",
-    "exportFilenamePlaceholder": "e.g. chest-ct-1.0.0",
-    "exportPackageId": "Package ID",
-    "exportReleaseVersion": "Release version",
     "exportAuthor": "Author (optional)",
     "exportAuthorPlaceholder": "e.g. Roman Shulgha",
     "exportLabel": "Export",
@@ -439,7 +434,6 @@
     "submitWarning": "The Community Library is PUBLIC. Make sure the protocol and snippets contain no patient data or real case identifiers before submitting. A moderator reviews every submission before publication.",
     "submitCatalogTitle": "Display title",
     "submitDescription": "Short description",
-    "submitCategories": "Categories (comma-separated)",
     "submitNote": "Note for the moderator (optional)",
     "submitNotePlaceholder": "Anything the reviewer should know",
     "submitLabel": "Submit",
@@ -447,6 +441,21 @@
     "submitting": "Submitting…",
     "submittedNotice": "Submission sent — pending moderation.",
     "submitSuccessPr": "Submitted! Moderation PR: {prUrl}",
-    "submitError": "Submission failed: {reason}"
+    "submitError": "Submission failed: {reason}",
+    "exportLocalSection": "Save to this vault",
+    "exportLocalHint": "Writes the package as a JSON file into the folder below.",
+    "exportSubmitSection": "Send to the Community Library",
+    "exportSubmitHint": "Uploads the package for public publication after a moderator reviews it.",
+    "submitCategories": "Categories (choose one or more)",
+    "category.brain": "Brain",
+    "category.neck": "Neck",
+    "category.cervical-spine": "Cervical spine",
+    "category.chest": "Chest",
+    "category.thoracic-spine": "Thoracic spine",
+    "category.abdomen-retroperitoneum": "Abdomen and retroperitoneum",
+    "category.pelvis": "Pelvis",
+    "category.lumbosacral-spine": "Lumbosacral spine",
+    "category.upper-extremities": "Upper extremities",
+    "category.lower-extremities": "Lower extremities"
   }
 }

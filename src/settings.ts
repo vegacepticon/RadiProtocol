@@ -37,6 +37,11 @@ export interface RadiProtocolSettings {
    *  Empty/undefined → bundled DEFAULT_REGISTRY_URL (empty → "catalog unavailable").
    *  Non-https/invalid URLs are normalized to '' by the registry client. */
   libraryRegistryUrl?: string;
+  /** Library submission bookkeeping: last submitted release version per packageId,
+   *  so the export modal can auto-suggest the next version (+0.0.1). */
+  libraryLastSubmittedVersions?: Record<string, string>;
+  /** Last vault folder used for a local package export (empty = never exported). */
+  libraryLastExportFolder?: string;
 }
 
 export const DEFAULT_SETTINGS: RadiProtocolSettings = {
@@ -48,6 +53,8 @@ export const DEFAULT_SETTINGS: RadiProtocolSettings = {
   inlineRunnerPosition: null,
   locale: 'en',
   libraryRegistryUrl: '',
+  libraryLastSubmittedVersions: {},
+  libraryLastExportFolder: '',
 };
 
 export class RadiProtocolSettingsTab extends PluginSettingTab {

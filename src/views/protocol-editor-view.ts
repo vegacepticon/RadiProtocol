@@ -775,7 +775,8 @@ export class ProtocolEditorView extends ItemView {
       this.minimapEl = workspace.createDiv({ cls: 'rp-protocol-editor-minimap' });
       this.minimapEl.setAttr('role', 'button');
       this.minimapEl.setAttr('tabindex', '0');
-      this.minimapEl.setAttr('aria-label', this.plugin.i18n.t('protocolEditor.minimapLabel'));
+      // No aria-label: Obsidian renders it as a hover tooltip over the whole
+      // minimap; keyboard/screen-reader users get the role + focus ring.
       this.minimapSvgEl = this.minimapEl.createSvg('svg', {
         attr: {
           class: 'rp-protocol-editor-minimap-svg',
@@ -1404,9 +1405,10 @@ export class ProtocolEditorView extends ItemView {
       });
     }
 
-    // Nodes
+    // Nodes — deliberately no SVG <title> tooltips: they duplicated the node
+    // title already visible on the canvas and added hover noise while panning.
     for (const node of this.doc.nodes) {
-      const nodeRect = this.minimapSvgEl.createSvg('rect', {
+      this.minimapSvgEl.createSvg('rect', {
         attr: {
           x: String(node.x),
           y: String(node.y),
@@ -1416,15 +1418,6 @@ export class ProtocolEditorView extends ItemView {
           class: `rp-protocol-editor-minimap-node rp-protocol-editor-minimap-node-${nodeKindToken(node.kind)}`,
         },
       });
-      // Native SVG tooltip — node title + localized kind on hover.
-      const tooltip = this.minimapSvgEl.createSvg('title');
-      const kindLabel = node.kind === null
-        ? this.plugin.i18n.t('protocolEditor.untyped')
-        : this.plugin.i18n.t(`protocolEditor.nodeKind.${node.kind}`);
-      // Dynamic composition of user-authored + localized parts (no literals).
-      const tooltipText = `${nodeTitle(node, this.plugin.i18n.t.bind(this.plugin.i18n))} (${kindLabel})`;
-      tooltip.textContent = tooltipText;
-      nodeRect.appendChild(tooltip);
     }
 
     this.minimapViewportEl = this.minimapSvgEl.createSvg('rect', {

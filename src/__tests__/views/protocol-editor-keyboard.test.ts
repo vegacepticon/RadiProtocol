@@ -690,12 +690,12 @@ describe('ProtocolEditorView: floating action button aria-labels', () => {
     expect(spy).toHaveBeenNthCalledWith(2, 'LR');
   });
 
-  it('minimap element has localized aria-label', () => {
+  it('minimap element has no aria-label (no hover-tooltip noise) but keeps role=button', () => {
     const { rootEl } = createShellView();
     const workspace = rootEl.children.find((c: MockEl) => c.classList.has('rp-protocol-editor-workspace'))!;
     const minimap = workspace.children.find((c: MockEl) => c.classList.has('rp-protocol-editor-minimap'))!;
     expect(minimap).toBeDefined();
-    expect(minimap!._attrs['aria-label']).toBe('Minimap — click or drag to pan');
+    expect(minimap!._attrs['aria-label']).toBeUndefined();
     expect(minimap!._attrs['role']).toBe('button');
   });
 

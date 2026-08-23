@@ -41,6 +41,15 @@ describe('library-submit-modal — wiring guard (Variant B)', () => {
     expect(exportSrc).toContain('buildLocalPackage');
   });
 
+  it('categories are a fixed checkbox taxonomy (one or more), not free text', () => {
+    expect(submitSrc).toContain('LIBRARY_SUBMISSION_CATEGORIES');
+    expect(submitSrc).toContain("type: 'checkbox'");
+    expect(submitSrc).toContain('canSubmit()');
+    // The payload filters the fixed taxonomy by selection — no comma splitting.
+    expect(submitSrc).toContain("LIBRARY_SUBMISSION_CATEGORIES.filter((c) => this.selectedCategories.has(c))");
+    expect(submitSrc).not.toContain(".split(',')");
+  });
+
   it('en/ru submit key parity (15 keys)', () => {
     const en = JSON.parse(enSrc).library as Record<string, string>;
     const ru = JSON.parse(ruSrc).library as Record<string, string>;

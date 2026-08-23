@@ -28,6 +28,31 @@ describe('library-export-modal — wiring guard', () => {
     expect(modalSrc).toContain('hasFileCollision');
     expect(modalSrc).toContain('!this.hasFileCollision');
   });
+
+  // Simplified UX (2026-08-23): metadata is derived, not typed.
+  it('derives package identity automatically instead of manual fields', () => {
+    expect(modalSrc).toContain('derivePackageId');
+    expect(modalSrc).toContain('nextReleaseVersion');
+    expect(modalSrc).not.toContain('radi-library-export-pkgid');
+    expect(modalSrc).not.toContain('radi-library-export-version');
+    expect(modalSrc).not.toContain('radi-library-export-name');
+  });
+  it('shows the derived id/version as a read-only summary line', () => {
+    expect(modalSrc).toContain('exportSummaryIdentity');
+  });
+  it('suggests +0.0.1 from remembered submissions in settings', () => {
+    expect(modalSrc).toContain('libraryLastSubmittedVersions');
+    expect(modalSrc).toContain('rememberSubmittedVersion');
+  });
+  it('defaults the export folder to the last used one', () => {
+    expect(modalSrc).toContain('libraryLastExportFolder');
+  });
+  it('splits the modal into labeled local-export vs submit-to-library sections', () => {
+    expect(modalSrc).toContain('exportLocalSection');
+    expect(modalSrc).toContain('exportSubmitSection');
+    expect(modalSrc).toContain('exportLocalHint');
+    expect(modalSrc).toContain('exportSubmitHint');
+  });
   it('main.ts registers the export command + opens the modal via ProtocolPickerSuggestModal', () => {
     expect(mainSrc).toContain("id: 'export-protocol-as-library-package'");
     expect(mainSrc).toContain('LibraryExportModal');

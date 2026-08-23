@@ -60,9 +60,10 @@ export class LibraryItemDetailModal extends Modal {
     contentEl.createEl('p', { cls: 'radi-library-detail-integrity', text: t('library.detailIntegrity') });
 
     const actions = contentEl.createDiv({ cls: 'radi-library-detail-actions' });
+    // Buttons carry visible text; no aria-label — Obsidian would surface it
+    // as a duplicate hover tooltip.
     this.installBtn = actions.createEl('button', {
       cls: 'radi-library-detail-install mod-cta',
-      attr: { 'aria-label': t('library.installLabel') },
     });
     this.installBtn.setText(t('library.installLabel'));
     this.installBtn.disabled = true; // enabled once the manifest loads (trust preview before download)
@@ -72,7 +73,6 @@ export class LibraryItemDetailModal extends Modal {
     });
     const cancelBtn = actions.createEl('button', {
       cls: 'radi-library-detail-cancel',
-      attr: { 'aria-label': t('library.cancel') },
     });
     cancelBtn.setText(t('library.cancel'));
     cancelBtn.addEventListener('click', () => {
@@ -135,13 +135,11 @@ export class LibraryItemDetailModal extends Modal {
     proto.createEl('span', { cls: 'radi-library-detail-file-name', text: manifest.protocolDoc.title });
     const protoHash = proto.createEl('span', { cls: 'radi-library-detail-file-hash' });
     protoHash.setText(`${t('library.detailProtocolHash')}: ${shortHash(manifest.protocolSha256)}`);
-    protoHash.setAttr('title', manifest.protocolSha256);
     for (const f of manifest.snippetFiles) {
       const row = this.fileListEl.createDiv({ cls: 'radi-library-detail-file' });
       row.createEl('span', { cls: 'radi-library-detail-file-name', text: f.relPath });
       const hash = row.createEl('span', { cls: 'radi-library-detail-file-hash' });
       hash.setText(shortHash(f.sha256));
-      hash.setAttr('title', f.sha256);
     }
   }
 }
