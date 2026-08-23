@@ -6,6 +6,7 @@ import type { ProtocolDocumentV1, ProtocolEdgeRecord, ProtocolNodeRecord } from 
 import type { RPNodeKind } from '../graph/graph-model';
 import { SnippetTreePicker, type SnippetTreePickerResult } from './snippet-tree-picker';
 import { mountOptionOrderChips, type OptionOrderChipItem } from './option-order-chip-editor';
+import { buildProtocolEditorOutline, type ProtocolEditorOutlineEntry } from './protocol-editor-outline';
 import { defaultT, type Translator } from '../i18n';
 import dagre from 'dagre';
 
@@ -54,6 +55,8 @@ const MIN_NODE_HEIGHT = 50;
 const MIN_ZOOM = 0.1;
 const MAX_ZOOM = 2;
 const ZOOM_STEP = 0.1;
+/** How long the outline-reveal flash highlight stays on a node (ms). */
+const REVEAL_FLASH_MS = 1200;
 
 interface NodeKindDefault {
   kind: RPNodeKind | null;
@@ -626,6 +629,8 @@ export class ProtocolEditorView extends ItemView {
   private minimapSvgEl: SVGSVGElement | null = null;
   private minimapViewportEl: SVGRectElement | null = null;
   private minimapWorldBounds: { x: number; y: number; width: number; height: number } | null = null;
+  private outlinePanelEl: HTMLElement | null = null;
+  private outlineListEl: HTMLElement | null = null;
   private readonly nodeElementById = new Map<string, HTMLElement>();
   private readonly liveNodeGeometryById = new Map<string, ProtocolEditorLiveNodeGeometry>();
   private panState: PanState | null = null;
@@ -659,6 +664,8 @@ export class ProtocolEditorView extends ItemView {
     this.minimapSvgEl = null;
     this.minimapViewportEl = null;
     this.minimapWorldBounds = null;
+    this.outlinePanelEl = null;
+    this.outlineListEl = null;
     this.doc = null;
     this.protocolPath = null;
     this.libraryReadOnly = false;
@@ -733,6 +740,17 @@ export class ProtocolEditorView extends ItemView {
     setIcon(minimapToggleBtn, 'map');
     minimapToggleBtn.addEventListener('click', () => this.toggleMinimap());
 
+    const outlineToggleBtn = floatingActions.createEl('button', {
+      cls: 'rp-protocol-editor-floating-action',
+      attr: {
+        type: 'button',
+        'aria-label': this.plugin.i18n.t('protocolEditor.toggleOutline'),
+        'aria-pressed': 'false',
+      },
+    });
+    setIcon(outlineToggleBtn, 'list-tree');
+    outlineToggleBtn.addEventListener('click', () => this.toggleOutlinePanel(outlineToggleBtn));
+
     const autoLayoutBtn = floatingActions.createEl('button', {
       cls: 'rp-protocol-editor-floating-action',
       attr: {
@@ -770,6 +788,24 @@ export class ProtocolEditorView extends ItemView {
     this.viewportEl.setAttr('data-layout-direction', this.layoutDirection);
     this.surfaceEl = this.viewportEl.createDiv({ cls: 'rp-protocol-editor-surface' });
     this.svgEl = this.viewportEl.createSvg('svg', { cls: 'rp-protocol-editor-edges' });
+
+    // Structure outline panel (hidden by default; toggled from the toolbar).
+    this.outlinePanelEl = workspace.createDiv({
+      cls: 'rp-protocol-editor-outline is-hidden',
+    });
+    const outlineHeader = this.outlinePanelEl.createDiv({ cls: 'rp-protocol-editor-outline-header' });
+    outlineHeader.createSpan({ cls: 'rp-protocol-editor-outline-title', text: this.plugin.i18n.t('protocolEditor.outlineTitle') });
+    const outlineCloseBtn = outlineHeader.createEl('button', {
+      cls: 'rp-protocol-editor-outline-close',
+      attr: {
+        type: 'button',
+        'aria-label': this.plugin.i18n.t('protocolEditor.close'),
+      },
+    });
+    setIcon(outlineCloseBtn, 'x');
+    const outlineBtnRef = outlineToggleBtn;
+    outlineCloseBtn.addEventListener('click', () => this.toggleOutlinePanel(outlineBtnRef));
+    this.outlineListEl = this.outlinePanelEl.createDiv({ cls: 'rp-protocol-editor-outline-list' });
 
     if (this.doc !== null) {
       this.minimapEl = workspace.createDiv({ cls: 'rp-protocol-editor-minimap' });
@@ -1343,6 +1379,33 @@ export class ProtocolEditorView extends ItemView {
     this.minimapWorldBounds = { x: vbX, y: vbY, width: vbWidth, height: vbHeight };
     this.minimapSvgEl.setAttr('viewBox', `${vbX} ${vbY} ${vbWidth} ${vbHeight}`);
 
+    // Adaptive container size: match the element's aspect ratio to the
+    // content's aspect ratio (bounded box), so a vertical protocol gets a
+    // tall narrow map and a horizontal one a wide flat map. The SVG keeps
+    // preserveAspectRatio="none", which stays distortion-free because the
+    // element aspect tracks the viewBox aspect.
+    const MINIMAP_MAX_WIDTH = 340;
+    const MINIMAP_MAX_HEIGHT = 440;
+    const MINIMAP_MIN_WIDTH = 180;
+    const MINIMAP_MIN_HEIGHT = 130;
+    if (this.minimapEl !== null) {
+      const scale = Math.min(MINIMAP_MAX_WIDTH / vbWidth, MINIMAP_MAX_HEIGHT / vbHeight);
+      let cssWidth = vbWidth * scale;
+      let cssHeight = vbHeight * scale;
+      if (cssWidth < MINIMAP_MIN_WIDTH) {
+        cssHeight *= MINIMAP_MIN_WIDTH / cssWidth;
+        cssWidth = MINIMAP_MIN_WIDTH;
+      }
+      if (cssHeight < MINIMAP_MIN_HEIGHT) {
+        cssWidth *= MINIMAP_MIN_HEIGHT / cssHeight;
+        cssHeight = MINIMAP_MIN_HEIGHT;
+      }
+      this.minimapEl.setCssProps({
+        '--rp-minimap-width': `${Math.round(cssWidth)}px`,
+        '--rp-minimap-height': `${Math.round(cssHeight)}px`,
+      });
+    }
+
     // Background
     this.minimapSvgEl.createSvg('rect', {
       attr: {
@@ -1372,7 +1435,7 @@ export class ProtocolEditorView extends ItemView {
 
     // Nodes
     for (const node of this.doc.nodes) {
-      this.minimapSvgEl.createSvg('rect', {
+      const nodeRect = this.minimapSvgEl.createSvg('rect', {
         attr: {
           x: String(node.x),
           y: String(node.y),
@@ -1382,6 +1445,13 @@ export class ProtocolEditorView extends ItemView {
           class: `rp-protocol-editor-minimap-node rp-protocol-editor-minimap-node-${nodeKindToken(node.kind)}`,
         },
       });
+      // Native SVG tooltip — node title + localized kind on hover.
+      const tooltip = this.minimapSvgEl.createSvg('title');
+      const kindLabel = node.kind === null
+        ? this.plugin.i18n.t('protocolEditor.untyped')
+        : this.plugin.i18n.t(`protocolEditor.nodeKind.${node.kind}`);
+      tooltip.textContent = `${nodeTitle(node, this.plugin.i18n.t.bind(this.plugin.i18n))} (${kindLabel})`;
+      nodeRect.appendChild(tooltip);
     }
 
     this.minimapViewportEl = this.minimapSvgEl.createSvg('rect', {
@@ -2046,6 +2116,76 @@ export class ProtocolEditorView extends ItemView {
   private toggleMinimap(): void {
     if (this.minimapEl === null) return;
     this.minimapEl.toggleClass('is-hidden', !this.minimapEl.hasClass('is-hidden'));
+  }
+
+  /** Show/hide the structure outline panel and keep the toolbar state in sync. */
+  private toggleOutlinePanel(toolbarBtn?: HTMLElement): void {
+    if (this.outlinePanelEl === null) return;
+    const willHide = !this.outlinePanelEl.hasClass('is-hidden');
+    this.outlinePanelEl.toggleClass('is-hidden', willHide);
+    if (toolbarBtn !== undefined) {
+      toolbarBtn.setAttr('aria-pressed', willHide ? 'false' : 'true');
+    }
+    if (!willHide) this.renderOutline();
+  }
+
+  /** Rebuild the outline rows from the current document. */
+  private renderOutline(): void {
+    if (this.doc === null || this.outlineListEl === null) return;
+    this.outlineListEl.empty();
+    const t = this.plugin.i18n.t.bind(this.plugin.i18n);
+    const entries = buildProtocolEditorOutline(this.doc.nodes, this.doc.edges, node => nodeTitle(node, t));
+    for (const entry of entries) {
+      this.renderOutlineRow(entry, t);
+    }
+  }
+
+  private renderOutlineRow(
+    entry: ProtocolEditorOutlineEntry,
+    t: Translator,
+  ): void {
+    if (this.outlineListEl === null) return;
+    const row = this.outlineListEl.createDiv({ cls: 'rp-protocol-editor-outline-row' });
+    row.setAttr('data-node-id', entry.nodeId);
+    row.setAttr('tabindex', '0');
+    row.setAttr('role', 'button');
+    row.setCssProps({ '--rp-outline-depth': String(entry.depth) });
+    row.addClass(`rp-protocol-editor-outline-row-${nodeKindToken(entry.kind)}`);
+
+    const kindLabel = entry.kind === null
+      ? t('protocolEditor.untyped')
+      : t(`protocolEditor.nodeKind.${entry.kind}`);
+    const kindBadge = row.createSpan({ cls: 'rp-protocol-editor-outline-kind', text: kindLabel });
+    kindBadge.setAttr('data-kind-token', nodeKindToken(entry.kind));
+    row.createSpan({ cls: 'rp-protocol-editor-outline-label', text: entry.title });
+
+    row.addEventListener('click', () => this.revealNodeInViewport(entry.nodeId));
+    row.addEventListener('keydown', (e: KeyboardEvent) => {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        this.revealNodeInViewport(entry.nodeId);
+      }
+    });
+  }
+
+  /** Pan the viewport so the given node is centered, then flash-highlight it. */
+  private revealNodeInViewport(nodeId: string): void {
+    if (this.viewportEl === null) return;
+    const geometry = this.liveNodeGeometryById.get(nodeId)
+      ?? this.doc?.nodes.find(node => node.id === nodeId);
+    if (geometry === undefined || geometry === null) return;
+
+    this.centerViewportOnSurfacePoint(
+      geometry.x + geometry.width / 2,
+      geometry.y + geometry.height / 2,
+    );
+
+    const nodeEl = this.nodeElementById.get(nodeId);
+    if (nodeEl === undefined) return;
+    nodeEl.addClass('is-reveal-flash');
+    window.setTimeout(() => {
+      nodeEl.removeClass('is-reveal-flash');
+    }, REVEAL_FLASH_MS);
   }
 
   private bindMinimapControls(): void {

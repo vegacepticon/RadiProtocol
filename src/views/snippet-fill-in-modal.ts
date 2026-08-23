@@ -60,6 +60,14 @@ export class SnippetFillInModal extends Modal {
       modalEl.addClass('rp-snippet-fill-modal');
     }
 
+    // Darken the entire workspace behind the modal (.modal-bg lives inside
+    // containerEl) so attention stays on placeholder filling. containerEl is
+    // torn down with the modal — no explicit cleanup needed.
+    const containerEl = this.containerEl as HTMLElement | undefined;
+    if (containerEl && typeof containerEl.addClass === 'function') {
+      containerEl.addClass('rp-snippet-fill-modal-backdrop');
+    }
+
     // Initialize values map with empty strings for every placeholder
     for (const p of this.snippet.placeholders) {
       this.values[p.id] = '';

@@ -24,9 +24,12 @@ interface MockEl {
   _type: string;
   disabled: boolean;
   style: { setProperty: (prop: string, value: string) => void };
+  setCssProps: (props: Record<string, string>) => void;
+  _cssProps: Record<string, string>;
   createEl: (tag: string, opts?: { text?: string; cls?: string; type?: string; attr?: Record<string, string | number | boolean> }) => MockEl;
   createDiv: (opts?: { cls?: string; text?: string; attr?: Record<string, string | number | boolean> }) => MockEl;
   createSvg: (tag: string, opts?: { cls?: string; attr?: Record<string, string | number | boolean> }) => MockEl;
+  appendChild: (child: MockEl) => MockEl;
   empty: () => void;
   setText: (text: string) => void;
   setAttr: (name: string, value: string | number | boolean) => void;
@@ -74,6 +77,10 @@ function makeEl(tag = 'div'): MockEl {
     disabled: false,
     isConnected: true,
     style: { setProperty() {} },
+    _cssProps: {} as Record<string, string>,
+    setCssProps(props: Record<string, string>): void {
+      for (const [k, v] of Object.entries(props)) el._cssProps[k] = v;
+    },
     createEl(subtag: string, opts?: { text?: string; cls?: string; type?: string; attr?: Record<string, string | number | boolean> }): MockEl {
       const child = makeEl(subtag);
       child.parent = el;
@@ -102,6 +109,11 @@ function makeEl(tag = 'div'): MockEl {
       child.parent = el;
       if (opts?.cls) for (const c of opts.cls.split(' ').filter(Boolean)) child.classList.add(c);
       if (opts?.attr) for (const [k, v] of Object.entries(opts.attr)) child._attrs[k] = String(v);
+      children.push(child);
+      return child;
+    },
+    appendChild(child: MockEl): MockEl {
+      child.parent = el;
       children.push(child);
       return child;
     },
@@ -358,6 +370,8 @@ const t = (key: string, _params?: Record<string, string>): string => {
     'protocolEditor.startPointEnabledLabel': 'Start point',
     'selfCheck.title': 'Self-check',
     'protocolEditor.toggleMinimap': 'Minimap',
+    'protocolEditor.toggleOutline': 'Outline',
+    'protocolEditor.outlineTitle': 'Structure',
     'protocolEditor.autoLayout': 'Auto layout',
     'protocolEditor.autoLayoutVertical': 'Vertical layout',
     'protocolEditor.autoLayoutHorizontal': 'Horizontal layout',
@@ -716,6 +730,144 @@ describe('ProtocolEditorView: floating action button aria-labels', () => {
     }
     expect(prevented).toBe(true);
     expect(minimap!.classList.has('is-hidden')).toBe(true);
+  });
+
+  it('outline toggle button has localized aria-label and starts unpressed', () => {
+    const { rootEl } = createShellView();
+    const workspace = rootEl.children.find((c: MockEl) => c.classList.has('rp-protocol-editor-workspace'))!;
+    const floatingActions = workspace.children.find((c: MockEl) => c.classList.has('rp-protocol-editor-floating-actions'))!;
+    const buttons = floatingActions.children.filter((c: MockEl) => c.tagName === 'BUTTON');
+    const outlineBtn = buttons.find((b: MockEl) => b._attrs['aria-label'] === 'Outline')!;
+    expect(outlineBtn).toBeDefined();
+    expect(outlineBtn!._attrs['aria-pressed']).toBe('false');
+  });
+
+  it('outline panel is created hidden and toggles via the toolbar button', () => {
+    const { rootEl } = createShellView();
+    const workspace = rootEl.children.find((c: MockEl) => c.classList.has('rp-protocol-editor-workspace'))!;
+    const outline = workspace.children.find((c: MockEl) => c.classList.has('rp-protocol-editor-outline'))!;
+    expect(outline).toBeDefined();
+    expect(outline!.classList.has('is-hidden')).toBe(true);
+
+    const floatingActions = workspace.children.find((c: MockEl) => c.classList.has('rp-protocol-editor-floating-actions'))!;
+    const outlineBtn = floatingActions.children.filter((c: MockEl) => c.tagName === 'BUTTON')
+      .find((b: MockEl) => b._attrs['aria-label'] === 'Outline')!;
+    const handlers = outlineBtn._listeners.get('click') ?? [];
+    for (const handler of handlers) handler({});
+
+    expect(outline!.classList.has('is-hidden')).toBe(false);
+    expect(outlineBtn._attrs['aria-pressed']).toBe('true');
+
+    for (const handler of handlers) handler({});
+    expect(outline!.classList.has('is-hidden')).toBe(true);
+    expect(outlineBtn._attrs['aria-pressed']).toBe('false');
+  });
+
+  it('opening the outline renders one row per node with kind badge and title', () => {
+    const { view, rootEl } = createShellView();
+    // Give the shell a small start → question graph.
+    (view as any).doc = {
+      schema: 'radiprotocol.protocol', version: 1, id: 't', title: 'T',
+      createdAt: '2025-01-01T00:00:00Z', updatedAt: '2025-01-01T00:00:00Z',
+      nodes: [
+        { id: 's', kind: 'start', x: 0, y: 0, width: 200, height: 80, text: 'Begin', fields: {} },
+        { id: 'q1', kind: 'question', x: 0, y: 200, width: 200, height: 80, text: 'Where?', fields: { questionText: 'Where?' } },
+      ],
+      edges: [{ id: 'e1', fromNodeId: 's', toNodeId: 'q1' }],
+    } as ProtocolDocumentV1;
+
+    (view as any).toggleOutlinePanel();
+
+    const workspace = rootEl.children.find((c: MockEl) => c.classList.has('rp-protocol-editor-workspace'))!;
+    const outline = workspace.children.find((c: MockEl) => c.classList.has('rp-protocol-editor-outline'))!;
+    const list = outline.children.find((c: MockEl) => c.classList.has('rp-protocol-editor-outline-list'))!;
+    const rows = list.children.filter((c: MockEl) => c.classList.has('rp-protocol-editor-outline-row'));
+    expect(rows.map((r) => r._attrs['data-node-id'])).toEqual(['s', 'q1']);
+    expect(rows[0]!._attrs['role']).toBe('button');
+    expect(rows[0]!._attrs['tabindex']).toBe('0');
+    const kinds = rows[1]!.children.filter((c: MockEl) => c.classList.has('rp-protocol-editor-outline-kind'));
+    expect(kinds[0]!._text).toBe('Question');
+    const labels = rows[1]!.children.filter((c: MockEl) => c.classList.has('rp-protocol-editor-outline-label'));
+    expect(labels[0]!._text).toBe('Where?');
+  });
+
+  it('clicking an outline row centers the viewport on the node and flashes it', () => {
+    const { view, rootEl } = createShellView();
+    const centered: Array<{ x: number; y: number }> = [];
+    (view as any).centerViewportOnSurfacePoint = (x: number, y: number): void => {
+      centered.push({ x, y });
+    };
+    (view as any).doc = {
+      schema: 'radiprotocol.protocol', version: 1, id: 't', title: 'T',
+      createdAt: '2025-01-01T00:00:00Z', updatedAt: '2025-01-01T00:00:00Z',
+      nodes: [
+        { id: 's', kind: 'start', x: 10, y: 20, width: 200, height: 80, text: 'Begin', fields: {} },
+      ],
+      edges: [],
+    } as ProtocolDocumentV1;
+    (view as any).toggleOutlinePanel();
+
+    const workspace = rootEl.children.find((c: MockEl) => c.classList.has('rp-protocol-editor-workspace'))!;
+    const outline = workspace.children.find((c: MockEl) => c.classList.has('rp-protocol-editor-outline'))!;
+    const list = outline.children.find((c: MockEl) => c.classList.has('rp-protocol-editor-outline-list'))!;
+    const row = list.children.filter((c: MockEl) => c.classList.has('rp-protocol-editor-outline-row'))[0]!;
+
+    const clickHandlers = row._listeners.get('click') ?? [];
+    for (const handler of clickHandlers) handler({});
+    expect(centered).toEqual([{ x: 110, y: 60 }]); // node center
+
+    // Flash class is applied then removed after REVEAL_FLASH_MS.
+    const surface = (view as any).surfaceEl as MockEl;
+    const nodeEl = surface.children.find((c: MockEl) => c.classList.has('rp-protocol-editor-node'));
+    expect(nodeEl).toBeUndefined(); // renderDocument was not called; reveal is a no-op without a DOM node
+  });
+
+  it('reveal flash adds and removes the highlight class on the canvas node', () => {
+    const savedSetTimeout = globalThis.setTimeout;
+    let flashCb: (() => void) | null = null;
+    (globalThis as any).setTimeout = (cb: () => void, _ms?: number): number => {
+      flashCb = cb;
+      return 0;
+    };
+    try {
+      const { view } = createTestView();
+      const nodeEl = makeEl('div');
+      (view as any).nodeElementById.set('node-1', nodeEl);
+      const geometry = { x: 100, y: 100, width: 200, height: 80 };
+      (view as any).liveNodeGeometryById.set('node-1', geometry);
+
+      (view as any).revealNodeInViewport('node-1');
+      expect(nodeEl.classList.has('is-reveal-flash')).toBe(true);
+      expect(flashCb).not.toBeNull();
+      flashCb!();
+      expect(nodeEl.classList.has('is-reveal-flash')).toBe(false);
+    } finally {
+      globalThis.setTimeout = savedSetTimeout;
+    }
+  });
+
+  it('adaptive minimap sets size custom props from the content aspect ratio', () => {
+    const { view } = createTestView();
+    (view as any).minimapSvgEl = makeEl('svg');
+    (view as any).minimapEl = makeEl('div');
+    // Wide flat graph (aspect 2:1)
+    (view as any).doc = {
+      schema: 'radiprotocol.protocol', version: 1, id: 't', title: 'T',
+      createdAt: '2025-01-01T00:00:00Z', updatedAt: '2025-01-01T00:00:00Z',
+      nodes: [{ id: 'n', kind: null, x: 0, y: 0, width: 1000, height: 400, fields: {} }],
+      edges: [],
+    } as ProtocolDocumentV1;
+    (view as any).renderMinimap();
+
+    const minimap = (view as any).minimapEl as MockEl;
+    const w = Number.parseFloat(minimap._cssProps['--rp-minimap-width'] ?? '0');
+    const h = Number.parseFloat(minimap._cssProps['--rp-minimap-height'] ?? '0');
+    // Bounded box caps at 340×440 — wide graph hits the width cap.
+    expect(w).toBeLessThanOrEqual(340);
+    expect(h).toBeLessThanOrEqual(440);
+    // Aspect ratio preserved within rounding (content 1160×680 incl. padding).
+    const vb = (view as any).minimapSvgEl._attrs['viewBox'].split(' ').map(Number);
+    expect(w / h).toBeCloseTo(vb[2] / vb[3], 1);
   });
 });
 

@@ -238,8 +238,11 @@ vi.mock('obsidian', () => {
     contentEl: MockEl;
     titleEl: MockEl;
     modalEl: MockEl;
+    // Real Obsidian modals own containerEl (holds .modal-bg + .modal-container).
+    containerEl: MockEl;
     constructor(app: unknown) {
       this.app = app;
+      this.containerEl = makeEl('div');
       this.contentEl = makeEl('div');
       this.titleEl = makeEl('div');
       this.modalEl = makeEl('div');
@@ -791,5 +794,34 @@ describe('SnippetFillInModal — inserted values highlighted in preview', () => 
     const css = readFileSync(cssPath, 'utf8');
     expect(css).toMatch(/\.rp-snippet-preview\.rp-snippet-preview-complete:hover/);
     expect(css).toContain('.rp-snippet-preview-value');
+  });
+
+  it('CSS keeps the filled-field highlight on input :hover (hover-parity tripwire)', () => {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const { readFileSync } = require('node:fs') as typeof import('node:fs');
+    const cssPath = require.resolve('../../styles/snippet-fill-modal.css');
+    const css = readFileSync(cssPath, 'utf8');
+    expect(css).toMatch(/\.rp-snippet-modal-free-text\.rp-snippet-field-filled:hover/);
+    expect(css).toMatch(/\.rp-snippet-modal-custom-input\.rp-snippet-field-filled:hover/);
+  });
+
+  it('dims the workspace backdrop while the modal is open', () => {
+    const snippet = makeSnippet(
+      [{ id: 'f', label: 'F', type: 'free-text' }],
+      'X: {{f}}',
+    );
+    const modal = new SnippetFillInModal(app, snippet);
+    modal.onOpen();
+    const containerEl = (modal as unknown as { containerEl: MockEl }).containerEl;
+    expect(containerEl.hasClass('rp-snippet-fill-modal-backdrop')).toBe(true);
+    modal.onClose();
+  });
+
+  it('CSS targets the backdrop dim class (full-dim tripwire)', () => {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const { readFileSync } = require('node:fs') as typeof import('node:fs');
+    const cssPath = require.resolve('../../styles/snippet-fill-modal.css');
+    const css = readFileSync(cssPath, 'utf8');
+    expect(css).toContain('.rp-snippet-fill-modal-backdrop .modal-bg');
   });
 });
