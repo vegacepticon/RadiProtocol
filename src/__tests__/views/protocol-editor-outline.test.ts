@@ -49,6 +49,30 @@ describe('buildProtocolEditorOutline', () => {
     expect(outline.map((e) => e.hasChildren)).toEqual([true, true, true, true, false]);
   });
 
+  it('emits each branch subtree directly under its parent (DFS)', () => {
+    const nodes = [
+      node('s', 'start'),
+      node('q1', 'question'),
+      node('q2', 'question'),
+      node('a1', 'answer'),
+      node('a2', 'answer'),
+      node('end', 'text-block'),
+    ];
+    const edges = [
+      edge('e1', 's', 'q1'),
+      edge('e2', 's', 'q2'),
+      edge('e3', 'q1', 'a1'),
+      edge('e4', 'q2', 'a2'),
+      edge('e5', 'a1', 'end'),
+      edge('e6', 'a2', 'end'), // join — folded into the first visit
+    ];
+    const outline = buildProtocolEditorOutline(nodes, edges, titleOf);
+    // First branch (q1 → a1) completes before the second branch starts;
+    // the shared successor `end` appears inside the first branch only.
+    expect(outline.map((e) => e.nodeId)).toEqual(['s', 'q1', 'a1', 'end', 'q2', 'a2']);
+    expect(new Set(outline.map((e) => e.nodeId)).size).toBe(6);
+  });
+
   it('folds joins and cycles into the first visit (each node exactly once)', () => {
     const nodes = [
       node('s', 'start'),

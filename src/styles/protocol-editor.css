@@ -650,63 +650,58 @@
 
 .rp-protocol-editor-minimap-edge {
   stroke: var(--interactive-accent);
-  stroke-width: 3;
-  stroke-opacity: 0.45;
+  stroke-width: 1;
+  stroke-opacity: 0.35;
   fill: none;
   vector-effect: non-scaling-stroke;
 }
 
+/* Nodes render as soft filled shapes without outlines — at minimap scale a
+   2px stroke on every node reads as heavy clutter; the fill alone (with the
+   kind palette) stays legible and compact. */
 .rp-protocol-editor-minimap-node {
   fill: var(--interactive-accent);
-  fill-opacity: 0.34;
-  stroke: var(--interactive-accent);
-  stroke-width: 2;
-  stroke-opacity: 0.75;
-  vector-effect: non-scaling-stroke;
+  fill-opacity: 0.45;
+  stroke: none;
 }
 
 .rp-protocol-editor-minimap-node-start {
-  fill: rgba(76, 175, 80, 0.3);
-  stroke: rgba(76, 175, 80, 0.7);
+  fill: rgba(76, 175, 80, 0.55);
 }
 
 .rp-protocol-editor-minimap-node-question {
-  fill: rgba(33, 150, 243, 0.3);
-  stroke: rgba(33, 150, 243, 0.7);
+  fill: rgba(33, 150, 243, 0.5);
 }
 
 .rp-protocol-editor-minimap-node-answer {
-  fill: rgba(255, 193, 7, 0.3);
-  stroke: rgba(255, 193, 7, 0.7);
+  fill: rgba(255, 193, 7, 0.55);
 }
 
 .rp-protocol-editor-minimap-node-text-block {
-  fill: rgba(255, 235, 59, 0.3);
-  stroke: rgba(255, 235, 59, 0.7);
+  fill: rgba(255, 235, 59, 0.55);
 }
 
 .rp-protocol-editor-minimap-node-snippet {
-  fill: rgba(156, 39, 176, 0.3);
-  stroke: rgba(156, 39, 176, 0.7);
+  fill: rgba(156, 39, 176, 0.55);
 }
 
 .rp-protocol-editor-minimap-viewport {
-  fill: transparent;
+  fill: color-mix(in srgb, var(--interactive-accent) 8%, transparent);
   stroke: var(--interactive-accent);
-  stroke-width: 2.5;
-  stroke-opacity: 1;
+  stroke-width: 1;
+  stroke-opacity: 0.8;
   vector-effect: non-scaling-stroke;
   pointer-events: none;
 }
 
 /* Adaptive minimap sizing: JS (renderMinimap) sets width/height custom props
-   from the graph's aspect ratio inside a bounded box; CSS only caps it.
-   Fallback keeps the old fixed footprint if the props are absent. */
+   from the graph's aspect ratio inside a viewport-derived bounded box; CSS
+   only caps it. Fallback keeps a sane footprint if the props are absent. */
 .rp-protocol-editor-minimap {
   width: var(--rp-minimap-width, 200px);
   height: var(--rp-minimap-height, 150px);
-  max-width: min(340px, calc(100% - var(--size-4-3) * 2));
-  max-height: min(440px, calc(100% - var(--size-4-3) * 2));
+  max-width: calc(100% - var(--size-4-3) * 2);
+  max-height: calc(100% - var(--size-4-3) * 2);
 }
 
 /* Structure outline panel — docked to the right edge of the workspace. */
@@ -752,19 +747,53 @@
 .rp-protocol-editor-outline-list {
   flex: 1 1 auto;
   overflow-y: auto;
-  padding: var(--size-2-1);
+  padding: var(--size-2-2) var(--size-2-1);
 }
 
+/* Tree connectors: a vertical guide rail runs down each depth level; the
+   elbow segment joins every row to its parent's rail. Indent step is compact
+   (12px) so deep protocols stay inside the panel without horizontal scroll. */
 .rp-protocol-editor-outline-row {
+  position: relative;
   display: flex;
-  align-items: baseline;
+  align-items: center;
   gap: var(--size-2-1);
-  padding: var(--size-2-1) var(--size-4-2);
-  /* Depth-driven indent: each BFS hop from the start shifts one step right. */
-  margin-left: calc(var(--rp-outline-depth, 0) * var(--size-4-3));
+  padding: 3px var(--size-4-2);
+
+  /* Compact indent step so deep protocols stay inside the panel. */
+  --rp-outline-step: 12px;
+
+  margin-left: calc(var(--rp-outline-depth, 0) * var(--rp-outline-step));
   border-radius: var(--radius-s);
   cursor: pointer;
-  line-height: 1.35;
+  line-height: 1.3;
+  white-space: nowrap;
+}
+
+.rp-protocol-editor-outline-row::before {
+  content: '';
+  position: absolute;
+  left: calc(-0.5 * var(--rp-outline-step));
+  top: -50%;
+  width: 1px;
+  height: 200%;
+  background: var(--background-modifier-border);
+}
+
+.rp-protocol-editor-outline-row::after {
+  content: '';
+  position: absolute;
+  left: calc(-0.5 * var(--rp-outline-step));
+  top: 50%;
+  width: calc(0.5 * var(--rp-outline-step));
+  height: 1px;
+  background: var(--background-modifier-border);
+}
+
+/* Root rows (depth 0) carry no parent rail or elbow. */
+.rp-protocol-editor-outline-row-root::before,
+.rp-protocol-editor-outline-row-root::after {
+  content: none;
 }
 
 .rp-protocol-editor-outline-row:hover,
@@ -772,12 +801,34 @@
   background: var(--background-modifier-hover);
 }
 
+/* Kind chip: small colored dot carrying the node-kind palette (same colors
+   as the canvas/minimap). Kind name lives in title/aria-label. */
 .rp-protocol-editor-outline-kind {
   flex: 0 0 auto;
-  font-size: var(--font-smaller);
-  color: var(--text-muted);
-  text-transform: uppercase;
-  letter-spacing: 0.02em;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--text-muted);
+}
+
+.rp-protocol-editor-outline-kind[data-kind-token='start'] {
+  background: rgba(76, 175, 80, 0.85);
+}
+
+.rp-protocol-editor-outline-kind[data-kind-token='question'] {
+  background: rgba(33, 150, 243, 0.85);
+}
+
+.rp-protocol-editor-outline-kind[data-kind-token='answer'] {
+  background: rgba(255, 193, 7, 0.9);
+}
+
+.rp-protocol-editor-outline-kind[data-kind-token='text-block'] {
+  background: rgba(255, 235, 59, 0.9);
+}
+
+.rp-protocol-editor-outline-kind[data-kind-token='snippet'] {
+  background: rgba(156, 39, 176, 0.85);
 }
 
 .rp-protocol-editor-outline-label {

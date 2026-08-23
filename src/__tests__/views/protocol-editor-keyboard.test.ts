@@ -786,7 +786,9 @@ describe('ProtocolEditorView: floating action button aria-labels', () => {
     expect(rows[0]!._attrs['role']).toBe('button');
     expect(rows[0]!._attrs['tabindex']).toBe('0');
     const kinds = rows[1]!.children.filter((c: MockEl) => c.classList.has('rp-protocol-editor-outline-kind'));
-    expect(kinds[0]!._text).toBe('Question');
+    expect(kinds[0]!._attrs['data-kind-token']).toBe('question');
+    expect(kinds[0]!._attrs['title']).toBe('Question');
+    expect(kinds[0]!._attrs['aria-label']).toBe('Question');
     const labels = rows[1]!.children.filter((c: MockEl) => c.classList.has('rp-protocol-editor-outline-label'));
     expect(labels[0]!._text).toBe('Where?');
   });
@@ -862,12 +864,33 @@ describe('ProtocolEditorView: floating action button aria-labels', () => {
     const minimap = (view as any).minimapEl as MockEl;
     const w = Number.parseFloat(minimap._cssProps['--rp-minimap-width'] ?? '0');
     const h = Number.parseFloat(minimap._cssProps['--rp-minimap-height'] ?? '0');
-    // Bounded box caps at 340×440 — wide graph hits the width cap.
-    expect(w).toBeLessThanOrEqual(340);
-    expect(h).toBeLessThanOrEqual(440);
+    // No measurable viewport in this shell → fallback caps at 640×720;
+    // the wide graph hits the width cap.
+    expect(w).toBeLessThanOrEqual(640);
+    expect(h).toBeLessThanOrEqual(720);
     // Aspect ratio preserved within rounding (content 1160×680 incl. padding).
     const vb = (view as any).minimapSvgEl._attrs['viewBox'].split(' ').map(Number);
     expect(w / h).toBeCloseTo(vb[2] / vb[3], 1);
+  });
+
+  it('adaptive minimap caps derive from the editor viewport when measurable', () => {
+    const { view } = createTestView();
+    (view as any).minimapSvgEl = makeEl('svg');
+    (view as any).minimapEl = makeEl('div');
+    (view as any).viewportEl = Object.assign(makeEl('div'), { clientWidth: 1000, clientHeight: 800 });
+    (view as any).doc = {
+      schema: 'radiprotocol.protocol', version: 1, id: 't', title: 'T',
+      createdAt: '2025-01-01T00:00:00Z', updatedAt: '2025-01-01T00:00:00Z',
+      nodes: [{ id: 'n', kind: null, x: 0, y: 0, width: 1000, height: 400, fields: {} }],
+      edges: [],
+    } as ProtocolDocumentV1;
+    (view as any).renderMinimap();
+
+    const minimap = (view as any).minimapEl as MockEl;
+    const w = Number.parseFloat(minimap._cssProps['--rp-minimap-width'] ?? '0');
+    // Viewport-derived width cap is 900px — wide graph hits it.
+    expect(w).toBeLessThanOrEqual(900);
+    expect(w).toBeGreaterThan(340); // larger than the old fixed cap
   });
 });
 

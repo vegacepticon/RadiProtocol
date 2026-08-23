@@ -1380,14 +1380,21 @@ export class ProtocolEditorView extends ItemView {
     this.minimapSvgEl.setAttr('viewBox', `${vbX} ${vbY} ${vbWidth} ${vbHeight}`);
 
     // Adaptive container size: match the element's aspect ratio to the
-    // content's aspect ratio (bounded box), so a vertical protocol gets a
-    // tall narrow map and a horizontal one a wide flat map. The SVG keeps
+    // content's aspect ratio, bounded by the live viewport of the editor
+    // (~90% width / ~92% height) so large protocols can use nearly the whole
+    // canvas while small ones stay compact. The SVG keeps
     // preserveAspectRatio="none", which stays distortion-free because the
     // element aspect tracks the viewBox aspect.
-    const MINIMAP_MAX_WIDTH = 340;
-    const MINIMAP_MAX_HEIGHT = 440;
     const MINIMAP_MIN_WIDTH = 180;
     const MINIMAP_MIN_HEIGHT = 130;
+    let MINIMAP_MAX_WIDTH = 640;
+    let MINIMAP_MAX_HEIGHT = 720;
+    const vpW = this.viewportEl?.clientWidth ?? 0;
+    const vpH = this.viewportEl?.clientHeight ?? 0;
+    if (Number.isFinite(vpW) && vpW > 0 && Number.isFinite(vpH) && vpH > 0) {
+      MINIMAP_MAX_WIDTH = Math.max(MINIMAP_MIN_WIDTH, Math.round(vpW * 0.9));
+      MINIMAP_MAX_HEIGHT = Math.max(MINIMAP_MIN_HEIGHT, Math.round(vpH * 0.92));
+    }
     if (this.minimapEl !== null) {
       const scale = Math.min(MINIMAP_MAX_WIDTH / vbWidth, MINIMAP_MAX_HEIGHT / vbHeight);
       let cssWidth = vbWidth * scale;
@@ -2148,6 +2155,7 @@ export class ProtocolEditorView extends ItemView {
   ): void {
     if (this.outlineListEl === null) return;
     const row = this.outlineListEl.createDiv({ cls: 'rp-protocol-editor-outline-row' });
+    if (entry.depth === 0) row.addClass('rp-protocol-editor-outline-row-root');
     row.setAttr('data-node-id', entry.nodeId);
     row.setAttr('tabindex', '0');
     row.setAttr('role', 'button');
@@ -2157,8 +2165,12 @@ export class ProtocolEditorView extends ItemView {
     const kindLabel = entry.kind === null
       ? t('protocolEditor.untyped')
       : t(`protocolEditor.nodeKind.${entry.kind}`);
-    const kindBadge = row.createSpan({ cls: 'rp-protocol-editor-outline-kind', text: kindLabel });
-    kindBadge.setAttr('data-kind-token', nodeKindToken(entry.kind));
+    // Color chip instead of a text badge — kind identity moves to color +
+    // hover/fallback label, keeping rows compact for large protocols.
+    const kindChip = row.createSpan({ cls: 'rp-protocol-editor-outline-kind' });
+    kindChip.setAttr('data-kind-token', nodeKindToken(entry.kind));
+    kindChip.setAttr('title', kindLabel);
+    kindChip.setAttr('aria-label', kindLabel);
     row.createSpan({ cls: 'rp-protocol-editor-outline-label', text: entry.title });
 
     row.addEventListener('click', () => this.revealNodeInViewport(entry.nodeId));

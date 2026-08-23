@@ -13,7 +13,7 @@ export interface ProtocolEditorOutlineEntry {
   kind: RPNodeKind | null;
   /** Display title resolved by the caller (nodeTitle + translator live in the view). */
   title: string;
-  /** BFS hop distance from the start node (0 = start). */
+  /** Hop distance from the start node along the traversal (0 = start). */
   depth: number;
   /** True when the node has at least one outgoing edge. */
   hasChildren: boolean;
@@ -22,11 +22,13 @@ export interface ProtocolEditorOutlineEntry {
 /**
  * Build the outline rows for a protocol document.
  *
- * Traversal: BFS from the start node (first `kind: 'start'`, else the first
- * node) following edges in document order. Every node appears exactly once —
- * joins and loop re-entries are folded into their first visit, so the panel
- * stays a tree even when the graph is not one. Unreachable nodes are appended
- * after the reachable ones (document order), so nothing silently disappears.
+ * Traversal: depth-first from the start node (first `kind: 'start'`, else the
+ * first node) following edges in document order. DFS keeps each branch's
+ * subtree directly under its parent, so rows read as an indented tree instead
+ * of level-by-level layers. Every node appears exactly once — joins and loop
+ * re-entries are folded into their first visit, so the panel stays a tree even
+ * when the graph is not one. Unreachable nodes are appended after the
+ * reachable ones (document order), so nothing silently disappears.
  */
 export function buildProtocolEditorOutline(
   nodes: readonly ProtocolNodeRecord[],
@@ -47,11 +49,13 @@ export function buildProtocolEditorOutline(
   if (start === undefined) return entries;
 
   const visited = new Set<string>();
-  const queue: Array<{ id: string; depth: number }> = [{ id: start.id, depth: 0 }];
-  visited.add(start.id);
-
-  while (queue.length > 0) {
-    const current = queue.shift()!;
+  // Iterative DFS with an explicit stack. Children are pushed in reverse
+  // document order so the first edge's subtree is emitted first.
+  const stack: Array<{ id: string; depth: number }> = [{ id: start.id, depth: 0 }];
+  while (stack.length > 0) {
+    const current = stack.pop()!;
+    if (visited.has(current.id)) continue;
+    visited.add(current.id);
     const node = nodeById.get(current.id);
     if (node === undefined) continue;
     const children = outgoing.get(current.id) ?? [];
@@ -62,10 +66,10 @@ export function buildProtocolEditorOutline(
       depth: current.depth,
       hasChildren: children.length > 0,
     });
-    for (const childId of children) {
+    for (let i = children.length - 1; i >= 0; i -= 1) {
+      const childId = children[i]!;
       if (visited.has(childId)) continue;
-      visited.add(childId);
-      queue.push({ id: childId, depth: current.depth + 1 });
+      stack.push({ id: childId, depth: current.depth + 1 });
     }
   }
 
