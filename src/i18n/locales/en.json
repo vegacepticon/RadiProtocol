@@ -80,8 +80,6 @@
     "loopExitLabel": "This edge exits the loop",
     "minimapLabel": "Minimap — click or drag to pan",
     "toggleMinimap": "Toggle minimap",
-    "toggleOutline": "Toggle structure outline",
-    "outlineTitle": "Structure",
     "autoLayout": "Auto layout",
     "autoLayoutVertical": "Vertical layout",
     "autoLayoutHorizontal": "Horizontal layout",
