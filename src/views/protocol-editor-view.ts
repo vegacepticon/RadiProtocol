@@ -1450,7 +1450,9 @@ export class ProtocolEditorView extends ItemView {
       const kindLabel = node.kind === null
         ? this.plugin.i18n.t('protocolEditor.untyped')
         : this.plugin.i18n.t(`protocolEditor.nodeKind.${node.kind}`);
-      tooltip.textContent = `${nodeTitle(node, this.plugin.i18n.t.bind(this.plugin.i18n))} (${kindLabel})`;
+      // Dynamic composition of user-authored + localized parts (no literals).
+      const tooltipText = `${nodeTitle(node, this.plugin.i18n.t.bind(this.plugin.i18n))} (${kindLabel})`;
+      tooltip.textContent = tooltipText;
       nodeRect.appendChild(tooltip);
     }
 
