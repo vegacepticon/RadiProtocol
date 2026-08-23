@@ -817,7 +817,7 @@ describe('SnippetFillInModal — inserted values highlighted in preview', () => 
     modal.onClose();
   });
 
-  it('CSS targets the backdrop dim class (full-dim tripwire)', () => {
+  it('CSS targets the backdrop cover class (full-cover tripwire)', () => {
     // eslint-disable-next-line @typescript-eslint/no-require-imports
     const { readFileSync } = require('node:fs') as typeof import('node:fs');
     const cssPath = require.resolve('../../styles/snippet-fill-modal.css');

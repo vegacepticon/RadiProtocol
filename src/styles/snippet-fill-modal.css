@@ -190,10 +190,11 @@
   box-shadow: 0 0 0 1px color-mix(in srgb, var(--interactive-accent) 24%, transparent);
 }
 
-/* Full-dim backdrop: darken the whole workspace behind the fill-in modal so
-   attention stays on the placeholder fields and the live preview. */
+/* Full-cover backdrop: flood the whole workspace behind the fill-in modal with
+   the current theme background so elements under the modal are simply hidden
+   (no darkening) and attention stays on the placeholder fields and preview. */
 .rp-snippet-fill-modal-backdrop .modal-bg {
-  background-color: rgba(0, 0, 0, 0.85);
+  background-color: var(--background-primary);
 }
 
 .rp-snippet-fill-option-row {
