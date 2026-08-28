@@ -348,7 +348,6 @@
     "exportProtocolPackage": "Export protocol as library package"
   },
   "snippetPreview": {
-    "ariaLabel": "Snippet preview",
     "showCustomAria": "Show custom value for {label}",
     "customValueAria": "Custom value for {label}"
   },

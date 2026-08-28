@@ -1,5 +1,5 @@
 // main.ts
-import { Plugin, Notice, TFile, SuggestModal, MarkdownView } from 'obsidian';
+import { Plugin, Notice, TFile, SuggestModal, MarkdownView, WorkspaceLeaf } from 'obsidian';
 import { RadiProtocolSettings, DEFAULT_SETTINGS, RadiProtocolSettingsTab, type InlineRunnerLayout } from './settings';
 import { ProtocolDocumentParser } from './protocol/protocol-document-parser';
 import { ProtocolDocumentStore } from './protocol/protocol-document-store';
@@ -60,6 +60,16 @@ export default class RadiProtocolPlugin extends Plugin {
   private pickerModal: SuggestModal<ProtocolPickerSuggestion | ProtocolEditorPickerSuggestion> | null = null;
   // Phase 85 INLINE-MULTI-01: registry of open inline runners keyed by `${protocolPath}#${notePath}`.
   private inlineRunners = new Map<string, InlineRunnerModal>();
+
+  /**
+   * Sidebar runners keyed by bound note path. Parallel runners each live in
+   * their own right-sidebar leaf (Obsidian's getRightLeaf creates a new leaf
+   * per call), so a launch never destroys another runner — it only steals
+   * sidebar visibility. This registry maps each bound note to its runner leaf
+   * so switching notes can surface the matching runner, and a repeated launch
+   * for the same note dedupes instead of stacking a look-alike tab.
+   */
+  private sidebarRunnersByNote = new Map<string, WorkspaceLeaf>();
 
   async onload(): Promise<void> {
     // Load settings with defaults guard (NFR-08)
@@ -128,6 +138,23 @@ export default class RadiProtocolPlugin extends Plugin {
     // Persistent right-sidebar plugin menu (durable workspace state — restored
     // by Obsidian across restarts once the leaf has been created).
     this.registerView(PLUGIN_MENU_VIEW_TYPE, (leaf) => new PluginMenuView(leaf, this));
+
+    // Surface the sidebar runner bound to a note when that note becomes
+    // active. With several parallel runners each living in its own sidebar
+    // leaf, the newest launch otherwise keeps hiding older runner tabs even
+    // while their notes are being edited. registerEvent cleans this up on
+    // unload automatically.
+    this.registerEvent(this.app.workspace.on('file-open', (file) => {
+      if (file === null) return;
+      void this.revealSidebarRunnerForNote(file);
+    }));
+
+    // Registry keys are note paths; TFile.path mutates on rename, so re-key
+    // alongside it or the binding silently points at the old path.
+    this.registerEvent(this.app.vault.on('rename', (file, oldPath) => {
+      if (!(file instanceof TFile)) return;
+      this.rekeySidebarRunnerForRename(file, oldPath);
+    }));
 
     // Command: open-community-library (NFR-06: no plugin name prefix)
     this.addCommand({
@@ -206,6 +233,7 @@ export default class RadiProtocolPlugin extends Plugin {
       modal.close();
     }
     this.inlineRunners.clear();
+    this.sidebarRunnersByNote.clear();
     this.app.workspace.detachLeavesOfType(SIDEBAR_RUNNER_VIEW_TYPE);
     console.debug('[RadiProtocol] Plugin unloaded');
   }
@@ -228,6 +256,43 @@ export default class RadiProtocolPlugin extends Plugin {
   // so the cascade-position logic can offset the new instance from the last one opened.
   getOpenInlineRunners(): InlineRunnerModal[] {
     return Array.from(this.inlineRunners.values());
+  }
+
+  /** Sidebar runners keyed by bound note path (see sidebarRunnersByNote). */
+  getSidebarRunnerNotePaths(): string[] {
+    return Array.from(this.sidebarRunnersByNote.keys());
+  }
+
+  /** Registry maintenance called by a sidebar runner when its leaf closes. */
+  unregisterSidebarRunnerLeaf(notePath: string, leaf: WorkspaceLeaf): void {
+    if (this.sidebarRunnersByNote.get(notePath) === leaf) {
+      this.sidebarRunnersByNote.delete(notePath);
+    }
+  }
+
+  /**
+   * Surface the sidebar runner bound to the given note (its leaf), so
+   * switching notes brings up the matching runner instead of leaving the
+   * newest launch's tab stacked on top. Also repairs stale entries whose
+   * leaf has been repurposed for another view.
+   */
+  private async revealSidebarRunnerForNote(file: TFile): Promise<void> {
+    const runnerLeaf = this.sidebarRunnersByNote.get(file.path);
+    if (runnerLeaf === undefined) return;
+    const view = runnerLeaf.view;
+    if (!(view instanceof SidebarRunnerView)) {
+      this.sidebarRunnersByNote.delete(file.path);
+      return;
+    }
+    await this.app.workspace.revealLeaf(runnerLeaf);
+  }
+
+  /** Registry keys are note paths; re-key when the bound note is renamed. */
+  private rekeySidebarRunnerForRename(file: TFile, oldPath: string): void {
+    const runnerLeaf = this.sidebarRunnersByNote.get(oldPath);
+    if (runnerLeaf === undefined) return;
+    this.sidebarRunnersByNote.delete(oldPath);
+    this.sidebarRunnersByNote.set(file.path, runnerLeaf);
   }
 
   async saveSettings(): Promise<void> {
@@ -572,6 +637,23 @@ export default class RadiProtocolPlugin extends Plugin {
   /** Open one transient runner session using the configured presentation. */
   async openRunnerSession(options: OpenRunnerSessionOptions): Promise<void> {
     if (this.settings.useSidebarRunner === true) {
+      // Dedup: a note owns at most one sidebar runner. Relaunching for the
+      // same note surfaces the existing runner instead of stacking a second
+      // look-alike tab over it (mirrors the inline-mode registry semantics).
+      // Protocol restart = close the runner, launch again.
+      const existingLeaf = this.sidebarRunnersByNote.get(options.targetNote.path);
+      if (existingLeaf !== undefined) {
+        const view = existingLeaf.view;
+        if (view instanceof SidebarRunnerView) {
+          await this.revealSidebarRunnerForNote(options.targetNote);
+          return;
+        }
+        // Stale entry (leaf reused for a non-runner view): repair and fall
+        // through to a fresh launch. Leaf identity is re-verified after every
+        // await below so async interleaving can never bind the wrong view.
+        this.sidebarRunnersByNote.delete(options.targetNote.path);
+      }
+
       const leaf = this.app.workspace.getRightLeaf(false);
       if (leaf === null) return;
 
@@ -584,15 +666,41 @@ export default class RadiProtocolPlugin extends Plugin {
           state: {},
         }, ephemeralState);
         if (leaf.isDeferred) await leaf.loadIfDeferred();
-        await this.app.workspace.revealLeaf(leaf);
 
         const view = leaf.view;
         if (!(view instanceof SidebarRunnerView)) {
           leaf.detach();
           return;
         }
+        // Registry set is check-then-set with no await in between: if a
+        // concurrent launch for the same note registered while we awaited
+        // setViewState, that newer launch wins and ours detaches instead of
+        // stacking over it.
+        if (this.sidebarRunnersByNote.has(options.targetNote.path)) {
+          leaf.detach();
+          return;
+        }
+        this.sidebarRunnersByNote.set(options.targetNote.path, leaf);
+        await this.app.workspace.revealLeaf(leaf);
+
+        // If the runner closed while reveal's layout work was awaited, the
+        // registry slot is already freed — do not initialize into a dead leaf.
+        if (this.sidebarRunnersByNote.get(options.targetNote.path) !== leaf) {
+          leaf.detach();
+          return;
+        }
         await view.initialize(options);
+        // Boot failures (missing protocol, mount rejection) already detached
+        // the leaf inside the view; drop the registry entry or a dead leaf
+        // would own the note's slot.
+        if (!view.isClosed) {
+          return;
+        }
+        this.sidebarRunnersByNote.delete(options.targetNote.path);
       } catch (error) {
+        if (this.sidebarRunnersByNote.get(options.targetNote.path) === leaf) {
+          this.sidebarRunnersByNote.delete(options.targetNote.path);
+        }
         leaf.detach();
         console.error('[RadiProtocol] Failed to open sidebar runner', error);
       }

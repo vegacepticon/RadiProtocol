@@ -153,6 +153,7 @@ function makePlugin(
   plugin.app = { workspace };
   plugin.settings = settings;
   plugin.inlineRunners = new Map();
+  plugin.sidebarRunnersByNote = new Map();
   plugin.pickerModal = null;
   return { plugin, workspace };
 }
@@ -219,17 +220,44 @@ describe('floating runner presentation routing', () => {
 });
 
 describe('sidebar runner presentation routing', () => {
-  it('creates independent fresh right leaves for identical launches without singleton lookup', async () => {
+  it('dedupes a relaunch for the same note by revealing the existing runner leaf', async () => {
+    const leaf = makeSidebarLeaf();
+    const { plugin, workspace } = makePlugin(
+      { useSidebarRunner: true },
+      [leaf],
+    );
+    const context = launch();
+
+    await plugin.openRunnerSession(context);
+    await plugin.openRunnerSession(context);
+
+    expect(workspace.getRightLeaf).toHaveBeenCalledTimes(1);
+    expect(workspace.getRightLeaf).toHaveBeenCalledWith(false);
+    expect(workspace.getLeavesOfType).not.toHaveBeenCalled();
+    expect(floatingInstances).toHaveLength(0);
+    expect(sidebarInstances).toHaveLength(1);
+    expect((leaf.leaf.view as SidebarRunnerView).initialize).toHaveBeenCalledTimes(1);
+    // Both the launch and the deduped relaunch surface the same runner leaf.
+    expect(workspace.revealLeaf).toHaveBeenNthCalledWith(1, leaf.leaf);
+    expect(workspace.revealLeaf).toHaveBeenNthCalledWith(2, leaf.leaf);
+    expect(plugin.getSidebarRunnerNotePaths()).toEqual([context.targetNote.path]);
+  });
+
+  it('creates independent fresh leaves for parallel launches on different notes', async () => {
     const first = makeSidebarLeaf();
     const second = makeSidebarLeaf();
     const { plugin, workspace } = makePlugin(
       { useSidebarRunner: true },
       [first, second],
     );
-    const context = launch();
+    const firstContext = launch();
+    const secondContext = {
+      ...launch(),
+      targetNote: new (TFile as any)('notes/other.md'),
+    };
 
-    await plugin.openRunnerSession(context);
-    await plugin.openRunnerSession(context);
+    await plugin.openRunnerSession(firstContext);
+    await plugin.openRunnerSession(secondContext);
 
     expect(workspace.getRightLeaf).toHaveBeenNthCalledWith(1, false);
     expect(workspace.getRightLeaf).toHaveBeenNthCalledWith(2, false);
@@ -237,8 +265,12 @@ describe('sidebar runner presentation routing', () => {
     expect(floatingInstances).toHaveLength(0);
     expect(sidebarInstances).toHaveLength(2);
     expect(first.leaf).not.toBe(second.leaf);
-    expect((first.leaf.view as SidebarRunnerView).initialize).toHaveBeenCalledWith(context);
-    expect((second.leaf.view as SidebarRunnerView).initialize).toHaveBeenCalledWith(context);
+    expect((first.leaf.view as SidebarRunnerView).initialize).toHaveBeenCalledWith(firstContext);
+    expect((second.leaf.view as SidebarRunnerView).initialize).toHaveBeenCalledWith(secondContext);
+    expect(plugin.getSidebarRunnerNotePaths().sort()).toEqual([
+      firstContext.targetNote.path,
+      secondContext.targetNote.path,
+    ].sort());
   });
 
   it('passes an empty durable state and one-shot marker through leaf state and eState', async () => {

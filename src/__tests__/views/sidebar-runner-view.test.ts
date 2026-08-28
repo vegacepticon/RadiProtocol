@@ -162,6 +162,10 @@ function makeEnvironment(initialActivePath = 'notes/target.md') {
     protocolDocumentParser: {},
     snippetService: {},
     insertMutex: { runExclusive: vi.fn(async (_path: string, operation: () => Promise<void>) => operation()) },
+    sidebarRunnersByNote: new Map<string, WorkspaceLeaf>(),
+    unregisterSidebarRunnerLeaf(notePath: string, leaf: WorkspaceLeaf): void {
+      if (plugin.sidebarRunnersByNote.get(notePath) === leaf) plugin.sidebarRunnersByNote.delete(notePath);
+    },
   };
 
   return {

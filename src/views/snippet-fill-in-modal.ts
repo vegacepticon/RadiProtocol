@@ -269,7 +269,9 @@ export class SnippetFillInModal extends Modal {
     this.previewEl = previewSection.createDiv({ cls: 'rp-snippet-preview' });
     this.previewEl.setAttribute('role', 'textbox');
     this.previewEl.setAttribute('aria-readonly', 'true');
-    this.previewEl.setAttribute('aria-label', this.t('snippetPreview.ariaLabel'));
+    // No aria-label here: Obsidian renders it as a hover tooltip over the
+    // preview, and the visible "Preview" heading above already names this
+    // region (hover-noise policy, see 3.5.8).
     // Show the raw template initially (unfilled tokens visible per UI-SPEC empty state)
     this.renderPreviewContent();
     this.resizePreview();

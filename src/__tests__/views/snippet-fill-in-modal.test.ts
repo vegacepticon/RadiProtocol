@@ -720,6 +720,15 @@ describe('SnippetFillInModal — inserted values highlighted in preview', () => 
     modal.onClose();
   });
 
+  it('sets no aria-label on the preview (Obsidian would show it as a hover tooltip)', () => {
+    const snippet = makeSnippet([{ id: 'f', label: 'F', type: 'free-text' }]);
+    const modal = new SnippetFillInModal(app, snippet);
+    modal.onOpen();
+    const preview = findPreview((modal as unknown as { contentEl: MockEl }).contentEl);
+    expect(preview.getAttribute('aria-label')).toBe(null);
+    modal.onClose();
+  });
+
   it('wraps a filled free-text value in rp-snippet-preview-value span', () => {
     const snippet = makeSnippet(
       [{ id: 'f', label: 'F', type: 'free-text' }],

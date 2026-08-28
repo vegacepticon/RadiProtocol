@@ -77,6 +77,11 @@ export class SidebarRunnerView extends ItemView {
     return 'list-checks';
   }
 
+  /** True once this view has closed (or is closing) its leaf. */
+  get isClosed(): boolean {
+    return this.closed;
+  }
+
   /** No protocol/session data is durable workspace state. */
   getState(): Record<string, unknown> {
     return {};
@@ -195,6 +200,13 @@ export class SidebarRunnerView extends ItemView {
     this.closeRequested = true;
     this.initialized = false;
     ++this.generation;
+
+    // Free the note→runner registry slot so future launches for this note
+    // create a fresh runner instead of revealing this closing leaf, and so
+    // note-switch reveal no longer targets a dead view.
+    if (this.launchContext !== null) {
+      this.plugin.unregisterSidebarRunnerLeaf(this.launchContext.targetNote.path, this.leaf);
+    }
     this.clearRestoreDetachTimer();
 
     if (this.boundKeyHandler !== null) {
