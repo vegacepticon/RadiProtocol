@@ -16,3 +16,6 @@ Thumbs.db
 
 # Inline agent guidance (canonical guidance lives in .rpiv/guidance/ shadow tree)
 CLAUDE.md
+
+# CodeGraph local index (pilot 2026-08-28; daemon watches and syncs)
+.codegraph/
