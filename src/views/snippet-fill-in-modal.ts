@@ -282,9 +282,13 @@ export class SnippetFillInModal extends Modal {
     if (!this.previewEl) return;
     this.previewEl.empty();
     for (const segment of this.buildPreviewSegments()) {
-      if (segment.filled) {
+      if (segment.kind === 'value') {
         const span = this.previewEl.createSpan({ cls: 'rp-snippet-preview-value' });
         span.textContent = segment.text;
+      } else if (segment.kind === 'placeholder') {
+        // Unfilled placeholders render as an empty grey block instead of the
+        // raw {{id}} token. No title/aria-label: hover-noise policy (3.5.8).
+        this.previewEl.createSpan({ cls: 'rp-snippet-preview-placeholder' });
       } else {
         this.previewEl.appendText(segment.text);
       }
@@ -292,11 +296,21 @@ export class SnippetFillInModal extends Modal {
   }
 
   /**
-   * Split the rendered snippet into segments around filled placeholder values.
-   * Unfilled placeholders stay as raw `{{id}}` tokens in static text.
+   * Split the template into segments: static text, filled placeholder values,
+   * and unfilled placeholder tokens. Unfilled placeholders become discrete
+   * `placeholder` segments so the preview can render them as grey blocks
+   * instead of raw `{{id}}` tokens (UI-SPEC empty state).
    */
-  private buildPreviewSegments(): Array<{ text: string; filled: boolean }> {
-    const segments: Array<{ text: string; filled: boolean }> = [];
+  private buildPreviewSegments(): Array<
+    { kind: 'static'; text: string }
+    | { kind: 'value'; text: string }
+    | { kind: 'placeholder'; id: string }
+  > {
+    const segments: Array<
+      { kind: 'static'; text: string }
+      | { kind: 'value'; text: string }
+      | { kind: 'placeholder'; id: string }
+    > = [];
     let output = this.snippet.template;
     for (const placeholder of this.snippet.placeholders) {
       const raw = this.values[placeholder.id] ?? '';
@@ -304,11 +318,22 @@ export class SnippetFillInModal extends Modal {
       const token = `{{${placeholder.id}}}`;
       const index = output.indexOf(token);
       if (index < 0) continue;
-      if (index > 0) segments.push({ text: output.slice(0, index), filled: false });
-      segments.push({ text: raw, filled: true });
+      if (index > 0) segments.push({ kind: 'static', text: output.slice(0, index) });
+      segments.push({ kind: 'value', text: raw });
       output = output.slice(index + token.length);
     }
-    if (output.length > 0) segments.push({ text: output, filled: false });
+    // Remaining unfilled {{id}} tokens (array order, length checked by validation).
+    // Manual exec loop: output is reassigned per match, so a matchAll snapshot
+    // of the ORIGINAL string would corrupt indices for the 2nd+ tokens.
+    const tokenRe = /\{\{([a-zA-Z0-9_-]+)\}\}/g;
+    for (let match = tokenRe.exec(output); match !== null; match = tokenRe.exec(output)) {
+      const index = match.index;
+      if (index > 0) segments.push({ kind: 'static', text: output.slice(0, index) });
+      segments.push({ kind: 'placeholder', id: match[1]! });
+      output = output.slice(index + match[0].length);
+      tokenRe.lastIndex = 0;
+    }
+    if (output.length > 0) segments.push({ kind: 'static', text: output });
     return segments;
   }
 

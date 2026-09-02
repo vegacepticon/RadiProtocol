@@ -285,6 +285,9 @@ describe('shared question branch renderer', () => {
     ]);
     expect(textareas[0]!.value).toBe('line one\nline two');
     expect(textareas[1]!.value).toBe('');
+    // Browser spellcheck is disabled on all runner free-text textareas.
+    expect(textareas[0]!.getAttribute('spellcheck')).toBe('false');
+    expect(textareas[1]!.getAttribute('spellcheck')).toBe('false');
     expect(textareas[0]!.getAttribute('aria-invalid')).toBe('true');
     expect(textareas[1]!.getAttribute('aria-invalid')).toBeNull();
     expect(alerts).toHaveLength(1);

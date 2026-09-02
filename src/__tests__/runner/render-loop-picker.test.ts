@@ -410,6 +410,7 @@ describe('shared loop picker renderer', () => {
     expect(findByClass(rows[0]!, 'rp-free-text-answer-prompt')[0]?.text).toBe('Describe');
     const textarea = findByClass(rows[0]!, 'rp-free-text-answer-textarea')[0]!;
     expect(textarea.attrs.get('rows')).toBe('1');
+    expect(textarea.attrs.get('spellcheck')).toBe('false');
     expect(findByClass(rows[0]!, 'rp-free-text-answer-submit')[0]?.text).toBe('Submit');
 
     // Draft is projected into the textarea.

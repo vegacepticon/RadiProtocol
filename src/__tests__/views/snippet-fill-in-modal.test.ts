@@ -635,6 +635,22 @@ describe('SnippetFillInModal — wide modal', () => {
     expect(modalEl.hasClass('rp-snippet-fill-modal')).toBe(true);
     modal.onClose();
   });
+
+  it('disables browser spellcheck on free-text and custom textareas', () => {
+    const snippet = makeSnippet([
+      { id: 'f', label: 'F', type: 'free-text' },
+      { id: 'c', label: 'C', type: 'choice', options: ['a', 'b'] },
+    ]);
+    const modal = new SnippetFillInModal(app, snippet);
+    modal.onOpen();
+    const root = (modal as unknown as { contentEl: MockEl }).contentEl;
+    const textareas = root.querySelectorAll('textarea');
+    expect(textareas.length).toBe(2); // free-text + custom override
+    for (const textarea of textareas) {
+      expect(textarea.getAttribute('spellcheck')).toBe('false');
+    }
+    modal.onClose();
+  });
 });
 
 describe('SnippetFillInModal — preview complete highlight', () => {
@@ -738,8 +754,15 @@ describe('SnippetFillInModal — inserted values highlighted in preview', () => 
     modal.onOpen();
     const root = (modal as unknown as { contentEl: MockEl }).contentEl;
     const preview = findPreview(root);
-    // Initially: raw token as plain text, no value spans
-    expect(previewSegments(preview)).toEqual([{ text: 'R: {{f}} end', filled: false }]);
+    // Initially: unfilled {{f}} renders as an empty grey placeholder block
+    // (a SPAN without the value class, so previewSegments sees filled: false)
+    expect(previewSegments(preview)).toEqual([
+      { text: 'R: ', filled: false },
+      { text: '', filled: false },
+      { text: ' end', filled: false },
+    ]);
+    const placeholderSpans = preview.querySelectorAll('.rp-snippet-preview-placeholder');
+    expect(placeholderSpans.length).toBe(1);
     (root.querySelectorAll('.rp-snippet-modal-free-text')[0] as unknown as { _value: string })._value = 'hello';
     root.querySelectorAll('.rp-snippet-modal-free-text')[0]!.dispatchEvent({ type: 'input' });
     expect(previewSegments(preview)).toEqual([
@@ -747,11 +770,56 @@ describe('SnippetFillInModal — inserted values highlighted in preview', () => 
       { text: 'hello', filled: true },
       { text: ' end', filled: false },
     ]);
-    // Clearing the value removes the highlight span
+    // Filled value replaced the placeholder block
+    expect(preview.querySelectorAll('.rp-snippet-preview-placeholder').length).toBe(0);
+    // Clearing the value restores the placeholder block
     (root.querySelectorAll('.rp-snippet-modal-free-text')[0] as unknown as { _value: string })._value = '';
     root.querySelectorAll('.rp-snippet-modal-free-text')[0]!.dispatchEvent({ type: 'input' });
-    expect(previewSegments(preview)).toEqual([{ text: 'R: {{f}} end', filled: false }]);
+    expect(preview.querySelectorAll('.rp-snippet-preview-placeholder').length).toBe(1);
+    // No raw {{id}} token text anywhere in the preview
+    const rawText = preview.children
+      .filter((c) => c.tagName !== 'SPAN')
+      .map((c) => c._text)
+      .join('');
+    expect(rawText).not.toContain('{{');
     modal.onClose();
+  });
+
+  it('renders each unfilled placeholder as a grey block span (no raw token text)', () => {
+    const snippet = makeSnippet(
+      [
+        { id: 'a', label: 'A', type: 'free-text' },
+        { id: 'b', label: 'B', type: 'free-text' },
+      ],
+      'R: {{a}} / {{b}} end',
+    );
+    const modal = new SnippetFillInModal(app, snippet);
+    modal.onOpen();
+    const root = (modal as unknown as { contentEl: MockEl }).contentEl;
+    const preview = findPreview(root);
+    const placeholderSpans = preview.querySelectorAll('.rp-snippet-preview-placeholder');
+    expect(placeholderSpans.length).toBe(2);
+    for (const span of placeholderSpans) {
+      expect(span.tagName).toBe('SPAN');
+      expect(span._text).toBe('');
+      // No raw token text and no tooltip attributes (hover-noise policy)
+      expect(span.getAttribute('title')).toBe(null);
+      expect(span.getAttribute('aria-label')).toBe(null);
+    }
+    const rawText = preview.children
+      .filter((c) => c.tagName !== 'SPAN')
+      .map((c) => c._text)
+      .join('');
+    expect(rawText).toBe('R:  /  end');
+    modal.onClose();
+  });
+
+  it('CSS styles the placeholder blocks (grey block tripwire)', () => {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const { readFileSync } = require('node:fs') as typeof import('node:fs');
+    const cssPath = require.resolve('../../styles/snippet-fill-modal.css');
+    const css = readFileSync(cssPath, 'utf8');
+    expect(css).toContain('.rp-snippet-preview-placeholder');
   });
 
   it('wraps choice selections and custom override values in value spans', () => {

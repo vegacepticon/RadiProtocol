@@ -48,7 +48,7 @@ export function createTextarea(parent: HTMLElement, opts: TextareaOpts = {}): HT
     cls: opts.cls,
     placeholder: opts.placeholder,
     value: opts.value,
-    attr: opts.attr,
+    attr: { spellcheck: 'false', ...opts.attr },
   });
   return ta as HTMLTextAreaElement;
 }
