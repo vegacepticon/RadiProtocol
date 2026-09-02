@@ -814,6 +814,26 @@ describe('SnippetFillInModal — inserted values highlighted in preview', () => 
     modal.onClose();
   });
 
+  it('renders Cyrillic placeholder ids as grey blocks too (matches validator shape)', () => {
+    const snippet = makeSnippet(
+      [{ id: 'возраст', label: 'Возраст', type: 'free-text' }],
+      'Возраст: {{возраст}} лет',
+    );
+    const modal = new SnippetFillInModal(app, snippet);
+    modal.onOpen();
+    const root = (modal as unknown as { contentEl: MockEl }).contentEl;
+    const preview = findPreview(root);
+    const placeholderSpans = preview.querySelectorAll('.rp-snippet-preview-placeholder');
+    expect(placeholderSpans.length).toBe(1);
+    const rawText = preview.children
+      .filter((c) => c.tagName !== 'SPAN')
+      .map((c) => c._text)
+      .join('');
+    expect(rawText).toBe('Возраст:  лет');
+    expect(rawText).not.toContain('{{');
+    modal.onClose();
+  });
+
   it('CSS styles the placeholder blocks (grey block tripwire)', () => {
     // eslint-disable-next-line @typescript-eslint/no-require-imports
     const { readFileSync } = require('node:fs') as typeof import('node:fs');

@@ -323,9 +323,12 @@ export class SnippetFillInModal extends Modal {
       output = output.slice(index + token.length);
     }
     // Remaining unfilled {{id}} tokens (array order, length checked by validation).
-    // Manual exec loop: output is reassigned per match, so a matchAll snapshot
-    // of the ORIGINAL string would corrupt indices for the 2nd+ tokens.
-    const tokenRe = /\{\{([a-zA-Z0-9_-]+)\}\}/g;
+    // Same accepted shape as validateBodyPlaceholders in md-template.ts
+    // (ids may be any non-brace non-whitespace text, e.g. Cyrillic; optional
+    // padding spaces around the id). Manual exec loop: output is reassigned
+    // per match, so a matchAll snapshot of the ORIGINAL string would corrupt
+    // indices for the 2nd+ tokens.
+    const tokenRe = /\{\{\s*([^{}\s]+)\s*\}\}/g;
     for (let match = tokenRe.exec(output); match !== null; match = tokenRe.exec(output)) {
       const index = match.index;
       if (index > 0) segments.push({ kind: 'static', text: output.slice(0, index) });
