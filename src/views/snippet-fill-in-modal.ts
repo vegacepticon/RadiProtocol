@@ -311,32 +311,32 @@ export class SnippetFillInModal extends Modal {
       | { kind: 'value'; text: string }
       | { kind: 'placeholder'; id: string }
     > = [];
-    let output = this.snippet.template;
-    for (const placeholder of this.snippet.placeholders) {
-      const raw = this.values[placeholder.id] ?? '';
-      if (raw.length === 0) continue;
-      const token = `{{${placeholder.id}}}`;
-      const index = output.indexOf(token);
-      if (index < 0) continue;
-      if (index > 0) segments.push({ kind: 'static', text: output.slice(0, index) });
-      segments.push({ kind: 'value', text: raw });
-      output = output.slice(index + token.length);
-    }
-    // Remaining unfilled {{id}} tokens (array order, length checked by validation).
-    // Same accepted shape as validateBodyPlaceholders in md-template.ts
-    // (ids may be any non-brace non-whitespace text, e.g. Cyrillic; optional
-    // padding spaces around the id). Manual exec loop: output is reassigned
-    // per match, so a matchAll snapshot of the ORIGINAL string would corrupt
-    // indices for the 2nd+ tokens.
+    // Single left-to-right scan of the template. Placeholder fill order and
+    // the chip order (placeholders array) are irrelevant to the preview —
+    // each token is resolved independently from the values map. The earlier
+    // sequential-slice approach broke when the chip order differed from the
+    // template token order: filling a later placeholder swallowed the
+    // unfilled tokens before it into a static prefix (raw {{id}} instead of
+    // grey blocks), and choice values whose token sat "behind" the slice
+    // point never appeared in the preview at all.
     const tokenRe = /\{\{\s*([^{}\s]+)\s*\}\}/g;
-    for (let match = tokenRe.exec(output); match !== null; match = tokenRe.exec(output)) {
-      const index = match.index;
-      if (index > 0) segments.push({ kind: 'static', text: output.slice(0, index) });
-      segments.push({ kind: 'placeholder', id: match[1]! });
-      output = output.slice(index + match[0].length);
-      tokenRe.lastIndex = 0;
+    let cursor = 0;
+    for (let match = tokenRe.exec(this.snippet.template); match !== null; match = tokenRe.exec(this.snippet.template)) {
+      if (match.index > cursor) {
+        segments.push({ kind: 'static', text: this.snippet.template.slice(cursor, match.index) });
+      }
+      const id = match[1]!;
+      const raw = this.values[id] ?? '';
+      if (raw.length > 0) {
+        segments.push({ kind: 'value', text: raw });
+      } else {
+        segments.push({ kind: 'placeholder', id });
+      }
+      cursor = match.index + match[0].length;
     }
-    if (output.length > 0) segments.push({ kind: 'static', text: output });
+    if (cursor < this.snippet.template.length) {
+      segments.push({ kind: 'static', text: this.snippet.template.slice(cursor) });
+    }
     return segments;
   }
 

@@ -884,6 +884,73 @@ describe('SnippetFillInModal — inserted values highlighted in preview', () => 
     modal.onClose();
   });
 
+  it('renders unfilled placeholders above a filled one as grey blocks (fill-bottom-first regression)', () => {
+    // Filling the LAST placeholder must not corrupt the preview of the
+    // UNFILLED placeholders ABOVE it: the old sequential-slice builder put
+    // everything left of the filled token into a static prefix, leaking raw
+    // {{id}} text into the preview.
+    const snippet = makeSnippet(
+      [
+        { id: 'top', label: 'Top', type: 'free-text' },
+        { id: 'mid', label: 'Mid', type: 'free-text' },
+        { id: 'bottom', label: 'Bottom', type: 'free-text' },
+      ],
+      'A: {{top}}\nB: {{mid}}\nC: {{bottom}}',
+    );
+    const modal = new SnippetFillInModal(app, snippet);
+    modal.onOpen();
+    const root = (modal as unknown as { contentEl: MockEl }).contentEl;
+    const preview = findPreview(root);
+    const inputs = root.querySelectorAll('.rp-snippet-modal-free-text');
+    // Fill ONLY the bottom (last) field
+    (inputs[2] as unknown as { _value: string })._value = 'низ';
+    inputs[2]!.dispatchEvent({ type: 'input' });
+    expect(previewSegments(preview)).toEqual([
+      { text: 'A: ', filled: false },
+      { text: '', filled: false }, // grey block for {{top}}
+      { text: '\nB: ', filled: false },
+      { text: '', filled: false }, // grey block for {{mid}}
+      { text: '\nC: ', filled: false },
+      { text: 'низ', filled: true },
+    ]);
+    expect(preview.querySelectorAll('.rp-snippet-preview-placeholder').length).toBe(2);
+    // Raw tokens must never leak into static text
+    const rawText = preview.children
+      .filter((c) => c.tagName !== 'SPAN')
+      .map((c) => c._text)
+      .join('');
+    expect(rawText).not.toContain('{{');
+    modal.onClose();
+  });
+
+  it('renders choice values when chip order differs from template token order', () => {
+    // The template has b BEFORE a, but the chips (placeholders array) list
+    // a first. Choice value for 'b' must still appear in the preview — the
+    // old sequential-slice builder searched for {{b}} in the leftover string
+    // after {{a}} was consumed and silently dropped it.
+    const snippet = makeSnippet(
+      [
+        { id: 'a', label: 'A', type: 'choice', options: ['x', 'y'] },
+        { id: 'b', label: 'B', type: 'choice', options: ['p', 'q'] },
+      ],
+      'B is {{b}}, A is {{a}}',
+    );
+    const modal = new SnippetFillInModal(app, snippet);
+    modal.onOpen();
+    const root = (modal as unknown as { contentEl: MockEl }).contentEl;
+    const preview = findPreview(root);
+    const buttons = root.querySelectorAll('.rp-snippet-fill-option-row');
+    // Field A renders first: options x, y → select 'y'
+    buttons[1]!.dispatchEvent({ type: 'click' });
+    // Field B renders second: options p, q → select 'q'
+    buttons[3]!.dispatchEvent({ type: 'click' });
+    expect(previewSegments(preview).map((s) => s.text).join('')).toBe('B is q, A is y');
+    // Filled values: 'q' (B) then 'y' (A), in template order
+    expect(previewSegments(preview).filter((s) => s.filled).map((s) => s.text)).toEqual(['q', 'y']);
+    expect(preview.querySelectorAll('.rp-snippet-preview-placeholder').length).toBe(0);
+    modal.onClose();
+  });
+
   it('CSS keeps the completed highlight on :hover (hover-parity tripwire)', () => {
     // eslint-disable-next-line @typescript-eslint/no-require-imports
     const { readFileSync } = require('node:fs') as typeof import('node:fs');
