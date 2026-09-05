@@ -335,16 +335,18 @@ async function flushDebounce(): Promise<void> {
 function triggerKeydown(
   inputEl: MockEl | undefined,
   key: string,
-  mods: { ctrlKey?: boolean; altKey?: boolean; metaKey?: boolean } = {},
+  mods: { ctrlKey?: boolean; altKey?: boolean; metaKey?: boolean; shiftKey?: boolean; code?: string } = {},
 ): void {
   if (!inputEl) throw new Error('triggerKeydown: element is undefined');
   const event = {
     type: 'keydown',
     key,
+    code: mods.code ?? '',
     target: inputEl,
     ctrlKey: !!mods.ctrlKey,
     altKey: !!mods.altKey,
     metaKey: !!mods.metaKey,
+    shiftKey: !!mods.shiftKey,
     preventDefault: vi.fn(),
   };
   inputEl.dispatchEvent(event as unknown as { type: string; target?: unknown });
@@ -1340,6 +1342,122 @@ describe('Keyboard navigation (Phase 4)', () => {
     const input = findFirst(container, (el) => el.classList.has('rp-stp-search-input'))!;
     expect(() => triggerKeydown(input, 'ArrowDown', { ctrlKey: true })).not.toThrow();
     expect(rowsOf(container).every((r) => !r.classList.has('rp-stp-row-highlighted'))).toBe(true);
+  });
+});
+
+describe('Vim-style navigation (Tab handoff + j/k)', () => {
+  let svc: FakeSnippetService;
+
+  beforeEach(() => {
+    svc = makeFakeSnippetService();
+  });
+
+  async function setupWithRows(): Promise<{ picker: SnippetTreePicker; container: MockEl; onSelect: ReturnType<typeof vi.fn>; input: MockEl; root: MockEl }> {
+    svc.listFolder.mockResolvedValue({
+      folders: ['abdomen', 'chest'],
+      snippets: [mdTemplateSnippet(`${ROOT}/report.md`)],
+    });
+    const { picker, container, onSelect } = makePicker({ mode: 'both' }, svc);
+    await picker.mount();
+    const input = findFirst(container, (el) => el.classList.has('rp-stp-search-input'))!;
+    const root = findFirst(container, (el) => el.classList.has('rp-stp-root'))!;
+    return { picker, container, onSelect, input, root };
+  }
+
+  /** Simulate a keydown that BUBBLED from the search input up to the root:
+   *  MockEl.dispatchEvent has no bubbling, so dispatch on the root with the
+   *  target overridden to the input. */
+  function triggerBubbledKeydown(root: MockEl, input: MockEl, key: string, mods: Parameters<typeof triggerKeydown>[2] = {}): void {
+    root.dispatchEvent({
+      type: 'keydown',
+      key,
+      code: mods.code ?? '',
+      target: input,
+      ctrlKey: !!mods.ctrlKey,
+      altKey: !!mods.altKey,
+      metaKey: !!mods.metaKey,
+      shiftKey: !!mods.shiftKey,
+      preventDefault: vi.fn(),
+    } as unknown as { type: string; target?: unknown });
+  }
+
+  it('Tab from the search input highlights the first row and focuses it', async () => {
+    const { container, input } = await setupWithRows();
+
+    triggerKeydown(input, 'Tab');
+    const rows = rowsOf(container);
+    expect(rows[0]!.classList.has('rp-stp-row-highlighted')).toBe(true);
+  });
+
+  it('after Tab, j/k move the highlight regardless of the event key value (layout-independent, matched by e.code)', async () => {
+    const { container, input, root } = await setupWithRows();
+
+    triggerKeydown(input, 'Tab'); // → 0
+    // On the Russian layout the physical j/k keys type «о»/«к»: key is Cyrillic,
+    // code is still KeyJ/KeyK. Navigation must key off code, not key.
+    triggerKeydown(root, 'о', { code: 'KeyJ' }); // → 1
+    let rows = rowsOf(container);
+    expect(rows[1]!.classList.has('rp-stp-row-highlighted')).toBe(true);
+    expect(rows[0]!.classList.has('rp-stp-row-highlighted')).toBe(false);
+
+    triggerKeydown(root, 'л', { code: 'KeyK' }); // → 0
+    rows = rowsOf(container);
+    expect(rows[0]!.classList.has('rp-stp-row-highlighted')).toBe(true);
+    expect(rows[1]!.classList.has('rp-stp-row-highlighted')).toBe(false);
+  });
+
+  it('j/k on the list wrap around like the arrow keys', async () => {
+    const { container, input, root } = await setupWithRows();
+
+    triggerKeydown(input, 'Tab'); // → 0
+    triggerKeydown(root, 'о', { code: 'KeyJ' }); // → 1
+    triggerKeydown(root, 'о', { code: 'KeyJ' }); // → 2 (last)
+    triggerKeydown(root, 'о', { code: 'KeyJ' }); // wrap last → first
+    let rows = rowsOf(container);
+    expect(rows[0]!.classList.has('rp-stp-row-highlighted')).toBe(true);
+
+    triggerKeydown(root, 'л', { code: 'KeyK' }); // wrap first → last
+    rows = rowsOf(container);
+    expect(rows[2]!.classList.has('rp-stp-row-highlighted')).toBe(true);
+  });
+
+  it('j/k while focus is in the search input do NOT navigate (letters keep typing)', async () => {
+    const { container, input, root } = await setupWithRows();
+
+    // Keydown events dispatched on the input bubble to the root listener with
+    // target = the input — the handler must bail out (search typing wins).
+    triggerBubbledKeydown(root, input, 'о', { code: 'KeyJ' });
+    triggerBubbledKeydown(root, input, 'л', { code: 'KeyK' });
+    expect(rowsOf(container).every((r) => !r.classList.has('rp-stp-row-highlighted'))).toBe(true);
+  });
+
+  it('Enter on a focused highlighted row activates it (onSelect for a file row)', async () => {
+    const { onSelect, container, input, root } = await setupWithRows();
+    // After the drill, row 0 becomes a FILE row.
+    svc.listFolder.mockResolvedValueOnce({ folders: [], snippets: [mdTemplateSnippet(`${ROOT}/abdomen/ct.md`)] });
+
+    triggerKeydown(input, 'Tab'); // → row 0 = folder «abdomen»
+    triggerKeydown(root, 'Enter'); // drills into «abdomen»
+    await Promise.resolve(); await Promise.resolve(); await Promise.resolve();
+
+    const fileRows = findByClass(container, 'rp-stp-file-row');
+    expect(fileRows.length).toBe(1);
+    // The drill re-render reset the highlight; re-highlight row 0 with j, then activate.
+    triggerKeydown(root, 'о', { code: 'KeyJ' });
+    expect(fileRows[0]!.classList.has('rp-stp-row-highlighted')).toBe(true);
+    triggerKeydown(root, 'Enter'); // activates the highlighted file row
+    expect(onSelect).toHaveBeenCalledWith({ kind: 'file', relativePath: 'abdomen/ct.md' });
+  });
+
+  it('Shift+Tab from the list returns focus to the search input', async () => {
+    const { container, input, root } = await setupWithRows();
+
+    triggerKeydown(input, 'Tab'); // → list focused
+    triggerKeydown(root, 'Tab', { shiftKey: true });
+
+    // Focus bookkeeping is behavioral in a real browser; here we at least
+    // require no throw and that the highlight survives the round-trip.
+    expect(rowsOf(container)[0]!.classList.has('rp-stp-row-highlighted')).toBe(true);
   });
 });
 

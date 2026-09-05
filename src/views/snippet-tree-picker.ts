@@ -167,6 +167,17 @@ export class SnippetTreePicker {
     });
     this.highlightStatusEl = statusSpan;
 
+    // Vim-style navigation handoff: one keydown listener on the STABLE root
+    // element (never replaced until unmount — removeBody keeps the search wrap
+    // and re-renders only the body). It branches on whether focus currently
+    // sits in the search input: while it does, j/k must keep typing letters
+    // (Russian layout: the physical j/k keys type «о»/«к»); once focus moves
+    // onto the list (Tab), j/k/Enter navigate regardless of keyboard layout
+    // (matched by physical key via e.code).
+    this.addListener(root, 'keydown', (e) => {
+      this.handleListKeydown(e as KeyboardEvent);
+    });
+
     // Breadcrumb + list host container. Both drill and search views render into here.
     // We keep the search input fixed above so typing never blows away focus.
     await this.renderDrillView(root);
@@ -204,14 +215,18 @@ export class SnippetTreePicker {
   }
 
   private removeListenersExceptSearch(): void {
-    // Keep the search-input 'input' listener across re-renders; drop all others.
+    // Keep the search-input 'input'/'keydown' listeners AND the root-level
+    // vim-navigation keydown listener across re-renders; drop all others.
     const keep: TrackedListener[] = [];
     const drop: TrackedListener[] = [];
+    const root = this.rootEl();
     for (const entry of this.listeners) {
       if (
         entry.el === (this.searchInputEl as unknown as HTMLElement) &&
         (entry.type === 'input' || entry.type === 'keydown')
       ) {
+        keep.push(entry);
+      } else if (root !== null && entry.el === root && entry.type === 'keydown') {
         keep.push(entry);
       } else {
         drop.push(entry);
@@ -550,6 +565,68 @@ export class SnippetTreePicker {
       e.preventDefault();
       // Dispatch the row's registered click handler — same path as a mouse click
       // (file row → onSelect, folder row → drill).
+      this.highlightedRowEl.click();
+      return;
+    }
+
+    // Vim-style handoff: Tab moves focus from the search input onto the list
+    // (highlighting the first row if nothing is highlighted yet). Shift+Tab is
+    // left alone so the browser's reverse focus cycle still works.
+    if (e.key === 'Tab' && !e.shiftKey) {
+      const rows = this.currentRows();
+      if (rows.length === 0) return; // nothing to land on — keep default Tab
+      e.preventDefault();
+      if (this.highlightedIndex === -1 || this.highlightedRowEl === null) {
+        this.moveHighlight(rows, 1);
+      }
+      this.highlightedRowEl?.focus({ preventScroll: true });
+      return;
+    }
+  }
+
+  /**
+   * Vim-style list navigation (lives on the stable picker root; see mount()).
+   * Active only when focus is NOT in the search input — while it is, j/k must
+   * keep typing letters (on the Russian layout the physical j/k keys type
+   * «о»/«к»). j/k are matched by physical key (e.code 'KeyJ'/'KeyK') so they
+   * work identically on any keyboard layout.
+   */
+  private handleListKeydown(e: KeyboardEvent): void {
+    if (e.ctrlKey || e.metaKey || e.altKey) return;
+    // Focus inside the search input: this event is (or bubbles from) typing —
+    // let handleSearchKeydown semantics apply, do not navigate.
+    const target = e.target as HTMLElement | null;
+    if (target !== null && target === this.searchInputEl) return;
+
+    const rows = this.currentRows();
+
+    // Shift+Tab from the list returns focus to the search input.
+    if (e.key === 'Tab' && e.shiftKey) {
+      if (this.searchInputEl) {
+        e.preventDefault();
+        this.searchInputEl.focus({ preventScroll: true });
+      }
+      return;
+    }
+
+    if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+      if (rows.length === 0) return;
+      e.preventDefault();
+      this.moveHighlight(rows, e.key === 'ArrowDown' ? 1 : -1);
+      return;
+    }
+
+    if (e.code === 'KeyJ' || e.code === 'KeyK') {
+      if (rows.length === 0) return;
+      e.preventDefault();
+      this.moveHighlight(rows, e.code === 'KeyJ' ? 1 : -1);
+      return;
+    }
+
+    if (e.key === 'Enter') {
+      // No-op + no-throw when nothing is highlighted.
+      if (this.highlightedIndex === -1 || this.highlightedRowEl === null) return;
+      e.preventDefault();
       this.highlightedRowEl.click();
       return;
     }
