@@ -11,6 +11,8 @@ import { LibraryView, LIBRARY_VIEW_TYPE } from './views/library-view';
 import { LibraryExportModal } from './views/library-export-modal';
 import { RegistryClient } from './library/registry-client';
 import { LibraryService } from './library/library-service';
+import { LibrarySubmissionService } from './library/submission-service';
+import { requestUrlSubmitTransport } from './library/submission-client';
 import type { InstalledRecord } from './library/library-model';
 import { WriteMutex } from './utils/write-mutex';
 import { I18nService } from './i18n';
@@ -56,6 +58,8 @@ export default class RadiProtocolPlugin extends Plugin {
   registryClient!: RegistryClient;
   // Forward-declared in Phase 6 so LibraryView type-checks; initialized in Phase 9.
   libraryService!: LibraryService;
+  /** Stage D — submission orchestration (persist-before-POST, frozen retry). */
+  librarySubmissionService!: LibrarySubmissionService;
   private readonly insertMutex = new WriteMutex();
   private pickerModal: SuggestModal<ProtocolPickerSuggestion | ProtocolEditorPickerSuggestion> | null = null;
   // Phase 85 INLINE-MULTI-01: registry of open inline runners keyed by `${protocolPath}#${notePath}`.
@@ -107,6 +111,9 @@ export default class RadiProtocolPlugin extends Plugin {
       snippetFolderPath: normalizeProtocolFolderPath(this.settings.snippetFolderPath),
     };
     this.libraryService = new LibraryService(this.app, librarySettings, this.registryClient, { t: this.i18n.t.bind(this.i18n) });
+    // Stage D — submission orchestration: persist-before-POST receipt store +
+    // typed submit client. View-agnostic (outlives the submit modal).
+    this.librarySubmissionService = new LibrarySubmissionService(this.app, requestUrlSubmitTransport);
     // Recovery on load: finalize any in-flight installs (never throws — rolls back
     // journals without a commit marker, commits valid ones). Runs before views are
     // registered so no user action can race a recovering install.

@@ -40,9 +40,9 @@ describe('library-export-modal — wiring guard', () => {
   it('shows the derived id/version as a read-only summary line', () => {
     expect(modalSrc).toContain('exportSummaryIdentity');
   });
-  it('suggests +0.0.1 from remembered submissions in settings', () => {
-    expect(modalSrc).toContain('libraryLastSubmittedVersions');
-    expect(modalSrc).toContain('rememberSubmittedVersion');
+  it('suggests the next version from bindings and legacy submissions in settings', () => {
+    expect(modalSrc).toContain('librarySubmissionBindings');
+    expect(modalSrc).toContain('rememberSubmission');
   });
   it('defaults the export folder to the last used one', () => {
     expect(modalSrc).toContain('libraryLastExportFolder');

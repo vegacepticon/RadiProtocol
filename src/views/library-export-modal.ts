@@ -15,7 +15,7 @@ import { FolderSuggest } from './folder-suggest';
 import type { BuildResult } from '../library/library-service';
 import { DEFAULT_REGISTRY_URL } from '../library/registry-client';
 import { LibrarySubmitModal } from './library-submit-modal';
-import { derivePackageId, nextReleaseVersion } from '../library/package-metadata';
+import { derivePackageId, nextReleaseVersion, submissionBindingKey, stableIdSuffix, resolveSubmissionIdentity } from '../library/package-metadata';
 
 export type LibraryExportResult =
   | { exported: true; path: string }
@@ -28,6 +28,9 @@ export class LibraryExportModal extends Modal {
 
   private readonly plugin: RadiProtocolPlugin;
   private readonly protocolPath: string;
+  /** Stable local document identity for the submission binding (doc id, or a
+   *  path-based fallback for legacy docs without an id). */
+  private sourceDocumentId = '';
   private folderPath = '';
   private packageId = '';
   private releaseVersion = '';
@@ -51,19 +54,36 @@ export class LibraryExportModal extends Modal {
     modalEl.addClass('radi-library-export');
     this.titleEl.setText(t('library.exportTitle'));
 
-    // Auto-derived package identity. The author field stays optional; the id
-    // comes from the protocol title, the version from settings bookkeeping.
+    // Package identity (Stage D): a saved binding (registryKey + document id)
+    // wins over title-derived identity; new packages get a title slug PLUS a
+    // stable unique suffix, saved once at first confirmed submission. Path and
+    // title are hints, never identity (rename must not fork the package).
     let authorDisplayName = '';
+    let documentId = '';
+    let title = '';
     try {
       const docRaw = await this.app.vault.adapter.read(this.protocolPath);
-      const parsedDoc = JSON.parse(docRaw) as { title?: unknown };
-      const title = typeof parsedDoc.title === 'string' ? parsedDoc.title : '';
-      this.packageId = derivePackageId(title || this.protocolPath);
-    } catch {
-      this.packageId = derivePackageId(this.protocolPath);
+      const parsedDoc = JSON.parse(docRaw) as { title?: unknown; id?: unknown };
+      title = typeof parsedDoc.title === 'string' ? parsedDoc.title : '';
+      documentId = typeof parsedDoc.id === 'string' ? parsedDoc.id : '';
+    } catch { /* identity falls back to the path below */ }
+    this.sourceDocumentId = documentId !== '' ? documentId : `path:${this.protocolPath}`;
+    const registryKey = this.plugin.settings.libraryRegistryUrl?.trim() || DEFAULT_REGISTRY_URL;
+    const bindingKey = submissionBindingKey(registryKey, this.sourceDocumentId);
+    const binding = this.plugin.settings.librarySubmissionBindings?.[bindingKey];
+    if (binding !== undefined) {
+      this.packageId = binding.packageId;
+      this.releaseVersion = nextReleaseVersion(binding.lastAcceptedVersion);
+    } else {
+      const suffix = await stableIdSuffix(`${registryKey}|${this.sourceDocumentId}`);
+      const identity = resolveSubmissionIdentity({
+        titleSlug: title || this.protocolPath,
+        suffix,
+        legacyLastSubmitted: undefined,
+      });
+      this.packageId = identity.packageId;
+      this.releaseVersion = identity.suggestedVersion;
     }
-    const lastVersion = this.plugin.settings.libraryLastSubmittedVersions?.[this.packageId];
-    this.releaseVersion = nextReleaseVersion(lastVersion);
 
     // Identity summary (read-only — replaces the former id/version/filename inputs).
     const summary = contentEl.createDiv({ cls: 'radi-library-submit-summary' });
@@ -169,7 +189,10 @@ export class LibraryExportModal extends Modal {
     if (this.submitBtn !== undefined) this.submitBtn.disabled = false;
   }
 
-  /** Build the bundle fresh and open the submit modal (Variant B moderation flow). */
+  /** Build the bundle fresh and open the submit modal (Variant B moderation flow).
+   *  Stage D: the version bookkeeping moves AFTER a confirmed API result —
+   *  cancel/error must not shift the next suggested version (F06). The export
+   *  modal stays open behind the submit modal and applies the binding on ok. */
   private async handleSubmitToCommunity(authorDisplayName: string): Promise<void> {
     const t = this.plugin.i18n.t.bind(this.plugin.i18n);
     this.submitBtn.disabled = true;
@@ -179,11 +202,61 @@ export class LibraryExportModal extends Modal {
       this.submitBtn.disabled = false;
       return;
     }
-    this.rememberSubmittedVersion();
     // Empty override → the submit modal falls back to DEFAULT_REGISTRY_URL
     // (the bundled primary mirror) via its own normalizeRegistryUrl default.
     const registryBaseUrl = this.plugin.settings.libraryRegistryUrl?.trim() || DEFAULT_REGISTRY_URL;
-    new LibrarySubmitModal(this.app, this.plugin, build.bundle, { registryBaseUrl }).open();
+    const submitModal = new LibrarySubmitModal(this.app, this.plugin, build.bundle, {
+      registryBaseUrl,
+      sourceDocumentId: this.sourceDocumentId,
+      sourceProtocolPath: this.protocolPath,
+    });
+    submitModal.open();
+    void submitModal.result.then((result) => {
+      this.submitBtn.disabled = false;
+      if (result.submitted) this.rememberSubmission(result.prUrl);
+    });
+  }
+
+  /**
+   * Persist the binding `<registryKey|documentId> → packageId + accepted
+   * version` — ONLY after a confirmed ok result (plan D.8). This is the
+   * identity record: the next open of this document reuses the packageId and
+   * suggests the next patch version. The legacy libraryLastSubmittedVersions
+   * map is updated too (advisory for older flows/readers).
+   */
+  private rememberSubmission(prUrl: string): void {
+    void prUrl;
+    const registryKey = this.plugin.settings.libraryRegistryUrl?.trim() || DEFAULT_REGISTRY_URL;
+    const bindingKey = submissionBindingKey(registryKey, this.sourceDocumentId);
+    const bindings = this.plugin.settings.librarySubmissionBindings ?? {};
+    const existing = bindings[bindingKey];
+    // Never decrement: a superseded/older accepted attempt must not roll the
+    // suggested version backwards.
+    const lastAccepted = existing?.lastAcceptedVersion;
+    const nextIsNewer = lastAccepted === undefined || this.compareVersions(this.releaseVersion, lastAccepted) > 0;
+    if (nextIsNewer) {
+      bindings[bindingKey] = { packageId: this.packageId, lastAcceptedVersion: this.releaseVersion };
+      this.plugin.settings.librarySubmissionBindings = bindings;
+    }
+    const versions = this.plugin.settings.libraryLastSubmittedVersions ?? {};
+    versions[this.packageId] = this.releaseVersion;
+    this.plugin.settings.libraryLastSubmittedVersions = versions;
+    void this.plugin.saveSettings();
+  }
+
+  /** Compare dotted numeric versions; non-numeric segments compare lexically. */
+  private compareVersions(a: string, b: string): number {
+    const pa = a.split('.');
+    const pb = b.split('.');
+    for (let i = 0; i < Math.max(pa.length, pb.length); i++) {
+      const na = Number(pa[i] ?? 0);
+      const nb = Number(pb[i] ?? 0);
+      if (Number.isFinite(na) && Number.isFinite(nb) && na !== nb) return na - nb;
+      const sa = pa[i] ?? '';
+      const sb = pb[i] ?? '';
+      if (sa !== sb) return sa < sb ? -1 : 1;
+    }
+    return 0;
   }
 
   private async handleExport(): Promise<void> {
@@ -218,14 +291,6 @@ export class LibraryExportModal extends Modal {
       releaseVersion: this.releaseVersion,
       author: authorDisplayName.trim() === '' ? undefined : { displayName: authorDisplayName.trim() },
     });
-  }
-
-  /** Persist `<packageId>: <version>` so the next open suggests +0.0.1. */
-  private rememberSubmittedVersion(): void {
-    const versions = this.plugin.settings.libraryLastSubmittedVersions ?? {};
-    versions[this.packageId] = this.releaseVersion;
-    this.plugin.settings.libraryLastSubmittedVersions = versions;
-    void this.plugin.saveSettings();
   }
 }
 

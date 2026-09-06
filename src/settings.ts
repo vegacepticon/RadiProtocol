@@ -38,8 +38,16 @@ export interface RadiProtocolSettings {
    *  Non-https/invalid URLs are normalized to '' by the registry client. */
   libraryRegistryUrl?: string;
   /** Library submission bookkeeping: last submitted release version per packageId,
-   *  so the export modal can auto-suggest the next version (+0.0.1). */
+   *  so the export modal can auto-suggest the next version (+0.0.1). Legacy
+   *  advisory field (Stage D): kept for backward compat, superseded by
+   *  librarySubmissionBindings as the identity/version source of truth. */
   libraryLastSubmittedVersions?: Record<string, string>;
+  /** Stage D — persistent submission identity: binding key
+   *  `<registryKey>|<protocolDoc.id>` → { packageId, lastAcceptedVersion? }.
+   *  Path is a hint, NOT identity: renaming a protocol file must not create a
+   *  new package, and a title change must not re-derive the packageId. Written
+   *  only after a confirmed API result (cancel/error never bumps the version). */
+  librarySubmissionBindings?: Record<string, { packageId: string; lastAcceptedVersion?: string }>;
   /** Last vault folder used for a local package export (empty = never exported). */
   libraryLastExportFolder?: string;
 }
@@ -54,6 +62,7 @@ export const DEFAULT_SETTINGS: RadiProtocolSettings = {
   locale: 'en',
   libraryRegistryUrl: '',
   libraryLastSubmittedVersions: {},
+  librarySubmissionBindings: {},
   libraryLastExportFolder: '',
 };
 
