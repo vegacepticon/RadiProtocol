@@ -435,3 +435,59 @@
   display: flex;
   gap: var(--size-4-2);
 }
+
+/* «Мои заявки» rows (Stage E) — mirrors the installed row visual language. */
+.radi-library-submission {
+  display: flex;
+  flex-direction: column;
+  gap: var(--size-2-1); /* 4px */
+  padding: var(--size-4-1) var(--size-4-2);
+  border: 1px solid var(--background-modifier-border);
+  border-radius: var(--radius-s);
+  background: var(--background-primary);
+}
+
+.radi-library-submission-title {
+  font-weight: var(--font-semibold);
+}
+
+.radi-library-submission-meta {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  gap: var(--size-4-1); /* 8px */
+  font-size: var(--font-smaller);
+  color: var(--text-muted);
+}
+
+.radi-library-submission-error {
+  color: var(--text-error);
+  font-size: var(--font-smaller);
+}
+
+.radi-library-submission-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--size-4-1); /* 8px */
+}
+
+.radi-library-submission-actions button {
+  font-size: var(--font-smaller);
+}
+
+/* Success screen (Stage E) — no auto-close; explicit acknowledgement. */
+.radi-library-submit-success-title {
+  font-weight: var(--font-semibold);
+  margin-bottom: var(--size-4-1);
+}
+
+.radi-library-submit-success-text {
+  margin-bottom: var(--size-4-1);
+}
+
+.radi-library-submit-success-request {
+  margin-bottom: var(--size-4-2);
+  color: var(--text-muted);
+  font-size: var(--font-smaller);
+  user-select: all; /* the requestId is the reconciliation handle — copyable */
+}

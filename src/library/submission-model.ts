@@ -12,13 +12,19 @@ export const SUBMISSION_RECORD_SCHEMA = 'radiprotocol.submission-record' as cons
 /** Current submission record schema version. */
 export const SUBMISSION_RECORD_VERSION = 1 as const;
 
-/** Local transport lifecycle states (§6.3) — separate from review states. */
+/** Local transport lifecycle states (§6.3) — transport facts, kept separate
+ *  from review states. Once a PR exists the record ALSO carries review states
+ *  ('pending' doubles as "open PR"; rejected/approved_pending_publish/
+ *  published are reconciled from the registry's status route). */
 export type SubmissionTransportState =
   | 'draft'
   | 'sending'
   | 'outcome_unknown'
   | 'pending'
-  | 'failed';
+  | 'failed'
+  | 'rejected'
+  | 'approved_pending_publish'
+  | 'published';
 
 /**
  * Typed backend error codes (Stage B contract). The client maps unknown codes
@@ -131,7 +137,8 @@ export function isSubmissionRecord(value: unknown): value is SubmissionRecord {
 
 function isTransportState(value: unknown): value is SubmissionTransportState {
   return value === 'draft' || value === 'sending' || value === 'outcome_unknown'
-    || value === 'pending' || value === 'failed';
+    || value === 'pending' || value === 'failed'
+    || value === 'rejected' || value === 'approved_pending_publish' || value === 'published';
 }
 
 function isSubmissionPayload(value: unknown): value is SubmissionPayload {

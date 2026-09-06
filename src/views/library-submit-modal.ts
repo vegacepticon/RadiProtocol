@@ -195,6 +195,30 @@ export class LibrarySubmitModal extends Modal {
     return this.plugin.librarySubmissionService;
   }
 
+  /** Stage E success screen: «Заявка отправлена на проверку» + PR number +
+   *  explicit actions (open PR, My submissions). NO auto-close — the modal
+   *  stays until the user dismisses it (plan §7 Этап E). */
+  private renderSuccess(requestId: string, prUrl: string): void {
+    const t = this.plugin.i18n.t.bind(this.plugin.i18n);
+    this.contentEl.empty();
+    this.contentEl.createDiv({ cls: 'radi-library-submit-success-title', text: t('library.submitSuccessTitle') });
+    this.contentEl.createDiv({
+      cls: 'radi-library-submit-success-text',
+      text: t('library.submitSuccessBody', { packageId: this.bundle.manifest.packageId }),
+    });
+    const requestIdRow = this.contentEl.createDiv({ cls: 'radi-library-submit-success-request' });
+    requestIdRow.setText(t('library.submitSuccessRequest', { requestId }));
+    const actions = this.contentEl.createDiv({ cls: 'radi-library-submit-actions' });
+    if (prUrl !== '') {
+      const prBtn = actions.createEl('button', { cls: 'radi-library-detail-install' });
+      prBtn.setText(t('library.submissionOpenPr'));
+      prBtn.addEventListener('click', () => { window.open(prUrl, '_blank'); });
+    }
+    const doneBtn = actions.createEl('button', { cls: 'radi-library-detail-cancel mod-cta' });
+    doneBtn.setText(t('library.submitSuccessDone'));
+    doneBtn.addEventListener('click', () => { this.safeResolve({ submitted: true, requestId, prUrl, reused: false }); this.close(); });
+  }
+
   private async handleSubmit(): Promise<void> {
     const t = this.plugin.i18n.t.bind(this.plugin.i18n);
     if (this.inFlight || !this.canSubmit()) return;
@@ -234,9 +258,10 @@ export class LibrarySubmitModal extends Modal {
     this.inFlight = false;
     if (outcome.status === 'ok') {
       new Notice(t('library.submittedNotice'));
-      this.statusEl.setText(t('library.submitSuccessPr', { prUrl: outcome.record.receipt?.prUrl ?? '' }));
+      // Stage E: success screen WITHOUT auto-close (plan §7 Этап E). The user
+      // explicitly acknowledges; closing resolves the promise as submitted.
+      this.renderSuccess(outcome.record.requestId, outcome.record.receipt?.prUrl ?? '');
       this.safeResolve({ submitted: true, requestId: outcome.record.requestId, prUrl: outcome.record.receipt?.prUrl ?? '', reused: outcome.record.receipt?.reused ?? false });
-      this.close();
       return;
     }
     if (outcome.status === 'persist-failed' || outcome.status === 'invalid-input') {

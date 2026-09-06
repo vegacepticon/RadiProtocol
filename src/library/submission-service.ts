@@ -7,11 +7,13 @@
 import type { App } from 'obsidian';
 import type { ReleaseBundle } from './library-model';
 import {
-  generateRequestId, requestDigest, canonicalPayloadJson,
+  generateRequestId, requestDigest,
+  isRequestUuid,
   type SubmissionPayload, type SubmissionMeta, type SubmissionRecord,
+  type SubmissionTransportState,
 } from './submission-model';
 import { SubmissionStore } from './submission-store';
-import { SubmissionClient, type SubmitHttpTransport, type SubmitClientResult } from './submission-client';
+import { SubmissionClient, type SubmitHttpTransport, type StatusHttpTransport, type SubmitClientResult, type SubmissionStatusResult } from './submission-client';
 
 /** Everything needed to freeze one attempt. */
 export interface NewSubmissionInput {
@@ -33,10 +35,10 @@ export class LibrarySubmissionService {
   private readonly app: App;
   private readonly store: SubmissionStore;
   private readonly client: SubmissionClient;
-  constructor(app: App, transport: SubmitHttpTransport) {
+  constructor(app: App, transport: SubmitHttpTransport, statusTransport?: StatusHttpTransport) {
     this.app = app;
     this.store = new SubmissionStore(app);
-    this.client = new SubmissionClient(transport);
+    this.client = new SubmissionClient(transport, statusTransport);
   }
 
   /** Direct store access for the Stage E UI; not used by the modal in D. */
@@ -97,6 +99,11 @@ export class LibrarySubmissionService {
     if (record === null) return { status: 'invalid-input', reason: `unknown submission attempt: ${requestId}` };
     if (record.state === 'sending') return { status: 'invalid-input', reason: 'attempt is currently in flight' };
     if (record.state === 'pending') return { status: 'invalid-input', reason: 'attempt already has a PR — reconcile instead of retrying' };
+    // Terminal review states: the moderation decision is final — a changed
+    // protocol needs a NEW attempt (§6.4), never a re-POST of the old one.
+    if (record.state === 'rejected' || record.state === 'approved_pending_publish' || record.state === 'published') {
+      return { status: 'invalid-input', reason: `attempt is already ${record.state} — start a new submission instead` };
+    }
     // Verify the frozen payload still matches the recorded digest before sending.
     const digest = await requestDigest(record.payload);
     if (digest !== record.digest) {
@@ -160,4 +167,100 @@ export class LibrarySubmissionService {
       return `failed to persist submission record: ${reason}`;
     }
   }
+
+  /**
+   * Reconcile one attempt against the registry's status route (Stage E, §6.3).
+   * Resolves outcome_unknown (lost response) and refreshes pending attempts.
+   * Read-only: this NEVER re-POSTs. Returns the updated record plus what
+   * changed, so the UI can show a meaningful result without guessing.
+   */
+  async reconcile(requestId: string): Promise<ReconcileResult> {
+    if (!isRequestUuid(requestId)) return { status: 'invalid-input', reason: 'invalid request id' };
+    const record = await this.store.read(requestId);
+    if (record === null) return { status: 'invalid-input', reason: `unknown submission attempt: ${requestId}` };
+    if (record.state === 'sending') return { status: 'in-flight' };
+    const before: SubmissionTransportState = record.state;
+    const remote: SubmissionStatusResult = await this.client.fetchStatus(record.registryKey, requestId);
+    if (remote.status === 'failed') {
+      // Status check itself failed — keep the record as-is, surface the error.
+      // Never downgrade a pending attempt to failed because a READ failed.
+      return { status: 'check-failed', record, code: remote.code ?? 'unknown_error', message: remote.message ?? 'status check failed' };
+    }
+    record.updatedAt = new Date().toISOString();
+    switch (remote.remote) {
+      case 'pending':
+        // Open PR — the attempt definitely exists and is under review.
+        record.state = 'pending';
+        if (record.receipt === null && remote.prUrl !== undefined) {
+          record.receipt = {
+            prUrl: remote.prUrl,
+            prNumber: remote.prNumber ?? null,
+            branch: `submit/${requestId}`,
+            reused: true,
+            degraded: remote.degraded === true,
+            receivedAt: record.updatedAt,
+          };
+        }
+        break;
+      case 'no_pr':
+        // Branch+commit exist, no PR: a retry of the FROZEN payload reconciles
+        // by creating the PR from the existing branch (backend recovery path).
+        record.state = 'outcome_unknown';
+        break;
+      case 'unverifiable':
+        // Branch facts verified but PR lookup degraded — keep current state,
+        // mark the timestamp so the UI shows staleness instead of a guess.
+        break;
+      case 'closed':
+        // PR closed unmerged: rejected OR superseded — the route cannot
+        // distinguish, so the record shows 'rejected' with the raw facts in
+        // lastError-style fields; a moderator note is the only way to upgrade
+        // this to superseded (plan §6.3). Only an actual PR state change moves
+        // a pending record; outcome_unknown becomes resolved-failed.
+        record.state = 'rejected';
+        break;
+      case 'merged':
+        // Merged → approved_pending_publish; published:true upgrades to
+        // 'published' after the backend confirmed the release blob on HEAD.
+        record.state = remote.published === true ? 'published' : 'approved_pending_publish';
+        break;
+      case 'not_found':
+        // The registry has NOTHING under this requestId. For outcome_unknown
+        // attempts this means the request never landed (persist-before-POST
+        // guarantees it was created locally, so it is safe to retry as the
+        // same frozen attempt). A pending attempt contradicting to not_found
+        // is suspicious — leave it pending, surface the anomaly.
+        if (before === 'outcome_unknown' || before === 'failed' || before === 'draft') {
+          record.state = 'failed';
+          record.lastError = {
+            code: 'network_error',
+            message: 'the registry has no record of this submission — safe to retry',
+            httpStatus: null,
+            occurredAt: record.updatedAt,
+          };
+        }
+        break;
+      default:
+        break;
+    }
+    const persistErr = await this.persist(record);
+    if (persistErr !== null) return { status: 'persist-failed', reason: persistErr };
+    return { status: 'ok', record, before, changed: record.state !== before, remote };
+  }
 }
+
+/** Review states a reconciled attempt can land in (§6.3 mapping). 'unavailable'
+ *  is intentionally NOT here — it is a check-failure signal, not a decision. */
+export type SubmissionReviewState =
+  | 'pending'
+  | 'rejected'
+  | 'approved_pending_publish'
+  | 'published'
+  | 'superseded';
+
+export type ReconcileResult =
+  | { status: 'ok'; record: SubmissionRecord; before: SubmissionTransportState; changed: boolean; remote: SubmissionStatusResult }
+  | { status: 'check-failed'; record: SubmissionRecord; code: string; message: string }
+  | { status: 'in-flight' }
+  | { status: 'invalid-input'; reason: string }
+  | { status: 'persist-failed'; reason: string };

@@ -40,6 +40,8 @@ import type RadiProtocolPlugin from '../main';
 import { isLibraryManagedPath } from '../library/library-paths';
 import type { CatalogEntry, InstalledRecord } from '../library/library-model';
 import type { CatalogListResult } from '../library/library-service';
+import type { SubmissionRecord } from '../library/submission-model';
+import type { ReconcileResult } from '../library/submission-service';
 import { LibraryItemDetailModal } from './library-item-detail-modal';
 import { LibraryImportModal } from './library-import-modal';
 import { LibraryInstallProgressModal } from './library-install-progress-modal';
@@ -55,9 +57,16 @@ export const LIBRARY_VIEW_TYPE = 'radiprotocol-library';
  *  churns before the marker lands. */
 const LIBRARY_INSTALLED_DIR = '.radiprotocol/library/installed';
 
+/** Submissions dir watched for new/removed submission receipts (mirrors
+ *  SUBMISSIONS_DIR in src/library/submission-store.ts). Writing a receipt is
+ *  the "submission attempt recorded" signal that warrants a refresh. */
+const LIBRARY_SUBMISSIONS_DIR = '.radiprotocol/library/submissions';
+
 interface LibraryViewModel {
   catalog: CatalogListResult;
   installed: InstalledRecord[];
+  /** Local submission attempts («Мои заявки»), newest first. */
+  submissions: SubmissionRecord[];
 }
 
 export class LibraryView extends ItemView {
@@ -80,6 +89,7 @@ export class LibraryView extends ItemView {
   private bannerEl!: HTMLElement;
   private catalogListEl!: HTMLElement;
   private installedListEl!: HTMLElement;
+  private submissionsListEl!: HTMLElement;
   private filterSelect!: HTMLSelectElement;
 
   constructor(leaf: WorkspaceLeaf, plugin: RadiProtocolPlugin) {
@@ -161,6 +171,14 @@ export class LibraryView extends ItemView {
     this.installedListEl.setAttr('role', 'list');
     this.installedListEl.setAttr('aria-label', t('library.installedSection'));
 
+    // «Мои заявки» section (Stage E): local submission attempts for this vault.
+    // NOT account sync — only what this vault has sent (plan §7 Этап E).
+    const submissionsSection = contentEl.createDiv({ cls: 'radi-library-section' });
+    submissionsSection.createEl('h3', { text: t('library.submissionsSection') });
+    this.submissionsListEl = submissionsSection.createDiv({ cls: 'radi-library-list' });
+    this.submissionsListEl.setAttr('role', 'list');
+    this.submissionsListEl.setAttr('aria-label', t('library.submissionsSection'));
+
     // Initial loading state.
     this.renderLoading();
 
@@ -207,7 +225,9 @@ export class LibraryView extends ItemView {
       isLibraryManagedPath(filePath, protocolRoot) ||
       isLibraryManagedPath(filePath, snippetRoot) ||
       filePath === LIBRARY_INSTALLED_DIR ||
-      filePath.startsWith(LIBRARY_INSTALLED_DIR + '/')
+      filePath.startsWith(LIBRARY_INSTALLED_DIR + '/') ||
+      filePath === LIBRARY_SUBMISSIONS_DIR ||
+      filePath.startsWith(LIBRARY_SUBMISSIONS_DIR + '/')
     );
   }
 
@@ -233,7 +253,9 @@ export class LibraryView extends ItemView {
       if (!this.owns(generation)) return false;
       const installed = await this.plugin.libraryService.listInstalled();
       if (!this.owns(generation)) return false;
-      this.model = { catalog, installed };
+      const submissions = await this.plugin.librarySubmissionService.records.list();
+      if (!this.owns(generation)) return false;
+      this.model = { catalog, installed, submissions };
       this.renderModel();
       return true;
     } catch (e) {
@@ -258,6 +280,8 @@ export class LibraryView extends ItemView {
     this.catalogListEl.createEl('p', { cls: 'radi-library-empty', text: t('library.loading') });
     this.installedListEl.empty();
     this.installedListEl.createEl('p', { cls: 'radi-library-empty', text: t('library.loading') });
+    this.submissionsListEl.empty();
+    this.submissionsListEl.createEl('p', { cls: 'radi-library-empty', text: t('library.loading') });
   }
 
   private renderModel(): void {
@@ -267,6 +291,7 @@ export class LibraryView extends ItemView {
     this.renderBanner(model.catalog);
     this.renderCatalog(this.applyLocalFilter(model.catalog.entries));
     this.renderInstalled(model.installed);
+    this.renderSubmissions(model.submissions);
   }
 
   /** Rebuild the category filter options from the UNFILTERED loaded entries,
@@ -426,6 +451,116 @@ export class LibraryView extends ItemView {
     uninstallBtn.addEventListener('click', () => { void this.handleUninstall(record); });
   }
 
+  /** «Мои заявки»: local submission attempts, newest first (store already
+   *  sorts by createdAt desc). Refresh + retry/reconcile per §7 Этап E. */
+  private renderSubmissions(records: SubmissionRecord[]): void {
+    const t = this.plugin.i18n.t.bind(this.plugin.i18n);
+    this.submissionsListEl.empty();
+    if (records.length === 0) {
+      this.submissionsListEl.createEl('p', { cls: 'radi-library-empty', text: t('library.submissionsEmpty') });
+      return;
+    }
+    for (const record of records) {
+      this.renderSubmissionRecord(record);
+    }
+  }
+
+  private renderSubmissionRecord(record: SubmissionRecord): void {
+    const t = this.plugin.i18n.t.bind(this.plugin.i18n);
+    const row = this.submissionsListEl.createDiv({ cls: 'radi-library-submission', attr: { role: 'listitem' } });
+    row.setAttr('aria-label', t('library.submissionEntryAria', { packageId: record.packageId, version: record.releaseVersion }));
+
+    const titleEl = row.createDiv({ cls: 'radi-library-submission-title' });
+    titleEl.setText(record.payload.meta.title || record.packageId); // user-authored content — never t()
+
+    const metaEl = row.createDiv({ cls: 'radi-library-submission-meta' });
+    metaEl.createEl('span', { cls: 'radi-library-submission-version', text: `${t('library.versionLabel')}: ${record.releaseVersion}` });
+    metaEl.createEl('span', { cls: 'radi-library-submission-state', text: t(submissionStateLabelKey(record.state)) });
+    metaEl.createEl('span', { cls: 'radi-library-submission-date', text: `${t('library.updatedLabel')}: ${formatDate(record.updatedAt)}` });
+
+    // Last error, when present (safe service-produced text, no raw dumps).
+    if (record.lastError !== null) {
+      row.createDiv({ cls: 'radi-library-submission-error', text: record.lastError.message });
+    }
+
+    const actionsEl = row.createDiv({ cls: 'radi-library-submission-actions' });
+
+    // PR link (https-validated at receipt time by the client).
+    if (record.receipt !== null) {
+      const prBtn = actionsEl.createEl('button', { cls: 'radi-library-submission-pr' });
+      prBtn.setText(t('library.submissionOpenPr'));
+      prBtn.addEventListener('click', () => { window.open(record.receipt!.prUrl, '_blank'); });
+    }
+
+    // Reconcile / check status — for anything not terminal and not in-flight.
+    if (record.state !== 'sending' && record.state !== 'published') {
+      const checkBtn = actionsEl.createEl('button', { cls: 'radi-library-submission-check' });
+      checkBtn.setText(t('library.submissionCheckStatus'));
+      checkBtn.addEventListener('click', () => { void this.handleReconcile(record.requestId); });
+    }
+
+    // Retry — only for attempts that never produced a PR (draft/failed/
+    // outcome_unknown). The service rejects invalid retries by contract.
+    if (record.state === 'failed' || record.state === 'outcome_unknown' || record.state === 'draft') {
+      const retryBtn = actionsEl.createEl('button', { cls: 'radi-library-submission-retry' });
+      retryBtn.setText(t('library.submissionRetry'));
+      retryBtn.addEventListener('click', () => { void this.handleRetry(record.requestId); });
+    }
+
+    // Explicit local retention action (plan §7 Этап E: удаление — явное действие).
+    const deleteBtn = actionsEl.createEl('button', {
+      cls: 'radi-library-submission-delete',
+      attr: { 'aria-label': t('library.submissionDelete') },
+    });
+    deleteBtn.setText(t('library.submissionDelete'));
+    deleteBtn.addEventListener('click', () => { void this.handleDeleteSubmission(record.requestId); });
+  }
+
+  /** Reconcile one attempt against the registry (read-only) and refresh. */
+  private async handleReconcile(requestId: string): Promise<void> {
+    const t = this.plugin.i18n.t.bind(this.plugin.i18n);
+    const result: ReconcileResult = await this.plugin.librarySubmissionService.reconcile(requestId);
+    if (result.status === 'ok' && result.changed) {
+      new Notice(t('library.submissionStatusChanged'));
+    } else if (result.status === 'check-failed') {
+      new Notice(t('library.submissionCheckFailed', { reason: result.message }));
+    } else if (result.status === 'invalid-input' || result.status === 'persist-failed') {
+      new Notice(t('library.submissionCheckFailed', { reason: result.reason }));
+    }
+    await this.refresh();
+  }
+
+  /** Retry a frozen attempt with the SAME payload + requestId (§6.2.2). */
+  private async handleRetry(requestId: string): Promise<void> {
+    const t = this.plugin.i18n.t.bind(this.plugin.i18n);
+    const result = await this.plugin.librarySubmissionService.retry(requestId);
+    if (result.status === 'ok') {
+      new Notice(t('library.submittedNotice'));
+    } else if (result.status === 'failed') {
+      new Notice(t('library.submitError', { reason: result.message }));
+    } else {
+      new Notice(t('library.submitError', { reason: result.reason }));
+    }
+    await this.refresh();
+  }
+
+  /** Explicit local deletion of a submission record (retention action). */
+  private async handleDeleteSubmission(requestId: string): Promise<void> {
+    const t = this.plugin.i18n.t.bind(this.plugin.i18n);
+    const modal = new ConfirmModal(this.app, {
+      title: t('library.submissionDeleteTitle'),
+      body: t('library.submissionDeleteBody'),
+      confirmLabel: t('library.submissionDelete'),
+      cancelLabel: t('library.cancel'),
+      destructive: true,
+    });
+    modal.open();
+    const result = await modal.result;
+    if (result !== 'confirm') return;
+    await this.plugin.librarySubmissionService.records.delete(requestId);
+    await this.refresh();
+  }
+
   private async openDetail(entry: CatalogEntry): Promise<void> {
     const modal = new LibraryItemDetailModal(this.app, this.plugin, entry);
     modal.open();
@@ -490,5 +625,19 @@ function formatDate(iso: string): string {
     return d.toLocaleDateString();
   } catch {
     return iso;
+  }
+}
+
+/** i18n key for a submission transport/review state badge. */
+function submissionStateLabelKey(state: SubmissionRecord['state']): string {
+  switch (state) {
+    case 'draft': return 'library.submissionStateDraft';
+    case 'sending': return 'library.submissionStateSending';
+    case 'outcome_unknown': return 'library.submissionStateUnknown';
+    case 'pending': return 'library.submissionStatePending';
+    case 'failed': return 'library.submissionStateFailed';
+    case 'rejected': return 'library.submissionStateRejected';
+    case 'approved_pending_publish': return 'library.submissionStateApproved';
+    case 'published': return 'library.submissionStatePublished';
   }
 }

@@ -60,11 +60,11 @@ describe('library-submit-modal — wiring guard (Stage D)', () => {
     expect(submitSrc).not.toContain(".split(',')");
   });
 
-  it('en/ru submit key parity (24 keys: 15 legacy + 9 Stage D)', () => {
+  it('en/ru submit key parity (28 keys: 15 legacy + 9 Stage D + 4 Stage E success screen)', () => {
     const en = JSON.parse(enSrc).library as Record<string, string>;
     const ru = JSON.parse(ruSrc).library as Record<string, string>;
     const keys = Object.keys(en).filter((k) => k.startsWith('submit'));
-    expect(keys.length).toBe(24);
+    expect(keys.length).toBe(28);
     for (const k of keys) {
       expect(typeof ru[k]).toBe('string');
       expect(ru[k]!.length).toBeGreaterThan(0);

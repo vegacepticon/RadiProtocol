@@ -6,6 +6,7 @@
 // SubmissionErrorCode. Transport errors and non-JSON bodies are failures with
 // safe messages — never raw dumps.
 import type { SubmissionPayload, SubmissionErrorCode } from './submission-model';
+import { isRequestUuid } from './submission-model';
 import { requestUrl } from 'obsidian';
 
 /** Production transport over Obsidian's requestUrl. STATIC import (NOT
@@ -26,6 +27,18 @@ export type SubmitHttpTransport = (
   body: string,
 ) => Promise<{ status: number; bodyText: string }>;
 
+/** Read-only transport seam for GET status checks (Stage E). Separate from the
+ *  POST transport: different method, no body, distinct failure domain — a
+ *  status outage must never be entangled with submission mutations. */
+export type StatusHttpTransport = (url: string) => Promise<{ status: number; bodyText: string }>;
+
+/** Production status transport over Obsidian's requestUrl. STATIC import (same
+ *  esbuild constraint as requestUrlSubmitTransport). */
+export const requestUrlStatusTransport: StatusHttpTransport = async (url) => {
+  const res = await requestUrl({ url, method: 'GET' });
+  return { status: res.status, bodyText: res.text };
+};
+
 /** One typed submit attempt outcome. */
 export type SubmitClientResult =
   | { ok: true; requestId: string; prUrl: string; prNumber: number | null; branch: string | null; reused: boolean; degraded: boolean }
@@ -40,9 +53,40 @@ const KNOWN_ERROR_CODES = new Set<string>([
   'SUBMISSION_STATE_UNKNOWN',
 ]);
 
+/** Raw moderation facts returned by GET /api/submissions/:requestId (Stage E).
+ *  The route reports GitHub facts only; the SERVICE maps them onto review
+ *  states (closed-vs-superseded needs a moderator decision, plan §6.3). */
+export type SubmissionRemoteStatus =
+  | 'pending'      // open PR
+  | 'closed'       // PR closed, unmerged (rejected OR superseded — not distinguishable remotely)
+  | 'merged'       // PR merged (approved_pending_publish; published flag adds the rest)
+  | 'no_pr'        // branch+commit exist, no PR (crash between ref and PR)
+  | 'not_found'    // branch absent — nothing was ever sent under this requestId
+  | 'unverifiable';// branch facts verified but PR lookup failed (degraded:true)
+
+export interface SubmissionStatusResult {
+  status: 'ok' | 'failed';
+  remote?: SubmissionRemoteStatus;
+  prUrl?: string;
+  prNumber?: number;
+  prState?: 'open' | 'closed';
+  merged?: boolean;
+  published?: boolean;
+  /** PR lookup failed upstream — facts are partial (§6.3: не маскировать). */
+  degraded?: boolean;
+  /** Failure path only: typed code + safe message + HTTP status. */
+  code?: SubmissionErrorCode;
+  message?: string;
+  httpStatus?: number | null;
+}
+
 export class SubmissionClient {
   private readonly transport: SubmitHttpTransport;
-  constructor(transport: SubmitHttpTransport) { this.transport = transport; }
+  private readonly statusTransport: StatusHttpTransport;
+  constructor(transport: SubmitHttpTransport, statusTransport: StatusHttpTransport = requestUrlStatusTransport) {
+    this.transport = transport;
+    this.statusTransport = statusTransport;
+  }
 
   /**
    * POST the frozen payload to `<registryKey>/api/submit`. Never throws.
@@ -65,6 +109,71 @@ export class SubmissionClient {
     }
     return parseSubmitResponse(res);
   }
+
+  /**
+   * GET the moderation status for one requestId (Stage E reconcile). Read-only
+   * on both ends. Never throws; failures carry typed codes. A GitHub-side
+   * failure (403/429/5xx on the route) surfaces as 'server_error'/'rate_limited'
+   * — it is NEVER mapped to a confident not-found (§6.3).
+   */
+  async fetchStatus(registryBaseUrl: string, requestId: string): Promise<SubmissionStatusResult> {
+    if (!isRequestUuid(requestId)) {
+      return { status: 'failed', code: 'unknown_error', message: 'invalid request id', httpStatus: null };
+    }
+    const base = normalizeSubmitBase(registryBaseUrl);
+    if (base === '') {
+      return { status: 'failed', code: 'server_error', message: 'no registry endpoint configured', httpStatus: null };
+    }
+    let res: { status: number; bodyText: string };
+    try {
+      res = await this.statusTransport(`${base}/api/submissions/${encodeURIComponent(requestId)}`);
+    } catch (e) {
+      return { status: 'failed', code: 'network_error', message: safeMessage(e), httpStatus: null };
+    }
+    return parseStatusResponse(res);
+  }
+}
+
+/** Parse a GET /api/submissions/:requestId response. Exported for tests. */
+export function parseStatusResponse(res: { status: number; bodyText: string }): SubmissionStatusResult {
+  let parsed: Record<string, unknown> = {};
+  const trimmed = res.bodyText.trim();
+  if (trimmed !== '') {
+    try { parsed = JSON.parse(trimmed) as Record<string, unknown>; } catch { /* non-JSON body below */ }
+  }
+  if (res.status === 200 && parsed['ok'] === true) {
+    const remote = parsed['status'];
+    if (typeof remote !== 'string' || !isRemoteStatus(remote)) {
+      return { status: 'failed', code: 'unknown_error', message: 'status response has unexpected shape', httpStatus: res.status };
+    }
+    return {
+      status: 'ok',
+      remote,
+      prUrl: typeof parsed['prUrl'] === 'string' ? parsed['prUrl'] : undefined,
+      prNumber: typeof parsed['prNumber'] === 'number' ? parsed['prNumber'] : undefined,
+      prState: parsed['prState'] === 'open' || parsed['prState'] === 'closed' ? parsed['prState'] : undefined,
+      merged: parsed['merged'] === true,
+      published: parsed['published'] === true,
+      degraded: parsed['degraded'] === true,
+    };
+  }
+  if (res.status === 404) {
+    // The route returns a genuine 404 only for an absent branch (nothing was
+    // ever sent under this requestId on this registry).
+    return { status: 'ok', remote: 'not_found', published: false };
+  }
+  // Failure mapping — same discipline as the POST path: typed codes, no
+  // guessing, GitHub-side errors stay server/rate-limit failures.
+  if (res.status === 429) return { status: 'failed', code: 'rate_limited', message: describeRateLimit(parsed), httpStatus: res.status };
+  if (res.status >= 500 && res.status < 600) return { status: 'failed', code: 'server_error', message: `status check failed: HTTP ${res.status}`, httpStatus: res.status };
+  if (res.status === 400) return { status: 'failed', code: 'unknown_error', message: 'status check rejected the request id', httpStatus: res.status };
+  if (res.status === 409) return { status: 'failed', code: 'REQUEST_ID_DIGEST_MISMATCH', message: describeKnownCode('REQUEST_ID_DIGEST_MISMATCH'), httpStatus: res.status };
+  return { status: 'failed', code: 'unknown_error', message: `unexpected status response: HTTP ${res.status}`, httpStatus: res.status };
+}
+
+function isRemoteStatus(value: string): value is NonNullable<SubmissionStatusResult['remote']> {
+  return value === 'pending' || value === 'closed' || value === 'merged'
+    || value === 'no_pr' || value === 'not_found' || value === 'unverifiable';
 }
 
 /** Parse a transport response into a typed outcome. Exported for tests. */

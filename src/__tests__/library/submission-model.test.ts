@@ -103,7 +103,10 @@ describe('submission-model', () => {
       expect(isSubmissionRecord({ ...makeRecord(), digest: '' })).toBe(false);
     });
     it('rejects unknown transport states', () => {
-      expect(isSubmissionRecord({ ...makeRecord(), state: 'published' })).toBe(false);
+      // 'published' became a VALID state in Stage E (§6.3 review mapping);
+      // 'superseded' is deliberately absent from v1 records (not yet produced).
+      expect(isSubmissionRecord({ ...makeRecord(), state: 'published' })).toBe(true);
+      expect(isSubmissionRecord({ ...makeRecord(), state: 'superseded' })).toBe(false);
       expect(isSubmissionRecord({ ...makeRecord(), state: 'weird' })).toBe(false);
     });
     it('rejects payload with consent flags not exactly true', () => {
