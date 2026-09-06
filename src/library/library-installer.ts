@@ -55,13 +55,19 @@ export type UninstallResult =
   | { status: 'not-installed'; packageId: string; releaseVersion: string }
   | { status: 'failed'; packageId: string; releaseVersion: string; reason: string };
 
-/** Result of recovery-on-load. */
+/** Result of recovery-on-load. The `*Failed` fields (A0) are additive — older
+ *  consumers reading only committed/rolledBack/orphansCleaned keep working. */
 export interface RecoveryReport {
   committed: Array<{ packageId: string; releaseVersion: string }>;
   rolledBack: Array<{ packageId: string; releaseVersion: string }>;
   /** Namespace folders cleaned by the FR-4 destination-folder orphan scan
    *  (journal-less interrupt leftovers with no valid marker). */
   orphansCleaned: Array<{ namespace: string }>;
+  /** A0: journals whose rollback did NOT fully succeed (deletion failure or
+   *  a suspicious/forged shape) — the journal file is preserved for inspection. */
+  rollbackFailed?: Array<{ packageId: string; releaseVersion: string; reason: string }>;
+  /** A0: orphan namespaces whose cleanup did not complete (deletion failure). */
+  orphanCleanupFailed?: Array<{ namespace: string; reason: string }>;
 }
 
 /** Result of the one-time slug→slug+hash migration (FR-2). Never throws. */
@@ -74,6 +80,16 @@ export interface MigrationReport {
 export interface LibraryInstallerSettings {
   protocolFolderPath: string;
   snippetFolderPath: string;
+}
+
+/** A0: canonical expected paths for a release, derived independently from the
+ *  committed identity (packageId, version) via the pure path helpers. */
+interface ExpectedPaths {
+  pkgSegment: string;
+  versionSlug: string;
+  markerPath: string;
+  protoNs: string;
+  snipNs: string;
 }
 
 export interface LibraryInstallerOptions {
@@ -164,7 +180,7 @@ export class LibraryInstaller {
    *  empty report (best-effort; the service may surface a warning). */
   async recoverInterrupted(): Promise<RecoveryReport> {
     return installMutex.runExclusive(INSTALL_LOCK_KEY, async () => {
-      let journals: TransactionJournal[];
+      let journals: { valid: TransactionJournal[]; quarantined: Array<{ packageId: string; releaseVersion: string; path: string }> };
       try {
         journals = await this.journalIO.listAll();
       } catch {
@@ -172,36 +188,77 @@ export class LibraryInstaller {
       }
       const committed: RecoveryReport['committed'] = [];
       const rolledBack: RecoveryReport['rolledBack'] = [];
-      for (const journal of journals) {
+      const rollbackFailed: NonNullable<RecoveryReport['rollbackFailed']> = [];
+      // A0: quarantined (shape-invalid) journals are surfaced with a reason and
+      // left untouched — they must never be silently deleted nor rolled back from.
+      for (const q of journals.quarantined) {
+        rollbackFailed.push({
+          packageId: q.packageId, releaseVersion: q.releaseVersion,
+          reason: `corrupted or forged journal shape (quarantined at ${q.path}) — inspect manually; no deletions were performed`,
+        });
+      }
+      for (const journal of journals.valid) {
         try {
-          const markerEntry = journal.entries.find((e) => e.kind === 'marker');
-          const markerValid = markerEntry
+          // A0: derive expected paths independently from the journal's
+          // identity (packageId/releaseVersion) via the same pure helpers the
+          // installer uses — journal entry paths are DATA to verify, never the
+          // deletion source of truth.
+          const expected = await this.deriveExpectedPaths(journal.packageId, journal.releaseVersion);
+          const markerEntry = journal.entries[journal.entries.length - 1]!;
+          const markerValid = markerEntry.kind === 'marker'
+            && markerEntry.path === expected.markerPath
             ? await this.isMarkerCommitted(markerEntry.path, journal.packageId, journal.releaseVersion)
             : false;
           if (markerValid) {
             await this.journalIO.remove(journal.packageId, journal.releaseVersion);
             committed.push({ packageId: journal.packageId, releaseVersion: journal.releaseVersion });
           } else {
-            await this.rollbackTransaction(journal);
-            rolledBack.push({ packageId: journal.packageId, releaseVersion: journal.releaseVersion });
+            const outcome = await this.rollbackTransaction(journal, expected);
+            if (outcome.status === 'ok') {
+              rolledBack.push({ packageId: journal.packageId, releaseVersion: journal.releaseVersion });
+            } else {
+              rollbackFailed.push({ packageId: journal.packageId, releaseVersion: journal.releaseVersion, reason: outcome.reason });
+            }
           }
-        } catch {
-          // one journal's recovery must not abort the others — continue
+        } catch (e) {
+          rollbackFailed.push({ packageId: journal.packageId, releaseVersion: journal.releaseVersion, reason: safeErrorMessage(e) });
         }
       }
       // Second phase (FR-4): scan destination folders for journal-less orphans.
       const orphansCleaned: RecoveryReport['orphansCleaned'] = [];
+      const orphanCleanupFailed: NonNullable<RecoveryReport['orphanCleanupFailed']> = [];
       try {
         const records = this.listInstalled ? await this.listInstalled() : [];
         const orphanNamespaces = await this.findOrphanedNamespaces(records);
         for (const ns of orphanNamespaces) {
-          if (await this.cleanOrphanedNamespace(ns)) orphansCleaned.push({ namespace: ns });
+          try {
+            if (await this.cleanOrphanedNamespace(ns)) orphansCleaned.push({ namespace: ns });
+            else orphanCleanupFailed.push({ namespace: ns, reason: 'cleanup skipped or incomplete' });
+          } catch (e) {
+            orphanCleanupFailed.push({ namespace: ns, reason: safeErrorMessage(e) });
+          }
         }
       } catch {
         // best-effort — a scan failure must not abort recovery (committed/rolledBack stand)
       }
-      return { committed, rolledBack, orphansCleaned };
+      return { committed, rolledBack, orphansCleaned, rollbackFailed, orphanCleanupFailed };
     });
+  }
+
+  /** A0: expected owned paths + marker for (packageId, version), derived
+   *  INDEPENDENTLY from the committed identity via the pure path helpers —
+  *  never from journal entries or stored record paths (those are verified
+   *  against this, not trusted). `expectedPaths` are the canonical final
+   *  paths a well-formed install of this release may own. */
+  private async deriveExpectedPaths(packageId: string, version: string): Promise<ExpectedPaths> {
+    const pkgSegment = await packageNamespaceSegment(packageId);
+    const versionSlug = slugifyPackageId(version);
+    const protocolRoot = this.settings.protocolFolderPath;
+    const snippetRoot = this.settings.snippetFolderPath;
+    const markerPath = installedRecordPath(pkgSegment, versionSlug);
+    const protoNs = `${protocolRoot === '' ? LIBRARY_SUBROOT : protocolRoot}/${LIBRARY_SUBROOT}/${pkgSegment}/${versionSlug}`;
+    const snipNs = `${snippetRoot === '' ? LIBRARY_SUBROOT : snippetRoot}/${LIBRARY_SUBROOT}/${pkgSegment}/${versionSlug}`;
+    return { pkgSegment, versionSlug, markerPath, protoNs, snipNs };
   }
 
   /** One-time slug-only → slug+hash migration of installed records (FR-2). Runs
@@ -503,6 +560,13 @@ export class LibraryInstaller {
    *  installMutex (D7). Never throws — `not-installed` if no valid+identity
    *  marker exists for (packageId, version); `failed` (Step 5 C5) if any owned
    *  path couldn't be deleted. */
+  /** A0: uninstall validates the record's stored paths against the namespace
+   *  derived from its own (packageId, version) BEFORE deleting anything. A
+   *  forged/corrupted record (paths outside the derived namespace) → explicit
+   *  `failed` with no deletions and a manual-recovery instruction. Owned files
+   *  are deleted first; the marker is deleted LAST and only on full success —
+   *  a partial failure keeps the marker and returns an idempotent `failed` so
+   *  a retry can complete. */
   async uninstall(packageId: string, version: string): Promise<UninstallResult> {
     return installMutex.runExclusive(INSTALL_LOCK_KEY, async () => {
       const record = await this.readMarker(packageId, version);
@@ -510,12 +574,26 @@ export class LibraryInstaller {
       const pkgSegment = await packageNamespaceSegment(packageId);
       const versionSlug = slugifyPackageId(version);
       const markerPath = installedRecordPath(pkgSegment, versionSlug);
-      const protoNs = parentDirOf(record.protocolPath);
-      const snipNs = record.snippetNamespace;
-      const paths = [record.protocolPath, markerPath];
+      // A0: the record's protocolPath/snippetNamespace are DATA, not a path
+      // source. Verify them against the independently derived expected slot;
+      // on mismatch refuse every deletion (manual recovery instruction).
+      const expected = await this.deriveExpectedPaths(packageId, version);
+      const expectedProtocolPath = `${expected.protoNs}/${pkgSegment}.rp.json`;
+      if (record.protocolPath !== expectedProtocolPath || record.snippetNamespace !== expected.snipNs) {
+        return {
+          status: 'failed', packageId, releaseVersion: version,
+          reason: `installed record paths do not match the expected namespace for ${packageId}@${version} `
+            + `(record: ${record.protocolPath}, ${record.snippetNamespace}; expected: ${expectedProtocolPath}, ${expected.snipNs}) `
+            + `— no files were deleted; please resolve manually`,
+        };
+      }
+      const protoNs = expected.protoNs;
+      const snipNs = expected.snipNs;
+      const paths = [record.protocolPath];
       for (const f of record.snippetFiles) {
         paths.push(`${snipNs}/${f.relPath}`);
       }
+      // Owned files FIRST; the marker is deleted LAST and only on full success.
       let allRemoved = true;
       try {
         allRemoved = await this.removeOwnedPaths(paths, markerPath, protoNs, snipNs);
@@ -524,6 +602,11 @@ export class LibraryInstaller {
       }
       if (!allRemoved) {
         return { status: 'failed', packageId, releaseVersion: version, reason: 'uninstall could not remove all owned paths (see console)' };
+      }
+      try {
+        if (await this.app.vault.adapter.exists(markerPath)) await this.app.vault.adapter.remove(markerPath);
+      } catch (e) {
+        return { status: 'failed', packageId, releaseVersion: version, reason: `uninstall failed to remove the marker: ${safeErrorMessage(e)}` };
       }
       return { status: 'ok', packageId, releaseVersion: version };
     });
@@ -604,33 +687,42 @@ export class LibraryInstaller {
     return allRemoved;
   }
 
-  /** Roll back a transaction: remove every journal entry path (via the shared
-   *  namespace-gated remover), then remove the journal. Best-effort. Called under
-   *  the global installMutex. Preserves the journal when any owned path could
-   *  not be removed — final files may remain and recovery-on-load will retry
-   *  (Step 5 C4: never discard the only recovery record while final files may
-   *  remain). */
-  private async rollbackTransaction(journal: TransactionJournal): Promise<void> {
-    const markerEntry = journal.entries.find((e) => e.kind === 'marker');
-    const markerPath = markerEntry?.path ?? '';
-    const ownedEntries = journal.entries.filter((e) => e.kind === 'owned');
-    const protocolEntry = ownedEntries.find((e) => e.path.endsWith('.rp.json'));
-    const snippetEntries = ownedEntries.filter((e) => !e.path.endsWith('.rp.json'));
-    const protoNs = protocolEntry ? parentDirOf(protocolEntry.path) : '';
-    const snipNs = commonNamespacePrefix(snippetEntries.map((e) => e.path));
-    const allRemoved = await this.removeOwnedPaths(journal.entries.map((e) => e.path), markerPath, protoNs, snipNs);
-    if (!allRemoved) return; // preserve the journal — recovery-on-load will retry
+  /** Roll back a transaction (A0): every deletion path must be inside the
+   *  independently derived expected namespaces (`expected`) — journal entry
+   *  paths are verified, not trusted; a forged journal with paths outside any
+   *  Library namespace deletes NOTHING and is quarantined (journal kept).
+   *  Preserves the journal when any owned path could not be removed —
+   *  recovery-on-load will retry. Returns the explicit outcome so recovery
+   *  reports only CONFIRMED successes as rolledBack. Called under the global
+   *  installMutex. */
+  private async rollbackTransaction(
+    journal: TransactionJournal,
+    expected?: ExpectedPaths,
+  ): Promise<{ status: 'ok' } | { status: 'failed'; reason: string }> {
+    const exp = expected ?? await this.deriveExpectedPaths(journal.packageId, journal.releaseVersion);
+    const markerPath = exp.markerPath;
+    const isSafe = (p: string): boolean =>
+      p === markerPath || p.startsWith(exp.protoNs + '/') || p.startsWith(exp.snipNs + '/');
+    const journalPaths = journal.entries.map((e) => e.path);
+    if (!journalPaths.every(isSafe)) {
+      // Quarantine: a shape-valid journal naming paths outside this release's
+      // expected namespaces must not cause ANY deletion.
+      return { status: 'failed', reason: 'journal contains paths outside the expected package namespace — quarantined, no deletions' };
+    }
+    const allRemoved = await this.removeOwnedPaths(journalPaths, markerPath, exp.protoNs, exp.snipNs);
+    if (!allRemoved) return { status: 'failed', reason: 'could not remove all journal-owned paths — journal preserved for retry' };
     try {
       await this.journalIO.remove(journal.packageId, journal.releaseVersion);
     } catch {
-      // best-effort
+      return { status: 'failed', reason: 'owned paths removed but the journal file could not be deleted' };
     }
+    return { status: 'ok' };
   }
 
   /** Discover namespace folders under ${root}/library/ that are NOT owned by any
    *  valid installed record (FR-4). A namespace folder is <root>/library/<pkgSegment>/<versionSlug>. */
   private async findOrphanedNamespaces(records: InstalledRecord[]): Promise<string[]> {
-    const orphans: string[] = [];
+    const orphans = new Set<string>();
     for (const root of [this.settings.protocolFolderPath, this.settings.snippetFolderPath]) {
       if (root === '') continue;
       const libraryFolder = `${root}/${LIBRARY_SUBROOT}`;
@@ -642,15 +734,35 @@ export class LibraryInstaller {
           const files = await this.listFilesRecursive(versionFolder);
           if (files.length === 0) continue;
           const owned = files.some((f) => findInstalledRecordForPath(records, f) !== null);
-          if (!owned) orphans.push(versionFolder);
+          if (!owned) orphans.add(versionFolder);
         }
       }
     }
-    return orphans;
+    // A0: roots may CHANGE after installs (user moves protocol/snippet folders).
+    // Version namespaces recorded under OLD roots are invisible to the scan above
+    // but are still owned by their installed records — the record itself knows its
+    // old protocol/snippet namespaces, so scan those too (the marker-file safety
+    // check in cleanOrphanedNamespace still guards every deletion).
+    for (const record of records) {
+      const namespaces = [record.snippetNamespace, parentDirOf(record.protocolPath)];
+      for (const ns of namespaces) {
+        if (ns === '' || orphans.has(ns)) continue;
+        // only namespace-shaped paths: <root>/library/<pkg>/<ver> (4+ segments)
+        if (ns.split('/').length < 4) continue;
+        if (!(await this.app.vault.adapter.exists(ns))) continue;
+        const files = await this.listFilesRecursive(ns);
+        if (files.length === 0) continue;
+        const owned = files.some((f) => findInstalledRecordForPath(records, f) !== null);
+        if (!owned) orphans.add(ns);
+      }
+    }
+    return [...orphans];
   }
 
   /** Delete an orphaned namespace folder's files, guarded by the marker-file-exists
-   *  safety check (D6). Returns true if cleaned, false if skipped (marker present). */
+   *  safety check (D6). Returns true only when every file was confirmed removed;
+   *  false when skipped (marker present) or the cleanup was incomplete (A0 — the
+   *  caller reports the namespace as NOT cleaned). */
   private async cleanOrphanedNamespace(namespace: string): Promise<boolean> {
     const parts = namespace.split('/');
     const versionSlug = parts[parts.length - 1]!;
@@ -662,8 +774,11 @@ export class LibraryInstaller {
       if (await this.app.vault.adapter.exists(markerSlot)) return false;
     } catch { return false; }
     const files = await this.listFilesRecursive(namespace);
-    await this.removeOwnedPaths(files, '', namespace, namespace);
-    return true;
+    // A0: cleanup is confirmed only when ALL files were removed (not skipped
+    // via a '' marker path that would let anything through the gate — the
+    // namespace itself is the gate here, and removeOwnedPaths still returns
+    // the honest all-removed boolean).
+    return this.removeOwnedPaths(files, `${namespace}/__none__.json`, namespace, namespace);
   }
 
   private async listChildrenFolders(dir: string): Promise<string[]> {
@@ -686,21 +801,6 @@ export class LibraryInstaller {
   }
 }
 
-/** Longest '/'-boundary path prefix that contains every path (the common namespace
- *  of a set of journal snippet entries). Returns '' for an empty set or when no
- *  common ancestor exists. A namespace is always a directory, so the seed is the
- *  parent of the first path (not the file path itself). */
-function commonNamespacePrefix(paths: string[]): string {
-  if (paths.length === 0) return '';
-  let prefix = parentDirOf(paths[0]!);
-  for (const p of paths) {
-    while (prefix !== '' && p !== prefix && !p.startsWith(prefix + '/')) {
-      prefix = parentDirOf(prefix);
-    }
-    if (prefix === '') break;
-  }
-  return prefix;
-}
 
 /** Install plan produced by planInstall on successful in-memory validation. */
 interface InstallPlan {

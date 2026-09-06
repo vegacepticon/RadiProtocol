@@ -387,7 +387,9 @@ describe('LibraryInstaller — recoverInterrupted', () => {
     const { vault } = makeVault();
     const installer = new LibraryInstaller(makeApp(vault) as never, SETTINGS);
     const report = await installer.recoverInterrupted();
-    expect(report).toEqual({ committed: [], rolledBack: [], orphansCleaned: [] });
+    expect(report).toEqual({
+      committed: [], rolledBack: [], orphansCleaned: [], rollbackFailed: [], orphanCleanupFailed: [],
+    });
   });
 });
 

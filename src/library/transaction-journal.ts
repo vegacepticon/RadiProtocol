@@ -53,15 +53,28 @@ export function isTransactionJournal(value: unknown): value is TransactionJourna
   const v = value as Record<string, unknown>;
   if (v['schema'] !== TRANSACTIONS_SCHEMA) return false;
   if (v['version'] !== TRANSACTIONS_VERSION) return false;
-  if (typeof v['packageId'] !== 'string') return false;
-  if (typeof v['releaseVersion'] !== 'string') return false;
-  if (typeof v['startedAt'] !== 'string') return false;
-  if (!Array.isArray(v['entries'])) return false;
-  return v['entries'].every((e) => {
+  // A0 hardening: identity fields must be NON-EMPTY strings (an empty
+  // packageId/version would derive an unusable namespace slot).
+  if (typeof v['packageId'] !== 'string' || v['packageId'] === '') return false;
+  if (typeof v['releaseVersion'] !== 'string' || v['releaseVersion'] === '') return false;
+  if (typeof v['startedAt'] !== 'string' || v['startedAt'] === '') return false;
+  if (!Array.isArray(v['entries']) || v['entries'].length === 0) return false;
+  // Structural invariants (A0): EXACTLY ONE 'marker' entry, and it is LAST
+  // (its presence = the commit signal; any other shape is a corrupted/forged
+  // journal that must be quarantined, never rolled back from).
+  let markerCount = 0;
+  for (let i = 0; i < v['entries'].length; i++) {
+    const e = v['entries'][i];
     if (typeof e !== 'object' || e === null) return false;
     const je = e as Record<string, unknown>;
-    return typeof je['path'] === 'string' && (je['kind'] === 'owned' || je['kind'] === 'marker');
-  });
+    if (typeof je['path'] !== 'string' || je['path'] === '') return false;
+    if (je['kind'] !== 'owned' && je['kind'] !== 'marker') return false;
+    if (je['kind'] === 'marker') {
+      markerCount++;
+      if (i !== v['entries'].length - 1) return false; // marker must be LAST
+    }
+  }
+  return markerCount === 1;
 }
 
 /** Vault-relative journal file path for an in-flight (packageId, version).
@@ -117,11 +130,12 @@ export class TransactionJournalIO {
    *  (D3); malformed single journal files are SKIPPED (a malformed journal has
    *  no usable owned-paths list — its orphaned paths, if any, live harmlessly
    *  under `library/<pkg>/<ver>/` and are out of foundation recovery scope). */
-  async listAll(): Promise<TransactionJournal[]> {
+  async listAll(): Promise<{ valid: TransactionJournal[]; quarantined: Array<{ packageId: string; releaseVersion: string; path: string }> }> {
     const adapter = this.app.vault.adapter;
     const dirExists = await adapter.exists(TRANSACTIONS_DIR);
-    if (!dirExists) return [];
-    const journals: TransactionJournal[] = [];
+    if (!dirExists) return { valid: [], quarantined: [] };
+    const valid: TransactionJournal[] = [];
+    const quarantined: Array<{ packageId: string; releaseVersion: string; path: string }> = [];
     const queue: string[] = [TRANSACTIONS_DIR];
     while (queue.length > 0) {
       const current = queue.shift() as string;
@@ -144,10 +158,22 @@ export class TransactionJournalIO {
         } catch {
           continue; // corrupt JSON — skip (malformed journal cannot be rolled back)
         }
-        if (isTransactionJournal(parsed)) journals.push(parsed);
+        if (isTransactionJournal(parsed)) {
+          valid.push(parsed);
+        } else {
+          // A0: shape-invalid journal (bad identity fields, no/duplicate/misordered
+          // marker, empty entry paths). It cannot be rolled back FROM, but it must
+          // be SURFACED — quarantined for inspection, never silently deleted.
+          const q = parsed as Record<string, unknown>;
+          quarantined.push({
+            packageId: typeof q['packageId'] === 'string' ? q['packageId'] : '',
+            releaseVersion: typeof q['releaseVersion'] === 'string' ? q['releaseVersion'] : '',
+            path: file,
+          });
+        }
       }
       for (const sub of listing.folders) queue.push(sub);
     }
-    return journals;
+    return { valid, quarantined };
   }
 }
