@@ -5,7 +5,7 @@ import type { MdTemplateSnippet, SnippetPlaceholder } from '../snippets/snippet-
 import { renderMdTemplateSnippet } from '../snippets/snippet-model';
 import type { Translator } from '../i18n';
 import { defaultT } from '../i18n';
-import { createTextarea } from '../utils/dom-helpers';
+import { createTextarea, growAutoTextarea } from '../utils/dom-helpers';
 
 // Phase 2 (JSON-removal): the fill-in modal accepts Markdown template snippets
 // only and renders exclusively via renderMdTemplateSnippet.
@@ -138,8 +138,7 @@ export class SnippetFillInModal extends Modal {
 
   /** Expand a single-line input textarea to fit its content (runner free-text pattern). */
   private growInput(textarea: HTMLTextAreaElement): void {
-    textarea.setCssProps({ height: 'auto' });
-    textarea.setCssProps({ height: `${textarea.scrollHeight}px` });
+    growAutoTextarea(textarea);
   }
 
   /**

@@ -172,11 +172,22 @@
   border: 1px solid var(--background-modifier-border);
   background: var(--background-primary);
   /* Compact single-line start; the modal grows the field with content. */
-  min-height: 32px;
+  /* Centering contract with growAutoTextarea (height: 0 → scrollHeight):
+     min-height derives from the line box + symmetric padding, never exceeds
+     the natural single-line height — a taller floor would pin the (top-aligned)
+     text above the field's midline. Symmetric padding keeps every grown state
+     centered too. */
+  min-height: calc(
+    var(--line-height-tight) * 1em
+    + 2 * var(--size-2-3)
+    + 2 * var(--input-border-width)
+  );
   height: auto;
   overflow-y: hidden;
   resize: none;
   white-space: pre-wrap;
+  padding-block: var(--size-2-3);
+  padding-inline: var(--input-padding);
   transition:
     background-color 120ms ease,
     border-color 120ms ease,

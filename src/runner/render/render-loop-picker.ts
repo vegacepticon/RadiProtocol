@@ -10,7 +10,7 @@ import type { AnswerNode, ProtocolGraph, RPEdge } from '../../graph/graph-model'
 import { nodeLabel } from '../../graph/node-label';
 import { orderedOutgoingEdges } from '../../graph/edge-order';
 import type { RunnerState } from '../runner-state';
-import { createButton, createTextarea } from '../../utils/dom-helpers';
+import { createButton, createTextarea, growAutoTextarea } from '../../utils/dom-helpers';
 import type { Translator } from '../../i18n';
 
 type AwaitingLoopPickState = Extract<RunnerState, { status: 'awaiting-loop-pick' }>;
@@ -41,8 +41,7 @@ interface FreeTextControl {
 }
 
 function growTextarea(textarea: HTMLTextAreaElement): void {
-  textarea.setCssProps({ height: 'auto' });
-  textarea.setCssProps({ height: `${textarea.scrollHeight}px` });
+  growAutoTextarea(textarea);
 }
 
 /** Free-text row for a loop branch whose target Answer requires typed input. */

@@ -4,7 +4,7 @@ import { orderedOutgoingEdges } from '../../graph/edge-order';
 import { nodeLabel } from '../../graph/node-label';
 import type { AnswerNode, ProtocolGraph, RPEdge, SnippetNode } from '../../graph/graph-model';
 import type { Translator } from '../../i18n';
-import { createButton, createTextarea } from '../../utils/dom-helpers';
+import { createButton, createTextarea, growAutoTextarea } from '../../utils/dom-helpers';
 import type { RunnerState } from '../runner-state';
 import { isFileBoundSnippetNode, snippetBranchLabel } from '../snippet-label';
 
@@ -54,8 +54,7 @@ function appendAnswerButton(parent: HTMLElement, answerNode: AnswerNode, host: Q
 }
 
 function growTextarea(textarea: HTMLTextAreaElement): void {
-  textarea.setCssProps({ height: 'auto' });
-  textarea.setCssProps({ height: `${textarea.scrollHeight}px` });
+  growAutoTextarea(textarea);
 }
 
 function appendFreeTextAnswer(
