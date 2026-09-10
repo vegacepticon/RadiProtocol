@@ -66,6 +66,9 @@ export class RunnerSessionHost {
   private progressEl: HTMLElement | null = null;
   private progressFillEl: HTMLElement | null = null;
   private progressTextEl: HTMLElement | null = null;
+  /** Session progress watermark: the bar never shrinks mid-walk (BFS hop
+   *  distances are non-monotonic across loop back-edges); stepBack rewinds it. */
+  private progressPercent = 0;
   private contentEl: HTMLElement | null = null;
   private actionsEl: HTMLElement | null = null;
   private footerBtnRowEl: HTMLElement | null = null;
@@ -209,6 +212,7 @@ export class RunnerSessionHost {
     this.progressEl = null;
     this.progressFillEl = null;
     this.progressTextEl = null;
+    this.progressPercent = 0;
     this.contentEl = null;
     this.actionsEl = null;
     this.footerBtnRowEl = null;
@@ -229,12 +233,14 @@ export class RunnerSessionHost {
     if ((event.ctrlKey || event.altKey) && event.key === 'ArrowLeft') {
       event.preventDefault();
       this.runner.stepBack();
+      this.progressPercent = 0;
       this.render();
       return true;
     }
     if ((event.ctrlKey || event.altKey) && event.key === 'ArrowRight') {
       event.preventDefault();
       this.runner.redo();
+      this.progressPercent = 0;
       this.render();
       return true;
     }
@@ -529,6 +535,9 @@ export class RunnerSessionHost {
       backButton.addEventListener('click', () => {
         backButton.disabled = true;
         this.runner.stepBack();
+        // Undo rewinds the walk: recompute progress from the restored node
+        // instead of the monotonic watermark, so Back visibly moves the bar.
+        this.progressPercent = 0;
         this.render();
       });
     }
@@ -541,6 +550,9 @@ export class RunnerSessionHost {
       redoButton.addEventListener('click', () => {
         redoButton.disabled = true;
         this.runner.redo();
+        // Redo re-applies the undone transition — recompute from the node too,
+        // so the bar reflects the restored walk position, not the stale watermark.
+        this.progressPercent = 0;
         this.render();
       });
     }
@@ -599,7 +611,16 @@ export class RunnerSessionHost {
     const sessionPercent = Math.round(
       (currentSessionDistance / sessionMaxDistance) * (99 - baselinePercent),
     );
-    return Math.min(99, Math.max(0, baselinePercent + sessionPercent));
+    const raw = Math.min(99, Math.max(0, baselinePercent + sessionPercent));
+    // Loop back-edges make BFS hop distances non-monotonic along the real walk
+    // (e.g. «ОГК ОБП ОМТ short»: a mid-question sits at a SHORTER global hop
+    // distance than the questions before it), so the raw percent could jump
+    // backwards mid-session and visibly SHRINK the fill bar. Progress is a
+    // measure of advancement, so it must never decrease: clamp to the session
+    // maximum seen so far (a stepBack() rewinds this.progressPercent first,
+    // so deliberate undos still move the bar backwards).
+    this.progressPercent = Math.max(this.progressPercent, raw);
+    return this.progressPercent;
   }
 
   private calculateShortestDistances(startNodeId: string): Map<string, number> {
@@ -963,11 +984,13 @@ export class RunnerSessionHost {
       onBack: () => {
         if (!this.isOperationCurrent(lifecycleGeneration, operationGeneration)) return;
         this.runner.stepBack();
+        this.progressPercent = 0;
         this.render();
       },
       onRedo: () => {
         if (!this.isOperationCurrent(lifecycleGeneration, operationGeneration)) return;
         this.runner.redo();
+        this.progressPercent = 0;
         this.render();
       },
     });
@@ -1035,6 +1058,7 @@ export class RunnerSessionHost {
     if (resolution.status === 'legacy-json') {
       renderSnippetFillUnsupportedFormat(questionZone, resolution.path, this.options.t);
       this.runner.stepBack();
+      this.progressPercent = 0;
       this.render();
       return;
     }

@@ -145,6 +145,7 @@ export class ProtocolRunner {
     // advanceOrReturnToLoop (protocol-runner.ts:682-700). Outside a loop, dead-end still completes.
     const neighbors = this.graph.adjacency.get(answerId);
     const next = neighbors !== undefined ? neighbors[0] : undefined;
+    if (next !== undefined) this.exitTrivialLoopFrames(next);
     if (next === undefined) {
       this.advanceOrReturnToLoop(undefined);
       return true;
@@ -205,6 +206,7 @@ export class ProtocolRunner {
     // contract as chooseAnswer lines 104-110). Accumulator is NOT touched.
     const answerNeighbors = this.graph.adjacency.get(skipTargetId);
     const next = answerNeighbors !== undefined ? answerNeighbors[0] : undefined;
+    if (next !== undefined) this.exitTrivialLoopFrames(next);
     if (next === undefined) {
       this.advanceOrReturnToLoop(undefined);
       return;
@@ -411,6 +413,7 @@ export class ProtocolRunner {
           }
         }
       }
+      if (next !== undefined) this.exitTrivialLoopFrames(next);
 
       if (next === undefined) {
         this.advanceOrReturnToLoop(undefined);
@@ -595,6 +598,7 @@ export class ProtocolRunner {
     // (iteration++) instead of completing the protocol — same contract as dead-end answer.
     const neighbors = this.graph.adjacency.get(pendingNodeId);
     const next = neighbors !== undefined ? neighbors[0] : undefined;
+    if (next !== undefined) this.exitTrivialLoopFrames(next);
     if (next === undefined) {
       this.advanceOrReturnToLoop(undefined);
       return;
@@ -944,6 +948,7 @@ export class ProtocolRunner {
               }
             }
           }
+          if (next !== undefined) this.exitTrivialLoopFrames(next);
 
           if (this.advanceOrReturnToLoop(next) === 'halted') return;
           cursor = next!;
@@ -988,6 +993,32 @@ export class ProtocolRunner {
           return;
         }
       }
+    }
+  }
+
+  /**
+   * Close stale loop frames when traversal moves to a node that is reachable
+   * ONLY through some loop's explicit isLoopExit edge (a "trivial" loop: the
+   * exit does not re-enter the looped question, so its body can never return
+   * to the picker). Authoring tools make exit targets easy to reach through a
+   * body branch too (e.g. an organ snippet wired both to the loop question and
+   * onward into the chain), so walking such a body branch left the frame open.
+   * A leaked frame later swallowed unrelated dead ends (e.g. the terminal
+   * '\n\nЗаключение…' answer) and threw the user back into an organ loop
+   * picker they had already finished. Only frames whose exit edge targets the
+   * very next node are popped — the innermost match first; deeper frames keep
+   * guarding legitimate outer loops.
+   */
+  private exitTrivialLoopFrames(nextNodeId: string): void {
+    if (this.graph === null || this.loopContextStack.length === 0) return;
+    for (let i = this.loopContextStack.length - 1; i >= 0; i -= 1) {
+      const frame = this.loopContextStack[i];
+      if (frame === undefined) return;
+      const exitsToNext = this.graph.edges.some(
+        e => e.fromNodeId === frame.loopNodeId && e.isLoopExit === true && e.toNodeId === nextNodeId,
+      );
+      if (!exitsToNext) return;
+      this.loopContextStack.pop();
     }
   }
 

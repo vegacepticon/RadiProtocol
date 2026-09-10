@@ -159,6 +159,29 @@ function loopGraph(): ProtocolGraph {
   ]);
 }
 
+// BFS hop distances are non-monotonic on loop-authored protocols: «q3» sits at
+// hop 2 (shortcut q1→q3) while the real walk reaches it AFTER «q2» (hop 3), so
+// the raw percent would drop 74 → 50 mid-walk and visibly shrink the bar.
+function progressShrinkGraph(): ProtocolGraph {
+  return graph([
+    { ...base, id: 'start', kind: 'start' },
+    { ...base, id: 'q1', kind: 'question', questionText: 'First?' },
+    { ...base, id: 'a1', kind: 'answer', answerText: 'A1' },
+    { ...base, id: 'q2', kind: 'question', questionText: 'Second?' },
+    { ...base, id: 'a2', kind: 'answer', answerText: 'A2' },
+    { ...base, id: 'q3', kind: 'question', questionText: 'Last?' },
+    { ...base, id: 'a3', kind: 'answer', answerText: 'A3' },
+  ], [
+    { id: 'start-q1', fromNodeId: 'start', toNodeId: 'q1' },
+    { id: 'q1-a1', fromNodeId: 'q1', toNodeId: 'a1' },
+    { id: 'a1-q2', fromNodeId: 'a1', toNodeId: 'q2' },
+    { id: 'q2-a2', fromNodeId: 'q2', toNodeId: 'a2' },
+    { id: 'a2-q3', fromNodeId: 'a2', toNodeId: 'q3' },
+    { id: 'q1-q3', fromNodeId: 'q1', toNodeId: 'q3', label: 'shortcut' },
+    { id: 'q3-a3', fromNodeId: 'q3', toNodeId: 'a3' },
+  ]);
+}
+
 function snippetGraph(fileBound: boolean): ProtocolGraph {
   return graph([
     { ...base, id: 'start', kind: 'start' },
@@ -274,6 +297,46 @@ describe('RunnerSessionHost bootstrap and projection', () => {
     expect(getPickerMockInstances()).toHaveLength(1);
     expect(snippet.root.querySelector('.rp-stp-runner-session-host')).not.toBeNull();
     expect(snippet.root.hasClass('rp-state-content-only')).toBe(true);
+  });
+});
+
+describe('RunnerSessionHost progress bar', () => {
+  function progressValue(root: MockEl): string {
+    const el = root.querySelector('.rp-runner-session-progress');
+    return el?.getAttribute('aria-valuenow') ?? '';
+  }
+
+  function pressArrowLeft(h: Harness): void {
+    const event = {
+      key: 'ArrowLeft', ctrlKey: true, altKey: false, target: null,
+      preventDefault: vi.fn(),
+    } as unknown as KeyboardEvent;
+    expect(h.host.handleKeydown(event)).toBe(true);
+  }
+
+  it('never shrinks mid-walk when BFS hop distance drops, and rewinds on Back', async () => {
+    const h = harness(progressShrinkGraph());
+    expect(await h.host.mount(h.root as unknown as HTMLElement)).toBe(true);
+
+    // q1 at hop 1 of 4 → 25%
+    expect(progressValue(h.root)).toBe('25');
+    // → auto-advance lands at q2 (hop 3) → 74%
+    h.root.querySelector('.rp-answer-btn')?.dispatchEvent({ type: 'click' });
+    await flushMicrotasks();
+    expect(progressValue(h.root)).toBe('74');
+    // → q3 sits at hop 2 (shortcut edge) — raw 50% must NOT shrink the bar
+    h.root.querySelector('.rp-answer-btn')?.dispatchEvent({ type: 'click' });
+    await flushMicrotasks();
+    expect(progressValue(h.root)).toBe('74');
+
+    // Back rewinds the watermark: q2 recomputes to 74…
+    pressArrowLeft(h);
+    await flushMicrotasks();
+    expect(progressValue(h.root)).toBe('74');
+    // …and one more Back lands on q1 at 25% again.
+    pressArrowLeft(h);
+    await flushMicrotasks();
+    expect(progressValue(h.root)).toBe('25');
   });
 });
 
