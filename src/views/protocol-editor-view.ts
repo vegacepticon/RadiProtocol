@@ -8,6 +8,7 @@ import { SnippetTreePicker, type SnippetTreePickerResult } from './snippet-tree-
 import { mountOptionOrderChips, type OptionOrderChipItem } from './option-order-chip-editor';
 import { defaultT, type Translator } from '../i18n';
 import dagre from 'dagre';
+import { ProtocolEditorDocumentOwner, type EditorDocumentLease } from './protocol-editor-document-owner';
 
 export const PROTOCOL_EDITOR_VIEW_TYPE = 'radiprotocol-protocol-editor';
 
@@ -635,10 +636,16 @@ export class ProtocolEditorView extends ItemView {
   private layoutDirection: ProtocolEditorLayoutDirection = 'LR';
   private zoom: number = 1;
   private loadGeneration = 0;
+  private readonly documentOwner: ProtocolEditorDocumentOwner;
 
   constructor(leaf: WorkspaceLeaf, plugin: RadiProtocolPlugin) {
     super(leaf);
     this.plugin = plugin;
+    this.documentOwner = new ProtocolEditorDocumentOwner(
+      plugin.protocolDocumentStore,
+      () => ({ path: this.protocolPath, generation: this.loadGeneration, readOnly: this.libraryReadOnly }),
+      () => { ++this.loadGeneration; this.clearPendingViewportSave(); },
+    );
   }
 
   getViewType(): string { return PROTOCOL_EDITOR_VIEW_TYPE; }
@@ -646,10 +653,12 @@ export class ProtocolEditorView extends ItemView {
   getIcon(): string { return 'workflow'; }
 
   async onOpen(): Promise<void> {
+    this.documentOwner.open();
     this.renderShell();
   }
 
   async onClose(): Promise<void> {
+    this.documentOwner.close();
     this.clearPendingViewportSave();
     this.rootEl = null;
     this.viewportEl = null;
@@ -670,27 +679,36 @@ export class ProtocolEditorView extends ItemView {
     document.body.removeClass('rp-protocol-editor-resize-active');
   }
 
-  async loadProtocol(protocolPath: string): Promise<void> {
+  async loadProtocol(protocolPath: string, refreshLease?: EditorDocumentLease): Promise<void> {
     const file = this.app.vault.getAbstractFileByPath(protocolPath);
     if (!(file instanceof TFile) || !file.path.endsWith('.rp.json')) {
       new Notice(this.plugin.i18n.t('protocolEditor.notProtocolFile'));
       return;
     }
 
-    const doc = await this.plugin.protocolDocumentStore.read(file.path);
-    if (doc === null) {
+    try {
+      const result = await this.documentOwner.load(file.path, (doc) => {
+        this.protocolPath = file.path;
+        this.libraryReadOnly = isLibraryManagedPath(file.path, this.plugin.settings.protocolFolderPath);
+        this.doc = doc;
+        this.panState = null;
+        this.connectionDragState = null;
+        this.layoutDirection = protocolEditorLayoutDirectionFromDocument(doc);
+        this.zoom = clampProtocolEditorZoom(doc.viewport?.zoom ?? 1);
+        this.renderShell();
+        this.renderDocument();
+      }, refreshLease);
+      if (result === 'failed') {
+        this.renderShell();
+        this.renderDocument();
+        new Notice(this.plugin.i18n.t('protocolEditor.loadFailed'));
+      }
+    } catch (error) {
+      this.renderShell();
+      this.renderDocument();
+      console.error('[RadiProtocol] Protocol Editor load failed:', error);
       new Notice(this.plugin.i18n.t('protocolEditor.loadFailed'));
-      return;
     }
-
-    this.loadGeneration++;
-    this.protocolPath = file.path;
-    this.libraryReadOnly = isLibraryManagedPath(file.path, this.plugin.settings.protocolFolderPath);
-    this.doc = doc;
-    this.layoutDirection = protocolEditorLayoutDirectionFromDocument(doc);
-    this.zoom = clampProtocolEditorZoom(doc.viewport?.zoom ?? 1);
-    this.renderShell();
-    this.renderDocument();
   }
 
   /** Slice 8 — library-managed protocols are read-only. Returns true (and shows
@@ -845,15 +863,15 @@ export class ProtocolEditorView extends ItemView {
     if (this.isLibraryReadOnly()) { options.onCreateAbandoned?.(); return; }
 
     const newNode = this.createProtocolEditorNode(kind, x, y);
-    const protocolPath = this.protocolPath;
-    const generation = this.loadGeneration;
+    const owner = this.documentOwner.capture();
+    if (owner === null) { options.onCreateAbandoned?.(); return; }
 
-    void this.plugin.protocolDocumentStore.update(protocolPath, (existing) => {
+    void this.documentOwner.update(owner, (existing) => {
       if (existing === null) protocolMissingFileError();
       return { ...existing, nodes: [...existing.nodes, newNode], viewport: this.currentViewportState(), updatedAt: new Date().toISOString() };
     }).then((updated) => {
       try {
-        if (this.protocolPath !== protocolPath || this.loadGeneration !== generation) {
+        if (updated === null || !this.documentOwner.isCurrent(owner)) {
           options.onCreateAbandoned?.();
           return;
         }
@@ -875,6 +893,8 @@ export class ProtocolEditorView extends ItemView {
   private openNodeKindPickerAtWorldPoint(x: number, y: number): void {
     if (this.doc === null || this.protocolPath === null) return;
     if (this.isLibraryReadOnly()) return;
+    const owner = this.documentOwner.capture();
+    if (owner === null) return;
     const t = this.plugin.i18n.t.bind(this.plugin.i18n);
     const modalEl = document.body.createDiv({ cls: 'rp-protocol-editor-modal-backdrop' });
     const modal = modalEl.createDiv({ cls: 'rp-protocol-editor-modal rp-protocol-editor-node-kind-modal' });
@@ -882,9 +902,10 @@ export class ProtocolEditorView extends ItemView {
     header.createEl('h3', { text: t('protocolEditor.chooseNodeType') });
     const closeBtn = header.createEl('button', { cls: 'rp-protocol-editor-modal-close', text: '✕', attr: { 'aria-label': t('protocolEditor.close') } });
     let isCreating = false;
+    const disposeModal = this.documentOwner.own(owner, () => modalEl.remove());
     const closeModal = (options?: { restoreFocus?: boolean }) => {
-      modalEl.remove();
-      if (options?.restoreFocus !== false) this.restoreEditorFocus();
+      disposeModal();
+      if (options?.restoreFocus !== false && this.documentOwner.isCurrent(owner)) this.restoreEditorFocus();
     };
     const beginCreate = () => {
       isCreating = true;
@@ -912,6 +933,7 @@ export class ProtocolEditorView extends ItemView {
       });
       btn.setAttr('data-node-kind', kind);
       btn.addEventListener('click', () => {
+        if (!this.documentOwner.isCurrent(owner)) return;
         if (isCreating) return;
         beginCreate();
         this.addNodeAtWorldPoint(kind, x, y, {
@@ -932,6 +954,8 @@ export class ProtocolEditorView extends ItemView {
   private openNodeKindPickerAndConnectAtWorldPoint(fromNodeId: string, x: number, y: number): void {
     if (this.doc === null || this.protocolPath === null) return;
     if (this.isLibraryReadOnly()) return;
+    const owner = this.documentOwner.capture();
+    if (owner === null) return;
     const t = this.plugin.i18n.t.bind(this.plugin.i18n);
     const modalEl = document.body.createDiv({ cls: 'rp-protocol-editor-modal-backdrop' });
     const modal = modalEl.createDiv({ cls: 'rp-protocol-editor-modal rp-protocol-editor-node-kind-modal' });
@@ -939,9 +963,10 @@ export class ProtocolEditorView extends ItemView {
     header.createEl('h3', { text: t('protocolEditor.chooseNodeType') });
     const closeBtn = header.createEl('button', { cls: 'rp-protocol-editor-modal-close', text: '✕', attr: { 'aria-label': t('protocolEditor.close') } });
     let isCreating = false;
+    const disposeModal = this.documentOwner.own(owner, () => modalEl.remove());
     const closeModal = (options?: { restoreFocus?: boolean }) => {
-      modalEl.remove();
-      if (options?.restoreFocus !== false) this.restoreEditorFocus();
+      disposeModal();
+      if (options?.restoreFocus !== false && this.documentOwner.isCurrent(owner)) this.restoreEditorFocus();
     };
     const beginCreate = () => {
       isCreating = true;
@@ -969,6 +994,7 @@ export class ProtocolEditorView extends ItemView {
       });
       btn.setAttr('data-node-kind', kind);
       btn.addEventListener('click', () => {
+        if (!this.documentOwner.isCurrent(owner)) return;
         if (isCreating) return;
         beginCreate();
         this.addNodeAndConnectAtWorldPoint(fromNodeId, kind, x, y, {
@@ -1000,10 +1026,10 @@ export class ProtocolEditorView extends ItemView {
     if (this.isLibraryReadOnly()) { options.onCreateAbandoned?.(); return; }
 
     const newNode = this.createProtocolEditorNode(kind, x, y);
-    const protocolPath = this.protocolPath;
-    const generation = this.loadGeneration;
+    const owner = this.documentOwner.capture();
+    if (owner === null) { options.onCreateAbandoned?.(); return; }
 
-    void this.plugin.protocolDocumentStore.update(protocolPath, (existing) => {
+    void this.documentOwner.update(owner, (existing) => {
       if (existing === null) protocolMissingFileError();
       const sourceNode = existing.nodes.find((n) => n.id === fromNodeId);
       const targetNode = { ...newNode };
@@ -1026,7 +1052,7 @@ export class ProtocolEditorView extends ItemView {
       return { ...existing, nodes, edges, viewport: this.currentViewportState(), updatedAt: new Date().toISOString() };
     }).then((updated) => {
       try {
-        if (this.protocolPath !== protocolPath || this.loadGeneration !== generation) {
+        if (updated === null || !this.documentOwner.isCurrent(owner)) {
           options.onCreateAbandoned?.();
           return;
         }
@@ -1471,8 +1497,10 @@ export class ProtocolEditorView extends ItemView {
   private async deleteEdge(edgeId: string): Promise<void> {
     if (this.protocolPath === null) return;
     if (this.isLibraryReadOnly()) return;
+    const owner = this.documentOwner.capture();
+    if (owner === null) return;
     try {
-      await this.plugin.protocolDocumentStore.update(this.protocolPath, (existing) => {
+      const updated = await this.documentOwner.update(owner, (existing) => {
         if (existing === null) protocolMissingFileError();
         return {
           ...existing,
@@ -1481,12 +1509,13 @@ export class ProtocolEditorView extends ItemView {
           updatedAt: new Date().toISOString(),
         };
       });
+      if (updated === null || !this.documentOwner.isCurrent(owner)) return;
       new Notice(this.plugin.i18n.t('protocolEditor.edgeDeleted'));
-      await this.loadProtocol(this.protocolPath);
+      await this.loadProtocol(owner.path, owner);
     } catch (err) {
       new Notice(this.plugin.i18n.t('protocolEditor.deleteFailed', { error: String(err) }));
     } finally {
-      this.restoreEditorFocus();
+      if (this.documentOwner.isCurrent(owner)) this.restoreEditorFocus();
     }
   }
 
@@ -1542,7 +1571,10 @@ export class ProtocolEditorView extends ItemView {
   }
 
   private bindConnectionDrag(outputPort: HTMLElement, node: ProtocolNodeRecord): void {
+    const owner = this.documentOwner.capture();
+    if (owner === null) return;
     outputPort.addEventListener('mousedown', (e: MouseEvent) => {
+      if (!this.documentOwner.isCurrent(owner)) return;
       if (e.button !== 0 || this.svgEl === null) return;
       // Slice 8 — silent gesture-start guard: a managed protocol must never
       // begin a connection gesture (finishConnectionDrag would reject it, but
@@ -1562,13 +1594,13 @@ export class ProtocolEditorView extends ItemView {
 
       const onMove = (ev: MouseEvent) => this.updateConnectionPreview(ev);
       const onUp = (ev: MouseEvent) => {
-        document.removeEventListener('mousemove', onMove);
-        document.removeEventListener('mouseup', onUp);
         void this.finishConnectionDrag(ev);
       };
 
-      document.addEventListener('mousemove', onMove);
-      document.addEventListener('mouseup', onUp);
+      this.bindOwnedPointerGesture(owner, onMove, onUp, () => {
+        previewPath.remove();
+        this.connectionDragState = null;
+      });
     });
   }
 
@@ -1650,16 +1682,19 @@ export class ProtocolEditorView extends ItemView {
       ) ? defaultLabel : undefined,
     };
 
+    const owner = this.documentOwner.capture();
+    if (owner === null) return;
     try {
-      await this.plugin.protocolDocumentStore.update(this.protocolPath, (existing) => {
+      const updated = await this.documentOwner.update(owner, (existing) => {
         if (existing === null) protocolMissingFileError();
         const currentDecision = canCreateProtocolEditorEdge(existing.edges, state.fromNodeId, toNodeId);
         if (currentDecision !== 'ok') return existing;
         const nodes = appendEdgeIdToOptionOrder(existing.nodes, state.fromNodeId, newEdge.id);
         return { ...existing, nodes, edges: [...existing.edges, newEdge], viewport: this.currentViewportState(), updatedAt: new Date().toISOString() };
       });
+      if (updated === null || !this.documentOwner.isCurrent(owner)) return;
       new Notice(this.plugin.i18n.t('protocolEditor.edgeCreated'));
-      await this.loadProtocol(this.protocolPath);
+      await this.loadProtocol(owner.path, owner);
     } catch (err) {
       new Notice(this.plugin.i18n.t('protocolEditor.saveFailed', { error: String(err) }));
     }
@@ -1667,6 +1702,8 @@ export class ProtocolEditorView extends ItemView {
 
   private openSelfCheckModal(): void {
     if (this.doc === null || this.protocolPath === null) return;
+    const owner = this.documentOwner.capture();
+    if (owner === null) return;
     const t = this.plugin.i18n.t.bind(this.plugin.i18n);
     const backdrop = document.body.createDiv({ cls: 'rp-protocol-editor-modal-backdrop' });
     const modal = backdrop.createDiv({ cls: 'rp-protocol-editor-modal rp-protocol-editor-self-check-modal' });
@@ -1680,14 +1717,15 @@ export class ProtocolEditorView extends ItemView {
     const values = [...(this.doc.selfCheckItems ?? []), ''];
     let enabled = enabledCheckbox.checked;
 
-    const closeModal = () => backdrop.remove();
+    const closeModal = this.documentOwner.own(owner, () => backdrop.remove());
     const persist = async () => {
-      if (this.isLibraryReadOnly()) return;
+      if (!this.documentOwner.isCurrent(owner) || this.isLibraryReadOnly()) return;
       const items = values.map(value => value.trim()).filter(value => value.length > 0);
-      await this.plugin.protocolDocumentStore.update(this.protocolPath!, (existing) => {
+      const updated = await this.documentOwner.update(owner, (existing) => {
         if (existing === null) protocolMissingFileError();
         return { ...existing, selfCheckEnabled: enabled, selfCheckItems: items, updatedAt: new Date().toISOString() };
       });
+      if (updated === null || !this.documentOwner.isCurrent(owner)) return;
       if (this.doc !== null) this.doc = { ...this.doc, selfCheckEnabled: enabled, selfCheckItems: items };
     };
     const createSelfCheckRow = (index: number) => {
@@ -1747,7 +1785,10 @@ export class ProtocolEditorView extends ItemView {
 
   /* Phase 4D — bind mouse drag events to a node element */
   private bindDrag(nodeEl: HTMLElement, node: ProtocolNodeRecord): void {
+    const owner = this.documentOwner.capture();
+    if (owner === null) return;
     nodeEl.addEventListener('mousedown', (e: MouseEvent) => {
+      if (!this.documentOwner.isCurrent(owner)) return;
       if (e.button !== 0) return;
       if ((e.target as HTMLElement).closest('.rp-protocol-editor-port') !== null) return;
       // Slice 8 — silent gesture-start guard: managed nodes never visibly move.
@@ -1784,8 +1825,6 @@ export class ProtocolEditorView extends ItemView {
           window.cancelAnimationFrame(dragRafId);
           dragRafId = null;
         }
-        document.removeEventListener('mousemove', onMove);
-        document.removeEventListener('mouseup', onUp);
         nodeEl.removeClass('rp-node-dragging');
         document.body.removeClass('rp-protocol-editor-drag-active');
         this.restoreEditorFocus();
@@ -1804,13 +1843,19 @@ export class ProtocolEditorView extends ItemView {
         void this.saveNodeGeometry(node);
       };
 
-      document.addEventListener('mousemove', onMove);
-      document.addEventListener('mouseup', onUp);
+      this.bindOwnedPointerGesture(owner, onMove, onUp, () => {
+        if (dragRafId !== null) window.cancelAnimationFrame(dragRafId);
+        nodeEl.removeClass('rp-node-dragging');
+        document.body.removeClass('rp-protocol-editor-drag-active');
+      });
     });
   }
 
   private bindResize(handleEl: HTMLElement, nodeEl: HTMLElement, node: ProtocolNodeRecord): void {
+    const owner = this.documentOwner.capture();
+    if (owner === null) return;
     handleEl.addEventListener('mousedown', (e: MouseEvent) => {
+      if (!this.documentOwner.isCurrent(owner)) return;
       if (e.button !== 0) return;
       // Slice 8 — silent gesture-start guard: managed nodes never visibly resize.
       if (this.libraryReadOnly) return;
@@ -1845,8 +1890,6 @@ export class ProtocolEditorView extends ItemView {
           window.cancelAnimationFrame(resizeRafId);
           resizeRafId = null;
         }
-        document.removeEventListener('mousemove', onMove);
-        document.removeEventListener('mouseup', onUp);
         nodeEl.removeClass('rp-node-resizing');
         document.body.removeClass('rp-protocol-editor-resize-active');
         this.restoreEditorFocus();
@@ -1863,17 +1906,17 @@ export class ProtocolEditorView extends ItemView {
         void this.saveNodeGeometry(node);
       };
 
-      document.addEventListener('mousemove', onMove);
-      document.addEventListener('mouseup', onUp);
+      this.bindOwnedPointerGesture(owner, onMove, onUp, () => {
+        if (resizeRafId !== null) window.cancelAnimationFrame(resizeRafId);
+        nodeEl.removeClass('rp-node-resizing');
+        document.body.removeClass('rp-protocol-editor-resize-active');
+      });
     });
   }
 
   /* Phase 4D — persist node position/size change */
   private async saveNodeGeometry(node: ProtocolNodeRecord): Promise<void> {
-    const protocolPath = this.protocolPath;
-    const generation = this.loadGeneration;
-    const isStaleSave = () => this.loadGeneration !== generation;
-    if (protocolPath === null) return;
+    if (this.protocolPath === null) return;
     if (this.isLibraryReadOnly()) return;
 
     const geometry = {
@@ -1885,10 +1928,11 @@ export class ProtocolEditorView extends ItemView {
     };
     const viewport = this.currentViewportState();
 
+    const owner = this.documentOwner.capture();
+    if (owner === null) return;
     try {
-      const updated = await this.plugin.protocolDocumentStore.update(protocolPath, (existing) => {
+      const updated = await this.documentOwner.update(owner, (existing) => {
         if (existing === null) protocolMissingFileError();
-        if (isStaleSave()) return existing;
         const nodes = existing.nodes.map((n) =>
           n.id === geometry.id
             ? { ...n, x: geometry.x, y: geometry.y, width: geometry.width, height: geometry.height }
@@ -1896,7 +1940,8 @@ export class ProtocolEditorView extends ItemView {
         );
         return { ...existing, nodes, viewport, updatedAt: new Date().toISOString() };
       });
-      if (this.loadGeneration !== generation) return;
+      if (updated === null || !this.documentOwner.isCurrent(owner)) return;
+      if (updated === null || !this.documentOwner.isCurrent(owner)) return;
 
       this.doc = updated;
       const nodeEl = this.nodeElementById.get(geometry.id);
@@ -1912,9 +1957,13 @@ export class ProtocolEditorView extends ItemView {
   }
 
   private bindViewportControls(): void {
+    const owner = this.documentOwner.capture();
+    if (owner === null) return;
     if (this.viewportEl === null) return;
 
     this.viewportEl.addEventListener('dblclick', (e: MouseEvent) => {
+      if (!this.documentOwner.isCurrent(owner)) return;
+      if (!this.documentOwner.isCurrent(owner)) return;
       if (e.button !== 0) return;
       const target = e.target as Element;
       if (target.closest('.rp-protocol-editor-minimap') !== null) return;
@@ -1928,6 +1977,7 @@ export class ProtocolEditorView extends ItemView {
     });
 
     this.viewportEl.addEventListener('mousedown', (e: MouseEvent) => {
+      if (!this.documentOwner.isCurrent(owner)) return;
       if (e.button !== 0 || e.detail > 1) return;
       const target = e.target as Element;
       if (target.closest('.rp-protocol-editor-minimap') !== null) return;
@@ -1951,18 +2001,19 @@ export class ProtocolEditorView extends ItemView {
         this.updateMinimapViewport();
       };
       const onUp = () => {
-        document.removeEventListener('mousemove', onMove);
-        document.removeEventListener('mouseup', onUp);
         this.viewportEl?.removeClass('is-panning');
         this.panState = null;
         this.restoreEditorFocus();
         void this.persistViewportState();
       };
-      document.addEventListener('mousemove', onMove);
-      document.addEventListener('mouseup', onUp);
+      this.bindOwnedPointerGesture(owner, onMove, onUp, () => {
+        this.viewportEl?.removeClass('is-panning');
+        this.panState = null;
+      });
     });
 
     this.viewportEl.addEventListener('wheel', (e: WheelEvent) => {
+      if (!this.documentOwner.isCurrent(owner)) return;
       if (!e.ctrlKey && !e.metaKey) return;
       if (this.viewportEl === null) return;
       e.preventDefault();
@@ -1987,6 +2038,7 @@ export class ProtocolEditorView extends ItemView {
     }, { passive: false });
 
     this.viewportEl.addEventListener('scroll', () => {
+      if (!this.documentOwner.isCurrent(owner)) return;
       this.updateMinimapViewport();
       this.scheduleViewportSave();
     });
@@ -2056,7 +2108,9 @@ export class ProtocolEditorView extends ItemView {
     }
 
     this.layoutDirection = direction;
-    void this.plugin.protocolDocumentStore.update(this.protocolPath, (existing) => {
+    const owner = this.documentOwner.capture();
+    if (owner === null) return;
+    void this.documentOwner.update(owner, (existing) => {
       if (existing === null) protocolMissingFileError();
       const updatedNodes = existing.nodes.map((n) => {
         const p = positions.get(n.id);
@@ -2071,9 +2125,10 @@ export class ProtocolEditorView extends ItemView {
         viewport: this.currentViewportState(),
         updatedAt: new Date().toISOString(),
       };
-    }).then(async () => {
+    }).then(async (updated) => {
+      if (updated === null || !this.documentOwner.isCurrent(owner)) return;
       new Notice(this.plugin.i18n.t('protocolEditor.autoLayoutDone'));
-      await this.loadProtocol(this.protocolPath!);
+      await this.loadProtocol(owner.path, owner);
     }).catch((err) => {
       new Notice(this.plugin.i18n.t('protocolEditor.saveFailed', { error: String(err) }));
     });
@@ -2085,6 +2140,8 @@ export class ProtocolEditorView extends ItemView {
   }
 
   private bindMinimapControls(): void {
+    const owner = this.documentOwner.capture();
+    if (owner === null) return;
     if (this.minimapEl === null) return;
 
     this.minimapEl.addEventListener('keydown', (e: KeyboardEvent) => {
@@ -2095,6 +2152,7 @@ export class ProtocolEditorView extends ItemView {
     });
 
     this.minimapEl.addEventListener('mousedown', (e: MouseEvent) => {
+      if (!this.documentOwner.isCurrent(owner)) return;
       if (e.button !== 0) return;
       e.preventDefault();
       e.stopPropagation();
@@ -2106,13 +2164,10 @@ export class ProtocolEditorView extends ItemView {
         this.panViewportFromMinimapPointer(ev.clientX, ev.clientY);
       };
       const onUp = () => {
-        document.removeEventListener('mousemove', onMove);
-        document.removeEventListener('mouseup', onUp);
         this.minimapEl?.removeClass('is-dragging');
         void this.persistViewportState();
       };
-      document.addEventListener('mousemove', onMove);
-      document.addEventListener('mouseup', onUp);
+      this.bindOwnedPointerGesture(owner, onMove, onUp, () => this.minimapEl?.removeClass('is-dragging'));
     });
   }
 
@@ -2153,8 +2208,35 @@ export class ProtocolEditorView extends ItemView {
     return { x: point.x - PROTOCOL_EDITOR_ORIGIN_X, y: point.y - PROTOCOL_EDITOR_ORIGIN_Y };
   }
 
+  private bindOwnedPointerGesture(
+    owner: EditorDocumentLease,
+    move: (event: MouseEvent) => void,
+    end: (event: MouseEvent) => void,
+    cancel: () => void,
+  ): void {
+    let finished = false;
+    const onMove = (event: MouseEvent) => {
+      if (this.documentOwner.isCurrent(owner)) move(event);
+    };
+    const onUp = (event: MouseEvent) => {
+      finished = true;
+      dispose();
+      if (this.documentOwner.isCurrent(owner)) end(event);
+    };
+    document.addEventListener('mousemove', onMove);
+    document.addEventListener('mouseup', onUp);
+    const dispose = this.documentOwner.own(owner, () => {
+      document.removeEventListener('mousemove', onMove);
+      document.removeEventListener('mouseup', onUp);
+      if (!finished) cancel();
+    });
+  }
+
   private restoreEditorFocus(): void {
+    const owner = this.documentOwner.capture();
+    if (owner === null) return;
     window.requestAnimationFrame(() => {
+      if (!this.documentOwner.isCurrent(owner)) return;
       if (this.viewportEl === null || !this.viewportEl.isConnected) return;
       if (document.activeElement instanceof HTMLElement && document.activeElement.closest('.rp-protocol-editor-modal') !== null) return;
       this.viewportEl.setAttr('tabindex', '-1');
@@ -2164,9 +2246,11 @@ export class ProtocolEditorView extends ItemView {
 
   private restoreViewportState(): void {
     if (this.viewportEl === null || this.doc === null) return;
+    const owner = this.documentOwner.capture();
+    if (owner === null) return;
     const viewport = this.doc.viewport ?? { x: 0, y: 0, zoom: this.zoom };
     window.requestAnimationFrame(() => {
-      if (this.viewportEl === null) return;
+      if (!this.documentOwner.isCurrent(owner) || this.viewportEl === null) return;
       this.viewportEl.scrollLeft = Math.max(0, viewport.x + PROTOCOL_EDITOR_ORIGIN_X * this.zoom);
       this.viewportEl.scrollTop = Math.max(0, viewport.y + PROTOCOL_EDITOR_ORIGIN_Y * this.zoom);
       this.updateMinimapViewport();
@@ -2204,11 +2288,14 @@ export class ProtocolEditorView extends ItemView {
     if (this.isLibraryReadOnly()) return;
     this.clearPendingViewportSave();
     const viewport = this.currentViewportState();
+    const owner = this.documentOwner.capture();
+    if (owner === null) return;
     try {
-      await this.plugin.protocolDocumentStore.update(this.protocolPath, (existing) => {
+      const updated = await this.documentOwner.update(owner, (existing) => {
         if (existing === null) protocolMissingFileError();
         return { ...existing, viewport, updatedAt: new Date().toISOString() };
       });
+      if (updated === null || !this.documentOwner.isCurrent(owner)) return;
       this.doc = { ...this.doc, viewport };
     } catch (err) {
       new Notice(this.plugin.i18n.t('protocolEditor.saveFailed', { error: String(err) }));
@@ -2217,13 +2304,18 @@ export class ProtocolEditorView extends ItemView {
 
   private openEdgeModal(edge: ProtocolEdgeRecord): void {
     if (this.protocolPath === null || this.doc === null) return;
+    const owner = this.documentOwner.capture();
+    if (owner === null) return;
     const t = this.plugin.i18n.t.bind(this.plugin.i18n);
     const modalEl = document.body.createDiv({ cls: 'rp-protocol-editor-modal-backdrop' });
     const modal = modalEl.createDiv({ cls: 'rp-protocol-editor-modal' });
     const header = modal.createDiv({ cls: 'rp-protocol-editor-modal-header' });
     header.createEl('h3', { text: t('protocolEditor.editEdge') });
     const closeBtn = header.createEl('button', { cls: 'rp-protocol-editor-modal-close', text: '✕', attr: { 'aria-label': t('protocolEditor.close') } });
-    const closeModal = () => { modalEl.remove(); this.restoreEditorFocus(); };
+    const closeModal = this.documentOwner.own(owner, () => {
+      modalEl.remove();
+      if (this.documentOwner.isCurrent(owner)) this.restoreEditorFocus();
+    });
     closeBtn.addEventListener('click', closeModal);
 
     const body = modal.createDiv({ cls: 'rp-protocol-editor-modal-body' });
@@ -2276,6 +2368,7 @@ export class ProtocolEditorView extends ItemView {
     cancelBtn.addEventListener('click', closeModal);
 
     saveBtn.addEventListener('click', async () => {
+      if (!this.documentOwner.isCurrent(owner)) return;
       const nextFrom = fromSelect.value;
       const nextTo = toSelect.value;
       const duplicate = this.doc?.edges.some((candidate) => candidate.id !== edge.id && candidate.fromNodeId === nextFrom && candidate.toNodeId === nextTo) ?? false;
@@ -2294,7 +2387,7 @@ export class ProtocolEditorView extends ItemView {
       const nextLabel = shouldDisplayLabel ? typedLabel ?? defaultLabel : undefined;
       if (this.isLibraryReadOnly()) return;
       try {
-        const updated = await this.plugin.protocolDocumentStore.update(this.protocolPath!, (existing) => {
+        const updated = await this.documentOwner.update(owner, (existing) => {
           if (existing === null) protocolMissingFileError();
           const nodes = existing.nodes.map((candidate) => {
             if (candidate.id !== nextTo || candidate.kind !== 'snippet' || typedLabel === undefined || nextIsLoopExit === true) {
@@ -2314,10 +2407,11 @@ export class ProtocolEditorView extends ItemView {
             : candidate);
           return { ...existing, nodes, edges, viewport: this.currentViewportState(), updatedAt: new Date().toISOString() };
         });
+        if (updated === null || !this.documentOwner.isCurrent(owner)) return;
         this.doc = updated;
         closeModal();
         new Notice(t('protocolEditor.edgeSaved'));
-        void this.loadProtocol(this.protocolPath!);
+        void this.loadProtocol(owner.path, owner);
       } catch (err) {
         new Notice(t('protocolEditor.saveFailed', { error: String(err) }));
       }
@@ -2325,7 +2419,7 @@ export class ProtocolEditorView extends ItemView {
 
     deleteBtn.addEventListener('click', async () => {
       closeModal();
-      await this.deleteEdge(edge.id);
+      if (this.documentOwner.isCurrent(owner)) await this.deleteEdge(edge.id);
     });
 
     const backdropGuard = createModalBackdropCloseGuard(modalEl);
@@ -2338,6 +2432,8 @@ export class ProtocolEditorView extends ItemView {
   /* Phase 4D — open edit modal for a node */
   private openEditModal(node: ProtocolNodeRecord, options?: { autofocusFirstTextField?: boolean }): void {
     if (this.protocolPath === null) return;
+    const owner = this.documentOwner.capture();
+    if (owner === null) return;
     const t = this.plugin.i18n.t.bind(this.plugin.i18n);
 
     const modalEl = document.body.createDiv({ cls: 'rp-protocol-editor-modal-backdrop' });
@@ -2348,7 +2444,7 @@ export class ProtocolEditorView extends ItemView {
     const closeBtn = header.createEl('button', { cls: 'rp-protocol-editor-modal-close', text: '✕', attr: { 'aria-label': t('protocolEditor.close') } });
     let closeActiveSnippetTargetPicker: (() => void) | null = null;
     let optionOrderChipHandle: { destroy(): void } | null = null;
-    const closeModal = () => {
+    const closeModal = this.documentOwner.own(owner, () => {
       if (closeActiveSnippetTargetPicker !== null) {
         closeActiveSnippetTargetPicker();
         closeActiveSnippetTargetPicker = null;
@@ -2356,8 +2452,8 @@ export class ProtocolEditorView extends ItemView {
       optionOrderChipHandle?.destroy();
       optionOrderChipHandle = null;
       modalEl.remove();
-      this.restoreEditorFocus();
-    };
+      if (this.documentOwner.isCurrent(owner)) this.restoreEditorFocus();
+    });
     modalEl.setAttr('tabindex', '-1');
     modalEl.addEventListener('keydown', (e: KeyboardEvent) => {
       if (e.key !== 'Escape') return;
@@ -2574,7 +2670,7 @@ export class ProtocolEditorView extends ItemView {
       };
 
       const openBrowseModal = () => {
-        if (closeActiveSnippetTargetPicker !== null) return;
+        if (!this.documentOwner.isCurrent(owner) || closeActiveSnippetTargetPicker !== null) return;
 
         const pickerBackdrop = document.body.createDiv({
           cls: 'rp-protocol-editor-modal-backdrop rp-protocol-editor-snippet-target-picker-backdrop',
@@ -2645,6 +2741,7 @@ export class ProtocolEditorView extends ItemView {
 
         void picker.mount();
         window.setTimeout(() => {
+          if (closed || !this.documentOwner.isCurrent(owner)) return;
           const searchInput = pickerBackdrop.querySelector('.rp-stp-search-input') as HTMLElement | null;
           (searchInput ?? pickerBackdrop).focus({ preventScroll: true });
         }, 0);
@@ -2712,6 +2809,7 @@ export class ProtocolEditorView extends ItemView {
     cancelBtn.addEventListener('click', closeModal);
 
     saveBtn.addEventListener('click', async () => {
+      if (!this.documentOwner.isCurrent(owner)) return;
       const nextFields: Record<string, unknown> = { ...node.fields };
       for (const control of textControls) {
         const value = control.value();
@@ -2741,7 +2839,7 @@ export class ProtocolEditorView extends ItemView {
 
       if (this.isLibraryReadOnly()) return;
       try {
-        await this.plugin.protocolDocumentStore.update(this.protocolPath!, (existing) => {
+        const updated = await this.documentOwner.update(owner, (existing) => {
           if (existing === null) protocolMissingFileError();
           const nodes = existing.nodes.map((n) => n.id === updatedNode.id ? updatedNode : n);
           const edgeNodeById = new Map(nodes.map((n) => [n.id, n]));
@@ -2763,9 +2861,10 @@ export class ProtocolEditorView extends ItemView {
             : existing.edges;
           return { ...existing, nodes, edges, viewport: this.currentViewportState(), updatedAt: new Date().toISOString() };
         });
+        if (updated === null || !this.documentOwner.isCurrent(owner)) return;
         closeModal();
         new Notice(t('protocolEditor.nodeSaved'));
-        void this.loadProtocol(this.protocolPath!);
+        void this.loadProtocol(owner.path, owner);
       } catch (err) {
         new Notice(t('protocolEditor.saveFailed', { error: String(err) }));
       }
@@ -2780,25 +2879,21 @@ export class ProtocolEditorView extends ItemView {
         text: t('protocolEditor.confirmDelete'),
       });
       confirmBtn.addEventListener('click', async () => {
+        if (!this.documentOwner.isCurrent(owner)) return;
         if (this.isLibraryReadOnly()) return;
         try {
-        const protocolPath = this.protocolPath!;
-        const generation = this.loadGeneration;
-        const updated = await this.plugin.protocolDocumentStore.update(protocolPath, (existing) => {
-          if (existing === null) protocolMissingFileError();
-          const nodes = existing.nodes.filter((n) => n.id !== node.id);
-          const edges = existing.edges.filter((e) => e.fromNodeId !== node.id && e.toNodeId !== node.id);
-          return { ...existing, nodes, edges, viewport: this.currentViewportState(), updatedAt: new Date().toISOString() };
-        });
-        if (this.protocolPath !== protocolPath || this.loadGeneration !== generation) {
+          const updated = await this.documentOwner.update(owner, (existing) => {
+            if (existing === null) protocolMissingFileError();
+            const nodes = existing.nodes.filter((n) => n.id !== node.id);
+            const edges = existing.edges.filter((e) => e.fromNodeId !== node.id && e.toNodeId !== node.id);
+            return { ...existing, nodes, edges, viewport: this.currentViewportState(), updatedAt: new Date().toISOString() };
+          });
+          if (updated === null || !this.documentOwner.isCurrent(owner)) return;
+          this.doc = updated;
           closeModal();
-          return;
-        }
-        this.doc = updated;
-        closeModal();
-        new Notice(t('protocolEditor.nodeDeleted'));
-        void this.loadProtocol(protocolPath);
-      } catch (err) {
+          new Notice(t('protocolEditor.nodeDeleted'));
+          void this.loadProtocol(owner.path, owner);
+        } catch (err) {
           new Notice(t('protocolEditor.deleteFailed', { error: String(err) }));
         }
       });
@@ -2813,7 +2908,9 @@ export class ProtocolEditorView extends ItemView {
     // Autofocus the first editable text field when opening for a newly-created node
     if (options?.autofocusFirstTextField && firstEditableField.length > 0) {
       const field = firstEditableField[0]!;
-      window.setTimeout(() => { field.focus(); field.select(); }, 0);
+      window.setTimeout(() => {
+        if (modalEl.isConnected && this.documentOwner.isCurrent(owner)) { field.focus(); field.select(); }
+      }, 0);
     }
   }
 

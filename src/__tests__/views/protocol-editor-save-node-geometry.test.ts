@@ -128,9 +128,7 @@ describe('ProtocolEditorView — saveNodeGeometry', () => {
       (viewRef as any).doc = otherDoc;
       (viewRef as any).loadGeneration += 1;
       const existingDoc = makeDoc(makeNode());
-      const updated = mutator(existingDoc);
-      expect(updated).toBe(existingDoc);
-      return updated;
+      return mutator(existingDoc);
     });
     const { view, nodeEl, updateEdgePaths, renderMinimap } = createView(update, makeDoc(node));
     viewRef = view;
@@ -154,9 +152,7 @@ describe('ProtocolEditorView — saveNodeGeometry', () => {
       (viewRef as any).doc = updatedDoc;
       (viewRef as any).loadGeneration += 1;
       const existingDoc = makeDoc(makeNode());
-      const updated = mutator(existingDoc);
-      expect(updated).toBe(existingDoc);
-      return updated;
+      return mutator(existingDoc);
     });
     const { view, nodeEl, updateEdgePaths, renderMinimap } = createView(update, makeDoc(node));
     viewRef = view;

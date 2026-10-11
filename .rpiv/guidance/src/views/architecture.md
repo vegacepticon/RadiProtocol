@@ -14,6 +14,7 @@
 ## Module Structure
 ```
 *-view.ts + protocol-editor-view.ts       # long-lived ItemViews
+protocol-editor-document-owner.ts         # load/edit leases and owned resources
 *-modal.ts + *-picker.ts + folder-suggest  # Promise/suggestion UI
 inline-runner-modal.ts + inline-runner-layout.ts # plain floating host
 snippet-chip-editor.ts + option-order-chip-editor.ts + tree-renderer.ts # components
@@ -53,6 +54,13 @@ onClose(): void {
 }
 ```
 Use `registerDomEvent()`/`registerEvent()`, slash-boundary watcher filters, debounced refresh, and mounted/generation checks around every awaited model load. The plugin registers each stable `VIEW_TYPE` and activates it through a get-or-create leaf flow.
+
+## Protocol Editor Document Ownership
+`ProtocolEditorDocumentOwner` owns loading, mutation leases, and transient-resource disposal. The view retains document projections and supplies its current path, generation, and read-only status. Explicit document loads invalidate the session before awaiting storage; save-triggered refreshes carry the existing lease so they do not cancel other accepted edits. New edits supersede earlier refresh snapshots. Begin loads through the owner before awaiting storage; only the latest request may apply its result. Close invalidates pending work and disposes overlays and active pointer gestures.
+
+Capture a lease when opening an overlay or starting a document action. Route every editor mutation through `owner.update(lease, mutate)`: it rejects detached/read-only work before storage, checks again inside the store's file lock, and returns `null` for cancelled or stale completion. Throwing inside the locked mutator prevents a queued stale operation from writing. A write already started may finish in its original file, but its late result must not change the new view. Check `owner.isCurrent(lease)` in the consumer continuation before applying projections, notices, or reloads.
+
+Register parent overlay cleanup and temporary document mouse listeners through `owner.own()`. Parent cleanup unmounts child snippet pickers and destroys option-order chips. Delayed focus and viewport restoration check their captured lease; viewport debounce is cancelled on invalidation. Failed current loads rebuild the previous projection so its controls receive the new generation.
 
 ## Destroyable Components and Safe DOM
 ```typescript
@@ -117,6 +125,6 @@ The inline host intentionally owns protocol migration/read/validation, accumulat
 <important if="you are adding a custom protocol-editor overlay">
 ## Adding an Editor Overlay
 1. Keep the overlay local to the editor owner, with explicit focus restoration and Escape ordering.
-2. Reject stale protocol path/generation completions before applying document or DOM changes.
+2. Capture a document-owner lease at opening; register cleanup with `owner.own()` and route saves through `owner.update()` using that lease.
 3. Preserve read-only library guards and route persistence through the document store.
 </important>

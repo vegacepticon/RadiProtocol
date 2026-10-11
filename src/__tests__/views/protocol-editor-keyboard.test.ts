@@ -1,3 +1,4 @@
+import { TFile } from 'obsidian';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { ProtocolEditorView, appendEdgeIdToOptionOrder } from '../../views/protocol-editor-view';
 import type { ProtocolDocumentV1, ProtocolNodeRecord } from '../../protocol/protocol-document';
@@ -993,6 +994,120 @@ describe('openEditModal — Answer free-text authoring', () => {
     for (const handler of handlers) await handler({ target: saveButton });
   }
 
+  function deferredDocument() {
+    let resolve!: (doc: ProtocolDocumentV1) => void;
+    const promise = new Promise<ProtocolDocumentV1>((done) => { resolve = done; });
+    return { promise, resolve };
+  }
+
+  function enableRealLoads(view: ProtocolEditorView, read: ReturnType<typeof vi.fn>) {
+    (view as any).plugin.protocolDocumentStore.read = read;
+    (view as any).app = { vault: { getAbstractFileByPath: (path: string) => { const file = new TFile(); file.path = path; return file; } } };
+    const renderShell = vi.spyOn(view as any, 'renderShell').mockImplementation(() => {});
+    const renderDocument = vi.spyOn(view as any, 'renderDocument').mockImplementation(() => {});
+    const load = (path: string) => ProtocolEditorView.prototype.loadProtocol.call(view, path);
+    return { load, renderShell, renderDocument };
+  }
+
+  it('switching protocols closes the old draft and rejects detached Save callbacks', async () => {
+    const h = openAnswerModal({ answerText: 'Old draft' });
+    const save = findAllByTag(h.documentBody, 'button').find(button => button._text === 'Save')!;
+    const next = { ...h.storedDocument(), id: 'next', title: 'Next document' };
+    const loads = enableRealLoads(h.view, vi.fn(async () => next));
+    await loads.load('Protocols/next.rp.json');
+    expect(findAllByClass(h.documentBody, 'rp-protocol-editor-modal-backdrop')).toHaveLength(0);
+    for (const handler of save._listeners.get('click') ?? []) await handler({ target: save });
+    expect(h.updateSpy).not.toHaveBeenCalled();
+    expect((h.view as any).doc).toBe(next);
+  });
+
+  it('latest requested protocol remains visible when earlier loading finishes last', async () => {
+    const h = openAnswerModal({});
+    const first = deferredDocument();
+    const second = deferredDocument();
+    const read = vi.fn().mockReturnValueOnce(first.promise).mockReturnValueOnce(second.promise);
+    const loads = enableRealLoads(h.view, read);
+    const oldLoad = loads.load('Protocols/old.rp.json');
+    const newLoad = loads.load('Protocols/new.rp.json');
+    const latest = { ...h.storedDocument(), title: 'Latest' };
+    second.resolve(latest);
+    await newLoad;
+    first.resolve(h.storedDocument());
+    await oldLoad;
+    expect((h.view as any).protocolPath).toBe('Protocols/new.rp.json');
+    expect((h.view as any).doc).toBe(latest);
+    expect(loads.renderDocument).toHaveBeenCalledTimes(1);
+  });
+
+  it('close during loading removes overlays and prevents late rendering', async () => {
+    const h = openAnswerModal({});
+    const read = deferredDocument();
+    const loads = enableRealLoads(h.view, vi.fn(() => read.promise));
+    const pending = loads.load('Protocols/next.rp.json');
+    await h.view.onClose();
+    read.resolve(h.storedDocument());
+    await pending;
+    expect((h.view as any).doc).toBeNull();
+    expect((h.view as any).protocolPath).toBeNull();
+    expect(findAllByClass(h.documentBody, 'rp-protocol-editor-modal-backdrop')).toHaveLength(0);
+    expect(loads.renderShell).not.toHaveBeenCalled();
+    expect(loads.renderDocument).not.toHaveBeenCalled();
+  });
+
+  it('switching during a node drag cancels document listeners and cannot save old geometry', async () => {
+    const h = openAnswerModal({});
+    const savedWindow = (globalThis as any).window;
+    const listeners = new Map<string, EventListener>();
+    Object.assign((globalThis as any).document, {
+      addEventListener: (name: string, handler: EventListener) => listeners.set(name, handler),
+      removeEventListener: (name: string, handler: EventListener) => {
+        if (listeners.get(name) === handler) listeners.delete(name);
+      },
+    });
+    const cancelFrame = vi.fn();
+    (globalThis as any).window = { requestAnimationFrame: () => 1, cancelAnimationFrame: cancelFrame };
+    try {
+      const nodeEl = makeEl();
+      const node = h.storedDocument().nodes[0]!;
+      (h.view as any).bindDrag(nodeEl, node);
+      for (const handler of nodeEl._listeners.get('mousedown') ?? []) handler({
+        button: 0, clientX: 0, clientY: 0, target: nodeEl,
+        preventDefault() {}, stopPropagation() {},
+      });
+      listeners.get('mousemove')!({ clientX: 50, clientY: 40 } as unknown as Event);
+      const lateMouseUp = listeners.get('mouseup')!;
+      const next = { ...h.storedDocument(), title: 'Next' };
+      const loads = enableRealLoads(h.view, vi.fn(async () => next));
+      await loads.load('Protocols/next.rp.json');
+      expect(listeners.size).toBe(0);
+      expect(cancelFrame).toHaveBeenCalledWith(1);
+      expect(h.documentBody.classList.has('rp-protocol-editor-drag-active')).toBe(false);
+      lateMouseUp({ clientX: 80, clientY: 60 } as unknown as Event);
+      expect(h.updateSpy).not.toHaveBeenCalled();
+      expect((h.view as any).doc).toBe(next);
+    } finally {
+      (globalThis as any).window = savedWindow;
+    }
+  });
+
+  it('late viewport completion cannot alter the newly loaded document', async () => {
+    const h = openAnswerModal({});
+    const written = deferredDocument();
+    h.updateSpy.mockImplementationOnce(async (_path, mutate) => {
+      const doc = mutate(h.storedDocument());
+      await written.promise;
+      return doc;
+    });
+    const pending = (h.view as any).persistViewportState();
+    const next = { ...h.storedDocument(), title: 'Next', viewport: { x: 99, y: 88, zoom: 2 } };
+    const loads = enableRealLoads(h.view, vi.fn(async () => next));
+    await loads.load('Protocols/next.rp.json');
+    written.resolve(h.storedDocument());
+    await pending;
+    expect((h.view as any).doc).toBe(next);
+    expect((h.view as any).doc.viewport).toEqual({ x: 99, y: 88, zoom: 2 });
+  });
+
   const initialStateCases: Array<{
     name: string;
     fields: Record<string, unknown>;
@@ -1471,7 +1586,7 @@ describe('ProtocolEditorView: node deletion state synchronization', () => {
       for (const handler of confirmBtn._listeners.get('click') ?? []) await handler({ target: confirmBtn });
 
       expect((view as any).doc.nodes).toEqual([]);
-      expect((view as any).loadProtocol).toHaveBeenCalledWith('delete-start.rp.json');
+      expect((view as any).loadProtocol).toHaveBeenCalledWith('delete-start.rp.json', expect.objectContaining({ path: 'delete-start.rp.json' }));
 
       (view as any).openNodeKindPickerAtWorldPoint(0, 0);
       expect(nodeKindsInPicker(documentBody)).toEqual(['start', 'question', 'answer', 'snippet']);
