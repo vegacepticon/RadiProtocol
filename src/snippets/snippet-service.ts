@@ -4,6 +4,7 @@ import type { App } from 'obsidian';
 import type { RadiProtocolSettings } from '../settings';
 import type { Snippet, MdTemplateSnippet, MdSnippet } from './snippet-model';
 import { parseMarkdownTemplate, serializeMarkdownTemplate, hasMarkdownTemplateFrontmatter } from './md-template';
+import { rewriteProtocolSnippetRefs, type ProtocolSyncResult } from './protocol-ref-sync';
 import { WriteMutex } from '../utils/write-mutex';
 import { ensureFolderPath } from '../utils/vault-utils';
 import { defaultT, type Translator } from '../i18n';
@@ -36,7 +37,7 @@ export interface SnippetSearchResult {
  *
  * This is the single source of truth for converting between vault-relative
  * paths (what SnippetService deals in) and the snippet-root-relative,
- * extension-less format that `rewriteProtocolSnippetRefs` expects.
+ * extension-less display/key format. Protocol reference repair preserves `.md`.
  */
 export function toSnippetRelativePath(vaultPath: string, snippetRoot: string): string {
   if (vaultPath === snippetRoot) return '';
@@ -47,10 +48,12 @@ export function toSnippetRelativePath(vaultPath: string, snippetRoot: string): s
 }
 
 /**
- * Full CRUD for snippet JSON files stored in {snippetFolderPath}/{id}.json (SNIP-01, D-14, D-15).
+ * Rooted Markdown snippet CRUD and service-owned path/reference reconciliation.
  * Every vault.modify() / vault.adapter.write() is wrapped in WriteMutex.runExclusive().
  * Folder existence is guaranteed via ensureFolderPath() before every write.
  */
+const pathChangeLocks = new WeakMap<App['vault'], WriteMutex>();
+
 export class SnippetService {
   private readonly app: App;
   private readonly settings: RadiProtocolSettings;
@@ -60,7 +63,9 @@ export class SnippetService {
    *  service can be constructed without a plugin reference in unit tests. */
   private readonly t: Translator;
 
-  constructor(app: App, settings: RadiProtocolSettings, t: Translator = defaultT) {
+  constructor(app: App, settings: RadiProtocolSettings, t: Translator = defaultT,
+    private readonly onReferenceSync: (result: ProtocolSyncResult) => void = () => {},
+  ) {
     this.app = app;
     this.settings = settings;
     this.t = t;
@@ -387,7 +392,7 @@ export class SnippetService {
 
   /**
    * Phase 34 (MOVE-01, RENAME-03): Rename a snippet file in place (same folder).
-   * Preserves the original extension (.json or .md). Rejects basenames that
+   * Preserves the Markdown extension. Rejects basenames that
    * contain slashes or are empty/whitespace-only. Collision-checks destination
    * before touching the source. Wrapped in WriteMutex per normalized source.
    * Returns the new normalized path. No-op (returns unchanged path) when the
@@ -415,16 +420,7 @@ export class SnippetService {
     if (normalizedNew === null) {
       throw new Error(`[RadiProtocol] renameSnippet rejected unsafe new path: ${newPath}`);
     }
-    if (normalizedOld === normalizedNew) return normalizedNew;
-    if (await this.app.vault.adapter.exists(normalizedNew)) {
-      throw new Error(this.t('snippetService.pathExists', { path: normalizedNew }));
-    }
-    await this.mutex.runExclusive(normalizedOld, async () => {
-      const file = this.app.vault.getAbstractFileByPath(normalizedOld);
-      if (file === null) throw new Error(this.t('snippetService.fileNotFound', { path: normalizedOld }));
-      await this.app.vault.rename(file, normalizedNew);
-    });
-    return normalizedNew;
+    return this.relocateSnippet(normalizedOld, normalizedNew);
   }
 
   /**
@@ -444,17 +440,31 @@ export class SnippetService {
     const basename = normalizedOld.slice(normalizedOld.lastIndexOf('/') + 1);
     const normalizedNew =
       normalizedFolder === '' ? basename : `${normalizedFolder}/${basename}`;
-    if (normalizedOld === normalizedNew) return normalizedNew;
-    if (await this.app.vault.adapter.exists(normalizedNew)) {
-      throw new Error(this.t('snippetService.pathExists', { path: normalizedNew }));
+    return this.relocateSnippet(normalizedOld, normalizedNew);
+  }
+
+  /** One relocation for simultaneous folder and basename changes; no intermediate identity. */
+  async relocateSnippet(oldPath: string, newPath: string): Promise<string> {
+    const normalizedOld = this.assertInsideRoot(oldPath);
+    const normalizedNew = this.assertInsideRoot(newPath);
+    if (normalizedOld === null || normalizedNew === null) {
+      throw new Error('[RadiProtocol] relocateSnippet rejected unsafe path');
     }
-    await this.mutex.runExclusive(normalizedOld, async () => {
-      await ensureFolderPath(this.app.vault, normalizedFolder);
-      const file = this.app.vault.getAbstractFileByPath(normalizedOld);
-      if (file === null) throw new Error(this.t('snippetService.fileNotFound', { path: normalizedOld }));
-      await this.app.vault.rename(file, normalizedNew);
+    if (!normalizedOld.toLowerCase().endsWith('.md') || !normalizedNew.endsWith('.md')) {
+      throw new Error(this.t('snippetService.invalidName'));
+    }
+    if (normalizedOld === normalizedNew) return normalizedNew;
+    return this.changePath(normalizedOld, normalizedNew, async () => {
+      if (await this.app.vault.adapter.exists(normalizedNew)) {
+        throw new Error(this.t('snippetService.pathExists', { path: normalizedNew }));
+      }
+      await this.mutex.runExclusive(normalizedOld, async () => {
+        const file = this.app.vault.getAbstractFileByPath(normalizedOld);
+        if (file === null) throw new Error(this.t('snippetService.fileNotFound', { path: normalizedOld }));
+        await ensureFolderPath(this.app.vault, normalizedNew.slice(0, normalizedNew.lastIndexOf('/')));
+        await this.app.vault.rename(file, normalizedNew);
+      });
     });
-    return normalizedNew;
   }
 
   /**
@@ -463,7 +473,7 @@ export class SnippetService {
    */
   async renameFolder(oldPath: string, newBasename: string): Promise<string> {
     const normalizedOld = this.assertInsideRoot(oldPath);
-    if (normalizedOld === null) {
+    if (normalizedOld === null || normalizedOld === this.settings.snippetFolderPath) {
       throw new Error(`[RadiProtocol] renameFolder rejected unsafe path: ${oldPath}`);
     }
     if (/[\\/]/.test(newBasename) || newBasename.trim() === '') {
@@ -485,15 +495,16 @@ export class SnippetService {
     ) {
       throw new Error(this.t('snippetService.cannotMoveIntoSelf'));
     }
-    if (await this.app.vault.adapter.exists(normalizedNew)) {
-      throw new Error(this.t('snippetService.pathExists', { path: normalizedNew }));
-    }
-    await this.mutex.runExclusive(normalizedOld, async () => {
-      const folder = this.app.vault.getAbstractFileByPath(normalizedOld);
-      if (folder === null) throw new Error(this.t('snippetService.folderNotFound', { path: normalizedOld }));
-      await this.app.vault.rename(folder, normalizedNew);
+    return this.changePath(normalizedOld, normalizedNew, async () => {
+      if (await this.app.vault.adapter.exists(normalizedNew)) {
+        throw new Error(this.t('snippetService.pathExists', { path: normalizedNew }));
+      }
+      await this.mutex.runExclusive(normalizedOld, async () => {
+        const folder = this.app.vault.getAbstractFileByPath(normalizedOld);
+        if (folder === null) throw new Error(this.t('snippetService.folderNotFound', { path: normalizedOld }));
+        await this.app.vault.rename(folder, normalizedNew);
+      });
     });
-    return normalizedNew;
   }
 
   /**
@@ -503,7 +514,7 @@ export class SnippetService {
    */
   async moveFolder(oldPath: string, newParent: string): Promise<string> {
     const normalizedOld = this.assertInsideRoot(oldPath);
-    if (normalizedOld === null) {
+    if (normalizedOld === null || normalizedOld === this.settings.snippetFolderPath) {
       throw new Error(`[RadiProtocol] moveFolder rejected unsafe path: ${oldPath}`);
     }
     const normalizedParent = this.assertInsideRoot(newParent);
@@ -524,16 +535,43 @@ export class SnippetService {
     ) {
       throw new Error(this.t('snippetService.cannotMoveIntoSelf'));
     }
-    if (await this.app.vault.adapter.exists(normalizedNew)) {
-      throw new Error(this.t('snippetService.pathExists', { path: normalizedNew }));
-    }
-    await this.mutex.runExclusive(normalizedOld, async () => {
-      await ensureFolderPath(this.app.vault, normalizedParent);
-      const folder = this.app.vault.getAbstractFileByPath(normalizedOld);
-      if (folder === null) throw new Error(this.t('snippetService.folderNotFound', { path: normalizedOld }));
-      await this.app.vault.rename(folder, normalizedNew);
+    return this.changePath(normalizedOld, normalizedNew, async () => {
+      if (await this.app.vault.adapter.exists(normalizedNew)) {
+        throw new Error(this.t('snippetService.pathExists', { path: normalizedNew }));
+      }
+      await this.mutex.runExclusive(normalizedOld, async () => {
+        await ensureFolderPath(this.app.vault, normalizedParent);
+        const folder = this.app.vault.getAbstractFileByPath(normalizedOld);
+        if (folder === null) throw new Error(this.t('snippetService.folderNotFound', { path: normalizedOld }));
+        await this.app.vault.rename(folder, normalizedNew);
+      });
     });
-    return normalizedNew;
+  }
+
+  /** All entry points await relocation and best-effort reference repair together. */
+  private async changePath(oldPath: string, newPath: string, relocate: () => Promise<void>): Promise<string> {
+    let lock = pathChangeLocks.get(this.app.vault);
+    if (!lock) {
+      lock = new WriteMutex();
+      pathChangeLocks.set(this.app.vault, lock);
+    }
+    const root = this.settings.snippetFolderPath;
+    return lock.runExclusive(root, async () => {
+      const prefix = root + '/';
+      await relocate();
+      const mapping = new Map([[oldPath.slice(prefix.length), newPath.slice(prefix.length)]]);
+      let result: ProtocolSyncResult;
+      try {
+        result = await rewriteProtocolSnippetRefs(this.app, mapping);
+      } catch (error) {
+        result = { updated: [], skipped: [{ path: oldPath, reason: String(error) }] };
+      }
+      // Reporting must never turn a completed rename into an apparent failure.
+      try { this.onReferenceSync(result); } catch (error) {
+        console.error('[RadiProtocol] Reference sync reporting failed', error);
+      }
+      return newPath;
+    });
   }
 
   /**

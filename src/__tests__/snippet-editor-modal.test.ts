@@ -343,8 +343,7 @@ interface MockSnippetService {
   delete: ReturnType<typeof vi.fn>;
   exists: ReturnType<typeof vi.fn>;
   listFolderDescendants: ReturnType<typeof vi.fn>;
-  moveSnippet: ReturnType<typeof vi.fn>;
-  renameSnippet: ReturnType<typeof vi.fn>;
+  relocateSnippet: ReturnType<typeof vi.fn>;
 }
 
 function makeMockPlugin(opts: {
@@ -352,10 +351,6 @@ function makeMockPlugin(opts: {
   descendants?: { files: string[]; folders: string[]; total: number };
   moveSnippetImpl?: (oldPath: string, newFolder: string) => Promise<string>;
 } = {}): { plugin: { app: unknown; settings: { snippetFolderPath: string }; snippetService: MockSnippetService; i18n: I18nService }; service: MockSnippetService } {
-  const defaultMove = async (oldPath: string, newFolder: string): Promise<string> => {
-    const basename = oldPath.slice(oldPath.lastIndexOf('/') + 1);
-    return newFolder === '' ? basename : `${newFolder}/${basename}`;
-  };
   const service: MockSnippetService = {
     save: vi.fn().mockResolvedValue(undefined),
     delete: vi.fn().mockResolvedValue(undefined),
@@ -365,9 +360,9 @@ function makeMockPlugin(opts: {
     listFolderDescendants: vi
       .fn()
       .mockResolvedValue(opts.descendants ?? { files: [], folders: [], total: 0 }),
-    moveSnippet: vi.fn().mockImplementation(opts.moveSnippetImpl ?? defaultMove),
-    renameSnippet: vi.fn().mockImplementation(async (_oldPath: string, newName: string) => {
-      return `.radiprotocol/snippets/${newName}.md`;
+    relocateSnippet: vi.fn().mockImplementation(async (oldPath: string, newPath: string) => {
+      if (opts.moveSnippetImpl) await opts.moveSnippetImpl(oldPath, newPath.slice(0, newPath.lastIndexOf('/')));
+      return newPath;
     }),
   };
   const plugin = {
@@ -662,9 +657,9 @@ describe('SnippetEditorModal', () => {
     const savedArg = service.save.mock.calls[0]?.[0] as Snippet;
     expect(savedArg.path).toBe('.radiprotocol/snippets/a/note.md');
     // Atomic moveSnippet replaces save+delete pipeline
-    expect(service.moveSnippet).toHaveBeenCalledWith(
+    expect(service.relocateSnippet).toHaveBeenCalledWith(
       '.radiprotocol/snippets/a/note.md',
-      '.radiprotocol/snippets/b',
+      '.radiprotocol/snippets/b/note.md',
     );
     // Phase 34 cleanup: no delete, no rewriteCanvasRefs from the modal move branch
     expect(service.delete).not.toHaveBeenCalled();
@@ -757,7 +752,7 @@ describe('SnippetEditorModal', () => {
     saveBtn.dispatchEvent({ type: 'click' });
     await new Promise((r) => setTimeout(r, 20));
     // moveSnippet was attempted
-    expect(service.moveSnippet).toHaveBeenCalled();
+    expect(service.relocateSnippet).toHaveBeenCalled();
     // An error is surfaced via the in-modal save-error element (Phase 84 I18N-02: English)
     const errorEl = findEl(
       modal.contentEl as unknown as MockEl,

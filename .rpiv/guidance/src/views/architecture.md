@@ -128,3 +128,6 @@ The inline host intentionally owns protocol migration/read/validation, accumulat
 2. Capture a document-owner lease at opening; register cleanup with `owner.own()` and route saves through `owner.update()` using that lease.
 3. Preserve read-only library guards and route persistence through the document store.
 </important>
+
+## Runner Output Recovery
+Both runner presentations use `RunnerSessionHost` and `runner/runner-output.ts` for accepted note deltas. Pending writes block navigation and stale controls; rejected writes show retained output and a retry action. Completion and self-check are rendered only after acknowledgement. Dispose guards still cancel unstarted writes and suppress late renders.

@@ -291,8 +291,7 @@ function makePlugin() {
       exists: vi.fn().mockResolvedValue(false),
       listFolderDescendants: vi.fn().mockResolvedValue({ folders: [], files: [], total: 0 }),
       save: vi.fn(),
-      moveSnippet: vi.fn(),
-      renameSnippet: vi.fn(),
+      relocateSnippet: vi.fn(),
     },
     i18n: new I18nService('en'),
   } as unknown as ConstructorParameters<typeof SnippetEditorModal>[1];

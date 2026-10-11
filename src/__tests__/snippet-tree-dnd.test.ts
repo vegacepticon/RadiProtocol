@@ -555,8 +555,8 @@ describe('SnippetManagerView — drag-and-drop (Phase 34 Plan 02)', () => {
       await flushAsync();
       expect(service.moveSnippet).toHaveBeenCalledWith(`${root}/note.md`, `${root}/b`);
       expect(service.moveFolder).not.toHaveBeenCalled();
-      expect(rewriteProtocolSnippetRefsSpy).toHaveBeenCalledTimes(1);
-      expect(rewriteProtocolSnippetRefsSpy).toHaveBeenCalledTimes(1);
+      expect(rewriteProtocolSnippetRefsSpy).not.toHaveBeenCalled();
+      expect(rewriteProtocolSnippetRefsSpy).not.toHaveBeenCalled();
       expect(ev.defaultPrevented).toBe(true);
     });
 
@@ -569,8 +569,8 @@ describe('SnippetManagerView — drag-and-drop (Phase 34 Plan 02)', () => {
       fire(targetRow!, ev);
       await flushAsync();
       expect(service.moveFolder).toHaveBeenCalledWith(`${root}/a`, `${root}/b`);
-      expect(rewriteProtocolSnippetRefsSpy).toHaveBeenCalledTimes(1);
-      expect(rewriteProtocolSnippetRefsSpy).toHaveBeenCalledTimes(1);
+      expect(rewriteProtocolSnippetRefsSpy).not.toHaveBeenCalled();
+      expect(rewriteProtocolSnippetRefsSpy).not.toHaveBeenCalled();
     });
 
     it('folder dropped on itself → rejected, no service call', async () => {
@@ -651,7 +651,7 @@ describe('SnippetManagerView — drag-and-drop (Phase 34 Plan 02)', () => {
       await flushAsync();
     }
 
-    it('file branch: selecting folder in picker calls moveSnippet; rewriteCanvasRefs and rewriteProtocolSnippetRefs called', async () => {
+    it('file branch: selecting folder in picker calls moveSnippet; reference repair is delegated to the service', async () => {
       const { plugin, service } = makePlugin({
         listings: {
           [root]: { folders: ['dst'], snippets: [makeSnippet('md-template', `${root}/note.md`, 'note')] },
@@ -675,12 +675,10 @@ describe('SnippetManagerView — drag-and-drop (Phase 34 Plan 02)', () => {
 
       expect(service.moveSnippet).toHaveBeenCalledWith(`${root}/note.md`, `${root}/dst`);
       expect(service.moveFolder).not.toHaveBeenCalled();
-      expect(rewriteProtocolSnippetRefsSpy).toHaveBeenCalledTimes(1);
-      const protocolMapping = rewriteProtocolSnippetRefsSpy.mock.calls[0]![1] as Map<string, string>;
-      expect(Array.from(protocolMapping.entries())).toEqual([['note.md', 'dst/note.md']]);
+      expect(rewriteProtocolSnippetRefsSpy).not.toHaveBeenCalled();
     });
 
-    it('folder branch: selecting target calls moveFolder then rewriteCanvasRefs and rewriteProtocolSnippetRefs with snippet-root-relative keys', async () => {
+    it('folder branch: selecting target calls moveFolder with reference repair delegated to the service', async () => {
       const { plugin, service } = makePlugin({
         listings: {
           [root]: { folders: ['a', 'b'], snippets: [] },
@@ -698,14 +696,8 @@ describe('SnippetManagerView — drag-and-drop (Phase 34 Plan 02)', () => {
       await selectAbsolute(`${root}/b`);
 
       expect(service.moveFolder).toHaveBeenCalledWith(`${root}/a`, `${root}/b`);
-      expect(rewriteProtocolSnippetRefsSpy).toHaveBeenCalledTimes(1);
-      expect(rewriteProtocolSnippetRefsSpy).toHaveBeenCalledTimes(1);
-      // Keys must be snippet-root-relative (D-03): oldKey 'a' → newKey 'b/a'
-      const mapping = rewriteProtocolSnippetRefsSpy.mock.calls[0]![1] as Map<string, string>;
-      expect(Array.from(mapping.entries())).toEqual([['a', 'b/a']]);
-      // Protocol ref sync must receive the same mapping
-      const protocolMapping = rewriteProtocolSnippetRefsSpy.mock.calls[0]![1] as Map<string, string>;
-      expect(Array.from(protocolMapping.entries())).toEqual([['a', 'b/a']]);
+      expect(rewriteProtocolSnippetRefsSpy).not.toHaveBeenCalled();
+      expect(rewriteProtocolSnippetRefsSpy).not.toHaveBeenCalled();
     });
 
     it('folder branch: move-target safety guards reject source-self and descendants with Russian Notices', async () => {
@@ -776,10 +768,9 @@ describe('SnippetManagerView — drag-and-drop (Phase 34 Plan 02)', () => {
     });
   });
 
-  it('file move keeps refreshed storage state when protocol-reference sync rejects', async () => {
+  it('file move keeps refreshed storage state after the service completes reference reconciliation', async () => {
     const { service, view } = makeTreeView();
     const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
-    rewriteProtocolSnippetRefsSpy.mockRejectedValueOnce(new Error('sync exploded'));
     await view.onOpen();
     await (view as any).performMove(`${root}/note.md`, 'file', `${root}/b`);
     expect(service.moveSnippet).toHaveBeenCalledWith(`${root}/note.md`, `${root}/b`);
@@ -788,19 +779,15 @@ describe('SnippetManagerView — drag-and-drop (Phase 34 Plan 02)', () => {
     await (view as any).selectFolder(`${root}/b`);
     expect((view as any).snippetData.map((node: { path: string }) => node.path))
       .toContain(`${root}/b/note.md`);
-    expect(noticeMessages.some((message) => message.includes('saved, but protocol references'))).toBe(true);
+    expect(rewriteProtocolSnippetRefsSpy).not.toHaveBeenCalled();
     expect(noticeMessages.some((message) => message.startsWith('Failed to move'))).toBe(false);
-    expect(consoleSpy).toHaveBeenCalledWith(
-      '[RadiProtocol] snippet manager protocol-reference sync failed',
-      expect.any(Error),
-    );
+    expect(consoleSpy).not.toHaveBeenCalled();
     consoleSpy.mockRestore();
   });
 
-  it('folder move keeps reconciled UI state when protocol-reference sync rejects', async () => {
+  it('folder move keeps reconciled UI state after the service completes reference reconciliation', async () => {
     const { plugin, view } = makeTreeView();
     const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
-    rewriteProtocolSnippetRefsSpy.mockRejectedValueOnce(new Error('sync exploded'));
     await view.onOpen();
     await (view as any).selectFolder(`${root}/a/sub`);
     await (view as any).performMove(`${root}/a`, 'folder', `${root}/b`);
@@ -808,12 +795,9 @@ describe('SnippetManagerView — drag-and-drop (Phase 34 Plan 02)', () => {
     expect(plugin.settings.snippetTreeExpandedPaths).toContain(`${root}/b/a`);
     expect(plugin.settings.snippetTreeExpandedPaths).toContain(`${root}/b/a/sub`);
     expect(plugin.settings.snippetTreeExpandedPaths).not.toContain(`${root}/a`);
-    expect(noticeMessages.some((message) => message.includes('saved, but protocol references'))).toBe(true);
+    expect(rewriteProtocolSnippetRefsSpy).not.toHaveBeenCalled();
     expect(noticeMessages.some((message) => message.startsWith('Failed to move'))).toBe(false);
-    expect(consoleSpy).toHaveBeenCalledWith(
-      '[RadiProtocol] snippet manager protocol-reference sync failed',
-      expect.any(Error),
-    );
+    expect(consoleSpy).not.toHaveBeenCalled();
     consoleSpy.mockRestore();
   });
 });

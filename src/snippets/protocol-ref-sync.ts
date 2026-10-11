@@ -6,7 +6,7 @@ import type { App, TFile } from 'obsidian';
 import { isProtocolDocumentV1, type ProtocolDocumentV1 } from '../protocol/protocol-document';
 import { withProtocolFileLock } from '../protocol/protocol-file-lock';
 
-interface ProtocolSyncResult {
+export interface ProtocolSyncResult {
   updated: string[];
   skipped: Array<{ path: string; reason: string }>;
 }

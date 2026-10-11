@@ -246,6 +246,7 @@
     "noSearchResults": "No matching snippets found.",
     "folderPaneAria": "Snippet folders",
     "snippetPaneAria": "Snippets",
+    "pathChangedNotice": "Snippet path updated.",
     "referenceSyncWarning": "The snippet change was saved, but protocol references could not be synchronized: {error}"
   },
   "startFromNode": {
@@ -326,6 +327,7 @@
     "couldNotReadProtocol": "Could not read protocol file: \"{path}\".",
     "snippetNotFound": "Snippet not found: \"{path}\".",
     "snippetLegacyJson": "Snippet \"{path}\" uses the legacy JSON format, which is no longer supported. Please recreate it as a Markdown template, then update the protocol.",
+    "retryNoteWrite": "Retry saving",
     "noteWriteFailed": "Could not write protocol output to the bound note.",
     "snippetLoadFailed": "Could not load the selected snippet. Go back and try again."
   },

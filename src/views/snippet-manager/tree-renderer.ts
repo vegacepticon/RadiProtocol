@@ -67,7 +67,7 @@ export interface TreeRendererCallbacks {
   completeFolderRename(
     oldPath: string,
     newPath: string,
-  ): Promise<{ updated: number; skipped: number } | null>;
+  ): Promise<void>;
 }
 
 // ---------------------------------------------------------------------------
@@ -615,13 +615,8 @@ export class SnippetManagerTreeRenderer {
       const oldPath = node.path;
       const newPath = await this.plugin.snippetService.renameFolder(oldPath, newValue);
       cleanup();
-      const result = await this.callbacks.completeFolderRename(oldPath, newPath);
-      if (result !== null) {
-        new Notice(t('snippetManager.folderRenamedNotice', {
-          updated: String(result.updated),
-          skipped: String(result.skipped),
-        }));
-      }
+      await this.callbacks.completeFolderRename(oldPath, newPath);
+      new Notice(t('snippetManager.pathChangedNotice'));
     } catch (e) {
       const error = (e as Error)?.message ?? t('snippetManager.unknownError');
       new Notice(t('snippetManager.renameError', { error }));

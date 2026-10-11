@@ -372,7 +372,16 @@ describe('RunnerSessionHost note deltas and snippets', () => {
     expect(h.root.querySelector('.rp-runner-session-self-check')).not.toBeNull();
   });
 
-  it('keeps an accepted delta alive across Back and unrelated rerender while note read is pending', async () => {
+  it('checking mount status preserves the rendered controls', async () => {
+    const h = harness(answerGraph());
+    await h.host.mount(h.root as unknown as HTMLElement);
+    const answer = h.root.querySelector('.rp-answer-btn');
+    expect(h.host.isMounted()).toBe(true);
+    expect(h.host.isMounted()).toBe(true);
+    expect(h.root.querySelector('.rp-answer-btn')).toBe(answer);
+  });
+
+  it('blocks Back while an accepted delta is awaiting note acknowledgement', async () => {
     const h = harness(answerGraph(), JSON.stringify({
       selfCheckEnabled: true,
       selfCheckItems: ['Review'],
@@ -382,23 +391,28 @@ describe('RunnerSessionHost note deltas and snippets', () => {
       file.path === h.protocolFile.path ? Promise.resolve('{}') : pendingRead.promise);
     expect(await h.host.mount(h.root as unknown as HTMLElement)).toBe(true);
 
-    h.root.querySelector('.rp-answer-btn')?.dispatchEvent({ type: 'click' });
+    const answer = h.root.querySelector('.rp-answer-btn');
+    const skip = h.root.querySelector('.rp-skip-btn');
+    answer?.dispatchEvent({ type: 'click' });
+    answer?.dispatchEvent({ type: 'click' });
+    skip?.dispatchEvent({ type: 'click' });
     await flushMicrotasks(2);
     const event = {
       key: 'ArrowLeft', ctrlKey: true, altKey: false, target: null,
       preventDefault: vi.fn(),
     } as unknown as KeyboardEvent;
-    expect(h.host.handleKeydown(event)).toBe(true);
-    expect(h.root.querySelector('.rp-question-text')?._text).toBe('Choose');
+    expect(h.host.handleKeydown(event)).toBe(false);
+    expect(h.root.querySelector('.rp-question-text')).toBeNull();
 
     pendingRead.resolve('Seed\n');
     await flushMicrotasks();
 
+    expect(h.app.vault.modify).toHaveBeenCalledTimes(1);
     expect(h.app.vault.modify).toHaveBeenCalledWith(h.targetNote, 'Seed\nFinding');
-    expect(h.root.querySelector('.rp-question-text')?._text).toBe('Choose');
+    expect(h.root.querySelector('.rp-question-text')).toBeNull();
   });
 
-  it('notifies and reprojects current runner state after a bound-note write failure', async () => {
+  it('retains failed output and retries before projecting completion', async () => {
     const h = harness(answerGraph(), JSON.stringify({
       selfCheckEnabled: true,
       selfCheckItems: ['Review'],
@@ -422,6 +436,13 @@ describe('RunnerSessionHost note deltas and snippets', () => {
         'Не удалось записать результат протокола в связанную заметку.',
       );
       expect(h.app.vault.modify).not.toHaveBeenCalled();
+      expect(h.root.querySelector('.rp-runner-session-self-check')).toBeNull();
+      const retry = h.root.querySelector('.rp-answer-btn');
+      expect(retry?._text).toBe('Повторить сохранение');
+      h.app.vault.read.mockResolvedValue('Seed\n');
+      retry?.dispatchEvent({ type: 'click' });
+      await flushMicrotasks();
+      expect(h.app.vault.modify).toHaveBeenCalledWith(h.targetNote, 'Seed\nFinding');
       expect(h.root.querySelector('.rp-runner-session-self-check')).not.toBeNull();
     } finally {
       consoleError.mockRestore();

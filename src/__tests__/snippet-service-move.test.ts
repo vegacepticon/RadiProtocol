@@ -64,6 +64,9 @@ function makeVault(opts: MockVaultOptions = {}) {
       if (!(p in abstractFiles)) abstractFiles[p] = { path: p, children: [] };
     }),
     getAbstractFileByPath: vi.fn((p: string) => (p in abstractFiles ? abstractFiles[p] : null)),
+    getFiles: vi.fn(() => Object.keys(files).map((path) => ({ path }))),
+    read: vi.fn(async (file: { path: string }) => files[file.path]!),
+    modify: vi.fn(async (file: { path: string }, content: string) => { files[file.path] = content; }),
     trash: vi.fn(),
     delete: vi.fn(),
     rename: vi.fn(async (file: { path: string }, newPath: string) => {
@@ -487,5 +490,125 @@ describe('listAllFolders (Phase 34 D-06)', () => {
 
     const folders = await svc.listAllFolders();
     expect(folders).toEqual([ROOT]);
+  });
+});
+
+function protocolRefs(snippetPath: string, subfolderPath = ''): string {
+  return JSON.stringify({
+    schema: 'radiprotocol.protocol', version: 1, id: 'refs', title: 'Refs',
+    createdAt: '2026-10-11', updatedAt: '2026-10-11', edges: [],
+    nodes: [{ id: 'snippet', kind: 'snippet', x: 0, y: 0, width: 100, height: 60,
+      fields: { snippetPath, subfolderPath } }],
+  });
+}
+
+describe('service-owned path changes and reference reconciliation', () => {
+  it.each([
+    ['renameSnippet', 'old.md', 'new.md'],
+    ['moveSnippet', 'old.md', 'dest/old.md'],
+    ['relocateSnippet', 'old.md', 'dest/new.md'],
+    ['renameFolder', 'folder/old.md', 'renamed/old.md'],
+    ['moveFolder', 'folder/old.md', 'dest/folder/old.md'],
+  ])('%s repairs references before returning', async (operation, oldRef, newRef) => {
+    const v = makeVault({ files: { [`${ROOT}/${oldRef}`]: 'body', 'p.rp.json': protocolRefs(oldRef, 'folder') },
+      folders: [ROOT, `${ROOT}/folder`, `${ROOT}/dest`] });
+    const reports = vi.fn();
+    const svc = new SnippetService(makeSnippetServiceApp(v.vault) as never, settings as never, undefined, reports);
+    if (operation === 'renameSnippet') await svc.renameSnippet(`${ROOT}/old.md`, 'new');
+    if (operation === 'moveSnippet') await svc.moveSnippet(`${ROOT}/old.md`, `${ROOT}/dest`);
+    if (operation === 'relocateSnippet') await svc.relocateSnippet(`${ROOT}/old.md`, `${ROOT}/dest/new.md`);
+    if (operation === 'renameFolder') await svc.renameFolder(`${ROOT}/folder`, 'renamed');
+    if (operation === 'moveFolder') await svc.moveFolder(`${ROOT}/folder`, `${ROOT}/dest`);
+    expect(v.files[`${ROOT}/${newRef}`]).toBe('body');
+    const fields = JSON.parse(v.files['p.rp.json']!).nodes[0].fields;
+    expect(fields.snippetPath).toBe(newRef);
+    expect(fields.subfolderPath).toBe(operation === 'renameFolder' ? 'renamed'
+      : operation === 'moveFolder' ? 'dest/folder' : 'folder');
+    expect(reports).toHaveBeenCalledWith({ updated: ['p.rp.json'], skipped: [] });
+    expect(v.vault.rename).toHaveBeenCalledTimes(1);
+  });
+
+  it('reports partial reference failures without rejecting a completed rename', async () => {
+    const v = makeVault({ files: { [`${ROOT}/old.md`]: 'body', 'ok.rp.json': protocolRefs('old.md'), 'bad.rp.json': '{' } });
+    const reports = vi.fn();
+    const log = vi.spyOn(console, 'error').mockImplementation(() => {});
+    try {
+      const svc = new SnippetService(makeSnippetServiceApp(v.vault) as never, settings as never, undefined, reports);
+      await expect(svc.renameSnippet(`${ROOT}/old.md`, 'new')).resolves.toBe(`${ROOT}/new.md`);
+      expect(JSON.parse(v.files['ok.rp.json']!).nodes[0].fields.snippetPath).toBe('new.md');
+      expect(reports.mock.calls[0]![0].skipped).toEqual([{ path: 'bad.rp.json', reason: expect.any(String) }]);
+    } finally { log.mockRestore(); }
+  });
+
+  it('serializes destination checks across two service instances without overwriting a winner', async () => {
+    const v = makeVault({ files: { [`${ROOT}/a.md`]: 'A', [`${ROOT}/b.md`]: 'B' } });
+    const app = makeSnippetServiceApp(v.vault);
+    const a = new SnippetService(app as never, settings as never);
+    const b = new SnippetService(app as never, settings as never);
+    const results = await Promise.allSettled([
+      a.renameSnippet(`${ROOT}/a.md`, 'dest'), b.renameSnippet(`${ROOT}/b.md`, 'dest'),
+    ]);
+    expect(results.map((result) => result.status)).toEqual(['fulfilled', 'rejected']);
+    expect(v.files[`${ROOT}/dest.md`]).toBe('A');
+    expect(v.files[`${ROOT}/b.md`]).toBe('B');
+    expect(v.vault.rename).toHaveBeenCalledTimes(1);
+  });
+
+  it('a relocation failure leaves every protocol untouched', async () => {
+    const v = makeVault({ files: { [`${ROOT}/old.md`]: 'body', 'p.rp.json': protocolRefs('old.md') } });
+    v.vault.rename.mockRejectedValueOnce(new Error('rename failed'));
+    const svc = new SnippetService(makeSnippetServiceApp(v.vault) as never, settings as never);
+    await expect(svc.renameSnippet(`${ROOT}/old.md`, 'new')).rejects.toThrow('rename failed');
+    expect(v.vault.read).not.toHaveBeenCalled();
+    expect(v.vault.modify).not.toHaveBeenCalled();
+    expect(v.files[`${ROOT}/old.md`]).toBe('body');
+  });
+});
+
+describe('path-change completion semantics', () => {
+  it('waits for protocol writes and serializes a subsequent rename', async () => {
+    const v = makeVault({ files: { [`${ROOT}/a.md`]: 'body', 'p.rp.json': protocolRefs('a.md') } });
+    const app = makeSnippetServiceApp(v.vault);
+    const a = new SnippetService(app as never, settings as never);
+    const b = new SnippetService(app as never, settings as never);
+    const modify = v.vault.modify.getMockImplementation()!;
+    let release!: () => void;
+    const held = new Promise<void>((resolve) => { release = resolve; });
+    v.vault.modify.mockImplementationOnce(async (file, content) => { await held; await modify(file, content); });
+    let settled = false;
+    const first = a.renameSnippet(`${ROOT}/a.md`, 'b').then(() => { settled = true; });
+    for (let i = 0; i < 20 && v.vault.modify.mock.calls.length === 0; i++) await Promise.resolve();
+    expect(v.vault.modify).toHaveBeenCalledTimes(1);
+    expect(settled).toBe(false);
+    const second = b.renameSnippet(`${ROOT}/b.md`, 'c');
+    await Promise.resolve();
+    expect(v.vault.rename).toHaveBeenCalledTimes(1);
+    release();
+    await Promise.all([first, second]);
+    expect(JSON.parse(v.files['p.rp.json']!).nodes[0].fields.snippetPath).toBe('c.md');
+    expect(v.files[`${ROOT}/c.md`]).toBe('body');
+  });
+
+  it('does not touch storage when asked to move or rename the configured root', async () => {
+    const v = makeVault({ folders: [ROOT] });
+    const svc = new SnippetService(makeSnippetServiceApp(v.vault) as never, settings as never);
+    const log = vi.spyOn(console, 'error').mockImplementation(() => {});
+    try {
+      await expect(svc.renameFolder(ROOT, 'new')).rejects.toThrow();
+      await expect(svc.moveFolder(ROOT, `${ROOT}/nested`)).rejects.toThrow();
+      expect(v.vault.adapter.exists).not.toHaveBeenCalled();
+      expect(v.vault.rename).not.toHaveBeenCalled();
+    } finally { log.mockRestore(); }
+  });
+
+  it('a reporting exception cannot reject a successfully repaired rename', async () => {
+    const v = makeVault({ files: { [`${ROOT}/old.md`]: 'body', 'p.rp.json': protocolRefs('old.md') } });
+    const svc = new SnippetService(makeSnippetServiceApp(v.vault) as never, settings as never, undefined,
+      () => { throw new Error('UI disposed'); });
+    const log = vi.spyOn(console, 'error').mockImplementation(() => {});
+    try {
+      await expect(svc.renameSnippet(`${ROOT}/old.md`, 'new')).resolves.toBe(`${ROOT}/new.md`);
+      expect(JSON.parse(v.files['p.rp.json']!).nodes[0].fields.snippetPath).toBe('new.md');
+    } finally { log.mockRestore(); }
   });
 });

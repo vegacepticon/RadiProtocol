@@ -5,6 +5,7 @@ import type { Translator } from '../i18n';
 import type { ProtocolDocumentParser } from '../protocol/protocol-document-parser';
 import type { ProtocolDocumentStore } from '../protocol/protocol-document-store';
 import { ProtocolRunner } from '../runner/protocol-runner';
+import { RunnerOutput, type AccumulatorDelta } from '../runner/runner-output';
 import { renderCompleteHeading } from '../runner/render/render-complete';
 import { renderErrorList } from '../runner/render/render-error';
 import { renderLoopPicker } from '../runner/render/render-loop-picker';
@@ -22,11 +23,6 @@ import { CSS_CLASS } from '../constants/css-classes';
 import { createButton } from '../utils/dom-helpers';
 import { SnippetFillInModal } from './snippet-fill-in-modal';
 import { SnippetTreePicker } from './snippet-tree-picker';
-
-interface AccumulatorDelta {
-  text: string;
-  hasSyntheticLeadingSeparator: boolean;
-}
 
 export interface RunnerSessionHostOptions {
   app: App;
@@ -51,6 +47,7 @@ export interface RunnerSessionHostOptions {
 export class RunnerSessionHost {
   private readonly options: RunnerSessionHostOptions;
   private readonly runner: ProtocolRunner;
+  private output: RunnerOutput | null = null;
 
   private mounted = false;
   /** Mount/dispose ownership: bootstrap and accepted note writes. */
@@ -109,6 +106,13 @@ export class RunnerSessionHost {
 
     this.mounted = true;
     const lifecycleGeneration = ++this.lifecycleGeneration;
+    this.output = new RunnerOutput({
+      withLock: (operation) => this.options.withTargetNoteLock(this.options.targetNote.path, operation),
+      read: () => this.options.app.vault.read(this.options.targetNote),
+      write: (content) => this.options.app.vault.modify(this.options.targetNote, content),
+      separator: () => this.options.getTextSeparator() === 'newline' ? '\n' : ' ',
+      isCurrent: () => this.isLifecycleCurrent(lifecycleGeneration),
+    });
     this.rootEl = rootEl;
     this.buildDom(rootEl);
     this.targetDeleteEventRef = this.options.app.vault.on('delete', (deletedFile) => {
@@ -173,14 +177,17 @@ export class RunnerSessionHost {
 
     this.graph = parseResult.graph;
     this.runner.start(this.graph, this.options.startNodeId);
-    this.render();
     // Start-from-node auto-appended content (e.g. starting AT a preset Answer or
     // a text-block chain between the chosen node and the first question) lands in
     // the accumulator without a user action, so the host must flush the initial
     // buffer to the target note itself — normal writes are deltas only. Regular
     // start-of-protocol sessions keep their lazy first-action delta semantics.
-    if (this.options.startNodeId !== undefined) {
-      await this.appendToTargetNote(this.captureAccumulatorDelta(''), lifecycleGeneration);
+    const initialDelta = this.options.startNodeId === undefined
+      ? { text: '', hasSyntheticLeadingSeparator: false } : this.captureAccumulatorDelta('');
+    if (initialDelta.text !== '') {
+      await this.appendToTargetNote(initialDelta, lifecycleGeneration);
+    } else {
+      this.render();
     }
     return this.mounted;
   }
@@ -226,6 +233,7 @@ export class RunnerSessionHost {
   }
 
   handleKeydown(event: KeyboardEvent): boolean {
+    if (!this.mounted || this.output?.isBlocked()) return false;
     const target = event.target as HTMLElement | null;
     if (target !== null && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA')) {
       return false;
@@ -256,6 +264,7 @@ export class RunnerSessionHost {
     operationGeneration: number,
   ): boolean {
     return this.isLifecycleCurrent(lifecycleGeneration)
+      && !this.output?.isBlocked()
       && operationGeneration === this.operationGeneration;
   }
 
@@ -327,6 +336,23 @@ export class RunnerSessionHost {
     if (this.footerBtnRowEl !== null) {
       this.footerBtnRowEl.empty();
       this.renderFooterCloseButton();
+    }
+
+    if (this.output?.isBlocked()) {
+      this.rootEl?.toggleClass('rp-state-actions', false);
+      this.rootEl?.toggleClass('rp-state-content-only', true);
+      this.contentEl.createEl('p', {
+        text: this.options.t(this.output.isWriting()
+          ? 'protocolRunner.processing' : 'inlineRunner.noteWriteFailed'),
+        cls: CSS_CLASS.EMPTY_STATE_BODY,
+      });
+      if (!this.output.isWriting()) {
+        this.contentEl.createEl('pre', { text: this.output.getPendingText() });
+        const retry = createButton(this.actionsEl, { text: this.options.t('inlineRunner.retryNoteWrite'), cls: 'rp-answer-btn' });
+        retry.addEventListener('click', () => { void this.flushOutput(lifecycleGeneration); });
+        this.rootEl?.toggleClass('rp-state-actions', true);
+      }
+      return;
     }
 
     switch (state.status) {
@@ -461,7 +487,10 @@ export class RunnerSessionHost {
               if (!this.isOperationCurrent(lifecycleGeneration, operationGeneration)) return;
               return this.handleLoopBranchClick(edge, submittedText);
             },
-            onChooseLoopBranch: (edge) => this.handleLoopBranchClick(edge),
+            onChooseLoopBranch: (edge) => {
+              if (!this.isOperationCurrent(lifecycleGeneration, operationGeneration)) return;
+              return this.handleLoopBranchClick(edge);
+            },
             getAnswerFocusRequest: () => this.answerFocusRequest,
             requestAnswerFocus: (answerId, textarea, explicitRequest) => {
               this.deferAnswerFocus(
@@ -525,6 +554,8 @@ export class RunnerSessionHost {
 
   private renderFooterIcons(showBack: boolean, showSkip: boolean, showRedo: boolean): void {
     if (this.footerBtnRowEl === null || (!showBack && !showSkip && !showRedo)) return;
+    const lifecycleGeneration = this.lifecycleGeneration;
+    const operationGeneration = this.operationGeneration;
     const group = this.footerBtnRowEl.createDiv({ cls: 'rp-runner-footer-row' });
     if (showBack) {
       const backButton = createButton(group, {
@@ -533,6 +564,7 @@ export class RunnerSessionHost {
       });
       setIcon(backButton, 'arrow-left');
       backButton.addEventListener('click', () => {
+        if (!this.isOperationCurrent(lifecycleGeneration, operationGeneration)) return;
         backButton.disabled = true;
         this.runner.stepBack();
         // Undo rewinds the walk: recompute progress from the restored node
@@ -548,6 +580,7 @@ export class RunnerSessionHost {
       });
       setIcon(redoButton, 'redo');
       redoButton.addEventListener('click', () => {
+        if (!this.isOperationCurrent(lifecycleGeneration, operationGeneration)) return;
         redoButton.disabled = true;
         this.runner.redo();
         // Redo re-applies the undone transition — recompute from the node too,
@@ -563,6 +596,7 @@ export class RunnerSessionHost {
       });
       setIcon(skipButton, 'skip-forward');
       skipButton.addEventListener('click', () => {
+        if (!this.isOperationCurrent(lifecycleGeneration, operationGeneration)) return;
         skipButton.disabled = true;
         void this.handleSkipClick();
       });
@@ -908,30 +942,24 @@ export class RunnerSessionHost {
     delta: AccumulatorDelta,
     lifecycleGeneration: number,
   ): Promise<void> {
-    const { text } = delta;
-    if (text.length === 0 || !this.isLifecycleCurrent(lifecycleGeneration)) return;
+    if (delta.text === '' || !this.isLifecycleCurrent(lifecycleGeneration)) return;
+    this.output?.accept(delta);
+    await this.flushOutput(lifecycleGeneration);
+  }
+
+  private async flushOutput(lifecycleGeneration: number): Promise<void> {
+    if (!this.isLifecycleCurrent(lifecycleGeneration) || this.output === null || this.output.isWriting()) return;
+    const output = this.output;
+    const flushing = output.flush();
+    this.render();
     try {
-      await this.options.withTargetNoteLock(this.options.targetNote.path, async () => {
-        if (!this.isLifecycleCurrent(lifecycleGeneration)) return;
-        const currentContent = await this.options.app.vault.read(this.options.targetNote);
-        if (!this.isLifecycleCurrent(lifecycleGeneration)) return;
-        const separator = this.options.getTextSeparator() === 'newline' ? '\n' : ' ';
-        const toAppend = delta.hasSyntheticLeadingSeparator
-          && currentContent.endsWith(separator)
-          && text.startsWith(separator)
-          ? text.slice(separator.length)
-          : text;
-        if (!this.isLifecycleCurrent(lifecycleGeneration)) return;
-        await this.options.app.vault.modify(
-          this.options.targetNote,
-          currentContent + toAppend,
-        );
-      });
+      await flushing;
     } catch (error) {
       if (!this.isLifecycleCurrent(lifecycleGeneration)) return;
       console.error('[RadiProtocol] Failed to append runner output to bound note', error);
       this.options.notify(this.options.t('inlineRunner.noteWriteFailed'));
     }
+    if (this.isLifecycleCurrent(lifecycleGeneration)) this.render();
   }
 
   private mountSnippetPicker(

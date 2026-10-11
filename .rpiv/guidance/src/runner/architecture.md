@@ -9,16 +9,22 @@ Pure mutable traversal state machine over an already parsed `ProtocolGraph`. It 
 - **`i18n`**: injected/default translator for runner errors.
 
 ## Consumers
-`views/inline-runner-modal.ts` is the production host: it calls runner commands, dispatches every state to renderers, resolves snippets, and appends note deltas.
+`views/runner-session-host.ts` owns execution for both floating and sidebar presentations. It calls commands, dispatches states to renderers, resolves snippets, and submits accepted deltas to `RunnerOutput`.
 
 ## Module Structure
 ```
 protocol-runner.ts             # guarded commands and cursor traversal
 runner-state.ts                # public state + undo/redo/snapshot contracts
 text-accumulator.ts            # separator-aware text buffer
+runner-output.ts               # retained output, note lock, acknowledgement/retry
 snippet-label.ts               # pure snippet classification/captions
 render/                         # DOM adapter; see its own guidance
 ```
+
+## Output Acknowledgement
+`RunnerOutput` accepts one delta at a time through an injected note adapter. `flush()` holds the shared target-note lock across read and write. A rejection retains the delta; retry reads fresh note content. An exact match to a previously attempted complete write is acknowledged without appending again. Authored first-chunk whitespace is preserved; only generated separators can be de-duplicated.
+
+While output is pending, the host invalidates old controls, blocks Back/Redo and all new actions, and defers completion/self-check/auto-close. A failed write shows retained text plus a retry button; successful acknowledgement renders the runner's already accepted state. Disposal cancels writes before modify begins and suppresses late presentation; an in-flight modify may finish. Pending output is transient and is not persisted across closing/restarting the session. If a rejected write actually reached disk and other edits subsequently changed that note, exact-result recognition cannot establish acknowledgement reliably.
 
 ## Discriminated State Snapshots
 ```typescript

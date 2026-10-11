@@ -13,7 +13,6 @@ import type { SnippetSearchResult } from '../snippets/snippet-service';
 import { SnippetEditorModal } from './snippet-editor-modal';
 import { ConfirmModal } from './confirm-modal';
 import { SnippetTreePicker } from './snippet-tree-picker';
-import { rewriteProtocolSnippetRefs } from '../snippets/protocol-ref-sync';
 import { SnippetManagerTreeRenderer } from './snippet-manager/tree-renderer';
 import type { TreeNode, TreeNodeFolder, TreeNodeFile } from './snippet-manager/tree-renderer';
 import { basenameNoExt } from './snippet-manager/tree-renderer';
@@ -36,18 +35,6 @@ interface SnippetManagerModel {
 function dirname(path: string): string {
   const i = path.lastIndexOf('/');
   return i > 0 ? path.slice(0, i) : '';
-}
-
-/**
- * Extension-preserving snippet-root-relative path used as a protocol-reference
- * mapping key. Unlike the `toSnippetRelativePath` exported by snippet-service.ts
- * (which strips `.md`), this keeps the extension so folder and file paths map
- * 1:1 to their protocol-reference form.
- */
-function toProtocolRelativePath(vaultPath: string, snippetRoot: string): string {
-  if (vaultPath === snippetRoot) return '';
-  const prefix = `${snippetRoot}/`;
-  return vaultPath.startsWith(prefix) ? vaultPath.slice(prefix.length) : vaultPath;
 }
 
 // ---------------------------------------------------------------------------
@@ -717,14 +704,9 @@ export class SnippetManagerView extends ItemView {
     }
     if (srcKind === 'file') {
       if (dirname(srcPath) === dstFolder) return;
-      const newPath = await this.plugin.snippetService.moveSnippet(srcPath, dstFolder);
+      await this.plugin.snippetService.moveSnippet(srcPath, dstFolder);
       await this.refresh();
-      const protocolResult = await this.syncProtocolRefs(srcPath, newPath);
-      if (protocolResult !== null) {
-        new Notice(t('snippetManager.movedFileNotice', {
-          protocolCount: String(protocolResult.updated),
-        }));
-      }
+      new Notice(t('snippetManager.pathChangedNotice'));
       return;
     }
     if (srcPath === dstFolder || dstFolder.startsWith(`${srcPath}/`)) {
@@ -732,12 +714,7 @@ export class SnippetManagerView extends ItemView {
     }
     const newPath = await this.plugin.snippetService.moveFolder(srcPath, dstFolder);
     await this.refreshAfterFolderPathChange(srcPath, newPath);
-    const protocolResult = await this.syncProtocolRefs(srcPath, newPath);
-    if (protocolResult !== null) {
-      new Notice(t('snippetManager.movedFolderNotice', {
-        protocolCount: String(protocolResult.updated),
-      }));
-    }
+    new Notice(t('snippetManager.pathChangedNotice'));
   }
 
   private async refreshAfterFolderPathChange(oldPath: string, newPath: string): Promise<void> {
@@ -759,33 +736,8 @@ export class SnippetManagerView extends ItemView {
     await this.refresh(selectedFolderPath);
   }
 
-  private async completeFolderRename(
-    oldPath: string,
-    newPath: string,
-  ): Promise<{ updated: number; skipped: number } | null> {
+  private async completeFolderRename(oldPath: string, newPath: string): Promise<void> {
     await this.refreshAfterFolderPathChange(oldPath, newPath);
-    return this.syncProtocolRefs(oldPath, newPath);
-  }
-
-  private async syncProtocolRefs(
-    oldPath: string,
-    newPath: string,
-  ): Promise<{ updated: number; skipped: number } | null> {
-    const t = this.plugin.i18n.t.bind(this.plugin.i18n);
-    const snippetRoot = this.plugin.settings.snippetFolderPath;
-    const mapping = new Map<string, string>([[
-      toProtocolRelativePath(oldPath, snippetRoot),
-      toProtocolRelativePath(newPath, snippetRoot),
-    ]]);
-    try {
-      const result = await rewriteProtocolSnippetRefs(this.app, mapping);
-      return { updated: result.updated.length, skipped: result.skipped.length };
-    } catch (e) {
-      const error = (e as Error)?.message ?? t('snippetManager.unknownError');
-      new Notice(t('snippetManager.referenceSyncWarning', { error }));
-      console.error('[RadiProtocol] snippet manager protocol-reference sync failed', e);
-      return null;
-    }
   }
 
   // -------------------------------------------------------------------------

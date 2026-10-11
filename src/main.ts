@@ -95,7 +95,13 @@ export default class RadiProtocolPlugin extends Plugin {
     // Instantiate services
     // Phase 84 (I18N-01): SnippetService takes the plugin's i18n translator so
     // its error messages and validatePlaceholders output follow the active locale.
-    this.snippetService = new SnippetService(this.app, this.settings, this.i18n.t.bind(this.i18n));
+    this.snippetService = new SnippetService(this.app, this.settings, this.i18n.t.bind(this.i18n), (result) => {
+      if (result.skipped.length > 0) {
+        new Notice(this.i18n.t('snippetManager.referenceSyncWarning', {
+          error: result.skipped.map(({ path, reason }) => `${path}: ${reason}`).join('; '),
+        }));
+      }
+    });
 
     // Slice 9 — community library services (wired here; consumed by Slices 6-8 views).
     // libraryRegistryUrl is the advanced override. Empty/undefined → the

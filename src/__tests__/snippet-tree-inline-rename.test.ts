@@ -463,7 +463,7 @@ describe('SnippetManagerView — F2 inline rename (Phase 34 Plan 03)', () => {
       expect(rewriteProtocolSnippetRefsSpy).not.toHaveBeenCalled();
     });
 
-    it('Enter commits via snippetService.renameFolder (folder) and fires rewriteProtocolSnippetRefs with snippet-root-relative keys', async () => {
+    it('Enter commits via snippetService.renameFolder (folder) without view-owned reference writes', async () => {
       const { service, view } = makeTreeView();
       await view.onOpen();
       const row = findRow(view, `${root}/a`);
@@ -473,11 +473,7 @@ describe('SnippetManagerView — F2 inline rename (Phase 34 Plan 03)', () => {
       fire(input, makeKeyEvent('keydown', 'Enter'));
       await flushAsync();
       expect(service.renameFolder).toHaveBeenCalledWith(`${root}/a`, 'renamed');
-      expect(rewriteProtocolSnippetRefsSpy).toHaveBeenCalledTimes(1);
-      const mapping = rewriteProtocolSnippetRefsSpy.mock.calls[0]![1] as Map<string, string>;
-      // toSnippetRelativePath('.radiprotocol/snippets/a', root) === 'a'
-      // toSnippetRelativePath('.radiprotocol/snippets/renamed', root) === 'renamed'
-      expect(Array.from(mapping.entries())).toEqual([['a', 'renamed']]);
+      expect(rewriteProtocolSnippetRefsSpy).not.toHaveBeenCalled();
     });
 
     it('settled flag prevents Enter+blur double-commit', async () => {
@@ -642,10 +638,9 @@ describe('SnippetManagerView — F2 inline rename (Phase 34 Plan 03)', () => {
     });
   });
 
-  it('folder rename keeps reconciled UI state when protocol-reference sync rejects', async () => {
+  it('folder rename keeps reconciled UI state after the service completes reference reconciliation', async () => {
     const { plugin, view } = makeTreeView();
     const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
-    rewriteProtocolSnippetRefsSpy.mockRejectedValueOnce(new Error('sync exploded'));
     await view.onOpen();
     await (view as any).selectFolder(`${root}/a/sub`);
     const cleanup = vi.fn();
@@ -659,12 +654,9 @@ describe('SnippetManagerView — F2 inline rename (Phase 34 Plan 03)', () => {
     expect(plugin.settings.snippetTreeExpandedPaths).toContain(`${root}/renamed`);
     expect(plugin.settings.snippetTreeExpandedPaths).toContain(`${root}/renamed/sub`);
     expect(plugin.settings.snippetTreeExpandedPaths).not.toContain(`${root}/a`);
-    expect(noticeMessages.some((message) => message.includes('saved, but protocol references'))).toBe(true);
+    expect(rewriteProtocolSnippetRefsSpy).not.toHaveBeenCalled();
     expect(noticeMessages.some((message) => message.startsWith('Failed to rename'))).toBe(false);
-    expect(consoleSpy).toHaveBeenCalledWith(
-      '[RadiProtocol] snippet manager protocol-reference sync failed',
-      expect.any(Error),
-    );
+    expect(consoleSpy).not.toHaveBeenCalled();
     consoleSpy.mockRestore();
   });
 });

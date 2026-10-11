@@ -10,7 +10,7 @@
 - **Obsidian**: injected `App`, `Vault`, `TFile`, and `FileManager` at the effectful boundary.
 
 ## Consumers
-`main.ts` constructs the service; snippet manager/editor/pickers and the inline runner consume it. Library package paths reuse pure slug/path behavior. Reference sync is invoked by snippet-manager orchestration after moves.
+`main.ts` constructs the service; snippet manager/editor/pickers and the inline runner consume it. Library package paths reuse pure slug/path behavior. Reference sync is owned by SnippetService after every file/folder path change; views only reconcile their selected/expanded paths.
 
 ## Module Structure
 ```
@@ -76,7 +76,9 @@ for (const file of app.vault.getFiles().filter(f => f.path.endsWith('.rp.json'))
 }
 return result;
 ```
-Move/rename and reference sync are separate operations: a successful move may leave partial or skipped protocol rewrites. The synchronizer shares the per-vault, per-path lock in `protocol/protocol-file-lock.ts` with protocol stores, holding it across read, rewrite, and write. It writes canonical pretty JSON with a trailing newline. Move/rename plus the vault-wide rewrite pass remain non-atomic.
+`renameSnippet`, `moveSnippet`, `relocateSnippet`, `renameFolder`, and `moveFolder` await the physical rename and reference repair together. `relocateSnippet(oldPath, newPath)` performs simultaneous folder/name changes with one rename, avoiding an intermediate identity. A per-vault/root lock serializes path changes across service instances, including destination collision checks and the repair pass. Paths keep the `.md` extension. The configured root cannot itself be renamed/moved.
+
+Reference repair is best-effort: a successful rename may leave skipped protocol rewrites. The injected report callback receives updated/skipped paths and production presents skipped-file warnings; callback failures never reject an already completed rename. The synchronizer shares the per-vault, per-path lock in `protocol/protocol-file-lock.ts` with protocol stores, holding it across read, rewrite, and write. It writes canonical pretty JSON with a trailing newline. Move/rename plus the vault-wide rewrite pass remain non-atomic.
 
 ## Architectural Boundaries
 - Keep pure model/codec code free of Obsidian imports and vault state.

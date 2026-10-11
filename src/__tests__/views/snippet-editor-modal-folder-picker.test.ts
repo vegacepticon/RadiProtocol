@@ -273,8 +273,7 @@ interface MockSnippetService {
   save: ReturnType<typeof vi.fn>;
   exists: ReturnType<typeof vi.fn>;
   listFolderDescendants: ReturnType<typeof vi.fn>;
-  moveSnippet: ReturnType<typeof vi.fn>;
-  renameSnippet: ReturnType<typeof vi.fn>;
+  relocateSnippet: ReturnType<typeof vi.fn>;
 }
 
 function makeMockPlugin(): { plugin: { app: unknown; settings: { snippetFolderPath: string }; snippetService: MockSnippetService; i18n: I18nService }; service: MockSnippetService } {
@@ -282,8 +281,7 @@ function makeMockPlugin(): { plugin: { app: unknown; settings: { snippetFolderPa
     save: vi.fn().mockResolvedValue(undefined),
     exists: vi.fn().mockResolvedValue(false),
     listFolderDescendants: vi.fn().mockResolvedValue({ files: [], folders: [], total: 0 }),
-    moveSnippet: vi.fn().mockResolvedValue(''),
-    renameSnippet: vi.fn().mockResolvedValue(''),
+    relocateSnippet: vi.fn().mockResolvedValue(''),
   };
   const plugin = {
     app: {},

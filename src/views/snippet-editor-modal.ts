@@ -42,8 +42,7 @@ interface SnippetEditorOptions {
     save(snippet: Snippet): Promise<void>;
     exists(path: string): Promise<boolean>;
     listFolderDescendants(root: string): Promise<{ folders: string[] }>;
-    moveSnippet(oldPath: string, newFolder: string): Promise<string>;
-    renameSnippet(oldPath: string, newBasename: string): Promise<string>;
+    relocateSnippet(oldPath: string, newPath: string): Promise<string>;
   };
   /** Hide the folder picker when the caller manages moves separately. */
   disableFolderPicker?: boolean;
@@ -264,8 +263,7 @@ export class SnippetEditorModal extends Modal {
     save(snippet: Snippet): Promise<void>;
     exists(path: string): Promise<boolean>;
     listFolderDescendants(root: string): Promise<{ folders: string[] }>;
-    moveSnippet(oldPath: string, newFolder: string): Promise<string>;
-    renameSnippet(oldPath: string, newBasename: string): Promise<string>;
+    relocateSnippet(oldPath: string, newPath: string): Promise<string>;
   } {
     return this.options.snippetServiceOverride ?? this.plugin.snippetService;
   }
@@ -539,15 +537,8 @@ export class SnippetEditorModal extends Modal {
         return;
       }
 
-      // Phase 34 (MOVE-04 cleanup, D-03 / D-10): atomic move/rename via service API.
-      // 1. Save any content changes to the OLD path first.
-      // 2. If the folder changed, moveSnippet → atomic folder move.
-      // 3. If the basename also changed (or instead of folder), renameSnippet →
-      //    atomic in-folder rename. Post-UAT fix: previously moveSnippet was
-      //    called unconditionally, which silently dropped pure name changes
-      //    (basename delta with unchanged folder).
-      // 4. No canvas-ref-sync — SnippetNode.subfolderPath is a folder-only
-      //    reference, so file moves/renames are canvas-invisible (D-03 Phase 34).
+      // Save content at the current identity, then relocate directly to the final
+      // destination. The service repairs protocol references before returning.
       const draftAtOldPath: Snippet =
         this.draftKind === 'md-template'
           ? { ...(this.draft as MdTemplateSnippet), path: oldPath }
@@ -563,16 +554,10 @@ export class SnippetEditorModal extends Modal {
         .slice(newPath.lastIndexOf('/') + 1)
         .replace(/\.(json|md)$/, '');
 
-      let currentPath = oldPath;
       const folderChanged = newFolder !== oldFolder;
       const basenameChanged = newBasenameNoExt !== oldBasenameNoExt;
 
-      if (folderChanged) {
-        currentPath = await this.snippetService().moveSnippet(currentPath, newFolder);
-      }
-      if (basenameChanged) {
-        currentPath = await this.snippetService().renameSnippet(currentPath, newBasenameNoExt);
-      }
+      const currentPath = await this.snippetService().relocateSnippet(oldPath, newPath);
 
       const finalDraft: Snippet =
         this.draftKind === 'md-template'
