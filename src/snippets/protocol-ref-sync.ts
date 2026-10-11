@@ -4,15 +4,12 @@
 
 import type { App, TFile } from 'obsidian';
 import { isProtocolDocumentV1, type ProtocolDocumentV1 } from '../protocol/protocol-document';
-import { WriteMutex } from '../utils/write-mutex';
+import { withProtocolFileLock } from '../protocol/protocol-file-lock';
 
 interface ProtocolSyncResult {
   updated: string[];
   skipped: Array<{ path: string; reason: string }>;
 }
-
-// Module-level mutex for protocol writes. Key = protocol file path.
-const protocolMutex = new WriteMutex();
 
 /**
  * Rewrite fields.snippetPath and fields.subfolderPath on snippet nodes across
@@ -48,7 +45,7 @@ export async function rewriteProtocolSnippetRefs(
     .filter((f) => f.path.endsWith('.rp.json'));
 
   for (const file of protocolFiles) {
-    await protocolMutex.runExclusive(file.path, async () => {
+    await withProtocolFileLock(app.vault, file.path, async () => {
       try {
         const raw = await app.vault.read(file);
         let parsed: ProtocolDocumentV1;

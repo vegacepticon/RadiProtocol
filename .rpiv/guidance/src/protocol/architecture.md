@@ -17,7 +17,8 @@
 protocol-document.ts          # V1 schema, factory, shallow envelope guard
 protocol-document-parser.ts   # pure JSON/record → ProtocolGraph parser
 protocol-document-migration.ts# pure, idempotent legacy-loop conversion
-protocol-document-store.ts    # vault CRUD, migration persistence, mutex
+protocol-document-store.ts    # vault CRUD, migration persistence, atomic update
+protocol-file-lock.ts         # shared per-vault, per-path serialization
 protocol-file-resolver.ts     # normalized recursive .rp.json enumeration
 ```
 
@@ -58,19 +59,17 @@ The source catches JSON decoding only. Because the envelope guard is shallow, ma
 
 ## Vault Store and Atomicity Boundary
 ```typescript
-async write(path: string, document: ProtocolDocumentV1): Promise<void> {
-  await this.mutex.runExclusive(path, async () => {
-    await ensureFolderPath(this.app.vault, parentOf(path));
-    await this.app.vault.adapter.write(path, JSON.stringify(document, null, 2) + '\n');
+async update(path: string, mutate: Mutator): Promise<ProtocolDocumentV1> {
+  return withProtocolFileLock(this.app.vault, path, async () => {
+    const next = mutate(await this.readUnlocked(path));
+    await this.writeUnlocked(path, next);
+    return next;
   });
 }
-async update(path: string, mutate: Mutator): Promise<ProtocolDocumentV1> {
-  const next = mutate(await this.read(path)); // read is outside write lock
-  await this.write(path, next);
-  return next;
-}
 ```
-`read()` returns `null` for missing, malformed, or migration-persistence failure; writes propagate errors. `update()` bundles a caller’s document mutation into one write, but is not an atomic read-modify-write across concurrent callers.
+`read()`, `write()`, `update()`, `delete()`, and snippet reference rewrites share `withProtocolFileLock()` keyed by vault identity and file path. `update()` holds the lock across read, migration persistence, mutation, and write. Multiple store instances for one vault share the same lock; other paths and vaults remain independent.
+
+Private `readUnlocked()` and `writeUnlocked()` require the caller to hold the lock. Migration writes directly through `writeUnlocked()` to avoid re-acquiring a non-reentrant lock. `read()` returns `null` for missing, malformed, or migration-persistence failure; writes and mutator errors propagate and release the lock. A whole-document `write()` still replaces the document supplied by its caller; use `update()` for edits that must preserve concurrent changes. External vault edits and the separate journaled library installer do not participate in this lock.
 
 ## Normalize-Then-Walk Resolution
 ```typescript
@@ -104,5 +103,5 @@ The resolver normalizes separators and edge slashes, prefers a folder-child walk
 <important if="you are writing or modifying tests for the protocol layer">
 - Test document/parser/migration directly with typed builders and deterministic clocks.
 - Store tests use `makeVault()`/`makeApp()` and assert both returned values and persisted bytes/call counts.
-- Cover canonical-first compatibility, collected parse errors, dangling-edge filtering, migration idempotence, resolver suffix/path behavior, and the known update race contract.
+- Cover canonical-first compatibility, collected parse errors, dangling-edge filtering, migration idempotence, resolver suffix/path behavior, concurrent updates, migration without deadlock, and concurrent snippet reference rewrites.
 </important>

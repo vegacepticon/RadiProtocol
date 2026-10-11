@@ -5,7 +5,7 @@
 import { TFile, TFolder } from 'obsidian';
 import type { App } from 'obsidian';
 
-import { WriteMutex } from '../utils/write-mutex';
+import { withProtocolFileLock } from './protocol-file-lock';
 import { ensureFolderPath } from '../utils/vault-utils';
 import {
   createEmptyProtocolDocument,
@@ -18,11 +18,11 @@ export const PROTOCOL_FILE_EXTENSION = 'rp.json' as const;
 
 /**
  * Vault-level service for .rp.json protocol documents.
- * All writes are mutex-protected per file path.
+ * Reads (including migration) and mutations share a per-vault, per-path lock
+ * with snippet reference rewrites and other store instances.
  */
 export class ProtocolDocumentStore {
   private readonly app: App;
-  private readonly mutex = new WriteMutex();
 
   constructor(app: App) {
     this.app = app;
@@ -33,6 +33,11 @@ export class ProtocolDocumentStore {
    * Returns parsed ProtocolDocumentV1 or null if file missing/invalid.
    */
   async read(protocolPath: string): Promise<ProtocolDocumentV1 | null> {
+    return withProtocolFileLock(this.app.vault, protocolPath, () => this.readUnlocked(protocolPath));
+  }
+
+  /** Caller must hold the protocol file lock; migration must not re-acquire it. */
+  private async readUnlocked(protocolPath: string): Promise<ProtocolDocumentV1 | null> {
     const exists = await this.app.vault.adapter.exists(protocolPath);
     if (!exists) return null;
 
@@ -51,7 +56,7 @@ export class ProtocolDocumentStore {
       // (load-failed UX), matching the existing read() contract.
       const { doc: migrated, changed } = migrateProtocolDocument(parsed);
       if (changed) {
-        await this.write(protocolPath, migrated);
+        await this.writeUnlocked(protocolPath, migrated);
       }
       return migrated;
     } catch (err) {
@@ -65,17 +70,19 @@ export class ProtocolDocumentStore {
    * Ensures parent folder exists before writing.
    */
   async write(protocolPath: string, doc: ProtocolDocumentV1): Promise<void> {
-    await this.mutex.runExclusive(protocolPath, async () => {
-      // Ensure parent folder exists
-      const lastSlash = protocolPath.lastIndexOf('/');
-      if (lastSlash > 0) {
-        const parent = protocolPath.slice(0, lastSlash);
-        await ensureFolderPath(this.app.vault, parent);
-      }
+    await withProtocolFileLock(this.app.vault, protocolPath, () => this.writeUnlocked(protocolPath, doc));
+  }
 
-      const payload = JSON.stringify(doc, null, 2) + '\n';
-      await this.app.vault.adapter.write(protocolPath, payload);
-    });
+  /** Caller must hold the protocol file lock. */
+  private async writeUnlocked(protocolPath: string, doc: ProtocolDocumentV1): Promise<void> {
+    const lastSlash = protocolPath.lastIndexOf('/');
+    if (lastSlash > 0) {
+      const parent = protocolPath.slice(0, lastSlash);
+      await ensureFolderPath(this.app.vault, parent);
+    }
+
+    const payload = JSON.stringify(doc, null, 2) + '\n';
+    await this.app.vault.adapter.write(protocolPath, payload);
   }
 
   /**
@@ -87,10 +94,12 @@ export class ProtocolDocumentStore {
     protocolPath: string,
     mutator: (doc: ProtocolDocumentV1 | null) => ProtocolDocumentV1
   ): Promise<ProtocolDocumentV1> {
-    const existing = await this.read(protocolPath);
-    const updated = mutator(existing);
-    await this.write(protocolPath, updated);
-    return updated;
+    return withProtocolFileLock(this.app.vault, protocolPath, async () => {
+      const existing = await this.readUnlocked(protocolPath);
+      const updated = mutator(existing);
+      await this.writeUnlocked(protocolPath, updated);
+      return updated;
+    });
   }
 
   /**
@@ -154,7 +163,7 @@ export class ProtocolDocumentStore {
    * Delete a protocol file. Mutex-protected.
    */
   async delete(protocolPath: string): Promise<void> {
-    await this.mutex.runExclusive(protocolPath, async () => {
+    await withProtocolFileLock(this.app.vault, protocolPath, async () => {
       const file = this.app.vault.getAbstractFileByPath(protocolPath);
       if (file instanceof TFile) {
         await this.app.fileManager.trashFile(file);

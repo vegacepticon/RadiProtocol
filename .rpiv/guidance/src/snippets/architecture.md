@@ -76,7 +76,7 @@ for (const file of app.vault.getFiles().filter(f => f.path.endsWith('.rp.json'))
 }
 return result;
 ```
-Move/rename and reference sync are separate operations: a successful move may leave partial or skipped protocol rewrites. The synchronizer uses its own per-protocol mutex and writes canonical pretty JSON with a trailing newline.
+Move/rename and reference sync are separate operations: a successful move may leave partial or skipped protocol rewrites. The synchronizer shares the per-vault, per-path lock in `protocol/protocol-file-lock.ts` with protocol stores, holding it across read, rewrite, and write. It writes canonical pretty JSON with a trailing newline. Move/rename plus the vault-wide rewrite pass remain non-atomic.
 
 ## Architectural Boundaries
 - Keep pure model/codec code free of Obsidian imports and vault state.

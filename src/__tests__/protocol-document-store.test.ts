@@ -3,6 +3,7 @@ import { describe, it, expect, vi } from 'vitest';
 import { ProtocolDocumentStore, PROTOCOL_FILE_EXTENSION } from '../protocol/protocol-document-store';
 import type { ProtocolDocumentV1 } from '../protocol/protocol-document';
 import { TFile, TFolder } from '../__mocks__/obsidian';
+import { rewriteProtocolSnippetRefs } from '../snippets/protocol-ref-sync';
 
 // ---------------------------------------------------------------------------
 // Mock infrastructure
@@ -80,6 +81,11 @@ function makeVault(opts: MockVaultOptions = {}) {
       return null;
     }),
     getFiles: vi.fn(() => Object.keys(files).map(p => new TFile(p))),
+    read: vi.fn(async (file: TFile) => {
+      if (!(file.path in files)) throw new Error('ENOENT: ' + file.path);
+      return files[file.path]!;
+    }),
+    modify: vi.fn(async (file: TFile, data: string) => { files[file.path] = data; }),
     trash: vi.fn(async (_file: unknown, _system: boolean) => {}),
     delete: vi.fn(),
   };
@@ -105,6 +111,12 @@ const VALID_DOC = {
   nodes: [],
   edges: [],
 } as ProtocolDocumentV1;
+
+function deferred<T>() {
+  let resolve!: (value: T) => void;
+  const promise = new Promise<T>((done) => { resolve = done; });
+  return { promise, resolve };
+}
 
 // ---------------------------------------------------------------------------
 // Tests
@@ -243,6 +255,25 @@ describe('ProtocolDocumentStore — migration on read', () => {
     expect(persisted.title).toBe('Edited');
     expect(persisted.nodes.find(n => n.id === 'n-loop')!.kind).toBe('question');
   });
+
+  it('serializes concurrent migration reads and an update', async () => {
+    const path = 'protocols/legacy.rp.json';
+    const { vault, files } = makeVault({
+      files: { [path]: JSON.stringify(legacyLoopDoc()) }, folders: ['protocols'],
+    });
+    const store = new ProtocolDocumentStore(makeApp(vault) as never);
+    const [first, second, updated] = await Promise.all([
+      store.read(path),
+      store.read(path),
+      store.update(path, (doc) => ({ ...doc!, title: 'Concurrent edit' })),
+    ]);
+    expect(first!.nodes.find(n => n.id === 'n-loop')!.kind).toBe('question');
+    expect(second!.nodes.find(n => n.id === 'n-loop')!.kind).toBe('question');
+    expect(updated.title).toBe('Concurrent edit');
+    expect((JSON.parse(files[path]!) as ProtocolDocumentV1).title).toBe('Concurrent edit');
+    // One migration and one edit; queued reads cannot persist stale migrations.
+    expect(vault.adapter.write).toHaveBeenCalledTimes(2);
+  });
 });
 
 describe('ProtocolDocumentStore — write', () => {
@@ -266,6 +297,96 @@ describe('ProtocolDocumentStore — write', () => {
 });
 
 describe('ProtocolDocumentStore — update', () => {
+  it('allows other paths and vaults to update while one write is pending', async () => {
+    const path = 'protocols/pending.rp.json';
+    const otherPath = 'protocols/other.rp.json';
+    const first = makeVault({ files: {
+      [path]: JSON.stringify(VALID_DOC), [otherPath]: JSON.stringify(VALID_DOC),
+    }, folders: ['protocols'] });
+    const other = makeVault({ files: { [path]: JSON.stringify(VALID_DOC) }, folders: ['protocols'] });
+    const store = new ProtocolDocumentStore(makeApp(first.vault) as never);
+    const otherStore = new ProtocolDocumentStore(makeApp(other.vault) as never);
+    const writeStarted = deferred<void>();
+    const finishWrite = deferred<void>();
+    first.vault.adapter.write.mockImplementationOnce(async (p, data) => {
+      writeStarted.resolve();
+      await finishWrite.promise;
+      first.files[p] = data;
+    });
+    const pending = store.update(path, (doc) => ({ ...doc!, title: 'Pending edit' }));
+    await writeStarted.promise;
+    try {
+      const results = await Promise.all([
+        store.update(otherPath, (doc) => ({ ...doc!, title: 'Other path' })),
+        otherStore.update(path, (doc) => ({ ...doc!, title: 'Other vault' })),
+      ]);
+      expect(results.map(doc => doc.title)).toEqual(['Other path', 'Other vault']);
+      expect((JSON.parse(first.files[path]!) as ProtocolDocumentV1).title).toBe(VALID_DOC.title);
+    } finally {
+      finishWrite.resolve();
+      await pending;
+    }
+    expect((JSON.parse(first.files[path]!) as ProtocolDocumentV1).title).toBe('Pending edit');
+  });
+
+  it.each([false, true])('preserves parallel edits (separate store instances: %s)', async (separateStores) => {
+    const path = 'protocols/concurrent.rp.json';
+    const { vault, files } = makeVault({
+      files: { [path]: JSON.stringify(VALID_DOC) },
+      folders: ['protocols'],
+    });
+    const app = makeApp(vault) as never;
+    const first = new ProtocolDocumentStore(app);
+    const second = separateStores ? new ProtocolDocumentStore(app) : first;
+
+    await Promise.all([
+      first.update(path, (doc) => ({ ...doc!, title: 'Edited title' })),
+      second.update(path, (doc) => ({ ...doc!, viewport: { x: 12, y: 34, zoom: 2 } })),
+    ]);
+
+    const persisted = JSON.parse(files[path]!) as ProtocolDocumentV1;
+    expect(persisted.title).toBe('Edited title');
+    expect(persisted.viewport).toEqual({ x: 12, y: 34, zoom: 2 });
+  });
+
+  it.each([false, true])('preserves editor and reference edits (refs first: %s)', async (refsFirst) => {
+    const path = 'protocols/snippet.rp.json';
+    const { vault, files } = makeVault({
+      files: { [path]: JSON.stringify({
+        ...VALID_DOC,
+        nodes: [{ id: 's1', kind: 'snippet', x: 0, y: 0, width: 200, height: 80,
+          fields: { snippetPath: 'old.md' } }],
+      }) },
+      folders: ['protocols'],
+    });
+    const app = makeApp(vault) as import('obsidian').App;
+    const store = new ProtocolDocumentStore(app);
+    const edit = () => store.update(path, (doc) => ({ ...doc!, title: 'Edited title' }));
+    const refs = () => rewriteProtocolSnippetRefs(app, new Map([['old.md', 'new.md']]));
+
+    const result = refsFirst
+      ? await Promise.all([refs(), edit()])
+      : await Promise.all([edit(), refs()]);
+
+    const persisted = JSON.parse(files[path]!) as ProtocolDocumentV1;
+    expect(persisted.title).toBe('Edited title');
+    expect(persisted.nodes[0]!.fields.snippetPath).toBe('new.md');
+    expect(result[refsFirst ? 0 : 1]).toEqual({ updated: [path], skipped: [] });
+  });
+
+  it('releases the lock after a failed write or mutator', async () => {
+    const path = 'protocols/retry.rp.json';
+    const { vault, files } = makeVault({
+      files: { [path]: JSON.stringify(VALID_DOC) }, folders: ['protocols'],
+    });
+    const store = new ProtocolDocumentStore(makeApp(vault) as never);
+    vault.adapter.write.mockRejectedValueOnce(new Error('disk error'));
+    await expect(store.update(path, (doc) => ({ ...doc!, title: 'Failed' }))).rejects.toThrow('disk error');
+    await expect(store.update(path, () => { throw new Error('mutator error'); })).rejects.toThrow('mutator error');
+    await store.update(path, (doc) => ({ ...doc!, title: 'Retry succeeded' }));
+    expect((JSON.parse(files[path]!) as ProtocolDocumentV1).title).toBe('Retry succeeded');
+  });
+
   it('applies mutator to existing document', async () => {
     const { vault, files } = makeVault({
       files: { 'protocols/existing.rp.json': JSON.stringify(VALID_DOC) },
