@@ -9,6 +9,7 @@ export interface MockEvent {
   ctrlKey?: boolean;
   altKey?: boolean;
   metaKey?: boolean;
+  shiftKey?: boolean;
   preventDefault?: () => void;
 }
 

@@ -93,7 +93,7 @@ function appendLoopFreeTextAnswer(
     growTextarea(textarea);
   });
   host.bindKeydown(textarea, (event) => {
-    if (event.key !== 'Enter' || (!event.ctrlKey && !event.metaKey)) return;
+    if (event.key !== 'Enter' || !event.shiftKey) return;
     event.preventDefault();
     void host.onSubmitFreeText(edge, textarea.value);
   });

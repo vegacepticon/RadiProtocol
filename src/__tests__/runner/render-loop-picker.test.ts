@@ -455,7 +455,7 @@ describe('shared loop picker renderer', () => {
     submit.clickHandler?.({} as MouseEvent);
     const preventDefault = vi.fn();
     textarea.dispatchEvent({
-      type: 'keydown', key: 'Enter', ctrlKey: true, metaKey: false, preventDefault,
+      type: 'keydown', key: 'Enter', ctrlKey: false, metaKey: false, shiftKey: true, preventDefault,
     });
     expect(onSubmitFreeText).toHaveBeenCalledTimes(2);
     expect(onSubmitFreeText.mock.calls.map((call) => [call[0]?.id, call[1]])).toEqual([
@@ -463,6 +463,14 @@ describe('shared loop picker renderer', () => {
       ['e-free', 'typed text'],
     ]);
     expect(preventDefault).toHaveBeenCalledTimes(1);
+
+    // The old Ctrl/Cmd+Enter binding is gone (3.6.12)
+    const modPreventDefault = vi.fn();
+    textarea.dispatchEvent({
+      type: 'keydown', key: 'Enter', ctrlKey: true, metaKey: false, shiftKey: false, preventDefault: modPreventDefault,
+    });
+    expect(onSubmitFreeText).toHaveBeenCalledTimes(2);
+    expect(modPreventDefault).not.toHaveBeenCalled();
   });
 
   it('projects sole-action and explicit focus requests onto the free-text textarea', () => {

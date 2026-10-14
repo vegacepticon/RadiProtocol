@@ -319,7 +319,7 @@ describe('shared question branch renderer', () => {
     expect(findByClass(actionZone, 'rp-free-text-answer-error')).toHaveLength(0);
   });
 
-  it('submits once per click or Mod+Enter, leaves plain Enter untouched, and binds one listener per event', () => {
+  it('submits once per click or Shift+Enter, leaves plain Enter untouched, and binds one listener per event', () => {
     const runtimeGraph = graphFrom([
       baseNode('q', 'question'),
       baseNode('free', 'answer', { answerText: 'Describe', freeText: true }),
@@ -338,13 +338,35 @@ describe('shared question branch renderer', () => {
     expect(submit._text).toBe('Submit');
 
     submit.dispatchEvent({ type: 'click' });
-    const ctrlPreventDefault = vi.fn();
+    const shiftPreventDefault = vi.fn();
+    textarea.dispatchEvent({
+      type: 'keydown',
+      key: 'Enter',
+      ctrlKey: false,
+      metaKey: false,
+      shiftKey: true,
+      preventDefault: shiftPreventDefault,
+    });
+
+    expect(harness.onSubmitFreeText).toHaveBeenCalledTimes(2);
+    expect(harness.onSubmitFreeText.mock.calls.map((call) => [
+      call[0].id,
+      call[1],
+    ])).toEqual([
+      ['free', 'submitted'],
+      ['free', 'submitted'],
+    ]);
+    expect(shiftPreventDefault).toHaveBeenCalledTimes(1);
+
+    // Mod+Enter / Meta+Enter / plain Enter are NOT submission hotkeys (3.6.12)
+    const modPreventDefault = vi.fn();
     textarea.dispatchEvent({
       type: 'keydown',
       key: 'Enter',
       ctrlKey: true,
       metaKey: false,
-      preventDefault: ctrlPreventDefault,
+      shiftKey: false,
+      preventDefault: modPreventDefault,
     });
     const metaPreventDefault = vi.fn();
     textarea.dispatchEvent({
@@ -352,6 +374,7 @@ describe('shared question branch renderer', () => {
       key: 'Enter',
       ctrlKey: false,
       metaKey: true,
+      shiftKey: false,
       preventDefault: metaPreventDefault,
     });
     const plainPreventDefault = vi.fn();
@@ -360,20 +383,12 @@ describe('shared question branch renderer', () => {
       key: 'Enter',
       ctrlKey: false,
       metaKey: false,
+      shiftKey: false,
       preventDefault: plainPreventDefault,
     });
-
-    expect(harness.onSubmitFreeText).toHaveBeenCalledTimes(3);
-    expect(harness.onSubmitFreeText.mock.calls.map((call) => [
-      call[0].id,
-      call[1],
-    ])).toEqual([
-      ['free', 'submitted'],
-      ['free', 'submitted'],
-      ['free', 'submitted'],
-    ]);
-    expect(ctrlPreventDefault).toHaveBeenCalledTimes(1);
-    expect(metaPreventDefault).toHaveBeenCalledTimes(1);
+    expect(harness.onSubmitFreeText).toHaveBeenCalledTimes(2);
+    expect(modPreventDefault).not.toHaveBeenCalled();
+    expect(metaPreventDefault).not.toHaveBeenCalled();
     expect(plainPreventDefault).not.toHaveBeenCalled();
   });
 
