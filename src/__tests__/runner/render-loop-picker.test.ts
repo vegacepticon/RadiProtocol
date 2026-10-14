@@ -422,7 +422,7 @@ describe('shared loop picker renderer', () => {
     expect(findByClass(draftZone, 'rp-free-text-answer-textarea')[0]?.value).toBe('drafted value');
   });
 
-  it('forwards input to the draft host, clears error/ARIA, grows, and submits once per click or Mod+Enter', () => {
+  it('forwards input to the draft host, clears error/ARIA, grows, and submits once per click or Shift+Enter', () => {
     const textZone = new MockEl('text');
     const actionZone = new MockEl('actions');
     const freeEdge = { id: 'e-free', fromNodeId: 'loop', toNodeId: 'free' };
