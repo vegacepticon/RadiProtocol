@@ -41,6 +41,21 @@ export class SnippetFillInModal extends Modal {
   private previewEl: HTMLDivElement | null = null;
   private readonly t: Translator;
 
+  /**
+   * Bubble-phase keydown listener on `contentEl` — Shift+Enter confirms.
+   *
+   * A contentEl-level listener is used instead of `Modal.scope` key bindings
+   * because the event has to be seen while focus sits inside a placeholder
+   * textarea (and scope bindings are bypassed for plain-key/typing contexts).
+   * It also covers the collapsed Custom override input and the action row.
+   * Plain Enter keeps its native meaning inside a field (newline).
+   */
+  private readonly onContentKeydown = (event: KeyboardEvent): void => {
+    if (event.key !== 'Enter' || !event.shiftKey) return;
+    event.preventDefault();
+    this.confirm();
+  };
+
   constructor(app: App, snippet: MdTemplateSnippet, t?: Translator) {
     super(app);
     this.snippet = snippet;
@@ -83,9 +98,13 @@ export class SnippetFillInModal extends Modal {
 
     // Button row — [Confirm] is last tab stop (D-12)
     this.renderButtonRow();
+
+    // Shift+Enter → Confirm (bubbled keydown from any field in the modal)
+    this.contentEl.addEventListener('keydown', this.onContentKeydown);
   }
 
   onClose(): void {
+    this.contentEl.removeEventListener('keydown', this.onContentKeydown);
     // Escape key or external close — resolve with null if not already resolved (T-5-11)
     this.safeResolve(null);
     this.contentEl.empty();
@@ -368,6 +387,17 @@ export class SnippetFillInModal extends Modal {
     return renderMdTemplateSnippet(this.snippet, this.values);
   }
 
+  /**
+   * Resolve with the fully-rendered snippet and close the modal.
+   * Shared by the Confirm button and the Shift+Enter hotkey — both paths stay
+   * identical, including the "unfilled placeholders render empty" behaviour.
+   */
+  private confirm(): void {
+    const rendered = this.renderCurrentSnippet();
+    this.safeResolve(rendered);
+    this.close();
+  }
+
   /** Render the Cancel / Confirm button row. Confirm is the last tab stop (D-12). */
   private renderButtonRow(): void {
     const row = this.contentEl.createDiv({ cls: 'rp-snippet-modal-btn-row' });
@@ -382,9 +412,7 @@ export class SnippetFillInModal extends Modal {
     const confirmBtn = row.createEl('button', { cls: 'mod-cta' });
     confirmBtn.textContent = this.t('snippetFillIn.confirm');
     confirmBtn.addEventListener('click', () => {
-      const rendered = this.renderCurrentSnippet();
-      this.safeResolve(rendered);
-      this.close();
+      this.confirm();
     });
   }
 }

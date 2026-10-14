@@ -989,3 +989,122 @@ describe('SnippetFillInModal — inserted values highlighted in preview', () => 
     expect(css).toContain('.rp-snippet-fill-modal-backdrop .modal-bg');
   });
 });
+
+// =========================================================================
+// Shift+Enter confirm hotkey
+// =========================================================================
+
+/**
+ * Simulate a keydown that BUBBLED from a field up to contentEl.
+ * MockEl.dispatchEvent has no bubbling, so dispatch on the root with the
+ * target overridden to the originating field (same pattern as
+ * snippet-tree-picker.test.ts's triggerBubbledKeydown).
+ */
+function triggerBubbledKeydown(
+  root: MockEl,
+  field: MockEl,
+  key: string,
+  mods: { ctrlKey?: boolean; altKey?: boolean; metaKey?: boolean; shiftKey?: boolean } = {},
+): { preventDefault: ReturnType<typeof vi.fn> } {
+  const preventDefault = vi.fn();
+  root.dispatchEvent({
+    type: 'keydown',
+    key,
+    code: '',
+    target: field,
+    ctrlKey: !!mods.ctrlKey,
+    altKey: !!mods.altKey,
+    metaKey: !!mods.metaKey,
+    shiftKey: !!mods.shiftKey,
+    preventDefault,
+  } as unknown as { type: string; target?: MockEl });
+  return { preventDefault };
+}
+
+function openModalWithFreeText(template = 'R: {{f}}'): {
+  modal: SnippetFillInModal;
+  root: MockEl;
+  field: MockEl;
+} {
+  const snippet = makeSnippet([{ id: 'f', label: 'F', type: 'free-text' }], template);
+  const modal = new SnippetFillInModal(app, snippet);
+  modal.onOpen();
+  const root = (modal as unknown as { contentEl: MockEl }).contentEl;
+  const field = root.querySelectorAll('.rp-snippet-modal-free-text')[0];
+  if (!field) throw new Error('Free-text field missing');
+  return { modal, root, field };
+}
+
+describe('SnippetFillInModal — Shift+Enter confirms', () => {
+  it('resolves with the rendered snippet when Shift+Enter bubbles from a free-text field', async () => {
+    const { modal, root, field } = openModalWithFreeText();
+    (field as unknown as { _value: string })._value = 'text';
+    field.dispatchEvent({ type: 'input' });
+
+    const { preventDefault } = triggerBubbledKeydown(root, field, 'Enter', { shiftKey: true });
+
+    // preventDefault keeps the textarea from also inserting a newline
+    expect(preventDefault).toHaveBeenCalled();
+    expect((modal as unknown as { resolved: boolean }).resolved).toBe(true);
+    expect(await modal.result).toBe('R: text');
+  });
+
+  it('ignores plain Enter so the field keeps its newline behaviour', async () => {
+    const { modal, root, field } = openModalWithFreeText();
+    (field as unknown as { _value: string })._value = 'text';
+    field.dispatchEvent({ type: 'input' });
+
+    const { preventDefault } = triggerBubbledKeydown(root, field, 'Enter');
+
+    expect(preventDefault).not.toHaveBeenCalled();
+    expect((modal as unknown as { resolved: boolean }).resolved).toBe(false);
+    // Closing without confirming still resolves null (the modal was not confirmed)
+    modal.onClose();
+    expect(await modal.result).toBeNull();
+  });
+
+  it('ignores Shift with a non-Enter key', async () => {
+    const { modal, root, field } = openModalWithFreeText();
+    const { preventDefault } = triggerBubbledKeydown(root, field, 'Tab', { shiftKey: true });
+    expect(preventDefault).not.toHaveBeenCalled();
+    expect((modal as unknown as { resolved: boolean }).resolved).toBe(false);
+    modal.onClose();
+  });
+
+  it('confirms with unfilled placeholders rendered empty — same as the Confirm button', async () => {
+    const { modal, root, field } = openModalWithFreeText();
+    triggerBubbledKeydown(root, field, 'Enter', { shiftKey: true });
+    expect(await modal.result).toBe('R: ');
+  });
+
+  it('confirms from a choice Custom override input', async () => {
+    const snippet = makeSnippet(
+      [{ id: 'f', label: 'F', type: 'choice', options: ['a', 'b'] }],
+      'R: {{f}}',
+    );
+    const modal = new SnippetFillInModal(app, snippet);
+    modal.onOpen();
+    const root = (modal as unknown as { contentEl: MockEl }).contentEl;
+    const toggle = root.querySelectorAll('.rp-snippet-modal-custom-toggle')[0];
+    if (!toggle) throw new Error('Custom toggle missing');
+    toggle.dispatchEvent({ type: 'click' });
+    const customRow = root.querySelectorAll('.rp-snippet-modal-custom-row')[0];
+    if (!customRow) throw new Error('Custom row missing');
+    const customInput = customRow.querySelectorAll('textarea')[0];
+    if (!customInput) throw new Error('Custom input missing');
+    (customInput as unknown as { _value: string })._value = 'custom-val';
+    customInput.dispatchEvent({ type: 'input' });
+
+    triggerBubbledKeydown(root, customInput, 'Enter', { shiftKey: true });
+
+    expect(await modal.result).toBe('R: custom-val');
+  });
+
+  it('removes the keydown listener on close', async () => {
+    const { modal, root } = openModalWithFreeText();
+    expect((root._listeners.get('keydown') ?? []).length).toBe(1);
+    modal.onClose();
+    expect((root._listeners.get('keydown') ?? []).length).toBe(0);
+    expect(await modal.result).toBeNull();
+  });
+});
