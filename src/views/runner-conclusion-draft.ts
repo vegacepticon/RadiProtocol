@@ -19,6 +19,7 @@ export class RunnerConclusionDraft {
   private readonly input: HTMLTextAreaElement;
   private readonly insert: HTMLButtonElement;
   private readonly dragId = String(++nextDraftId);
+  private nextLabelId = 0;
   private lines: DraftLine[] = [];
   private dragged: DraftLine | null = null;
   private insertedText = '';
@@ -36,13 +37,13 @@ export class RunnerConclusionDraft {
     // Never let native textarea drops import foreign/plain text. Only our row
     // handler may mutate order, after validating this component's drag token.
     this.root.addEventListener('drop', event => { event.preventDefault(); });
-    this.root.createEl('h3', { text: t('runnerDraft.title') });
-    this.root.createEl('p', { cls: 'rp-runner-draft-help', text: t('runnerDraft.help') });
+
     this.list = this.root.createDiv({ cls: 'rp-runner-draft-list' });
     this.input = createTextarea(this.root, {
       cls: 'rp-runner-draft-input', placeholder: t('runnerDraft.inputPlaceholder'),
-      attr: { rows: '1', 'aria-label': t('runnerDraft.inputLabel') },
+      attr: { rows: '1' },
     });
+    this.labelControl(this.root, this.input, 'runnerDraft.inputLabel');
     this.input.addEventListener('input', () => {
       growDraftTextarea(this.input);
       this.changed();
@@ -116,26 +117,29 @@ export class RunnerConclusionDraft {
     this.onChange();
   }
 
-  private move(line: DraftLine, target: number, focusClass?: string): void {
+  private move(line: DraftLine, target: number): void {
     const from = this.lines.indexOf(line);
     if (from < 0 || target < 0 || target >= this.lines.length || from === target) return;
     this.lines.splice(from, 1);
     this.lines.splice(target, 0, line);
     this.renderLines();
-    if (focusClass) {
-      const row = this.list.children[target];
-      const control = row?.querySelector<HTMLButtonElement>(focusClass);
-      if (control && !control.disabled) control.focus();
-      else row?.querySelector<HTMLTextAreaElement>('.rp-runner-draft-line')?.focus();
-    }
     this.changed();
+  }
+
+  private labelControl(parent: HTMLElement, control: HTMLElement, key: string): void {
+    const id = `rp-runner-draft-${this.dragId}-label-${++this.nextLabelId}`;
+    parent.createEl('span', { cls: 'rp-sr-only', text: this.t(key), attr: { id } });
+    // Obsidian turns aria-label into a tooltip; labelledby keeps the accessible
+    // name without introducing hover noise on fields or icon-only controls.
+    control.setAttribute('aria-labelledby', id);
   }
 
   private renderLines(): void {
     this.list.empty();
-    this.lines.forEach((line, index) => {
+    this.lines.forEach(line => {
       const row = this.list.createDiv({ cls: 'rp-runner-draft-row' });
-      const handle = createButton(row, { cls: 'rp-runner-draft-drag', text: '⠿', attr: { type: 'button', draggable: 'true', 'aria-label': this.t('runnerDraft.dragLine') } });
+      const handle = createButton(row, { cls: 'rp-runner-draft-drag', text: '⠿', attr: { type: 'button', draggable: 'true' } });
+      this.labelControl(row, handle, 'runnerDraft.dragLine');
       handle.addEventListener('dragstart', event => {
         if (!event.dataTransfer || this.destroyed) return;
         this.dragged = line;
@@ -153,7 +157,8 @@ export class RunnerConclusionDraft {
         this.dragged = null;
         this.move(dragged, this.lines.indexOf(line));
       });
-      const editor = createTextarea(row, { cls: 'rp-runner-draft-line', attr: { rows: '1', 'aria-label': this.t('runnerDraft.editLine') } });
+      const editor = createTextarea(row, { cls: 'rp-runner-draft-line', attr: { rows: '1' } });
+      this.labelControl(row, editor, 'runnerDraft.editLine');
       editor.value = line.text;
       editor.addEventListener('input', () => {
         line.text = editor.value;
@@ -161,14 +166,8 @@ export class RunnerConclusionDraft {
         this.changed();
       });
       growDraftTextarea(editor);
-      const controls = row.createDiv({ cls: 'rp-runner-draft-controls' });
-      const up = createButton(controls, { cls: 'rp-runner-draft-up', text: '↑', attr: { type: 'button', 'aria-label': this.t('runnerDraft.moveUp') } });
-      up.disabled = index === 0;
-      up.addEventListener('click', () => this.move(line, this.lines.indexOf(line) - 1, '.rp-runner-draft-up'));
-      const down = createButton(controls, { cls: 'rp-runner-draft-down', text: '↓', attr: { type: 'button', 'aria-label': this.t('runnerDraft.moveDown') } });
-      down.disabled = index === this.lines.length - 1;
-      down.addEventListener('click', () => this.move(line, this.lines.indexOf(line) + 1, '.rp-runner-draft-down'));
-      const remove = createButton(controls, { cls: 'rp-runner-draft-delete', text: '×', attr: { type: 'button', 'aria-label': this.t('runnerDraft.deleteLine') } });
+      const remove = createButton(row, { cls: 'rp-runner-draft-delete', text: '×', attr: { type: 'button' } });
+      this.labelControl(row, remove, 'runnerDraft.deleteLine');
       remove.addEventListener('click', () => {
         this.lines = this.lines.filter(candidate => candidate !== line);
         this.renderLines();

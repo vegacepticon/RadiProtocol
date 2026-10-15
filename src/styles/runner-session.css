@@ -426,6 +426,8 @@
 }
 
 .rp-runner-draft {
+  --rp-runner-draft-control-height: var(--input-height, 30px);
+
   display: flex;
   flex: 0 0 auto;
   flex-direction: column;
@@ -433,16 +435,6 @@
   min-width: 0;
   padding: var(--size-4-3);
   border-top: 1px solid var(--background-modifier-border);
-}
-
-.rp-runner-draft h3,
-.rp-runner-draft-help {
-  margin: 0;
-}
-
-.rp-runner-draft-help {
-  color: var(--text-muted);
-  font-size: var(--font-ui-smaller);
 }
 
 .rp-runner-draft-list {
@@ -465,9 +457,9 @@
   box-sizing: border-box;
   width: 100%;
   min-width: 0;
-  min-height: calc(1lh + 2 * var(--input-border-width));
+  min-height: var(--rp-runner-draft-control-height);
   max-height: none;
-  padding-block: 0;
+  padding-block: max(0px, calc((var(--rp-runner-draft-control-height) - 1lh - 2 * var(--input-border-width)) / 2));
   padding-inline: var(--input-padding);
   overflow: hidden;
   overflow-wrap: anywhere;
@@ -476,23 +468,22 @@
   resize: none;
 }
 
-.rp-runner-draft-controls {
+.rp-runner-draft-drag,
+.rp-runner-draft-delete {
   display: flex;
-  flex-wrap: wrap;
-  gap: var(--size-2-1);
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  width: var(--rp-runner-draft-control-height);
+  min-width: var(--rp-runner-draft-control-height);
+  height: var(--rp-runner-draft-control-height);
+  padding: 0;
 }
 
 .rp-runner-draft-drag {
   cursor: grab;
 }
 
-.rp-runner-draft-up,
-.rp-runner-draft-down,
-.rp-runner-draft-delete {
-  min-width: 24px;
-  padding-inline: var(--size-2-1);
-}
-
 .rp-runner-draft-insert {
-  align-self: flex-end;
+  align-self: center;
 }

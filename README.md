@@ -51,7 +51,7 @@ RadiProtocol is a documentation aid. The radiologist remains responsible for cli
 
 ### Conclusion draft in the Runner
 
-The floating Runner and sidebar include a session-only conclusion draft below the answer choices. Type a line and press **Enter** to turn it into an item. Edit or delete individual items, or reorder them using the drag handle or arrow buttons.
+The floating Runner and sidebar include a session-only conclusion draft below the answer choices. Type a line and press **Enter** to turn it into an item. Edit or delete individual items, or reorder them using the drag handle. The compact editor has no heading, help text or hover tooltips; single-line fields match the drag-handle height and expand for longer text. The insert button is centered.
 
 **Insert conclusion** inserts the entire draft, including uncommitted input, at the last cursor position **in the note bound to this Runner**. That note must be open in editing mode. Items are joined with newlines, without a heading or list markers. The draft remains visible after insertion; pressing the button again inserts the entire text again rather than updating an earlier insertion.
 

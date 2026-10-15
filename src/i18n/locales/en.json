@@ -1,13 +1,9 @@
 {
   "runnerDraft": {
-    "title": "Conclusion draft",
-    "help": "Press Enter to add an item; drag to reorder.",
     "inputLabel": "New conclusion item",
     "inputPlaceholder": "Type a conclusion item…",
     "editLine": "Edit item",
     "deleteLine": "Delete item",
-    "moveUp": "Move up",
-    "moveDown": "Move down",
     "dragLine": "Drag to reorder",
     "insert": "Insert conclusion",
     "insertFailed": "Could not insert the conclusion draft. Your draft has been kept.",

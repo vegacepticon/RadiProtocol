@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
+import { readFileSync } from 'node:fs';
 import { makeEl, type MockEl, type MockEvent } from '../runner/runner-renderer-host-fixtures';
 import { defaultT } from '../../i18n';
 import { RunnerConclusionDraft } from '../../views/runner-conclusion-draft';
@@ -38,6 +39,15 @@ function transfer() {
 }
 
 describe('RunnerConclusionDraft', () => {
+  it('uses one theme-based control height and centers the insert button', () => {
+    const css = readFileSync(new URL('../../styles/runner-session.css', import.meta.url), 'utf8');
+    expect(css).toMatch(/--rp-runner-draft-control-height:\s*var\(--input-height,\s*30px\)/);
+    expect(css).toMatch(/\.rp-runner-draft-line\s*\{[^}]*min-height:\s*var\(--rp-runner-draft-control-height\)/);
+    expect(css).toMatch(/\.rp-runner-draft-delete\s*\{[^}]*height:\s*var\(--rp-runner-draft-control-height\)/);
+    expect(css).toMatch(/\.rp-runner-draft-insert\s*\{\s*align-self:\s*center/);
+    expect(css).not.toMatch(/\.rp-runner-draft-(?:up|down|help|controls)\b/);
+  });
+
   it('accounts for borders and remeasures on width changes, disconnecting on destroy', () => {
     let resize!: (entries: Array<{ contentRect: { width: number } }>) => void;
     const disconnect = vi.fn();
@@ -152,25 +162,28 @@ describe('RunnerConclusionDraft', () => {
     expect(s.draft.hasUninsertedText()).toBe(true);
   });
 
-  it('supports accessible move controls and exact snapshot restoration after reorder', () => {
+  it('keeps the draft minimal and labels controls without Obsidian hover tooltips', () => {
     const s = setup();
     s.commit('One\nTwo\nThree');
-    s.draft.markInserted(s.draft.getText());
-    expect(s.find('up').disabled).toBe(true);
-    expect(s.rows()[2]!.querySelector('.rp-runner-draft-down')!.disabled).toBe(true);
-    expect(s.find('up').getAttribute('aria-label')).toBeTruthy();
-    s.find('down').dispatchEvent({ type: 'click' });
-    expect(s.draft.getText()).toBe('Two\nOne\nThree');
-    expect(s.draft.hasUninsertedText()).toBe(true);
-    s.rows()[1]!.querySelector('.rp-runner-draft-up')!.dispatchEvent({ type: 'click' });
-    expect(s.draft.getText()).toBe('One\nTwo\nThree');
-    expect(s.draft.hasUninsertedText()).toBe(false);
+    expect(s.container.querySelector('h3')).toBeNull();
+    for (const removed of ['help', 'up', 'down']) expect(s.find(removed)).toBeNull();
+    for (const control of [s.find('input'), ...s.container.querySelectorAll('.rp-runner-draft-line'),
+      ...s.container.querySelectorAll('.rp-runner-draft-drag'), ...s.container.querySelectorAll('.rp-runner-draft-delete')]) {
+      expect(control.getAttribute('aria-label')).toBeNull();
+      expect(control.getAttribute('title')).toBeNull();
+      const labelId = control.getAttribute('aria-labelledby');
+      expect(labelId).toBeTruthy();
+      const label = s.container.querySelectorAll('span').find(el => el.getAttribute('id') === labelId);
+      expect(label?.hasClass('rp-sr-only')).toBe(true);
+      expect(label?.textContent).toBeTruthy();
+    }
   });
 
   it('reorders by handle drag only within the owning component', () => {
     const a = setup();
     const b = setup();
     a.commit('One\nTwo');
+    a.draft.markInserted(a.draft.getText());
     b.commit('Foreign\nOther');
     const data = transfer();
     dragEvent(a.find('drag'), 'dragstart', data);
@@ -180,6 +193,15 @@ describe('RunnerConclusionDraft', () => {
     expect(b.draft.getText()).toBe('Foreign\nOther');
     dragEvent(a.rows()[1]!, 'drop', data);
     expect(a.draft.getText()).toBe('Two\nOne');
+    expect(a.draft.hasUninsertedText()).toBe(true);
+    const back = transfer();
+    dragEvent(a.find('drag'), 'dragstart', back);
+    dragEvent(a.rows()[1]!, 'drop', back);
+    expect(a.draft.getText()).toBe('One\nTwo');
+    expect(a.draft.hasUninsertedText()).toBe(false);
+    const again = transfer();
+    dragEvent(a.find('drag'), 'dragstart', again);
+    dragEvent(a.rows()[1]!, 'drop', again);
     const plain = transfer();
     plain.setData('text/plain', 'Injected');
     // MockEl does not bubble events: exercise the root guard explicitly too.
