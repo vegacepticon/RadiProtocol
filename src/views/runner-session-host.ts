@@ -1,4 +1,4 @@
-import { TFile, setIcon, type App, type EventRef } from 'obsidian';
+import { TFile, setIcon, type App, type Editor, type EventRef } from 'obsidian';
 import { GraphValidator } from '../graph/graph-validator';
 import type { AnswerNode, ProtocolGraph, RPEdge } from '../graph/graph-model';
 import type { Translator } from '../i18n';
@@ -23,6 +23,9 @@ import { CSS_CLASS } from '../constants/css-classes';
 import { createButton } from '../utils/dom-helpers';
 import { SnippetFillInModal } from './snippet-fill-in-modal';
 import { SnippetTreePicker } from './snippet-tree-picker';
+import { ConfirmModal } from './confirm-modal';
+import { RunnerConclusionDraft } from './runner-conclusion-draft';
+import { RunnerDraftTarget } from './runner-draft-target';
 
 export interface RunnerSessionHostOptions {
   app: App;
@@ -34,6 +37,7 @@ export interface RunnerSessionHostOptions {
   snippetService: SnippetService;
   getTextSeparator(): 'newline' | 'space';
   getSnippetFolderPath(): string;
+  isRunnerDraftEnabled?(): boolean;
   withTargetNoteLock(path: string, operation: () => Promise<void>): Promise<void>;
   t: Translator;
   notify(message: string): void;
@@ -80,6 +84,13 @@ export class RunnerSessionHost {
   private answerFocusTimer: ReturnType<typeof globalThis.setTimeout> | null = null;
   private readonly initiallyFocusedAnswers = new Set<string>();
   private readonly textareaResizeTimers = new Set<ReturnType<typeof globalThis.setTimeout>>();
+  private conclusionDraft: RunnerConclusionDraft | null = null;
+  private draftTarget: RunnerDraftTarget | null = null;
+  private draftEditorEventRef: EventRef | null = null;
+  private draftWriting = false;
+  private draftInsertionAttempt: { editor: Editor; text: string; content: string } | null = null;
+  private closeConfirmation: ConfirmModal | null = null;
+  private readonly checkedSelfCheckItems = new Set<number>();
 
   constructor(options: RunnerSessionHostOptions) {
     this.options = options;
@@ -94,7 +105,36 @@ export class RunnerSessionHost {
   }
 
   hasOpenChildModal(): boolean {
-    return this.fillModal !== null;
+    return this.fillModal !== null || this.closeConfirmation !== null;
+  }
+
+  hasUninsertedDraft(): boolean {
+    return this.conclusionDraft?.hasUninsertedText() === true;
+  }
+
+  /** User-requested closes are cancellable. Disposal/unload remains unconditional. */
+  requestClose(): void {
+    if (!this.mounted || this.draftWriting || this.closeConfirmation !== null) return;
+    if (!this.hasUninsertedDraft()) {
+      this.options.onRequestClose();
+      return;
+    }
+    const t = this.options.t;
+    const confirmation = new ConfirmModal(this.options.app, {
+      title: t('runnerDraft.closeTitle'),
+      body: t('runnerDraft.closeMessage'),
+      confirmLabel: t('runnerDraft.discard'),
+      cancelLabel: t('runnerDraft.cancel'),
+      destructive: true,
+    });
+    this.closeConfirmation = confirmation;
+    const generation = this.lifecycleGeneration;
+    confirmation.open();
+    void confirmation.result.then((result) => {
+      if (this.closeConfirmation !== confirmation) return;
+      this.closeConfirmation = null;
+      if (result === 'confirm' && this.isLifecycleCurrent(generation)) this.options.onRequestClose();
+    });
   }
 
   getHeaderElement(): HTMLElement | null {
@@ -203,6 +243,18 @@ export class RunnerSessionHost {
     this.clearTextareaResizeTimers();
     this.disposeSnippetPicker();
     this.closeFillModal();
+    this.closeConfirmation?.close();
+    this.closeConfirmation = null;
+    this.conclusionDraft?.destroy();
+    this.conclusionDraft = null;
+    this.draftTarget?.clear();
+    this.draftTarget = null;
+    this.draftInsertionAttempt = null;
+    if (this.draftEditorEventRef !== null) {
+      this.options.app.workspace.offref(this.draftEditorEventRef);
+      this.draftEditorEventRef = null;
+    }
+    this.checkedSelfCheckItems.clear();
     if (this.targetDeleteEventRef !== null) {
       this.options.app.vault.offref(this.targetDeleteEventRef);
       this.targetDeleteEventRef = null;
@@ -233,7 +285,7 @@ export class RunnerSessionHost {
   }
 
   handleKeydown(event: KeyboardEvent): boolean {
-    if (!this.mounted || this.output?.isBlocked()) return false;
+    if (!this.mounted || this.output?.isBlocked() || this.draftWriting || this.draftInsertionAttempt !== null) return false;
     const target = event.target as HTMLElement | null;
     if (target !== null && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA')) {
       return false;
@@ -265,6 +317,8 @@ export class RunnerSessionHost {
   ): boolean {
     return this.isLifecycleCurrent(lifecycleGeneration)
       && !this.output?.isBlocked()
+      && !this.draftWriting
+      && this.draftInsertionAttempt === null
       && operationGeneration === this.operationGeneration;
   }
 
@@ -307,6 +361,18 @@ export class RunnerSessionHost {
       cls: CSS_CLASS.EMPTY_STATE_BODY,
     });
     this.actionsEl = rootEl.createDiv({ cls: 'rp-runner-session-actions' });
+    if (this.options.isRunnerDraftEnabled?.() !== false) {
+      const draftEl = rootEl.createDiv({ cls: 'rp-runner-draft-container' });
+      this.conclusionDraft = new RunnerConclusionDraft(
+        draftEl, this.options.t, () => { void this.insertConclusionDraft(); },
+        () => this.clearCompletionTimer(),
+      );
+      this.draftTarget = new RunnerDraftTarget(this.options.app, this.options.targetNote);
+      this.draftTarget.resolve();
+      this.draftEditorEventRef = this.options.app.workspace.on('active-leaf-change', () => {
+        this.draftTarget?.resolve();
+      });
+    }
     const footer = rootEl.createDiv({ cls: 'rp-runner-session-footer' });
     this.footerBtnRowEl = footer.createDiv({ cls: 'rp-runner-session-footer-btn-row' });
     this.renderFooterCloseButton();
@@ -325,6 +391,8 @@ export class RunnerSessionHost {
 
     const state = this.runner.getState();
     this.reconcileAnswerFocusRequest(state);
+    this.conclusionDraft?.setBusy(this.draftWriting || this.output?.isBlocked() === true
+      || state.status === 'awaiting-snippet-fill');
     this.updateProgress(state);
     this.contentEl.empty();
     this.actionsEl.empty();
@@ -352,6 +420,14 @@ export class RunnerSessionHost {
         retry.addEventListener('click', () => { void this.flushOutput(lifecycleGeneration); });
         this.rootEl?.toggleClass('rp-state-actions', true);
       }
+      return;
+    }
+
+    if (this.draftInsertionAttempt !== null) {
+      this.contentEl.createEl('p', { text: this.options.t('runnerDraft.insertFailed') });
+      const retry = createButton(this.actionsEl, { text: this.options.t('runnerDraft.insert'), cls: 'rp-answer-btn' });
+      retry.addEventListener('click', () => { void this.insertConclusionDraft(); });
+      this.rootEl?.toggleClass('rp-state-actions', true);
       return;
     }
 
@@ -521,7 +597,8 @@ export class RunnerSessionHost {
 
       case 'complete':
         if (!this.selfCheckEnabled || this.selfCheckItems.length === 0) {
-          this.scheduleCompletionClose(lifecycleGeneration, operationGeneration);
+          renderCompleteHeading(this.contentEl);
+          if (!this.conclusionDraft?.getText().trim()) this.scheduleCompletionClose(lifecycleGeneration, operationGeneration);
         } else {
           this.renderSelfCheckCompletion(
             this.contentEl,
@@ -549,7 +626,7 @@ export class RunnerSessionHost {
     });
     setIcon(closeButton, 'x');
     closeButton.setAttribute('aria-label', this.options.t('protocolRunner.closeProtocol'));
-    closeButton.addEventListener('click', () => this.options.onRequestClose());
+    closeButton.addEventListener('click', () => this.requestClose());
   }
 
   private renderFooterIcons(showBack: boolean, showSkip: boolean, showRedo: boolean): void {
@@ -697,7 +774,7 @@ export class RunnerSessionHost {
     this.clearCompletionTimer();
     this.completionTimer = globalThis.setTimeout(() => {
       this.completionTimer = null;
-      if (this.isOperationCurrent(lifecycleGeneration, operationGeneration)) {
+      if (this.isOperationCurrent(lifecycleGeneration, operationGeneration) && !this.hasUninsertedDraft()) {
         this.options.onRequestClose();
       }
     }, 0);
@@ -717,20 +794,69 @@ export class RunnerSessionHost {
     renderCompleteHeading(container);
     const checklist = container.createDiv({ cls: 'rp-runner-session-self-check' });
     checklist.createEl('h4', { text: this.options.t('selfCheck.title') });
-    const checked = new Set<number>();
+    const checked = this.checkedSelfCheckItems;
     this.selfCheckItems.forEach((item, index) => {
       const label = checklist.createEl('label', {
         cls: 'rp-runner-session-self-check-item',
       });
       const checkbox = label.createEl('input', { type: 'checkbox' });
+      checkbox.checked = checked.has(index);
       label.createSpan({ text: item });
       checkbox.addEventListener('change', () => {
         if (!this.isOperationCurrent(lifecycleGeneration, operationGeneration)) return;
         if (checkbox.checked) checked.add(index);
         else checked.delete(index);
-        if (checked.size === this.selfCheckItems.length) this.options.onRequestClose();
+        if (checked.size === this.selfCheckItems.length && !this.hasUninsertedDraft()) this.options.onRequestClose();
       });
     });
+  }
+
+  private async insertConclusionDraft(): Promise<void> {
+    const draft = this.conclusionDraft;
+    if (!this.mounted || draft === null || this.draftWriting || this.output?.isBlocked()
+      || this.runner.getState().status === 'awaiting-snippet-fill') return;
+    const text = draft.getText();
+    if (text.trim() === '') return;
+    const lifecycleGeneration = this.lifecycleGeneration;
+    this.draftWriting = true;
+    draft.setBusy(true);
+    this.clearCompletionTimer();
+    try {
+      await this.options.withTargetNoteLock(this.options.targetNote.path, async () => {
+        if (!this.isLifecycleCurrent(lifecycleGeneration)) return;
+        const target = this.draftTarget?.resolve();
+        if (target === null || target === undefined) {
+          this.options.notify(this.options.t('runnerDraft.noEditor'));
+          return;
+        }
+        const { editor } = target;
+        const previous = this.draftInsertionAttempt;
+        const alreadyInserted = previous?.editor === editor && previous.text === text
+          && previous.content === editor.getValue();
+        if (!alreadyInserted) {
+          const cursor = editor.getCursor('head');
+          const offset = editor.posToOffset(cursor);
+          editor.replaceRange(text, cursor);
+          editor.setCursor(editor.offsetToPos(offset + text.length));
+          this.draftInsertionAttempt = { editor, text, content: editor.getValue() };
+        }
+        // Obsidian debounces autosave by two seconds. Flush inside the same
+        // note lock before a following Runner append can read stale disk data.
+        await target.save();
+        if (this.isLifecycleCurrent(lifecycleGeneration)) {
+          this.draftInsertionAttempt = null;
+          draft.markInserted(text);
+        }
+      });
+    } catch (error) {
+      if (this.isLifecycleCurrent(lifecycleGeneration)) {
+        console.error('[RadiProtocol] Failed to insert conclusion draft', error);
+        this.options.notify(this.options.t('runnerDraft.insertFailed'));
+      }
+    } finally {
+      this.draftWriting = false;
+      if (this.isLifecycleCurrent(lifecycleGeneration)) this.render();
+    }
   }
 
   private handleAnswerDraftChange(answerId: string, value: string): void {

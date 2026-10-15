@@ -9,6 +9,8 @@ const hostState = vi.hoisted(() => ({
     disposed: boolean;
     disposeCalls: number;
     handleKeydown: ReturnType<typeof vi.fn>;
+    dirty: boolean;
+    requestClose: ReturnType<typeof vi.fn<() => void>>;
   }>,
 }));
 
@@ -23,6 +25,8 @@ vi.mock('../../views/runner-session-host', () => ({
         disposed: false,
         disposeCalls: 0,
         handleKeydown: vi.fn(() => true),
+        dirty: false,
+        requestClose: vi.fn(),
       };
       hostState.instances.push(this.instance);
     }
@@ -38,6 +42,9 @@ vi.mock('../../views/runner-session-host', () => ({
       this.instance.disposed = true;
       this.instance.disposeCalls += 1;
     }
+
+    hasUninsertedDraft(): boolean { return this.instance.dirty; }
+    requestClose(): void { this.instance.requestClose(); }
 
     handleKeydown(event: KeyboardEvent): boolean {
       Reflect.apply(
@@ -397,6 +404,18 @@ describe('SidebarRunnerView bound-note chrome and focus policy', () => {
 });
 
 describe('SidebarRunnerView close and keyboard policy', () => {
+  it('routes dirty Escape to confirmation and detaches only after the host approves', async () => {
+    const harness = await openMarkedView();
+    const host = hostState.instances[0]!;
+    host.dirty = true;
+    harness.view.contentEl.dispatchEvent(keyboardEvent('Escape') as any);
+    expect(host.requestClose).toHaveBeenCalledOnce();
+    expect(harness.leaf.detachCalls).toBe(0);
+    host.options.onRequestClose();
+    expect(harness.leaf.detachCalls).toBe(1);
+    expect(host.disposeCalls).toBe(1);
+  });
+
   it.each(['completion', 'target deletion'])(
     'detaches exactly once when the host requests close for %s',
     async () => {

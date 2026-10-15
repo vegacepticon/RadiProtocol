@@ -5,6 +5,8 @@ const hostInstances = vi.hoisted(() => [] as Array<{
   options: Record<string, unknown>;
   disposed: boolean;
   childOpen: boolean;
+  dirty: boolean;
+  requestClose: ReturnType<typeof vi.fn<() => void>>;
   keydown: ReturnType<typeof vi.fn>;
   header: MockEl | null;
 }>);
@@ -33,6 +35,8 @@ vi.mock('../../views/runner-session-host', () => ({
         options,
         disposed: false,
         childOpen: false,
+        dirty: false,
+        requestClose: vi.fn(),
         keydown: vi.fn(),
         header: null,
       };
@@ -46,6 +50,8 @@ vi.mock('../../views/runner-session-host', () => ({
     }
     dispose(): void { this.instance.disposed = true; }
     hasOpenChildModal(): boolean { return this.instance.childOpen; }
+    hasUninsertedDraft(): boolean { return this.instance.dirty; }
+    requestClose(): void { this.instance.requestClose(); }
     getHeaderElement(): MockEl | null { return this.instance.header; }
     handleKeydown(event: KeyboardEvent): boolean {
       Reflect.apply(this.instance.keydown as unknown as (...args: unknown[]) => void, undefined, [event]);
@@ -152,6 +158,43 @@ beforeEach(() => {
 afterEach(() => vi.unstubAllGlobals());
 
 describe('InlineRunnerModal floating shell', () => {
+  it('guards dirty close and keeps the draft reachable if its hidden note leaf closes', async () => {
+    const plugin = makeBasePlugin();
+    const app = makeBaseApp(plugin);
+    const note = target();
+    app.workspace.getActiveFile.mockReturnValue(note as never);
+    app.workspace.iterateAllLeaves.mockImplementation((callback: any) => callback({ view: { file: note } }));
+    const modal = new InlineRunnerModal(app as any, plugin as any, 'Protocols/test.rp.json', note);
+    await modal.open();
+    const host = hostInstances[0]!;
+    host.dirty = true;
+    modal.close();
+    expect(host.requestClose).toHaveBeenCalledOnce();
+    expect(modal.isOpen()).toBe(true);
+    const container = (modal as any).containerEl as MockEl;
+    container.addClass('is-hidden');
+    app.workspace.iterateAllLeaves.mockImplementation(() => {});
+    app._emitWorkspace('active-leaf-change');
+    expect(container.hasClass('is-hidden')).toBe(false);
+    expect(host.disposed).toBe(false);
+    (host.options.onRequestClose as () => void)();
+    expect(modal.isOpen()).toBe(false);
+    expect(host.disposed).toBe(true);
+  });
+
+  it('unconditionally tears down on forced unload despite dirty draft', async () => {
+    const plugin = makeBasePlugin();
+    const app = makeBaseApp(plugin);
+    const note = target();
+    app.workspace.iterateAllLeaves.mockImplementation((callback: any) => callback({ view: { file: note } }));
+    const modal = new InlineRunnerModal(app as any, plugin as any, 'Protocols/test.rp.json', note);
+    await modal.open();
+    hostInstances[0]!.dirty = true;
+    modal.close(true);
+    expect(hostInstances[0]!.requestClose).not.toHaveBeenCalled();
+    expect(hostInstances[0]!.disposed).toBe(true);
+  });
+
   it('mounts a shared host, preserves registry identity, and disposes it on close', async () => {
     const plugin = makeBasePlugin();
     const app = makeBaseApp(plugin);

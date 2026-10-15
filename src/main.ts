@@ -243,7 +243,7 @@ export default class RadiProtocolPlugin extends Plugin {
       this.pickerModal = null;
     }
     for (const modal of this.inlineRunners.values()) {
-      modal.close();
+      modal.close(true);
     }
     this.inlineRunners.clear();
     this.sidebarRunnersByNote.clear();

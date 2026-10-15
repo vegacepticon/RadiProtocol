@@ -49,6 +49,16 @@ RadiProtocol is a documentation aid. The radiologist remains responsible for cli
 4. Choose the preferred text separator for accumulated report text: newline or space.
 5. Select the interface language if needed.
 
+### Conclusion draft in the Runner
+
+The floating Runner and sidebar include a session-only conclusion draft below the answer choices. Type a line and press **Enter** to turn it into an item. Edit or delete individual items, or reorder them using the drag handle or arrow buttons.
+
+**Insert conclusion** inserts the entire draft, including uncommitted input, at the last cursor position **in the note bound to this Runner**. That note must be open in editing mode. Items are joined with newlines, without a heading or list markers. The draft remains visible after insertion; pressing the button again inserts the entire text again rather than updating an earlier insertion.
+
+Protocol navigation, Back and Redo leave the draft unchanged. Uninserted text prevents automatic close on protocol or self-check completion. Closing through the Runner button, Escape outside a text field, the tab X or middle-click asks before discarding uninserted text. The native tab gesture guard depends on Obsidian's UI; command/menu closes, plugin unload and application exit are not intercepted.
+
+Drafts exist **only for the current run**. They are not saved in protocol files or settings, and do not survive a restart. The feature is enabled by default; the **Conclusion draft in Runner** setting applies to new runs.
+
 ### Community library
 
 RadiProtocol does not ship with a registry endpoint. To use the Community library, open RadiProtocol settings and enter an explicitly configured **HTTPS** endpoint in **Advanced → Library registry URL**. An empty, invalid, or non-HTTPS value leaves the catalog unavailable instead of falling back to another service.

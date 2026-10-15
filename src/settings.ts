@@ -29,6 +29,8 @@ export interface RadiProtocolSettings {
   textSeparator: 'newline' | 'space';
   /** Present runner sessions in independent transient right-sidebar leaves. Absent = false for compatibility. */
   useSidebarRunner?: boolean;
+  /** Show the session-only conclusion scratchpad in the runner. Absent = enabled. */
+  enableRunnerDraft?: boolean;
   /** Phase 60 (D-01): Last dragged inline runner position; Phase 67 (D-05/D-06) extended with optional width/height. */
   inlineRunnerPosition?: InlineRunnerLayout | null;
   /** Phase 84 (I18N-01): UI language. Default 'en' for new installs; existing installs without this key default to 'ru' for backward compat. */
@@ -58,6 +60,7 @@ export const DEFAULT_SETTINGS: RadiProtocolSettings = {
   protocolFolderPath: 'Protocols',
   textSeparator: 'newline',
   useSidebarRunner: false,
+  enableRunnerDraft: true,
   inlineRunnerPosition: null,
   locale: 'en',
   libraryRegistryUrl: '',
@@ -118,6 +121,16 @@ export class RadiProtocolSettingsTab extends PluginSettingTab {
         .setValue(this.plugin.settings.useSidebarRunner === true)
         .onChange(async (value) => {
           this.plugin.settings.useSidebarRunner = value;
+          await this.plugin.saveSettings();
+        }));
+
+    new Setting(containerEl)
+      .setName(this.plugin.i18n.t('settings.enableRunnerDraft'))
+      .setDesc(this.plugin.i18n.t('settings.enableRunnerDraftDesc'))
+      .addToggle(toggle => toggle
+        .setValue(this.plugin.settings.enableRunnerDraft !== false)
+        .onChange(async (value) => {
+          this.plugin.settings.enableRunnerDraft = value;
           await this.plugin.saveSettings();
         }));
 

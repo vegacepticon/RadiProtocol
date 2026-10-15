@@ -7,6 +7,7 @@ import {
 } from 'obsidian';
 import type RadiProtocolPlugin from '../main';
 import { RunnerSessionHost } from './runner-session-host';
+import { guardRunnerTabClose } from './runner-tab-close-guard';
 
 export const SIDEBAR_RUNNER_VIEW_TYPE = 'radiprotocol-sidebar-runner';
 export const SIDEBAR_RUNNER_LAUNCH_MARKER = 'radiprotocol-sidebar-runner-launch';
@@ -59,6 +60,7 @@ export class SidebarRunnerView extends ItemView {
   private initialized = false;
   private closeRequested = false;
   private closed = false;
+  private removeTabCloseGuard: (() => void) | null = null;
 
   constructor(leaf: WorkspaceLeaf, plugin: RadiProtocolPlugin) {
     super(leaf);
@@ -166,13 +168,20 @@ export class SidebarRunnerView extends ItemView {
       snippetService: this.plugin.snippetService,
       getTextSeparator: () => this.plugin.settings.textSeparator,
       getSnippetFolderPath: () => this.plugin.settings.snippetFolderPath,
+      isRunnerDraftEnabled: () => this.plugin.settings.enableRunnerDraft !== false,
       withTargetNoteLock: (path, operation) =>
         this.plugin['insertMutex'].runExclusive(path, operation),
       t,
       notify: (message) => new Notice(message),
-      onRequestClose: () => this.requestClose(),
+      onRequestClose: () => this.requestClose(true),
     });
     this.sessionHost = host;
+    const tabHeader = (this.leaf as WorkspaceLeaf & { tabHeaderEl?: HTMLElement }).tabHeaderEl;
+    if (tabHeader !== undefined) {
+      this.removeTabCloseGuard = guardRunnerTabClose(
+        this.leaf, () => host.hasUninsertedDraft(), () => this.requestClose(), tabHeader.ownerDocument,
+      );
+    }
 
     let mounted: boolean;
     try {
@@ -209,6 +218,8 @@ export class SidebarRunnerView extends ItemView {
     }
     this.clearRestoreDetachTimer();
 
+    this.removeTabCloseGuard?.();
+    this.removeTabCloseGuard = null;
     if (this.boundKeyHandler !== null) {
       this.contentEl.removeEventListener('keydown', this.boundKeyHandler);
       this.boundKeyHandler = null;
@@ -340,8 +351,12 @@ export class SidebarRunnerView extends ItemView {
     this.sessionHost?.handleKeydown(event);
   }
 
-  private requestClose(): void {
+  private requestClose(force = false): void {
     if (this.closeRequested) return;
+    if (!force && this.sessionHost?.hasUninsertedDraft()) {
+      this.sessionHost.requestClose();
+      return;
+    }
     this.closeRequested = true;
     this.leaf.detach();
   }

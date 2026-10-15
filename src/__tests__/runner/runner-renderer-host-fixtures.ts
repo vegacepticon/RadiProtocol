@@ -37,6 +37,8 @@ export interface MockEl {
   readOnly: boolean;
   dataset: Record<string, string>;
   scrollHeight: number;
+  offsetHeight: number;
+  clientHeight: number;
   focusCount: number;
   createEl: (tag: string, opts?: { text?: string; cls?: string; type?: string; attr?: Record<string, string> }) => MockEl;
   createDiv: (opts?: { cls?: string; text?: string; attr?: Record<string, string> }) => MockEl;
@@ -88,6 +90,8 @@ export function makeEl(tag = 'div'): MockEl {
     readOnly: false,
     dataset,
     scrollHeight: 24,
+    offsetHeight: 24,
+    clientHeight: 24,
     focusCount: 0,
     createEl(subtag: string, opts?: { text?: string; cls?: string; type?: string; attr?: Record<string, string> }): MockEl {
       const child = makeEl(subtag);
@@ -429,6 +433,7 @@ export function makeBasePlugin(
       snippetFolderPath: opts.snippetFolderPath ?? 'Snippets',
       protocolFolderPath: 'Protocols',
       locale: 'ru',
+      enableRunnerDraft: false,
     },
     snippetService: {
       load: vi.fn<(absolutePath: string) => Promise<unknown | null>>(async () => null),

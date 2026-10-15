@@ -1,4 +1,22 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+const confirmations = vi.hoisted(() => [] as Array<{
+  resolve(value: string): void;
+  options: Record<string, unknown>;
+  close: ReturnType<typeof vi.fn>;
+}>);
+vi.mock('../../views/confirm-modal', () => ({
+  ConfirmModal: class {
+    result: Promise<string>;
+    close: ReturnType<typeof vi.fn>;
+    constructor(_app: unknown, options: Record<string, unknown>) {
+      let resolve!: (value: string) => void;
+      this.result = new Promise((done) => { resolve = done; });
+      this.close = vi.fn(() => resolve('cancel'));
+      confirmations.push({ resolve, options, close: this.close });
+    }
+    open(): void {}
+  },
+}));
 import {
   deferred,
   getFillModalInstances,
@@ -212,7 +230,7 @@ function makeFile(path: string): TFile {
   return Object.assign(new TFile(), { path });
 }
 
-function harness(runtimeGraph: ProtocolGraph, rawDocument = '{}'): Harness {
+function harness(runtimeGraph: ProtocolGraph, rawDocument = '{}', enableDraft = false): Harness {
   const plugin = makeBasePlugin();
   const app = makeBaseApp(plugin);
   const protocolFile = makeFile('Protocols/test.rp.json');
@@ -237,6 +255,7 @@ function harness(runtimeGraph: ProtocolGraph, rawDocument = '{}'): Harness {
     snippetService: plugin.snippetService as any,
     getTextSeparator: () => 'newline',
     getSnippetFolderPath: () => 'Snippets',
+    isRunnerDraftEnabled: () => enableDraft,
     withTargetNoteLock,
     t: plugin.i18n.t.bind(plugin.i18n),
     notify,
@@ -260,8 +279,221 @@ async function flushMicrotasks(turns = 8): Promise<void> {
 }
 
 beforeEach(() => {
+  confirmations.length = 0;
   resetFillModalInstances();
   resetPickerMockInstances();
+});
+
+describe('RunnerSessionHost conclusion draft', () => {
+  function typeDraft(h: Harness, text: string): MockEl {
+    const area = h.root.querySelector('.rp-runner-draft')!.querySelector('textarea')!;
+    area.value = text;
+    area.dispatchEvent({ type: 'input' });
+    return area;
+  }
+
+  function bindEditor(h: Harness) {
+    let text = 'ABCDEF';
+    let cursor = { line: 0, ch: 3 };
+    const editor = {
+      getValue: () => text,
+      getCursor: vi.fn(() => cursor),
+      posToOffset: (pos: { line: number; ch: number }) =>
+        text.split('\n').slice(0, pos.line).reduce((total, line) => total + line.length + 1, 0) + pos.ch,
+      offsetToPos: (offset: number) => {
+        const lines = text.slice(0, offset).split('\n');
+        return { line: lines.length - 1, ch: lines.at(-1)!.length };
+      },
+      replaceRange: vi.fn((inserted: string, pos: { line: number; ch: number }) => {
+        const offset = editor.posToOffset(pos);
+        text = text.slice(0, offset) + inserted + text.slice(offset);
+      }),
+      setCursor: vi.fn((pos: { line: number; ch: number }) => { cursor = pos; }),
+    };
+    const save = vi.fn(async () => {});
+    h.app.workspace.iterateAllLeaves.mockImplementation((callback: any) => callback({
+      view: { file: h.targetNote, editor, getMode: () => 'source', save },
+    }));
+    return { editor, save, getText: () => text };
+  }
+
+  async function insert(h: Harness): Promise<void> {
+    await (h.host as any).insertConclusionDraft();
+  }
+
+  it('can be disabled and stays below the answer zone when enabled', async () => {
+    const disabled = harness(answerGraph());
+    await disabled.host.mount(disabled.root as unknown as HTMLElement);
+    expect(disabled.root.querySelector('.rp-runner-draft')).toBeNull();
+    disabled.host.dispose();
+    const h = harness(answerGraph(), '{}', true);
+    await h.host.mount(h.root as unknown as HTMLElement);
+    const draft = h.root.querySelector('.rp-runner-draft-container')!;
+    expect(h.root.children.indexOf(draft)).toBeGreaterThan(h.root.children.indexOf(h.root.querySelector('.rp-runner-session-actions')!));
+    expect(h.host.hasUninsertedDraft()).toBe(false);
+    h.host.dispose();
+  });
+
+  it('inserts all text including pending input at the bound editor cursor, retaining it for repeat insertion', async () => {
+    const h = harness(answerGraph(), '{}', true);
+    const bound = bindEditor(h);
+    await h.host.mount(h.root as unknown as HTMLElement);
+    typeDraft(h, 'Line one\nLine two');
+    expect(h.host.hasUninsertedDraft()).toBe(true);
+    await insert(h);
+    expect(bound.getText()).toBe('ABCLine one\nLine twoDEF');
+    expect(bound.editor.replaceRange).toHaveBeenCalledWith('Line one\nLine two', { line: 0, ch: 3 });
+    expect(h.withTargetNoteLock).toHaveBeenCalledWith(h.targetNote.path, expect.any(Function));
+    expect(h.app.vault.modify).not.toHaveBeenCalled();
+    expect(h.host.hasUninsertedDraft()).toBe(false);
+    expect(h.root.querySelector('.rp-runner-draft')!.querySelector('textarea')!.value).toBe('Line one\nLine two');
+    await insert(h);
+    expect(bound.getText()).toBe('ABCLine one\nLine twoLine one\nLine twoDEF');
+    typeDraft(h, 'Changed');
+    expect(h.host.hasUninsertedDraft()).toBe(true);
+    h.host.dispose();
+  });
+
+  it('preserves drafts through Back/Redo and keeps completion open', async () => {
+    vi.useFakeTimers();
+    try {
+      const h = harness(answerGraph(), '{}', true);
+      await h.host.mount(h.root as unknown as HTMLElement);
+      const textarea = typeDraft(h, 'Keep conclusion');
+      h.root.querySelector('.rp-answer-btn')!.dispatchEvent({ type: 'click' });
+      await flushMicrotasks();
+      vi.runAllTimers();
+      expect(h.onRequestClose).not.toHaveBeenCalled();
+      expect(h.root.querySelector('.rp-runner-draft')!.querySelector('textarea')).toBe(textarea);
+      for (const key of ['ArrowLeft', 'ArrowRight']) {
+        h.host.handleKeydown({ key, ctrlKey: true, target: null, preventDefault() {} } as KeyboardEvent);
+        expect(textarea.value).toBe('Keep conclusion');
+      }
+      vi.runAllTimers();
+      expect(h.onRequestClose).not.toHaveBeenCalled();
+      h.host.dispose();
+    } finally { vi.useRealTimers(); }
+  });
+
+  it('holds completion after self-check and preserves checked items on rerender', async () => {
+    const h = harness(answerGraph(), JSON.stringify({ selfCheckEnabled: true, selfCheckItems: ['Review'] }), true);
+    await h.host.mount(h.root as unknown as HTMLElement);
+    typeDraft(h, 'Conclusion');
+    h.root.querySelector('.rp-answer-btn')!.dispatchEvent({ type: 'click' });
+    await flushMicrotasks();
+    const checkbox = h.root.querySelector('input')!;
+    checkbox.checked = true;
+    checkbox.dispatchEvent({ type: 'change' });
+    expect(h.onRequestClose).not.toHaveBeenCalled();
+    (h.host as any).render();
+    expect(h.root.querySelector('input')!.checked).toBe(true);
+    h.host.dispose();
+  });
+
+  it('warns once on dirty close, supports cancel, and closes only on explicit discard', async () => {
+    const h = harness(answerGraph(), '{}', true);
+    await h.host.mount(h.root as unknown as HTMLElement);
+    typeDraft(h, 'Unsaved');
+    h.host.requestClose();
+    h.host.requestClose();
+    expect(confirmations).toHaveLength(1);
+    expect(h.host.hasOpenChildModal()).toBe(true);
+    confirmations[0]!.resolve('cancel');
+    await flushMicrotasks();
+    expect(h.onRequestClose).not.toHaveBeenCalled();
+    expect(h.host.hasUninsertedDraft()).toBe(true);
+    h.host.requestClose();
+    confirmations[1]!.resolve('confirm');
+    await flushMicrotasks();
+    expect(h.onRequestClose).toHaveBeenCalledTimes(1);
+    h.host.dispose();
+  });
+
+  it('does not acknowledge failed insertion or write to an unrelated note', async () => {
+    const h = harness(answerGraph(), '{}', true);
+    await h.host.mount(h.root as unknown as HTMLElement);
+    typeDraft(h, 'Unsaved');
+    await insert(h);
+    expect(h.notify).toHaveBeenCalledWith(h.plugin.i18n.t('runnerDraft.noEditor'));
+    expect(h.host.hasUninsertedDraft()).toBe(true);
+    const bound = bindEditor(h);
+    bound.editor.replaceRange.mockImplementation(() => { throw new Error('readonly'); });
+    const warning = vi.spyOn(console, 'error').mockImplementation(() => {});
+    await insert(h);
+    warning.mockRestore();
+    expect(h.host.hasUninsertedDraft()).toBe(true);
+    h.host.dispose();
+  });
+
+  it('flushes the editor before allowing the next protocol append to read the note', async () => {
+    const h = harness(answerGraph(), '{}', true);
+    const bound = bindEditor(h);
+    let disk = 'ABCDEF';
+    h.app.vault.read.mockImplementation(async file => file.path === h.protocolFile.path ? '{}' : disk);
+    const saving = deferred<void>();
+    bound.save.mockImplementation(async () => { await saving.promise; disk = bound.getText(); });
+    await h.host.mount(h.root as unknown as HTMLElement);
+    typeDraft(h, 'Conclusion');
+    const insertion = insert(h);
+    h.root.querySelector('.rp-answer-btn')!.dispatchEvent({ type: 'click' });
+    expect(h.app.vault.modify).not.toHaveBeenCalled();
+    expect(h.host.hasUninsertedDraft()).toBe(true);
+    saving.resolve();
+    await insertion;
+    expect(disk).toBe('ABCConclusionDEF');
+    h.root.querySelector('.rp-answer-btn')!.dispatchEvent({ type: 'click' });
+    await flushMicrotasks();
+    expect(h.app.vault.modify).toHaveBeenCalledWith(h.targetNote, 'ABCConclusionDEF\nFinding');
+    h.host.dispose();
+  });
+
+  it('retries a failed editor save without inserting the same text twice', async () => {
+    const h = harness(answerGraph(), '{}', true);
+    const bound = bindEditor(h);
+    await h.host.mount(h.root as unknown as HTMLElement);
+    typeDraft(h, 'Conclusion');
+    bound.save.mockRejectedValueOnce(new Error('disk write failed'));
+    const warning = vi.spyOn(console, 'error').mockImplementation(() => {});
+    await insert(h);
+    warning.mockRestore();
+    expect(h.host.hasUninsertedDraft()).toBe(true);
+    expect(h.host.handleKeydown({ key: 'ArrowLeft', ctrlKey: true } as KeyboardEvent)).toBe(false);
+    await insert(h);
+    expect(bound.getText()).toBe('ABCConclusionDEF');
+    expect(bound.editor.replaceRange).toHaveBeenCalledTimes(1);
+    expect(bound.save).toHaveBeenCalledTimes(2);
+    expect(h.host.hasUninsertedDraft()).toBe(false);
+    h.host.dispose();
+  });
+
+  it('does not lose edits made while queued and rejects duplicate/stale insertions', async () => {
+    const h = harness(answerGraph(), '{}', true);
+    const bound = bindEditor(h);
+    await h.host.mount(h.root as unknown as HTMLElement);
+    typeDraft(h, 'Snapshot');
+    const gate = deferred<void>();
+    h.withTargetNoteLock.mockImplementation(async (_path: string, operation: () => Promise<void>) => {
+      await gate.promise;
+      await operation();
+    });
+    const first = insert(h);
+    await insert(h);
+    typeDraft(h, 'New text');
+    gate.resolve();
+    await first;
+    expect(bound.getText()).toBe('ABCSnapshotDEF');
+    expect(h.host.hasUninsertedDraft()).toBe(true);
+    const nextGate = deferred<void>();
+    h.withTargetNoteLock.mockImplementation(async (_path: string, operation: () => Promise<void>) => {
+      await nextGate.promise;
+      await operation();
+    });
+    const stale = insert(h);
+    h.host.dispose();
+    nextGate.resolve();
+    await stale;
+    expect(bound.editor.replaceRange).toHaveBeenCalledTimes(1);
+  });
 });
 
 describe('RunnerSessionHost bootstrap and projection', () => {

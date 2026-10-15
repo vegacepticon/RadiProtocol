@@ -88,11 +88,12 @@ export class InlineRunnerModal {
       snippetService: this.plugin.snippetService,
       getTextSeparator: () => this.plugin.settings.textSeparator,
       getSnippetFolderPath: () => this.plugin.settings.snippetFolderPath,
+      isRunnerDraftEnabled: () => this.plugin.settings.enableRunnerDraft !== false,
       withTargetNoteLock: (path, operation) =>
         this.plugin['insertMutex'].runExclusive(path, operation),
       t,
       notify: (message) => new Notice(message),
-      onRequestClose: () => this.close(),
+      onRequestClose: () => this.close(true),
     });
     this.sessionHost = sessionHost;
 
@@ -133,8 +134,12 @@ export class InlineRunnerModal {
     mountedContainer.addEventListener('keydown', this.boundKeyHandler);
   }
 
-  close(): void {
+  close(force = false): void {
     if (this.closed) return;
+    if (!force && this.sessionHost?.hasUninsertedDraft()) {
+      this.sessionHost.requestClose();
+      return;
+    }
     this.closed = true;
     this.openedSuccessfully = false;
 
@@ -221,6 +226,12 @@ export class InlineRunnerModal {
     });
 
     if (!targetHasOpenLeaves) {
+      // A pending conclusion must remain reachable even after its note leaf closes.
+      if (this.sessionHost?.hasUninsertedDraft()) {
+        this.containerEl.removeClass('is-hidden');
+        this.isHidden = false;
+        return;
+      }
       this.close();
       return;
     }

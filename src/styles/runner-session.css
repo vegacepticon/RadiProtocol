@@ -417,3 +417,82 @@
   padding: var(--size-4-3);
   color: var(--text-muted);
 }
+
+.rp-runner-draft-container {
+  flex: 0 1 auto;
+  min-height: 100px;
+  max-height: 50%;
+  overflow-y: auto;
+}
+
+.rp-runner-draft {
+  display: flex;
+  flex: 0 0 auto;
+  flex-direction: column;
+  gap: var(--size-2-2);
+  min-width: 0;
+  padding: var(--size-4-3);
+  border-top: 1px solid var(--background-modifier-border);
+}
+
+.rp-runner-draft h3,
+.rp-runner-draft-help {
+  margin: 0;
+}
+
+.rp-runner-draft-help {
+  color: var(--text-muted);
+  font-size: var(--font-ui-smaller);
+}
+
+.rp-runner-draft-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--size-2-2);
+  min-width: 0;
+}
+
+.rp-runner-draft-row {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: start;
+  gap: var(--size-2-2);
+  min-width: 0;
+}
+
+.rp-runner-draft-input,
+.rp-runner-draft-line {
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
+  min-height: calc(1lh + 2 * var(--input-border-width));
+  max-height: none;
+  padding-block: 0;
+  padding-inline: var(--input-padding);
+  overflow: hidden;
+  overflow-wrap: anywhere;
+  line-height: var(--line-height-tight);
+  white-space: pre-wrap;
+  resize: none;
+}
+
+.rp-runner-draft-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--size-2-1);
+}
+
+.rp-runner-draft-drag {
+  cursor: grab;
+}
+
+.rp-runner-draft-up,
+.rp-runner-draft-down,
+.rp-runner-draft-delete {
+  min-width: 24px;
+  padding-inline: var(--size-2-1);
+}
+
+.rp-runner-draft-insert {
+  align-self: flex-end;
+}

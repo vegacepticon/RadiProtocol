@@ -24,6 +24,10 @@ describe('Settings defaults (RUN-07)', () => {
     expect(DEFAULT_SETTINGS.useSidebarRunner).toBe(false);
   });
 
+  it('defaults the runner conclusion draft to enabled', () => {
+    expect(DEFAULT_SETTINGS.enableRunnerDraft).toBe(true);
+  });
+
   it('SettingsTab has display method (stub check)', async () => {
     // Full settings tab test requires Obsidian environment — manual only.
     // This stub verifies the class is importable and has the display method.
@@ -99,7 +103,7 @@ describe('Settings sidebar runner toggle', () => {
     (useSidebarRunner) => {
       const { toggleComponents } = renderSettings({ useSidebarRunner });
 
-      expect(toggleComponents).toHaveLength(1);
+      expect(toggleComponents).toHaveLength(2);
       expect(toggleComponents[0]!.value).toBe(useSidebarRunner);
     },
   );
@@ -114,6 +118,32 @@ describe('Settings sidebar runner toggle', () => {
     await toggleComponents[0]!.trigger(false);
     expect(plugin.settings.useSidebarRunner).toBe(false);
     expect(plugin.saveSettingsCalls).toBe(2);
+  });
+});
+
+describe('Settings runner conclusion draft toggle', () => {
+  it.each([undefined, true, false])(
+    'renders the persisted value %s (absent means enabled)',
+    (enableRunnerDraft) => {
+      const { toggleComponents } = renderSettings({ enableRunnerDraft });
+
+      expect(toggleComponents).toHaveLength(2);
+      expect(toggleComponents[1]!.value).toBe(enableRunnerDraft !== false);
+    },
+  );
+
+  it('persists disabling and enabling without changing sidebar presentation', async () => {
+    const { plugin, toggleComponents } = renderSettings({ useSidebarRunner: true });
+
+    await toggleComponents[1]!.trigger(false);
+    expect(plugin.settings.enableRunnerDraft).toBe(false);
+    expect(plugin.saveSettingsCalls).toBe(1);
+
+    await toggleComponents[1]!.trigger(true);
+    expect(plugin.settings.enableRunnerDraft).toBe(true);
+    expect(plugin.saveSettingsCalls).toBe(2);
+    expect(plugin.settings.useSidebarRunner).toBe(true);
+    expect(plugin.rebuildLibraryServicesCalls).toBe(0);
   });
 });
 
