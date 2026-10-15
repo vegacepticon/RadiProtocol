@@ -48,6 +48,68 @@ describe('RunnerConclusionDraft', () => {
     expect(css).not.toMatch(/\.rp-runner-draft-(?:up|down|help|controls)\b/);
   });
 
+  it('reserves the draft scrollbar gutter so measured width equals rendered width', () => {
+    const css = readFileSync(new URL('../../styles/runner-session.css', import.meta.url), 'utf8');
+    expect(css).toMatch(/\.rp-runner-draft-container\s*\{[^}]*scrollbar-gutter:\s*stable/);
+  });
+
+  it('measures a line only once its row is complete', () => {
+    const s = setup();
+    const list = s.container.querySelector('.rp-runner-draft-list')!;
+    const reads: boolean[] = [];
+    const createDiv = list.createDiv.bind(list);
+    list.createDiv = (opts) => {
+      const row = createDiv(opts);
+      const createEl = row.createEl.bind(row);
+      row.createEl = (tag, elOpts) => {
+        const el = createEl(tag, elOpts);
+        if (tag === 'textarea') {
+          // A row measured before its delete button exists resolves the editor's
+          // `minmax(0, 1fr)` column one control wider and clips wrapped lines.
+          Object.defineProperty(el, 'scrollHeight', {
+            get: () => {
+              reads.push(row.children.some(child => child.hasClass('rp-runner-draft-delete')));
+              return 24;
+            },
+          });
+        }
+        return el;
+      };
+      return row;
+    };
+    s.commit('One\nTwo');
+    expect(reads.length).toBeGreaterThan(0);
+    expect(reads.every(Boolean)).toBe(true);
+  });
+
+  it('re-measures every field once the rebuild settles, once per task', () => {
+    vi.useFakeTimers();
+    try {
+      const s = setup();
+      s.commit('Wrapped one\nWrapped two');
+      const lines = s.container.querySelectorAll('.rp-runner-draft-line');
+      const fields = [s.find('input'), ...lines];
+      s.type(' pending', s.find('input'));
+      // Two rebuild/measure triggers, one pending pass.
+      expect(vi.getTimerCount()).toBe(1);
+      for (const field of fields) {
+        // Heights as recorded mid-rebuild: too short for the settled width.
+        field.setCssProps({ height: '30px' });
+        field.scrollHeight = 96;
+        field.offsetHeight = 92;
+        field.clientHeight = 90;
+      }
+      expect(fields.map(field => field.style.height)).toEqual(['30px', '30px', '30px']);
+      vi.advanceTimersByTime(0);
+      expect(fields.map(field => field.style.height)).toEqual(['98px', '98px', '98px']);
+      expect(vi.getTimerCount()).toBe(0);
+      s.draft.destroy();
+      expect(vi.getTimerCount()).toBe(0);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it('accounts for borders and remeasures on width changes, disconnecting on destroy', () => {
     let resize!: (entries: Array<{ contentRect: { width: number } }>) => void;
     const disconnect = vi.fn();

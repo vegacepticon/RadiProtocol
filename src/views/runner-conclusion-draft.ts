@@ -12,6 +12,8 @@ function growDraftTextarea(textarea: HTMLTextAreaElement): void {
   textarea.setCssProps({ height: `${textarea.scrollHeight + borders}px` });
 }
 
+const GROW_DELAY_MS = 0;
+
 /** Session-local editor. Successful writes acknowledge a snapshot, never clear the draft. */
 export class RunnerConclusionDraft {
   private readonly root: HTMLElement;
@@ -25,6 +27,8 @@ export class RunnerConclusionDraft {
   private insertedText = '';
   private busy = false;
   private destroyed = false;
+  private growScheduled = false;
+  private growTimer: ReturnType<typeof globalThis.setTimeout> | null = null;
   private resizeObserver: ResizeObserver | null = null;
 
   constructor(
@@ -66,14 +70,14 @@ export class RunnerConclusionDraft {
     });
     growDraftTextarea(this.input);
     this.refresh();
+    this.scheduleGrow();
     if (typeof ResizeObserver !== 'undefined') {
       let previousWidth = -1;
       this.resizeObserver = new ResizeObserver(entries => {
         const width = entries[0]?.contentRect.width;
         if (this.destroyed || width === undefined || width === previousWidth) return;
         previousWidth = width;
-        growDraftTextarea(this.input);
-        this.list.querySelectorAll<HTMLTextAreaElement>('textarea').forEach(editor => growDraftTextarea(editor));
+        this.growFields();
       });
       this.resizeObserver.observe(this.root);
     }
@@ -102,6 +106,7 @@ export class RunnerConclusionDraft {
   destroy(): void {
     this.destroyed = true;
     this.dragged = null;
+    this.clearGrowTimer();
     this.resizeObserver?.disconnect();
     this.resizeObserver = null;
     this.root.remove();
@@ -114,7 +119,43 @@ export class RunnerConclusionDraft {
   private changed(): void {
     if (this.destroyed) return;
     this.refresh();
+    this.scheduleGrow();
     this.onChange();
+  }
+
+  /**
+   * Re-measure every field on the next task, after the DOM rebuilt and the
+   * scroll container's gutter settled.
+   *
+   * A measurement taken inside the rebuild loop is unreliable: the editor is
+   * laid out before its delete button exists (so it measures ~one control
+   * wider), and the container's scrollbar appears only once all rows are in
+   * place. Either way wrapped text re-flows into more lines than the recorded
+   * height shows, which clipped long lines until an unrelated width change
+   * re-measured them. The same deferred pattern guards the host's answer
+   * textareas.
+   */
+  private scheduleGrow(): void {
+    if (this.destroyed || this.growScheduled) return;
+    this.growScheduled = true;
+    this.growTimer = globalThis.setTimeout(() => {
+      this.growScheduled = false;
+      this.growTimer = null;
+      if (this.destroyed) return;
+      this.growFields();
+    }, GROW_DELAY_MS);
+  }
+
+  private growFields(): void {
+    growDraftTextarea(this.input);
+    this.list.querySelectorAll<HTMLTextAreaElement>('textarea').forEach(editor => growDraftTextarea(editor));
+  }
+
+  private clearGrowTimer(): void {
+    if (this.growTimer === null) return;
+    globalThis.clearTimeout(this.growTimer);
+    this.growTimer = null;
+    this.growScheduled = false;
   }
 
   private move(line: DraftLine, target: number): void {
@@ -165,7 +206,6 @@ export class RunnerConclusionDraft {
         growDraftTextarea(editor);
         this.changed();
       });
-      growDraftTextarea(editor);
       const remove = createButton(row, { cls: 'rp-runner-draft-delete', text: '×', attr: { type: 'button' } });
       this.labelControl(row, remove, 'runnerDraft.deleteLine');
       remove.addEventListener('click', () => {
@@ -174,6 +214,10 @@ export class RunnerConclusionDraft {
         this.input.focus();
         this.changed();
       });
+      // Measure only once the row is complete: the editor's grid column is
+      // `minmax(0, 1fr)`, so without the trailing delete button it reads one
+      // control wider and stores a height that clips the wrapped last line.
+      growDraftTextarea(editor);
     });
   }
 }

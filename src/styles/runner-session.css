@@ -422,6 +422,11 @@
   flex: 0 1 auto;
   min-height: 100px;
   max-height: 50%;
+
+  /* Reserve the scrollbar gutter: this container starts scrolling only once
+     enough lines pile up, and that late width change re-wraps lines that were
+     already measured. A stable gutter keeps measured width == rendered width. */
+  scrollbar-gutter: stable;
   overflow-y: auto;
 }
 
