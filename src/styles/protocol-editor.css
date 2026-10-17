@@ -121,6 +121,13 @@
   shape-rendering: geometricprecision;
 }
 
+/* Loop exits — the edge that leaves a looped question — render green so they
+   read apart from that loop's body edges at a glance (the looped node itself
+   already carries the repeat badge). Hover/focus only thickens the stroke. */
+.rp-protocol-editor-edge.is-loop-exit {
+  stroke: var(--color-green, #4caf50);
+}
+
 .rp-protocol-editor-edge-preview {
   stroke-dasharray: 6 4;
   opacity: 0.75;
@@ -654,6 +661,12 @@
   stroke-opacity: 0.35;
   fill: none;
   vector-effect: non-scaling-stroke;
+}
+
+/* Repeat the loop-exit cue at overview scale. */
+.rp-protocol-editor-minimap-edge.is-loop-exit {
+  stroke: var(--color-green, #4caf50);
+  stroke-opacity: 0.6;
 }
 
 /* Nodes render as soft filled shapes without outlines — at minimap scale a

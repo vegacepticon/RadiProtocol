@@ -1544,6 +1544,95 @@ describe('ProtocolEditorView: loop toggle authoring + badge', () => {
   });
 });
 
+// ── Loop-exit edge rendering ────────────────────────────────────────────────
+
+describe('ProtocolEditorView: loop-exit edge colorization', () => {
+  function createEdgeView(): { view: ProtocolEditorView; svgEl: MockEl; surfaceEl: MockEl } {
+    const mockPlugin = {
+      i18n: { t },
+      settings: { snippetFolderPath: '.radiprotocol/snippets' },
+      protocolDocumentStore: {},
+    } as any;
+
+    const view = new ProtocolEditorView({} as any, mockPlugin);
+    const surfaceEl = makeEl('div');
+    const svgEl = makeEl('svg');
+    const viewportEl = makeEl('div');
+    const rootEl = makeEl('div');
+    (view as any).surfaceEl = surfaceEl;
+    (view as any).svgEl = svgEl;
+    (view as any).viewportEl = viewportEl;
+    (view as any).rootEl = rootEl;
+    (view as any).protocolPath = 'test.rp.json';
+    (view as any).zoom = 1;
+
+    const doc: ProtocolDocumentV1 = {
+      schema: 'radiprotocol.protocol',
+      version: 1,
+      id: 'test-doc',
+      title: 'Test Protocol',
+      createdAt: '2025-01-01T00:00:00Z',
+      updatedAt: '2025-01-01T00:00:00Z',
+      nodes: [
+        { id: 'node-loop', kind: 'question', x: 100, y: 100, width: 200, height: 80, text: 'Repeat?', fields: { questionText: 'Repeat?', loop: true } },
+        { id: 'node-body', kind: 'question', x: 400, y: 100, width: 200, height: 80, text: 'Next finding?', fields: { questionText: 'Next finding?' } },
+        { id: 'node-exit', kind: 'text-block', x: 100, y: 300, width: 200, height: 80, text: 'Wrap up', fields: { content: 'Wrap up' } },
+      ],
+      edges: [
+        { id: 'edge-body', fromNodeId: 'node-loop', toNodeId: 'node-body' },
+        { id: 'edge-exit', fromNodeId: 'node-loop', toNodeId: 'node-exit', label: 'Done', isLoopExit: true },
+      ],
+    };
+    (view as any).doc = doc;
+
+    return { view, svgEl, surfaceEl };
+  }
+
+  // createSvg() in this harness stores `attr.class` verbatim (real SVG elements
+  // expose it through classList), so edge classes are asserted via the attribute.
+  function edgeGroup(svgEl: MockEl, edgeId: string): MockEl | undefined {
+    return svgEl.children.find((child) => child._attrs['data-edge-id'] === edgeId);
+  }
+
+  function edgePath(group: MockEl | undefined, kind: 'visible' | 'hitbox'): MockEl | undefined {
+    return group?.children.find((child) => {
+      if (child.tagName !== 'PATH') return false;
+      const cls = child._attrs['class'] ?? '';
+      return kind === 'hitbox' ? cls.includes('-hitbox') : !cls.includes('-hitbox');
+    });
+  }
+
+  it('marks the loop-exit edge with is-loop-exit and leaves the body edge unmarked', () => {
+    const { view, svgEl } = createEdgeView();
+    (view as any).renderDocument();
+
+    const exitPath = edgePath(edgeGroup(svgEl, 'edge-exit'), 'visible');
+    expect(exitPath?._attrs['class']).toBe('rp-protocol-editor-edge');
+    expect(exitPath?.classList.has('is-loop-exit')).toBe(true);
+    expect(edgePath(edgeGroup(svgEl, 'edge-body'), 'visible')?.classList.has('is-loop-exit')).toBe(false);
+  });
+
+  it('keeps the loop-exit hitbox unmarked so only the visible stroke is colorized', () => {
+    const { view, svgEl } = createEdgeView();
+    (view as any).renderDocument();
+
+    const hitbox = edgePath(edgeGroup(svgEl, 'edge-exit'), 'hitbox');
+    expect(hitbox?._attrs['class']).toBe('rp-protocol-editor-edge-hitbox');
+    expect(hitbox?.classList.has('is-loop-exit')).toBe(false);
+  });
+
+  it('CSS renders loop-exit edges in green (tripwire)', () => {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const { readFileSync } = require('node:fs') as typeof import('node:fs');
+    const cssPath = require.resolve('../../styles/protocol-editor.css');
+    const css = readFileSync(cssPath, 'utf8');
+    const exitRule = css.match(/\.rp-protocol-editor-edge\.is-loop-exit\s*\{[^}]*\}/);
+    expect(exitRule?.[0]).toContain('stroke: var(--color-green');
+    const minimapRule = css.match(/\.rp-protocol-editor-minimap-edge\.is-loop-exit\s*\{[^}]*\}/);
+    expect(minimapRule?.[0]).toContain('stroke: var(--color-green');
+  });
+});
+
 describe('ProtocolEditorView: node deletion state synchronization', () => {
   it('uses the successful Start deletion result before the asynchronous reload finishes', async () => {
     const savedWindow = (globalThis as any).window;

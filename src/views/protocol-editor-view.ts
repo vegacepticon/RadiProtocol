@@ -1206,6 +1206,7 @@ export class ProtocolEditorView extends ItemView {
         ? protocolEditorAnchorToSurfacePoint(protocolEditorMeasuredNodeAnchor(targetNodeEl, inputSide))
         : protocolEditorAnchorToSurfacePoint(protocolEditorPortAnchor(to, inputSide));
       const route = protocolEditorEdgeRoute(source.x, source.y, target.x, target.y, this.layoutDirection);
+      const isLoopExit = edge.isLoopExit === true;
       const group = this.svgEl.createSvg('g', {
         attr: {
           class: 'rp-protocol-editor-edge-group',
@@ -1238,12 +1239,16 @@ export class ProtocolEditorView extends ItemView {
           class: 'rp-protocol-editor-edge-hitbox',
         },
       });
-       group.createSvg('path', {
+      const edgePathEl = group.createSvg('path', {
         attr: {
           d: route.d,
           class: 'rp-protocol-editor-edge',
         },
       }) as SVGPathElement;
+      // Loop exits carry `isLoopExit`; the modifier class lets CSS render them
+      // apart from the loop body edges (green), matching the loop badge cue on
+      // the source node.
+      if (isLoopExit) edgePathEl.classList.add('is-loop-exit');
       const effectiveLabel = shouldDisplayProtocolEditorEdgeLabel(edge, from, to)
         ? deriveProtocolEditorEdgeLabel(to, edge.label)
         : undefined;
@@ -1420,7 +1425,7 @@ export class ProtocolEditorView extends ItemView {
       const from = nodeById.get(edge.fromNodeId);
       const to = nodeById.get(edge.toNodeId);
       if (from === undefined || to === undefined) continue;
-      this.minimapSvgEl.createSvg('line', {
+      const minimapEdgeEl = this.minimapSvgEl.createSvg('line', {
         attr: {
           x1: String(from.x + from.width / 2),
           y1: String(from.y + from.height / 2),
@@ -1429,6 +1434,7 @@ export class ProtocolEditorView extends ItemView {
           class: 'rp-protocol-editor-minimap-edge',
         },
       });
+      if (edge.isLoopExit === true) minimapEdgeEl.classList.add('is-loop-exit');
     }
 
     // Nodes — deliberately no SVG <title> tooltips: they duplicated the node
