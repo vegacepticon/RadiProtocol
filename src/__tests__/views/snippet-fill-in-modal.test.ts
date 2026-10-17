@@ -969,6 +969,21 @@ describe('SnippetFillInModal — inserted values highlighted in preview', () => 
     expect(css).toMatch(/\.rp-snippet-modal-custom-input\.rp-snippet-field-filled:hover/);
   });
 
+  it('CSS suppresses the host textarea hover repaint on both fill-in fields (tripwire)', () => {
+    // Obsidian's `textarea:not(:disabled):hover` repaints any textarea using
+    // these two variables; pinning them on the fields keeps the resting look
+    // on pointer-over (free-text field and the ✎ Custom value field).
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const { readFileSync } = require('node:fs') as typeof import('node:fs');
+    const cssPath = require.resolve('../../styles/snippet-fill-modal.css');
+    const css = readFileSync(cssPath, 'utf8');
+    const pinnedBlock = css.match(
+      /\.rp-snippet-modal-free-text,\s*\.rp-snippet-modal-custom-input\s*\{[^}]*--background-modifier-form-field-hover[^}]*\}/,
+    );
+    expect(pinnedBlock?.[0]).toContain('--background-modifier-form-field-hover: var(--background-primary)');
+    expect(pinnedBlock?.[0]).toContain('--background-modifier-border-hover: var(--background-modifier-border)');
+  });
+
   it('dims the workspace backdrop while the modal is open', () => {
     const snippet = makeSnippet(
       [{ id: 'f', label: 'F', type: 'free-text' }],

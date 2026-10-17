@@ -171,6 +171,15 @@
   box-sizing: border-box;
   border: 1px solid var(--background-modifier-border);
   background: var(--background-primary);
+  /* Pointer-over must not repaint a fill-in field. Obsidian's host rule
+     (`textarea:not(:disabled):hover` in app.css) swaps in the form-field hover
+     background and border, which reads as an interactive affordance on a plain
+     typing area — including the Custom value field revealed by the ✎ toggle.
+     Pinning those two host variables to the resting values removes the hover
+     repaint; the filled-state highlight below sets its own accent colors, so it
+     keeps working. */
+  --background-modifier-form-field-hover: var(--background-primary);
+  --background-modifier-border-hover: var(--background-modifier-border);
   /* Compact single-line start; the modal grows the field with content. */
   /* Centering contract with growAutoTextarea (height: 0 → scrollHeight):
      min-height derives from the line box + symmetric padding, never exceeds
