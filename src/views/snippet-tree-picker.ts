@@ -77,6 +77,11 @@ export interface SnippetTreePickerOptions {
    *  preserves the prior two-line behavior (basename + full relative path).
    *  Drill-view rows never render the path line regardless of this flag. */
   hideSearchResultPath?: boolean;
+  /** Runner surfaces: put the caret in the search field as soon as the initial
+   *  listing is rendered, so typing filters immediately and ArrowUp/Down/Enter
+   *  navigate without an extra click. Default `false` — embedding pickers
+   *  (node editor, snippet manager/editor) keep the host's own focus. */
+  autoFocusSearch?: boolean;
 }
 
 // ── Implementation ───────────────────────────────────────────────────────
@@ -181,6 +186,13 @@ export class SnippetTreePicker {
     // Breadcrumb + list host container. Both drill and search views render into here.
     // We keep the search input fixed above so typing never blows away focus.
     await this.renderDrillView(root);
+
+    // Keyboard-first entry for the runner (see `autoFocusSearch`): land the caret
+    // in the search field once the listing exists. Optional-chained because the
+    // host may unmount the picker while the initial folder load is in flight.
+    if (this.options.autoFocusSearch === true) {
+      this.searchInputEl?.focus({ preventScroll: true });
+    }
   }
 
   unmount(): void {

@@ -92,6 +92,9 @@ export function renderSnippetPicker(
     container: pickerHost as unknown as HTMLElement,
     mode: 'file-only',
     rootPath: nodeRootAbs,
+    // Keyboard-first runner picker: the caret starts in the search field so the
+    // radiologist can type to filter / arrow through snippets right away.
+    autoFocusSearch: true,
     onSelect: (result) => {
       void (async () => {
         const absPath = result.relativePath === ''

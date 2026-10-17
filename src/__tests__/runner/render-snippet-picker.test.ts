@@ -148,6 +148,9 @@ describe('renderSnippetPicker (Phase 75 Plan 04)', () => {
     const opts = pickerInstances[0]!.options as Record<string, unknown>;
     expect(opts.mode).toBe('file-only');
     expect(opts.rootPath).toBe('.radiprotocol/snippets/abdomen');
+    // Keyboard-first entry: renderSnippetPicker is runner-owned, so the search
+    // caret is placed by the picker itself once the listing renders.
+    expect(opts.autoFocusSearch).toBe(true);
 
     const hostDivs = findByClass(zone, 'rp-stp-inline-host');
     expect(hostDivs.length).toBe(1);

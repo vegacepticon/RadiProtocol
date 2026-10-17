@@ -59,7 +59,9 @@ interface MockEl {
   scrollIntoView: (opts?: unknown) => void;
   click: () => void;
   remove: () => void;
-  focus: () => void;
+  /** Records programmatic focus so tests can assert caret placement. */
+  _focused?: boolean;
+  focus: (opts?: { preventScroll?: boolean }) => void;
 }
 
 function makeEl(tag = 'div'): MockEl {
@@ -184,7 +186,9 @@ function makeEl(tag = 'div'): MockEl {
       if (idx >= 0) p.children.splice(idx, 1);
       el.parent = null;
     },
-    focus(): void {},
+    focus(_opts?: { preventScroll?: boolean }): void {
+      el._focused = true;
+    },
   };
   return el;
 }
@@ -1516,5 +1520,54 @@ describe('hideSearchResultPath option (Phase 5)', () => {
     const pathEl = findFirst(container, (el) => el.classList.has('rp-stp-result-path'));
     expect(pathEl).not.toBeNull();
     expect(pathEl?.textContent).toBe('abdomen/ct/ct-routine.md');
+  });
+});
+
+// Runner surfaces opt in to keyboard-first entry: the caret must sit in the
+// search field as soon as the listing is rendered, so typing filters and
+// ArrowUp/Down/Enter navigate without an extra click.
+describe('autoFocusSearch option', () => {
+  let svc: FakeSnippetService;
+
+  beforeEach(() => {
+    svc = makeFakeSnippetService();
+  });
+
+  it('focuses the search input after the initial listing renders when enabled', async () => {
+    svc.listFolder.mockResolvedValue({
+      folders: [],
+      snippets: [mdSnippet(`${ROOT}/abdomen/ct.md`)],
+    });
+    const { picker, container } = makePicker({ mode: 'file-only', autoFocusSearch: true }, svc);
+    await picker.mount();
+
+    const input = findFirst(container, (el) => el.classList.has('rp-stp-search-input'))!;
+    expect(input._focused).toBe(true);
+  });
+
+  it('leaves focus to the host by default (editor / manager pickers)', async () => {
+    const { picker, container } = makePicker({ mode: 'file-only' }, svc);
+    await picker.mount();
+
+    const input = findFirst(container, (el) => el.classList.has('rp-stp-search-input'))!;
+    expect(input._focused).toBeUndefined();
+  });
+
+  it('does not focus a detached field when the picker is unmounted mid-load', async () => {
+    let resolveListing!: (value: { folders: string[]; snippets: Snippet[] }) => void;
+    const listingPromise = new Promise<{ folders: string[]; snippets: Snippet[] }>((resolve) => {
+      resolveListing = resolve;
+    });
+    svc.listFolder.mockReturnValue(listingPromise);
+
+    const { picker, container } = makePicker({ mode: 'file-only', autoFocusSearch: true }, svc);
+    const mountPromise = picker.mount();
+    // The search field exists synchronously, before the listing resolves.
+    const input = findFirst(container, (el) => el.classList.has('rp-stp-search-input'))!;
+    picker.unmount();
+    resolveListing({ folders: [], snippets: [] });
+    await mountPromise;
+
+    expect(input._focused).toBeUndefined();
   });
 });
