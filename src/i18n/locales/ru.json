@@ -366,8 +366,7 @@
     "exportProtocolPackage": "Экспортировать протокол как пакет библиотеки"
   },
   "snippetPreview": {
-    "showCustomAria": "Показать пользовательское значение для {label}",
-    "customValueAria": "Пользовательское значение для {label}"
+    "showCustomAria": "Показать пользовательское значение для {label}"
   },
   "snippetFillIn": {
     "customLabel": "Пользовательский:",

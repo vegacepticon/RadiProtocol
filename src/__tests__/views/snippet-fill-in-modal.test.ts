@@ -449,6 +449,45 @@ describe('SnippetFillInModal Phase 52 D-06 — Custom override preserved', () =>
     modal.onClose();
   });
 
+  it('names the Custom field via its visible label, not aria-label (hover-tooltip-free)', () => {
+    const snippet = makeSnippet([
+      { id: 'f', label: 'F', type: 'choice', options: ['a', 'b'] },
+    ]);
+    const modal = new SnippetFillInModal(app, snippet);
+    modal.onOpen();
+    const root = (modal as unknown as { contentEl: MockEl }).contentEl;
+
+    const customInput = walk(root, '.rp-snippet-modal-custom-input')[0];
+    if (!customInput) throw new Error('Custom input missing');
+    // Obsidian renders any `aria-label` as a hover tooltip over the element —
+    // a tooltip over a typing area is exactly the noise this guards against.
+    expect(customInput.getAttribute('aria-label')).toBeNull();
+
+    const id = customInput.getAttribute('id');
+    expect(id).toBeTruthy();
+    const associatedLabel = walk(root, 'label')
+      .find((label) => label.getAttribute('for') === id);
+    expect(associatedLabel).toBeDefined();
+    expect(associatedLabel!._text).toBe('Custom:');
+    modal.onClose();
+  });
+
+  it('gives every Custom field a distinct label↔field id pair', () => {
+    const snippet = makeSnippet([
+      { id: 'f', label: 'F', type: 'choice', options: ['a'] },
+      { id: 'g', label: 'G', type: 'choice', options: ['b'] },
+    ]);
+    const modal = new SnippetFillInModal(app, snippet);
+    modal.onOpen();
+    const root = (modal as unknown as { contentEl: MockEl }).contentEl;
+
+    const ids = walk(root, '.rp-snippet-modal-custom-input')
+      .map((input) => input.getAttribute('id'));
+    expect(ids).toHaveLength(2);
+    expect(new Set(ids).size).toBe(2);
+    modal.onClose();
+  });
+
   it('Custom non-empty text overrides options', async () => {
     const snippet = makeSnippet([
       { id: 'f', label: 'F', type: 'choice', options: ['a', 'b'] },

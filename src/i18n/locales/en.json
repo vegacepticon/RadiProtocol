@@ -366,8 +366,7 @@
     "exportProtocolPackage": "Export protocol as library package"
   },
   "snippetPreview": {
-    "showCustomAria": "Show custom value for {label}",
-    "customValueAria": "Custom value for {label}"
+    "showCustomAria": "Show custom value for {label}"
   },
   "snippetFillIn": {
     "customLabel": "Custom:",

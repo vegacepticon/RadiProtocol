@@ -40,6 +40,9 @@ export class SnippetFillInModal extends Modal {
   /** Live preview container reference for updatePreview() calls */
   private previewEl: HTMLDivElement | null = null;
   private readonly t: Translator;
+  /** Monotonic seed for label↔field id pairs (accessible naming without
+   *  `aria-label`, which Obsidian turns into a hover tooltip). */
+  private fieldIdSeed = 0;
 
   /**
    * Bubble-phase keydown listener on `contentEl` — Shift+Enter confirms.
@@ -235,15 +238,22 @@ export class SnippetFillInModal extends Modal {
 
     const customRow = fieldset.createDiv({ cls: 'rp-snippet-modal-custom-row' });
     customRow.setAttribute('hidden', 'true');
-    const customLabel = customRow.createEl('label');
-    customLabel.textContent = this.t('snippetFillIn.customLabel');
+    // Name the field through the visible label (`for` ↔ `id`) instead of an
+    // `aria-label`: Obsidian renders every `aria-label` as a hover tooltip over
+    // the element (hover-noise policy, see 3.5.8), and a tooltip over a typing
+    // area is pure noise. The fieldset legend already carries the placeholder
+    // context for assistive tech.
+    const customInputId = `rp-snippet-custom-input-${++this.fieldIdSeed}`;
+    customRow.createEl('label', {
+      text: this.t('snippetFillIn.customLabel'),
+      attr: { for: customInputId },
+    });
 
     customInput = createTextarea(customRow, {
       cls: 'rp-snippet-modal-custom-input',
       // Same compact auto-growing behavior as free-text placeholder fields.
-      attr: { rows: 1 },
+      attr: { rows: 1, id: customInputId },
     });
-    customInput.setAttribute('aria-label', this.t('snippetPreview.customValueAria', { label: placeholder.label }));
 
     const setCustomOpen = (open: boolean): void => {
       customToggle.setAttribute('aria-expanded', open ? 'true' : 'false');
