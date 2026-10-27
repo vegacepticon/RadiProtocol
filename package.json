@@ -28,7 +28,7 @@
     "@types/node": "^22.0.0",
     "builtin-modules": "4.0.0",
     "dotenv": "17.4.0",
-    "esbuild": "0.28.0",
+    "esbuild": "0.28.2",
     "eslint": "^9.39.4",
     "eslint-plugin-obsidianmd": "0.1.9",
     "globals": "17.4.0",
